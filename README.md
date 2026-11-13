@@ -14,7 +14,7 @@ It also provides definitions for cryptographic primitives such as symmetric/asym
 signatures, $\Sigma$-protocols, and transforms like Fiat-Shamir and Fischlin.
 
 On top of the generic framework, `LatticeCrypto` covers ML-DSA, ML-KEM, and Falcon, including
-proof-level abstractions and executable concrete implementations. `HashSig` covers SLH-DSA
+proof-level abstractions and executable concrete implementations. `HashSig` covers generalized XMSS (GXMSS) and SLH-DSA
 (SPHINCS+, FIPS 205), and the interaction layer supports computational interpretations of
 interactive and UC-style systems.
 
@@ -66,6 +66,15 @@ build boundaries and the staged consolidation.
   their independent regressions run with `lake exe algorithm_tests`.
 - `LatticeCrypto/` contains lattice algebra, hardness assumptions, ML-DSA, ML-KEM, Falcon, and their concrete implementations.
 - `Extern/` contains the native FFI surface: the `@[extern]` bindings and the FFI-backed concrete instances. Its `extern_lib`s build as empty stubs when the `third_party/` submodules are absent.
+- `HashSig/GXMSS/` contains arbitrary-incomparable-encoding specifications, completeness,
+  original-domain interval strong-unforgeability reductions, and a shared-response PRF extension.
+  Complete-tree security specializes the full-range interval. The conditional bounds preserve
+  failed signing, consumed epochs and exact pair freshness; they require positive parameters,
+  two distinct codewords and an all-request signing-query bound. See the
+  [GXMSS reading guide](docs/reading/gxmss.md) for exact sampling laws, losses and public endpoints.
+  The ordinary complete-tree theorem is defined in `Security/Unforgeability.lean`;
+  interval endpoints are under `Security/Interval/`, with named reductions and auxiliary support
+  in their respective directories.
 - `HashSig/` contains hash-based signatures: proof-level specifications, component-level FIPS 205
   conformance results, and security results for SLH-DSA. SLH-DSA has a proved quantitative SUF-CMA
   bound (strong unforgeability: no valid message-signature pair the signer never returned, which
