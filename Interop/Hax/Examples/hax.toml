@@ -1,0 +1,5 @@
+# Extract into the Lean modules `Interop.Hax.Examples.Extraction.*` next to this crate.
+[scenario.add-or-panic]
+backend = "lean"
+project-files = false
+aeneas-args = ["-dest", "../../..", "-subdir", "Interop/Hax/Examples/Extraction"]

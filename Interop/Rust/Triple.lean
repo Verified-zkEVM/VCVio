@@ -184,6 +184,19 @@ theorem triple_liftRustM_of_triple {x : RustM α} {pre : Prop} {post : α → Pr
       (Lean.Order.pushOption (Lean.Order.pushExcept post perr) fun _ => pdiv) ()
       (h hpre)⟩
 
+/-- A triple whose precondition is a hypothesis, `pre → ⦃⌜True⌝⦄ x ⦃⇓ v => ⌜post v⌝⦄`, is a
+`Std.WP` triple for the lifted program with precondition `pre`, which neither panics nor diverges.
+This is the form of the contract `f.spec` that hax extracts from `#[requires]` and `#[ensures]`,
+with `pre` and `post` the `holds` readings of the extracted `f.pre` and `f.post`. -/
+theorem triple_liftRustM_of_imp {x : RustM α} {pre : Prop} {post : α → Prop}
+    (h : pre → ⦃⌜True⌝⦄ x ⦃⇓v => ⌜post v⌝⦄) :
+    Std.WP.Triple (liftRustM x : RustOracleComp spec α) pre post
+      (fun _ => False, fun _ => False, ()) := by
+  refine triple_liftRustM_of_triple (perr := fun _ => False) (pdiv := False)
+    (R := fun _ => ⌜False⌝) ?_
+  simp only [Std.Do.Triple, WP.wp, PredTrans.apply] at h ⊢
+  exact fun hpre => h hpre trivial
+
 end StdDo
 
 end Interop.Rust

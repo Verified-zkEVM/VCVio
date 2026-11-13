@@ -62,12 +62,7 @@ and the fork of Aeneas it pins names it `RustM`; upstream Aeneas calls the same 
 | `Interop.Rust.Common` | `RustOracleComp spec α := ExceptT Error (OptionT (OracleComp spec)) α`: Rust panics, then divergence, then oracle queries |
 | `Interop.Rust.Run` | `.run.run` equations for that stack, for probabilistic proofs |
 | `Interop.Rust.RustM` | the lift `RustM → RustOracleComp spec`, with its `pure`/`bind` laws, `LawfulMonadLift` and a bundled `MonadHom` |
-| `Interop.Rust.Triple` | Aeneas's specifications (`spec`, `dspec`, `Std.Do` triples) as `Std.WP` triples for the lift, under any interpretation of `OracleComp spec`, and the `vcgen` rule `Spec.liftRustM` |
+| `Interop.Rust.Triple` | Aeneas's specifications (`spec`, `dspec`, `Std.Do` triples, and the implication form of hax's extracted contracts) as `Std.WP` triples for the lift, under any interpretation of `OracleComp spec`, and the `vcgen` rule `Spec.liftRustM` |
 | `Interop.Aeneas.ITree` | Aeneas's interaction trees as PolyFun's: an injective monad morphism into `ITree ⟨E.I, E.O⟩`, sending `div` to `ITree.diverge` |
 | `Interop.Aeneas.WP` | Aeneas's total and partial correctness (`DWP`, `DWLP`) are PolyFun's `ITree.wpTotal` and `ITree.wpPartial` along `toPolyFun`, for every Aeneas effect, with exact `bind` laws as corollaries |
-| `Interop.Hax.*` | hax examples, from Rust source through `RustM` into VCVio: ML-KEM's centred binomial sampler and Barrett reduction, add-with-carry, checked arithmetic and division, and a Rust step after an oracle query; see [their README](Hax/README.md) |
-
-## Not yet done
-
-- **Regenerate extractions.** Regenerate the hax examples with the hax CLI (`third_party/hax-cbd`
-  for the sampler). Their code is transcribed in hax's current emission style.
+| `Interop.Hax.*` | hax examples, extracted from Rust crates by the hax CLI and proved in VCVio: ML-KEM's centred binomial sampler and Barrett reduction, add-with-carry, checked arithmetic and division, and a Rust step after an oracle query; see [their README](Hax/README.md) |
