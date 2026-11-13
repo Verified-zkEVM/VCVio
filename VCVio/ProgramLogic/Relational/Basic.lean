@@ -396,6 +396,24 @@ lemma evalDistEq_map_of_relTriple {σ : Type} {f : α → σ} {g : β → σ}
     f <$> oa =ᵈ g <$> ob :=
   evalDistEq_of_relTriple_eqRel (relTriple_map h)
 
+/-- Equality of the projected output law and a support invariant give a coupling preserving
+both the visible output and the chosen relation between full and projected states. -/
+lemma relTriple_of_projected_eq {A S T : Type}
+    (source : OracleComp spec₁ (A × S)) (target : OracleComp spec₂ (A × T))
+    (proj : S → T) (relation : S → T → Prop)
+    (heq : Prod.map id proj <$> source =ᵈ target)
+    (hsource : ∀ result ∈ support source, relation result.2 (proj result.2)) :
+    RelTriple source target (fun left right => left.1 = right.1 ∧ relation left.2 right.2) := by
+  have hself : RelTriple source source
+      (fun left right => left.1 = right.1 ∧ relation left.2 (proj right.2)) := by
+    apply relTriple_refl_of_mem_support
+    intro result hresult
+    exact ⟨rfl, hsource result hresult⟩
+  have hmap : RelTriple (id <$> source) (Prod.map id proj <$> source)
+      (fun left right => left.1 = right.1 ∧ relation left.2 right.2) :=
+    relTriple_map (f := id) (g := Prod.map id proj) hself
+  simpa only [id_map] using relTriple_of_evalDistEq_right heq hmap
+
 private lemma list_eq_of_forall₂_eqRel {xs ys : List α}
     (hxy : List.Forall₂ (EqRel α) xs ys) : xs = ys := by
   rwa [EqRel, List.forall₂_eq_eq_eq] at hxy
