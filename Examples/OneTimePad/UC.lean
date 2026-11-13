@@ -319,7 +319,7 @@ The real-semantics-view of `close W_real K` is a `Measure Unit` that
 depends on `readMsg (close W_real K)` and `P`; by OTP privacy, this
 is the same as the ideal-semantics view, which depends only on `P`
 and is the same for `W_real` and `W_ideal`. Hence the two
-real-semantics views coincide and the total variation distance is
+real-semantics views coincide and the statistical distance is
 zero. -/
 theorem observedCompEmulates_realSmcSemantics (sp : ℕ)
     (readMsg : MsgReader sp) (P : BitVec sp → Bool)
@@ -332,7 +332,7 @@ theorem observedCompEmulates_realSmcSemantics (sp : ℕ)
     exact (realSmcSemantics_eq_idealSmcSemantics sp readMsg P (T.close W_real K)).trans
       (realSmcSemantics_eq_idealSmcSemantics sp readMsg P (T.close W_ideal K)).symm
   unfold Semantics.distAdvantage
-  rw [hreal, MeasureTheory.Measure.etvDist_self]
+  rw [hreal, MeasureTheory.Measure.statEDist_self]
 
 /-! ## Concrete instantiation: two structurally distinct closed systems -/
 

@@ -137,9 +137,10 @@ Mathlib kernel composition delegates to the measure rules. Parameterized expecte
 `ToMathlib/Probability/Kernel/TotalVariation.lean`.
 
 Mathlib v4.35 defines `MeasureTheory.etvDist`/`tvDist` (`Mathlib/MeasureTheory/Measure/TotalVariation/`)
-as the total variation of `μ - ν`, twice the event-supremum `Measure.etvDist` on probability
-measures; `ToMathlib/MeasureTheory/Measure/TotalVariation/Variation.lean` proves the relation
-(`two_mul_etvDist_eq_etvDist_add_absDiff`). Mathlib has no map, bind or kernel bounds for its
+as the total variation of `μ - ν`, twice the statistical distance `Measure.statEDist` on
+probability measures; on finite measures the total-mass discrepancy enters as well, and
+`ToMathlib/MeasureTheory/Measure/TotalVariation/Variation.lean` proves the relation
+(`two_mul_statEDist_eq_etvDist_add_absDiff`). Mathlib has no map, bind or kernel bounds for its
 distance, at the pin or on `master`, so the composition lemmas stay local and are the upstream
 candidates.
 
@@ -1127,7 +1128,7 @@ The *Maintenance* pass for the v4.35.0 pins, read against the next releases as w
 - PolyFun's `IsTotalRollBound.mono`/`isTotalRollBound_bind` prove the total query bound laws.
 - Mathlib's `ENNReal.div_le_of_le_mul'` is the divided Cauchy–Schwarz step.
 - Core `List.map_const'`/`List.prod_replicate` replace the deleted `List.prod_map_const`.
-- Mathlib's variation distance is related to `Measure.etvDist` (see *Native TV composition*).
+- Mathlib's variation distance is related to `Measure.statEDist` (see *Native TV composition*).
 - Core `vcgen` steps oracle programs with the rules of `Unary/WP/{NecessarySpecs,LowerSpecs}.lean`,
   and VCVio's exhaustive `pvcgen` delegates its quantitative triples to it.
 

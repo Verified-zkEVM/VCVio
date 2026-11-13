@@ -27,7 +27,7 @@ framework, Falcon) and masking (ML-DSA / Dilithium).
 - `discreteGaussianPMF σ μ` — the probability mass function, defined as
   `ρ_{σ,μ}(z) / ∑_z ρ_{σ,μ}(z)`.
 - `discreteGaussianMeasure σ μ` — the same distribution as a probability measure on `ℤ`,
-  for use with `Measure.etvDist`, `InformationTheory.renyiDiv`, etc.
+  for use with `Measure.statEDist`, `InformationTheory.renyiDiv`, etc.
 
 ## References
 

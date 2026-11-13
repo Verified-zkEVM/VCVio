@@ -32,7 +32,7 @@ coupling supremum with the sum behind the bind rule.
 
 - introduction, consequence, and bind rules for eRHL
 - the quantitative relational algebra and its anchoring to unary expectations
-- total variation as the complement of the best coupled probability of equal outputs
+- statistical distance as the complement of the best coupled probability of equal outputs
 - witness lower bounds for uniform samples and oracle queries under a bijection
 
 ## Design
@@ -259,10 +259,10 @@ Output measures of oracle computations concentrate on their finite supports, whe
 coupled probability of equal outputs is the overlap of the two measures, attained by their
 maximal coupling. -/
 
-/-- Total variation between two output measures is the complement of the best coupled
+/-- The statistical distance between two output measures is the complement of the best coupled
 probability of equal outputs. -/
-theorem etvDist_eq_one_sub_eRelWP_eqRel (oa : OracleComp spec₁ α) (ob : OracleComp spec₂ α) :
-    (letI : MeasurableSpace α := ⊤; 𝒟[oa].etvDist 𝒟[ob]) =
+theorem statEDist_eq_one_sub_eRelWP_eqRel (oa : OracleComp spec₁ α) (ob : OracleComp spec₂ α) :
+    (letI : MeasurableSpace α := ⊤; 𝒟[oa].statEDist 𝒟[ob]) =
       1 - eRelWP oa ob (RelPost.indicator (EqRel α)) := by
   classical
   let : MeasurableSpace α := ⊤
@@ -301,23 +301,23 @@ theorem etvDist_eq_one_sub_eRelWP_eqRel (oa : OracleComp spec₁ α) (ob : Oracl
     · refine le_trans ?_ (le_eRelWP_of_isCoupling _ ⟨_, Measure.isCoupling_maximalCoupling hμ hν⟩)
       rw [hdiag]
       exact Finset.sum_le_sum fun a ha => Measure.min_le_maximalCoupling_apply_diag ha
-  rw [hw, Measure.etvDist_eq_one_sub_sum_min hμ hν]
+  rw [hw, Measure.statEDist_eq_one_sub_sum_min hμ hν]
 
-/-- An approximate equality coupling with error `ε` is exactly a total variation bound `ε`
+/-- An approximate equality coupling with error `ε` is exactly a statistical distance bound `ε`
 between the two output measures. -/
-theorem approxRelTriple_eqRel_iff_etvDist_le {oa : OracleComp spec₁ α}
+theorem approxRelTriple_eqRel_iff_statEDist_le {oa : OracleComp spec₁ α}
     {ob : OracleComp spec₂ α} {ε : ℝ≥0∞} :
     ApproxRelTriple ε oa ob (EqRel α) ↔
-      (letI : MeasurableSpace α := ⊤; 𝒟[oa].etvDist 𝒟[ob]) ≤ ε := by
-  rw [ApproxRelTriple, etvDist_eq_one_sub_eRelWP_eqRel]
+      (letI : MeasurableSpace α := ⊤; 𝒟[oa].statEDist 𝒟[ob]) ≤ ε := by
+  rw [ApproxRelTriple, statEDist_eq_one_sub_eRelWP_eqRel]
   exact tsub_le_iff_tsub_le
 
 /-- Computations with a zero-error approximate equality coupling are equal in distribution. -/
 theorem evalDistEq_of_approxRelTriple_zero {oa : OracleComp spec₁ α}
     {ob : OracleComp spec₂ α} (h : ApproxRelTriple 0 oa ob (EqRel α)) : oa =ᵈ ob := by
   let : MeasurableSpace α := ⊤
-  exact EvalDistEq.of_evalDist_eq (Measure.etvDist_eq_zero_iff.1 (nonpos_iff_eq_zero.1
-    (approxRelTriple_eqRel_iff_etvDist_le.1 h)))
+  exact EvalDistEq.of_evalDist_eq (Measure.statEDist_eq_zero_iff.1 (nonpos_iff_eq_zero.1
+    (approxRelTriple_eqRel_iff_statEDist_le.1 h)))
 
 /-! ## Relational algebra instance -/
 

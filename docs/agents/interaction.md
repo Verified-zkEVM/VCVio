@@ -108,8 +108,8 @@ Important definitions:
 - `Semantics T` bundles a result type and measurable space, a surface monad, its
   `SemanticsVia`, and a closed-system runner.
 - `Semantics.evalDist` evaluates a closed system to a `Measure sem.Result`.
-- `Semantics.distAdvantage` is the `ℝ≥0∞`-valued total variation `Measure.etvDist` between the
-  measure denotations of two closed systems.
+- `Semantics.distAdvantage` is the `ℝ≥0∞`-valued statistical distance `Measure.statEDist` between
+  the measure denotations of two closed systems.
 - `ObservedCompEmulates sem ε real ideal` states fixed-advantage computational emulation, with
   `ε : ℝ≥0∞`.
 - `AsympObservedCompEmulates` requires the advantage sequence itself to be `negligible`.
@@ -148,7 +148,7 @@ The raw relay canary and untransported-schedule counterexample live in PolyFun's
 
 `HandledAssembly` also carries each local polynomial-operation interpreter. `ReactiveSecurity`
 specializes it to total `ProbComp` sampling and proves additive statistical composition from
-actual token execution. Its `advantage` is the `Measure.etvDist` of the two observation laws, so
+actual token execution. Its `advantage` is the `Measure.statEDist` of the two observation laws, so
 error bounds are `ℝ≥0∞`. The fixed observation retains returned Booleans, explicit aborts, and
 unfinished prefixes; `law_univ` proves unit observation mass. `ContextualWithin` requires
 explicit admission of each constructed residual context. `ReactiveWorld` wires separate honest,

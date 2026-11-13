@@ -64,15 +64,15 @@ example (mx my : ProbComp ℝ) (f g : ℝ → ProbComp ℝ) (post : ℝ → ℝ 
 /-- Total variation between real-valued output measures is the complement of the best coupled
 probability of equal outputs. -/
 example (mx my : ProbComp ℝ) :
-    (letI : MeasurableSpace ℝ := ⊤; 𝒟[mx].etvDist 𝒟[my]) =
+    (letI : MeasurableSpace ℝ := ⊤; 𝒟[mx].statEDist 𝒟[my]) =
       1 - eRelWP mx my (RelPost.indicator (EqRel ℝ)) :=
-  etvDist_eq_one_sub_eRelWP_eqRel mx my
+  statEDist_eq_one_sub_eRelWP_eqRel mx my
 
 /-- A total variation bound on real-valued outputs is an approximate equality coupling. -/
 example (mx my : ProbComp ℝ) (ε : ENNReal)
-    (h : (letI : MeasurableSpace ℝ := ⊤; 𝒟[mx].etvDist 𝒟[my]) ≤ ε) :
+    (h : (letI : MeasurableSpace ℝ := ⊤; 𝒟[mx].statEDist 𝒟[my]) ≤ ε) :
     ApproxRelTriple ε mx my (EqRel ℝ) :=
-  approxRelTriple_eqRel_iff_etvDist_le.2 h
+  approxRelTriple_eqRel_iff_statEDist_le.2 h
 
 /-- A finite oracle whose true branch is operationally possible but has zero mass. -/
 abbrev weightedSpec : OracleSpec (Fin 1) := Fin 1 →ₒ Bool

@@ -331,8 +331,13 @@ class EventLemmaTests(unittest.TestCase):
         self.assertEqual([line for _, line, _ in items], [2])
 
     def test_mathlib_total_variation_is_not_a_legacy_name(self):
-        _, items = migrate("exact Measure.tvDist_triangle _ _ _ h₁ h₂ h₃ |>.trans "
-                           "(MeasureTheory.Measure.etvDist_le_one _ _ h₁ h₂)")
+        _, items = migrate("exact MeasureTheory.tvDist_triangle _ _ _ |>.trans "
+                           "(MeasureTheory.etvDist_ne_top _ _)")
+        self.assertEqual(items, [])
+
+    def test_statistical_distance_is_not_a_legacy_name(self):
+        _, items = migrate("exact Measure.statDist_triangle _ _ _ h₁ h₂ h₃ |>.trans "
+                           "(MeasureTheory.Measure.statEDist_le_one _ _ h₁ h₂)")
         self.assertEqual(items, [])
 
     def test_no_name_is_both_renamed_and_reported(self):

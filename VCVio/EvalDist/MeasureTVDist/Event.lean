@@ -42,7 +42,7 @@ theorem prEvent_le_prEvent_add_measureETVDist [MeasurableSpace α] (mx my : m α
 theorem measureETVDist_map_le [MeasurableSpace α] [MeasurableSpace β] (mx my : m α) (f : α → β)
     (hf : Measurable f) : measureETVDist (f <$> mx) (f <$> my) ≤ measureETVDist mx my := by
   simp only [measureETVDist, evalDist_map mx hf, evalDist_map my hf]
-  exact Measure.etvDist_map_le _ _ f hf
+  exact Measure.statEDist_map_le _ _ f hf
 
 /-- Measurable post-processing of both computations cannot increase real total variation. -/
 theorem measureTVDist_map_le [MeasurableSpace α] [MeasurableSpace β] (mx my : m α) (f : α → β)

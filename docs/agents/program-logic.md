@@ -561,8 +561,8 @@ expectation `wp ($ᵗ α) (fun a => post a (f a))`; a `pure` side collapses `eRe
 of the other side.
 
 pRHL is the special case where `ε = 0` (exact coupling). On equality,
-`approxRelTriple_eqRel_iff_etvDist_le` identifies `ApproxRelTriple ε` with a total variation bound
-`ε` between the output measures, through the maximal coupling of
+`approxRelTriple_eqRel_iff_statEDist_le` identifies `ApproxRelTriple ε` with a statistical
+distance bound `ε` between the output measures, through the maximal coupling of
 `ToMathlib/MeasureTheory/Measure/Coupling/Maximal.lean`.
 
 ### Design target

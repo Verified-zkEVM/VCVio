@@ -136,14 +136,14 @@ theorem Primitives.not_samplerQuality_zero {p : Params} (prims : Primitives p) (
   have := isProbabilityMeasure_discreteGaussianMeasure p.sigmaMin 0 h0
   have hR := hq.renyiDiv_le 0 p.sigmaMin le_rfl hle
   rw [add_zero] at hR
-  have htv := etvDist_rpow_two_le_one_sub_inv_renyiDiv hq.one_lt
+  have htv := statEDist_rpow_two_le_one_sub_inv_renyiDiv hq.one_lt
     (𝒟[prims.samplerZ 0 p.sigmaMin] : Measure ℤ) (discreteGaussianMeasure p.sigmaMin 0)
   rw [tsub_eq_zero_of_le (ENNReal.one_le_inv.2 hR), nonpos_iff_eq_zero,
     ENNReal.rpow_eq_zero_iff_of_pos two_pos] at htv
-  exact evalDist_ne_discreteGaussianMeasure _ h0 0 (Measure.etvDist_eq_zero_iff.1 htv)
+  exact evalDist_ne_discreteGaussianMeasure _ h0 0 (Measure.statEDist_eq_zero_iff.1 htv)
 
-/-- **Sampler quality gives the envelope**: total variation is at most
-`(1 - (1 + ε)⁻¹)^(1/2)` (`etvDist_rpow_two_le_one_sub_inv_renyiDiv`), and the ideal Gaussian
+/-- **Sampler quality gives the envelope**: the statistical distance is at most
+`(1 - (1 + ε)⁻¹)^(1/2)` (`statEDist_rpow_two_le_one_sub_inv_renyiDiv`), and the ideal Gaussian
 meets the envelope with no slack. -/
 theorem Primitives.samplerEnvelope_of_samplerQuality {p : Params} (prims : Primitives p)
     {a : ℝ} {ε : ℝ≥0∞} (hq : prims.SamplerQuality a ε)
@@ -156,16 +156,16 @@ theorem Primitives.samplerEnvelope_of_samplerQuality {p : Params} (prims : Primi
   have := isProbabilityMeasure_discreteGaussianMeasure σ' μ hσ0
   set P : Measure ℤ := 𝒟[prims.samplerZ μ σ']
   set Q := discreteGaussianMeasure σ' μ
-  have htv : P.etvDist Q ≤ (1 - (1 + ε)⁻¹) ^ (1 / 2 : ℝ) := by
-    have h2 := (etvDist_rpow_two_le_one_sub_inv_renyiDiv hq.one_lt P Q).trans
+  have htv : P.statEDist Q ≤ (1 - (1 + ε)⁻¹) ^ (1 / 2 : ℝ) := by
+    have h2 := (statEDist_rpow_two_le_one_sub_inv_renyiDiv hq.one_lt P Q).trans
       (tsub_le_tsub_left (ENNReal.inv_le_inv.2 (hq.renyiDiv_le μ σ' hσ' hσ'')) 1)
-    calc P.etvDist Q = (P.etvDist Q ^ (2 : ℝ)) ^ (1 / 2 : ℝ) := by
+    calc P.statEDist Q = (P.statEDist Q ^ (2 : ℝ)) ^ (1 / 2 : ℝ) := by
           rw [← ENNReal.rpow_mul]; norm_num
       _ ≤ _ := ENNReal.rpow_le_rpow h2 (by norm_num)
   rw [prEvent_eq_evalDist_singleton]
-  calc P {v} ≤ Q {v} + P.etvDist Q :=
+  calc P {v} ≤ Q {v} + P.statEDist Q :=
         (ENNReal.absDiff_le_iff.1
-          (Measure.absDiff_apply_le_etvDist P Q (measurableSet_singleton v))).1
+          (Measure.absDiff_apply_le_statEDist P Q (measurableSet_singleton v))).1
     _ ≤ _ := add_le_add (discreteGaussianMeasure_singleton_le σ' μ hσ0 h1 v) htv
 
 /-! ## Injectivity of the merge step and of the leaf packing -/

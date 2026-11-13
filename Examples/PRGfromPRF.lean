@@ -551,7 +551,7 @@ theorem prfIdealGap_le_collisionProb (adv : PRGAdversary (List.Vector O n)) :
   rw [prfIdealExperiment_prfReduction_eq adv, prgIdealExperiment_eq_bind adv]
   calc 𝒟[idealOutputs n >>= adv].boolDist 𝒟[($ᵗ (List.Vector O n)) >>= adv]
       ≤ measureETVDist (idealOutputs n >>= adv) (($ᵗ (List.Vector O n)) >>= adv) :=
-        Measure.absDiff_apply_le_etvDist _ _ (measurableSet_singleton true)
+        Measure.absDiff_apply_le_statEDist _ _ (measurableSet_singleton true)
     _ ≤ measureETVDist (idealOutputs n) ($ᵗ (List.Vector O n)) :=
         measureETVDist_bind_le _ _ _ Measurable.of_discrete
     _ ≤ collisionProb (S := S) (O := O) n := measureETVDist_idealOutputs_le_collisionProb
