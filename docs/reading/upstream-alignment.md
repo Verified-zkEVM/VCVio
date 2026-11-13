@@ -779,7 +779,10 @@ ML-DSA uses nested-`Vector` `matVecMul`; `PolyMatrix.toMatrix` exists but no pro
 6. Poisson summation `Real.tsum_exp_neg_mul_int_sq` (`M:Analysis/SpecialFunctions/Gaussian/PoissonSummation.lean:123`)
    / `jacobiTheta₂` give the exact theta form of `discreteGaussianSum`, replacing the 106-line
    `le_discreteGaussianSum` (`V:LatticeCrypto/DiscreteGaussian.lean:216–321`) without its `−1` loss and
-   opening the deferred smoothing-parameter bound.
+   opening the deferred smoothing-parameter bound. `discreteGaussianSum_eq_jacobiTheta₂` proves the theta
+   form through `Complex.tsum_exp_neg_quadratic` (the real lemma is centered at `0`), and
+   `abs_discreteGaussianSum_sub_le` the two-sided bound `|∑ρ - σ√(2π)| ≤ σ√(2π) · 2e^{-2π²σ²} / (1 - e^{-2π²σ²})`;
+   `le_discreteGaussianSum` keeps its statement and follows from it.
 7. Pick one matrix convention (Mathlib literature: column `A *ᵥ x`) and route ML-DSA's `TqMatrix`
    through `PolyMatrix.toMatrix` so `mulVec_add`/`mulVec_sub` replace the `Vector`-induction proofs
    (`Transform.lean:306–346`).
@@ -959,7 +962,7 @@ audit before deletion (see Method).
 | 4 duplicates | this PR (#632) | |
 | 5 lattice | #634 | reviewed and queued; includes the explicit modulus-zero behavior change |
 | 9 hygiene | #647 (C1), #648 (C2) | merged; #648 retains the necessary ML-DSA/ML-KEM equality instances and adds an `Option.elim` measurability lemma |
-| 10 design track | #650 (transparency policy + expose ratchet), #651 (selective-expose pilot), #653 (program-logic) | all merged; cost-layer unification, Poisson summation, and matrix conventions remain open |
+| 10 design track | #650 (transparency policy + expose ratchet), #651 (selective-expose pilot), #653 (program-logic) | all merged; cost-layer unification and matrix conventions remain open; Poisson summation is `discreteGaussianSum_eq_jacobiTheta₂` |
 | tooling | #649 (SHA pins, dependabot, templates), Track A PR (drivers, `check-imports.sh`, dead scripts, options) | `CODEOWNERS` was dropped on review: routing files are boilerplate for a small team |
 | gates | #641 | merged; tactic contract and test warnings are checked, with detailed policy in `docs/agents/probability.md` |
 
