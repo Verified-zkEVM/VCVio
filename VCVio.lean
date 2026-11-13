@@ -224,6 +224,8 @@ public import VCVio.CryptoFoundations.MerkleTree.Salted.HalfPreimage
 public import VCVio.CryptoFoundations.MerkleTree.Salted.Instability
 public import VCVio.CryptoFoundations.PRF
 public import VCVio.CryptoFoundations.PRF.HiddenBit
+public import VCVio.CryptoFoundations.PRF.ProjectedQueries
+public import VCVio.CryptoFoundations.PRF.QuerySimulation
 public import VCVio.CryptoFoundations.PRG
 public import VCVio.CryptoFoundations.ReplayFork
 public import VCVio.CryptoFoundations.ReplayForkCost
@@ -266,6 +268,7 @@ public import VCVio.CryptoFoundations.SymmEncAlg.Defs
 public import VCVio.CryptoFoundations.SymmEncAlg.Deterministic
 public import VCVio.CryptoFoundations.SymmEncAlg.Measure
 public import VCVio.CryptoFoundations.SymmEncAlg.OneTimeINDCPA
+public import VCVio.CryptoFoundations.SyncSignatureAlg.PRFSimulation
 public import VCVio.CryptoFoundations.TimeLockPuzzle
 public import VCVio.CryptoFoundations.TimeLockPuzzle.Encoding
 public import VCVio.CryptoFoundations.TimeLockPuzzle.Hiding
