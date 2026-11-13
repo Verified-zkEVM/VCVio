@@ -136,7 +136,7 @@ theorem advantage_pure_uniform (bit : Bool) :
 theorem advantage_false_true :
     advantage (server (pure false)) (server (pure true)) (context 5) = 1 := by
   rw [advantage_eq_etvDist, law_server_pure, law_server_pure]
-  exact Measure.etvDist_dirac_of_ne (by decide)
+  exact Measure.etvDist_dirac_dirac_of_ne (by decide)
 
 /-- Reusing a positive error threshold under transitivity is unsound even for actual networks. -/
 theorem fixed_error_not_transitive :

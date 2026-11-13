@@ -7,7 +7,7 @@ Authors: Devon Tuma, Quang Dao
 module
 
 public import ToMathlib.Data.ENNReal.AbsDiff
-public import Mathlib.MeasureTheory.Measure.Dirac.Basic
+public import Mathlib.MeasureTheory.MeasurableSpace.CountablyGenerated
 public import Mathlib.MeasureTheory.Measure.Map
 public import Mathlib.MeasureTheory.Measure.Sub
 public import Mathlib.MeasureTheory.Measure.Typeclasses.Finite
@@ -103,9 +103,9 @@ theorem etvDist_ne_top (μ ν : Measure α)
 /-- Dirac measures at distinct points of a space whose measurable sets separate points are at
 extended TV one: a measurable set containing the first point and not the second carries all of
 one measure and none of the other. -/
-theorem etvDist_dirac_of_ne [MeasurableSpace.SeparatesPoints α] {a b : α} (h : a ≠ b) :
+theorem etvDist_dirac_dirac_of_ne [MeasurableSpace.SeparatesPoints α] {a b : α} (h : a ≠ b) :
     (dirac a).etvDist (dirac b) = 1 := by
-  obtain ⟨s, hs, ha, hb⟩ := dirac_ne_dirac_iff_exists_measurableSet.mp (dirac_ne_dirac h)
+  obtain ⟨s, hs, ha, hb⟩ := MeasurableSpace.exists_measurableSet_of_ne h
   refine le_antisymm (etvDist_le_one _ _ (by simp) (by simp)) ?_
   have := absDiff_apply_le_etvDist (dirac a) (dirac b) hs
   simpa [dirac_apply' _ hs, ha, hb, ENNReal.absDiff] using this
@@ -177,9 +177,9 @@ theorem tvDist_eq_zero_iff (μ ν : Measure α)
 
 /-- Dirac measures at distinct points of a space whose measurable sets separate points are at
 TV one. -/
-theorem tvDist_dirac_of_ne [MeasurableSpace.SeparatesPoints α] {a b : α} (h : a ≠ b) :
+theorem tvDist_dirac_dirac_of_ne [MeasurableSpace.SeparatesPoints α] {a b : α} (h : a ≠ b) :
     (dirac a).tvDist (dirac b) = 1 := by
-  simp [Measure.tvDist, etvDist_dirac_of_ne h]
+  simp [Measure.tvDist, etvDist_dirac_dirac_of_ne h]
 
 theorem tvDist_map_le (μ ν : Measure α) (f : α → β) (hf : Measurable f)
     (hμ : μ Set.univ ≤ 1) (hν : ν Set.univ ≤ 1) :
