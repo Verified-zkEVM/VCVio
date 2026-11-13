@@ -235,3 +235,17 @@ theorem prEvent_bind_bind_swap_of_countable_left {m : Type → Type v} [Monad m]
   simp only [← bind_pure_comp]
   exact congrArg (· {True}) <| evalDist_bind_bind_swap mx my (fun a b ↦ pure (p a b))
     (measurable_from_prod_countable_right fun _ ↦ Measurable.of_discrete)
+
+/-- Independent draws commute in front of a common continuation when the first one has a countable
+output type. The other output types are arbitrary and need no measurable structure. -/
+theorem prEvent_bind_bind_swap_of_countable {m : Type → Type v} [Monad m] [LawfulMonad m]
+    [EvalDistSemantics m] [LawfulEvalDistSemantics m] {α β γ : Type} [Countable α] (mx : m α)
+    (my : m β) (f : α → β → m γ) (q : γ → Prop) :
+    Pr{let c ← mx >>= fun a => my >>= fun b => f a b}[q c] =
+      Pr{let c ← my >>= fun b => mx >>= fun a => f a b}[q c] := by
+  let _ : MeasurableSpace α := ⊤
+  let _ : MeasurableSpace β := ⊤
+  let _ : MeasurableSpace γ := ⊤
+  rw [prEvent_eq_evalDist_of_discrete, prEvent_eq_evalDist_of_discrete,
+    evalDist_bind_bind_swap mx my f
+      (measurable_from_prod_countable_right fun _ ↦ Measurable.of_discrete)]
