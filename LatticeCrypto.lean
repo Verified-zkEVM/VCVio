@@ -5,6 +5,8 @@ public import LatticeCrypto.DiscreteGaussian.RenyiShift
 public import LatticeCrypto.DiscreteGaussian.SubGaussian
 public import LatticeCrypto.DiscreteGaussian.ThetaTail
 public import LatticeCrypto.Falcon.Arithmetic
+public import LatticeCrypto.Falcon.BasisCoords
+public import LatticeCrypto.Falcon.BasisMoments
 public import LatticeCrypto.Falcon.Concrete.BigInt31
 public import LatticeCrypto.Falcon.Concrete.Encoding
 public import LatticeCrypto.Falcon.Concrete.FPR
@@ -21,6 +23,7 @@ public import LatticeCrypto.Falcon.FFTStages
 public import LatticeCrypto.Falcon.FFTStagesL2
 public import LatticeCrypto.Falcon.FixedPoint.Arith
 public import LatticeCrypto.Falcon.FixedPoint.FFT
+public import LatticeCrypto.Falcon.GuessBound
 public import LatticeCrypto.Falcon.PackedFFT
 public import LatticeCrypto.Falcon.Params
 public import LatticeCrypto.Falcon.Precision
@@ -30,6 +33,7 @@ public import LatticeCrypto.Falcon.PrecisionTrueTree
 public import LatticeCrypto.Falcon.Primitives
 public import LatticeCrypto.Falcon.SISBridge
 public import LatticeCrypto.Falcon.SamplerMinEntropy
+public import LatticeCrypto.Falcon.SamplerTransfer
 public import LatticeCrypto.Falcon.Scheme
 public import LatticeCrypto.Falcon.Security
 public import LatticeCrypto.HardnessAssumptions.LearningWithErrors

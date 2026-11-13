@@ -218,9 +218,12 @@ theorem advantage_le_ntruSISProblemKeyed
 /-! ## The EUF-CMA bound in NTRU-SIS terms -/
 
 /-- **Conditional EUF-CMA bound for the idealized Falcon rejection-loop signer, in keyed NTRU-SIS
-terms.**  Conditional, and not below one at Falcon's parameters with what is proved so far: the only
-guessing bound proved is `εpp = 1` (`Falcon.idealSamplerGuessBound_one`), and no `ε_step` is proved
-for Falcon's floating-point sampler. `LatticeCryptoTest.Falcon.NonVacuity` discharges every
+terms.**  Conditional, and not below one at Falcon's parameters with what is proved in this file
+and `LatticeCrypto.Falcon.Security`: the only guessing bound proved there is `εpp = 1`
+(`Falcon.idealSamplerGuessBound_one`), and no `ε_step` is proved for Falcon's floating-point
+sampler. `LatticeCrypto.Falcon.GuessBound` bounds the terms of
+`Falcon.euf_cma_collision_security` other than the collision term below one at Falcon's
+parameters. `LatticeCryptoTest.Falcon.NonVacuity` discharges every
 hypothesis jointly at a toy key, at `εpp = 1`.
 
 For an adversary against the rejection-loop signer obeying the query bound `(qSign, qHash)`, under

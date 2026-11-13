@@ -225,15 +225,16 @@ inverse of the Hermitian matrix `[[x, z], [conj z, y]]`. -/
 @[expose] noncomputable def slotQ (x y : ℝ) (z a b : ℂ) : ℝ :=
   (y * ‖a‖ ^ 2 + x * ‖b‖ ^ 2 - 2 * (conj b * conj z * a).re) / (x * y - ‖z‖ ^ 2)
 
-private theorem norm_sq_eq (w : ℂ) : ‖w‖ ^ 2 = w.re ^ 2 + w.im ^ 2 := by
+/-- `‖w‖² = (Re w)² + (Im w)²`. -/
+theorem _root_.Complex.sq_norm_eq_re_sq_add_im_sq (w : ℂ) : ‖w‖ ^ 2 = w.re ^ 2 + w.im ^ 2 := by
   rw [Complex.sq_norm, Complex.normSq_apply]; ring
 
 /-- The trace bound: `‖a‖² + ‖b‖² ≤ (x + y) · slotQ`. -/
 theorem norm_sq_add_le_slotQ {x y : ℝ} {z : ℂ} (hD : 0 < x * y - ‖z‖ ^ 2) (a b : ℂ) :
     ‖a‖ ^ 2 + ‖b‖ ^ 2 ≤ (x + y) * slotQ x y z a b := by
   rw [slotQ, mul_div_assoc', le_div_iff₀ hD]
-  rw [norm_sq_eq] at hD ⊢
-  rw [norm_sq_eq, norm_sq_eq]
+  rw [Complex.sq_norm_eq_re_sq_add_im_sq] at hD ⊢
+  rw [Complex.sq_norm_eq_re_sq_add_im_sq, Complex.sq_norm_eq_re_sq_add_im_sq]
   simp only [Complex.mul_re, Complex.mul_im, Complex.conj_re, Complex.conj_im]
   nlinarith [sq_nonneg (y * a.re - (z.re * b.re - z.im * b.im)),
     sq_nonneg (y * a.im - (z.re * b.im + z.im * b.re)),
@@ -253,8 +254,9 @@ theorem slotQ_eq_ldl {x y : ℝ} {z : ℂ} (hx : 0 < x) (hD : 0 < x * y - ‖z�
     slotQ x y z a b = ‖a‖ ^ 2 / x + ‖b - conj (z / (x : ℂ)) * a‖ ^ 2 / (y - ‖z‖ ^ 2 / x) := by
   have hd : y - ‖z‖ ^ 2 / x = (x * y - ‖z‖ ^ 2) / x := by field_simp
   rw [hd, slotQ]
-  rw [norm_sq_eq] at hD ⊢
-  rw [norm_sq_eq, norm_sq_eq, norm_sq_eq]
+  rw [Complex.sq_norm_eq_re_sq_add_im_sq] at hD ⊢
+  rw [Complex.sq_norm_eq_re_sq_add_im_sq, Complex.sq_norm_eq_re_sq_add_im_sq,
+    Complex.sq_norm_eq_re_sq_add_im_sq]
   have hx' : (x : ℂ) ≠ 0 := by exact_mod_cast hx.ne'
   simp only [map_div₀, Complex.conj_ofReal, Complex.sub_re, Complex.sub_im, Complex.mul_re,
     Complex.mul_im, Complex.conj_re, Complex.conj_im, Complex.div_re, Complex.div_im,
@@ -272,7 +274,7 @@ theorem slotQ_split {x₀ x₁ : ℝ} (h₀ : 0 < x₀) (h₁ : 0 < x₁) {ω : 
     (e₀ e₁ : ℂ) :
     ‖e₀‖ ^ 2 / x₀ + ‖e₁‖ ^ 2 / x₁ = slotQ ((x₀ + x₁) / 2) ((x₀ + x₁) / 2)
       (conj (conj ω * (((x₀ - x₁) / 2 : ℝ) : ℂ))) (e₀ + e₁) (conj ω * (e₀ - e₁)) / 2 := by
-  have hω2 : ω.re ^ 2 + ω.im ^ 2 = 1 := by rw [← norm_sq_eq, hω, one_pow]
+  have hω2 : ω.re ^ 2 + ω.im ^ 2 = 1 := by rw [← Complex.sq_norm_eq_re_sq_add_im_sq, hω, one_pow]
   have hB : ‖conj (conj ω * (((x₀ - x₁) / 2 : ℝ) : ℂ))‖ ^ 2 = ((x₀ - x₁) / 2) ^ 2 := by
     rw [Complex.norm_conj, norm_mul, Complex.norm_conj, hω, one_mul, Complex.norm_real,
       Real.norm_eq_abs, sq_abs]
@@ -280,14 +282,16 @@ theorem slotQ_split {x₀ x₁ : ℝ} (h₀ : 0 < x₀) (h₁ : 0 < x₁) {ω : 
     rw [norm_mul, Complex.norm_conj, hω, one_mul]
   have hR : (conj (conj ω * (e₀ - e₁)) * conj (conj (conj ω * (((x₀ - x₁) / 2 : ℝ) : ℂ))) *
       (e₀ + e₁)).re = (x₀ - x₁) / 2 * (‖e₀‖ ^ 2 - ‖e₁‖ ^ 2) := by
-    rw [Complex.conj_conj, norm_sq_eq, norm_sq_eq]
+    rw [Complex.conj_conj, Complex.sq_norm_eq_re_sq_add_im_sq, Complex.sq_norm_eq_re_sq_add_im_sq]
     simp only [map_mul, map_sub, Complex.conj_conj, Complex.mul_re, Complex.mul_im,
       Complex.conj_re, Complex.conj_im, Complex.sub_re, Complex.sub_im, Complex.add_re,
       Complex.add_im, Complex.ofReal_re, Complex.ofReal_im]
     linear_combination (x₀ - x₁) / 2 * (e₀.re ^ 2 + e₀.im ^ 2 - e₁.re ^ 2 - e₁.im ^ 2) * hω2
   rw [slotQ, hB, hb, hR]
   have hD : (x₀ + x₁) / 2 * ((x₀ + x₁) / 2) - ((x₀ - x₁) / 2) ^ 2 = x₀ * x₁ := by ring
-  rw [hD, norm_sq_eq (e₀ + e₁), norm_sq_eq (e₀ - e₁), norm_sq_eq e₀, norm_sq_eq e₁]
+  rw [hD, Complex.sq_norm_eq_re_sq_add_im_sq (e₀ + e₁),
+    Complex.sq_norm_eq_re_sq_add_im_sq (e₀ - e₁), Complex.sq_norm_eq_re_sq_add_im_sq e₀,
+    Complex.sq_norm_eq_re_sq_add_im_sq e₁]
   simp only [Complex.add_re, Complex.add_im, Complex.sub_re, Complex.sub_im]
   field_simp
   ring
@@ -443,7 +447,8 @@ theorem devVar_leaf_slotForm (σ : ℝ) (a b : Fin (2 ^ 0) → ℂ) :
     simp only [leafPair, RealFFTPoly.coord_pack, Vector.get_ofFn, Complex.add_re,
       Complex.mul_re, Complex.conj_re, Complex.conj_im]
     ring
-  rw [FalconTree.devVar, hw, hw, hw, hw, norm_sq_eq, norm_sq_eq]
+  rw [FalconTree.devVar, hw, hw, hw, hw, Complex.sq_norm_eq_re_sq_add_im_sq,
+    Complex.sq_norm_eq_re_sq_add_im_sq]
   ring
 
 /-- **Variance proxies of ffLDL⋆ trees**: for a positive Gram matrix, the variance proxy of a slot
@@ -608,11 +613,12 @@ theorem ntru_coord (hn : 2 * 2 ^ p.fftDepth = p.n) (sk : SecretKey p)
 private theorem lagrange (f g F G : ℂ) :
     (‖g‖ ^ 2 + ‖f‖ ^ 2) * (‖G‖ ^ 2 + ‖F‖ ^ 2) - ‖G * conj g + F * conj f‖ ^ 2 =
       ‖f * G - g * F‖ ^ 2 := by
-  simp only [norm_sq_eq, Complex.add_re, Complex.add_im, Complex.sub_re, Complex.sub_im,
-    Complex.mul_re, Complex.mul_im, Complex.conj_re, Complex.conj_im]
+  simp only [Complex.sq_norm_eq_re_sq_add_im_sq, Complex.add_re, Complex.add_im, Complex.sub_re,
+    Complex.sub_im, Complex.mul_re, Complex.mul_im, Complex.conj_re, Complex.conj_im]
   ring
 
-private theorem coord_mul_adj_add {κ' : ℕ} (u v : RealFFTPoly κ') (j : Fin (2 ^ κ')) :
+/-- Slot `j` of `u u⋆ + v v⋆` is `‖u_j‖² + ‖v_j‖²`. -/
+theorem RealFFTPoly.coord_mulFFT_adjFFT_add {κ' : ℕ} (u v : RealFFTPoly κ') (j : Fin (2 ^ κ')) :
     RealFFTPoly.coord (Primitives.mulFFT u (RealFFTPoly.adjFFT u) +
         Primitives.mulFFT v (RealFFTPoly.adjFFT v)) j =
       ((‖RealFFTPoly.coord u j‖ ^ 2 + ‖RealFFTPoly.coord v j‖ ^ 2 : ℝ) : ℂ) := by
@@ -621,6 +627,45 @@ private theorem coord_mul_adj_add {κ' : ℕ} (u v : RealFFTPoly κ') (j : Fin (
     Complex.normSq_eq_norm_sq, Complex.normSq_eq_norm_sq]
   push_cast
   ring
+
+/-- **The Gram matrix of an NTRU basis is positive**: every slot has determinant `q²`
+(`ntru_coord`). -/
+theorem posGram_gramFFT (hn : 2 * 2 ^ p.fftDepth = p.n) (sk : SecretKey p)
+    (hntru : ntruEquation p sk.f sk.g sk.capF sk.capG) :
+    PosGram (gramFFT p sk).1 (gramFFT p sk).2.1 (gramFFT p sk).2.2 := by
+  set g := Primitives.exactFftInt p sk.g
+  set f := Primitives.exactFftInt p sk.f
+  set G := Primitives.exactFftInt p sk.capG
+  set F := Primitives.exactFftInt p sk.capF
+  set q : ℝ := ((modulus : ℕ) : ℝ)
+  have hq : 0 < q := by simp only [q]; norm_num [modulus]
+  have hgram : gramFFT p sk =
+      (Primitives.mulFFT g (RealFFTPoly.adjFFT g) + Primitives.mulFFT f (RealFFTPoly.adjFFT f),
+        Primitives.mulFFT G (RealFFTPoly.adjFFT g) + Primitives.mulFFT F (RealFFTPoly.adjFFT f),
+        Primitives.mulFFT G (RealFFTPoly.adjFFT G) + Primitives.mulFFT F (RealFFTPoly.adjFFT F)) :=
+    rfl
+  intro j
+  set x : ℝ := ‖RealFFTPoly.coord g j‖ ^ 2 + ‖RealFFTPoly.coord f j‖ ^ 2
+  set y : ℝ := ‖RealFFTPoly.coord G j‖ ^ 2 + ‖RealFFTPoly.coord F j‖ ^ 2
+  have h00 : RealFFTPoly.coord (gramFFT p sk).1 j = (x : ℂ) := by
+    rw [hgram]; exact RealFFTPoly.coord_mulFFT_adjFFT_add g f j
+  have h11 : RealFFTPoly.coord (gramFFT p sk).2.2 j = (y : ℂ) := by
+    rw [hgram]; exact RealFFTPoly.coord_mulFFT_adjFFT_add G F j
+  have h10 : RealFFTPoly.coord (gramFFT p sk).2.1 j =
+      RealFFTPoly.coord G j * conj (RealFFTPoly.coord g j) +
+        RealFFTPoly.coord F j * conj (RealFFTPoly.coord f j) := by
+    rw [hgram, RealFFTPoly.coord_add, RealFFTPoly.coord_mulFFT, RealFFTPoly.coord_mulFFT,
+      RealFFTPoly.coord_adjFFT, RealFFTPoly.coord_adjFFT]
+  have hD : x * y - ‖RealFFTPoly.coord (gramFFT p sk).2.1 j‖ ^ 2 = q ^ 2 := by
+    rw [h10, lagrange, ntru_coord hn sk hntru j, Complex.norm_natCast]
+  rw [h00, h11, Complex.ofReal_im, Complex.ofReal_im, Complex.ofReal_re, Complex.ofReal_re]
+  have hx0 : 0 ≤ x := by positivity
+  have hy0 : 0 ≤ y := by positivity
+  have hq2 : 0 < q ^ 2 := by positivity
+  refine ⟨rfl, rfl, ?_, by nlinarith⟩
+  rcases hx0.lt_or_eq with h | h
+  · exact h
+  · rw [← h] at hD; nlinarith [sq_nonneg ‖RealFFTPoly.coord (gramFFT p sk).2.1 j‖]
 
 /-- **Variance proxies under the true tree.** For a key satisfying the NTRU equation whose tree is
 the true tree, coefficient `i` of the first polynomial of `t - z` has variance proxy at most
@@ -638,7 +683,6 @@ theorem devVar_trueTree_le (hn : 2 * 2 ^ p.fftDepth = p.n) (sk : SecretKey p)
   set G := Primitives.exactFftInt p sk.capG
   set F := Primitives.exactFftInt p sk.capF
   set q : ℝ := ((modulus : ℕ) : ℝ)
-  have hq : 0 < q := by simp only [q]; norm_num [modulus]
   have hgram : gramFFT p sk =
       (Primitives.mulFFT g (RealFFTPoly.adjFFT g) + Primitives.mulFFT f (RealFFTPoly.adjFFT f),
         Primitives.mulFFT G (RealFFTPoly.adjFFT g) + Primitives.mulFFT F (RealFFTPoly.adjFFT f),
@@ -649,9 +693,9 @@ theorem devVar_trueTree_le (hn : 2 * 2 ^ p.fftDepth = p.n) (sk : SecretKey p)
   set y : Fin (2 ^ p.fftDepth) → ℝ := fun j =>
     ‖RealFFTPoly.coord G j‖ ^ 2 + ‖RealFFTPoly.coord F j‖ ^ 2
   have h00 : ∀ j, RealFFTPoly.coord (gramFFT p sk).1 j = (x j : ℂ) := fun j => by
-    rw [hgram]; exact coord_mul_adj_add g f j
+    rw [hgram]; exact RealFFTPoly.coord_mulFFT_adjFFT_add g f j
   have h11 : ∀ j, RealFFTPoly.coord (gramFFT p sk).2.2 j = (y j : ℂ) := fun j => by
-    rw [hgram]; exact coord_mul_adj_add G F j
+    rw [hgram]; exact RealFFTPoly.coord_mulFFT_adjFFT_add G F j
   have h10 : ∀ j, RealFFTPoly.coord (gramFFT p sk).2.1 j =
       RealFFTPoly.coord G j * conj (RealFFTPoly.coord g j) +
         RealFFTPoly.coord F j * conj (RealFFTPoly.coord f j) := fun j => by
@@ -659,16 +703,7 @@ theorem devVar_trueTree_le (hn : 2 * 2 ^ p.fftDepth = p.n) (sk : SecretKey p)
       RealFFTPoly.coord_adjFFT, RealFFTPoly.coord_adjFFT]
   have hD : ∀ j, x j * y j - ‖RealFFTPoly.coord (gramFFT p sk).2.1 j‖ ^ 2 = q ^ 2 := fun j => by
     rw [h10, lagrange, ntru_coord hn sk hntru j, Complex.norm_natCast]
-  have hpos : PosGram (gramFFT p sk).1 (gramFFT p sk).2.1 (gramFFT p sk).2.2 := fun j => by
-    rw [h00, h11, Complex.ofReal_im, Complex.ofReal_im, Complex.ofReal_re, Complex.ofReal_re]
-    have hx0 : 0 ≤ x j := by positivity
-    have hy0 : 0 ≤ y j := by positivity
-    have hDj := hD j
-    have hq2 : 0 < q ^ 2 := by positivity
-    refine ⟨rfl, rfl, ?_, by nlinarith⟩
-    rcases hx0.lt_or_eq with h | h
-    · exact h
-    · rw [← h] at hDj; nlinarith [sq_nonneg ‖RealFFTPoly.coord (gramFFT p sk).2.1 j‖]
+  have hpos := posGram_gramFFT hn sk hntru
   have hρ := ffLDLLeafRatio_nonneg p.fftDepth _ _ _ hpos
   have hpars : ∀ u : IntPoly p.n, ∑ j, ‖RealFFTPoly.coord (Primitives.exactFftInt p u) j‖ ^ 2 ≤
       2 ^ p.fftDepth * ∑ j, (u.get j : ℝ) ^ 2 := fun u => by

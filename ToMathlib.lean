@@ -80,6 +80,7 @@ public import ToMathlib.Probability.Kernel.Quadratic
 public import ToMathlib.Probability.Kernel.Subprobability
 public import ToMathlib.Probability.Kernel.TotalVariation
 public import ToMathlib.Probability.NegativeHypergeometric
+public import ToMathlib.Probability.SecondMoment
 public import ToMathlib.Probability.TailSums
 public import ToMathlib.Probability.UniformOn
 public import ToMathlib.ProbabilityTheory.FinRatPMF

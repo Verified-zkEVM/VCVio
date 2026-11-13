@@ -64,17 +64,21 @@ discharges the exact-match branch by the ideal sampler's guessing bound `idealSa
 
 ## What the bounds give at Falcon's parameters
 
-Every headline here is conditional, and with what is proved so far none is below one at
-Falcon's parameters:
+Every headline here is conditional, and with what is proved in this file none is below one at
+Falcon's parameters. `LatticeCrypto.Falcon.GuessBound` bounds the terms of
+`euf_cma_collision_security` other than the collision term below one at Falcon's parameters
+(`falcon512_non_sis_terms_lt_one`, `falcon1024_non_sis_terms_lt_one`), conditional on exact FFT
+fields, a Rényi sampler law and honest keys:
 
-- **Exact-match term.** The only guessing bound proved is `εpp = 1`
+- **Exact-match term.** The only guessing bound proved here is `εpp = 1`
   (`idealSamplerGuessBound_one`), at which the exact-match term of `euf_cma_collision_security`
   and `euf_cma_collision_security_ntruSIS` is `qSign + qHash + 1`.
   `LatticeCrypto.Falcon.SamplerMinEntropy` bounds the point mass of `ffSampling`'s output
-  before reduction modulo `q`; the bound for the reduced output is open.
+  before reduction modulo `q`; `LatticeCrypto.Falcon.GuessBound` bounds the reduced output of
+  the accept-conditional sampler (`idealSamplerGuessBound_acceptCond`).
 - **Sampler term.** No `ε_step` is proved for Falcon's floating-point sampler. `ε_step = 0` is
   reachable by taking Falcon's own attempt as the ideal one, which moves the precision question into
-  `hReg` and the guessing bound.
+  `hReg` and the guessing bound; `LatticeCrypto.Falcon.GuessBound` takes that route.
 
 `LatticeCryptoTest.Falcon.NonVacuity` instantiates the hypotheses of `euf_cma_security` at an NTRU
 key with a genuinely rejecting sampler, and those of `euf_cma_collision_security_ntruSIS` at
@@ -286,10 +290,12 @@ smoothing parameter of the lattice, so `εpp` is negligible at Falcon parameters
 output by the product over its `4 · 2^κ` leaf draws, since the merge steps are injective, and by
 `(1 / (σ_min √(2π) - 1)) ^ (4 · 2^κ)` under a leaf envelope. On honest keys only short
 preimages carry mass (`idealSamplerGuessBound_of_short`), and a short preimage determines the
-lattice point modulo `q` except for representatives at distance at least `q - β`. A bound on the
-mass of those far representatives, which would give a numeric `εpp` for the reduced output, is
-not formalized. The only proved instance is the trivial `εpp = 1`
-(`idealSamplerGuessBound_one`), since pointwise masses of any sampler are probabilities. -/
+lattice point modulo `q` except for representatives at distance at least `q - β`.
+`LatticeCrypto.Falcon.GuessBound` bounds the reduced output through the far event `BasisFar`
+(some coordinate of `(t - z) · B` at least `(q + 1) / 2`) and gives a numeric `εpp` for the
+accept-conditional sampler (`idealSamplerGuessBound_acceptCond`). In this file the only proved
+instance is the trivial `εpp = 1` (`idealSamplerGuessBound_one`), since pointwise masses of any
+sampler are probabilities. -/
 def idealSamplerGuessBound
     (hr : GenerableRelation (PublicKey p) (SecretKey p) (validKeyPair p))
     (idealPSF : PreimageSampleableFunction
@@ -443,8 +449,8 @@ theorem measureTVDist_falconRetryPSF_trapdoorSample_le
       (hRej pk sk hmem c) maxAttempts
 
 /-- **Conditional EUF-CMA bound for the idealized Falcon rejection-loop signer.** Conditional on
-the sampler hypotheses, and not below one at Falcon's parameters with what is proved so far (see
-*What the bounds give at Falcon's parameters* in the module docstring).
+the sampler hypotheses, and not below one at Falcon's parameters with what is proved in this
+file (see *What the bounds give at Falcon's parameters* in the module docstring).
 
 For any query-bounded adversary `A` against `falconRetrySignatureAlg`, the GPV reductions of `A`
 with its final verification query appended (`appendForgeQuery`), at the domain sampler
@@ -538,9 +544,10 @@ theorem euf_cma_security
   exact le_trans hAdvLe (by gcongr)
 
 /-- **Collision-only EUF-CMA security of the Falcon rejection-loop signer.**
-Conditional, and not below one at Falcon's parameters with what is proved so far: the only
-guessing bound proved is `εpp = 1` (`idealSamplerGuessBound_one`), at which the exact-match
-term is `qSign + qHash + 1`.
+Conditional, and not below one at Falcon's parameters with what is proved in this file: the only
+guessing bound proved here is `εpp = 1` (`idealSamplerGuessBound_one`), at which the exact-match
+term is `qSign + qHash + 1`. `LatticeCrypto.Falcon.GuessBound` bounds the terms other than the
+collision term below one (`falcon512_non_sis_terms_lt_one`, `falcon1024_non_sis_terms_lt_one`).
 `euf_cma_security` with the exact-match branch discharged by the ideal
 sampler's guessing-probability bound `hGuess`
 (`GPVHashAndSign.programmedPreimageAdvantage_le_of_prEvent_trapdoorSample_le`). -/
