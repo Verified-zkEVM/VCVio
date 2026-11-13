@@ -34,7 +34,7 @@ abbrev World := unifSpec + HashSpec Input Output
 repeated input from the cache. -/
 @[expose] noncomputable def impl :
     QueryImpl (World Input Output) (StateT (QueryCache (HashSpec Input Output)) ProbComp) :=
-  unifFwdImpl (HashSpec Input Output) +
+  unifFwdImpl (HashSpec Input Output) +ₛ
     (randomOracle : QueryImpl (HashSpec Input Output)
       (StateT (QueryCache (HashSpec Input Output)) ProbComp))
 

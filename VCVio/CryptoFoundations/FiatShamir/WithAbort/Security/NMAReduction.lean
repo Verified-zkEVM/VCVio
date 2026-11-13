@@ -51,7 +51,7 @@ variable (adv : SignatureAlg.UnforgeableAdversary
 
 The managed NMA run is a two-layer nested simulation: an *inner managed* handler
 `nmaOuterImpl pk` (forward uniform, managed-cache RO reads, simulator-loop signing) threads
-the inner cache, and an *outer runtime* handler `nmaInnerImpl` (`unifFwdImpl + randomOracle`)
+the inner cache, and an *outer runtime* handler `nmaInnerImpl` (`unifFwdImpl +ₛ randomOracle`)
 re-simulates the residual live queries. Their `link`, `nmaLinkImpl pk`, is the single
 combined simulation over the product cache that the per-step state-coupling projects onto.
 Naming the three handlers at top level lets the coupling be stated and proved against
@@ -102,7 +102,7 @@ lemma simulateQ_unifSim_run {α : Type}
 spec (`unifSim`), answer hash queries through the managed cache (`roSim`, forwarding misses
 to the live oracle), and answer signing queries with the simulator loop (`sigSim`), programming
 the accepted transcript's challenge into the managed cache. This is the
-`(unifSim + roSim) + sigSim` handler used inside `simulatedNmaAdv`. -/
+`(unifSim +ₛ roSim) +ₛ sigSim` handler used inside `simulatedNmaAdv`. -/
 noncomputable def nmaOuterImpl (pk : Stmt) :
     QueryImpl.Stateful (unifSpec + (M × Commit →ₒ Chal))
       ((unifSpec + (M × Commit →ₒ Chal)) + (M →ₒ Option (Commit × Resp)))
@@ -127,17 +127,17 @@ noncomputable def nmaOuterImpl (pk : Stmt) :
     | some (w, c, z) =>
         modifyGet fun cache => (some (w, z), cache.cacheQuery (.inr (msg, w)) c)
     | none => pure none
-  (unifSim + roSim) + sigSim
+  (unifSim +ₛ roSim) +ₛ sigSim
 
 /-- The outer *runtime* handler of the NMA reduction: forward uniform queries (`unifFwdImpl`)
 and answer the residual live random-oracle reads through the runtime's own random oracle
 (`randomOracle`), threading the outer cache. This is the
-`unifFwdImpl + randomOracle` handler that re-simulates the `.run ∅` boundary in
+`unifFwdImpl +ₛ randomOracle` handler that re-simulates the `.run ∅` boundary in
 `simulatedNmaAdv`. -/
 noncomputable def nmaInnerImpl :
     QueryImpl.Stateful unifSpec (unifSpec + (M × Commit →ₒ Chal))
       ((M × Commit →ₒ Chal).QueryCache) :=
-  unifFwdImpl (M × Commit →ₒ Chal) +
+  unifFwdImpl (M × Commit →ₒ Chal) +ₛ
     (randomOracle : QueryImpl (M × Commit →ₒ Chal)
       (StateT ((M × Commit →ₒ Chal).QueryCache) ProbComp))
 
@@ -364,7 +364,7 @@ private lemma hproj2_sign (pk : Stmt) (sk : Wit) (msg : M)
   -- Distribute the outer `simulateQ nmaInnerImpl` and `.run` over the bind, and collapse the
   -- lifted `firstSome` loop against `nmaInnerImpl`'s uniform-forwarding branch (`roSim`).
   rw [simulateQ_bind, StateT.run_bind, simulateQ_map, StateT.run_map]
-  rw [show nmaInnerImpl M = unifFwdImpl (M × Commit →ₒ Chal) +
+  rw [show nmaInnerImpl M = unifFwdImpl (M × Commit →ₒ Chal) +ₛ
       (randomOracle : QueryImpl (M × Commit →ₒ Chal)
         (StateT ((M × Commit →ₒ Chal).QueryCache) ProbComp)) from rfl,
     roSim.simulateQ_liftComp, unifFwdImpl.simulateQ_run]
@@ -533,7 +533,7 @@ with the managed cache, in the interface of `SignatureAlg.ManagedRoNmaAdversary`
     -- signed `(msg, w')` does not win through the programmed challenge, which is what
     -- makes the bridge to `SignatureAlg.eufNmaAdvantage` sound. Other programmed entries sit at
     -- different points and are never read by `verify`.
-    (simulateQ ((unifSim + roSim) + sigSim) (adv.main pk)).run ∅ >>= fun result =>
+    (simulateQ ((unifSim +ₛ roSim) +ₛ sigSim) (adv.main pk)).run ∅ >>= fun result =>
       let ((msg, σ), cache) := result
       let advCache : spec.QueryCache :=
         match σ with
@@ -608,7 +608,7 @@ lemma prEvent_hybridVerifyCont_le_managed_verify (pk : Stmt)
     Pr{let x ← (hybridVerifyCont ids hr M maxAttempts pk
         (ms, (overlayCache M base ghost, signed)))}[x = true] ≤
       Pr{let y ← ((fun x : Bool × _ => x.1) <$>
-        (simulateQ (unifFwdImpl (M × Commit →ₒ Chal) +
+        (simulateQ (unifFwdImpl (M × Commit →ₒ Chal) +ₛ
             (randomOracle : QueryImpl (M × Commit →ₒ Chal)
               (StateT ((M × Commit →ₒ Chal).QueryCache) ProbComp)))
           (withCacheOverlay
@@ -643,7 +643,7 @@ outer `randomOracle`), followed by overlay verification.
 The two presentations run the *same* adversary `adv.main pk` but thread the random-oracle
 cache through genuinely different layers:
 
-* the **hybrid** (`impl₁ := hybridBaseImpl + hybridSignImpl simSignBody`) keeps a *single*
+* the **hybrid** (`impl₁ := hybridBaseImpl +ₛ hybridSignImpl simSignBody`) keeps a *single*
   cache `(cache, signed)`, into which both live RO reads (`randomOracle`) and the signing
   simulation's accepted-transcript programming (`simSignBody` via `signProgramCont`) write;
 * the **managed reduction** (`simulatedNmaAdv.main`) keeps an *inner managed* cache threaded
@@ -665,15 +665,15 @@ out a stale read). Hence the per-forgery success of the hybrid tail is at most t
 overlay verification, and the bound follows. -/
 lemma hybridSimRun_le_managedRun_verify (pk : Stmt) (sk : Wit) :
     Pr{let x ← ((simulateQ
-          (hybridBaseImpl (Commit := Commit) (Chal := Chal) M +
+          (hybridBaseImpl (Commit := Commit) (Chal := Chal) M +ₛ
             hybridSignImpl M (simSignBody M maxAttempts sim pk sk))
           (adv.main pk)).run (∅, []) >>= hybridVerifyCont ids hr M maxAttempts pk)}[x = true] ≤
       Pr{let y ← ((fun x : Bool × _ => x.1) <$> do
-        let p ← (simulateQ (unifFwdImpl (M × Commit →ₒ Chal) +
+        let p ← (simulateQ (unifFwdImpl (M × Commit →ₒ Chal) +ₛ
             (randomOracle : QueryImpl (M × Commit →ₒ Chal)
               (StateT ((M × Commit →ₒ Chal).QueryCache) ProbComp)))
           ((simulatedNmaAdv ids hr M maxAttempts sim adv).main pk)).run ∅
-        (simulateQ (unifFwdImpl (M × Commit →ₒ Chal) +
+        (simulateQ (unifFwdImpl (M × Commit →ₒ Chal) +ₛ
             (randomOracle : QueryImpl (M × Commit →ₒ Chal)
               (StateT ((M × Commit →ₒ Chal).QueryCache) ProbComp)))
           (withCacheOverlay p.1.2 ((FiatShamirWithAbort ids hr M maxAttempts).verify
@@ -768,7 +768,7 @@ lemma hybridSimRun_le_managedRun_verify (pk : Stmt) (sk : Wit) :
       ((unifSpec + (M × Commit →ₒ Chal)).QueryCache × (M × Commit →ₒ Chal).QueryCache) →
       ProbComp Bool :=
     fun p => (fun x : Bool × _ => x.1) <$>
-      (simulateQ (unifFwdImpl (M × Commit →ₒ Chal) +
+      (simulateQ (unifFwdImpl (M × Commit →ₒ Chal) +ₛ
           (randomOracle : QueryImpl (M × Commit →ₒ Chal)
             (StateT ((M × Commit →ₒ Chal).QueryCache) ProbComp)))
         (withCacheOverlay
@@ -858,7 +858,7 @@ lemma hybridExp_sim_le_managedRun_perKey
     (hro : ro = randomOracle) (pk : Stmt) (sk : Wit) :
     Pr{let x ← (hybridExpAtKey ids hr M maxAttempts adv
         (simSignBody M maxAttempts sim pk sk) pk)}[x = true] ≤
-      Pr{let x ← ((simulateQ (unifFwdImpl (M × Commit →ₒ Chal) + ro)
+      Pr{let x ← ((simulateQ (unifFwdImpl (M × Commit →ₒ Chal) +ₛ ro)
         ((simulatedNmaAdv ids hr M maxAttempts sim adv).main pk >>= fun result =>
           withCacheOverlay result.2
             ((FiatShamirWithAbort ids hr M maxAttempts).verify
@@ -904,7 +904,7 @@ lemma prEvent_hybridExp_sim_le_managedRoNmaAdvantage :
   have hRHS : SignatureAlg.managedRoNmaAdvantage (runtime M)
         (simulatedNmaAdv ids hr M maxAttempts sim adv) =
       Pr{let x ← (hr.gen >>= fun pksk =>
-        (simulateQ (unifFwdImpl (M × Commit →ₒ Chal) + ro)
+        (simulateQ (unifFwdImpl (M × Commit →ₒ Chal) +ₛ ro)
           ((simulatedNmaAdv ids hr M maxAttempts sim adv).main pksk.1 >>= fun result =>
             withCacheOverlay result.2
               ((FiatShamirWithAbort ids hr M maxAttempts).verify
@@ -912,7 +912,7 @@ lemma prEvent_hybridExp_sim_le_managedRoNmaAdvantage :
     unfold SignatureAlg.managedRoNmaAdvantage SignatureAlg.managedRoNmaExperiment
     -- Expose the bundled `withStateOracle` semantics as a run-normal-form ProbComp.
     rw [runtime_evalDist_eq_simulateQ_run', ← prEvent_eq_evalDist_singleton]
-    change Pr{let x ← ((simulateQ (unifFwdImpl (M × Commit →ₒ Chal) + ro)
+    change Pr{let x ← ((simulateQ (unifFwdImpl (M × Commit →ₒ Chal) +ₛ ro)
         (do
           let (pk, _) ← (FiatShamirWithAbort ids hr M maxAttempts).keygen
           let result ← (simulatedNmaAdv ids hr M maxAttempts sim adv).main pk

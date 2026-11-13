@@ -84,10 +84,10 @@ private abbrev runImpl : QueryImpl (indexedSpec n S L Salt Ctx N K qEnc)
   (QueryImpl.ofLift unifSpec
           (OracleComp (PRFOracleSpec (Fin (2 * qEnc) × ByteArray) (Bytes 32)))).liftTarget
         (StateT (sealSpec n S L Salt Ctx N K).QueryCache
-          (OracleComp (PRFOracleSpec (Fin (2 * qEnc) × ByteArray) (Bytes 32)))) +
+          (OracleComp (PRFOracleSpec (Fin (2 * qEnc) × ByteArray) (Bytes 32)))) +ₛ
        ((sealSpec n S L Salt Ctx N K).randomOracle.liftTarget
           (StateT (sealSpec n S L Salt Ctx N K).QueryCache
-            (OracleComp (PRFOracleSpec (Fin (2 * qEnc) × ByteArray) (Bytes 32)))) +
+            (OracleComp (PRFOracleSpec (Fin (2 * qEnc) × ByteArray) (Bytes 32)))) +ₛ
         (fun x => liftM (functionQuery (R := Bytes 32) x) : QueryImpl (instanceSpec qEnc)
           (StateT (sealSpec n S L Salt Ctx N K).QueryCache
             (OracleComp (PRFOracleSpec (Fin (2 * qEnc) × ByteArray) (Bytes 32))))))
@@ -124,9 +124,9 @@ private abbrev challengerImpl (pz : ByteArray) (b : Bool) :
     QueryImpl (challengeSpec n S L Salt Ctx N K)
       (StateT ℕ (OracleComp (indexedSpec n S L Salt Ctx N K qEnc))) :=
   ((QueryImpl.ofLift unifSpec (OracleComp (indexedSpec n S L Salt Ctx N K qEnc))).liftTarget
-        (StateT ℕ (OracleComp (indexedSpec n S L Salt Ctx N K qEnc))) +
+        (StateT ℕ (OracleComp (indexedSpec n S L Salt Ctx N K qEnc))) +ₛ
       LeftOrRight.oracle (indexedEncrypt (n := n) (S := S) (L := L) (Salt := Salt) (Ctx := Ctx)
-        (K := K) codec qEnc pz) plaintextLength b) +
+        (K := K) codec qEnc pz) plaintextLength b) +ₛ
       (fun t => liftM ((indexedSpec n S L Salt Ctx N K qEnc).query (.inr (.inl t))) :
         QueryImpl (sealSpec n S L Salt Ctx N K)
           (StateT ℕ (OracleComp (indexedSpec n S L Salt Ctx N K qEnc))))
@@ -287,9 +287,9 @@ private def freshImpl (pz : ByteArray) (b : Bool) :
     QueryImpl (challengeSpec n S L Salt Ctx N K)
       (StateT (freshState n S L Salt Ctx N K) ProbComp) :=
   ((QueryImpl.ofLift unifSpec ProbComp).liftTarget
-        (StateT (freshState n S L Salt Ctx N K) ProbComp) +
+        (StateT (freshState n S L Salt Ctx N K) ProbComp) +ₛ
       LeftOrRight.oracle (freshEncrypt (n := n) (S := S) (L := L) (Salt := Salt) (Ctx := Ctx)
-        (K := K) codec qEnc pz) plaintextLength b) +
+        (K := K) codec qEnc pz) plaintextLength b) +ₛ
     (fun t => StateT.mk fun s =>
       (fun z => (z.1, (s.1, z.2))) <$> ((sealSpec n S L Salt Ctx N K).randomOracle t).run s.2 :
       QueryImpl (sealSpec n S L Salt Ctx N K) (StateT (freshState n S L Salt Ctx N K) ProbComp))

@@ -421,7 +421,7 @@ private theorem length_le_cap_of_stages
       (simulateQ (handlerAt rightKeep walk) keygen).run
         (startAt walk.2, (([], []), 0)) >>= fun keys =>
       (simulateQ (fuseServing (handlerAt rightKeep walk)
-        (recordedAdversaryImpl + recordedSigningOracle (Scheme.sign keys.1.1))
+        (recordedAdversaryImpl +ₛ recordedSigningOracle (Scheme.sign keys.1.1))
         ServedAgreement.startServingOn ServedAgreement.stopServingOn)
           (adversary.main keys.1.2)).run (1, [], keys.2) >>= fun middle =>
       (simulateQ (handlerAt rightKeep walk) (countRecorded verifierCost
@@ -508,7 +508,7 @@ private theorem le_cap_of_stages
       (simulateQ (handlerAt rightKeep walk) keygen).run
         (startAt walk.2, (([], []), 0)) >>= fun keys =>
       (simulateQ (fuseServing (handlerAt rightKeep walk)
-        (recordedAdversaryImpl + recordedSigningOracle (Scheme.sign keys.1.1))
+        (recordedAdversaryImpl +ₛ recordedSigningOracle (Scheme.sign keys.1.1))
         ServedAgreement.startServingOn ServedAgreement.stopServingOn)
           (adversary.main keys.1.2)).run (1, [], keys.2) >>= fun middle =>
       (simulateQ (handlerAt rightKeep walk) (countRecorded verifierCost

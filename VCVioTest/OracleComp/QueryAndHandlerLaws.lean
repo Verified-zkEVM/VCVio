@@ -53,7 +53,7 @@ example (draw : OptionT ProbComp Bool) {spec : OracleSpec ι}
       monadLift draw
     let idle : QueryImpl coinSpec (StateT ℕ (OptionT ProbComp)) := fun _ => pure false
     QueryImpl.PreservesInv
-      ((bump + idle).extendState (fun _ _ _ _ (count : ℕ) => count + 1) ∘ₛ forward)
+      ((bump +ₛ idle).extendState (fun _ _ _ _ (count : ℕ) => count + 1) ∘ₛ forward)
       (fun state => 0 < state.1) := by
   dsimp only
   apply QueryImpl.PreservesInv.compose

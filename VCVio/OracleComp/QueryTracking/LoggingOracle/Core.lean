@@ -284,12 +284,12 @@ theorem map_run_withLogging_inputs_eq_run_appendInputLog
       (HasQuery.toQueryImpl (spec := spec₀) (m := m₀)).liftTarget _
     let implW : QueryImpl (spec₀ + loggedSpec)
         (WriterT (QueryLog loggedSpec) m₀) :=
-      baseW + QueryImpl.withLogging so
+      baseW +ₛ QueryImpl.withLogging so
     let baseS : QueryImpl spec₀ (StateT (List loggedSpec.Domain) m₀) :=
       (HasQuery.toQueryImpl (spec := spec₀) (m := m₀)).liftTarget _
     let implAppend : QueryImpl (spec₀ + loggedSpec)
         (StateT (List loggedSpec.Domain) m₀) :=
-      baseS + appendInputLog so
+      baseS +ₛ appendInputLog so
     ((fun z : α' × QueryLog loggedSpec =>
         (z.1, initialInputs ++ z.2.map (fun e => e.1))) <$>
           ((simulateQ implW oa).run : m₀ (α' × QueryLog loggedSpec))) =
@@ -331,7 +331,7 @@ theorem exists_le_mem_support_run_of_mem_log_add_withLogging
     (oa : OracleComp (spec + sigSpec) α) {s₀ : σ} {z : (α × QueryLog sigSpec) × σ}
     (hz : z ∈ support ((simulateQ outer ((simulateQ
       ((HasQuery.toQueryImpl (spec := spec) (m := OracleComp spec)).liftTarget
-        (WriterT (QueryLog sigSpec) (OracleComp spec)) + sign.withLogging) oa).run)).run s₀))
+        (WriterT (QueryLog sigSpec) (OracleComp spec)) +ₛ sign.withLogging) oa).run)).run s₀))
     {e : (t : sigSpec.Domain) × sigSpec.Range t} (he : e ∈ z.1.2) :
     ∃ s₁ s₂, s₀ ≤ s₁ ∧ s₂ ≤ z.2 ∧ (e.2, s₂) ∈ support ((simulateQ outer (sign e.1)).run s₁) := by
   induction oa using OracleComp.inductionOn generalizing s₀ z with
@@ -385,7 +385,7 @@ theorem holds_of_mem_support_run_add_withLogging
     {s₀ : σ} (h₀ : I log₀ s₀) {z : (α × QueryLog sigSpec) × σ}
     (hz : z ∈ support ((simulateQ outer ((simulateQ
       ((HasQuery.toQueryImpl (spec := spec) (m := OracleComp spec)).liftTarget
-        (WriterT (QueryLog sigSpec) (OracleComp spec)) + sign.withLogging) oa).run)).run s₀)) :
+        (WriterT (QueryLog sigSpec) (OracleComp spec)) +ₛ sign.withLogging) oa).run)).run s₀)) :
     I (log₀ ++ z.1.2) z.2 := by
   induction oa using OracleComp.inductionOn generalizing log₀ s₀ z with
   | pure x => simp_all
@@ -435,7 +435,7 @@ theorem length_log_le_cnt_of_mem_support_run_add_withLogging
     {z : (α × QueryLog sigSpec) × σ}
     (hz : z ∈ support ((simulateQ outer ((simulateQ
       ((HasQuery.toQueryImpl (spec := spec) (m := OracleComp spec)).liftTarget
-        (WriterT (QueryLog sigSpec) (OracleComp spec)) + sign.withLogging) oa).run)).run s₀)) :
+        (WriterT (QueryLog sigSpec) (OracleComp spec)) +ₛ sign.withLogging) oa).run)).run s₀)) :
     cnt s₀ + z.1.2.length ≤ cnt z.2 := by
   simpa using holds_of_mem_support_run_add_withLogging outer sign (allowed := fun _ ↦ True)
     (fun log s ↦ cnt s₀ + log.length ≤ cnt s)

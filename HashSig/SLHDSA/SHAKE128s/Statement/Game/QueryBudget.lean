@@ -29,7 +29,7 @@ variable {Output PK SK α β : Type}
     QueryImpl (World Output + SigningSpec) (CountedRun Output) :=
   (QueryImpl.ofLift (World Output)
     (StateT SigningLog (OracleComp (World Output)))).withAddCost
-      (fun input => Counts.single .hash (hashCost input)) + signingOracle scheme sk
+      (fun input => Counts.single .hash (hashCost input)) +ₛ signingOracle scheme sk
 
 /-- Run an adversary program with its actual additive phase counters and an initial log. -/
 @[expose] def runPhase (scheme : ExternalScheme Output PK SK) (sk : SK)

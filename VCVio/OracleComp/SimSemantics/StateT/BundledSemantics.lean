@@ -47,7 +47,7 @@ noncomputable def withStateOracle
   Sem := StateT σ ProbComp
   instMonadSem := inferInstance
   interpret := simulateQ'
-    ((QueryImpl.ofLift unifSpec ProbComp).liftTarget (StateT σ ProbComp) + hashImpl)
+    ((QueryImpl.ofLift unifSpec ProbComp).liftTarget (StateT σ ProbComp) +ₛ hashImpl)
   observe := fun mx => 𝒟[StateT.run' mx s]
   observe_apply_univ_le_one := fun mx =>
     _root_.evalDist_apply_univ_le_one (StateT.run' mx s)
@@ -60,7 +60,7 @@ lemma withStateOracle_evalDist
     [MeasurableSpace α] (mx : OracleComp (unifSpec + hashSpec) α) :
     (SemanticsVia.withStateOracle hashImpl s).evalDist mx =
       𝒟[StateT.run' (simulateQ'
-        ((QueryImpl.ofLift unifSpec ProbComp).liftTarget (StateT σ ProbComp) + hashImpl) mx) s] :=
+        ((QueryImpl.ofLift unifSpec ProbComp).liftTarget (StateT σ ProbComp) +ₛ hashImpl) mx) s] :=
   rfl
 
 /-- Mapping a measurable function over a state-oracle computation maps its visible measure. -/
@@ -110,7 +110,7 @@ lemma withStateOracle_evalDist
     [MeasurableSpace α] (mx : OracleComp (unifSpec + hashSpec) α) :
     (ProbCompRuntime.withStateOracle hashImpl s).evalDist mx =
       𝒟[(simulateQ
-        ((QueryImpl.ofLift unifSpec ProbComp).liftTarget (StateT σ ProbComp) + hashImpl)
+        ((QueryImpl.ofLift unifSpec ProbComp).liftTarget (StateT σ ProbComp) +ₛ hashImpl)
           mx).run' s] :=
   rfl
 

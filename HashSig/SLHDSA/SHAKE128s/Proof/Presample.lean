@@ -242,13 +242,13 @@ requires. -/
 
 /-- Simulating a purely-sampling computation leaves the hash cache untouched.
 
-`rom` is `unifFwdImpl + randomOracle`, so a left-lifted computation simulates through the
+`rom` is `unifFwdImpl +ₛ randomOracle`, so a left-lifted computation simulates through the
 left component alone (`simulateQ_add_liftM_left`), and that component never writes to the
 cache. -/
 theorem run_liftM_probComp {γ : Type} (sample : ProbComp γ) (cache : QueryCache HashSpec) :
     (simulateQ KeygenUniform.rom (liftM sample : OracleComp OracleWorld γ)).run cache =
       (fun value => (value, cache)) <$> sample := by
-  rw [show KeygenUniform.rom = unifFwdImpl HashSpec + (randomOracle :
+  rw [show KeygenUniform.rom = unifFwdImpl HashSpec +ₛ (randomOracle :
       QueryImpl HashSpec (StateT (QueryCache HashSpec) ProbComp)) from rfl,
     QueryImpl.simulateQ_add_liftM_left]
   induction sample using OracleComp.inductionOn generalizing cache with
@@ -299,7 +299,7 @@ theorem run_worldWarmup (publicSeed secretSeed : Digest) (cache : QueryCache Has
       (simulateQ randomOracle
         (CanonicalGraph.Programming.warmup publicSeed secretSeed)).run cache := by
   rw [worldWarmup, worldEvaluate_eq_liftM,
-    show KeygenUniform.rom = unifFwdImpl HashSpec + (randomOracle :
+    show KeygenUniform.rom = unifFwdImpl HashSpec +ₛ (randomOracle :
       QueryImpl HashSpec (StateT (QueryCache HashSpec) ProbComp)) from rfl,
     QueryImpl.simulateQ_add_liftM_right]
   rfl

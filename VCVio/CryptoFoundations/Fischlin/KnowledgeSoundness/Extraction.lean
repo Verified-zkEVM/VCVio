@@ -351,7 +351,7 @@ private def compositeW {ι : Type} (hashSpec : OracleSpec ι) [DecidableEq ι]
      [∀ t : hashSpec.Domain, SampleableType (hashSpec.Range t)] :
     QueryImpl (unifSpec + hashSpec)
       (WriterT (QueryLog hashSpec) (StateT hashSpec.QueryCache ProbComp)) :=
-  idImplW hashSpec + loggedROW hashSpec
+  idImplW hashSpec +ₛ loggedROW hashSpec
 
 /-- The lifted unifSpec forwarder neither logs nor touches the cache. -/
 private lemma idImplW_run_run {ι : Type} (hashSpec : OracleSpec ι)

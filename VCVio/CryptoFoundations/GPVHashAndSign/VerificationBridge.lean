@@ -117,7 +117,7 @@ theorem prEvent_unforgeableExp_eq_keygen_average
                 (HasQuery.toQueryImpl (spec := (unifSpec + (Salt × M →ₒ Range)))
                   (m := OracleComp (unifSpec + (Salt × M →ₒ Range)))).liftTarget
                   (WriterT (QueryLog (M →ₒ (Salt × Domain)))
-                    (OracleComp (unifSpec + (Salt × M →ₒ Range)))) +
+                    (OracleComp (unifSpec + (Salt × M →ₒ Range)))) +ₛ
                   (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range)))
                     psf hr M Salt).signingOracle pksk.1 pksk.2
               let ((msg, σ), log) ← (simulateQ impl (adv.main pksk.1)).run
@@ -154,7 +154,7 @@ lemma simulateQ_writerImpl_verify_fold (pk : PK) (sk : SK)
         ((HasQuery.toQueryImpl (spec := (unifSpec + (Salt × M →ₒ Range)))
           (m := OracleComp (unifSpec + (Salt × M →ₒ Range)))).liftTarget
           (WriterT (QueryLog (M →ₒ (Salt × Domain)))
-            (OracleComp (unifSpec + (Salt × M →ₒ Range)))) +
+            (OracleComp (unifSpec + (Salt × M →ₒ Range)))) +ₛ
           (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range)))
             psf hr M Salt).signingOracle pk sk)
         (adv.main pk)).run >>=
@@ -166,7 +166,7 @@ lemma simulateQ_writerImpl_verify_fold (pk : PK) (sk : SK)
         ((HasQuery.toQueryImpl (spec := (unifSpec + (Salt × M →ₒ Range)))
           (m := OracleComp (unifSpec + (Salt × M →ₒ Range)))).liftTarget
           (WriterT (QueryLog (M →ₒ (Salt × Domain)))
-            (OracleComp (unifSpec + (Salt × M →ₒ Range)))) +
+            (OracleComp (unifSpec + (Salt × M →ₒ Range)))) +ₛ
           (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range)))
             psf hr M Salt).signingOracle pk sk)
         (adv.main pk >>= fun out =>
@@ -215,7 +215,7 @@ lemma signedSet_eq_wasQueried
           (HasQuery.toQueryImpl (spec := (unifSpec + (Salt × M →ₒ Range)))
             (m := OracleComp (unifSpec + (Salt × M →ₒ Range)))).liftTarget
             (WriterT (QueryLog (M →ₒ (Salt × Domain)))
-              (OracleComp (unifSpec + (Salt × M →ₒ Range)))) +
+              (OracleComp (unifSpec + (Salt × M →ₒ Range)))) +ₛ
             (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range)))
               psf hr M Salt).signingOracle pk sk
         let ((msg, σ), log) ← (simulateQ impl (adv.main pk)).run
@@ -236,7 +236,7 @@ lemma signedSet_eq_wasQueried
           (HasQuery.toQueryImpl (spec := (unifSpec + (Salt × M →ₒ Range)))
             (m := OracleComp (unifSpec + (Salt × M →ₒ Range)))).liftTarget
             (WriterT (QueryLog (M →ₒ (Salt × Domain)))
-              (OracleComp (unifSpec + (Salt × M →ₒ Range)))) +
+              (OracleComp (unifSpec + (Salt × M →ₒ Range)))) +ₛ
             (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range)))
               psf hr M Salt).signingOracle pk sk
         let ((msg, σ), log) ← (simulateQ impl (adv.main pk)).run
@@ -248,7 +248,7 @@ lemma signedSet_eq_wasQueried
           (simulateQ ((HasQuery.toQueryImpl (spec := (unifSpec + (Salt × M →ₒ Range)))
               (m := OracleComp (unifSpec + (Salt × M →ₒ Range)))).liftTarget
               (WriterT (QueryLog (M →ₒ (Salt × Domain)))
-                (OracleComp (unifSpec + (Salt × M →ₒ Range)))) +
+                (OracleComp (unifSpec + (Salt × M →ₒ Range)))) +ₛ
               (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range)))
                 psf hr M Salt).signingOracle pk sk)
             (adv.main pk >>= fun out =>
@@ -266,13 +266,13 @@ lemma signedSet_eq_wasQueried
         (Salt × M →ₒ Range).QueryCache =>
       decide (a.1.1.1.1 ∉ (List.map (fun e => e.1) a.1.2).toFinset) && a.1.1.2) <$>
       (simulateQ ((QueryImpl.ofLift unifSpec ProbComp).liftTarget
-          (StateT ((Salt × M →ₒ Range).QueryCache) ProbComp) +
+          (StateT ((Salt × M →ₒ Range).QueryCache) ProbComp) +ₛ
           (randomOracle : QueryImpl (Salt × M →ₒ Range)
             (StateT ((Salt × M →ₒ Range).QueryCache) ProbComp)))
         ((simulateQ ((HasQuery.toQueryImpl (spec := unifSpec + (Salt × M →ₒ Range))
             (m := OracleComp (unifSpec + (Salt × M →ₒ Range)))).liftTarget
               (WriterT (QueryLog (M →ₒ (Salt × Domain)))
-                (OracleComp (unifSpec + (Salt × M →ₒ Range)))) +
+                (OracleComp (unifSpec + (Salt × M →ₒ Range)))) +ₛ
             (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range)))
               psf hr M Salt).signingOracle pk sk)
           (adv.main pk >>= fun out =>
@@ -288,7 +288,7 @@ lemma signedSet_eq_wasQueried
             ((simulateQ ((HasQuery.toQueryImpl (spec := unifSpec + (Salt × M →ₒ Range))
                 (m := OracleComp (unifSpec + (Salt × M →ₒ Range)))).liftTarget
                   (WriterT (QueryLog (M →ₒ (Salt × Domain)))
-                    (OracleComp (unifSpec + (Salt × M →ₒ Range)))) +
+                    (OracleComp (unifSpec + (Salt × M →ₒ Range)))) +ₛ
                 (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range)))
                   psf hr M Salt).signingOracle pk sk)
               (adv.main pk >>= fun out =>
@@ -341,7 +341,7 @@ theorem gpv_advantage_le_progGameVerifyFreshAvg_add_collisionBound
               (HasQuery.toQueryImpl (spec := (unifSpec + (Salt × M →ₒ Range)))
                 (m := OracleComp (unifSpec + (Salt × M →ₒ Range)))).liftTarget
                 (WriterT (QueryLog (M →ₒ (Salt × Domain)))
-                  (OracleComp (unifSpec + (Salt × M →ₒ Range)))) +
+                  (OracleComp (unifSpec + (Salt × M →ₒ Range)))) +ₛ
                 (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range)))
                   psf hr M Salt).signingOracle pksk.1 pksk.2
             let ((msg, σ), log) ← (simulateQ impl (adv.main pksk.1)).run

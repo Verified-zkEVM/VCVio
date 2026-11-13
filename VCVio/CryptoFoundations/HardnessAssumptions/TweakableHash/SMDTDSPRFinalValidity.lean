@@ -118,8 +118,8 @@ def oracles [DecidableEq Tweak] (prob : Problem ι PkSeed Tweak M Y)
     QueryImpl (unifSpec +
       (challengeSpec Tweak M Y + SourceFinalValidity.collectionSpec prob.thColl))
       (StateT (State Tweak M) ProbComp) :=
-  (QueryImpl.ofLift unifSpec ProbComp).liftTarget (StateT (State Tweak M) ProbComp) +
-    (challengeOracle prob pk +
+  (QueryImpl.ofLift unifSpec ProbComp).liftTarget (StateT (State Tweak M) ProbComp) +ₛ
+    (challengeOracle prob pk +ₛ
       SourceFinalValidity.collectionOracle (Q := Tweak × M) Prod.fst prob.thColl pk)
 
 /-- The decisional experiment. The selected target must exist and the guess must equal its actual

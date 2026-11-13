@@ -57,6 +57,7 @@ The API policy is:
 | Lattice and executable interfaces | `Poly` is a semireducible carrier with explicit arithmetic instances. New `VectorAPI` consumers use coefficient/extensionality laws and prove `X² = -1` at degree two, distinguishing negacyclic from pointwise multiplication. Native executable bodies and FFI interfaces are unchanged. | intentional |
 | HashSig primitive and game packaging | Keep exposed `thColl.Msg` projections needed to construct dependent collection queries. Opaque value bundles and final-validity conversions are handled by the focused repairs, with verification and game-identification consumers. | intentional |
 | Typed heaps | The reducible function carrier allowed `Heap.instInhabited` to replace ordinary function defaults. A distinct carrier preserves typed initialization, lookup, updates, and sum decomposition. The ordinary-import `Heap` fixture checks that a cell default of seven does not replace the function default of zero. | repaired |
+| Handler sums | An `HAdd` instance on the reducible `QueryImpl` carrier was keyed on the underlying function type, so `f + g` for `f g : ℕ → Multiset ℕ` elaborated as a handler on `ℕ ⊕ ℕ`. Handler sums are the notation `+ₛ` for `QueryImpl.add`, matching PolyFun's refusal of `HAdd` on `Handler`. The ordinary-import `QueryImplSum` fixture checks pointwise `+` on functions and `+ₛ` routing. | repaired |
 
 ## Validation and rollout
 
@@ -76,7 +77,7 @@ order. The full per-PR gate is `./scripts/validate.sh --lint --test --axioms`; a
 interfaces additionally run the FFI/vector checks, and affected optional adapters build separately.
 Exposure and PMF baselines only decrease. No new sorry or nonstandard axiom debt is admitted.
 
-`scripts/add-api-consumer-fixtures.py` copies eleven source fixtures into the scratch consumer
+`scripts/add-api-consumer-fixtures.py` copies twelve source fixtures into the scratch consumer
 and registers them as separate Lake library targets. Separate targets preserve import-isolation
 checks in the native measure fixtures. CI compiles these alongside its linked consumer executable.
 The fixture list identifies the reviewed interfaces; these results are not a claim that every

@@ -55,7 +55,7 @@ theorem prEvent_run_add_withLogging_le (outer : QueryImpl spec (StateT σ ProbCo
     (hq : IsQueryBoundP oa p q) {s₀ : σ} (h₀ : ¬bad s₀) :
     Pr{let z ← (simulateQ outer ((simulateQ
       ((HasQuery.toQueryImpl (spec := spec) (m := OracleComp spec)).liftTarget
-        (WriterT (QueryLog sigSpec) (OracleComp spec)) + sign.withLogging) oa).run)).run s₀}[
+        (WriterT (QueryLog sigSpec) (OracleComp spec)) +ₛ sign.withLogging) oa).run)).run s₀}[
       bad z.2] ≤ q * ε := by
   induction oa using OracleComp.inductionOn generalizing q s₀ with
   | pure x =>

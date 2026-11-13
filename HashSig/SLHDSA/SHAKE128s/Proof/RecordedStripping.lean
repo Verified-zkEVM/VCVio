@@ -86,15 +86,15 @@ theorem evalDist_writerRun_congr {ω : Type} [Monoid ω] (warm : QueryCache Hash
 theorem evalDist_writerRun_signingOracle (warm : QueryCache HashSpec) (sk : SecretKey)
     (t : (OracleWorld + SigningSpec).Domain) (log : SigningLog)
     (current : QueryCache HashSpec) (hsub : Extends warm current) :
-    writerRun ((recordedAdversaryImpl + recordedSigningOracle (Scheme.sign sk)) t) log
+    writerRun ((recordedAdversaryImpl +ₛ recordedSigningOracle (Scheme.sign sk)) t) log
         current =ᵈ
-      writerRun ((recordedAdversaryImpl +
+      writerRun ((recordedAdversaryImpl +ₛ
         recordedSigningOracle (StrippedGame.strippedSign warm sk)) t) log current := by
   rcases t with world | request
   · exact .rfl
-  · have heq : writerRun ((recordedAdversaryImpl + recordedSigningOracle (Scheme.sign sk))
+  · have heq : writerRun ((recordedAdversaryImpl +ₛ recordedSigningOracle (Scheme.sign sk))
           (.inr request)) log current =
-        writerRun ((recordedAdversaryImpl +
+        writerRun ((recordedAdversaryImpl +ₛ
           recordedSigningOracle (StrippedGame.strippedSign warm sk)) (.inr request)) log
           current := by
       change (simulateQ KeygenUniform.rom

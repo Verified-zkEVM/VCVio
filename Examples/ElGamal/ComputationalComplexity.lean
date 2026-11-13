@@ -166,7 +166,7 @@ theorem IND_CPA_OneTime_DDHReduction_openOracle_eval
     (adv : AsymmEncAlg.IND_CPA_OneTime_Adversary (elGamalAsymmEnc F G gen))
     (g A B T : G) :
     simulateQ
-      (oneTimeINDCPAImpl (gen := gen) adv + oneTimeDDHFairCoinImpl)
+      (oneTimeINDCPAImpl (gen := gen) adv +ₛ oneTimeDDHFairCoinImpl)
       (IND_CPA_OneTime_DDHReduction_openOracle (State := adv.State) g A B T) =
       IND_CPA_OneTime_DDHReduction (F := F) (G := G) (gen := gen) adv g A B T := by
   rfl

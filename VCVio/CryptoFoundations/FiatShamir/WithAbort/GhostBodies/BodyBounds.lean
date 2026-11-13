@@ -69,7 +69,7 @@ random oracle: commit, take one `roStep` at the commitment point, respond agains
 returned challenge, and either return or recurse on the post-step cache. -/
 lemma run_simulateQ_fsAbortSignLoop_succ (pk : Stmt) (sk : Wit) (msg : M) (n : ℕ)
     (c : (M × Commit →ₒ Chal).QueryCache) :
-    (simulateQ (unifFwdImpl (M × Commit →ₒ Chal) +
+    (simulateQ (unifFwdImpl (M × Commit →ₒ Chal) +ₛ
         (randomOracle : QueryImpl (M × Commit →ₒ Chal)
           (StateT ((M × Commit →ₒ Chal).QueryCache) ProbComp)))
       (fsAbortSignLoop ids M pk sk msg (n + 1))).run c =
@@ -79,7 +79,7 @@ lemma run_simulateQ_fsAbortSignLoop_succ (pk : Stmt) (sk : Wit) (msg : M) (n : �
             match oz with
             | some z => pure (some (ws.1, z), chc.2)
             | none =>
-                (simulateQ (unifFwdImpl (M × Commit →ₒ Chal) +
+                (simulateQ (unifFwdImpl (M × Commit →ₒ Chal) +ₛ
                     (randomOracle : QueryImpl (M × Commit →ₒ Chal)
                       (StateT ((M × Commit →ₒ Chal).QueryCache) ProbComp)))
                   (fsAbortSignLoop ids M pk sk msg n)).run chc.2 := by
@@ -234,7 +234,7 @@ lemma measureETVDist_run_fsAbortSignLoop_progSignBody_le
     (hAbort : Pr{let x ← ids.honestExecution pk sk}[x = none] ≤ ENNReal.ofReal p_abort) :
     ∀ (n : ℕ) (c : (M × Commit →ₒ Chal).QueryCache),
       (measureETVDist
-        ((simulateQ (unifFwdImpl (M × Commit →ₒ Chal) +
+        ((simulateQ (unifFwdImpl (M × Commit →ₒ Chal) +ₛ
             (randomOracle : QueryImpl (M × Commit →ₒ Chal)
               (StateT ((M × Commit →ₒ Chal).QueryCache) ProbComp)))
           (fsAbortSignLoop ids M pk sk msg n)).run c)
@@ -258,7 +258,7 @@ lemma measureETVDist_run_fsAbortSignLoop_progSignBody_le
                 match oz with
                 | some z => pure (some (ws.1, z), chc.2)
                 | none =>
-                    (simulateQ (unifFwdImpl (M × Commit →ₒ Chal) +
+                    (simulateQ (unifFwdImpl (M × Commit →ₒ Chal) +ₛ
                         (randomOracle : QueryImpl (M × Commit →ₒ Chal)
                           (StateT ((M × Commit →ₒ Chal).QueryCache) ProbComp)))
                       (fsAbortSignLoop ids M pk sk msg n)).run chc.2)
@@ -286,7 +286,7 @@ lemma measureETVDist_run_fsAbortSignLoop_progSignBody_le
                     match oz with
                     | some z => pure (some (ws.1, z), c.cacheQuery (msg, ws.1) ch)
                     | none =>
-                        (simulateQ (unifFwdImpl (M × Commit →ₒ Chal) +
+                        (simulateQ (unifFwdImpl (M × Commit →ₒ Chal) +ₛ
                             (randomOracle : QueryImpl (M × Commit →ₒ Chal)
                               (StateT ((M × Commit →ₒ Chal).QueryCache) ProbComp)))
                           (fsAbortSignLoop ids M pk sk msg n)).run

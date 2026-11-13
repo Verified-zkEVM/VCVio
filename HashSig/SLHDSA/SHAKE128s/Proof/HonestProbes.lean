@@ -987,7 +987,7 @@ theorem run_keygenInternal_world_eq_pure (publicSeed secretSeed prfSeed : Digest
         warmCache publicSeed secretSeed outputs) :
         ProbComp ((SecretKey × PublicKey) × QueryCache HashSpec)) := by
   rw [keygenInternal_lift,
-    show KeygenUniform.rom = unifFwdImpl HashSpec +
+    show KeygenUniform.rom = unifFwdImpl HashSpec +ₛ
       (randomOracle : QueryImpl HashSpec (StateT (QueryCache HashSpec) ProbComp)) from rfl,
     QueryImpl.simulateQ_add_liftComp_right]
   exact run_keygenInternal_eq_pure publicSeed secretSeed prfSeed outputs

@@ -34,7 +34,7 @@ variable {Output PK SK : Type}
     (simulateQ
       ((QueryImpl.ofLift (World Output)
           (StateT SigningLog (OracleComp (World Output)))).withAddCost
-          (fun input => Counts.single .hash (hashCost input)) + signingOracle scheme sk)
+          (fun input => Counts.single .hash (hashCost input)) +ₛ signingOracle scheme sk)
       (adversary.main pk)).run.run []
   let (verified, verifierCounts) ← countQueries
     (fun input => Counts.single .verification (hashCost input))

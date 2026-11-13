@@ -196,7 +196,7 @@ through a cached oracle only extends the cache. -/
 theorem le_snd_of_mem_support_run_unifFwdImpl_add_withCaching (so : QueryImpl spec ProbComp)
     (oa : OracleComp (unifSpec + spec) α) {cache : spec.QueryCache}
     {z : α × spec.QueryCache}
-    (hz : z ∈ support ((simulateQ (unifFwdImpl spec + so.withCaching) oa).run cache)) :
+    (hz : z ∈ support ((simulateQ (unifFwdImpl spec +ₛ so.withCaching) oa).run cache)) :
     cache ≤ z.2 :=
   simulateQ_run_preservesInv _ (cache ≤ ·)
     (QueryImpl.PreservesInv.add

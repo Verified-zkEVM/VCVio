@@ -95,9 +95,9 @@ theorem generic_game_inclusion :
     let random : QueryImpl unifSpec Id := fun n => pure ⟨n, Nat.lt_succ_self n⟩
     let game : QueryImpl Γ (StateT (Tbl fun _ : Bool => ZMod 7) Id) := fun _ => pure ()
     let lhs := run M (fun _ => id)
-      (encImpl (m := Id) (V := fun _ : Bool => ZMod 7) (fun _ => id) +
-        (coinImpl (G := fun _ : Bool => ZMod 7) random + game)) (toAlgebraic A) (fun _ => [1, 2])
-    let rhs := run M (fun _ => id) (coinImpl (G := fun _ : Bool => ZMod 7) random + game)
+      (encImpl (m := Id) (V := fun _ : Bool => ZMod 7) (fun _ => id) +ₛ
+        (coinImpl (G := fun _ : Bool => ZMod 7) random +ₛ game)) (toAlgebraic A) (fun _ => [1, 2])
+    let rhs := run M (fun _ => id) (coinImpl (G := fun _ : Bool => ZMod 7) random +ₛ game)
         A (fun _ => [1, 2])
     lhs.1 = (2, 1) ∧ rhs.1 = (2, 1) ∧ lhs.2 true = [1, 2, 3] ∧ rhs.2 true = [1, 2, 3] ∧
       lhs.2 false = [1, 2] ∧ rhs.2 false = [1, 2] := by

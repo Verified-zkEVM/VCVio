@@ -22,8 +22,8 @@ cache is the state of `StateT hashSpec.QueryCache ProbComp`. The runtime
 `ProbCompRuntime.rom hashSpec cache` interprets experiments through `romImpl` from the initial
 cache `cache`, empty by default; a nonempty cache programs the random oracle at its entries.
 
-The `roSim` lemmas are stated for `unifFwdImpl hashSpec + ro` with a general hash handler `ro`.
-They apply to `romImpl`, which unfolds reducibly to `unifFwdImpl hashSpec + hashSpec.randomOracle`,
+The `roSim` lemmas are stated for `unifFwdImpl hashSpec +ₛ ro` with a general hash handler `ro`.
+They apply to `romImpl`, which unfolds reducibly to `unifFwdImpl hashSpec +ₛ hashSpec.randomOracle`,
 and equally to programmed or logged hash handlers. They show that lifted `ProbComp` computations
 and computations without hash queries leave the cache unchanged, and that a hash query is
 dispatched to `ro`.
@@ -35,7 +35,7 @@ does, so a probability-one claim about `romImpl` reduces to the same claim for e
 ## Main definitions
 
 * `unifFwdImpl`: the identity forwarding implementation for `unifSpec`, lifted to `StateT`
-* `OracleSpec.romImpl`: the random oracle model handler `unifFwdImpl hashSpec + randomOracle`,
+* `OracleSpec.romImpl`: the random oracle model handler `unifFwdImpl hashSpec +ₛ randomOracle`,
   equal to `unifSpec.passthrough + hashSpec.randomOracle`
 * `ProbCompRuntime.rom`: the random-oracle-model runtime, interpreting through `romImpl` from a
   given initial cache
@@ -95,50 +95,50 @@ namespace roSim
 
 variable (ro : QueryImpl hashSpec (StateT hashSpec.QueryCache ProbComp))
 
-/-- Simulating a `liftComp`-embedded `ProbComp` through `unifFwdImpl + ro` discards the hash
+/-- Simulating a `liftComp`-embedded `ProbComp` through `unifFwdImpl +ₛ ro` discards the hash
 oracle, reducing to simulation through `unifFwdImpl` alone. -/
 lemma simulateQ_liftComp {α : Type} (oa : ProbComp α) :
-    simulateQ (unifFwdImpl hashSpec + ro)
+    simulateQ (unifFwdImpl hashSpec +ₛ ro)
       (OracleComp.liftComp oa (unifSpec + hashSpec)) =
     simulateQ (unifFwdImpl hashSpec) oa :=
   QueryImpl.simulateQ_add_liftComp_left
     (m' := StateT hashSpec.QueryCache ProbComp) (unifFwdImpl hashSpec) ro oa
 
-/-- Running the `unifFwdImpl + ro` simulation of a lifted `ProbComp` on cache `s` leaves the
+/-- Running the `unifFwdImpl +ₛ ro` simulation of a lifted `ProbComp` on cache `s` leaves the
 cache untouched, pairing each sampled output with `s`. -/
 lemma run_liftM {α : Type} (oa : ProbComp α) (s : hashSpec.QueryCache) :
-    (simulateQ (unifFwdImpl hashSpec + ro) (liftM oa)).run s =
+    (simulateQ (unifFwdImpl hashSpec +ₛ ro) (liftM oa)).run s =
       (fun x => (x, s)) <$> oa := by
-  rw [show simulateQ (unifFwdImpl hashSpec + ro) (liftM oa) =
+  rw [show simulateQ (unifFwdImpl hashSpec +ₛ ro) (liftM oa) =
       simulateQ (unifFwdImpl hashSpec) oa from simulateQ_liftComp ro oa]
   exact unifFwdImpl.simulateQ_run oa s
 
-/-- The support of the `unifFwdImpl + ro` simulation of a lifted `ProbComp` run on cache `s`
+/-- The support of the `unifFwdImpl +ₛ ro` simulation of a lifted `ProbComp` run on cache `s`
 is the image of `support oa` under pairing each output with `s`. -/
 lemma run_liftM_support {α : Type} (oa : ProbComp α) (s : hashSpec.QueryCache) :
-    support ((simulateQ (unifFwdImpl hashSpec + ro) (liftM oa)).run s) =
+    support ((simulateQ (unifFwdImpl hashSpec +ₛ ro) (liftM oa)).run s) =
       (fun x => (x, s)) '' support oa := by
   rw [run_liftM, support_map]
 
-/-- A run of `liftM oa >>= k` under the `unifFwdImpl + ro` simulation from cache `s` is a run of
+/-- A run of `liftM oa >>= k` under the `unifFwdImpl +ₛ ro` simulation from cache `s` is a run of
 `k x` from the same cache, for some possible output `x` of `oa`. -/
 lemma exists_mem_support_run_of_mem_support_run_liftM_bind {α β : Type} (oa : ProbComp α)
     (k : α → OracleComp (unifSpec + hashSpec) β) {s : hashSpec.QueryCache}
     {z : β × hashSpec.QueryCache}
-    (hz : z ∈ support ((simulateQ (unifFwdImpl hashSpec + ro) (liftM oa >>= k)).run s)) :
-    ∃ x ∈ support oa, z ∈ support ((simulateQ (unifFwdImpl hashSpec + ro) (k x)).run s) := by
+    (hz : z ∈ support ((simulateQ (unifFwdImpl hashSpec +ₛ ro) (liftM oa >>= k)).run s)) :
+    ∃ x ∈ support oa, z ∈ support ((simulateQ (unifFwdImpl hashSpec +ₛ ro) (k x)).run s) := by
   rw [simulateQ_bind, StateT.run_bind, mem_support_bind_iff] at hz
   obtain ⟨_, ⟨x, hx, rfl⟩, hz⟩ := run_liftM_support ro oa s ▸ hz
   exact ⟨x, hx, hz⟩
 
-/-- Running the `unifFwdImpl + ro` simulation of a lifted `ProbComp` bound to a continuation,
+/-- Running the `unifFwdImpl +ₛ ro` simulation of a lifted `ProbComp` bound to a continuation,
 projected to its value via `run'`, samples `oa` and then runs each continuation on cache `s`. -/
 lemma run'_liftM_bind {α β : Type} (oa : ProbComp α)
     (rest : α → StateT hashSpec.QueryCache ProbComp β) (s : hashSpec.QueryCache) :
-    (simulateQ (unifFwdImpl hashSpec + ro) (liftM oa) >>= rest).run' s =
+    (simulateQ (unifFwdImpl hashSpec +ₛ ro) (liftM oa) >>= rest).run' s =
       oa >>= fun x => (rest x).run' s := by
   change Prod.fst <$>
-    ((simulateQ (unifFwdImpl hashSpec + ro) (liftM oa) >>= rest).run s) =
+    ((simulateQ (unifFwdImpl hashSpec +ₛ ro) (liftM oa) >>= rest).run s) =
     oa >>= fun x => Prod.fst <$> (rest x).run s
   rw [StateT.run_bind, run_liftM]
   simp [map_bind]
@@ -151,15 +151,16 @@ private lemma allQueriesSatisfy_not_of_isQueryBoundP_zero {α : Type} {p : ℕ �
   (isQueryBoundP_zero_iff oa _).1 ((isQueryBoundP_congr_pred fun _ => not_not.symm).1 h)
 
 /-- Every query outside a predicate that charges every `hashSpec` query is a uniform query, which
-`unifFwdImpl + ro` answers without touching the cache. -/
+`unifFwdImpl +ₛ ro` answers without touching the cache. -/
 private lemma run_eq_map_run'_of_not {p : ℕ ⊕ ι → Prop} (hp : ∀ t, p (.inr t))
     (t : ℕ ⊕ ι) (ht : ¬ p t) (s : hashSpec.QueryCache) :
-    ((unifFwdImpl hashSpec + ro) t).run s = (·, s) <$> ((unifFwdImpl hashSpec + ro) t).run' s := by
+    ((unifFwdImpl hashSpec +ₛ ro) t).run s =
+      (·, s) <$> ((unifFwdImpl hashSpec +ₛ ro) t).run' s := by
   rcases t with n | t
   · simp [unifFwdImpl, StateT.run'_eq]
   · exact absurd (hp t) ht
 
-/-- Simulating through `unifFwdImpl + ro` a computation that makes no `hashSpec` query leaves
+/-- Simulating through `unifFwdImpl +ₛ ro` a computation that makes no `hashSpec` query leaves
 the cache untouched, whatever `ro` does on hash queries. The query bound is stated for any
 predicate `p` that charges every `hashSpec` query, such as `(· matches .inr _)`. This is the
 counterpart of `run_liftM` for a computation given with a query bound rather than as a lifted
@@ -167,8 +168,8 @@ counterpart of `run_liftM` for a computation given with a query bound rather tha
 lemma run_eq_map_run'_of_isQueryBoundP_zero {α : Type} {p : ℕ ⊕ ι → Prop} [DecidablePred p]
     (hp : ∀ t, p (.inr t)) {oa : OracleComp (unifSpec + hashSpec) α}
     (h : oa.IsQueryBoundP p 0) (s : hashSpec.QueryCache) :
-    (simulateQ (unifFwdImpl hashSpec + ro) oa).run s =
-      (·, s) <$> (simulateQ (unifFwdImpl hashSpec + ro) oa).run' s :=
+    (simulateQ (unifFwdImpl hashSpec +ₛ ro) oa).run s =
+      (·, s) <$> (simulateQ (unifFwdImpl hashSpec +ₛ ro) oa).run' s :=
   (allQueriesSatisfy_not_of_isQueryBoundP_zero h).simulateQ_run_eq_map_run'
     (run_eq_map_run'_of_not ro hp) s
 
@@ -177,33 +178,33 @@ lemma run'_bind_of_isQueryBoundP_zero {α β : Type} {p : ℕ ⊕ ι → Prop} [
     (hp : ∀ t, p (.inr t)) {oa : OracleComp (unifSpec + hashSpec) α}
     (h : oa.IsQueryBoundP p 0) (ob : α → OracleComp (unifSpec + hashSpec) β)
     (s : hashSpec.QueryCache) :
-    (simulateQ (unifFwdImpl hashSpec + ro) (oa >>= ob)).run' s =
-      (simulateQ (unifFwdImpl hashSpec + ro) oa).run' s >>= fun x =>
-        (simulateQ (unifFwdImpl hashSpec + ro) (ob x)).run' s :=
+    (simulateQ (unifFwdImpl hashSpec +ₛ ro) (oa >>= ob)).run' s =
+      (simulateQ (unifFwdImpl hashSpec +ₛ ro) oa).run' s >>= fun x =>
+        (simulateQ (unifFwdImpl hashSpec +ₛ ro) (ob x)).run' s :=
   (allQueriesSatisfy_not_of_isQueryBoundP_zero h).simulateQ_run'_bind
     (run_eq_map_run'_of_not ro hp) ob s
 
-/-- A uniform-sampling query of `unifFwdImpl + ro` samples and leaves the cache unchanged. -/
+/-- A uniform-sampling query of `unifFwdImpl +ₛ ro` samples and leaves the cache unchanged. -/
 lemma run_apply_inl (n : ℕ) (s : hashSpec.QueryCache) :
-    ((unifFwdImpl hashSpec + ro) (Sum.inl n)).run s =
+    ((unifFwdImpl hashSpec +ₛ ro) (Sum.inl n)).run s =
       (fun u => (u, s)) <$> (unifSpec.query n : ProbComp (Fin (n + 1))) := by
   simpa using unifFwdImpl.simulateQ_run (hashSpec := hashSpec)
     (unifSpec.query n : ProbComp (Fin (n + 1))) s
 
-/-- Simulating a `hashSpec` query through `unifFwdImpl + ro` dispatches it to the hash-oracle
+/-- Simulating a `hashSpec` query through `unifFwdImpl +ₛ ro` dispatches it to the hash-oracle
 handler `ro`, since uniform forwarding leaves hash queries to `ro`. -/
 @[simp]
 lemma simulateQ_liftM_spec_query (q : hashSpec.Domain) :
-    simulateQ (unifFwdImpl hashSpec + ro) (hashSpec.query q) = ro q := by
-  change simulateQ (unifFwdImpl hashSpec + ro)
+    simulateQ (unifFwdImpl hashSpec +ₛ ro) (hashSpec.query q) = ro q := by
+  change simulateQ (unifFwdImpl hashSpec +ₛ ro)
     (liftM (liftM (hashSpec.query q) :
       OracleQuery (unifSpec + hashSpec) _)) = _
   exact QueryImpl.simulateQ_add_liftM_query_right (unifFwdImpl hashSpec) ro q
 
-/-- Simulating a `HasQuery.query` hash query through `unifFwdImpl + ro` dispatches it to the
+/-- Simulating a `HasQuery.query` hash query through `unifFwdImpl +ₛ ro` dispatches it to the
 hash-oracle handler `ro`, matching `simulateQ_liftM_spec_query` through the monad-lift form. -/
 lemma simulateQ_HasQuery_query (q : hashSpec.Domain) :
-    simulateQ (unifFwdImpl hashSpec + ro)
+    simulateQ (unifFwdImpl hashSpec +ₛ ro)
       (HasQuery.query (spec := hashSpec)
         (m := OracleComp (unifSpec + hashSpec)) q) =
       ro q := by
@@ -223,9 +224,9 @@ variable (hashSpec) [DecidableEq ι] [∀ t : hashSpec.Domain, SampleableType (h
 empty cache is the execution of `oa` in the random oracle model.
 
 It is `unifSpec.passthrough + hashSpec.randomOracle` (`romImpl_eq_passthrough_add`). It unfolds
-reducibly to `unifFwdImpl hashSpec + hashSpec.randomOracle`, so the `roSim` lemmas apply to it. -/
+reducibly to `unifFwdImpl hashSpec +ₛ hashSpec.randomOracle`, so the `roSim` lemmas apply to it. -/
 abbrev romImpl : QueryImpl (unifSpec + hashSpec) (StateT hashSpec.QueryCache ProbComp) :=
-  unifFwdImpl hashSpec + hashSpec.randomOracle
+  unifFwdImpl hashSpec +ₛ hashSpec.randomOracle
 
 variable {hashSpec}
 
@@ -502,9 +503,9 @@ theorem prEvent_eq_one_simulateQ_randomOracle_run_iff
 lemma run_simulateQ_unifFwdImpl_add_liftM {ι τ : Type} {spec : OracleSpec.{0, 0} ι}
     {spec' : OracleSpec.{0, 0} τ} (impl : QueryImpl spec' (StateT spec.QueryCache ProbComp))
     {α : Type} (oa : ProbComp α) (c : spec.QueryCache) :
-    (simulateQ (unifFwdImpl spec + impl) (liftM oa : OracleComp (unifSpec + spec') α)).run c =
+    (simulateQ (unifFwdImpl spec +ₛ impl) (liftM oa : OracleComp (unifSpec + spec') α)).run c =
       (·, c) <$> oa := by
-  rw [show simulateQ (unifFwdImpl spec + impl) (liftM oa : OracleComp (unifSpec + spec') α) =
+  rw [show simulateQ (unifFwdImpl spec +ₛ impl) (liftM oa : OracleComp (unifSpec + spec') α) =
       simulateQ (unifFwdImpl spec) oa from QueryImpl.simulateQ_add_liftComp_left _ _ oa,
     unifFwdImpl.simulateQ_run]
 

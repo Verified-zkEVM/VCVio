@@ -239,7 +239,7 @@ tweakable hash, `R ‖ PK.seed ‖ PK.root ‖ M` for `H_msg`, `SK.prf ‖ opt_r
 is `encHashImpl`. -/
 @[expose] noncomputable def encImpl :
     QueryImpl (unifSpec + hashSpec (shakeCore vp)) (OracleComp (unifSpec + shakeSpec vp)) :=
-  QueryImpl.ofLift unifSpec (OracleComp (unifSpec + shakeSpec vp)) + encHashImpl vp
+  QueryImpl.ofLift unifSpec (OracleComp (unifSpec + shakeSpec vp)) +ₛ encHashImpl vp
 
 /-- **SLH-DSA over one SHAKE256 oracle.** FIPS 205's internal key generation, signing and
 verification, with every tweakable-hash, `PRF`, `PRF_msg` and `H_msg` evaluation one query of the

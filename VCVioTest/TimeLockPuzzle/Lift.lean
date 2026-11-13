@@ -72,7 +72,7 @@ def puzPoint : QueryImpl puzSpec (StateT ℕ Id) := fun t => pure (t + 100)
 
 /-- The preprocessing oracles: coins from the counter, and the puzzle oracle `t ↦ t + 100`. -/
 def preImpl : QueryImpl (unifSpec + puzSpec) (StateT ℕ Id) :=
-  counterCoins id (fun k _ => k) + puzPoint
+  counterCoins id (fun k _ => k) +ₛ puzPoint
 
 /-- Rounds of the puzzle oracle answered by `t ↦ t + 100` and recorded in a log. -/
 def puzRounds : QueryImpl puzSpec.batch (StateT (ℕ × List (List ℕ)) Id) :=
@@ -82,7 +82,7 @@ def puzRounds : QueryImpl puzSpec.batch (StateT (ℕ × List (List ℕ)) Id) :=
 /-- The online oracles: coins from the counter, and rounds answered by `t ↦ t + 100` and recorded
 in a log. -/
 def onImpl : QueryImpl (unifSpec + puzSpec.batch) (StateT (ℕ × List (List ℕ)) Id) :=
-  counterCoins (σ := ℕ × List (List ℕ)) Prod.fst (fun k s => (k, s.2)) + puzRounds
+  counterCoins (σ := ℕ × List (List ℕ)) Prod.fst (fun k s => (k, s.2)) +ₛ puzRounds
 
 /-- Run the simulation from coin counter `3`: preprocessing, then the online phase on its state;
 return the output and the rounds submitted, in order. -/
@@ -213,7 +213,7 @@ def sumRounds : QueryImpl (puzSpec + sideSpec).batch (StateT (List (List (ℕ �
 /-- Rounds of the sum recorded in a log; coins are never asked. -/
 def sumImpl : QueryImpl (unifSpec + (puzSpec + sideSpec).batch)
     (StateT (List (List (ℕ ⊕ ℕ))) Id) :=
-  counterCoins (σ := List (List (ℕ ⊕ ℕ))) (fun _ => 0) (fun _ log => log) + sumRounds
+  counterCoins (σ := List (List (ℕ ⊕ ℕ))) (fun _ => 0) (fun _ log => log) +ₛ sumRounds
 
 /-- Lifted to the sum, the generator submits the single round `[.inl 0]` and returns the answer
 there as the key. -/

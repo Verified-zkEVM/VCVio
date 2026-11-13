@@ -111,8 +111,8 @@ def SM_DT_TCR_oracles [DecidableEq Tweak] (prob : SM_DT_TCR_Problem ι PkSeed Tw
     (pk : PkSeed) :
     QueryImpl (unifSpec + (SM_DT_TCR_challengeSpec Tweak M Y + collectionSpec prob.thColl))
       (StateT (SM_DT_TCR_State Tweak M) ProbComp) :=
-  (QueryImpl.ofLift unifSpec ProbComp).liftTarget (StateT (SM_DT_TCR_State Tweak M) ProbComp) +
-    (SM_DT_TCR_challengeOracle prob pk +
+  (QueryImpl.ofLift unifSpec ProbComp).liftTarget (StateT (SM_DT_TCR_State Tweak M) ProbComp) +ₛ
+    (SM_DT_TCR_challengeOracle prob pk +ₛ
       collectionOracle (Q := Tweak × M) Prod.fst prob.thColl pk)
 
 /-- The SM-TCR experiment. The public seed is sampled, the first phase runs against both oracles

@@ -205,7 +205,7 @@ def batch' (impl : QueryImpl (free + spec) m) : QueryImpl (free + spec.batch) m 
 
 /-- The batched form of a sum handler batches its right summand. -/
 @[simp] lemma batch'_add (impl₁ : QueryImpl free m) (impl₂ : QueryImpl spec m) :
-    (impl₁ + impl₂).batch' = impl₁ + impl₂.batch := rfl
+    (impl₁ +ₛ impl₂).batch' = impl₁ +ₛ impl₂.batch := rfl
 
 end batch'
 
@@ -264,7 +264,7 @@ shared cache. -/
 theorem simulateQ_romImpl_simulateQ_unbatch {α : Type}
     (oa : OracleComp (unifSpec + hashSpec.batch) α) :
     simulateQ hashSpec.romImpl (simulateQ hashSpec.unbatch oa) =
-      simulateQ (unifFwdImpl hashSpec + hashSpec.randomOracle.batch) oa :=
+      simulateQ (unifFwdImpl hashSpec +ₛ hashSpec.randomOracle.batch) oa :=
   QueryImpl.simulateQ_simulateQ_unbatch _ oa
 
 end OracleSpec
@@ -411,10 +411,10 @@ theorem run_simulateQ_add_parallelStateT_batch_liftComp {τ : Type} {free : Orac
     (base : QueryImpl free m) (impl₁ : QueryImpl spec (StateT σ₁ m))
     (impl₂ : QueryImpl side (StateT σ₂ m)) {α : Type} (oa : OracleComp (free + spec.batch) α)
     (s₁ : σ₁) (s₂ : σ₂) :
-    (simulateQ (base.liftTarget (StateT (σ₁ × σ₂) m) + (parallelStateT impl₁ impl₂).batch)
+    (simulateQ (base.liftTarget (StateT (σ₁ × σ₂) m) +ₛ (parallelStateT impl₁ impl₂).batch)
         (liftComp oa (free + (spec + side).batch))).run (s₁, s₂) =
       Prod.map id (·, s₂) <$>
-        (simulateQ (base.liftTarget (StateT σ₁ m) + impl₁.batch) oa).run s₁ := by
+        (simulateQ (base.liftTarget (StateT σ₁ m) +ₛ impl₁.batch) oa).run s₁ := by
   rw [liftComp_def, ← QueryImpl.simulateQ_compose]
   refine (map_run_simulateQ_eq_of_query_map_eq _ _ (·, s₂) (fun t s₁ => ?_) oa s₁).symm
   rcases t with n | ts
@@ -548,7 +548,7 @@ namespace OracleComp
 lemma simulateQ_add_batch_queryPoint {ι : Type} {spec : OracleSpec.{0, 0} ι}
     {m : Type → Type} [Monad m] [LawfulMonad m] (impl₁ : QueryImpl unifSpec m)
     (impl₂ : QueryImpl spec m) (t : ι) :
-    simulateQ (impl₁ + impl₂.batch) (queryPoint t) = impl₂ t := by
+    simulateQ (impl₁ +ₛ impl₂.batch) (queryPoint t) = impl₂ t := by
   simp only [queryPoint, queryRound, queryRound₂, simulateQ_map, simulateQ_spec_query,
     QueryImpl.add_apply_inr, Functor.map_map]
   change (fun a => (splitAnswers (fun _ : Fin 1 => t) Fin.elim0 a).1 0) <$> impl₂.batch [t] = _

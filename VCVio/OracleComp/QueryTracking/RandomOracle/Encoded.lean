@@ -161,13 +161,13 @@ its encoding, truncated. -/
 /-- The typed oracles and the raw inputs answered by the single random oracle. -/
 @[expose] noncomputable def singleHashImpl :
     QueryImpl (spec + (D →ₒ M)) (StateT (D →ₒ M).QueryCache ProbComp) :=
-  E.truncatedImpl + (D →ₒ M).randomOracle
+  E.truncatedImpl +ₛ (D →ₒ M).randomOracle
 
 /-- The single-oracle world: uniform sampling passes through, typed points and raw inputs are
 answered by the single random oracle. -/
 @[expose] noncomputable def singleImpl :
     QueryImpl (unifSpec + (spec + (D →ₒ M))) (StateT (D →ₒ M).QueryCache ProbComp) :=
-  unifFwdImpl (D →ₒ M) + E.singleHashImpl
+  unifFwdImpl (D →ₒ M) +ₛ E.singleHashImpl
 
 /-- The encoding as a program translation: a uniform query and a raw input are the same query of
 `unifSpec + (D →ₒ M)`, and a typed point is the query of the single oracle at its encoding,
@@ -238,14 +238,14 @@ the answer is the typed answer at `q` completed from `p`, and otherwise it is `p
 router. -/
 @[expose] noncomputable def typedHashImpl :
     QueryImpl (spec + (D →ₒ M)) (StateT (spec.QueryCache × (D →ₒ M).QueryCache) ProbComp) :=
-  (fun t ↦ pairImpl (spec := spec) (D := D) (M := M) (.inl t)) + E.routerImpl
+  (fun t ↦ pairImpl (spec := spec) (D := D) (M := M) (.inl t)) +ₛ E.routerImpl
 
 /-- The typed world: uniform sampling passes through, typed points are answered by independent
 lazy random oracles and raw inputs by the router. -/
 @[expose] noncomputable def typedImpl : QueryImpl (unifSpec + (spec + (D →ₒ M)))
     (StateT (spec.QueryCache × (D →ₒ M).QueryCache) ProbComp) :=
   (QueryImpl.ofLift unifSpec ProbComp).liftTarget
-    (StateT (spec.QueryCache × (D →ₒ M).QueryCache) ProbComp) + E.typedHashImpl
+    (StateT (spec.QueryCache × (D →ₒ M).QueryCache) ProbComp) +ₛ E.typedHashImpl
 
 variable {E}
 
@@ -552,7 +552,7 @@ noncomputable def patchedHashImpl :
 noncomputable def patchedImpl : QueryImpl (unifSpec + (spec + (D →ₒ M)))
     (StateT (spec.QueryCache × (D →ₒ M).QueryCache) ProbComp) :=
   (QueryImpl.ofLift unifSpec ProbComp).liftTarget
-    (StateT (spec.QueryCache × (D →ₒ M).QueryCache) ProbComp) + E.patchedHashImpl
+    (StateT (spec.QueryCache × (D →ₒ M).QueryCache) ProbComp) +ₛ E.patchedHashImpl
 
 /-- The invariant of the patched typed world: finitely many typed points are cached, and without
 a clash every tabulated raw input read as a typed point has that point cached. -/

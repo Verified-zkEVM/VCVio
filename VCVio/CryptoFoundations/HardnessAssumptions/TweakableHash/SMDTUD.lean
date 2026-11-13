@@ -202,8 +202,8 @@ is tweaks alone, so the collection oracle reads it through `id`. -/
     (prob : SM_DT_UD_Problem ι PkSeed Tweak M M' Y) (pk : PkSeed) :
     QueryImpl (unifSpec + (SM_DT_UD_challengeSpec Tweak Y + collectionSpec prob.thColl))
       (StateT (SM_DT_UD_State Tweak) ProbComp) :=
-  (QueryImpl.ofLift unifSpec ProbComp).liftTarget (StateT (SM_DT_UD_State Tweak) ProbComp) +
-    (SM_DT_UD_challengeOracle world prob pk +
+  (QueryImpl.ofLift unifSpec ProbComp).liftTarget (StateT (SM_DT_UD_State Tweak) ProbComp) +ₛ
+    (SM_DT_UD_challengeOracle world prob pk +ₛ
       collectionOracle (Q := Tweak) id prob.thColl pk)
 
 /-- The SM-UD experiment in one world. The seed is sampled, the first phase runs against both

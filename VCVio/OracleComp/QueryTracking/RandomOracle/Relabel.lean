@@ -506,7 +506,7 @@ noncomputable def relabelImpl :
 /-- The relabelled game extended by the label operations, each drawing its cell. -/
 @[expose] noncomputable def eagerImpl :
     QueryImpl (pub.withLabels X K R) (StateT (RelabelState pub X K R) ProbComp) :=
-  G.relabelImpl +
+  G.relabelImpl +ₛ
     (RelabelState.labelImpl :
       QueryImpl (OracleSpec.labelOps X K R) (StateT (RelabelState pub X K R) ProbComp))
 

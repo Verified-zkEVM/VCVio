@@ -101,7 +101,7 @@ def typAnswer (t : ℕ) : Fin 8 := ⟨(t + 5) % 8, Nat.mod_lt _ (by decide)⟩
 
 /-- The preprocessing oracles: coins from the counter, and the typed oracle. -/
 def preImpl : QueryImpl (unifSpec + typSpec) (StateT ℕ Id) :=
-  counterCoins id (fun k _ => k) +
+  counterCoins id (fun k _ => k) +ₛ
     (fun t => pure (typAnswer t) : QueryImpl typSpec (StateT ℕ Id))
 
 /-- The online state: the coin counter, the typed rounds and the challenges, latest first. -/
@@ -118,7 +118,7 @@ def typRounds : QueryImpl typSpec.batch (StateT OnState Id) :=
 
 /-- The online oracles: coins from the counter, challenges, and typed rounds. -/
 def onImpl : QueryImpl (freeSpec + typSpec.batch) (StateT OnState Id) :=
-  (counterCoins (σ := OnState) Prod.fst (fun k s => (k, s.2)) + challenges) + typRounds
+  (counterCoins (σ := OnState) Prod.fst (fun k s => (k, s.2)) +ₛ challenges) +ₛ typRounds
 
 /-- Run the adapted adversary from coin counter `3`: preprocessing, then the online phase on its
 state; return the output, the typed rounds and the challenges, in order. -/

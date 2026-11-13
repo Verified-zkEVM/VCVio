@@ -92,7 +92,7 @@ def ITSRTargetOracle (prob : ITSRProblem K X Y Index) :
 /-- Combined private-randomness and target handler. -/
 def ITSROracles (prob : ITSRProblem K X Y Index) :
     QueryImpl (unifSpec + ITSRTargetSpec X K) (StateT (ITSRTranscript K X) ProbComp) :=
-  (QueryImpl.ofLift unifSpec ProbComp).liftTarget (StateT (ITSRTranscript K X) ProbComp) +
+  (QueryImpl.ofLift unifSpec ProbComp).liftTarget (StateT (ITSRTranscript K X) ProbComp) +ₛ
     ITSRTargetOracle prob
 
 /-- Execute an adversary and retain its candidate and ordered target transcript. -/

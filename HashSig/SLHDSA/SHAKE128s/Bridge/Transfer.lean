@@ -419,13 +419,13 @@ theorem simulateQ_relabel_adversaryPhase (b : SchemeBridge e SA SB)
     simulateQ (relabel e) ((simulateQ
       ((QueryImpl.ofLift (Game.World A)
           (StateT Game.SigningLog (OracleComp (Game.World A)))).withAddCost
-          (fun input => Game.Counts.single .hash (Game.hashCost input)) +
+          (fun input => Game.Counts.single .hash (Game.hashCost input)) +ₛ
         Game.signingOracle SA sk)
       ((adapt b adversary).main pk)).run.run s) =
     (simulateQ
       ((QueryImpl.ofLift (Game.World B)
           (StateT Game.SigningLog (OracleComp (Game.World B)))).withAddCost
-          (fun input => Game.Counts.single .hash (Game.hashCost input)) +
+          (fun input => Game.Counts.single .hash (Game.hashCost input)) +ₛ
         Game.signingOracle SB (b.sk sk))
       (adversary.main (b.pk pk))).run.run s := by
   simp only [adapt]

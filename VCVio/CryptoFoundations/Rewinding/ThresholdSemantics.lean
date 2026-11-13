@@ -82,8 +82,8 @@ theorem map_thresholdChildren {m n : Type → Type} [Monad m] [LawfulMonad m]
 /-- Forgetting the counter leaves precisely the direct interpretation of the Boolean oracle. -/
 theorem counted_fst {Q α β : Type} (f : Q → α)
     (alg : OracleComp (unifSpec + rerunSpec Q α) β) (count : ℕ) :
-    Prod.fst <$> (simulateQ (coins (S := ℕ) + counted f) alg).run count =
-      simulateQ (QueryImpl.ofLift unifSpec ProbComp +
+    Prod.fst <$> (simulateQ (coins (S := ℕ) +ₛ counted f) alg).run count =
+      simulateQ (QueryImpl.ofLift unifSpec ProbComp +ₛ
         (fun q => (pure (f q) : ProbComp α))) alg := by
   induction alg using OracleComp.inductionOn generalizing count with
   | pure a => simp
@@ -103,9 +103,9 @@ theorem counted_fst {Q α β : Type} (f : Q → α)
 /-- An initial counter offset is added to the final counter without changing any answers. -/
 theorem counted_run_add {Q α β : Type} (f : Q → α)
     (alg : OracleComp (unifSpec + rerunSpec Q α) β) (count offset : ℕ) :
-    (simulateQ (coins (S := ℕ) + counted f) alg).run (count + offset) =
+    (simulateQ (coins (S := ℕ) +ₛ counted f) alg).run (count + offset) =
       (fun z => (z.1, z.2 + offset)) <$>
-        (simulateQ (coins (S := ℕ) + counted f) alg).run count := by
+        (simulateQ (coins (S := ℕ) +ₛ counted f) alg).run count := by
   induction alg using OracleComp.inductionOn generalizing count with
   | pure a => simp
   | query_bind q next ih =>

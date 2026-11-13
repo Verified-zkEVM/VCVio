@@ -111,7 +111,7 @@ theorem log_append (signer : Message → OracleComp OracleWorld (Option Bytes)) 
     ∀ (log : SigningLog) (cache : QueryCache HashSpec)
       (result : ((α × Multiplicative Tally) × SigningLog) × QueryCache HashSpec),
       result ∈ support (recordedRun
-        (simulateQ (recordedAdversaryImpl + recordedSigningOracle signer) computation)
+        (simulateQ (recordedAdversaryImpl +ₛ recordedSigningOracle signer) computation)
         log cache) → ∃ rest : SigningLog, result.1.2 = log ++ rest := by
   induction computation using OracleComp.inductionOn with
   | pure value =>
@@ -212,7 +212,7 @@ theorem provenance_phase_subset (sk : SecretKey) {α : Type}
     ∀ (log : SigningLog) (cache : QueryCache HashSpec)
       (result : ((α × Multiplicative Tally) × SigningLog) × QueryCache HashSpec),
       result ∈ support (recordedRun
-        (simulateQ (recordedAdversaryImpl + recordedSigningOracle (Scheme.sign sk)) computation)
+        (simulateQ (recordedAdversaryImpl +ₛ recordedSigningOracle (Scheme.sign sk)) computation)
         log cache) →
       ∀ laterCache : QueryCache HashSpec,
         (∀ (input : Bytes) (output : HashOutput),

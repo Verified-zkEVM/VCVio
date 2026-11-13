@@ -228,9 +228,10 @@ def combinedChallengeImpl {Puzzle Key Λ : Type} [DecidableEq Λ]
     QueryImpl ((unifSpec + LeftOrRight.spec Msg C) + (D →ₒ M))
       (OracleComp (unifSpec + (spec + (D →ₒ M)))) :=
   ((fun n => liftM ((unifSpec + (spec + (D →ₒ M))).query (.inl n)) :
-      QueryImpl unifSpec (OracleComp (unifSpec + (spec + (D →ₒ M))))) +
+      QueryImpl unifSpec (OracleComp (unifSpec + (spec + (D →ₒ M))))) +ₛ
     LeftOrRight.oracle
-      (fun msg => simulateQ (typedLift (D := D) (M := M)) (dem.encrypt (puzzle, key) msg)) leak b) +
+      (fun msg => simulateQ (typedLift (D := D) (M := M)) (dem.encrypt (puzzle, key) msg))
+      leak b) +ₛ
   (fun x => liftM ((unifSpec + (spec + (D →ₒ M))).query (.inr (.inr x))) :
       QueryImpl (D →ₒ M) (OracleComp (unifSpec + (spec + (D →ₒ M)))))
 
@@ -267,7 +268,7 @@ lemma simulateQ_encodeImpl_combinedHidingExperiment {Puzzle Key Λ : Type} [Deci
       encodeImpl_compose_typedLift_batch', QueryImpl.simulateQ_compose, hgen]
   have hch : ∀ (puzzle : Puzzle) (key : Key),
       E.encodeImpl ∘ₛ combinedChallengeImpl dem leak puzzle key b =
-        (unifSpec.passthrough + LeftOrRight.oracle (demRaw.encrypt (puzzle, key)) leak b) +
+        (unifSpec.passthrough + LeftOrRight.oracle (demRaw.encrypt (puzzle, key)) leak b) +ₛ
           (QueryImpl.id' (D →ₒ M)).liftTarget (OracleComp (unifSpec + (D →ₒ M))) := by
     intro puzzle key
     funext t
@@ -336,7 +337,7 @@ lemma freeOnlineImpl_run_step {Puzzle Key Λ : Type} [DecidableEq Λ]
     (t : ((unifSpec + LeftOrRight.spec Msg C) + (D →ₒ M).batch).Domain)
     (pv : (D →ₒ M).QueryCache) (c : spec.QueryCache) :
     (simulateQ (spec.romImpl ∘ₛ ((unifSpec.passthrough +
-        LeftOrRight.oracle (dem.encrypt (puzzle, key)) leak b) +
+        LeftOrRight.oracle (dem.encrypt (puzzle, key)) leak b) +ₛ
         (QueryImpl.id' spec).liftTarget (OracleComp (unifSpec + spec)))).batch'
       ((E.freeOnlineImpl t).run pv)).run c =ᵈ
       (fun z => ((z.1, z.2.2), z.2.1)) <$>
@@ -353,7 +354,7 @@ lemma freeOnlineImpl_run_step {Puzzle Key Λ : Type} [DecidableEq Λ]
     rw [E.challenge_run_step dem leak puzzle key b mm pv c]
     simp [Functor.map_map]
   · have hround : QueryImpl.batch (fun t => (spec.romImpl ∘ₛ ((unifSpec.passthrough +
-        LeftOrRight.oracle (dem.encrypt (puzzle, key)) leak b) +
+        LeftOrRight.oracle (dem.encrypt (puzzle, key)) leak b) +ₛ
         (QueryImpl.id' spec).liftTarget (OracleComp (unifSpec + spec)))) (.inr t)) =
           spec.randomOracle.batch := by
       congr 1

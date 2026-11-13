@@ -281,7 +281,7 @@ jobs:
             echo '    {t : Type uQuery -> Type uTarget} [Monad t] [LawfulMonad t]'
             echo '    (f1 : QueryImpl s1 t) (f2 : QueryImpl s2 t)'
             echo '    {A : Type uQuery} (x : OracleComp s1 A) :'
-            echo '    simulateQ (f1 + f2) (liftM x : OracleComp (s1 + s2) A) ='
+            echo '    simulateQ (f1 +ₛ f2) (liftM x : OracleComp (s1 + s2) A) ='
             echo '      simulateQ f1 x :='
             echo '  QueryImpl.simulateQ_add_liftM_left f1 f2 x'
             echo ''

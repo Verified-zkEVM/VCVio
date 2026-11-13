@@ -314,7 +314,7 @@ lemma typedImpl_compose_rawLift_inr (x : D) :
 
 lemma onlineImpl_run_step (t : (unifSpec + (D →ₒ M).batch).Domain) (pv : (D →ₒ M).QueryCache)
     (c : spec.QueryCache) :
-    (simulateQ (unifFwdImpl spec + spec.randomOracle.batch) ((E.onlineImpl t).run pv)).run c =ᵈ
+    (simulateQ (unifFwdImpl spec +ₛ spec.randomOracle.batch) ((E.onlineImpl t).run pv)).run c =ᵈ
       (fun z => ((z.1, z.2.2), z.2.1)) <$> ((E.typedImpl ∘ₛ rawLift).batch' t).run (c, pv) := by
   rcases t with n | xs
   · simp only [onlineImpl, QueryImpl.batch'_apply_inl, QueryImpl.apply_compose, rawLift,

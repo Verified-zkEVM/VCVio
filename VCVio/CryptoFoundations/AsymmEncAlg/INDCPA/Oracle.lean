@@ -105,7 +105,7 @@ def IND_CPA_queryImplFromChallenge
     {σ : Type}
     (challenge : QueryImpl (M × M →ₒ C) (StateT σ ProbComp)) :
     QueryImpl encAlg.IND_CPA_oracleSpec (StateT σ ProbComp) :=
-  (QueryImpl.ofLift unifSpec ProbComp).liftTarget (StateT σ ProbComp) + challenge
+  (QueryImpl.ofLift unifSpec ProbComp).liftTarget (StateT σ ProbComp) +ₛ challenge
 
 /-- The cached left/right challenge oracle under public key `pk`: a repeated message pair is
 answered with its cached ciphertext, and a fresh pair `mm` is answered by encrypting the message

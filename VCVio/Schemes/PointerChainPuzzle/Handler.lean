@@ -363,7 +363,7 @@ round counter and logs the points (`IdealState.afterRound`). -/
 def idealImpl (P : Puzzle n S L Salt) (ℓ : Labels n m S L) :
     QueryImpl (unifSpec + (oracleSpec n S L Salt Ctx).batch)
       (StateT (IdealState n m S L Salt Ctx) ProbComp) :=
-  (QueryImpl.ofLift unifSpec ProbComp).liftTarget (StateT (IdealState n m S L Salt Ctx) ProbComp) +
+  (QueryImpl.ofLift unifSpec ProbComp).liftTarget (StateT (IdealState n m S L Salt Ctx) ProbComp) +ₛ
     fun ts => StateT.mk fun s : IdealState n m S L Salt Ctx =>
       (fun z => (z.1, s.afterRound m mkCtx initAcc P ℓ ts z.2)) <$>
         (QueryImpl.batch (idealPoint m mkCtx initAcc P ℓ s.reached) ts).run s.cache
@@ -576,7 +576,7 @@ lemma not_bad_of_mem_support_batch_idealPoint {R : Finset (PathValue n m)}
 
 /-- The handler of the programmed experiment's online phase: uniform queries pass through, and
 each round is answered point by point by the lazy random oracle. -/
-local notation "H" => unifFwdImpl (oracleSpec n S L Salt Ctx) +
+local notation "H" => unifFwdImpl (oracleSpec n S L Salt Ctx) +ₛ
   QueryImpl.batch (OracleSpec.randomOracle (spec := oracleSpec n S L Salt Ctx))
 
 variable (m mkCtx initAcc P ℓ) in
@@ -718,7 +718,7 @@ answering each round point by point. -/
 lemma onlineRun_eq_map_run (σ : adv.State) (P : Puzzle n S L Salt) (key : S)
     (c : (oracleSpec n S L Salt Ctx).QueryCache) :
     onlineRun adv σ P key c = (fun z => (z.1, key)) <$>
-      (simulateQ (unifFwdImpl (oracleSpec n S L Salt Ctx) +
+      (simulateQ (unifFwdImpl (oracleSpec n S L Salt Ctx) +ₛ
         QueryImpl.batch (oracleSpec n S L Salt Ctx).randomOracle) (adv.online σ P)).run c := by
   simp [onlineRun, OracleSpec.simulateQ_romImpl_simulateQ_unbatch, StateT.run'_eq]
 
@@ -820,7 +820,7 @@ the lazy random oracle answering each round point by point leads the online phas
 lemma prEvent_onlineWin (σ : adv.State) (P : Puzzle n S L Salt) (key : S)
     (c : (oracleSpec n S L Salt Ctx).QueryCache) :
     Pr{let b ← onlineWin adv σ P key c}[b = true] =
-      Pr{let z ← (simulateQ (unifFwdImpl (oracleSpec n S L Salt Ctx) +
+      Pr{let z ← (simulateQ (unifFwdImpl (oracleSpec n S L Salt Ctx) +ₛ
           QueryImpl.batch (oracleSpec n S L Salt Ctx).randomOracle) (adv.online σ P)).run c}[
         z.1 = key] := by
   rw [onlineWin, onlineRun_eq_map_run, Functor.map_map, prEvent_map]

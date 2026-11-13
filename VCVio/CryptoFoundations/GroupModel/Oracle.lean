@@ -134,7 +134,7 @@ theorem lookup_append_fresh [DecidableEq S] [∀ s, Zero (V s)] (tbl : Tbl V) (s
     {m : Type → Type} [Monad m] {ι : Type} {Γ : OracleSpec ι}
     (game : QueryImpl Γ (StateT (Tbl V) m)) {α : Type}
     (oa : OracleComp (spec F σ + Γ) α) (tbl : Tbl V) : m (α × Tbl V) :=
-  (simulateQ (impl M obs m + game) oa).run tbl
+  (simulateQ (impl M obs m +ₛ game) oa).run tbl
 
 /-- Group queries followed by uniform sampling queries. -/
 abbrev genSpec (F : Type) (σ : Sig S) := spec F σ + unifSpec
@@ -203,7 +203,7 @@ theorem run_extends {m : Type → Type} [Monad m] [LawfulMonad m] [MonadAttach m
     (hg : ∀ t tbl z, z ∈ support ((game t).run tbl) → Tbl.Extends tbl z.2)
     {α : Type} (oa : OracleComp (spec F σ + Γ) α) (tbl : Tbl V) (z : α × Tbl V)
     (hz : z ∈ support (run M obs game oa tbl)) : Tbl.Extends tbl z.2 := by
-  refine simulateQ_run_preservesInv (impl M obs m + game) (Tbl.Extends tbl) ?_ oa tbl
+  refine simulateQ_run_preservesInv (impl M obs m +ₛ game) (Tbl.Extends tbl) ?_ oa tbl
     (Tbl.Extends.refl tbl) z hz
   rintro (t | t) tbl' htbl' w hw
   · exact htbl'.trans (impl_extends M obs t tbl' w hw)

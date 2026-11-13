@@ -72,7 +72,7 @@ lemma hybridBaseImpl_run_ro (mc : M × Commit)
     (hybridBaseImpl (Commit := Commit) (Chal := Chal) M (.inr mc)).run (c, l) =
       (fun cu : Chal × (M × Commit →ₒ Chal).QueryCache =>
         (cu.1, (cu.2, l))) <$> roStep M c mc := by
-  have h : (onCache M ((unifFwdImpl (M × Commit →ₒ Chal) +
+  have h : (onCache M ((unifFwdImpl (M × Commit →ₒ Chal) +ₛ
       (randomOracle : QueryImpl (M × Commit →ₒ Chal)
         (StateT ((M × Commit →ₒ Chal).QueryCache) ProbComp))) (.inr mc))).run (c, l) =
         (fun cu : Chal × (M × Commit →ₒ Chal).QueryCache =>
@@ -127,7 +127,7 @@ lemma ghostHybridImpl_proj_prog (pk : Stmt) (sk : Wit)
     Prod.map id (fun g : GhostState M Commit Chal =>
         (overlayCache M g.1.1.1 g.1.1.2, g.1.2)) <$>
         (ghostHybridImpl ids M maxAttempts true pk sk t).run s =
-      ((hybridBaseImpl (Commit := Commit) (Chal := Chal) M +
+      ((hybridBaseImpl (Commit := Commit) (Chal := Chal) M +ₛ
           hybridSignImpl M (progSignBody ids M pk sk · maxAttempts)) t).run
         (overlayCache M s.1.1.1 s.1.1.2, s.1.2) := by
   rcases t with (n | mc) | msg
@@ -173,7 +173,7 @@ lemma ghostHybridImpl_proj_trans (pk : Stmt) (sk : Wit)
     (s : GhostState M Commit Chal) :
     Prod.map id (fun g : GhostState M Commit Chal => (g.1.1.1, g.1.2)) <$>
         (ghostHybridImpl ids M maxAttempts false pk sk t).run s =
-      ((hybridBaseImpl (Commit := Commit) (Chal := Chal) M +
+      ((hybridBaseImpl (Commit := Commit) (Chal := Chal) M +ₛ
           hybridSignImpl M (transSignBody ids M maxAttempts pk sk)) t).run
         (s.1.1.1, s.1.2) := by
   rcases t with (n | mc) | msg

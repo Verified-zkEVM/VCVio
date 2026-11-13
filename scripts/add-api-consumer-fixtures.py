@@ -21,6 +21,7 @@ FIXTURES = {
     "APIReactive": "VCVioTest/ReactiveKernel.lean",
     "APIReactiveAdversarial": "VCVioTest/ReactiveNetworkAdversarial.lean",
     "APIRuntime": "VCVioTest/Runtime.lean",
+    "APIQueryImplSum": "VCVioTest/ModuleAPI/QueryImplSum.lean",
 }
 
 

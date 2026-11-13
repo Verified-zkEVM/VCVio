@@ -77,7 +77,7 @@ passive: projecting it away recovers `embedTrapIdxImpl … j y` exactly
         fun t' => if t' = (r, msg) then some st.1.1.2 else st.1.2 t'),
         insert msg st.2)) : State)
       pure (r, x)
-  (unifImpl + roImpl) + signImpl
+  (unifImpl +ₛ roImpl) +ₛ signImpl
 
 omit [DecidableEq Range] [Fintype Salt] in
 /-- One-step unfolding of `embedTrapIdxSigImpl` on a uniform query. -/
@@ -217,7 +217,7 @@ so it is distributionally passive: projecting it away recovers `embedTrapFreshId
         fun t' => if t' = (r, msg) then some st.1.1.2 else st.1.2 t'),
         insert msg st.2)) : State)
       pure (r, x)
-  (unifImpl + roImpl) + signImpl
+  (unifImpl +ₛ roImpl) +ₛ signImpl
 
 omit [DecidableEq Range] [Fintype Salt] in
 /-- One-step unfolding of `embedTrapFreshIdxSigImpl` on a uniform query. -/

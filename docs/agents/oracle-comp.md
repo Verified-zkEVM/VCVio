@@ -206,6 +206,13 @@ polymorphic query code; the PolyFun theorem makes clear that the same object
 can interpret any free program over the interface, not only oracle-specific
 syntax.
 
+Reducibility is what lets cslib's `PFunctor.FreeM.liftM` lemmas and PolyFun's
+`PFunctor.Handler` lemmas apply to a `QueryImpl` unchanged. It also means that an
+instance stated for `QueryImpl` would be keyed on the underlying function type and
+found for ordinary functions, so no instance may be keyed on `QueryImpl` (gotcha 8b
+in [`gotchas.md`](gotchas.md)); operations on handlers are named definitions and
+notations, such as `+ₛ` and `∘ₛ` below.
+
 Constructors:
 
 | Constructor | Use |
@@ -215,6 +222,8 @@ Constructors:
 | `QueryImpl.ofLift spec m` | From `MonadLift` instance |
 | `QueryImpl.ofFn f` | From pure function `f : (t : Domain) → Range t` |
 | `impl.liftTarget n` | Lift impl from `m` to `n` via `MonadLiftT` |
+| `impl₁ +ₛ impl₂` | Handle `spec₁ + spec₂`: `.inl` queries by `impl₁`, `.inr` queries by `impl₂` |
+| `impl₁.addLift impl₂` | `+ₛ` after lifting both handlers into a common target monad |
 | `spec.passthrough + impl` | Handle `spec'` with `impl`; pass `spec` queries through |
 
 To simulate only some of a computation's oracles, `spec.passthrough + impl` handles `spec'` with
@@ -261,6 +270,21 @@ infixl : 65 " ∘ₛ " => QueryImpl.compose
 ```
 
 Key lemma: `simulateQ (so' ∘ₛ so) oa = simulateQ so' (simulateQ so oa)`
+
+### QueryImpl sums
+
+```lean
+protected def add (impl₁ : QueryImpl spec₁ m) (impl₂ : QueryImpl spec₂ m) :
+    QueryImpl (spec₁ + spec₂) m
+
+infixl:65 " +ₛ " => QueryImpl.add
+```
+
+Specifications combine with `+`, their handlers with `+ₛ`; both are left-associative at
+precedence 65, so `impl₁ +ₛ impl₂ +ₛ impl₃` handles `spec₁ + spec₂ + spec₃`. The `@[simp]`
+lemmas `QueryImpl.add_apply_inl`/`_inr` route a query to its summand, and
+`QueryImpl.simulateQ_add_liftComp_left`/`_right` discard the unused handler:
+`simulateQ (impl₁ +ₛ impl₂) (liftComp oa (spec₁ + spec₂)) = simulateQ impl₁ oa`.
 
 ### Wrapping a QueryImpl with a per-query side effect (`preInsert` / `postInsert`)
 
