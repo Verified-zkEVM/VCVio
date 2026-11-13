@@ -11,15 +11,30 @@ public import VCVio
 /-!
 # Discrete total variation and finite-support comparisons
 
-A uniform bit against a fixed bit is the running example. Their distance is one half by the
-finite-type L1 formula, the event bound is attained on the bit the fixed computation never
-outputs, and a common continuation or an independent second draw stays within the stated bounds.
-Singleton masses decide equality of the discrete measures of finitely supported computations.
+Two fixed values are at distance zero or one. A uniform bit against a fixed bit is the running
+example otherwise. Their distance is one half by the finite-type L1 formula, the event bound is
+attained on the bit the fixed computation never outputs, and a common continuation or an
+independent second draw stays within the stated bounds. Singleton masses decide equality of the
+discrete measures of finitely supported computations.
 -/
 
 open OracleComp
 
 namespace VCVioTest.DiscreteTVDist
+
+/-- Two fixed bits that differ are at distance one. -/
+example : discreteTVDist (pure false : ProbComp Bool) (pure true) = 1 := by
+  simp [discreteTVDist.pure_pure]
+
+/-- Two fixed bits that differ are also at `measureTVDist` one under a locally chosen discrete
+σ-algebra. -/
+example : letI : MeasurableSpace Bool := ⊤
+    measureTVDist (pure false : ProbComp Bool) (pure true) = 1 := by
+  simp [measureTVDist_pure_pure]
+
+/-- Distinct fixed values of a type without decidable equality are at distance one. -/
+example {α : Type} {a b : α} (h : a ≠ b) : discreteTVDist (pure a : ProbComp α) (pure b) = 1 :=
+  discreteTVDist.pure_pure_of_ne h
 
 /-- A uniform bit is at distance one half from a fixed bit. The examples below that use this
 distance take it as the hypothesis `h`. -/

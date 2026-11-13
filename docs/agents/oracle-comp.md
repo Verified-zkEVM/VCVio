@@ -236,12 +236,12 @@ must lift `OracleComp spec`. `spec.passthrough` is not itself a `QueryImpl`: rew
 Substitutes every `query t` in a computation with `impl t`:
 
 ```lean
-@[reducible] def simulateQ [Monad r] (impl : QueryImpl spec r) (mx : OracleComp spec α) : r α
+def simulateQ [Monad r] (impl : QueryImpl spec r) (mx : OracleComp spec α) : r α
 ```
 
-**Universal property.** `simulateQ impl` is the *unique* monad morphism `OracleComp spec →ᵐ r` that agrees with `impl` on queries. It is a reducible wrapper around `PFunctor.FreeM.liftM impl`, i.e. the fold of the free-monad syntax tree into `r`. Every way of "running" an `OracleComp` in another monad factors through `simulateQ`.
+**Universal property.** `simulateQ impl` is the *unique* monad morphism `OracleComp spec →ᵐ r` that agrees with `impl` on queries. It is the fold `PFunctor.FreeM.liftM impl` of the free-monad syntax tree into `r` (`simulateQ_def`). Every way of "running" an `OracleComp` in another monad factors through `simulateQ`.
 
-**Fold lemmas.** Because `simulateQ` is reducible, the `PFunctor.FreeM.liftM` lemmas of CSLib and PolyFun (`PFunctor.FreeM.liftM_bind`, `PFunctor.FreeM.liftM_map`, `PFunctor.FreeM.liftM_mapLens`, …) apply to `simulateQ` goals under `simp`, and CSLib's `@[simp]` `liftM_pure`/`liftM_bind`/`liftM_map` fire there before the `simulateQ_*` lemmas below. `rw` matches on the head constant without unfolding it, so the `simulateQ_*` lemmas remain the `rw` interface; add a `simulateQ`-headed restatement only where `rw` needs one.
+**Normal form.** `simulateQ` is a semireducible `def`, so CSLib's and PolyFun's `PFunctor.FreeM.liftM` simp lemmas do not fire on `simulateQ` goals and `simp` leaves them `simulateQ`-headed. That keeps `rw` working after a `simp` step: `rw` finds its pattern by head constant, so `rw [simulateQ_spec_query]`, or `rw [h]` with a hypothesis `h` about `simulateQ impl oa`, cannot see a `simulateQ` that has become `PFunctor.FreeM.liftM impl …`. Fold laws enter through `simulateQ`-headed restatements: `simulateQ_natural` (naturality along a monad morphism `F : r →ᵐ n`), `simulateQ_mapLens` (relabelling along a `PFunctor.Lens`), `QueryImpl.simulateQ_compose` (composition `so' ∘ₛ so`) and `simulateQ_liftTarget`. For another `PFunctor.FreeM.liftM` law, state a `simulateQ`-headed lemma and prove it from `simulateQ_def`; do not add a simp lemma folding `PFunctor.FreeM.liftM` back into `simulateQ`.
 
 **Handler vs denotation.** The target monad `r` determines how `simulateQ impl` reads:
 
@@ -250,15 +250,19 @@ Substitutes every `query t` in a computation with `impl t`:
 
 So "operational vs denotational" is not a primitive split for monad-valued interpretations: both are `simulateQ` parameterized by the target monad. The measure semantics is the one exception, because `Measure α` needs a `MeasurableSpace α` and is not a Lean monad (see [Output measures and support](#output-measures-and-support) below).
 
-### Key lemmas (all `@[grind =]`)
+### Key lemmas (all `@[simp, grind =]`)
 
-| Lemma | Statement | `@[simp]` |
-|-------|-----------|-----------|
-| `simulateQ_pure` | `simulateQ impl (pure x) = pure x` | yes |
-| `simulateQ_bind` | `simulateQ impl (mx >>= my) = simulateQ impl mx >>= fun x => simulateQ impl (my x)` | no: `PFunctor.FreeM.liftM_bind` |
-| `simulateQ_query` | `simulateQ impl (liftM q) = q.cont <$> (impl q.input)` | yes |
-| `simulateQ_map` | `simulateQ impl (f <$> mx) = f <$> simulateQ impl mx` | no: `PFunctor.FreeM.liftM_map` |
-| `simulateQ_id'` | `simulateQ (QueryImpl.id' spec) mx = mx` | yes |
+| Lemma | Statement |
+|-------|-----------|
+| `simulateQ_pure` | `simulateQ impl (pure x) = pure x` |
+| `simulateQ_bind` | `simulateQ impl (mx >>= my) = simulateQ impl mx >>= fun x => simulateQ impl (my x)` |
+| `simulateQ_query` | `simulateQ impl (liftM q) = q.cont <$> (impl q.input)` |
+| `simulateQ_map` | `simulateQ impl (f <$> mx) = f <$> simulateQ impl mx` |
+| `simulateQ_id'` | `simulateQ (QueryImpl.id' spec) mx = mx` |
+
+`simulateQ_seq`, `simulateQ_seqLeft` and `simulateQ_seqRight` are `@[simp]` as well. For an
+explicit `spec.query t`, `simulateQ_spec_query : simulateQ impl (liftM (spec.query t)) = impl t`
+(`@[grind =]`, not `@[simp]`) avoids the `id <$>` that `simulateQ_query` leaves.
 
 ### QueryImpl composition
 

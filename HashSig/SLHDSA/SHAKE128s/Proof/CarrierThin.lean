@@ -7,7 +7,6 @@ Authors: Tom Wambsgans
 module
 
 public import HashSig.SLHDSA.SHAKE128s.Proof.CarrierThinStages
-import VCVio.OracleComp.EvalDist.Sum
 
 /-!
 # The fired cells are thinned by a fresh `PRF_msg` answer

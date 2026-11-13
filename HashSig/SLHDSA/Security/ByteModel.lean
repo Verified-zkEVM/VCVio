@@ -8,7 +8,6 @@ module
 
 public import HashSig.SLHDSA.Security.Target
 public import HashSig.SLHDSA.Concrete.FIPS
-import VCVio.OracleComp.Constructions.SampleableType.Measure
 
 /-!
 # SLH-DSA over a single SHAKE256 random oracle

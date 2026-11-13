@@ -42,23 +42,6 @@ universe u
 
 variable {Y : Type u}
 
-/-- Every well-typed batch proof exposes at least one selected leaf. This is the indexed
-witness form of `BatchProof.anySelected_of_batchProof`. -/
-theorem BatchProof.exists_selected {s : Skeleton} {selector : LeafData Bool s}
-    (proof : BatchProof Y selector) :
-    ∃ index : SkeletonLeafIndex s, selector.get index = true := by
-  induction proof with
-  | leaf => exact ⟨.ofLeaf, rfl⟩
-  | internalBoth leftProof rightProof ihLeft ihRight =>
-      obtain ⟨index, selected⟩ := ihLeft
-      exact ⟨.ofLeft index, by simpa using selected⟩
-  | pruneRight hright rightRoot leftProof ih =>
-      obtain ⟨index, selected⟩ := ih
-      exact ⟨.ofLeft index, by simpa using selected⟩
-  | pruneLeft hleft leftRoot rightProof ih =>
-      obtain ⟨index, selected⟩ := ih
-      exact ⟨.ofRight index, by simpa using selected⟩
-
 /-- Unequal selected-value tuples for one selector disagree at a concrete selected leaf. -/
 theorem exists_selectedValueAt_ne_of_ne {s : Skeleton} {selector : LeafData Bool s}
     (values₁ values₂ : SelectedValues Y selector) (hne : values₁ ≠ values₂) :
@@ -278,7 +261,7 @@ theorem exists_batchToSingleProofAddressed_ne_of_ne {s : Skeleton}
             have hlist := congrArg List.Vector.toList heq
             exact (List.cons.inj (by
               simpa only [batchToSingleProofAddressed, List.Vector.toList_cons] using hlist)).2
-          · obtain ⟨index, selected⟩ := leftProof₁.exists_selected
+          · obtain ⟨index, selected⟩ := leftProof₁.exists_get_eq_true
             refine ⟨.ofLeft index, by simpa using selected, ?_⟩
             intro heq
             apply hroot
@@ -313,7 +296,7 @@ theorem exists_batchToSingleProofAddressed_ne_of_ne {s : Skeleton}
             have hlist := congrArg List.Vector.toList heq
             exact (List.cons.inj (by
               simpa only [batchToSingleProofAddressed, List.Vector.toList_cons] using hlist)).2
-          · obtain ⟨index, selected⟩ := rightProof₁.exists_selected
+          · obtain ⟨index, selected⟩ := rightProof₁.exists_get_eq_true
             refine ⟨.ofRight index, by simpa using selected, ?_⟩
             intro heq
             apply hroot
@@ -387,7 +370,7 @@ theorem exists_batchToSingleProofAddressed_map_some_ne_generateProof {s : Skelet
       | internal root leftTree rightTree =>
           have hleftSelected := leftProof.anySelected_of_batchProof
           by_cases hroot : some rightRoot ≠ rightTree.getRootValue
-          · obtain ⟨index, selected⟩ := leftProof.exists_selected
+          · obtain ⟨index, selected⟩ := leftProof.exists_get_eq_true
             refine ⟨.ofLeft index, by simpa using selected, ?_⟩
             intro heq
             apply hroot
@@ -423,7 +406,7 @@ theorem exists_batchToSingleProofAddressed_map_some_ne_generateProof {s : Skelet
       | internal root leftTree rightTree =>
           have hrightSelected := rightProof.anySelected_of_batchProof
           by_cases hroot : some leftRoot ≠ leftTree.getRootValue
-          · obtain ⟨index, selected⟩ := rightProof.exists_selected
+          · obtain ⟨index, selected⟩ := rightProof.exists_get_eq_true
             refine ⟨.ofRight index, by simpa using selected, ?_⟩
             intro heq
             apply hroot

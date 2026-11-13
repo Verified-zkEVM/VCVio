@@ -11,6 +11,7 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURES = {
     "APIHeap": "VCVioTest/ModuleAPI/Heap.lean",
+    "APIQueryImpl": "VCVioTest/ModuleAPI/QueryImpl.lean",
     "APIVector": "LatticeCryptoTest/Ring/VectorAPI.lean",
     "APIFacade": "VCVioTest/PFunctorFacade.lean",
     "APIMeasureWP": "VCVioTest/ProgramLogic/MeasureWP.lean",

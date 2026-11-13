@@ -7,7 +7,6 @@ Authors: Quang Dao
 module
 public import VCVio.CryptoFoundations.Rewinding.ThresholdAnalysis
 public import VCVio.CryptoFoundations.Rewinding.FinderBridge
-import Mathlib.Algebra.Order.BigOperators.Group.List
 
 /-!
 # The ACK threshold tree finder

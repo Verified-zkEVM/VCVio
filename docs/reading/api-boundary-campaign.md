@@ -77,7 +77,7 @@ order. The full per-PR gate is `./scripts/validate.sh --lint --test --axioms`; a
 interfaces additionally run the FFI/vector checks, and affected optional adapters build separately.
 Exposure and PMF baselines only decrease. No new sorry or nonstandard axiom debt is admitted.
 
-`scripts/add-api-consumer-fixtures.py` copies twelve source fixtures into the scratch consumer
+`scripts/add-api-consumer-fixtures.py` copies thirteen source fixtures into the scratch consumer
 and registers them as separate Lake library targets. Separate targets preserve import-isolation
 checks in the native measure fixtures. CI compiles these alongside its linked consumer executable.
 The fixture list identifies the reviewed interfaces; these results are not a claim that every

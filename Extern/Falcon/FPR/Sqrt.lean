@@ -74,10 +74,10 @@ private theorem sqrtStep_toNat (v : UInt64 × UInt64 × UInt64 × UInt64)
       rw [toNat_shiftLeft_one, hsub2]
       omega
   · simp only [ite_eq_right hbit]
-    have e2 : v.2.2.2 &&& (0 : UInt64) = 0 := by rw [UInt64.and_comm]; exact uint64_zero_and _
-    have e3 : (0 : UInt64) &&& (v.2.2.2 <<< (1 : UInt64)) = 0 := uint64_zero_and _
+    have e2 : v.2.2.2 &&& (0 : UInt64) = 0 := by rw [UInt64.and_comm]; exact UInt64.zero_and
+    have e3 : (0 : UInt64) &&& (v.2.2.2 <<< (1 : UInt64)) = 0 := UInt64.zero_and
     have e4 : (v.2.2.1 + v.2.2.2) &&& (0 : UInt64) = 0 := by
-      rw [UInt64.and_comm]; exact uint64_zero_and _
+      rw [UInt64.and_comm]; exact UInt64.zero_and
     rw [e2, e3, e4]
     refine ⟨?_, ?_, ?_, ?_⟩
     · rw [UInt64.toNat_shiftRight, show (1 : UInt64).toNat % 64 = 1 from by decide,
@@ -429,7 +429,7 @@ private theorem sqrtPipeline_xu_toNat_of_bit (x : FPR) {p : ℕ} (hp : p ≤ 1)
   · have hw : ((sqrtPipeline x).e_.toUInt32 &&& 1) = 0 := by
       rw [← UInt32.toNat_inj, hbit]; rfl
     rw [hw, show ((0 : UInt32).toUInt64) = 0 from by decide,
-      show ((0 : UInt64) - 0) = 0 from by decide, and_zero_uint64, UInt64.add_zero]
+      show ((0 : UInt64) - 0) = 0 from by decide, UInt64.and_zero, UInt64.add_zero]
     omega
   · have hw : ((sqrtPipeline x).e_.toUInt32 &&& 1) = 1 := by
       rw [← UInt32.toNat_inj, hbit]; rfl

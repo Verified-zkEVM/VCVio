@@ -8,7 +8,6 @@ module
 
 public import HashSig.SLHDSA.Security.ByteLinkedBound
 public import VCVio.OracleComp.QueryTracking.RandomOracle.ProjectedHazards
-import VCVio.OracleComp.Constructions.SampleableType.Measure
 
 /-!
 # The virtual hit and the honest input at a linked point, charged
