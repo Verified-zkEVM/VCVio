@@ -48,6 +48,13 @@ the draws that actually occur wants the support-restricted
 `evalDist_bind_apply_le_of_forall_mem_support_notMem_eq_zero` instead, of which
 `evalDist_bind_apply_le_of_forall_notMem_eq_zero` is a corollary.
 
+The union form of the adapted bound is in
+`VCVio.OracleComp.ProbComp.IndepProductEvents.AdaptedUnion`. Suppose the target sets at each
+coordinate depend only on the coordinates strictly before it, each projection of a uniform draw
+takes any one value with probability at most `ε`, and the target sets of every tape have at most
+`B` elements in total. Then some coordinate's projection lands in its target set with probability
+at most `B * ε` (`prEvent_answerTape_exists_project_mem_le_tickets`).
+
 Every statement here is `ProbComp`-valued, which is why this file sits at the `ProbComp` layer;
 the index-free product denotation it rests on is `VCVio.EvalDist.IndepProductMeasure`.
 -/

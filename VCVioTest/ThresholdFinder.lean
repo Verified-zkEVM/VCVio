@@ -212,6 +212,6 @@ example (run : ((i : Fin 2) → fourChallenges i) → ProbComp Bool) :
             Pr{let z ← (fixedTape.attempt run
               (thresholdFinder fourChallenges twoBranches))}[z.1.isSome] ∧
       expectedCalls (fixedTape.attempt run (thresholdFinder fourChallenges twoBranches)) ≤ 4 :=
-  fixedTape.finder_bounds_honest run isTreeFinder_twoRounds
+  fixedTape.finder_bounds_honest run isTreeFinder_twoRounds.toIsFinder
 
 end VCVioTest.ThresholdFinder

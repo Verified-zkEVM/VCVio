@@ -3,6 +3,7 @@ module  -- shake: keep-all --deprecated_module: ignore
 public import VCVioTest.AKE.UAKE.ExperimentFixtures
 public import VCVioTest.AKE.UAKE.TranscriptFixtures
 public import VCVioTest.Algorithms.Hash
+public import VCVioTest.AnswerTapeAdaptedUnion
 public import VCVioTest.Asymptotics.Negligible
 public import VCVioTest.CachedPointsBound
 public import VCVioTest.Computability
@@ -176,6 +177,7 @@ public import VCVioTest.RandomOracleEncoded
 public import VCVioTest.RandomOracleFreshAnswer
 public import VCVioTest.RandomOracleFreshQuery
 public import VCVioTest.RandomOracleHiddenSeed
+public import VCVioTest.RandomOracleHiddenSeedCacheExtension
 public import VCVioTest.RandomOracleHiddenSeedCollapse
 public import VCVioTest.RandomOracleHitPotential
 public import VCVioTest.RandomOracleJointPotential
@@ -237,3 +239,4 @@ public import VCVioTest.UniformOn
 public import VCVioTest.UniversePolymorphism
 public import VCVioTest.Unpredictability
 public import VCVioTest.VCGenAmbiguity
+public import VCVioTest.WriterCostStateT
