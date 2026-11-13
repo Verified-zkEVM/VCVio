@@ -73,6 +73,9 @@ public import VCVioTest.GroupModel.ToExplained
 public import VCVioTest.GroupModel.Typed
 public import VCVioTest.GroupModel.Virtualize
 public import VCVioTest.ITSR
+public import VCVioTest.IncomparableEncoding.Basic
+public import VCVioTest.IncomparableEncoding.Code
+public import VCVioTest.IncomparableEncoding.Retry
 public import VCVioTest.KernelSemantics
 public import VCVioTest.ListCache
 public import VCVioTest.LoggedRunInvariant
