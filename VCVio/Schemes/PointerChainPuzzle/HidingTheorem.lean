@@ -85,7 +85,7 @@ The leanSeal paper's statement, with the declarations that formalize it.
 | --- | --- |
 | `thm:hiding` | `hidingAdvantage_sealScheme_le` |
 | `thm:hiding`, paper's constants | `hidingAdvantage_sealScheme_le_paper` |
-| `thm:hiding`, as hiding security | `hidingSecure_sealScheme` |
+| `thm:hiding`, against an adversary class | `hidingSecureAgainst_sealScheme` |
 | `thm:hiding`, the paper's capped challenger | `cappedHidingAdvantage_sealScheme_le_paper` |
 | `thm:hiding`, leanSeal's bytes (SPEC §8) | `LeanSeal.hidingAdvantage_byteScheme_le` |
 
@@ -117,8 +117,8 @@ To trust the rows above, read these definitions and compare each with the source
 * `PointerChainPuzzle.hidingAdvantage_sealScheme_le`: the hiding theorem with the generic sizes.
 * `PointerChainPuzzle.hidingAdvantage_sealScheme_le_paper`: the hiding theorem with the paper's
   sizes.
-* `PointerChainPuzzle.hidingSecure_sealScheme`: `TimeLockPuzzle.HidingSecure` with the generic
-  bound, for a bound on the PRF advantage of every distinguisher `D*`.
+* `PointerChainPuzzle.hidingSecureAgainst_sealScheme`: `TimeLockPuzzle.HidingSecureAgainst` for
+  a class of adversaries whose distinguishers lie in a class against which the PRF is secure.
 * `PointerChainPuzzle.cappedHidingAdvantage_sealScheme_le_paper`: the hiding theorem with the
   paper's sizes in the paper's capped game, with no encryption budget.
 -/
@@ -256,28 +256,39 @@ theorem hidingAdvantage_sealScheme_le_paper [Finite Ctx] [Fintype S] [Fintype L]
     exact_mod_cast Nat.le_add_right _ _
   gcongr 2 * (_ + _ + (_ * ?_ + ?_) / _ + _ + _)
 
-/-- **Hiding security (`thm:hiding`).** If every hiding adversary's distinguisher
-`hidingDistinguisher` has PRF advantage at most `ε` against `2 qEnc` independent keys, then
-`sealScheme` with `sealDEM` is hiding against adversaries with at most `Q_pre` preprocessing
-queries, an online phase within `keyRound n m - 1` rounds holding at most `Q_on` points, and at
-most `qEnc` challenge queries, with the bound of `hidingAdvantage_sealScheme_le`. The PRF premise
-quantifies over every hiding adversary, including those outside these budgets; it is not derived
-from a time-bounded PRF assumption. -/
-theorem hidingSecure_sealScheme [Finite Ctx] [Fintype S] [Fintype L] [Fintype Salt]
+/-- **Hiding security against a class of adversaries (`thm:hiding`).** Let `Admissible` be a
+class of hiding adversaries and `PRFAdmissible` a class of PRF distinguishers such that the
+distinguisher `hidingDistinguisher` of every admissible adversary within the budgets lies in
+`PRFAdmissible`. If `prf.multiKey` on `2 qEnc` keys has advantage at most `ε` against every
+distinguisher in `PRFAdmissible`, then `sealScheme` with `sealDEM` is hiding against `Admissible`,
+with the bound of `hidingAdvantage_sealScheme_le`.
+
+The classes carry the efficiency restriction, as concrete resource bounds at these parameters:
+for example adversaries running in time `t`, and distinguishers in time `t` plus the cost of
+simulating the puzzle and the challenger. Concrete hiding then follows from proving that
+`hidingDistinguisher` maps the one class into the other. An asymptotic polynomial-time class
+bounds nothing at fixed parameters, and over the class of all distinguishers the PRF premise holds
+only at large `ε`; asymptotic hiding is a statement about adversary families across parameters,
+derived from the per-adversary bound `hidingAdvantage_sealScheme_le`. -/
+theorem hidingSecureAgainst_sealScheme [Finite Ctx] [Fintype S] [Fintype L] [Fintype Salt]
     [Fintype N] (hprf : prf.UniformKey) (mkCtx : Salt → Ctx) (initAcc : Ctx → S)
     (hctx : Function.Injective mkCtx) (Qpre Qon qEnc : ℕ) {ε : ℝ≥0∞}
-    (hε : ∀ adv : HidingAdversary (sealSpec n S L Salt Ctx N K) (Puzzle n S L Salt) Plaintext
-      ByteArray, prfAdvantage (prf.multiKey (Fin (2 * qEnc)))
-        (hidingDistinguisher m codec encodePuzzle qEnc mkCtx initAcc adv) ≤ ε) :
-    HidingSecure (sealScheme n m mkCtx initAcc N K) (sealDEM prf codec encodePuzzle)
-      plaintextLength Qpre (keyRound n m - 1, Qon) qEnc
+    (Admissible :
+      HidingAdversary (sealSpec n S L Salt Ctx N K) (Puzzle n S L Salt) Plaintext ByteArray → Prop)
+    (PRFAdmissible : PRFAdversary (Fin (2 * qEnc) × ByteArray) (Bytes 32) → Prop)
+    (hreduce : ∀ adv, Admissible adv → adv.IsQueryBound Qpre (keyRound n m - 1, Qon) →
+      adv.MakesAtMostQueries qEnc →
+        PRFAdmissible (hidingDistinguisher m codec encodePuzzle qEnc mkCtx initAcc adv))
+    (hε : ∀ D, PRFAdmissible D → prfAdvantage (prf.multiKey (Fin (2 * qEnc))) D ≤ ε) :
+    HidingSecureAgainst Admissible (sealScheme n m mkCtx initAcc N K)
+      (sealDEM prf codec encodePuzzle) plaintextLength Qpre (keyRound n m - 1, Qon) qEnc
       (2 * ((if 2 ≤ n then (Qon : ℝ≥0∞) / Fintype.card L else 0) +
         Qpre / (Fintype.card Salt * Fintype.card L) +
           ((Qpre + Qon) * (solvePoints n m + 1) + (solvePoints n m : ℝ≥0∞) ^ 2) /
             Fintype.card S +
-          (qEnc : ℝ≥0∞) ^ 2 / (2 * Fintype.card N) + ε)) := fun adv hadv henc =>
+          (qEnc : ℝ≥0∞) ^ 2 / (2 * Fintype.card N) + ε)) := fun adv hA hadv henc =>
   (hidingAdvantage_sealScheme_le prf codec encodePuzzle hprf mkCtx initAcc hctx hadv henc).trans
-    (by gcongr; exact hε adv)
+    (by gcongr; exact hε _ (hreduce adv hA hadv henc))
 
 /-- **The hiding theorem (`thm:hiding`) in the paper's game.** With the paper's capped challenger
 (`TimeLockPuzzle.cappedHidingAdvantage`), which answers every request beyond the `qEnc`-th
