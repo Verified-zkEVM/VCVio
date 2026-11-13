@@ -487,7 +487,7 @@ section Duplicated
 
 /-- Collapsing the duplication: either copy of a query is the same query of `spec`. -/
 def dupCollapse (spec : OracleSpec.{0, 0} ι) : QueryImpl (spec + spec) (OracleComp spec) :=
-  QueryImpl.id' spec + QueryImpl.id' spec
+  QueryImpl.id' spec +ₛ QueryImpl.id' spec
 
 variable [∀ t : spec.Domain, SampleableType (spec.Range t)]
 
@@ -498,7 +498,7 @@ keeps no trace of which copy a query came through: the call site is a distinctio
 program's syntax, not in the run (`simulateQ_dupRandomOracle_eq`). What consumes it is the
 tape-class map `τ`, which may send the two copies of a point to different classes. -/
 def dupRandomOracle : QueryImpl (spec + spec) (StateT spec.QueryCache ProbComp) :=
-  spec.randomOracle + spec.randomOracle
+  spec.randomOracle +ₛ spec.randomOracle
 
 theorem dupRandomOracle_apply_inl (t : spec.Domain) :
     dupRandomOracle spec (Sum.inl t) = spec.randomOracle t := by
@@ -610,7 +610,7 @@ oracle: a query of the `unifSpec` summand is passed to `ProbComp` and leaves the
 is. -/
 abbrev dupRandomOracleFwd :
     QueryImpl (unifSpec + (spec + spec)) (StateT spec.QueryCache ProbComp) :=
-  unifFwdImpl spec + dupRandomOracle spec
+  unifFwdImpl spec +ₛ dupRandomOracle spec
 
 /-- The class-indexed tape oracle of `tapeCachingImplClass` beside a forwarded private uniform
 oracle: a query of the `unifSpec` summand is passed to `ProbComp` and leaves the cache and every
@@ -620,7 +620,7 @@ abbrev tapeImplFwd (R : J → Type) (τ : (spec + spec).Domain → J)
     QueryImpl (unifSpec + (spec + spec))
       (StateT (spec.QueryCache × ((k : J) → List (R k))) ProbComp) :=
   (QueryImpl.ofLift unifSpec ProbComp).liftTarget
-      (StateT (spec.QueryCache × ((k : J) → List (R k))) ProbComp) +
+      (StateT (spec.QueryCache × ((k : J) → List (R k))) ProbComp) +ₛ
     tapeCachingImplClass R τ hR
 
 end Forwarded

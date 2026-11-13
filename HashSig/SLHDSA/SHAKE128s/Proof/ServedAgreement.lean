@@ -150,7 +150,7 @@ Both hold of `Scheme.sign sk`: `signerShape_sign`, `signerPins_sign`. -/
     QueryImpl (OracleWorld + SigningSpec)
       (StateT (Multiplicative Tally × SigningLog × (HandlerCarrier.State × τ)) ProbComp) :=
   PhaseFusion.fuseServing impl
-    (recordedAdversaryImpl + recordedSigningOracle signer) startServingOn stopServingOn
+    (recordedAdversaryImpl +ₛ recordedSigningOracle signer) startServingOn stopServingOn
 
 /-- **What the filing argument asks of a signer**: it asks its randomiser and then its digest. -/
 @[expose] def SignerShape (sk : SecretKey)

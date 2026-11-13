@@ -82,7 +82,7 @@ noncomputable def authToPRFQueryImpl :
     QueryImpl (AuthOracleSpec TagId Nonce Digest)
       (StateT (AuthState TagId Nonce Digest)
         (OracleComp (unifSpec + ((TagId × Nonce) →ₒ Digest)))) :=
-  authToPRFTagImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest) +
+  authToPRFTagImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest) +ₛ
     authToPRFReaderImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
 
 /-- PRF distinguisher derived from an authentication adversary. The reduction runs the auth game

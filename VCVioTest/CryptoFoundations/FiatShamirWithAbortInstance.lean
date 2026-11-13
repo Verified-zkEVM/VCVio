@@ -137,7 +137,7 @@ theorem toy_euf_cma_to_nma :
 lemma runtime_evalDist_apply_singleton
     (oa : OracleComp (unifSpec + (Bool × Fin (n + 1) →ₒ Bool)) Bool) (b : Bool) :
     (runtime (Commit := Fin (n + 1)) (Chal := Bool) Bool).evalDist oa {b} =
-      Pr{let x ← ((simulateQ (unifFwdImpl (Bool × Fin (n + 1) →ₒ Bool) +
+      Pr{let x ← ((simulateQ (unifFwdImpl (Bool × Fin (n + 1) →ₒ Bool) +ₛ
           (randomOracle : QueryImpl (Bool × Fin (n + 1) →ₒ Bool)
             (StateT (Bool × Fin (n + 1) →ₒ Bool).QueryCache ProbComp))) oa).run' ∅)}[x = b] := by
   rw [runtime_evalDist_eq_simulateQ_run', ← prEvent_eq_evalDist_singleton]

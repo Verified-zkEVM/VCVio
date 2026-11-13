@@ -217,7 +217,7 @@ theorem right_record_phase (leftKeep rightKeep : Bytes → QueryCache HashSpec �
     ∀ (log : SigningLog) (state : SplitState)
       (result : ((α × Multiplicative Tally) × SigningLog) × SplitState),
       result ∈ support (recorderRun leftKeep rightKeep
-        (simulateQ (recordedAdversaryImpl + recordedSigningOracle (Scheme.sign sk)) computation)
+        (simulateQ (recordedAdversaryImpl +ₛ recordedSigningOracle (Scheme.sign sk)) computation)
         log state) →
       ∀ final : QueryCache HashSpec,
         (∀ (probe : Bytes) (value : HashOutput),
@@ -252,7 +252,7 @@ theorem right_record_phase (leftKeep rightKeep : Bytes → QueryCache HashSpec �
       intro probe value hprobe
       exact hinnerFinal probe value
         (persists_of_mem_recorderRun leftKeep rightKeep
-          (simulateQ (recordedAdversaryImpl + recordedSigningOracle (Scheme.sign sk))
+          (simulateQ (recordedAdversaryImpl +ₛ recordedSigningOracle (Scheme.sign sk))
             (next outer.1.1.1)) outer.1.2 outer.2 inner hinner probe value hprobe)
     rw [hstate] at hentry
     rcases ih outer.1.1.1 outer.1.2 outer.2 inner hinner final hinnerFinal entry hentry with

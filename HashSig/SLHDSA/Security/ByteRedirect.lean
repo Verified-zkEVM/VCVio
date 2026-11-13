@@ -238,9 +238,9 @@ identity on uniform draws and on `PRF_msg`. -/
 @[expose] noncomputable def linkedHashRedirect :
     QueryImpl (unifSpec + hashSpec (shakeCore vp))
       (OracleComp (unifSpec + hashSpec (shakeCore vp))) :=
-  QueryImpl.ofLift unifSpec (OracleComp (unifSpec + hashSpec (shakeCore vp))) +
+  QueryImpl.ofLift unifSpec (OracleComp (unifSpec + hashSpec (shakeCore vp))) +ₛ
     ((HasQuery.toQueryImpl (spec := publicHashSpec (shakeCore vp))
-        (m := OracleComp (unifSpec + hashSpec (shakeCore vp))) ∘ₛ linkedRedirect vp pk) +
+        (m := OracleComp (unifSpec + hashSpec (shakeCore vp))) ∘ₛ linkedRedirect vp pk) +ₛ
       QueryImpl.ofLift (prfMsgSpec (shakeCore vp))
         (OracleComp (unifSpec + hashSpec (shakeCore vp))))
 

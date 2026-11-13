@@ -66,7 +66,7 @@ noncomputable abbrev keyAt (walk : Walk) : PublicKey :=
         (Scheme.keygenInternal walk.1.1.1 walk.1.1.2.1 walk.1.1.2.2)).run
       (startAt walk.2, (([], []), 0)) >>= fun keys =>
       (simulateQ (fuseServing (handlerAt rightKeep walk)
-          (recordedAdversaryImpl + recordedSigningOracle (Scheme.sign keys.1.1))
+          (recordedAdversaryImpl +ₛ recordedSigningOracle (Scheme.sign keys.1.1))
           ServedAgreement.startServingOn ServedAgreement.stopServingOn)
         (adversary.main keys.1.2)).run (1, [], keys.2) >>= fun middle =>
         (simulateQ (handlerAt rightKeep walk) (countRecorded verifierCost
@@ -214,7 +214,7 @@ theorem run_recordedAfterSeeds_split {S : Type}
     (sds : Digest × Digest × Digest) (state : S) :
     (simulateQ outer (RecordedTail.recordedAfterSeeds adversary sds)).run state =
       (simulateQ outer (Scheme.keygenInternal sds.1 sds.2.1 sds.2.2)).run state >>= fun keys =>
-        (simulateQ outer ((((simulateQ (recordedAdversaryImpl +
+        (simulateQ outer ((((simulateQ (recordedAdversaryImpl +ₛ
               recordedSigningOracle (Scheme.sign keys.1.1)) (adversary.main keys.1.2)).run).run
             []))).run keys.2 >>= fun phase =>
           (simulateQ outer (countRecorded verifierCost (Scheme.verify keys.1.2
@@ -268,19 +268,19 @@ theorem middle_stage_forget (rightKeep : Walk → Bytes → HandlerCarrier.State
     (walk : Walk) (adversary : Adversary)
     (keys : (SecretKey × PublicKey) × CountedState) :
     (simulateQ CountedHandler.romWithCount
-        (((simulateQ (recordedAdversaryImpl + recordedSigningOracle (Scheme.sign keys.1.1))
+        (((simulateQ (recordedAdversaryImpl +ₛ recordedSigningOracle (Scheme.sign keys.1.1))
           (adversary.main keys.1.2)).run).run [])).run (keys.2.1.cache, keys.2.2.2) =
       (fun step : Forgery × (Multiplicative Tally × SigningLog × CountedState) =>
           (((step.1, step.2.1), step.2.2.1), (step.2.2.2.1.cache, step.2.2.2.2.2))) <$>
         (simulateQ (fuseServing (handlerAt rightKeep walk)
-          (recordedAdversaryImpl + recordedSigningOracle (Scheme.sign keys.1.1))
+          (recordedAdversaryImpl +ₛ recordedSigningOracle (Scheme.sign keys.1.1))
           ServedAgreement.startServingOn ServedAgreement.stopServingOn)
           (adversary.main keys.1.2)).run (1, [], keys.2) := by
   rw [PhaseFusion.run_phase_fused CountedHandler.romWithCount
-      (recordedAdversaryImpl + recordedSigningOracle (Scheme.sign keys.1.1))
+      (recordedAdversaryImpl +ₛ recordedSigningOracle (Scheme.sign keys.1.1))
       (adversary.main keys.1.2) [] (keys.2.1.cache, keys.2.2.2),
     ← middle_forget rightKeep walk
-      (recordedAdversaryImpl + recordedSigningOracle (Scheme.sign keys.1.1))
+      (recordedAdversaryImpl +ₛ recordedSigningOracle (Scheme.sign keys.1.1))
       (adversary.main keys.1.2) 1 [] keys.2, Functor.map_map]
 
 /-- The third stage's projection, named the same way. -/
@@ -320,10 +320,10 @@ theorem middle_stage_bind (rightKeep : Walk → Bytes → HandlerCarrier.State �
     (walk : Walk) (adversary : Adversary)
     (keys : (SecretKey × PublicKey) × CountedState) :
     (simulateQ CountedHandler.romWithCount
-        (((simulateQ (recordedAdversaryImpl + recordedSigningOracle (Scheme.sign keys.1.1))
+        (((simulateQ (recordedAdversaryImpl +ₛ recordedSigningOracle (Scheme.sign keys.1.1))
           (adversary.main keys.1.2)).run).run [])).run (keys.2.1.cache, keys.2.2.2) =
       (simulateQ (fuseServing (handlerAt rightKeep walk)
-          (recordedAdversaryImpl + recordedSigningOracle (Scheme.sign keys.1.1))
+          (recordedAdversaryImpl +ₛ recordedSigningOracle (Scheme.sign keys.1.1))
           ServedAgreement.startServingOn ServedAgreement.stopServingOn)
           (adversary.main keys.1.2)).run (1, [], keys.2) >>= fun step =>
         (pure (((step.1, step.2.1), step.2.2.1), (step.2.2.2.1.cache, step.2.2.2.2.2)) :

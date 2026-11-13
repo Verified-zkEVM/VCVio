@@ -54,7 +54,8 @@ coherent: at every programmed point `t`, `table t = some d → cache t = some (p
 
 open Classical in
 /-- **The collision reduction's internal oracle handler.** The named handler stack
-`(unifImpl + roImpl) + signImpl` over `StateT (QueryCache × ((Salt × M) → Option Domain)) ProbComp`
+`(unifImpl +ₛ roImpl) +ₛ signImpl` over
+`StateT (QueryCache × ((Salt × M) → Option Domain)) ProbComp`
 that the collision `reduction` runs the adversary under. On a random-oracle miss it forward-samples
 a short preimage `s ← domainSample pk`, sets the cache value to `psf.eval pk s`, and records `s` in
 the hidden table at the queried point; the signing handler does the same at the freshly salted point
@@ -86,7 +87,7 @@ off the final table (`reduction_eq_run_reductionImpl`). -/
       set ((st.1.cacheQuery (r, msg) v,
         fun t' => if t' = (r, msg) then some s else st.2 t') : State)
       pure (r, s)
-  (unifImpl + roImpl) + signImpl
+  (unifImpl +ₛ roImpl) +ₛ signImpl
 
 omit [Fintype Salt] in
 /-- **The collision reduction is `reductionImpl` run from the empty state.** Restates the body of
@@ -142,7 +143,7 @@ re-query. Signing queries return `(r, s)` with `psf.eval pk s` the value cached 
       let st ← get
       set ((st.1.cacheQuery (r, msg) (psf.eval pk s), st.2 + 1) : State)
       pure (r, s)
-  (unifImpl + roImpl) + signImpl
+  (unifImpl +ₛ roImpl) +ₛ signImpl
 
 omit [DecidableEq Range] [SampleableType Range] [Fintype Salt] in
 /-- One-step unfolding of `embedAtIndexImpl` on a uniform query. -/
@@ -243,7 +244,7 @@ random oracle (modulo `y` at the winner), matching the trapdoor-recording combin
       let st ← get
       set ((st.1.cacheQuery (r, msg) c, st.2 + 1) : State)
       pure (r, x)
-  (unifImpl + roImpl) + signImpl
+  (unifImpl +ₛ roImpl) +ₛ signImpl
 
 omit [DecidableEq Range] [Fintype Salt] in
 /-- One-step unfolding of `embedTrapImpl` on a uniform query. -/

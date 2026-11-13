@@ -211,7 +211,7 @@ theorem probes_filed_of (setup : Setup) {σ : Type} (π : σ → St)
     (coin : QueryImpl unifSpec (StateT σ ProbComp))
     (impl : QueryImpl HashSpec (StateT σ ProbComp)) (himpl : RoutesBlind setup π impl)
     {α : Type} (computation : OracleComp HashSpec α) (state : σ) (z : α × σ)
-    (hz : z ∈ support ((simulateQ (coin + impl)
+    (hz : z ∈ support ((simulateQ (coin +ₛ impl)
       (OracleComp.liftComp computation OracleWorld)).run state)) :
     (π z.2).served = (π state).served ∧
       ∀ probe, CacheReplay.QueriesUnder (visible setup (π z.2)) computation probe →
@@ -243,7 +243,7 @@ noncomputable def coinImpl (setup : Setup) : QueryImpl unifSpec (StateT (St × B
   fun coin => ShareBound.worldImpl false setup (Sum.inl coin)
 
 theorem worldImpl_eq_add (setup : Setup) :
-    ShareBound.worldImpl false setup = coinImpl setup + hashImpl setup := by
+    ShareBound.worldImpl false setup = coinImpl setup +ₛ hashImpl setup := by
   funext queried
   rcases queried with coin | input <;> rfl
 

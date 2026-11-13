@@ -63,7 +63,7 @@ into the negated generator coefficient, returning zero when that denominator van
 
 /-- The empty auxiliary specification, with intrinsic private sampling passed through unchanged. -/
 abbrev plainImpl : QueryImpl (unifSpec + emptySpec) (StateT Unit ProbComp) :=
-  QueryImpl.ofLift unifSpec (StateT Unit ProbComp) +
+  QueryImpl.ofLift unifSpec (StateT Unit ProbComp) +ₛ
     (fun t => PEmpty.elim t : QueryImpl emptySpec (StateT Unit ProbComp))
 
 /-- Regard a probabilistic finder as a finder with private coins and no auxiliary oracles. -/

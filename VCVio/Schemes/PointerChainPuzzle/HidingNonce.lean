@@ -112,9 +112,9 @@ def counterImpl (puzzle : Puzzle n S L Salt) (b : Bool) :
       (StateT ℕ (OracleComp (unifSpec + (sealSpec n S L Salt Ctx N K).batch))) :=
   (((QueryImpl.ofLift unifSpec
         (OracleComp (unifSpec + (sealSpec n S L Salt Ctx N K).batch))).liftTarget
-      (StateT ℕ (OracleComp (unifSpec + (sealSpec n S L Salt Ctx N K).batch)))) +
+      (StateT ℕ (OracleComp (unifSpec + (sealSpec n S L Salt Ctx N K).batch)))) +ₛ
     LeftOrRight.oracle (counterEncrypt (n := n) (S := S) (L := L) (Salt := Salt) (Ctx := Ctx)
-      prf codec qEnc (encodePuzzle puzzle)) plaintextLength b) +
+      prf codec qEnc (encodePuzzle puzzle)) plaintextLength b) +ₛ
     (fun ts => liftM ((unifSpec + (sealSpec n S L Salt Ctx N K).batch).query (.inr ts)) :
       QueryImpl (sealSpec n S L Salt Ctx N K).batch (StateT ℕ
         (OracleComp (unifSpec + (sealSpec n S L Salt Ctx N K).batch))))
@@ -186,9 +186,9 @@ def counterLogImpl (puzzle : Puzzle n S L Salt) (b : Bool) :
   (((QueryImpl.ofLift unifSpec
         (OracleComp (unifSpec + (sealSpec n S L Salt Ctx N K).batch))).liftTarget
       (StateT (ℕ × CounterLog N K)
-        (OracleComp (unifSpec + (sealSpec n S L Salt Ctx N K).batch)))) +
+        (OracleComp (unifSpec + (sealSpec n S L Salt Ctx N K).batch)))) +ₛ
     LeftOrRight.oracle (counterLogEncrypt (n := n) (S := S) (L := L) (Salt := Salt) (Ctx := Ctx)
-      prf codec qEnc (encodePuzzle puzzle)) plaintextLength b) +
+      prf codec qEnc (encodePuzzle puzzle)) plaintextLength b) +ₛ
     (fun ts => liftM ((unifSpec + (sealSpec n S L Salt Ctx N K).batch).query (.inr ts)) :
       QueryImpl (sealSpec n S L Salt Ctx N K).batch (StateT (ℕ × CounterLog N K)
         (OracleComp (unifSpec + (sealSpec n S L Salt Ctx N K).batch))))
@@ -761,9 +761,9 @@ def indexedOnlineImpl (puzzle : Puzzle n S L Salt) (b : Bool) :
     QueryImpl ((unifSpec + LeftOrRight.spec Plaintext ByteArray) + sealSpec n S L Salt Ctx N K)
       (StateT ℕ (OracleComp (indexedSpec n S L Salt Ctx N K qEnc))) :=
   ((QueryImpl.ofLift unifSpec (OracleComp (indexedSpec n S L Salt Ctx N K qEnc))).liftTarget
-      (StateT ℕ (OracleComp (indexedSpec n S L Salt Ctx N K qEnc))) +
+      (StateT ℕ (OracleComp (indexedSpec n S L Salt Ctx N K qEnc))) +ₛ
     LeftOrRight.oracle (indexedEncrypt (n := n) (S := S) (L := L) (Salt := Salt) (Ctx := Ctx)
-      (K := K) codec qEnc (encodePuzzle puzzle)) plaintextLength b) +
+      (K := K) codec qEnc (encodePuzzle puzzle)) plaintextLength b) +ₛ
     (fun t => liftM ((indexedSpec n S L Salt Ctx N K qEnc).query (.inr (.inl t))) :
       QueryImpl (sealSpec n S L Salt Ctx N K)
         (StateT ℕ (OracleComp (indexedSpec n S L Salt Ctx N K qEnc))))
@@ -778,10 +778,10 @@ noncomputable def indexedRunImpl :
   (QueryImpl.ofLift unifSpec
       (OracleComp (PRFOracleSpec (Fin (2 * qEnc) × ByteArray) (Bytes 32)))).liftTarget
     (StateT (sealSpec n S L Salt Ctx N K).QueryCache
-      (OracleComp (PRFOracleSpec (Fin (2 * qEnc) × ByteArray) (Bytes 32)))) +
+      (OracleComp (PRFOracleSpec (Fin (2 * qEnc) × ByteArray) (Bytes 32)))) +ₛ
   ((sealSpec n S L Salt Ctx N K).randomOracle.liftTarget
       (StateT (sealSpec n S L Salt Ctx N K).QueryCache
-        (OracleComp (PRFOracleSpec (Fin (2 * qEnc) × ByteArray) (Bytes 32)))) +
+        (OracleComp (PRFOracleSpec (Fin (2 * qEnc) × ByteArray) (Bytes 32)))) +ₛ
     (fun x => liftM (functionQuery (R := Bytes 32) x) : QueryImpl (instanceSpec qEnc)
       (StateT (sealSpec n S L Salt Ctx N K).QueryCache
         (OracleComp (PRFOracleSpec (Fin (2 * qEnc) × ByteArray) (Bytes 32))))))
@@ -793,8 +793,8 @@ evaluates `prf` under `T i`. -/
 noncomputable def keyedRomImpl (T : Fin (2 * qEnc) → K) :
     QueryImpl (indexedSpec n S L Salt Ctx N K qEnc)
       (StateT (sealSpec n S L Salt Ctx N K).QueryCache ProbComp) :=
-  unifFwdImpl (sealSpec n S L Salt Ctx N K) +
-    ((sealSpec n S L Salt Ctx N K).randomOracle +
+  unifFwdImpl (sealSpec n S L Salt Ctx N K) +ₛ
+    ((sealSpec n S L Salt Ctx N K).randomOracle +ₛ
       (fun x => pure (prf.eval (T x.1) x.2) : QueryImpl (instanceSpec qEnc)
         (StateT (sealSpec n S L Salt Ctx N K).QueryCache ProbComp)))
 

@@ -97,10 +97,10 @@ CMA-to-NMA hybrid chain. -/
     (pk : Stmt) : ProbComp Bool := do
   let ((msg, σ), (cache, signed)) ← StateT.run
     (simulateQ
-      (hybridBaseImpl (Commit := Commit) (Chal := Chal) M + hybridSignImpl M signBody)
+      (hybridBaseImpl (Commit := Commit) (Chal := Chal) M +ₛ hybridSignImpl M signBody)
       (adv.main pk)) (∅, [])
   let ok ← StateT.run'
-    (simulateQ (unifFwdImpl (M × Commit →ₒ Chal) +
+    (simulateQ (unifFwdImpl (M × Commit →ₒ Chal) +ₛ
         (randomOracle : QueryImpl (M × Commit →ₒ Chal)
           (StateT ((M × Commit →ₒ Chal).QueryCache) ProbComp)))
       ((FiatShamirWithAbort.inROM ids hr M maxAttempts).verify pk msg σ)) cache
@@ -114,7 +114,7 @@ adversary's forgery and the final hybrid state. -/
     (z : (M × Option (Commit × Resp)) × ((M × Commit →ₒ Chal).QueryCache × List M)) :
     ProbComp Bool := do
   let ok ← StateT.run'
-    (simulateQ (unifFwdImpl (M × Commit →ₒ Chal) +
+    (simulateQ (unifFwdImpl (M × Commit →ₒ Chal) +ₛ
         (randomOracle : QueryImpl (M × Commit →ₒ Chal)
           (StateT ((M × Commit →ₒ Chal).QueryCache) ProbComp)))
       ((FiatShamirWithAbort.inROM ids hr M maxAttempts).verify pk z.1.1 z.1.2)) z.2.1
@@ -126,7 +126,7 @@ lemma hybridExpAtKey_eq_run_bind
     (pk : Stmt) :
     hybridExpAtKey ids hr M maxAttempts adv signBody pk =
       (simulateQ
-          (hybridBaseImpl (Commit := Commit) (Chal := Chal) M + hybridSignImpl M signBody)
+          (hybridBaseImpl (Commit := Commit) (Chal := Chal) M +ₛ hybridSignImpl M signBody)
           (adv.main pk)).run (∅, []) >>=
         hybridVerifyCont ids hr M maxAttempts pk := by
   refine bind_congr fun z => ?_
@@ -144,7 +144,7 @@ lemma hybridVerifyCont_cache_congr (pk : Stmt) (ms : M × Option (Commit × Resp
   · rfl
   · refine congrArg (· >>= fun ok => pure (decide (msg ∉ l) && ok)) ?_
     have hside : ∀ c : (M × Commit →ₒ Chal).QueryCache,
-        (simulateQ (unifFwdImpl (M × Commit →ₒ Chal) +
+        (simulateQ (unifFwdImpl (M × Commit →ₒ Chal) +ₛ
             (randomOracle : QueryImpl (M × Commit →ₒ Chal)
               (StateT ((M × Commit →ₒ Chal).QueryCache) ProbComp)))
           ((FiatShamirWithAbort.inROM ids hr M maxAttempts).verify pk msg (some (w, zr)))).run' c =

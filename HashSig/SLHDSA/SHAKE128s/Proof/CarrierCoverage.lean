@@ -71,7 +71,7 @@ theorem carrierTail_eq_threeStage
       @FusedTape.threeStageHandlerRun Counted (countedView (keyAt walk)) _ _
         (liftTest (disclosingKeep (keyAt walk)))
         (liftTest (rightKeep walk)) _ _ _ _
-        (fun keys => recordedAdversaryImpl + recordedSigningOracle (Scheme.sign keys.1))
+        (fun keys => recordedAdversaryImpl +ₛ recordedSigningOracle (Scheme.sign keys.1))
         ServedAgreement.startServingOn ServedAgreement.stopServingOn
         (Scheme.keygenInternal walk.1.1.1 walk.1.1.2.1 walk.1.1.2.2)
         (fun keys => adversary.main keys.2)

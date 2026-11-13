@@ -197,7 +197,6 @@ theorem IND_CPA_Game_eq_IND_CCA_Game_toIND_CCA
     have : QueryImpl.add spec.passthrough impl₂ ∘ₛ
         HasQuery.toQueryImpl (spec := spec) (m := OracleComp (spec + (C →ₒ Option K))) =
           QueryImpl.id' spec := by
-      rw [QueryImpl.add_eq_hAdd]
       ext t
       simp [QueryImpl.compose]
       simpa using

@@ -545,7 +545,7 @@ every other step is literally independent of `y` (`embedTrapImpl_run_step_indep_
       let st ← get
       set ((st.1.cacheQuery (r, msg) c, st.2 + 1) : State)
       pure (r, x)
-  (unifImpl + roImpl) + signImpl
+  (unifImpl +ₛ roImpl) +ₛ signImpl
 
 omit [DecidableEq Range] [Fintype Salt] in
 /-- One-step unfolding of `embedTrapFreshImpl` on a uniform query. -/
@@ -816,7 +816,7 @@ embedded winner slot (`cache(forged) = some y`) coincides with `idx(forged) = so
       set (((st.1.1.cacheQuery (r, msg) c, st.1.2 + 1),
         fun t' => if t' = (r, msg) then some st.1.2 else st.2 t') : State)
       pure (r, x)
-  (unifImpl + roImpl) + signImpl
+  (unifImpl +ₛ roImpl) +ₛ signImpl
 
 omit [DecidableEq Range] [Fintype Salt] in
 /-- One-step unfolding of `embedTrapIdxImpl` on a uniform query. -/
@@ -954,7 +954,7 @@ point.  It is the run-only bookkeeping that replaces the `y`-reading win literal
       set (((st.1.1.cacheQuery (r, msg) c, st.1.2 + 1),
         fun t' => if t' = (r, msg) then some st.1.2 else st.2 t') : State)
       pure (r, x)
-  (unifImpl + roImpl) + signImpl
+  (unifImpl +ₛ roImpl) +ₛ signImpl
 
 omit [DecidableEq Range] [Fintype Salt] in
 /-- One-step unfolding of `embedTrapFreshIdxImpl` on a uniform query. -/

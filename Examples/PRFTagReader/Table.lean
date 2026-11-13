@@ -288,7 +288,7 @@ noncomputable def multipleTableHandler (g : TagId × Nonce → Digest) :
     QueryImpl (UnlinkOracleSpec TagId Nonce Digest)
       (StateT (UnlinkState TagId) ProbComp) :=
   unlinkTagQueryImpl (Slot := TagId) (fun tag nonce => g (tag, nonce))
-    (multiplePattern sessionsPerTag) +
+    (multiplePattern sessionsPerTag) +ₛ
   unlinkReaderQueryImpl (Slot := TagId) (fun tag nonce => g (tag, nonce))
     (multiplePattern sessionsPerTag)
 
@@ -354,7 +354,7 @@ noncomputable def singleTableHandler (g : (TagId × Fin sessionsPerTag) × Nonce
     QueryImpl (UnlinkOracleSpec TagId Nonce Digest)
       (StateT (UnlinkState TagId) ProbComp) :=
   unlinkTagQueryImpl (Slot := TagId × Fin sessionsPerTag) (fun slot nonce => g (slot, nonce))
-    (singlePattern sessionsPerTag) +
+    (singlePattern sessionsPerTag) +ₛ
   unlinkReaderQueryImpl (Slot := TagId × Fin sessionsPerTag) (fun slot nonce => g (slot, nonce))
     (singlePattern sessionsPerTag)
 

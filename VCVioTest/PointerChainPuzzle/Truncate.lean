@@ -52,10 +52,10 @@ example (k₀ : Bool) :
   simp only [threeRounds, truncate_succ_query_bind_inr, truncate_zero_query_bind_inr]
 
 /-- The full chain returns `true` under the negating handler. -/
-example : simulateQ (zeroCoins + notImpl).batch' threeRounds = true := rfl
+example : simulateQ (zeroCoins +ₛ notImpl).batch' threeRounds = true := rfl
 
 /-- Its truncation after one round returns the fallback `false` instead. -/
-example : simulateQ (zeroCoins + notImpl).batch' (truncate 1 false threeRounds) = false := by
+example : simulateQ (zeroCoins +ₛ notImpl).batch' (truncate 1 false threeRounds) = false := by
   simp only [threeRounds, truncate_succ_query_bind_inr, truncate_zero_query_bind_inr]
   rfl
 
@@ -64,7 +64,7 @@ example (k₀ : Bool) : IsOnlineQueryBound (truncate 1 k₀ threeRounds) (1, 3) 
   threeRounds_isOnlineQueryBound.isPointQueryBound.isOnlineQueryBound_truncate
 
 /-- Counting rounds along the run: the chain outputs `true` after three completed rounds. -/
-example : runCountingRounds (zeroCoins + notImpl).batch' threeRounds = (true, 3) := by
+example : runCountingRounds (zeroCoins +ₛ notImpl).batch' threeRounds = (true, 3) := by
   simp only [threeRounds, runCountingRounds_query_bind, runCountingRounds_pure]
   rfl
 
@@ -72,7 +72,7 @@ example : runCountingRounds (zeroCoins + notImpl).batch' threeRounds = (true, 3)
 
 /-- Uniform local coins, and rounds answered by negating every point. -/
 def coinImpl : QueryImpl (unifSpec + boolSpec.batch) ProbComp :=
-  QueryImpl.ofLift unifSpec ProbComp +
+  QueryImpl.ofLift unifSpec ProbComp +ₛ
     fun ts => (pure (notImpl.batch ts).run : ProbComp (boolSpec.batch.Range ts))
 
 /-- A single round, returning `true`. -/
@@ -121,7 +121,7 @@ example {m : Type → Type} [Monad m] [EvalDistSemantics m]
   rw [truncate_eq_self_of_isOnlineQueryBound threeRounds_isOnlineQueryBound]
 
 /-- Under the negating handler, the truncation after three rounds still returns `true`. -/
-example : simulateQ (zeroCoins + notImpl).batch' (truncate 3 false threeRounds) = true := by
+example : simulateQ (zeroCoins +ₛ notImpl).batch' (truncate 3 false threeRounds) = true := by
   rw [truncate_eq_self_of_isOnlineQueryBound threeRounds_isOnlineQueryBound]
   rfl
 
@@ -139,7 +139,7 @@ example (k₀ : Bool) : truncate 1 k₀ coinsAroundRound = coinsAroundRound :=
   truncate_eq_self_of_isOnlineQueryBound (q := 1) (by simp [coinsAroundRound])
 
 /-- Counting rounds along the run: the coins add nothing to the count. -/
-example : (runCountingRounds (zeroCoins + notImpl).batch' coinsAroundRound).2 = 1 := by
+example : (runCountingRounds (zeroCoins +ₛ notImpl).batch' coinsAroundRound).2 = 1 := by
   simp only [coinsAroundRound, runCountingRounds_query_bind, runCountingRounds_pure]
   rfl
 

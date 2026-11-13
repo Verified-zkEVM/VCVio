@@ -55,7 +55,7 @@ theorem fresh_hit_le (y₀ : Fin N) (t : (hashSpecN N).Domain)
 caches a fixed output with probability at most `q * N⁻¹`. -/
 theorem preimage_hit_le {α : Type} (y₀ : Fin N) (oa : OracleComp (unifSpec + hashSpecN N) α)
     {q : ℕ} (h : IsQueryBoundP oa (fun t => t.isRight = true) q) :
-    Pr{let z ← (simulateQ (unifFwdImpl (hashSpecN N) + (hashSpecN N).randomOracle) oa).run ∅}[
+    Pr{let z ← (simulateQ (unifFwdImpl (hashSpecN N) +ₛ (hashSpecN N).randomOracle) oa).run ∅}[
       ∃ t, z.2 t = some y₀] ≤ (q : ℝ≥0∞) * (N : ℝ≥0∞)⁻¹ :=
   prEvent_run_le_of_fresh_bound_of_isQueryBoundP (fun c => ∃ t, c t = some y₀) (by simp)
     _ (by simp [NeZero.ne N]) (fun t c hc ht => fresh_hit_le N y₀ t c hc ht) oa h
@@ -71,17 +71,17 @@ random oracle caches a fixed output with probability below one. -/
 theorem preimage_hit_lt_one {α : Type} (y₀ : Fin (2 ^ 256))
     (oa : OracleComp (unifSpec + hashSpecN (2 ^ 256)) α)
     (h : IsQueryBoundP oa (fun t => t.isRight = true) (2 ^ 64)) :
-    Pr{let z ← (simulateQ (unifFwdImpl (hashSpecN (2 ^ 256)) +
+    Pr{let z ← (simulateQ (unifFwdImpl (hashSpecN (2 ^ 256)) +ₛ
       (hashSpecN (2 ^ 256)).randomOracle) oa).run ∅}[∃ t, z.2 t = some y₀] < 1 :=
   (preimage_hit_le (2 ^ 256) y₀ oa h).trans_lt preimage_bound_lt_one
 
 /-- A single public query to a `2`-valued random oracle caches a fixed output with probability
 exactly `2⁻¹`, the bound `q * N⁻¹` at `q = 1` and `N = 2`. -/
 theorem single_query_hit_eq (y₀ : Fin 2) :
-    Pr{let z ← (simulateQ (unifFwdImpl (hashSpecN 2) + (hashSpecN 2).randomOracle)
+    Pr{let z ← (simulateQ (unifFwdImpl (hashSpecN 2) +ₛ (hashSpecN 2).randomOracle)
         (liftM ((unifSpec + hashSpecN 2).query (Sum.inr [])) :
           OracleComp (unifSpec + hashSpecN 2) (Fin 2))).run ∅}[∃ t, z.2 t = some y₀] = 2⁻¹ := by
-  have hrun : ((unifFwdImpl (hashSpecN 2) + (hashSpecN 2).randomOracle) (Sum.inr [])).run ∅ =
+  have hrun : ((unifFwdImpl (hashSpecN 2) +ₛ (hashSpecN 2).randomOracle) (Sum.inr [])).run ∅ =
       (fun u => (u, (∅ : (hashSpecN 2).QueryCache).cacheQuery [] u)) <$>
         ($ᵗ (hashSpecN 2).Range []) :=
     QueryImpl.withCaching_run_none _ rfl

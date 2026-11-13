@@ -60,7 +60,7 @@ private lemma forkInitialState_liveCacheAdvCacheInv :
 variable (Chal) in
 @[fs_simp] private noncomputable def forkWrappedUniformImpl [SampleableType Chal] :
     QueryImpl (Fork.wrappedSpec Chal) ProbComp :=
-  QueryImpl.ofLift unifSpec ProbComp +
+  QueryImpl.ofLift unifSpec ProbComp +ₛ
     (uniformSampleImpl (spec := (Unit →ₒ Chal)))
 
 @[fs_simp] private noncomputable def forkVerifyFreshComp [DecidableEq M]
@@ -290,7 +290,7 @@ private lemma forkBase_finalQuery_runTrace_eq
     OracleQuery.cont_query, StateT.run_bind, QueryImpl.add_apply_inr,
     bind_assoc]
   rw [OracleComp.simulateQ_mapStateTBase_run_eq_map_flattenStateT
-    (outer := Fork.unifForward M Commit Chal + Fork.roImpl M Commit Chal)
+    (outer := Fork.unifForward M Commit Chal +ₛ Fork.roImpl M Commit Chal)
     (inner := simulatedNmaImpl (M := M) (Commit := Commit) (Chal := Chal)
       (Resp := Resp) simT pk)
     (oa := adv.main pk)
@@ -330,7 +330,7 @@ private lemma forkWrappedUniform_forkSim_query_inl_run
      (n : unifSpec.Domain)
     (liveSt : Fork.SimState M Commit Chal) :
     simulateQ (forkWrappedUniformImpl Chal)
-        ((simulateQ (Fork.unifForward M Commit Chal + Fork.roImpl M Commit Chal)
+        ((simulateQ (Fork.unifForward M Commit Chal +ₛ Fork.roImpl M Commit Chal)
           (liftM ((unifSpec + (M × Commit →ₒ Chal)).query (Sum.inl n)))).run liveSt) =
       (fun u => (u, liveSt)) <$>
         (liftM (unifSpec.query n) : ProbComp
@@ -345,7 +345,7 @@ private lemma forkWrappedUniform_forkSim_query_inr_run_none
     (cache : (M × Commit →ₒ Chal).QueryCache) (log : List (M × Commit))
     (hcache : cache mc = none) :
     simulateQ (forkWrappedUniformImpl Chal)
-        ((simulateQ (Fork.unifForward M Commit Chal + Fork.roImpl M Commit Chal)
+        ((simulateQ (Fork.unifForward M Commit Chal +ₛ Fork.roImpl M Commit Chal)
           (liftM ((unifSpec + (M × Commit →ₒ Chal)).query (Sum.inr mc)))).run
             (cache, log)) =
       (fun v => (v, (cache.cacheQuery mc v, log ++ [mc]))) <$>
@@ -371,7 +371,7 @@ private lemma forkWrappedUniform_forkSim_query_inr_run_none_map_fst
     (cache : (M × Commit →ₒ Chal).QueryCache) (log : List (M × Commit))
     (hcache : cache mc = none) :
     (fun a => f a.1) <$> simulateQ (forkWrappedUniformImpl Chal)
-        ((simulateQ (Fork.unifForward M Commit Chal + Fork.roImpl M Commit Chal)
+        ((simulateQ (Fork.unifForward M Commit Chal +ₛ Fork.roImpl M Commit Chal)
           (liftM ((unifSpec + (M × Commit →ₒ Chal)).query (Sum.inr mc)))).run
             (cache, log)) =
       f <$> ($ᵗ Chal) := by
@@ -388,7 +388,7 @@ private lemma simulatedNmaUnifSim_forkWrapped_run
     (advCache : (fsRoSpec M Commit Chal).QueryCache)
     (liveSt : Fork.SimState M Commit Chal) :
     simulateQ (forkWrappedUniformImpl Chal)
-        ((simulateQ (Fork.unifForward M Commit Chal + Fork.roImpl M Commit Chal)
+        ((simulateQ (Fork.unifForward M Commit Chal +ₛ Fork.roImpl M Commit Chal)
           ((simulateQ (simulatedNmaUnifSim (M := M) (Commit := Commit)
             (Chal := Chal)) oa).run advCache)).run liveSt) =
       (fun a ↦ ((a, advCache), liveSt)) <$> oa := by
@@ -406,7 +406,7 @@ private lemma simulatedNmaUnifSim_forkWrapped_run
         (M := M) (Commit := Commit) (Chal := Chal) n liveSt
       refine (congrArg (fun q => q >>= fun a =>
         simulateQ (forkWrappedUniformImpl Chal)
-          ((simulateQ (Fork.unifForward M Commit Chal + Fork.roImpl M Commit Chal)
+          ((simulateQ (Fork.unifForward M Commit Chal +ₛ Fork.roImpl M Commit Chal)
             ((simulateQ (simulatedNmaUnifSim (M := M) (Commit := Commit)
               (Chal := Chal)) (k a.1)).run advCache)).run a.2)) hquery).trans ?_
       rw [bind_map_left]
@@ -487,8 +487,8 @@ private def forkLoggedProbOrnament [Inhabited Chal]
         Prod.mk.eta, bind_pure_comp, simulateQ_map, StateT.run_mk, StateT.run_map,
         Functor.map_map, Prod.map_apply, id_eq]
       have hleft :
-          simulateQ (QueryImpl.id' unifSpec + uniformSampleImpl)
-              ((simulateQ (Fork.unifForward M Commit Chal + Fork.roImpl M Commit Chal)
+          simulateQ (QueryImpl.id' unifSpec +ₛ uniformSampleImpl)
+              ((simulateQ (Fork.unifForward M Commit Chal +ₛ Fork.roImpl M Commit Chal)
                 ((simulateQ (simulatedNmaUnifSim (M := M) (Commit := Commit)
                   (Chal := Chal)) (simT pk)).run advCache)).run
                 (liveCache, queryLog)) =
@@ -498,7 +498,7 @@ private def forkLoggedProbOrnament [Inhabited Chal]
             (Chal := Chal) (oa := simT pk) (advCache := advCache)
             (liveSt := (liveCache, queryLog)))
       have hright :
-          simulateQ (QueryImpl.id' unifSpec + uniformSampleImpl)
+          simulateQ (QueryImpl.id' unifSpec +ₛ uniformSampleImpl)
               ((simulateQ (simulatedNmaUnifSim (M := M) (Commit := Commit)
                 (Chal := Chal)) (simT pk)).run advCache) =
             (fun a => (a, advCache)) <$> simT pk := by
@@ -547,7 +547,7 @@ private lemma forkLogged_queryLog_length_le
     (Chal := Chal) (Resp := Resp) σ hr adv simT pk hz
   have hnested :
       ((z.1, z.2.1.1), z.2.1.2) ∈ support
-        ((simulateQ (Fork.unifForward M Commit Chal + Fork.roImpl M Commit Chal)
+        ((simulateQ (Fork.unifForward M Commit Chal +ₛ Fork.roImpl M Commit Chal)
           ((simulateQ (simulatedNmaImpl (M := M) (Commit := Commit)
             (Chal := Chal) (Resp := Resp) simT pk) (adv.main pk)).run
             (∅ : (fsRoSpec M Commit Chal).QueryCache))).run
@@ -570,7 +570,7 @@ private lemma forkLogged_queryLog_length_le
               ((fsRoSpec M Commit Chal).QueryCache × Fork.SimState M Commit Chal) =>
               ((y.1, y.2.1), y.2.2)) <$>
             (simulateQ
-              ((Fork.unifForward M Commit Chal + Fork.roImpl M Commit Chal).mapStateTBase
+              ((Fork.unifForward M Commit Chal +ₛ Fork.roImpl M Commit Chal).mapStateTBase
                 (simulatedNmaImpl (M := M) (Commit := Commit) (Chal := Chal)
                   (Resp := Resp) simT pk)).flattenStateT
               (adv.main pk)).run
@@ -579,7 +579,7 @@ private lemma forkLogged_queryLog_length_le
       rw [support_map]
       exact ⟨(z.1, z.2.1), hmap_base, rfl⟩
     rw [← OracleComp.simulateQ_mapStateTBase_run_eq_map_flattenStateT
-      (outer := Fork.unifForward M Commit Chal + Fork.roImpl M Commit Chal)
+      (outer := Fork.unifForward M Commit Chal +ₛ Fork.roImpl M Commit Chal)
       (inner := simulatedNmaImpl (M := M) (Commit := Commit) (Chal := Chal)
         (Resp := Resp) simT pk)
       (oa := adv.main pk)

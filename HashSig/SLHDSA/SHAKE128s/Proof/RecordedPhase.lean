@@ -79,7 +79,7 @@ noncomputable def unchargedSigner (signer : Message → OracleComp OracleWorld (
 @[expose]
 noncomputable def unchargedPhase (signer : Message → OracleComp OracleWorld (Option Bytes)) :
     QueryImpl (OracleWorld + SigningSpec) (StateT SigningLog (OracleComp OracleWorld)) :=
-  QueryImpl.ofLift OracleWorld (StateT SigningLog (OracleComp OracleWorld)) +
+  QueryImpl.ofLift OracleWorld (StateT SigningLog (OracleComp OracleWorld)) +ₛ
     unchargedSigner signer
 
 /-- A cost told in front of a lifted state computation, at any writer. -/
@@ -104,7 +104,7 @@ theorem run_unchargedPhase_inr (signer : Message → OracleComp OracleWorld (Opt
 
 /-- **The phase's pair of oracles is the uncharged pair, charged and recorded in front.** -/
 theorem phase_eq (signer : Message → OracleComp OracleWorld (Option Bytes)) :
-    recordedAdversaryImpl + recordedSigningOracle signer =
+    recordedAdversaryImpl +ₛ recordedSigningOracle signer =
       (unchargedPhase signer).withAddCost phaseCost := by
   funext queried
   cases queried with
@@ -125,7 +125,7 @@ nothing, so a computation lifted alongside the adversary's is neither charged no
 being there. -/
 theorem run_phase_counted (signer : Message → OracleComp OracleWorld (Option Bytes)) {α : Type}
     (computation : OracleComp (OracleWorld + SigningSpec) α) :
-    WriterT.run (simulateQ (recordedAdversaryImpl + recordedSigningOracle signer) computation) =
+    WriterT.run (simulateQ (recordedAdversaryImpl +ₛ recordedSigningOracle signer) computation) =
       simulateQ (unchargedPhase signer)
         ((simulateQ (addCostOracle phaseCost) computation).run) := by
   rw [phase_eq, WriterState.run_simulateQ_withAddCost]

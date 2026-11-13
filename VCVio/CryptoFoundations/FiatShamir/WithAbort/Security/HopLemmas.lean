@@ -67,7 +67,7 @@ lemma unforgeableAdvantage_eq_hybridExpAtKey_real :
   classical
   set base : QueryImpl (unifSpec + (M × Commit →ₒ Chal))
       (StateT ((M × Commit →ₒ Chal).QueryCache) ProbComp) :=
-    unifFwdImpl (M × Commit →ₒ Chal) +
+    unifFwdImpl (M × Commit →ₒ Chal) +ₛ
       (randomOracle : QueryImpl (M × Commit →ₒ Chal)
         (StateT ((M × Commit →ₒ Chal).QueryCache) ProbComp)) with hbase
   -- `base` matches the runtime's `withStateOracle` interpreter: both lift `unifSpec` by
@@ -93,7 +93,7 @@ lemma unforgeableAdvantage_eq_hybridExpAtKey_real :
   -- Remaining: reconcile the fused WriterT-log-over-`StateT cache` run with the hybrid's
   -- flat `StateT (cache × List M)` run. The bridge follows the Sigma-side recipe in
   -- `FiatShamir/Sigma/Stateful/Compatibility.lean`:
-  --   1. `base.writerTMapBase implW = (toQueryImpl _).liftTarget _ + (realSignBody …).withLogging`
+  --   1. `base.writerTMapBase implW = (toQueryImpl _).liftTarget _ +ₛ (realSignBody …).withLogging`
   --      (a per-query handler equality; the signing handler is `simulateQ base (sign …) =
   --      realSignBody`);
   --   2. `QueryImpl.map_run_withLogging_inputs_eq_run_appendInputLog` rewrites the WriterT log
@@ -101,18 +101,18 @@ lemma unforgeableAdvantage_eq_hybridExpAtKey_real :
   --   3. `OracleComp.simulateQ_flattenStateT_run` flattens the nested `StateT (List M)
   --      (StateT cache ProbComp)` into the hybrid's flat `StateT (cache × List M) ProbComp`;
   --   4. a state-projection (`map_run_simulateQ_eq_of_query_map_eq`) matches the flattened
-  --      handler against `hybridBaseImpl + hybridSignImpl realSignBody` (the lists differ only
+  --      handler against `hybridBaseImpl +ₛ hybridSignImpl realSignBody` (the lists differ only
   --      by append-vs-prepend ordering, which is invisible to the freshness check);
   --   5. the verify tail matches `hybridVerifyCont` with `wasQueried msg ↔ msg ∈ signed`
   --      via `QueryLog.wasQueried_eq_decide_mem_map_fst`.
   have hHandler : base.writerTMapBase
       ((QueryImpl.id' (unifSpec + (M × Commit →ₒ Chal))).liftTarget
           (WriterT (QueryLog (M →ₒ Option (Commit × Resp)))
-            (OracleComp (unifSpec + (M × Commit →ₒ Chal)))) +
+            (OracleComp (unifSpec + (M × Commit →ₒ Chal)))) +ₛ
         (FiatShamirWithAbort.inROM ids hr M maxAttempts).signingOracle pk sk) =
       base.liftTarget
           (WriterT (QueryLog (M →ₒ Option (Commit × Resp)))
-            (StateT ((M × Commit →ₒ Chal).QueryCache) ProbComp)) +
+            (StateT ((M × Commit →ₒ Chal).QueryCache) ProbComp)) +ₛ
         QueryImpl.withLogging
           (fun msg => realSignBody ids M maxAttempts pk sk msg :
             QueryImpl (M →ₒ Option (Commit × Resp))
@@ -132,7 +132,7 @@ lemma unforgeableAdvantage_eq_hybridExpAtKey_real :
       (StateT ((M × Commit →ₒ Chal).QueryCache) ProbComp) := base.toHasQuery
   -- Replay the WriterT log into a `StateT (List M)` input log, flatten the nested
   -- `StateT (List M) (StateT cache ProbComp)` to `StateT (List M × cache) ProbComp`, and
-  -- match the flattened handler against `hybridBaseImpl + hybridSignImpl realSignBody` under
+  -- match the flattened handler against `hybridBaseImpl +ₛ hybridSignImpl realSignBody` under
   -- the state swap `(List M × cache) → (cache × List M)`.
   set so : QueryImpl (M →ₒ Option (Commit × Resp))
       (StateT ((M × Commit →ₒ Chal).QueryCache) ProbComp) :=
@@ -149,9 +149,9 @@ lemma unforgeableAdvantage_eq_hybridExpAtKey_real :
       (StateT (List M) (StateT ((M × Commit →ₒ Chal).QueryCache) ProbComp)) :=
     (HasQuery.toQueryImpl (spec := unifSpec + (M × Commit →ₒ Chal))
       (m := StateT ((M × Commit →ₒ Chal).QueryCache) ProbComp)).liftTarget
-        (StateT (List M) (StateT ((M × Commit →ₒ Chal).QueryCache) ProbComp)) +
+        (StateT (List M) (StateT ((M × Commit →ₒ Chal).QueryCache) ProbComp)) +ₛ
       QueryImpl.appendInputLog so with himplAppend
-  -- (c) the flattened handler equals `hybridBaseImpl + hybridSignImpl realSignBody` after
+  -- (c) the flattened handler equals `hybridBaseImpl +ₛ hybridSignImpl realSignBody` after
   -- swapping the joint state `(List M × cache) → (cache × List M)`.
   -- `proj` swaps the components and reverses the list: the hybrid prepends each signed
   -- message (`msg :: l`) while `appendInputLog` appends it (`l ++ [msg]`), and reversing
@@ -162,7 +162,7 @@ lemma unforgeableAdvantage_eq_hybridExpAtKey_real :
         (M →ₒ Option (Commit × Resp))).Domain)
       (s : List M × (M × Commit →ₒ Chal).QueryCache),
       Prod.map id proj <$> (implAppend.flattenStateT t).run s =
-        ((hybridBaseImpl (Commit := Commit) (Chal := Chal) M +
+        ((hybridBaseImpl (Commit := Commit) (Chal := Chal) M +ₛ
           hybridSignImpl M so) t).run (proj s) := by
     rintro ((tu | tro) | tsign) ⟨l, c⟩
     · simp only [hproj, himplAppend, QueryImpl.flattenStateT, QueryImpl.add_apply_inl,
@@ -198,7 +198,7 @@ lemma unforgeableAdvantage_eq_hybridExpAtKey_real :
       (oa : OracleComp ((unifSpec + (M × Commit →ₒ Chal)) +
         (M →ₒ Option (Commit × Resp))) β) (s : List M × (M × Commit →ₒ Chal).QueryCache) =>
     OracleComp.map_run_simulateQ_eq_of_query_map_eq implAppend.flattenStateT
-      (hybridBaseImpl (Commit := Commit) (Chal := Chal) M + hybridSignImpl M so)
+      (hybridBaseImpl (Commit := Commit) (Chal := Chal) M +ₛ hybridSignImpl M so)
       proj hmatch oa s
   -- Final assembly (steps b/d): chain `hreplay` (WriterT-log → `appendInputLog`),
   -- `OracleComp.simulateQ_flattenStateT_run` (flatten the nested `StateT (List M) (StateT cache)`
@@ -361,11 +361,11 @@ lemma prEvent_hybridExpAtKey_real_le_prog
   -- The combined cache-level handlers for the two games.
   set implReal : QueryImpl ((unifSpec + (M × Commit →ₒ Chal)) + (M →ₒ Option (Commit × Resp)))
       (StateT σ ProbComp) :=
-    hybridBaseImpl (Commit := Commit) (Chal := Chal) M +
+    hybridBaseImpl (Commit := Commit) (Chal := Chal) M +ₛ
       hybridSignImpl M (realSignBody ids M maxAttempts pk sk) with himplReal
   set implProg : QueryImpl ((unifSpec + (M × Commit →ₒ Chal)) + (M →ₒ Option (Commit × Resp)))
       (StateT σ ProbComp) :=
-    hybridBaseImpl (Commit := Commit) (Chal := Chal) M +
+    hybridBaseImpl (Commit := Commit) (Chal := Chal) M +ₛ
       hybridSignImpl M (progSignBody ids M pk sk · maxAttempts) with himplProg
   set R : σ → ℝ≥0∞ := fun s => QueryCache.enncard s.1 with hR
   set ζ : ℝ≥0∞ := ENNReal.ofReal ε *
@@ -740,7 +740,7 @@ lemma prEvent_hybridExpAtKey_prog_le_trans
     rw [hybridExpAtKey_eq_run_bind]
     have hproj := OracleComp.map_run_simulateQ_eq_of_query_map_eq
       (ghostHybridImpl ids M maxAttempts true pk sk)
-      (hybridBaseImpl (Commit := Commit) (Chal := Chal) M +
+      (hybridBaseImpl (Commit := Commit) (Chal := Chal) M +ₛ
         hybridSignImpl M (progSignBody ids M pk sk · maxAttempts))
       (fun g : GhostState M Commit Chal => (overlayCache M g.1.1.1 g.1.1.2, g.1.2))
       (ghostHybridImpl_proj_prog ids M maxAttempts pk sk)
@@ -758,7 +758,7 @@ lemma prEvent_hybridExpAtKey_prog_le_trans
     rw [hybridExpAtKey_eq_run_bind]
     have hproj := OracleComp.map_run_simulateQ_eq_of_query_map_eq
       (ghostHybridImpl ids M maxAttempts false pk sk)
-      (hybridBaseImpl (Commit := Commit) (Chal := Chal) M +
+      (hybridBaseImpl (Commit := Commit) (Chal := Chal) M +ₛ
         hybridSignImpl M (transSignBody ids M maxAttempts pk sk))
       (fun g : GhostState M Commit Chal => (g.1.1.1, g.1.2))
       (ghostHybridImpl_proj_trans ids M maxAttempts pk sk)
@@ -903,10 +903,10 @@ lemma prEvent_hybridExpAtKey_trans_le_sim
     ((M × Commit →ₒ Chal).QueryCache × List M)) := ⊤
   have h_run : measureETVDist
       (StateT.run (simulateQ
-        (hybridBaseImpl (Commit := Commit) (Chal := Chal) M +
+        (hybridBaseImpl (Commit := Commit) (Chal := Chal) M +ₛ
           hybridSignImpl M (transSignBody ids M maxAttempts pk sk)) (adv.main pk)) (∅, []))
       (StateT.run (simulateQ
-        (hybridBaseImpl (Commit := Commit) (Chal := Chal) M +
+        (hybridBaseImpl (Commit := Commit) (Chal := Chal) M +ₛ
           hybridSignImpl M (simSignBody M maxAttempts sim pk sk)) (adv.main pk)) (∅, []))
         ≤ qS * ENNReal.ofReal ε := by
     refine OracleComp.ProgramLogic.Relational.measureETVDist_simulateQ_run_le_queryBoundP_mul

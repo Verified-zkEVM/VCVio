@@ -33,7 +33,7 @@ private theorem simulated_hash_bound [DecidableEq M] [DecidableEq Commit] {A : T
     (oa : OracleComp (unifSpec + (M × Commit →ₒ Chal)) A) (Q : ℕ)
     (hQ : nmaHashQueryBound (M := M) (oa := oa) Q) (st : Fork.SimState M Commit Chal) :
     IsQueryBoundP
-      ((simulateQ (Fork.unifForward M Commit Chal + Fork.roImpl M Commit Chal) oa).run st)
+      ((simulateQ (Fork.unifForward M Commit Chal +ₛ Fork.roImpl M Commit Chal) oa).run st)
       (· = .inr ()) Q := by
   apply hQ.simulateQ_run_StateT_of_step
   intro t st

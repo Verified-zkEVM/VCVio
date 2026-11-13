@@ -32,7 +32,7 @@ variable {PK SK Domain Range : Type}
 /-! ### Cross-monad WriterT-log → signed-set reconstruction
 
 The unforgeability experiment runs the adversary under the WriterT signing-log handler stack
-`baseW + signingOracle pk sk` (logging each signing query) inside the runtime's
+`baseW +ₛ signingOracle pk sk` (logging each signing query) inside the runtime's
 `withStateOracle randomOracle ∅` bundle, and its winning Bool reads the freshness mask
 `!log.wasQueried msg` off the WriterT log.  The freshness vehicle `gpvRealImplFresh` instead
 threads a `Finset M` signed-set through the random-oracle `StateT QueryCache ProbComp` surface.
@@ -45,15 +45,15 @@ flattened handler onto `gpvRealImplFresh` with the signed-set reconstructed as t
 
 /-- **The fused real WriterT handler over the random-oracle cache.** The signing handler of the
 unforgeability experiment, with the public/random-oracle base simulated by the runtime's
-`withStateOracle` interpreter (`outerLift + randomOracle` over `StateT QueryCache ProbComp`).  This
+`withStateOracle` interpreter (`outerLift +ₛ randomOracle` over `StateT QueryCache ProbComp`).  This
 is the fused `writerTMapBase` form of the signing-log handler: it equals
-`baseW + withLogging signBody`, where `signBody msg = gpvRealImpl … (Sum.inr msg)` is the real GPV
+`baseW +ₛ withLogging signBody`, where `signBody msg = gpvRealImpl … (Sum.inr msg)` is the real GPV
 signing body run on the cache (`gpvOuter_writerTMapBase_implW`). -/
 @[expose] noncomputable def gpvOuter :
     QueryImpl (unifSpec + (Salt × M →ₒ Range))
       (StateT ((Salt × M →ₒ Range).QueryCache) ProbComp) :=
   (QueryImpl.ofLift unifSpec ProbComp).liftTarget
-      (StateT ((Salt × M →ₒ Range).QueryCache) ProbComp) +
+      (StateT ((Salt × M →ₒ Range).QueryCache) ProbComp) +ₛ
     (randomOracle : QueryImpl (Salt × M →ₒ Range)
       (StateT ((Salt × M →ₒ Range).QueryCache) ProbComp))
 
@@ -78,10 +78,10 @@ lemma gpvRealImpl_inl_eq_gpvOuter (pk : PK) (sk : SK)
 
 open Classical in
 omit [Fintype Salt] in
-/-- **Handler fusion: the fused WriterT stack is `baseW + withLogging signBody`.** Pushing the
+/-- **Handler fusion: the fused WriterT stack is `baseW +ₛ withLogging signBody`.** Pushing the
 runtime's `withStateOracle` interpreter `gpvOuter` through the base monad of the unforgeability
-experiment's WriterT handler stack `baseW + signingOracle pk sk` (via `writerTMapBase`) yields the
-WriterT handler `baseW' + withLogging signBody` over `StateT QueryCache ProbComp`, where the
+experiment's WriterT handler stack `baseW +ₛ signingOracle pk sk` (via `writerTMapBase`) yields the
+WriterT handler `baseW' +ₛ withLogging signBody` over `StateT QueryCache ProbComp`, where the
 public/random-oracle base re-emits its query through the cache (`baseW'`) and the signing body is
 the real GPV signing computation run on the cache (`signBody msg = gpvRealImpl … (Sum.inr msg)`).
 -/
@@ -90,12 +90,12 @@ lemma gpvOuter_writerTMapBase_implW (pk : PK) (sk : SK) :
         ((HasQuery.toQueryImpl (spec := unifSpec + (Salt × M →ₒ Range))
           (m := OracleComp (unifSpec + (Salt × M →ₒ Range)))).liftTarget
             (WriterT (QueryLog (M →ₒ (Salt × Domain)))
-              (OracleComp (unifSpec + (Salt × M →ₒ Range)))) +
+              (OracleComp (unifSpec + (Salt × M →ₒ Range)))) +ₛ
           (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range)))
             psf hr M Salt).signingOracle pk sk) =
       (gpvOuter M Salt).liftTarget
           (WriterT (QueryLog (M →ₒ (Salt × Domain)))
-            (StateT ((Salt × M →ₒ Range).QueryCache) ProbComp)) +
+            (StateT ((Salt × M →ₒ Range).QueryCache) ProbComp)) +ₛ
         QueryImpl.withLogging
           (fun msg => gpvRealImpl psf hr M Salt pk sk (Sum.inr msg) :
             QueryImpl (M →ₒ (Salt × Domain))
@@ -121,8 +121,6 @@ lemma gpvOuter_writerTMapBase_implW (pk : PK) (sk : SK) :
       QueryImpl.add_apply_inr, StateT.run_bind, StateT.run_pure,
       WriterT.run_bind, WriterT.run_liftM,
       WriterT.run_tell, WriterT.run_pure, map_eq_bind_pure_comp]
-    simp only [HAdd.hAdd, QueryImpl.add, simulateQ_bind, simulateQ_pure,
-      StateT.run_bind, StateT.run_pure, bind_assoc, pure_bind, Function.comp_def]
 
 omit [Fintype Salt] in
 /-- **Per-query state-projection of the flattened append-log handler onto `gpvRealImplFresh`.**
@@ -139,7 +137,7 @@ lemma flattenAppendLog_proj_gpvRealImplFresh (pk : PK) (sk : SK)
     (s : List M × (Salt × M →ₒ Range).QueryCache) :
     Prod.map id (fun s : List M × (Salt × M →ₒ Range).QueryCache => (s.2, s.1.toFinset)) <$>
         ((((gpvOuter M Salt).liftTarget
-              (StateT (List M) (StateT ((Salt × M →ₒ Range).QueryCache) ProbComp))) +
+              (StateT (List M) (StateT ((Salt × M →ₒ Range).QueryCache) ProbComp))) +ₛ
             QueryImpl.appendInputLog
               (fun msg => gpvRealImpl psf hr M Salt pk sk (Sum.inr msg) :
                 QueryImpl (M →ₒ (Salt × Domain))
@@ -180,7 +178,7 @@ lemma flattenAppendLog_proj_gpvRealImplFresh (pk : PK) (sk : SK)
 
 omit [Fintype Salt] in
 /-- **Cross-monad WriterT-log → signed-set run reconstruction.** Running `oa` under the
-unforgeability experiment's WriterT signing-log handler stack `baseW + signingOracle pk sk`, then
+unforgeability experiment's WriterT signing-log handler stack `baseW +ₛ signingOracle pk sk`, then
 interpreting its base random-oracle queries through the runtime's `withStateOracle` cache
 (`gpvOuter`) and mapping the result to `(output, (log.map fst).toFinset, cache)`, coincides with the
 freshness vehicle `gpvRealImplFresh` run started from `(∅, ∅), false`, projected to drop the passive
@@ -190,7 +188,7 @@ This is the kernel of the freshness game identification: it identifies the Write
 log of `unforgeableExperiment` with the `Finset M` signed-set carried by `gpvRealImplFresh`, across
 the WriterT/StateT monad divide.  The proof chains the reconstruction pieces:
 `simulateQ_writerTMapBase_run` + `gpvOuter_writerTMapBase_implW` (fuse the inner WriterT pass with
-the outer cache simulation into `baseW' + withLogging signBody`),
+the outer cache simulation into `baseW' +ₛ withLogging signBody`),
 `map_run_withLogging_inputs_eq_run_appendInputLog` (replay the WriterT log into a `StateT (List M)`
 input log, `initialInputs = []`), `simulateQ_flattenStateT_run` (flatten the nested `StateT`), and
 `flattenAppendLog_proj_gpvRealImplFresh` via `map_run_simulateQ_eq_of_query_map_eq` (project onto
@@ -204,7 +202,7 @@ lemma map_simulateQ_gpvOuter_writerLog_eq_gpvRealImplFresh (pk : PK) (sk : SK) {
               ((HasQuery.toQueryImpl (spec := unifSpec + (Salt × M →ₒ Range))
                 (m := OracleComp (unifSpec + (Salt × M →ₒ Range)))).liftTarget
                   (WriterT (QueryLog (M →ₒ (Salt × Domain)))
-                    (OracleComp (unifSpec + (Salt × M →ₒ Range)))) +
+                    (OracleComp (unifSpec + (Salt × M →ₒ Range)))) +ₛ
                 (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range)))
                   psf hr M Salt).signingOracle pk sk)
               oa).run)).run (∅ : (Salt × M →ₒ Range).QueryCache)
@@ -218,7 +216,7 @@ lemma map_simulateQ_gpvOuter_writerLog_eq_gpvRealImplFresh (pk : PK) (sk : SK) {
   let hq : HasQuery (unifSpec + (Salt × M →ₒ Range))
       (StateT ((Salt × M →ₒ Range).QueryCache) ProbComp) := (gpvOuter M Salt).toHasQuery
   -- (1) Fuse the inner WriterT pass with the outer cache simulation `gpvOuter` via
-  -- `writerTMapBase`, and rewrite the fused handler as `baseW' + withLogging signBody`.
+  -- `writerTMapBase`, and rewrite the fused handler as `baseW' +ₛ withLogging signBody`.
   rw [QueryImpl.simulateQ_writerTMapBase_run, gpvOuter_writerTMapBase_implW]
   -- (2) Replay the WriterT log into a `StateT (List M)` input log starting from `[]`.
   have hreplay := QueryImpl.map_run_withLogging_inputs_eq_run_appendInputLog
@@ -230,7 +228,7 @@ lemma map_simulateQ_gpvOuter_writerLog_eq_gpvRealImplFresh (pk : PK) (sk : SK) {
   -- `gpvRealImplFresh` via the per-query `hmatch`.
   have hflatten := OracleComp.simulateQ_flattenStateT_run
     ((gpvOuter M Salt).liftTarget
-        (StateT (List M) (StateT ((Salt × M →ₒ Range).QueryCache) ProbComp)) +
+        (StateT (List M) (StateT ((Salt × M →ₒ Range).QueryCache) ProbComp)) +ₛ
       QueryImpl.appendInputLog
         (fun msg => gpvRealImpl psf hr M Salt pk sk (Sum.inr msg) :
           QueryImpl (M →ₒ (Salt × Domain))
@@ -238,7 +236,7 @@ lemma map_simulateQ_gpvOuter_writerLog_eq_gpvRealImplFresh (pk : PK) (sk : SK) {
     oa ([] : List M) (∅ : (Salt × M →ₒ Range).QueryCache)
   have hflat := OracleComp.map_run_simulateQ_eq_of_query_map_eq
     (((gpvOuter M Salt).liftTarget
-        (StateT (List M) (StateT ((Salt × M →ₒ Range).QueryCache) ProbComp)) +
+        (StateT (List M) (StateT ((Salt × M →ₒ Range).QueryCache) ProbComp)) +ₛ
       QueryImpl.appendInputLog
         (fun msg => gpvRealImpl psf hr M Salt pk sk (Sum.inr msg) :
           QueryImpl (M →ₒ (Salt × Domain))
@@ -474,7 +472,7 @@ theorem withStateOracle_run'_liftM_bind {ι : Type} {hashSpec : OracleSpec ι}
   simp only [SemanticsVia.withStateOracle]
   rw [simulateQ_bind, StateT.run'_eq, StateT.run_bind]
   rw [show simulateQ ((QueryImpl.ofLift unifSpec ProbComp).liftTarget
-        (StateT hashSpec.QueryCache ProbComp) + hashImpl) (liftM oa)
+        (StateT hashSpec.QueryCache ProbComp) +ₛ hashImpl) (liftM oa)
       = simulateQ ((QueryImpl.ofLift unifSpec ProbComp).liftTarget
         (StateT hashSpec.QueryCache ProbComp)) oa
       from QueryImpl.simulateQ_add_liftComp_left _ hashImpl oa]
@@ -533,7 +531,7 @@ theorem gpv_measureTVDist_real_programmed_le_collisionBound
 
 The GPV `runtime` interprets the surface program over the *sum* spec
 `unifSpec + (Salt × M →ₒ Range)` via
-`simulateQ' ((QueryImpl.ofLift unifSpec ProbComp).liftTarget _ + randomOracle)`. The reusable
+`simulateQ' ((QueryImpl.ofLift unifSpec ProbComp).liftTarget _ +ₛ randomOracle)`. The reusable
 state-threading bridge in `ProgramLogic/Relational/ProgrammingOracle.lean`
 (`measureETVDist_simulateQ_randomOracle_withProgramming_le_prEvent_bad`) is instead stated for the
 bare

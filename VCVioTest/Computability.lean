@@ -102,7 +102,7 @@ def toyForkCollision : OracleComp (unifSpec + (Unit →ₒ Bool)) (Option (Fin 2
 
 /-- The replay fork interpreted into `ProbComp` by uniform sampling. -/
 def toyForkProb : ProbComp (Option (Bool × Bool)) :=
-  simulateQ (QueryImpl.ofLift unifSpec ProbComp +
+  simulateQ (QueryImpl.ofLift unifSpec ProbComp +ₛ
     uniformSampleImpl (spec := ((Unit →ₒ Bool) : OracleSpec Unit))) toyFork
 
 /-- The replay fork as an executable `IO` action. -/

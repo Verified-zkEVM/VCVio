@@ -77,7 +77,7 @@ noncomputable def unlinkToMultiplePRFQueryImpl :
       (StateT (UnlinkState TagId)
         (OracleComp (unifSpec + ((TagId × Nonce) →ₒ Digest)))) :=
   unlinkToMultiplePRFTagImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-    (sessionsPerTag := sessionsPerTag) +
+    (sessionsPerTag := sessionsPerTag) +ₛ
     unlinkToMultiplePRFReaderImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
 
 /-- PRF distinguisher against `prfs.multiplePRFScheme` derived from an unlinkability adversary.
@@ -138,7 +138,7 @@ noncomputable def unlinkToSinglePRFQueryImpl :
         (OracleComp (unifSpec +
           (((TagId × Fin sessionsPerTag) × Nonce) →ₒ Digest)))) :=
   unlinkToSinglePRFTagImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-    (sessionsPerTag := sessionsPerTag) +
+    (sessionsPerTag := sessionsPerTag) +ₛ
     unlinkToSinglePRFReaderImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
       (sessionsPerTag := sessionsPerTag)
 

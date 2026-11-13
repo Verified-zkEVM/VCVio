@@ -148,7 +148,7 @@ theorem leftServed_carrierTail (rightKeep : Walk → Bytes → HandlerCarrier.St
       (startAt walk.2, (([], []), 0))))
     (middle : Forgery × (Multiplicative Tally × SigningLog × CountedState))
     (hmiddle : middle ∈ support ((simulateQ (fuseServing (handlerAt rightKeep walk)
-      (recordedAdversaryImpl + recordedSigningOracle (Scheme.sign keys.1.1))
+      (recordedAdversaryImpl +ₛ recordedSigningOracle (Scheme.sign keys.1.1))
       ServedAgreement.startServingOn ServedAgreement.stopServingOn)
       (adversary.main keys.1.2)).run (1, [], keys.2)))
     {γ : Type} (last : OracleComp OracleWorld γ) (final : γ × CountedState)
@@ -162,7 +162,7 @@ theorem leftServed_carrierTail (rightKeep : Walk → Bytes → HandlerCarrier.St
     _ (startAt walk.2, (([], []), 0)) keys (by revert hkeys; intro; assumption)
       (leftServed_start walk.2)
   have hsecond := RecordInvariant.phase_invariant (Inv := LeftServed) _
-    (recordedAdversaryImpl + recordedSigningOracle (Scheme.sign keys.1.1))
+    (recordedAdversaryImpl +ₛ recordedSigningOracle (Scheme.sign keys.1.1))
     ServedAgreement.startServingOn ServedAgreement.stopServingOn
     (fun queried state step hstep hinv =>
       step_leftServed (keyAt walk) (rightKeep walk) queried state step hstep hinv)

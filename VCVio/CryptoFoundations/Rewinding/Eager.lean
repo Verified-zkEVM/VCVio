@@ -135,11 +135,11 @@ coins and complete-run count. -/
 theorem commute_draw_algorithm {n : ℕ} (qs : Fin n → Q) {β γ : Type}
     (alg : OracleComp (unifSpec + rerunSpec Q α) β) (w : P.World) (m : ℕ)
     (f : β → ℕ → (Fin n → α) → P.World → ProbComp γ) :
-    (do let z ← (simulateQ (coins (S := P.World × ℕ) + P.rerun run) alg).run (w, m)
+    (do let z ← (simulateQ (coins (S := P.World × ℕ) +ₛ P.rerun run) alg).run (w, m)
         let y ← (P.draw run qs).run z.2.1
         f z.1 z.2.2 y.1 y.2) =ᵈ
     (do let y ← (P.draw run qs).run w
-        let z ← (simulateQ (coins (S := P.World × ℕ) + P.rerun run) alg).run (y.2, m)
+        let z ← (simulateQ (coins (S := P.World × ℕ) +ₛ P.rerun run) alg).run (y.2, m)
         f z.1 z.2.2 y.1 z.2.1) := by
   induction alg using OracleComp.inductionOn generalizing w m f with
   | pure a => simp only [simulateQ_pure, StateT.run_pure, pure_bind]; rfl
@@ -157,7 +157,7 @@ theorem commute_draw_algorithm {n : ℕ} (qs : Fin n → Q) {β γ : Type}
       exact (EvalDistEq.bind_right ((P.runWorld run q).run w) fun x =>
         ih x.1 x.2 (m + 1) f).trans
           (P.commute_draw run qs q w (fun a g w' => do
-            let z ← (simulateQ (coins (S := P.World × ℕ) + P.rerun run) (k a)).run
+            let z ← (simulateQ (coins (S := P.World × ℕ) +ₛ P.rerun run) (k a)).run
               (w', m + 1)
             f z.1 z.2.2 g z.2.1))
 
@@ -166,9 +166,9 @@ fixed function and preserves the world. -/
 theorem algorithm_of_settled {β : Type} (f : Q → α) (w : P.World)
     (hf : ∀ q, (P.runWorld run q).run w = pure (f q, w))
     (alg : OracleComp (unifSpec + rerunSpec Q α) β) (m : ℕ) :
-    (simulateQ (coins (S := P.World × ℕ) + P.rerun run) alg).run (w, m) =
+    (simulateQ (coins (S := P.World × ℕ) +ₛ P.rerun run) alg).run (w, m) =
       (fun z => (z.1, (w, z.2))) <$>
-        (simulateQ (coins (S := ℕ) + counted f) alg).run m := by
+        (simulateQ (coins (S := ℕ) +ₛ counted f) alg).run m := by
   induction alg using OracleComp.inductionOn generalizing m with
   | pure a => simp only [simulateQ_pure, StateT.run_pure, map_pure]
   | query_bind t k ih =>
@@ -210,11 +210,11 @@ theorem attempt_draw {n : ℕ} (qs : Fin n → Q) (idx : Q → Fin n)
     (alg : OracleComp (unifSpec + rerunSpec Q α) β) :
     P.attempt run alg =ᵈ
       (do let y ← (P.draw run qs).run P.empty
-          (simulateQ (coins (S := ℕ) + counted (fun q => y.1 (idx q))) alg).run 0) := by
+          (simulateQ (coins (S := ℕ) +ₛ counted (fun q => y.1 (idx q))) alg).run 0) := by
   have hswap := P.commute_draw_algorithm run qs alg P.empty 0
     (fun a m _ _ => pure (a, m))
   have hleft :
-      (do let z ← (simulateQ (coins (S := P.World × ℕ) + P.rerun run) alg).run (P.empty, 0)
+      (do let z ← (simulateQ (coins (S := P.World × ℕ) +ₛ P.rerun run) alg).run (P.empty, 0)
           let y ← (P.draw run qs).run z.2.1
           pure (z.1, z.2.2)) =ᵈ P.attempt run alg := by
     rw [attempt, map_eq_bind_pure_comp]
@@ -255,7 +255,7 @@ theorem attempt_eagerTable [Finite Q] {β : Type}
     (alg : OracleComp (unifSpec + rerunSpec Q α) β) :
     P.attempt run alg =ᵈ
       (do let f ← P.eagerTable run
-          (simulateQ (coins (S := ℕ) + counted f) alg).run 0) := by
+          (simulateQ (coins (S := ℕ) +ₛ counted f) alg).run 0) := by
   classical
   let : Fintype Q := Fintype.ofFinite Q
   simpa only [eagerTable, bind_map_left] using

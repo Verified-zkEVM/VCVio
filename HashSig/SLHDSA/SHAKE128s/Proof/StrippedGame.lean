@@ -112,7 +112,7 @@ theorem run_liftComp {α : Type} (computation : OracleComp HashSpec α)
     (simulateQ KeygenUniform.rom
         (OracleComp.liftComp computation OracleWorld)).run current =
       (simulateQ randomOracle computation).run current := by
-  rw [show KeygenUniform.rom = unifFwdImpl HashSpec +
+  rw [show KeygenUniform.rom = unifFwdImpl HashSpec +ₛ
       (randomOracle : QueryImpl HashSpec (StateT (QueryCache HashSpec) ProbComp)) from rfl,
     QueryImpl.simulateQ_add_liftComp_right]
 
@@ -226,7 +226,7 @@ noncomputable def strippedAfterSeeds (adversary : Adversary) (sds : Digest × Di
   let ((forgery, adversaryCounts), signed) ←
     (simulateQ
       ((QueryImpl.ofLift OracleWorld (StateT SigningLog (OracleComp OracleWorld))).withAddCost
-          (fun input => Counts.single .hash (hashCost input)) + strippedSigningOracle warm sk)
+          (fun input => Counts.single .hash (hashCost input)) +ₛ strippedSigningOracle warm sk)
       (adversary.main pk)).run.run []
   let (verified, verifierCounts) ← countQueries
     (fun input => Counts.single .verification (hashCost input))
