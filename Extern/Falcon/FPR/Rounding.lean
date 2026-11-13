@@ -351,7 +351,7 @@ private theorem shiftRight_or_and_one (v es : UInt64) (hes : es.toNat ≤ 1) :
     have hsr : v >>> (0 : UInt64) = v := by
       rw [← UInt64.toNat_inj, UInt64.toNat_shiftRight]
       rfl
-    rw [hm, hz, ite_eq_left rfl, hsr, or_and_self, or_zero]
+    rw [hm, hz, ite_eq_left rfl, hsr, or_and_self, UInt64.or_zero]
   · have hm : (1 : UInt64) <<< (1 : UInt64) - 1 = 1 := by decide
     rw [hm]
     rcases and_one_eq_zero_or_one v with h | h
@@ -426,10 +426,6 @@ private theorem toNat_fpr_ursh_or_fold (yu : UInt64) (n : UInt32) :
 The shift amounts and mask widths appearing in `FPR.lzcnt_nonzero` are `UInt32` numerals; these
 evaluate them so that `omega` sees genuine literals. -/
 
-private theorem toNat_lit0 : (0 : UInt32).toNat = 0 := by decide
-
-private theorem toNat_lit1 : (1 : UInt32).toNat = 1 := by decide
-
 private theorem toNat_lit2 : (2 : UInt32).toNat = 2 := by decide
 
 private theorem toNat_lit4 : (4 : UInt32).toNat = 4 := by decide
@@ -489,7 +485,7 @@ private theorem and_highMask_eq_zero_iff {n k : ℕ} (hn : n < 2 ^ 32) (hk : k �
 private theorem uint32_and_highMask_eq_zero_iff (v : UInt32) {k : ℕ} (hk : k ≤ 32)
     {M : UInt32} (hM : M.toNat = 2 ^ 32 - 2 ^ k) :
     (v &&& M = 0) ↔ v.toNat < 2 ^ k := by
-  rw [← UInt32.toNat_inj, UInt32.toNat_and, hM, toNat_lit0]
+  rw [← UInt32.toNat_inj, UInt32.toNat_and, hM, UInt32.toNat_zero]
   exact and_highMask_eq_zero_iff (UInt32.toNat_lt v) hk
 
 /-- The step-1 mask test of `FPR.lzcnt_nonzero`. -/
@@ -536,8 +532,8 @@ private theorem lzcnt_nonzero_toNat_le (x : UInt32) : (lzcnt_nonzero x).toNat �
   simp only [lzcnt_nonzero, Id.run]
   dsimp only [pure, Id.instMonad]
   split_ifs <;>
-    norm_num [UInt32.toNat_add, toNat_lit0, toNat_lit1, toNat_lit2, toNat_lit4, toNat_lit8,
-      toNat_lit16]
+    norm_num [UInt32.toNat_add, UInt32.toNat_zero, UInt32.toNat_one, toNat_lit2, toNat_lit4,
+      toNat_lit8, toNat_lit16]
 
 /-- `FPR.lzcnt_nonzero x` is the number of leading zero bits of a nonzero 32-bit word `x`: it is
 the unique `c` with `2 ^ (31 - c) ≤ x < 2 ^ (32 - c)`. Proved by running the five-step binary
@@ -553,8 +549,8 @@ private theorem lzcnt_nonzero_spec (x : UInt32) (hx : x ≠ 0) :
   simp only [beq_iff_eq, and_mask16, and_mask24, and_mask28, and_mask30, and_mask31,
     toNat_shl16, toNat_shl8, toNat_shl4, toNat_shl2]
   split_ifs <;>
-    (norm_num [UInt32.toNat_add, toNat_lit0, toNat_lit1, toNat_lit2, toNat_lit4, toNat_lit8,
-      toNat_lit16]; omega)
+    (norm_num [UInt32.toNat_add, UInt32.toNat_zero, UInt32.toNat_one, toNat_lit2, toNat_lit4,
+      toNat_lit8, toNat_lit16]; omega)
 
 /-! ### 64-bit leading-zero count -/
 
@@ -577,8 +573,8 @@ private theorem or_neg_shiftRight_31 (y : UInt32) (hy : y ≠ 0) :
     (y ||| ((0 : UInt32) - y)) >>> 31 = 1 := by
   have hyN : y.toNat ≠ 0 := fun h0 => hy (UInt32.toNat_inj.mp (by simpa using h0))
   have hylt : y.toNat < 2 ^ 32 := UInt32.toNat_lt y
-  rw [← UInt32.toNat_inj, UInt32.toNat_shiftRight, UInt32.toNat_or, UInt32.toNat_sub, toNat_lit0,
-    toNat_lit1, show (31 : UInt32).toNat % 32 = 31 from by decide,
+  rw [← UInt32.toNat_inj, UInt32.toNat_shiftRight, UInt32.toNat_or, UInt32.toNat_sub,
+    UInt32.toNat_zero, UInt32.toNat_one, show (31 : UInt32).toNat % 32 = 31 from by decide,
     show (2 ^ 32 - y.toNat + 0) % 2 ^ 32 = 2 ^ 32 - y.toNat from Nat.mod_eq_of_lt (by omega),
     Nat.shiftRight_or_distrib, Nat.shiftRight_eq_div_pow, Nat.shiftRight_eq_div_pow]
   rcases Nat.lt_or_ge y.toNat (2 ^ 31) with h | h

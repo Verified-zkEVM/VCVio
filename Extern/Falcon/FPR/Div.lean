@@ -165,7 +165,7 @@ private theorem divStep_toNat (yu : UInt64) (s : UInt64 × UInt64)
       omega
   · rw [ite_eq_right h]
     push Not at h
-    rw [uint64_zero_and, uint64_zero_and]
+    rw [UInt64.zero_and, UInt64.zero_and]
     have hsub : (s.2 - 0).toNat = s.2.toNat := by simp
     have hor : (s.1 ||| 0).toNat = s.1.toNat := by rw [UInt64.toNat_or]; simp
     refine ⟨?_, ?_⟩
@@ -459,7 +459,7 @@ private theorem divPipeline_e'_eq (x y : FPR) (ha : FPR.IsNormal x) :
     (divPipeline x y).e' = (divPipeline x y).e.toInt32 := by
   change ((divPipeline x y).e ^^^ ((divPipeline x y).dzu
       &&& ((divPipeline x y).e ^^^ ((0 : UInt32) - 1076)))).toInt32 = _
-  rw [divPipeline_dzu_eq_zero x y ha, uint32_zero_and, uint32_xor_zero]
+  rw [divPipeline_dzu_eq_zero x y ha, UInt32.zero_and, UInt32.xor_zero]
 
 /-- The sign word of `FPR.div` is the exclusive-or of the operands' sign bits. -/
 private theorem divPipeline_sign_factor (x y : FPR) :
