@@ -136,11 +136,7 @@ theorem advantage_pure_uniform (bit : Bool) :
 theorem advantage_false_true :
     advantage (server (pure false)) (server (pure true)) (context 5) = 1 := by
   rw [advantage_eq_etvDist, law_server_pure, law_server_pure]
-  apply le_antisymm
-  · exact Measure.etvDist_le_one _ _ (by simp) (by simp)
-  · simpa [ENNReal.absDiff] using Measure.absDiff_apply_le_etvDist
-      (Measure.dirac (some (some false) : Result)) (Measure.dirac (some (some true)))
-      (measurableSet_singleton (some (some false)))
+  exact Measure.etvDist_dirac_of_ne (by decide)
 
 /-- Reusing a positive error threshold under transitivity is unsound even for actual networks. -/
 theorem fixed_error_not_transitive :

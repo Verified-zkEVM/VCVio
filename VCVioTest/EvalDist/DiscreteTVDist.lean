@@ -25,6 +25,11 @@ namespace VCVioTest.DiscreteTVDist
 example : discreteTVDist (pure false : ProbComp Bool) (pure true) = 1 := by
   simp [discreteTVDist.pure_pure]
 
+/-- The same bound for `measureTVDist` under a locally chosen discrete σ-algebra. -/
+example : letI : MeasurableSpace Bool := ⊤
+    measureTVDist (pure false : ProbComp Bool) (pure true) = 1 := by
+  simp [measureTVDist_pure_pure]
+
 /-- A uniform bit is at distance one half from a fixed bit. The examples below that use this
 distance take it as the hypothesis `h`. -/
 example : discreteTVDist ($ᵗ Bool) (pure true : ProbComp Bool) = 1 / 2 := by
