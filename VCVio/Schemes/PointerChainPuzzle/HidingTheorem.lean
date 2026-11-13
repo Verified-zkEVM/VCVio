@@ -263,9 +263,13 @@ distinguisher `hidingDistinguisher` of every admissible adversary within the bud
 distinguisher in `PRFAdmissible`, then `sealScheme` with `sealDEM` is hiding against `Admissible`,
 with the bound of `hidingAdvantage_sealScheme_le`.
 
-The classes carry the efficiency restriction: computational hiding follows by taking both to be
-classes of efficient algorithms and proving that `hidingDistinguisher` maps one into the other.
-Over the class of all distinguishers the PRF premise holds only at large `ε`. -/
+The classes carry the efficiency restriction, as concrete resource bounds at these parameters:
+for example adversaries running in time `t`, and distinguishers in time `t` plus the cost of
+simulating the puzzle and the challenger. Concrete hiding then follows from proving that
+`hidingDistinguisher` maps the one class into the other. An asymptotic polynomial-time class
+bounds nothing at fixed parameters, and over the class of all distinguishers the PRF premise holds
+only at large `ε`; asymptotic hiding is a statement about adversary families across parameters,
+derived from the per-adversary bound `hidingAdvantage_sealScheme_le`. -/
 theorem hidingSecureAgainst_sealScheme [Finite Ctx] [Fintype S] [Fintype L] [Fintype Salt]
     [Fintype N] (hprf : prf.UniformKey) (mkCtx : Salt → Ctx) (initAcc : Ctx → S)
     (hctx : Function.Injective mkCtx) (Qpre Qon qEnc : ℕ) {ε : ℝ≥0∞}

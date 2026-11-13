@@ -199,8 +199,12 @@ def HidingSecure (tlp : TimeLockPuzzle spec Puzzle Key)
 /-- Hiding against a class of adversaries: every adversary in `Admissible` within the
 preprocessing, online and encryption budgets of `HidingSecure` has hiding advantage at most `ε`.
 
-`Admissible` is where a restriction on local computation enters, such as a running-time bound,
-since the budgets count oracle queries only. Over the class of all adversaries this is
+`Admissible` is where a restriction on local computation enters, since the budgets count oracle
+queries only. It must be a concrete resource bound at this parameter, such as running in at most
+`t` steps. An asymptotic class such as probabilistic polynomial time restricts nothing at one
+fixed parameter: a uniform polynomial-time family may run exhaustive search at any single
+parameter, its cost absorbed into the polynomial's constant. Asymptotic hiding is a statement
+about adversary families across parameters. Over the class of all adversaries this predicate is
 `HidingSecure` (`hidingSecureAgainst_true_iff`). -/
 @[expose]
 def HidingSecureAgainst (Admissible : HidingAdversary spec Puzzle M C → Prop)

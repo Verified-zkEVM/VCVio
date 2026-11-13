@@ -66,8 +66,10 @@ the PRF advantage of that adversary's distinguisher `byteHidingDistinguisher`. T
 distinguishers of *all* adversaries would have to hold for an adversary that recovers the HMAC key
 from the keystream by exhaustive search. HMAC is computed outside the oracle, so that adversary
 makes no oracle query, fits every query budget and wins with probability near `1`, which forces
-`ε` near `1/2`. A computational corollary takes both classes to be classes of efficient algorithms
-and proves that `byteHidingDistinguisher` maps one into the other.
+`ε` near `1/2`. A computational corollary takes both classes to be concrete resource classes
+(adversaries and distinguishers running within explicit time bounds) and proves that
+`byteHidingDistinguisher` maps one into the other. leanSeal's sizes are fixed, so an asymptotic
+polynomial-time class says nothing here: at fixed parameters it contains exhaustive search.
 
 ## Paper citation table
 
@@ -199,8 +201,10 @@ theorem hidingAdvantage_byteScheme_le (hb : b ≤ 32) (hn : n < 2 ^ 32) (m : ℕ
 If the distinguisher `byteHidingDistinguisher` of every byte-level adversary in `Admissible` within
 the budgets lies in `PRFAdmissible`, and HMAC-SHA256 on `2 qEnc` keys has advantage at most `ε`
 against every distinguisher in `PRFAdmissible`, then leanSeal is hiding against `Admissible` with
-the bound of `hidingAdvantage_byteScheme_le`. The classes carry the efficiency restriction; over the
-class of all distinguishers the PRF premise holds only at large `ε`. -/
+the bound of `hidingAdvantage_byteScheme_le`. The classes carry the efficiency restriction as
+concrete resource bounds (for example explicit running-time bounds); an asymptotic polynomial-time
+class contains exhaustive search at these fixed sizes, and over the class of all distinguishers the
+PRF premise holds only at large `ε`. -/
 theorem hidingSecureAgainst_byteScheme (hb : b ≤ 32) (hn : n < 2 ^ 32) (m : ℕ) [NeZero n]
     (Qpre Qon qEnc : ℕ) {ε : ℝ≥0∞}
     (Admissible : HidingAdversary byteSpec (Puzzle b n) Plaintext ByteArray → Prop)
