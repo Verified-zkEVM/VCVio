@@ -15,8 +15,8 @@ signatures, $\Sigma$-protocols, and transforms like Fiat-Shamir and Fischlin.
 
 On top of the generic framework, `LatticeCrypto` covers ML-DSA, ML-KEM, and Falcon, including
 proof-level abstractions and executable concrete implementations. `HashSig` covers SLH-DSA
-(SPHINCS+, FIPS 205), and the interaction layer supports computational interpretations of
-interactive and UC-style systems.
+(SPHINCS+, FIPS 205) and [generalized XMSS](docs/reading/gxmss.md), and the interaction layer
+supports computational interpretations of interactive and UC-style systems.
 
 Assuming Lean and Lake are already installed, the project can be built by just running:
 
