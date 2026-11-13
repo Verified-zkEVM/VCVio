@@ -93,18 +93,6 @@ theorem get?_selectedValues {s : Skeleton} (leaves : LeafData α s) (sel : LeafD
 
 end InductiveMerkleTree
 
-namespace BinaryTree
-
-variable {α : Type}
-
-/-- The leaf data of a skeleton with the value `f j` at each leaf `j`. -/
-def LeafData.ofFn : (s : Skeleton) → (SkeletonLeafIndex s → α) → LeafData α s
-  | .leaf, f => .leaf (f .ofLeaf)
-  | .internal l r, f =>
-      .internal (LeafData.ofFn l fun j => f (.ofLeft j)) (LeafData.ofFn r fun j => f (.ofRight j))
-
-end BinaryTree
-
 namespace MerkleTreeExtractability
 
 variable {Query Address Y : Type}

@@ -278,6 +278,8 @@ public import VCVio.CryptoFoundations.TweakableHash
 public import VCVio.CryptoFoundations.UniversalHash
 public import VCVio.CryptoFoundations.VectorCommitment
 public import VCVio.CryptoFoundations.VectorCommitment.Merkle
+public import VCVio.CryptoFoundations.VectorCommitment.Monadic
+public import VCVio.CryptoFoundations.VectorCommitment.MonadicMerkle
 public import VCVio.CryptoFoundations.VectorCommitment.OnlineExtraction
 public import VCVio.EvalDist.BitVec.Measure
 public import VCVio.EvalDist.Defs.Instances
