@@ -422,6 +422,7 @@ public import VCVio.OracleComp.QueryTracking.QueryBound
 public import VCVio.OracleComp.QueryTracking.QueryBound.Basic
 public import VCVio.OracleComp.QueryTracking.QueryBound.Batch
 public import VCVio.OracleComp.QueryTracking.QueryBound.Counter
+public import VCVio.OracleComp.QueryTracking.QueryBound.FinMOfFn
 public import VCVio.OracleComp.QueryTracking.QueryBound.Hazard
 public import VCVio.OracleComp.QueryTracking.QueryBound.Partition
 public import VCVio.OracleComp.QueryTracking.QueryBound.Simulation
@@ -445,6 +446,7 @@ public import VCVio.OracleComp.QueryTracking.RandomOracle.Encoded
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Encoded.Batch
 public import VCVio.OracleComp.QueryTracking.RandomOracle.ExpectedFreshQuery
 public import VCVio.OracleComp.QueryTracking.RandomOracle.ExpectedFreshQueryInfinite
+public import VCVio.OracleComp.QueryTracking.RandomOracle.FinMOfFn
 public import VCVio.OracleComp.QueryTracking.RandomOracle.FiniteSupport
 public import VCVio.OracleComp.QueryTracking.RandomOracle.FreshAnswer
 public import VCVio.OracleComp.QueryTracking.RandomOracle.FreshQuery
@@ -488,6 +490,7 @@ public import VCVio.OracleComp.SimSemantics.QueryImpl.Constructions.Core
 public import VCVio.OracleComp.SimSemantics.QueryImpl.Tagged
 public import VCVio.OracleComp.SimSemantics.ReaderT.Basic
 public import VCVio.OracleComp.SimSemantics.SimulateQ
+public import VCVio.OracleComp.SimSemantics.SimulateQ.FinMOfFn
 public import VCVio.OracleComp.SimSemantics.SimulateQ.Option
 public import VCVio.OracleComp.SimSemantics.StateT.Basic
 public import VCVio.OracleComp.SimSemantics.StateT.BundledSemantics

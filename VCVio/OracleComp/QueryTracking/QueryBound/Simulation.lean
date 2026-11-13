@@ -13,7 +13,6 @@ public import VCVio.OracleComp.QueryTracking.CountingOracle.Core
 public import VCVio.OracleComp.SimSemantics.Append.Core
 public import VCVio.OracleComp.SimSemantics.StateT.Basic
 public import VCVio.OracleComp.QueryTracking.QueryBound.Basic
-import all VCVio.OracleComp.QueryTracking.QueryBound.Basic
 
 /-!
 # Query-bound transfer through oracle simulation
@@ -586,6 +585,40 @@ theorem isQueryBoundP_iff_counting_filter_le
 
 end IsQueryBoundPRelations
 
+/-- A stateful simulation uses at most `cost` charged target queries per charged source
+query, and no charged target queries on uncharged source queries. Prefix bounds multiply. -/
+theorem IsQueryBoundP.simulateQ_run_of_step_le {ι' : Type u} {spec' : OracleSpec ι'}
+    {σ : Type u} {p : ι → Prop} [DecidablePred p] {q : ι' → Prop} [DecidablePred q]
+    {impl : QueryImpl spec (StateT σ (OracleComp spec'))}
+    {oa : OracleComp spec α} {n cost : ℕ}
+    (h : IsQueryBoundP oa p n)
+    (hstep_p : ∀ t, p t → ∀ s, IsQueryBoundP ((impl t).run s) q cost)
+    (hstep_np : ∀ t, ¬ p t → ∀ s, IsQueryBoundP ((impl t).run s) q 0)
+    (s : σ) : IsQueryBoundP ((simulateQ impl oa).run s) q (n * cost) := by
+  induction oa using OracleComp.inductionOn generalizing n s with
+  | pure value => simp
+  | query_bind t next ih =>
+    rw [isQueryBoundP_query_bind_iff] at h
+    rw [simulateQ_query_bind, StateT.run_bind]
+    simp only [OracleQuery.input_query, OracleQuery.cont_query, monadLift_self, id_eq]
+    by_cases hp : p t
+    · have hn : 0 < n := h.1.resolve_left (not_not.mpr hp)
+      have hrest : ∀ output : spec.Range t × σ,
+          IsQueryBoundP ((simulateQ impl (next output.1)).run output.2) q ((n - 1) * cost) :=
+        fun output => ih output.1 (n := n - 1)
+          (by simpa [hp] using h.2 output.1) output.2
+      have hbound := isQueryBoundP_bind (hstep_p t hp s) (fun output _ => hrest output)
+      have hcost : cost + (n - 1) * cost = n * cost := by
+        calc
+          cost + (n - 1) * cost = ((n - 1) + 1) * cost := by
+            simp [Nat.add_mul, Nat.add_comm]
+          _ = n * cost := by rw [Nat.sub_add_cancel hn]
+      simpa only [hcost] using hbound
+    · have hrest : ∀ output : spec.Range t × σ,
+          IsQueryBoundP ((simulateQ impl (next output.1)).run output.2) q (n * cost) :=
+        fun output => ih output.1 (n := n) (by simpa [hp] using h.2 output.1) output.2
+      simpa using isQueryBoundP_bind (hstep_np t hp s) (fun output _ => hrest output)
+
 /-- Transfer a predicate-targeted query bound through `simulateQ` into a stateful target
 semantics, provided each simulated source query step is itself `q`-bounded (by `1` on
 `p`-indices, by `0` on `¬ p`-indices). -/
@@ -599,23 +632,8 @@ theorem IsQueryBoundP.simulateQ_run_of_step {ι' : Type u} {spec' : OracleSpec �
     (hstep_np : ∀ t, ¬ p t → ∀ s, IsQueryBoundP ((impl t).run s) q 0)
     (s : σ) :
     IsQueryBoundP ((simulateQ impl oa).run s) q n := by
-  induction oa using OracleComp.inductionOn generalizing n s with
-  | pure x => simp
-  | query_bind t mx ih =>
-      rw [isQueryBoundP_query_bind_iff] at h
-      rw [simulateQ_query_bind, StateT.run_bind]
-      have hlift :
-          IsQueryBoundP
-            ((liftM (impl t) : StateT σ (OracleComp spec') (spec.Range t)).run s) q
-            (if p t then 1 else 0) := by
-        by_cases hpt : p t
-        · simpa [OracleComp.liftM_run_StateT, MonadLift.monadLift, ite_eq_left hpt] using
-            hstep_p t hpt s
-        · simpa [OracleComp.liftM_run_StateT, MonadLift.monadLift, ite_eq_right hpt] using
-            hstep_np t hpt s
-      have hbound : (if p t then 1 else 0) + (if p t then n - 1 else n) = n := by grind
-      simpa [hbound] using isQueryBoundP_bind hlift
-        fun pu _ => ih pu.1 (h.2 pu.1) pu.2
+  simpa only [Nat.mul_one] using
+    IsQueryBoundP.simulateQ_run_of_step_le h hstep_p hstep_np s
 
 /-- Stateless analogue of `IsQueryBoundP.simulateQ_run_of_step`: when the simulation target
 monad is `OracleComp spec'` directly (no `StateT` layer), the per-step bounds apply without
