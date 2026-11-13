@@ -73,6 +73,8 @@ public import VCVioTest.GroupModel.ToExplained
 public import VCVioTest.GroupModel.Typed
 public import VCVioTest.GroupModel.Virtualize
 public import VCVioTest.ITSR
+public import VCVioTest.IncomparableEncoding.TargetCollisionReduction
+public import VCVioTest.IncomparableEncoding.TargetCollisionResistance
 public import VCVioTest.KernelSemantics
 public import VCVioTest.ListCache
 public import VCVioTest.LoggedRunInvariant
