@@ -88,6 +88,7 @@ public import VCVioTest.MerkleTreeMultiExtractability
 public import VCVioTest.ModuleAPI.Cache
 public import VCVioTest.ModuleAPI.Counting
 public import VCVioTest.ModuleAPI.Heap
+public import VCVioTest.ModuleAPI.QueryImpl
 public import VCVioTest.MonadProbability
 public import VCVioTest.OracleComp.AdaptiveMeasure
 public import VCVioTest.OracleComp.BudgetedPotential
