@@ -14,6 +14,25 @@ effect-preserving outcome types for transformers. The
 which finite events can be evaluated exactly and which semantics require measurable proofs.
 [`docs/reading/`](../reading/README.md) indexes the full design record.
 
+PolyFun owns the generic measure semantics, under the names this guide uses (see
+[module boundaries](module-system.md#architectural-decision)). The semantics of monads
+(`EvalDistSemantics`, `evalDist`, `prEvent`, `prFail`, `EvalDistEq`, failure, `OptionT`, `ExceptT`,
+couplings, the relational program logic, uniform measures and the expectation algebra) is in
+`PolyFun.Control.Monad.Measure` and `PolyFun/Control/Monad/Measure/`. Free programs
+(`PFunctor.AnswerMeasure`, `PFunctor.FreeM.denote`, kernel handlers and path measures) are in
+`PolyFun.PFunctor.Free.Measure` and `PolyFun/PFunctor/Free/Measure/`, and the lemmas about
+Mathlib's types are staged in PolyFun's `ToCslib/MeasureTheory/` and `ToCslib/Probability/`.
+VCVio adds the notation (`𝒟[·]`, `Pr{…}[…]`, `=ᵈ`), uniform sampling, oracle answer measures and
+the `OracleComp` instances. The VCVio modules that held the moved declarations are deprecated
+re-exports; import the modules their deprecation warning lists instead: the PolyFun module and,
+where the old module provided them, notation hosts such as `VCVio.EvalDist.Defs.Measure.Core` and
+other VCVio modules.
+
+PolyFun states its instances on free programs at every result universe. A restatement for a
+reducible alias pins the result universe at the alias, as `OracleComp/EvalDist/AnswerMeasure.lean`
+does with `EvalDistSemantics (OracleComp.{u, v, v} spec)`. Without the pin, a statement about
+`OracleComp spec α` leaves the answer universe of `spec` free.
+
 `import VCVio.Foundations` is the public entry point for oracle, sampling, measure, kernel,
 operational-support, unary/relational WP, and stateful security foundations. Its import closure
 excludes Mathlib's `PMF`; `VCVioTest/Foundations.lean` checks this boundary. Across the library,
@@ -79,8 +98,8 @@ probability certificate on that observation and on both branches. Measurable obs
 branch families give `measurable_evalDist_bind_ite`, which uses the existing `evalDistKernel`
 with chosen environment/output spaces, including continuous spaces.
 
-`VCVio.ProgramLogic.Relational.Measure` uses successful-output measure couplings. Pure and
-successful optional values simplify to their exact postcondition with plain `simp`.
+PolyFun's `PolyFun.Control.Monad.Measure.Relational` uses successful-output measure couplings.
+Pure and successful optional values simplify to their exact postcondition with plain `simp`.
 `eRelWP_mono` supports `gcongr` and `grw`. Unequal success masses admit no coupling, so the
 qualitative judgment is false and the quantitative supremum is zero.
 Couplings expose named `joint` and `isCoupling` fields, with public equations for their
@@ -134,10 +153,10 @@ Product and vector uniformity follow from product measures and bijective pushfor
 An abstract result's `𝒟` still needs its chosen `MeasurableSpace`. Event notation hides intermediate
 spaces, and uniformity certificates apply to any result space with measurable singletons.
 
-`VCVio.EvalDist.Lossless` uses Mathlib's `IsProbabilityMeasure` directly. For a lossless prefix,
-`evalDist.isProbabilityMeasure_bind_iff` characterizes a lossless bind by almost everywhere
-lossless continuations. `isProbabilityMeasure_bind_of_ae` supplies the forward construction;
-no structural positivity assumption or bind instance search is needed.
+PolyFun's `PolyFun.Control.Monad.Measure.Lossless` uses Mathlib's `IsProbabilityMeasure` directly.
+For a lossless prefix, `evalDist.isProbabilityMeasure_bind_iff` characterizes a lossless bind by
+almost everywhere lossless continuations. `isProbabilityMeasure_bind_of_ae` supplies the forward
+construction; no structural positivity assumption or bind instance search is needed.
 
 The [measure conversion roadmap](../design/measure-conversion-roadmap.md) records the owning
 modules, standard proof conversions, theorem families, and validation gates.
@@ -151,9 +170,9 @@ available for free oracle trees. State and reader reasoning uses PolyFun's index
 judgments and kernels; flattened support does not acquire an exact bind law.
 
 The notation is measure-valued: `𝒟[mx] : Measure α` is the successful-output measure, and mass
-missing from it is failure or nontermination. The generic classes and Giry laws live in
-`VCVio.EvalDist.Defs.Measure.Core`; the direct free-program instances live in
-`VCVio.EvalDist.PFunctorMeasure.Core`.
+missing from it is failure or nontermination. The generic classes and Giry laws live in PolyFun's
+`PolyFun.Control.Monad.Measure`, and the direct free-program instances in
+`PolyFun.PFunctor.Free.Measure.EvalDist`; `VCVio.EvalDist.Defs.Measure.Core` adds the notation.
 `Pr{let x ← mx; let y ← my x}[event]` is the event notation. The braces hold an ordinary Lean `do`
 sequence: statements are separated by `;` or laid out as in a `do` block, and `let y := f x`,
 destructuring draws and `if` are available. An action that continues on the following lines is
@@ -223,8 +242,8 @@ no measurable space on that intermediate type. A constant output map after the g
 normalization rule, so monad normalization preserves this automation. The guarded unit-output
 measure is its event probability times `Measure.dirac ()`. `OptionT.prEvent_eq_run` observes present
 values in the underlying run, and `OptionT.prEvent_lift` preserves an event through a lift.
-`VCVio.EvalDist.Defs.Measure.Deterministic` gives `Id`, `Option`, and `Except` Dirac/zero
-semantics. Every `Id` value and successful `Option`/`Except` constructor infers its
+PolyFun's `PolyFun.Control.Monad.Measure.Deterministic` gives `Id`, `Option`, and `Except`
+Dirac/zero semantics. Every `Id` value and successful `Option`/`Except` constructor infers its
 probability-measure instance; arbitrary optional/exceptional values infer only the
 subprobability bound. Bare `Except` observes no errors and needs no measurable space on its error
 type. `ExceptT` instead interprets its base run and uses the inherited coproduct space on errors
@@ -245,8 +264,8 @@ including over state and reader bases. `HasEvalSet.LawfulFailure` only requires 
 `Alternative` and attachment.
 The independent `LawfulFailureEvalDistSemantics` mixin certifies zero measure for failure.
 `Option` and `OptionT` export that certificate; `OptionT` needs only the base pure law.
-`VCVio.EvalDist.Monad.Failure` makes failure before a continuation, a constantly failing
-continuation, and a final event after failure normalize to zero with `simp` and `grind`.
+PolyFun's `PolyFun.Control.Monad.Measure.Failure` makes failure before a continuation, a constantly
+failing continuation, and a final event after failure normalize to zero with `simp` and `grind`.
 These composition laws need no attachment or measurable-space instance on intermediate results.
 The successful-output pullback equations `OptionT.evalDist_apply` and `ExceptT.evalDist_apply`
 hold on arbitrary sets, without a measurability argument.
@@ -398,10 +417,10 @@ kernel events on arbitrary spaces, so continuous kernel families have the same a
 `VCVio.EvalDist.Monad.UniformTable` supplies cell resampling/extraction, permutation,
 and injective restriction laws with explicit uniform-measure hypotheses. Its counting
 proofs live in `ToMathlib.MeasureTheory.Measure.UniformTable`. The continuation may lose mass.
-`evalDist_map_equiv_of_uniform` packages Mathlib's `uniformOn_univ_map_equiv` for a computation;
-use it for a uniform permutation before introducing a bind continuation.
-`evalDist_bind_bijective_of_uniform` reindexes any continuation after a uniform draw,
-using the finite-uniform pushforward law. `evalDist_bind_congr` compares continuation
+`evalDist_map_equiv_of_uniform` packages `uniformOn_univ_map_equiv` (PolyFun's
+`ToCslib.Probability.UniformOn`) for a computation; use it for a uniform permutation before
+introducing a bind continuation. `evalDist_bind_bijective_of_uniform` reindexes any continuation
+after a uniform draw, using the pushforward of a uniform measure along a bijection. `evalDist_bind_congr` compares continuation
 measures pointwise without a measurable-space instance on the intermediate result.
 `VCVio.OracleComp.EvalDist.Measure` gives `evalDist_bind_congr_of_support` by structural
 induction, without a probability/support bridge. These laws power the PRF tag/reader cache,
@@ -544,24 +563,25 @@ the two add up to one, and `prFail_eq_one_sub_evalDist_univ` identifies it with
 `prFail` on `pure` (`0`), maps, `if`, `failure` (`1`), `guard`, `OptionT.lift`, and oracle
 computations (`OracleComp.prFail_eq_zero`); `prFail_bind_eq_add_lintegral_of_discrete` is the bind
 law.
-`evalDistWithFailure mx : Measure (Option α)` (`VCVio/EvalDist/WithFailure.lean`) is the
+`evalDistWithFailure mx : Measure (Option α)` (PolyFun's
+`PolyFun/Control/Monad/Measure/WithFailure.lean`) is the
 probability measure that puts the missing mass at `none`: `evalDistWithFailure_none_eq_prFail`
 gives `prFail mx`, and `evalDistWithFailure_some` recovers the successful singleton masses.
 `𝒟[failure] = 0` under `LawfulFailureEvalDistSemantics` (`evalDist_failure_eq_zero`). An
 `OptionT` computation denotes `Measure.comap some` of its run (`OptionT.evalDist_eq_comap_some`),
-equivalently its run's `dropNone` (`OptionT.evalDist_eq_dropNone`, in
-`VCVio/EvalDist/Defs/Measure/OptionT.lean`), and a lift keeps the measure:
+equivalently its run's `dropNone` (`OptionT.evalDist_eq_dropNone`, in PolyFun's
+`PolyFun/Control/Monad/Measure/OptionT.lean`), and a lift keeps the measure:
 `OptionT.evalDist_liftM` (`@[simp]`) states `𝒟[(liftM mx : OptionT m α)] = 𝒟[mx]`.
 
 ## Core Definitions
 
 | Definition | Type | Notation | Defined in |
 |-----------|------|----------|------------|
-| `evalDist mx` | `Measure α` | `𝒟[mx]` | `EvalDist/Defs/Measure/Core.lean` |
-| `prEvent mx` (`mx : m Prop`) | `ℝ≥0∞` | `Pr{let x ← mx; …}[p x]`, `Pr{let x ← mx}[x = a]` | `EvalDist/ProbabilityNotation.lean` |
-| `prFail mx` | `ℝ≥0∞` | `1 - Pr{let _ ← mx}[True]` | `EvalDist/ProbabilityNotation.lean` |
-| `evalDistWithFailure mx` | `Measure (Option α)` | — | `EvalDist/WithFailure.lean` |
-| `EvalDistEq mx my` | `Prop` | `mx =ᵈ my` | `EvalDist/EvalDistEq.lean` |
+| `evalDist mx` | `Measure α` | `𝒟[mx]` | PolyFun's `PolyFun/Control/Monad/Measure.lean`; notation in `EvalDist/Defs/Measure/Core.lean` |
+| `prEvent mx` (`mx : m Prop`) | `ℝ≥0∞` | `Pr{let x ← mx; …}[p x]`, `Pr{let x ← mx}[x = a]` | PolyFun's `PolyFun/Control/Monad/Measure/Event.lean`; notation in `EvalDist/ProbabilityNotation.lean` |
+| `prFail mx` | `ℝ≥0∞` | `1 - Pr{let _ ← mx}[True]` | PolyFun's `PolyFun/Control/Monad/Measure/Event.lean` |
+| `evalDistWithFailure mx` | `Measure (Option α)` | — | PolyFun's `PolyFun/Control/Monad/Measure/WithFailure.lean` |
+| `EvalDistEq mx my` | `Prop` | `mx =ᵈ my` | PolyFun's `PolyFun/Control/Monad/Measure/EvalDistEq.lean`; notation in `EvalDist/EvalDistEq.lean` |
 | `support mx` | `Set α` | — | `EvalDist/Defs/Support.lean` |
 | `finSupport mx` | `Finset α` | — | `EvalDist/Defs/Support.lean` |
 
@@ -574,7 +594,7 @@ needed for composition and data-processing theorems.
 
 | Definition | Purpose | Defined in |
 |-----------|---------|------------|
-| `IsSubprobabilityKernel κ` | Every value of `κ` has total mass at most one | `ToMathlib/Probability/Kernel/Subprobability.lean` |
+| `IsSubprobabilityKernel κ` | Every value of `κ` has total mass at most one | PolyFun's `ToCslib/Probability/Kernel/Subprobability.lean` |
 | `evalDistKernel f hf` | Measurable computation family `ρ → m α` as a kernel | `EvalDist/Kernel.lean` |
 | `evalDistKernelOfDiscrete f` | Discrete-input specialization | `EvalDist/Kernel.lean` |
 | `ReaderT.evalDistKernel` | Reader environment as kernel input | `EvalDist/Kernel.lean` |
@@ -593,7 +613,7 @@ unfolds; consumers do not need to supply the measurable-map equation.
 
 `ProbabilitySemantics` is the total/lossless semantics bundle used by transformer adapters.
 The lower-level `SemanticsVia` describes potentially lossy surface semantics.
-Import `VCVio.EvalDist.Defs.Semantics.Core` for the bundles and
+Import PolyFun's `PolyFun.Control.Monad.Measure.SemanticsVia` for the bundles and
 `VCVio.EvalDist.MeasureSemantics` for effect-preserving transformer observations. Bundled
 `evalDist` observations infer `IsSubprobabilityMeasure` and `IsFiniteMeasure`.
 Known probability certificates propagate through bundling, and bundled kernels infer
@@ -652,9 +672,9 @@ constant-continuation laws.
 | `Measure.etvDist_bind_le` / `Kernel.etvDist_comp_le` | Common-transition contraction on chosen measurable spaces | `ToMathlib/MeasureTheory/Measure/TotalVariation/Bind.lean`, `ToMathlib/Probability/Kernel/TotalVariation.lean` |
 | `measureETVDist_bind_bind_le_lintegral` | Conditional composition with an AE majorant under the prefix law | `EvalDist/MeasureTVDist/Bind.lean` |
 | `Measure.etvDist_bind_bind_le_of_bad` | Exceptional prefix mass plus the good-branch allowance weighted by its mass | `ToMathlib/MeasureTheory/Measure/TotalVariation/Bind.lean` |
-| `Measure.Coupling` | Joint measure with prescribed marginals | `ToMathlib/MeasureTheory/Measure/Coupling.lean` |
-| `ExpectationWP.RelWP` | Almost-everywhere relational postcondition under a measure coupling | `ProgramLogic/Relational/Measure.lean` |
-| `ExpectationWP.eRelWP` | Best coupled `lintegral` post-expectation | `ProgramLogic/Relational/Measure.lean` |
+| `Measure.Coupling` | Joint measure with prescribed marginals | PolyFun's `ToCslib/MeasureTheory/Measure/Coupling.lean` |
+| `ExpectationWP.RelWP` | Almost-everywhere relational postcondition under a measure coupling | PolyFun's `PolyFun/Control/Monad/Measure/Relational.lean` |
+| `ExpectationWP.eRelWP` | Best coupled `lintegral` post-expectation | PolyFun's `PolyFun/Control/Monad/Measure/Relational.lean` |
 
 ## ProbComp and Sampling
 

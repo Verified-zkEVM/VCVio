@@ -5,7 +5,7 @@ Authors: Devon Tuma
 -/
 
 module
-public import VCVio.EvalDist.WiringKernel
+public import PolyFun.PFunctor.Wiring.Measure
 public import VCVio.ProgramLogic.Relational.KernelHandler
 
 /-!

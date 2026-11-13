@@ -11,8 +11,10 @@ public import VCVio.EvalDist.Defs.Measure.FinRatPMF
 public import VCVioTest.MeasureSemantics
 public import VCVio.EvalDist.Inequalities
 public import VCVio.OracleComp.Constructions.UniformFinMeasure
-public import VCVio.EvalDist.PFunctorPath
-public import VCVio.EvalDist.Defs.Measure.ExceptT
+public import PolyFun.PFunctor.Free.Measure.Path
+public import PolyFun.Control.Monad.Measure.ExceptT
+public import VCVio.EvalDist.Defs.Measure.Core
+public import ToMathlib.MeasureTheory.Measure.GiryMonad
 public import VCVio.OracleComp.Constructions.SampleableType.Measure
 
 /-!

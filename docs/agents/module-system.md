@@ -27,7 +27,11 @@ PolyFun owns domain-independent structure:
 - reusable handler transformations such as target lifting, before/after
   instrumentation, and writer tracing;
 - interaction trees, observations, fairness predicates, processes, and UC
-  structural laws; and
+  structural laws;
+- measure interpretations of those constructions: the measure semantics of
+  monads and of free programs, kernel handlers, path measures, couplings,
+  uniform measures and expectation algebras, with the Mathlib-facing lemmas
+  staged in its `ToCslib` library; and
 - public equations needed to reason about those abstractions without opening
   private definitions.
 
@@ -35,8 +39,11 @@ VCVio owns cryptographic specialization:
 
 - `OracleSpec`, `OracleQuery`, `OracleComp`, `QueryImpl`, and established
   oracle notation;
-- measure and support semantics, probability lemmas, uniform-oracle policy,
-  query accounting, and program logic;
+- the probability notation (`𝒟[·]`, `Pr{…}[…]`, `=ᵈ`), uniform sampling
+  (`$ᵗ`, `SampleableType`), oracle answer measures and the measure semantics
+  of `OracleComp`;
+- support semantics, probability lemmas about oracle computations,
+  uniform-oracle policy, query accounting, and program logic;
 - cryptographic games, reductions, and examples; and
 - compatibility names that keep existing oracle-facing developments stable.
 
@@ -46,8 +53,30 @@ VCVio names. `OracleComp spec` remains definitionally the free monad on
 `spec.toPFunctor`, and `QueryImpl` compatibility operations are thin aliases
 of the generic handler operations.
 
-Probability semantics are PFunctor-parametric but remain in VCVio: PolyFun is
-domain-independent and should not acquire VCVio's measure policy. The
+The generic measure semantics lives in PolyFun, in `Measure` companions
+beside the constructions it interprets, under the names VCVio uses:
+
+- `PolyFun.Control.Monad.Measure` and `PolyFun/Control/Monad/Measure/` hold
+  the measure semantics of monads: `EvalDistSemantics`, `evalDist`, `prEvent`,
+  `prFail`, `EvalDistEq`, the deterministic, lossless, failure, `OptionT`,
+  `ExceptT` and `SemanticsVia` readings, couplings and the relational program
+  logic over them, uniform measures, and the expectation algebra;
+- `PolyFun.PFunctor.Measure`, `PolyFun.PFunctor.Free.Measure` and
+  `PolyFun/PFunctor/Free/Measure/` hold `PFunctor.AnswerMeasure`,
+  `PFunctor.FreeM.denote`, kernel handlers, path measures and the
+  `EvalDistSemantics` instances of free programs, and
+  `PolyFun.PFunctor.Wiring.Measure` interprets polynomial wiring by kernels;
+- `ToCslib/MeasureTheory/` and `ToCslib/Probability/` stage the lemmas about
+  Mathlib's and core's types: subprobability measures and kernels, the
+  measurable structures of `Option`, `Except` and `Prop`, couplings, and
+  `uniformOn`.
+
+VCVio's former modules of these declarations are deprecated re-exports of
+their PolyFun homes. A re-export also imports the modules that its importers
+received through it and the PolyFun module does not provide, such as the
+notation hosts, so the deprecation warning lists every module to import. New
+code imports the PolyFun module. Oracle conventions,
+sampling, the notation and everything security-facing stay in VCVio. The
 `OracleSpec.AnswerMeasure` name is a definitional abbreviation of
 `PFunctor.AnswerMeasure` on `spec.toPFunctor` with the discrete σ-algebra on
 answers. `OracleSpec.UniformAnswerMeasure` extends it with the law that each chosen
@@ -63,10 +92,11 @@ are not.
 
 ## Import policy
 
-Never use `import all PolyFun.…` in this repository. If VCVio needs a PolyFun
-implementation detail, add an intrinsic public law or a deliberately exposed
-definition to PolyFun, then use a plain or public import. The script
-`scripts/check-polyfun-boundary.sh` enforces this package boundary.
+Never use `import all PolyFun.…` or `import all ToCslib.…` in this repository.
+`ToCslib` is PolyFun's staging library, measure-theoretic lemmas included. If
+VCVio needs a PolyFun implementation detail, add an intrinsic public law or a
+deliberately exposed definition to PolyFun, then use a plain or public import.
+The script `scripts/check-polyfun-boundary.sh` enforces this package boundary.
 
 Within one package, `import all` is still available for a proof module that
 proves a public API theorem about a private implementation in a sibling

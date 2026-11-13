@@ -6,7 +6,7 @@ Authors: Devon Tuma
 
 module
 public import ToMathlib.MeasureTheory.Integral.Quadratic
-public import ToMathlib.Probability.Kernel.Subprobability
+public import ToCslib.Probability.Kernel.Subprobability
 public import Mathlib.Probability.Kernel.Composition.MeasureComp
 
 /-!

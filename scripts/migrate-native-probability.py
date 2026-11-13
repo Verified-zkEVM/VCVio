@@ -389,10 +389,10 @@ MODULES: dict[str, list[str]] = {
     "VCVio.EvalDist.Instances.ReaderT": ["VCVio.EvalDist.MeasureSemantics"],
     "VCVio.EvalDist.Defs.Semantics": ["VCVio.EvalDist.MeasureSemantics"],
     "ToMathlib.ProbabilityTheory.Coupling":
-        ["ToMathlib.MeasureTheory.Measure.Coupling",
+        ["ToCslib.MeasureTheory.Measure.Coupling",
          "ToMathlib.MeasureTheory.Measure.Coupling.Maximal"],
     "ToMathlib.ProbabilityTheory.OptimalCoupling":
-        ["ToMathlib.MeasureTheory.Measure.Coupling",
+        ["ToCslib.MeasureTheory.Measure.Coupling",
          "ToMathlib.MeasureTheory.Measure.Coupling.Maximal"],
     "VCVio.ProgramLogic.Relational.Measure.Oracle": ["VCVio.ProgramLogic.Relational.Basic"],
     "VCVio.ProgramLogic.Relational.SimulateQ.Basic":
@@ -416,13 +416,16 @@ MODULES: dict[str, list[str]] = {
         ["VCVio.EvalDist.Defs.Support.Failure", "VCVio.EvalDist.ProbabilityNotation"],
     "VCVio.EvalDist.Defs.NeverFails":
         ["VCVio.EvalDist.Defs.Support.Failure", "VCVio.EvalDist.Monad.Seq"],
-    "VCVio.EvalDist.FailureMeasure": ["VCVio.EvalDist.Defs.Measure", "VCVio.EvalDist.WithFailure"],
+    "VCVio.EvalDist.FailureMeasure":
+        ["VCVio.EvalDist.Defs.Measure", "PolyFun.Control.Monad.Measure.WithFailure"],
     "VCVio.EvalDist.Bool": ["VCVio.EvalDist.Monad.Map"],
     "VCVio.EvalDist.BitVec": ["VCVio.EvalDist.Monad.Map"],
     "VCVio.EvalDist.Option": ["VCVio.EvalDist.Monad.Map"],
     "VCVio.EvalDist.Fintype": ["VCVio.EvalDist.Monad.Basic"],
     "VCVio.EvalDist.PFunctor": ["VCVio.EvalDist.PFunctorSupport"],
-    "VCVio.EvalDist.PFunctorMeasure": ["VCVio.EvalDist.PFunctorMeasure.Core"],
+    "VCVio.EvalDist.PFunctorMeasure":
+        ["PolyFun.PFunctor.Free.Measure.EvalDist", "VCVio.EvalDist.Defs.Measure.Core",
+         "Mathlib.MeasureTheory.Measure.ProbabilityMeasure"],
     "VCVio.OracleComp.EvalDist.UniformCompatibility":
         ["VCVio.OracleComp.EvalDist.Measure", "VCVio.OracleComp.EvalDist.AnswerMeasure"],
     "VCVio.OracleComp.Constructions.SampleableType.MeasureCompatibility":

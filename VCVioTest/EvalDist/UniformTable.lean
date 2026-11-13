@@ -6,7 +6,11 @@ Authors: Devon Tuma
 
 module
 public import VCVio.EvalDist.Monad.UniformTable
-public import VCVio.EvalDist.PFunctorMeasure.Core
+public import PolyFun.PFunctor.Free.Measure.EvalDist
+public import Mathlib.MeasureTheory.Measure.ProbabilityMeasure
+public import Mathlib.MeasureTheory.Measure.Prod
+public import Mathlib.Probability.UniformOn
+public import VCVio.EvalDist.Defs.Measure.Core
 
 /-!
 # Uniform-table regression checks

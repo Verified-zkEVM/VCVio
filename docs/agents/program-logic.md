@@ -9,8 +9,8 @@
   the tactic surface.
 - Prefer the step-through tactics from `Tactics` for new proofs.
 
-For continuous or otherwise non-discrete denotations, import
-`VCVio.ProgramLogic.Relational.Measure`. Its `ExpectationWP.RelWP` uses an almost-everywhere
+For continuous or otherwise non-discrete denotations, import PolyFun's
+`PolyFun.Control.Monad.Measure.Relational`. Its `ExpectationWP.RelWP` uses an almost-everywhere
 postcondition under a Mathlib `Measure.Coupling`, and `eRelWP` integrates quantitative
 post-expectations with `lintegral`. The `OracleComp` relational logic (`RelTriple`, `CouplingPost`,
 `eRelWP`) specializes these to the output measures observed in the discrete structure on each

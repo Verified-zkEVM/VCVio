@@ -6,7 +6,7 @@ Authors: Devon Tuma, Quang Dao
 
 module
 public import PolyFun.PFunctor.Free.Cursor.Fork
-public import ToMathlib.Probability.UniformOn
+public import ToCslib.Probability.UniformOn
 public import VCVio.EvalDist.ProbabilityBounds
 public import VCVio.OracleComp.EvalDist.AnswerMeasure
 

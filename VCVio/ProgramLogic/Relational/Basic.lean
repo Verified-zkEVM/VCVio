@@ -7,7 +7,11 @@ Authors: Quang Dao
 module
 
 public import ToMathlib.Control.Monad.RelationalAlgebra
-public import VCVio.ProgramLogic.Relational.Measure.Bind
+public import PolyFun.Control.Monad.Measure.Relational.Bind
+public import PolyFun.Control.Monad.Measure.Relational.Algebra
+public import VCVio.EvalDist.Defs.Measure.Core
+public import ToMathlib.MeasureTheory.Measure.GiryMonad
+public import ToMathlib.MeasureTheory.Measure.Monotone
 public import VCVio.OracleComp.EvalDist.Measure
 public import VCVio.OracleComp.Constructions.Replicate.Basic
 public import VCVio.OracleComp.Constructions.SampleableType.Basic
@@ -133,13 +137,11 @@ theorem CouplingPost.bind {oa : OracleComp spec₁ α} {ob : OracleComp spec₂ 
       fun y hy ↦ MonadAttach.mem_support_bind.mpr ⟨b, hb, hy⟩)
     (fun _ _ _ _ h ↦ by simpa only [CouplingPost, RelWP] using h)
 
-/-- Relational algebra instance for `OracleComp`, based on measure coupling semantics. -/
+/-- Relational algebra instance for `OracleComp`: PolyFun's coupling algebra, whose relational
+weakest precondition is `CouplingPost`. Finite response types supply `CountableEvalDist`. -/
 noncomputable instance instMAlgRelOrdered :
-    MAlgRelOrdered (OracleComp spec₁) (OracleComp spec₂) Prop where
-  rwp := CouplingPost
-  rwp_pure a b R := propext (couplingPost_pure_pure_iff a b R)
-  rwp_mono hpost h := h.mono hpost
-  rwp_bind_le _ _ _ _ _ h := CouplingPost.bind h
+    MAlgRelOrdered (OracleComp spec₁) (OracleComp spec₂) Prop :=
+  ExpectationWP.couplingAlgebra _ _
 
 /-- Relational weakest precondition induced by `MAlgRelOrdered` for `OracleComp`. -/
 abbrev RelWP (oa : OracleComp spec₁ α) (ob : OracleComp spec₂ β) (R : RelPost α β) : Prop :=
@@ -188,7 +190,7 @@ lemma relTriple_refl (oa : OracleComp spec₁ α) :
 lemma relTriple_post_mono {oa : OracleComp spec₁ α} {ob : OracleComp spec₂ β} {R R' : RelPost α β}
     (h : RelTriple oa ob R) (hpost : ∀ ⦃x y⦄, R x y → R' x y) :
     RelTriple oa ob R' :=
-  relTriple_iff_relWP.2 ((relTriple_iff_relWP.1 h).mono fun _ _ hR => hpost hR)
+  relTriple_iff_relWP.2 (CouplingPost.mono (relTriple_iff_relWP.1 h) fun _ _ hR => hpost hR)
 
 /-- Two computations whose outputs satisfy independent support-wide postconditions are related
 by their conjunction, through the independent product coupling. -/

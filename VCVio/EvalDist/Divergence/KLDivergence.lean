@@ -6,13 +6,17 @@ Authors: Devon Tuma
 module
 
 public import VCVio.EvalDist.Kernel
-public import VCVio.EvalDist.PFunctorMeasure.Core
+public import PolyFun.PFunctor.Free.Measure.EvalDist
+public import Mathlib.MeasureTheory.Measure.ProbabilityMeasure
+public import Mathlib.MeasureTheory.Measure.Prod
+public import Mathlib.Probability.UniformOn
+public import VCVio.EvalDist.Defs.Measure.Core
 public import Mathlib.InformationTheory.KullbackLeibler.DataProcessing
 
 /-!
 # Kullback-Leibler divergence between denoted programs
 
-The measure denotation of `VCVio.EvalDist.PFunctorMeasure.Core` puts VCVio programs inside Mathlib's
+The measure denotation of `PolyFun.PFunctor.Free.Measure` puts VCVio programs inside Mathlib's
 probability library, and this module spends that access on the Kullback-Leibler divergence.
 
 Nothing here is a port. `Measure.bind` *is* composition of a measure with a kernel — Mathlib

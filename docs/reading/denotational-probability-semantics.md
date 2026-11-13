@@ -34,7 +34,7 @@ Where a missing general-purpose lemma or measurable-space instance is needed, it
 
 ### Free polynomial programs
 
-[`VCVio/EvalDist/PFunctorMeasure/Core.lean`](../../VCVio/EvalDist/PFunctorMeasure/Core.lean) provides:
+PolyFun's `PolyFun.PFunctor.Measure` and `PolyFun.PFunctor.Free.Measure` provide:
 
 - `PFunctor.AnswerMeasure`, assigning a probability measure to each operation's answer type;
 - `PFunctor.FreeM.denote`, with `pure` interpreted by `Measure.dirac` and an operation interpreted

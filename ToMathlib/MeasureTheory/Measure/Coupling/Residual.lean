@@ -5,7 +5,9 @@ Authors: Devon Tuma
 -/
 
 module
-public import ToMathlib.MeasureTheory.Measure.Coupling.Bind
+public import ToCslib.MeasureTheory.Measure.Coupling.Bind
+public import ToMathlib.MeasureTheory.Measure.GiryMonad
+public import ToMathlib.MeasureTheory.Measure.Monotone
 
 /-!
 # Subcouplings with explicit unmatched mass

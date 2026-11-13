@@ -6,7 +6,7 @@ Authors: Devon Tuma, Quang Dao
 
 module
 public import ToMathlib.MeasureTheory.Measure.Bounds
-public import ToMathlib.Probability.UniformOn
+public import ToCslib.Probability.UniformOn
 public import Mathlib.MeasureTheory.Integral.Lebesgue.Countable
 
 /-!
@@ -82,8 +82,6 @@ theorem uniformOn_univ_bind_map_update_dependent {D : Type*} {R : D → Type*}
       (ENNReal.natCast_ne_top _), one_mul]
   simp [uniformOn_univ]
 
-
-
 /-- Replace one cell of a uniform table by an independent uniform value. -/
 theorem uniformOn_univ_bind_map_update {D R : Type*} [Finite D] [DecidableEq D]
     [Finite R] [Nonempty R] [MeasurableSpace R] [MeasurableSingletonClass R] (t : D) :
@@ -91,23 +89,6 @@ theorem uniformOn_univ_bind_map_update {D R : Type*} [Finite D] [DecidableEq D]
       (uniformOn Set.univ : Measure (D → R)).map (fun g => Function.update g t u)) =
       uniformOn Set.univ :=
   uniformOn_univ_bind_map_update_dependent t
-
-/-- A bijection transports a finite uniform measure to the uniform measure on its codomain. -/
-theorem uniformOn_univ_map_equiv {α β : Type*} [Finite α] [Finite β]
-    [MeasurableSpace α] [MeasurableSingletonClass α]
-    [MeasurableSpace β] [MeasurableSingletonClass β] (e : α ≃ β) :
-    (uniformOn Set.univ : Measure α).map e = (uniformOn Set.univ : Measure β) := by
-  classical
-  let : Fintype α := Fintype.ofFinite α
-  let : Fintype β := Fintype.ofFinite β
-  apply Measure.ext_of_singleton
-  intro y
-  rw [Measure.map_apply .of_discrete (MeasurableSet.singleton y)]
-  have hpreimage : e ⁻¹' {y} = {e.symm y} := by
-    ext x
-    simp only [Set.mem_preimage, Set.mem_singleton_iff, ← e.eq_symm_apply]
-  rw [hpreimage]
-  simp [uniformOn_univ, Fintype.card_congr e]
 
 /-- A parameter-dependent permutation of an independent uniform draw is still independent. -/
 theorem bind_uniformOn_map_equiv_eq_prod {A B : Type*} [MeasurableSpace A]
@@ -147,6 +128,5 @@ theorem uniformOn_univ_map_comp_injective {A B R : Type*} [Finite A] [Finite B] 
     _ = (uniformOn Set.univ : Measure ((A → R) × (C → R))).map Prod.fst := by
       rw [uniformOn_univ_map_equiv]
     _ = _ := by rw [uniformOn_univ_prod, Measure.map_fst_prod, measure_univ, one_smul]
-
 
 end ProbabilityTheory

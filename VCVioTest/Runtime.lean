@@ -6,7 +6,10 @@ Authors: Quang Dao
 
 module
 public import VCVio.OracleComp.Runtime
-public import VCVio.EvalDist.WithFailure
+public import PolyFun.Control.Monad.Measure.WithFailure
+public import VCVio.EvalDist.Defs.Measure.Core
+public import ToMathlib.MeasureTheory.Measure.GiryMonad
+public import VCVio.EvalDist.ProbabilityNotation
 public import VCVio.EvalDist.Defs.Measure
 public import VCVio.OracleComp.EvalDist.Measure
 

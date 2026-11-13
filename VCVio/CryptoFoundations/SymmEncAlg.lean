@@ -8,8 +8,9 @@ module
 public import VCVio.CryptoFoundations.SymmEncAlg.Defs
 public import VCVio.EvalDist.Monad.Measure
 public import VCVio.EvalDist.EvalDistEq
-public import ToMathlib.Probability.UniformOn
-public import ToMathlib.MeasureTheory.Measure.Option
+public import ToCslib.Probability.UniformOn
+public import ToCslib.MeasureTheory.Measure.Option
+public import ToMathlib.MeasureTheory.Measure.GiryMonad
 
 /-!
 # Symmetric Encryption Schemes
@@ -103,7 +104,6 @@ the key for each message, then every ciphertext row is uniform. -/
 theorem evalDist_perfectSecrecyCipherGivenMsgExperiment_of_uniformKey_of_bijective
     [MeasurableSpace K] [DiscreteMeasurableSpace K] [MeasurableSingletonClass K]
     [MeasurableSpace C] [MeasurableSingletonClass C]
-    [Finite K] [Finite C] [Nonempty K] [Nonempty C]
     (encAlg : SymmEncAlg m M K C) (enc : K → M → C)
     (hkey : 𝒟[encAlg.keygen] = uniformOn Set.univ)
     (henc : ∀ k msg, 𝒟[encAlg.encrypt k msg] = Measure.dirac (enc k msg))
@@ -118,8 +118,7 @@ theorem evalDist_perfectSecrecyCipherGivenMsgExperiment_of_uniformKey_of_bijecti
 bijective in the key give equal ciphertext rows. -/
 theorem ciphertextRowsEqualAt_of_uniformKey_of_bijective [LawfulMonad m]
     [MeasurableSpace K] [DiscreteMeasurableSpace K] [MeasurableSingletonClass K]
-    [hC : MeasurableSpace C] [DiscreteMeasurableSpace C]
-    [Finite K] [Finite C] [Nonempty K] [Nonempty C]
+    [hC : MeasurableSpace C] [DiscreteMeasurableSpace C] [Finite C]
     (encAlg : SymmEncAlg m M K C) (enc : K → M → C)
     (hkey : 𝒟[encAlg.keygen] = uniformOn Set.univ)
     (henc : ∀ k msg, 𝒟[encAlg.encrypt k msg] = Measure.dirac (enc k msg))

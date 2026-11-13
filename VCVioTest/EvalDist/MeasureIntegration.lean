@@ -8,7 +8,9 @@ module
 public import VCVio.EvalDist.ProbabilityNotation
 public import VCVio.OracleComp.EvalDist.Measure
 public import VCVio.OracleComp.Constructions.SampleableType.Basic
-public import VCVio.EvalDist.Defs.Measure.OptionT
+public import PolyFun.Control.Monad.Measure.OptionT
+public import VCVio.EvalDist.Defs.Measure.Core
+public import ToMathlib.MeasureTheory.Measure.GiryMonad
 public import Mathlib.Probability.Distributions.Gaussian.Real
 
 /-!

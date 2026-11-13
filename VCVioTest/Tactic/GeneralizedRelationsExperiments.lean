@@ -8,7 +8,8 @@ module
 
 public import VCVioTest.Tactic.GeneralizedRelations
 public import VCVio.ProgramLogic.Tactics
-public import VCVio.ProgramLogic.Relational.Measure
+public import PolyFun.Control.Monad.Measure.Relational
+public import VCVio.EvalDist.Defs.Measure.Core
 public import Mathlib.Tactic.Monotonicity
 public import Mathlib.Tactic.ApplyCongr
 public import Mathlib.Tactic.CongrM
