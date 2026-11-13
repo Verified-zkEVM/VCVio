@@ -1,5 +1,12 @@
 module  -- shake: keep-all --deprecated_module: ignore
 
+public import HashSig.GXMSS.Security.Auxiliary.Adversary
+public import HashSig.GXMSS.Security.Auxiliary.MerkleWitnesses
+public import HashSig.GXMSS.Security.Interval.Reductions.MerkleCollision
+public import HashSig.GXMSS.Security.Interval.Reductions.MerkleGames
+public import HashSig.GXMSS.Security.Reductions.TargetRegistration.Basic
+public import HashSig.GXMSS.Security.Reductions.TargetRegistration.Chains
+public import HashSig.GXMSS.Security.Reductions.TargetRegistration.Tweaks
 public import HashSig.SLHDSA.Address
 public import HashSig.SLHDSA.AddressDiscipline
 public import HashSig.SLHDSA.C13.Concrete
