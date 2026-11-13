@@ -110,14 +110,11 @@ would cost a factor of the number of address prefixes. -/
   .tree ⟨⟨layers - 1, by decide⟩, ⟨0, by decide⟩⟩ ⟨subtreeHeight - 1, by decide⟩
     ⟨0, by decide⟩
 
-variable [HasQuery HashSpec Id]
-
 /-- **The public root is that cell.** -/
-theorem value_topNode (secretSeed publicSeed : Digest) :
+theorem value_topNode [HasQuery HashSpec Id] (secretSeed publicSeed : Digest) :
     value secretSeed publicSeed (.structural topNode) =
       Extraction.HypertreeChain.honestNode secretSeed publicSeed (layers - 1) 0 := rfl
 
-omit [HasQuery HashSpec Id] in
 /-- **A coordinate of the walk's output table, truncated, is a uniform digest.** -/
 theorem outputs_coordinate_uniform (parent : StructuralNode) :
     ((fun outputs : Programming.Outputs => Hashing.truncate (outputs parent)) <$>
@@ -148,7 +145,6 @@ theorem outputs_coordinate_uniform (parent : StructuralNode) :
   rw [hcomp]
   exact (hcoordinate.map Hashing.truncate).trans KeygenUniform.truncate_uniform
 
-omit [HasQuery HashSpec Id] in
 /-- **The two halves of the public key form an address prefix with probability `2 ^ -165`.**
 The seed is the walk's own and the root is one of its cells, drawn afterwards and
 independently. -/

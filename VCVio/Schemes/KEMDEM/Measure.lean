@@ -80,11 +80,10 @@ lemma composedGame_eq [LawfulMonad m]
 variable [LawfulMonad m] [EvalDistSemantics m] [LawfulEvalDistSemantics m]
   [MeasurableSpace A] [DiscreteMeasurableSpace A]
   [MeasurableSpace (B × K)] [DiscreteMeasurableSpace (B × K)]
-  [MeasurableSpace K] [DiscreteMeasurableSpace K]
+  [MeasurableSpace K]
   (prepare : m A) (encaps : A → m (B × K))
   (finish : A → B → K → Bool → m Bool) (coin : m Bool) (key : m K)
 
-omit [DiscreteMeasurableSpace K] in
 /-- Both KEM message branches share the same measure decomposition into real and random keys. -/
 lemma evalDist_kemGame (hkey : 𝒟[key] Set.univ = 1) (side : Bool) :
     𝒟[kemGame prepare encaps finish coin key side] =
@@ -106,7 +105,7 @@ lemma evalDist_kemGame (hkey : 𝒟[key] Set.univ = 1) (side : Bool) :
     rw [evalDist_bind _ _ measurable_const, Measure.bind_const, hkey, one_smul]
     exact evalDist_bind_of_discrete _ _
 
-variable [Countable K]
+variable [DiscreteMeasurableSpace K] [Countable K]
 
 /-- Independent-key interchange identifies the DEM experiment with the two random-key branches. -/
 lemma evalDist_demGame :

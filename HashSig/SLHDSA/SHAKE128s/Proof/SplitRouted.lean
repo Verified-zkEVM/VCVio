@@ -74,10 +74,8 @@ The message the honest key at the bottom layer signs is the FORS public key the 
 produce, and that is the graph's cell at the `forsRoots` node of the FORS key the digest
 selects. Both names unfold to the same tweakable hash of the same fourteen canonical roots. -/
 
-variable [HasQuery HashSpec Id]
-
 /-- **At the bottom layer the honest message is that cell.** -/
-theorem honestMessage_zero (secretSeed publicSeed : Digest) (key : WotsKey)
+theorem honestMessage_zero [HasQuery HashSpec Id] (secretSeed publicSeed : Digest) (key : WotsKey)
     (hlayer : key.tree.layer.val = 0) :
     GraphStakes.honestMessage secretSeed publicSeed key =
       value secretSeed publicSeed (.structural (.forsRoots ⟨key.tree.tree, key.leaf⟩)) := by
@@ -90,7 +88,6 @@ The residue's accumulators name a layer, a subtree and a leaf; read as a key tho
 `ClaimedProbes.forgedSteps` records. So the entry the record already holds at that layer and
 chain is the canonical input of a node whose staked cell no signature discloses. -/
 
-omit [HasQuery HashSpec Id] in
 /-- The coordinates of the key the residue reaches after `i` steps. -/
 theorem forgedKey_coords (tree : Fin (2 ^ (totalHeight - subtreeHeight)))
     (leaf : SLHDSA.SHAKE128s.Hypertree.LeafIndex) (layer : Fin layers) :
@@ -101,7 +98,7 @@ theorem forgedKey_coords (tree : Fin (2 ^ (totalHeight - subtreeHeight)))
 
 /-- **The digit the honest key at that layer discloses**, whichever layer the residue stopped
 at: the message the residue threads for the honest side is the message the key really signs. -/
-theorem honestRevealed_eq_revealedAt (secretSeed publicSeed : Digest)
+theorem honestRevealed_eq_revealedAt [HasQuery HashSpec Id] (secretSeed publicSeed : Digest)
     (tree : Fin (2 ^ (totalHeight - subtreeHeight)))
     (leaf : SLHDSA.SHAKE128s.Hypertree.LeafIndex) (layer : Fin layers) (chain : Fin chains) :
     GraphStakes.honestRevealed secretSeed publicSeed
@@ -130,7 +127,7 @@ theorem honestRevealed_eq_revealedAt (secretSeed publicSeed : Digest)
       (by rw [hleaf, hstep]) chain
 
 /-- **The residue names a claim the record already holds, and it is sensitive.** -/
-theorem sensitive_of_residue {State : Type} (secretSeed publicSeed : Digest)
+theorem sensitive_of_residue [HasQuery HashSpec Id] {State : Type} (secretSeed publicSeed : Digest)
     (signedAt : State → ForsKey → Finset (Fin (forsTrees * 2 ^ forsHeight))) (state : State)
     (cells : Cells) (hcells : value secretSeed publicSeed = cells)
     (tree : Fin (2 ^ (totalHeight - subtreeHeight)))
@@ -171,7 +168,6 @@ event, or it is not, and then the secret the forgery claims is the graph's own c
 the signatures leave unavailable — a sensitive candidate, and one the record of claims already
 holds. -/
 
-omit [HasQuery HashSpec Id] in
 /-- **The FORS disclosure, position by position: the coverage event, or a sensitive claim.** -/
 theorem signed_or_sensitive_of_secrets {State : Type} (secretSeed publicSeed : Digest)
     (revealed : WotsKey → Fin chains → Nat)

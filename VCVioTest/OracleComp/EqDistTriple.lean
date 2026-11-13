@@ -238,16 +238,14 @@ def honestNode (h i : ℕ) (l r : R) : OracleComp (pub.withDerivations X R) R :=
 def labNode (h i : ℕ) (_ _ : R) : OracleComp (pub.withLabels X K R) R :=
   query (spec := pub.withLabels X K R) (.inr (.inr (key h i)))
 
-variable [DecidableEq ι] [DecidableEq X] [DecidableEq K] [SampleableType R]
-  [∀ t, SampleableType (pub.Range t)]
-
 /-- The value is the drawn cell of `(h, i)`. -/
 def Rel (h i : ℕ) (y : R) (st : RelabelState pub X K R) : Prop := st.2 (cell h i) = some y
 
-omit [DecidableEq ι] [DecidableEq X] [DecidableEq K] [SampleableType R]
-  [∀ t, SampleableType (pub.Range t)] in
 theorem Rel_mono (h i : ℕ) (y : R) (st st' : RelabelState pub X K R) (hle : st ≤ st')
     (hy : Rel cell h i y st) : Rel cell h i y st' := hle.2 hy
+
+variable [DecidableEq ι] [DecidableEq X] [DecidableEq K] [SampleableType R]
+  [∀ t, SampleableType (pub.Range t)]
 
 /-- From drawn children, the lifted honest node step is the label read. -/
 theorem node_triple (hS : TreeShape G sec key cell q) (h i : ℕ) (l r : R) :

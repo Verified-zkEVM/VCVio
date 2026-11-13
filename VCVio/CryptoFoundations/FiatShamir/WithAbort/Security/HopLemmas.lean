@@ -256,13 +256,11 @@ from `false`. -/
   fun t => StateT.mk fun p =>
     (fun us : spec.Range t × σ => (us.1, (us.2, p.2))) <$> (impl t).run p.1
 
-omit [DecidableEq Commit] [SampleableType Chal] [DecidableEq M] in
 lemma flagLift_run {ι : Type} {spec : OracleSpec ι} {σ : Type}
     (impl : QueryImpl spec (StateT σ ProbComp)) (t : spec.Domain) (s : σ) (b : Bool) :
     ((flagLift impl t).run (s, b)) =
       (fun us : spec.Range t × σ => (us.1, (us.2, b))) <$> (impl t).run s := rfl
 
-omit [DecidableEq Commit] [SampleableType Chal] [DecidableEq M] in
 /-- Transport a predicate-targeted query bound across a (propositionally equal) choice of
 predicate and `DecidablePred` instance. The predicate is allowed to differ by its match
 auxiliary (which arises when the same matches-notation is elaborated in different
