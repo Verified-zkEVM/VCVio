@@ -155,7 +155,7 @@ theorem intrinsicAuthPath_decode_get {Y : Type} (p : Params)
   simp only [Option.getD_some] at hget
   rw [Vector.getElem_toList hv] at hget
   exact hget.trans
-    (XmssConformance.authPath_getElem_eq_merkleRoot _ _ _ _ _ j.isLt)
+    (PerfectMerkleTree.authPath_getElem_eq_merkleRoot _ _ _ _ _ j.isLt)
 
 /-- Honest signing consumes the typed decoder's exact global coordinate; the signature remains the
 canonical intrinsic `ForsTreeSigCore` with no adapter or competing representation. -/
