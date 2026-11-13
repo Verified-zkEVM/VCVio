@@ -8,7 +8,6 @@ module
 
 public import VCVio.CryptoFoundations.TimeLockPuzzle
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Encoded.Batch
-import VCVio.OracleComp.SimSemantics.StateT.Measure
 
 /-!
 # Time-lock puzzles over a random-oracle encoding
