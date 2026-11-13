@@ -28,7 +28,9 @@ This is a variable-length code: small coefficients use ~9 bits, larger ones up t
 ## Public Key Encoding
 
 Each coefficient of `h ∈ R_q` takes exactly 14 bits (since `q = 12289 < 2^14`),
-packed 4 coefficients into 7 bytes.
+packed 4 coefficients into 7 bytes. The decoder accepts only inputs of exactly `7n/4` bytes
+(`pkDecode_eq_none_of_size_ne`), and the external encoding `publicKeyBytes` prefixes the header
+byte `logn` (`publicKeyBytes_getElem!_zero`).
 
 ## Round-trip theorems
 
@@ -338,6 +340,25 @@ theorem decompress_compress (n : ℕ) (s : IntPoly n) (dlen : ℕ) (d : List UIn
     List.getElem?_eq_getElem (by simp [List.length_finRange]), Option.map_some, Option.getD_some]
   simp [List.getElem_finRange]
 
+/-- The empty byte string decodes to no polynomial of positive degree: the bit stream ends
+before the first coefficient code. -/
+@[simp] theorem decompress_nil (n dlen : ℕ) : decompress (n + 1) [] dlen = none := by
+  unfold decompress
+  split_ifs <;> simp [bytesToBits, parseCoeffs, parseCoeff]
+
+/-- A successful compression has exactly the requested length. -/
+theorem length_eq_of_compress_eq_some {n : ℕ} {s : IntPoly n} {dlen : ℕ} {d : List UInt8}
+    (h : compress n s dlen = some d) : d.length = dlen := by
+  by_contra hne
+  simpa [decompress_eq_none_of_length_ne n d dlen hne] using decompress_compress n s dlen d h
+
+/-- A successful compression of a polynomial of positive degree is a nonempty byte string. -/
+theorem ne_nil_of_compress_eq_some {n : ℕ} (hn : 0 < n) {s : IntPoly n} {dlen : ℕ}
+    {d : List UInt8} (h : compress n s dlen = some d) : d ≠ [] := by
+  rintro rfl
+  obtain ⟨k, rfl⟩ := Nat.exists_eq_add_of_lt hn
+  simpa using decompress_compress _ s dlen [] h
+
 /-! ## Public key encoding (14 bits per coefficient) -/
 
 /-- The FN-DSA public-key header byte for a given `logn`. -/
@@ -364,11 +385,13 @@ def pkEncode (n : ℕ) (h : Rq n) : ByteArray := Id.run do
     out := out.push h3.toUInt8
   return out
 
-/-- Decode a Falcon public key polynomial from the packed 14-bit coefficient format. -/
+/-- Decode a Falcon public key polynomial from the packed 14-bit coefficient format. The input
+must have exactly the `7 * n / 4` bytes of the encoding, as in the reference verifier, and every
+coefficient must lie below `q`. -/
 def pkDecode (n : ℕ) (d : ByteArray) : Option (Rq n) := Id.run do
   if n % 4 != 0 then return none
   let needed := 7 * n / 4
-  if d.size < needed then return none
+  if d.size != needed then return none
   let mut result : Array Coeff := Array.replicate n 0
   for b in [0:n / 4] do
     let i := 4 * b
@@ -396,6 +419,13 @@ def pkDecode (n : ℕ) (d : ByteArray) : Option (Rq n) := Id.run do
 one header byte followed by the packed 14-bit coefficient encoding. -/
 def publicKeyBytes (logn : Nat) {n : ℕ} (h : Rq n) : ByteArray :=
   ByteArray.mk #[publicKeyHeader logn] ++ pkEncode n h
+
+/-- The public-key decoder rejects every input whose length is not exactly the `7 * n / 4` bytes
+of the packed encoding. -/
+theorem pkDecode_eq_none_of_size_ne {n : ℕ} {d : ByteArray} (h : d.size ≠ 7 * n / 4) :
+    pkDecode n d = none := by
+  unfold pkDecode
+  by_cases hn : n % 4 = 0 <;> simp [Id.run, hn, h] <;> rfl
 
 /-! ## Public key codec round-trip
 
@@ -727,6 +757,15 @@ theorem publicKeyBytes_extract (logn : Nat) {n : ℕ} (h : Rq n) :
   rw [ByteArray.extract_append_eq_right (a := ByteArray.mk #[hdr]) (b := pkEncode n h)
       (by rw [hb1]) (by rw [hb1])]
 
+/-- The first byte of the external public-key encoding is the header byte. -/
+@[simp] theorem publicKeyBytes_getElem!_zero (logn : Nat) {n : ℕ} (h : Rq n) :
+    (publicKeyBytes logn h)[0]! = publicKeyHeader logn := by
+  have hdata : (publicKeyBytes logn h).data = #[publicKeyHeader logn] ++ (pkEncode n h).data := by
+    simp only [publicKeyBytes, ByteArray.data_append]
+  rw [byteArray_getElem!_data, hdata, getElem!_pos _ 0 (by simp),
+    Array.getElem_append_left (by simp)]
+  rfl
+
 /-- The decoded value written at sub-index `s ∈ {0,1,2,3}` of group `b`, as a `Coeff`. -/
 private def decVal (g : ByteArray) (b s : ℕ) : Coeff :=
   let d0 := g[7 * b]!.toNat
@@ -918,7 +957,7 @@ theorem pkDecode_pkEncode (n : ℕ) (h : Rq n) (hn4 : 4 ∣ n) :
   -- the encoder output has exactly the canonical length, so the size guard is not taken
   have hsize : (pkEncode n h).size = 7 * n / 4 := by
     rw [pkEncode_size n h hmod]; omega
-  have hguard : ¬ (pkEncode n h).size < 7 * n / 4 := by rw [hsize]; omega
+  have hguard : ((pkEncode n h).size != 7 * n / 4) = false := by rw [hsize]; simp
   -- obtain the loop result via the invariant
   obtain ⟨R, hforIn, hRsz, hRval, hRkeep⟩ :=
     decode_loop_invariant n (pkEncode n h) (n / 4) 0 (Array.replicate n 0)

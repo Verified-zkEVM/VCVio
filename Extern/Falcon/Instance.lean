@@ -98,10 +98,13 @@ def pairL2NormSqU32 {n : ℕ} (s₁ s₂ : Rq n) : Nat := Id.run do
   return sqn.toNat
 
 /-- Standalone executable Falcon verification using the concrete hash, codec, and arithmetic
-implementations. -/
+implementations. As in the reference verifier, the public key must start with the header byte
+`logn` (`concreteVerify_eq_false_of_header_ne`) and its body must have exactly the `7n/4` bytes of
+the packed encoding (`pkDecode_eq_none_of_size_ne`). -/
 def concreteVerify (p : Params) (pk : ByteArray) (msg : List Byte)
     (sig : ByteArray) : Bool := Id.run do
   let logn := p.logn
+  if pk[0]! != publicKeyHeader logn then return false
   match sigDecode sig logn with
   | none => return false
   | some (salt, compSig) =>
@@ -120,6 +123,12 @@ def concreteVerify (p : Params) (pk : ByteArray) (msg : List Byte)
     (p : Params) (pk : ByteArray) (salt : Bytes 40) (msg : List Byte) :
     concreteVerify p pk msg (sigEncode salt [] p.logn) = false := by
   simp [concreteVerify]
+
+/-- `concreteVerify` rejects every public key whose first byte is not the header byte `logn`. -/
+theorem concreteVerify_eq_false_of_header_ne (p : Params) {pk : ByteArray}
+    (hpk : pk[0]! ≠ publicKeyHeader p.logn) (msg : List Byte) (sig : ByteArray) :
+    concreteVerify p pk msg sig = false := by
+  simp [concreteVerify, hpk]
 
 /-! ## Kernel correctness
 
