@@ -75,6 +75,7 @@ public import VCVioTest.GroupModel.Virtualize
 public import VCVioTest.ITSR
 public import VCVioTest.KernelSemantics
 public import VCVioTest.ListCache
+public import VCVioTest.ListFirstWrite
 public import VCVioTest.LoggedRunInvariant
 public import VCVioTest.LongChainPrograms
 public import VCVioTest.MeasurabilityBoundary
