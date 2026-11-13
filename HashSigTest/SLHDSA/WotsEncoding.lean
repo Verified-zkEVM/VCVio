@@ -23,7 +23,7 @@ public section
 
 namespace SLHDSA.WotsEncodingTest
 
-open WotsChecksum WotsEncoding
+open WotsChecksum WotsEncoding VCVio.Algorithms.RadixEncoding
 
 def limited : Params := slhdsaSha2_128_24
 def zeroDigits : List ℕ := List.replicate limited.len1 0

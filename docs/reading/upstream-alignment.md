@@ -694,6 +694,14 @@ UInt8.ofNat`, `fromBaseW` is `Nat.ofDigits w ds.reverse`, `digitsOfBaseW` is
 to `lt_of_mem_digitsAppend`, `setInvOn_digitsAppend_ofDigits`, `ofDigits_lt_base_pow_length`
 (`M:Data/Nat/Digits/Lemmas.lean:344,363`, `Defs.lean:380`).
 
+**Shared checksum alignment.** `VCVio/Algorithms/RadixEncoding.lean` provides the big-endian
+radix codec and its `Nat.ofDigits` reversal bridge. General ordered digit and padded-coordinate
+facts live in `ToMathlib/Data/Nat/Digits.lean`; equal-sum list rigidity lives in
+`ToMathlib/Data/List/Forall2.lean`. `VCVio/Algorithms/ComplementaryChecksum/Basic.lean` proves
+payload equality through a monotone checksum decoder and reconstruction laws. Generic SLH-DSA
+and SHAKE128s use that shared law with their existing data layouts. FIPS byte padding and the
+wire-specific `toInt`/`toByte` codecs remain in their scheme adapters.
+
 **Lemma-level duplicates verified by reading both declarations** (all added to the Adopt table):
 `List.length_eq_countP_add_countP_not` ↔ core `List.length_eq_countP_add_countP`
 (`C:Init/Data/List/Count.lean:66`, `¬p a` vs `!p x`); `vector_eq_nil` ↔ `List.Vector.eq_nil`
