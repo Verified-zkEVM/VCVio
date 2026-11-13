@@ -229,11 +229,14 @@ public import VCVio.CryptoFoundations.ReplayFork
 public import VCVio.CryptoFoundations.ReplayForkCost
 public import VCVio.CryptoFoundations.Rewinding.Basic
 public import VCVio.CryptoFoundations.Rewinding.Eager
+public import VCVio.CryptoFoundations.Rewinding.Extraction
+public import VCVio.CryptoFoundations.Rewinding.ExtractionCached
 public import VCVio.CryptoFoundations.Rewinding.Finder
 public import VCVio.CryptoFoundations.Rewinding.FinderBridge
 public import VCVio.CryptoFoundations.Rewinding.FixedTape
 public import VCVio.CryptoFoundations.Rewinding.Instances
 public import VCVio.CryptoFoundations.Rewinding.Laws
+public import VCVio.CryptoFoundations.Rewinding.QueriedPoints
 public import VCVio.CryptoFoundations.Rewinding.Threshold
 public import VCVio.CryptoFoundations.Rewinding.ThresholdAnalysis
 public import VCVio.CryptoFoundations.Rewinding.ThresholdBounds
