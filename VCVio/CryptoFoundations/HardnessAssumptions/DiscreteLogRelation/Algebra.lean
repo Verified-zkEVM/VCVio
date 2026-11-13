@@ -9,7 +9,6 @@ public import Mathlib.Algebra.BigOperators.GroupWithZero.Action
 public import Mathlib.Algebra.Module.BigOperators
 public import Mathlib.Algebra.Field.Defs
 public import Mathlib.Data.Fintype.BigOperators
-import Mathlib.Data.FinEnum
 
 /-!
 # Finite representations and discrete-log relations

@@ -4,6 +4,18 @@ Bridges that let VCVio reason about Lean code produced by external verification 
 Rust frontends [hax](https://github.com/cryspen/hax) and
 [Aeneas](https://github.com/AeneasVerif/aeneas).
 
+## Stability
+
+`Interop/` is experimental, and it changes much faster than the rest of VCVio.
+- *No stable interface.* Any PR may rename its modules, restate its theorems or move its hax and
+  Aeneas pins, without deprecations.
+- *It follows the tools.* hax and Aeneas change their Lean output and libraries between releases,
+  and the bridges change with them.
+- *The core is unaffected.* Core VCVio never depends on `Interop/` (see
+  [TCB isolation](#tcb-isolation)).
+
+To build on these bridges, pin a VCVio commit and open an issue describing what you rely on.
+
 ## A separate package
 
 The Rust bridges need hax's and Aeneas's Lean libraries, and every package that requires VCVio

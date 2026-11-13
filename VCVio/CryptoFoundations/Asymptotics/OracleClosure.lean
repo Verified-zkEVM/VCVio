@@ -55,8 +55,12 @@ while `cost` bounds the concrete structural overhead of the assembled `seqComp` 
 structure BindCertificate
     (first : StrictPPTWitness Q bd contract program)
     (second : StrictPPTWitness Q (bd.mid outRep) contract next) where
+  /-- A polynomial envelope, uniform over response models, for every second-phase run that a
+  conforming first-phase run can reach. -/
   handoff : PolynomialSeqCompHandoffBound first.realization second.realization contract
     second.runBound
+  /-- A polynomial allowance, uniform over response models, for the structural overhead of
+  the assembled `seqComp` realization. -/
   cost : PolynomialSeqCompCostCertificate first.realization second.realization contract
 
 namespace BindCertificate

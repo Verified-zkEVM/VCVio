@@ -1,0 +1,307 @@
+/-
+Copyright (c) 2026 Bas Spitters. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Bas Spitters
+-/
+
+module
+
+public import VCVio.OracleComp.Coercions.Add.Basic
+public import VCVio.OracleComp.QueryTracking.QueryBound.Basic
+
+/-!
+# Transporting oracle computations along polynomial lenses
+
+A lens `l : PFunctor.Lens spec.toPFunctor spec'.toPFunctor` sends each `spec`-query `t` to the
+`spec'`-query `l.toFunA t` and translates each answer back by `l.toFunB t`. This file defines
+the action of such a lens on oracle computations, `OracleComp.mapLens`, as PolyFun's
+`PFunctor.FreeM.mapLens`, and proves:
+
+* the monad-morphism and functoriality laws `mapLens_pure`, `mapLens_bind`, `mapLens_map`,
+  `mapLens_id`, `mapLens_mapLens`, and the action `mapLens_liftM_query` on a single query;
+* `simulateQ_mapLens`: simulating a transported computation with `impl` is simulating the
+  original with the pulled-back handler `impl.comapLens l`, and `mapLens_eq_simulateQ`, which
+  expresses `mapLens` itself as a simulation;
+* `liftComp_eq_mapLens`: the lift along a sub-spec inclusion `h : spec ⊂ₒ superSpec` is
+  `mapLens h.toLens`, with the summand inclusions into `spec₁ + spec₂` as instances;
+* `IsQueryBound.mapLens`, `IsTotalQueryBound.mapLens`, `IsQueryBoundP.mapLens`,
+  `AllQueriesSatisfy.mapLens`: a query bound on a computation, read through the lens, bounds the
+  transported computation. These are PolyFun's `IsRollBound.mapLens` and `IsChargeBound.mapLens`
+  at the charges of VCVio's bounds. When every map `l.toFunB t` is surjective the bounds agree
+  (`isQueryBound_mapLens_iff`, `isTotalQueryBound_mapLens_iff`, `isQueryBoundP_mapLens_iff`,
+  `allQueriesSatisfy_mapLens_iff`);
+* `isPerIndexQueryBound_iff_forall_isQueryBoundP`: a per-index bound is a bound at each index
+  separately (PolyFun's `isChargeBound_pi_iff`), which gives `IsPerIndexQueryBound.mapLens` and,
+  along a lens injective on queries,
+  `IsPerIndexQueryBound.mapLens_of_injective`.
+-/
+
+public section
+
+universe u u' u'' v w
+
+open OracleSpec PFunctor
+
+open scoped PFunctor
+
+namespace OracleComp
+
+section mapLens
+
+variable {ι : Type u} {ι' : Type u'} {ι'' : Type u''}
+  {spec : OracleSpec.{u, v} ι} {spec' : OracleSpec.{u', v} ι'}
+  {spec'' : OracleSpec.{u'', v} ι''} {α β : Type w}
+
+/-- Transport an oracle computation along a polynomial lens: each query `t` to `spec` is
+replaced by the query `l.toFunA t` to `spec'`, whose answer is translated back by
+`l.toFunB t`. -/
+@[expose]
+def mapLens (l : Lens spec.toPFunctor spec'.toPFunctor) (oa : OracleComp spec α) :
+    OracleComp spec' α :=
+  FreeM.mapLens l oa
+
+/-- Transport along a lens fixes `pure`. -/
+@[simp]
+lemma mapLens_pure (l : Lens spec.toPFunctor spec'.toPFunctor) (x : α) :
+    (pure x : OracleComp spec α).mapLens l = pure x :=
+  FreeM.mapLens_pure l x
+
+/-- Transport along a lens on a query node: the query is relabelled forward and each answer of
+the new query is translated back before entering the continuation. -/
+lemma mapLens_queryBind (l : Lens spec.toPFunctor spec'.toPFunctor) (t : spec.Domain)
+    (k : spec.Range t → OracleComp spec α) :
+    (queryBind t k).mapLens l = queryBind (l.toFunA t) fun d => (k (l.toFunB t d)).mapLens l :=
+  FreeM.mapLens_liftBind l t k
+
+/-- Transport along a lens commutes with `bind`. -/
+@[simp]
+lemma mapLens_bind (l : Lens spec.toPFunctor spec'.toPFunctor) (oa : OracleComp spec α)
+    (f : α → OracleComp spec β) :
+    (oa >>= f).mapLens l = oa.mapLens l >>= fun a => (f a).mapLens l :=
+  FreeM.mapLens_bind' l oa f
+
+/-- Transport along a lens commutes with `map`. -/
+@[simp]
+lemma mapLens_map (l : Lens spec.toPFunctor spec'.toPFunctor) (f : α → β)
+    (oa : OracleComp spec α) :
+    (f <$> oa).mapLens l = f <$> oa.mapLens l :=
+  FreeM.mapLens_map l f oa
+
+/-- Transport along the identity lens is the identity. -/
+@[simp]
+lemma mapLens_id (oa : OracleComp spec α) :
+    oa.mapLens (Lens.id spec.toPFunctor) = oa :=
+  FreeM.mapLens_id oa
+
+/-- Transport along two lenses in turn is transport along their composite. -/
+@[simp]
+lemma mapLens_mapLens (l₂ : Lens spec'.toPFunctor spec''.toPFunctor)
+    (l₁ : Lens spec.toPFunctor spec'.toPFunctor) (oa : OracleComp spec α) :
+    (oa.mapLens l₁).mapLens l₂ = oa.mapLens (l₂ ∘ₗ l₁) :=
+  FreeM.mapLens_mapLens l₂ l₁ oa
+
+/-- A single query `t` is transported to the query `l.toFunA t`, its answer mapped back by
+`l.toFunB t`. -/
+@[simp]
+lemma mapLens_liftM_query {spec : OracleSpec.{u, w} ι} {spec' : OracleSpec.{u', w} ι'}
+    (l : Lens spec.toPFunctor spec'.toPFunctor) (t : spec.Domain) :
+    (liftM (spec.query t) : OracleComp spec (spec.Range t)).mapLens l =
+      l.toFunB t <$> (liftM (spec'.query (l.toFunA t)) : OracleComp spec' _) :=
+  rfl
+
+end mapLens
+
+end OracleComp
+
+namespace QueryImpl
+
+variable {ι : Type u} {ι' : Type u'} {spec : OracleSpec.{u, v} ι}
+  {spec' : OracleSpec.{u', v} ι'} {m : Type v → Type w}
+
+/-- Pull a handler for `spec'` back along a lens into `spec'`: a `spec`-query `t` is answered by
+`impl (l.toFunA t)`, mapped by `l.toFunB t`. -/
+@[expose]
+def comapLens [Functor m] (impl : QueryImpl spec' m) (l : Lens spec.toPFunctor spec'.toPFunctor) :
+    QueryImpl spec m :=
+  fun t => l.toFunB t <$> impl (l.toFunA t)
+
+/-- The pulled-back handler at a query `t`. -/
+@[simp]
+lemma comapLens_apply [Functor m] (impl : QueryImpl spec' m)
+    (l : Lens spec.toPFunctor spec'.toPFunctor) (t : spec.Domain) :
+    impl.comapLens l t = l.toFunB t <$> impl (l.toFunA t) := rfl
+
+/-- Pulling a handler back along the identity lens returns the handler. -/
+@[simp]
+lemma comapLens_id [Functor m] [LawfulFunctor m] (impl : QueryImpl spec m) :
+    impl.comapLens (Lens.id spec.toPFunctor) = impl := by
+  grind only [comapLens_apply, id_map']
+
+end QueryImpl
+
+namespace OracleComp
+
+section simulateQ
+
+variable {ι : Type u} {ι' : Type u'} {spec : OracleSpec.{u, v} ι}
+  {spec' : OracleSpec.{u', v} ι'} {m : Type v → Type w} [Monad m] [LawfulMonad m] {α : Type v}
+
+/-- Simulating a transported computation with `impl` is simulating the original computation
+with the handler pulled back along the lens. -/
+theorem simulateQ_mapLens (impl : QueryImpl spec' m) (l : Lens spec.toPFunctor spec'.toPFunctor)
+    (oa : OracleComp spec α) :
+    simulateQ impl (oa.mapLens l) = simulateQ (impl.comapLens l) oa :=
+  FreeM.liftM_mapLens l impl oa
+
+/-- Transport along a lens is the simulation that answers each query `t` by the query
+`l.toFunA t`, mapped back by `l.toFunB t`. -/
+theorem mapLens_eq_simulateQ (l : Lens spec.toPFunctor spec'.toPFunctor)
+    (oa : OracleComp spec α) :
+    oa.mapLens l = simulateQ ((QueryImpl.id' spec').comapLens l) oa := by
+  rw [← simulateQ_mapLens, simulateQ_id']
+
+end simulateQ
+
+section liftComp
+
+variable {ι : Type u} {τ : Type u'} {spec : OracleSpec.{u, w} ι} {superSpec : OracleSpec.{u', w} τ}
+  {α : Type w}
+
+/-- Lifting a computation along a sub-spec inclusion is transport along the inclusion's lens. -/
+theorem liftComp_eq_mapLens [h : spec ⊂ₒ superSpec] (mx : OracleComp spec α) :
+    liftComp mx superSpec = mx.mapLens h.toLens := by
+  rw [mapLens_eq_simulateQ, liftComp_def]
+  congr 1
+  funext t
+  have e : (liftM (spec.query t) : OracleQuery superSpec _) =
+      ⟨h.onQuery t, h.onResponse t⟩ :=
+    SubSpec.liftM_eq_lift (self := h) _
+  rw [liftM_eq_liftM_liftM (superSpec := superSpec), e]
+  rfl
+
+variable {ι₁ : Type u} {ι₂ : Type u'} {spec₁ : OracleSpec.{u, w} ι₁}
+  {spec₂ : OracleSpec.{u', w} ι₂}
+
+/-- Lifting a computation into the left summand of `spec₁ + spec₂` is transport along the
+inclusion lens `Sum.inl`. -/
+theorem liftComp_add_left_eq_mapLens (mx : OracleComp spec₁ α) :
+    liftComp mx (spec₁ + spec₂) = mx.mapLens (Sum.inl ⇆ fun _ => id) :=
+  liftComp_eq_mapLens mx
+
+/-- Lifting a computation into the right summand of `spec₁ + spec₂` is transport along the
+inclusion lens `Sum.inr`. -/
+theorem liftComp_add_right_eq_mapLens (mx : OracleComp spec₂ α) :
+    liftComp mx (spec₁ + spec₂) = mx.mapLens (Sum.inr ⇆ fun _ => id) :=
+  liftComp_eq_mapLens mx
+
+end liftComp
+
+section queryBound
+
+variable {ι ι' : Type u} {spec : OracleSpec.{u, u} ι} {spec' : OracleSpec.{u, u} ι'}
+  {α : Type u} {B : Type*}
+
+/-- A query bound on `oa`, with validity check and cost read through the lens, bounds
+`oa.mapLens l`. This is PolyFun's `IsRollBound.mapLens`. -/
+theorem IsQueryBound.mapLens (l : Lens spec.toPFunctor spec'.toPFunctor)
+    {canQuery : ι' → B → Prop} {cost : ι' → B → B} {oa : OracleComp spec α} {b : B}
+    (h : oa.IsQueryBound b (fun t => canQuery (l.toFunA t)) (fun t => cost (l.toFunA t))) :
+    (oa.mapLens l).IsQueryBound b canQuery cost :=
+  PFunctor.FreeM.IsRollBound.mapLens l h
+
+/-- When every answer of `spec'` is reached by the lens, the query bound on `oa.mapLens l` is the
+query bound on `oa` read through the lens. This is PolyFun's `isRollBound_mapLens_iff`. -/
+theorem isQueryBound_mapLens_iff (l : Lens spec.toPFunctor spec'.toPFunctor)
+    (hl : ∀ t, Function.Surjective (l.toFunB t)) {canQuery : ι' → B → Prop}
+    {cost : ι' → B → B} {oa : OracleComp spec α} {b : B} :
+    (oa.mapLens l).IsQueryBound b canQuery cost ↔
+      oa.IsQueryBound b (fun t => canQuery (l.toFunA t)) (fun t => cost (l.toFunA t)) :=
+  PFunctor.FreeM.isRollBound_mapLens_iff l hl
+
+/-- Transport along a lens preserves a total query bound. This is PolyFun's
+`isTotalRollBound_mapLens`. -/
+theorem IsTotalQueryBound.mapLens (l : Lens spec.toPFunctor spec'.toPFunctor)
+    {oa : OracleComp spec α} {n : ℕ} (h : oa.IsTotalQueryBound n) :
+    (oa.mapLens l).IsTotalQueryBound n :=
+  PFunctor.FreeM.isTotalRollBound_mapLens l oa h
+
+/-- When every answer of `spec'` is reached by the lens, the total query bounds of `oa` and
+`oa.mapLens l` agree. -/
+theorem isTotalQueryBound_mapLens_iff (l : Lens spec.toPFunctor spec'.toPFunctor)
+    (hl : ∀ t, Function.Surjective (l.toFunB t)) {oa : OracleComp spec α} {n : ℕ} :
+    (oa.mapLens l).IsTotalQueryBound n ↔ oa.IsTotalQueryBound n :=
+  isQueryBound_mapLens_iff l hl
+
+/-- A bound on the queries satisfying `p ∘ l.toFunA` bounds the queries of the transported
+computation satisfying `p`. This is PolyFun's `IsChargeBound.mapLens` at the charge that counts
+the queries satisfying `p`. -/
+theorem IsQueryBoundP.mapLens (l : Lens spec.toPFunctor spec'.toPFunctor) {p : ι' → Prop}
+    [DecidablePred p] {oa : OracleComp spec α} {n : ℕ}
+    (h : oa.IsQueryBoundP (fun t => p (l.toFunA t)) n) :
+    (oa.mapLens l).IsQueryBoundP p n :=
+  (isQueryBoundP_iff_isChargeBound p _ n).2 <|
+    PFunctor.FreeM.IsChargeBound.mapLens l <| (isQueryBoundP_iff_isChargeBound _ oa n).1 h
+
+/-- When every answer of `spec'` is reached by the lens, the bound on the queries of
+`oa.mapLens l` satisfying `p` is the bound on the queries of `oa` satisfying `p ∘ l.toFunA`. -/
+theorem isQueryBoundP_mapLens_iff (l : Lens spec.toPFunctor spec'.toPFunctor)
+    (hl : ∀ t, Function.Surjective (l.toFunB t)) {p : ι' → Prop} [DecidablePred p]
+    {oa : OracleComp spec α} {n : ℕ} :
+    (oa.mapLens l).IsQueryBoundP p n ↔ oa.IsQueryBoundP (fun t => p (l.toFunA t)) n :=
+  (isQueryBoundP_iff_isChargeBound p _ n).trans <|
+    (PFunctor.FreeM.isChargeBound_mapLens_iff l hl).trans
+      (isQueryBoundP_iff_isChargeBound _ oa n).symm
+
+/-- A predicate-only bound on `oa` at `P ∘ l.toFunA` is a predicate-only bound at `P` on the
+transported computation. -/
+theorem AllQueriesSatisfy.mapLens (l : Lens spec.toPFunctor spec'.toPFunctor) {P : ι' → Prop}
+    {oa : OracleComp spec α} (h : oa.AllQueriesSatisfy fun t => P (l.toFunA t)) :
+    (oa.mapLens l).AllQueriesSatisfy P := by
+  classical
+  exact (allQueriesSatisfy_iff_isChargeBound _ P).2 <|
+    PFunctor.FreeM.IsChargeBound.mapLens l <| (allQueriesSatisfy_iff_isChargeBound oa _).1 h
+
+/-- When every answer of `spec'` is reached by the lens, `oa.mapLens l` satisfies `P` at every
+query exactly when `oa` satisfies `P ∘ l.toFunA`. -/
+theorem allQueriesSatisfy_mapLens_iff (l : Lens spec.toPFunctor spec'.toPFunctor)
+    (hl : ∀ t, Function.Surjective (l.toFunB t)) {P : ι' → Prop} {oa : OracleComp spec α} :
+    (oa.mapLens l).AllQueriesSatisfy P ↔ oa.AllQueriesSatisfy fun t => P (l.toFunA t) := by
+  rw [allQueriesSatisfy_def, allQueriesSatisfy_def]
+  exact isQueryBound_mapLens_iff l hl
+
+/-- A per-index bound is a bound at each index separately. With the per-index charges
+`fun t => Pi.single t 1`, this is PolyFun's `isChargeBound_pi_iff`. -/
+theorem isPerIndexQueryBound_iff_forall_isQueryBoundP [DecidableEq ι] (oa : OracleComp spec α)
+    (qb : ι → ℕ) :
+    oa.IsPerIndexQueryBound qb ↔ ∀ t, oa.IsQueryBoundP (· = t) (qb t) := by
+  rw [isPerIndexQueryBound_iff_isChargeBound, PFunctor.FreeM.isChargeBound_pi_iff]
+  refine forall_congr' fun t => ?_
+  rw [isQueryBoundP_iff_isChargeBound]
+  simp only [Pi.single_apply, Pi.zero_apply, @eq_comm _ t]
+
+/-- A per-index bound on the transported computation follows from a bound, at each index `t'`,
+on the queries of `oa` that the lens sends to `t'`. -/
+theorem IsPerIndexQueryBound.mapLens [DecidableEq ι'] (l : Lens spec.toPFunctor spec'.toPFunctor)
+    {oa : OracleComp spec α} {qb : ι' → ℕ}
+    (h : ∀ t', oa.IsQueryBoundP (fun t => l.toFunA t = t') (qb t')) :
+    (oa.mapLens l).IsPerIndexQueryBound qb :=
+  (isPerIndexQueryBound_iff_forall_isQueryBoundP _ qb).2 fun t' => IsQueryBoundP.mapLens l (h t')
+
+/-- Along a lens injective on queries, a per-index bound at `qb ∘ l.toFunA` is a per-index bound
+at `qb` on the transported computation. -/
+theorem IsPerIndexQueryBound.mapLens_of_injective [DecidableEq ι] [DecidableEq ι']
+    (l : Lens spec.toPFunctor spec'.toPFunctor) (hl : Function.Injective l.toFunA)
+    {oa : OracleComp spec α} {qb : ι' → ℕ} (h : oa.IsPerIndexQueryBound (qb ∘ l.toFunA)) :
+    (oa.mapLens l).IsPerIndexQueryBound qb := by
+  refine IsPerIndexQueryBound.mapLens l fun t' => ?_
+  rw [isPerIndexQueryBound_iff_forall_isQueryBoundP] at h
+  by_cases ht : ∃ s, l.toFunA s = t'
+  · obtain ⟨s, rfl⟩ := ht
+    exact (h s).of_imp fun t hts => hl hts
+  · exact (((isQueryBoundP_zero_iff oa fun t => l.toFunA t ≠ t').2
+      (allQueriesSatisfy_of_forall (fun t htt => ht ⟨t, htt⟩) oa)).of_imp
+        fun t htt => not_not.2 htt).mono (Nat.zero_le _)
+
+end queryBound
+
+end OracleComp

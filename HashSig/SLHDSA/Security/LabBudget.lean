@@ -9,7 +9,6 @@ module
 public import HashSig.SLHDSA.Security.LabScheme
 public import HashSig.SLHDSA.Security.SeedCouplingBound
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Defer
-import HashSig.SLHDSA.GeneralSchemeQueryBound
 
 /-!
 # The query budget of the lab experiment

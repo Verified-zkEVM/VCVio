@@ -8,7 +8,6 @@ module
 public import VCVio.OracleComp.Constructions.SampleableType.Basic
 public import VCVio.EvalDist.BitVec.Measure
 public import VCVio.OracleComp.Constructions.SampleableType.Measure
-import VCVio.OracleComp.EvalDist.AnswerMeasure
 
 /-!
 # Uniform bit-vector sampling
