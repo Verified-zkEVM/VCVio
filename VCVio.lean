@@ -167,6 +167,7 @@ public import VCVio.CryptoFoundations.MerkleTree.Addressed.NatIndexed.OptionCove
 public import VCVio.CryptoFoundations.MerkleTree.Addressed.NatIndexed.QueryBound
 public import VCVio.CryptoFoundations.MerkleTree.Addressed.NatIndexed.Sibling
 public import VCVio.CryptoFoundations.MerkleTree.Addressed.Query
+public import VCVio.CryptoFoundations.MerkleTree.Addressed.Query.Honest
 public import VCVio.CryptoFoundations.MerkleTree.Addressed.QueryBound
 public import VCVio.CryptoFoundations.MerkleTree.Addressed.Uniqueness
 public import VCVio.CryptoFoundations.MerkleTree.BatchExtractability
