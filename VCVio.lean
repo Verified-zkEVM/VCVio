@@ -23,6 +23,12 @@ public import VCVio.CryptoFoundations.Asymptotics.RankedRun
 public import VCVio.CryptoFoundations.Asymptotics.ReductionCost
 public import VCVio.CryptoFoundations.Asymptotics.Security
 public import VCVio.CryptoFoundations.CommitmentScheme
+public import VCVio.CryptoFoundations.CoordinateFork
+public import VCVio.CryptoFoundations.CoordinateFork.Extraction
+public import VCVio.CryptoFoundations.CoordinateFork.Finder
+public import VCVio.CryptoFoundations.CoordinateFork.Operational
+public import VCVio.CryptoFoundations.CoordinateFork.Realizability
+public import VCVio.CryptoFoundations.CoordinateFork.SpecialSoundness
 public import VCVio.CryptoFoundations.DataEncapMech
 public import VCVio.CryptoFoundations.DataEncapMech.RealOrRandom
 public import VCVio.CryptoFoundations.FiatShamir.QueryBounds
@@ -374,6 +380,7 @@ public import VCVio.OracleComp.Constructions.UniformPreimage
 public import VCVio.OracleComp.Constructions.UniformSelectMeasure
 public import VCVio.OracleComp.Constructions.WithoutReplacement
 public import VCVio.OracleComp.Constructions.WithoutReplacement.Basic
+public import VCVio.OracleComp.Constructions.WithoutReplacement.Exchangeable
 public import VCVio.OracleComp.Constructions.WithoutReplacement.Weighted
 public import VCVio.OracleComp.EvalDist
 public import VCVio.OracleComp.EvalDist.AnswerMeasure
