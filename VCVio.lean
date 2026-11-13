@@ -24,6 +24,7 @@ public import VCVio.CryptoFoundations.Asymptotics.ReductionCost
 public import VCVio.CryptoFoundations.Asymptotics.Security
 public import VCVio.CryptoFoundations.ChallengeVerifyProtocol.Basic
 public import VCVio.CryptoFoundations.ChallengeVerifyProtocol.Kilian
+public import VCVio.CryptoFoundations.ChallengeVerifyProtocol.Kilian.Merkle
 public import VCVio.CryptoFoundations.ChallengeVerifyProtocol.Kilian.Soundness
 public import VCVio.CryptoFoundations.CommitmentScheme
 public import VCVio.CryptoFoundations.DataEncapMech
@@ -276,6 +277,7 @@ public import VCVio.CryptoFoundations.TimeLockPuzzle.Truncate
 public import VCVio.CryptoFoundations.TweakableHash
 public import VCVio.CryptoFoundations.UniversalHash
 public import VCVio.CryptoFoundations.VectorCommitment
+public import VCVio.CryptoFoundations.VectorCommitment.Merkle
 public import VCVio.CryptoFoundations.VectorCommitment.OnlineExtraction
 public import VCVio.EvalDist.BitVec.Measure
 public import VCVio.EvalDist.Defs.Instances
@@ -433,6 +435,7 @@ public import VCVio.OracleComp.QueryTracking.QueryCost
 public import VCVio.OracleComp.QueryTracking.QueryLog
 public import VCVio.OracleComp.QueryTracking.QueryLogCheck
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
+public import VCVio.OracleComp.QueryTracking.RandomOracle.CacheOverlay
 public import VCVio.OracleComp.QueryTracking.RandomOracle.CachePartial
 public import VCVio.OracleComp.QueryTracking.RandomOracle.ClassIndexedTape
 public import VCVio.OracleComp.QueryTracking.RandomOracle.ClassIndexedTape.HitPotential

@@ -33,14 +33,15 @@ PCP verifier, replayed against the claims, accepts (`PCP.kilianDecision`).
 
 where `ε` is the soundness error of the PCP and the online extraction error of the commitment is
 measured against the cheating prover itself. The proof is the classical one: the extractor reads a
-proof string off the oracle cache when the commitment is output, before the coins are drawn. If an
-accepted response agrees with that proof string, the PCP verifier accepts it
-(`runVerifier_of_kilianDecision`), which PCP soundness bounds by `ε` over the independent coins
-(`DetVectorCommitment.prEvent_onlineRun_le`); otherwise the run is an online extraction failure.
+proof string off the commitment and the prover's query log when the commitment is output, before
+the coins are drawn. If an accepted response agrees with that proof string, the PCP verifier
+accepts it (`runVerifier_of_kilianDecision`), which PCP soundness bounds by `ε` over the independent
+coins (`DetVectorCommitment.prEvent_onlineRun_le`); otherwise the run is an online extraction
+failure.
 
 The bound holds for every extractor, so the best extractor for the commitment gives the tightest
-bound. Bounding the online extraction error of a concrete commitment, such as a Merkle tree, in
-terms of the prover's query count is a separate theorem about that commitment.
+bound. For Merkle trees the online extraction error is bounded in terms of the prover's query
+counts (`VCVio.CryptoFoundations.ChallengeVerifyProtocol.Kilian.Merkle`).
 -/
 
 public section
@@ -76,20 +77,20 @@ extractor `extract`, the Kilian verifier accepts with probability at most `ε` p
 extraction error of `extract` against `P` itself. -/
 theorem KilianTransformation_rom_sound (pcp : PCP Stmt Wit) (rel : Stmt → Wit → Bool)
     (vc : DetVectorCommitment X Y pcp.Symbol Cm Td Pf pcp.length)
-    (extract : (X →ₒ Y).QueryCache → Cm → Fin pcp.length → pcp.Symbol)
+    (extract : (X →ₒ Y).QueryLog → Cm → Fin pcp.length → pcp.Symbol)
     {ε : ℝ≥0} (hpcp : pcp.soundness rel ε) (x : Stmt) (hx : ¬ ∃ w, rel x w) {St : Type}
     (P : OnlineAdversary X Y Cm St pcp.Coins (PartialVec pcp.length pcp.Symbol × Pf)) :
     romAcceptance pcp vc x P ≤ ε + vc.onlineExtractionError extract pcp.sampleCoins P := by
   unfold romAcceptance onlineExtractionError
   -- The PCP verifier accepts the extracted proof string on the drawn coins.
   let good : OnlineTranscript X Y Cm pcp.Coins (PartialVec pcp.length pcp.Symbol × Pf) → Prop :=
-    fun t => pcp.runVerifier x t.chal (List.Vector.ofFn (extract t.cache t.cm)) = true
+    fun t => pcp.runVerifier x t.chal (List.Vector.ofFn (extract t.log t.cm)) = true
   refine (prEvent_le_prEvent_add_prEvent_and_not _ _ good).trans (add_le_add ?_ ?_)
   · -- The extracted proof string is fixed before the coins, so PCP soundness bounds this event.
     refine prEvent_onlineRun_le vc pcp.sampleCoins P
-      (fun cm cache coins =>
-        pcp.runVerifier x coins (List.Vector.ofFn (extract cache cm)) = true) fun cm cache => ?_
-    have h := hpcp x hx (List.Vector.ofFn (extract cache cm))
+      (fun cm log coins =>
+        pcp.runVerifier x coins (List.Vector.ofFn (extract log cm)) = true) fun cm log => ?_
+    have h := hpcp x hx (List.Vector.ofFn (extract log cm))
     simp only [bind_pure_comp, prEvent_map] at h
     exact h
   · -- An accepted response that the PCP verifier rejects on the extracted string disagrees with it.
