@@ -229,6 +229,7 @@ public import VCVio.CryptoFoundations.ReplayFork
 public import VCVio.CryptoFoundations.ReplayForkCost
 public import VCVio.CryptoFoundations.Rewinding.Basic
 public import VCVio.CryptoFoundations.Rewinding.Eager
+public import VCVio.CryptoFoundations.Rewinding.Extraction
 public import VCVio.CryptoFoundations.Rewinding.Finder
 public import VCVio.CryptoFoundations.Rewinding.FinderBridge
 public import VCVio.CryptoFoundations.Rewinding.FixedTape
