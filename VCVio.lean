@@ -223,6 +223,7 @@ public import VCVio.CryptoFoundations.MerkleTree.Salted.Extraction
 public import VCVio.CryptoFoundations.MerkleTree.Salted.HalfPreimage
 public import VCVio.CryptoFoundations.MerkleTree.Salted.Instability
 public import VCVio.CryptoFoundations.PRF
+public import VCVio.CryptoFoundations.PRF.DomainTransport
 public import VCVio.CryptoFoundations.PRF.HiddenBit
 public import VCVio.CryptoFoundations.PRG
 public import VCVio.CryptoFoundations.ReplayFork
