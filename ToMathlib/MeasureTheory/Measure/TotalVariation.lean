@@ -7,6 +7,7 @@ Authors: Devon Tuma, Quang Dao
 module
 
 public import ToMathlib.Data.ENNReal.AbsDiff
+public import Mathlib.MeasureTheory.MeasurableSpace.CountablyGenerated
 public import Mathlib.MeasureTheory.Measure.Map
 public import Mathlib.MeasureTheory.Measure.Sub
 public import Mathlib.MeasureTheory.Measure.Typeclasses.Finite
@@ -99,6 +100,16 @@ theorem etvDist_ne_top (μ ν : Measure α)
     (hμ : μ Set.univ ≤ 1) (hν : ν Set.univ ≤ 1) : μ.etvDist ν ≠ ⊤ :=
   ne_top_of_le_ne_top one_ne_top (etvDist_le_one μ ν hμ hν)
 
+/-- Dirac measures at distinct points of a space whose measurable sets separate points are at
+extended TV one: a measurable set containing the first point and not the second carries all of
+one measure and none of the other. -/
+theorem etvDist_dirac_dirac_of_ne [MeasurableSpace.SeparatesPoints α] {a b : α} (h : a ≠ b) :
+    (dirac a).etvDist (dirac b) = 1 := by
+  obtain ⟨s, hs, ha, hb⟩ := MeasurableSpace.exists_measurableSet_of_ne h
+  refine le_antisymm (etvDist_le_one _ _ (by simp) (by simp)) ?_
+  have := absDiff_apply_le_etvDist (dirac a) (dirac b) hs
+  simpa [dirac_apply' _ hs, ha, hb, ENNReal.absDiff] using this
+
 /-- Two probability measures differ in total variation by at most the missing mass of any
 common lower measure. -/
 theorem etvDist_le_one_sub_of_le {μ ν c : Measure α} [IsProbabilityMeasure μ]
@@ -163,6 +174,12 @@ theorem tvDist_eq_zero_iff (μ ν : Measure α)
     (hμ : μ Set.univ ≤ 1) (hν : ν Set.univ ≤ 1) : μ.tvDist ν = 0 ↔ μ = ν := by
   rw [Measure.tvDist, ENNReal.toReal_eq_zero_iff, etvDist_eq_zero_iff]
   simp [etvDist_ne_top μ ν hμ hν]
+
+/-- Dirac measures at distinct points of a space whose measurable sets separate points are at
+TV one. -/
+theorem tvDist_dirac_dirac_of_ne [MeasurableSpace.SeparatesPoints α] {a b : α} (h : a ≠ b) :
+    (dirac a).tvDist (dirac b) = 1 := by
+  simp [Measure.tvDist, etvDist_dirac_dirac_of_ne h]
 
 theorem tvDist_map_le (μ ν : Measure α) (f : α → β) (hf : Measurable f)
     (hμ : μ Set.univ ≤ 1) (hν : ν Set.univ ≤ 1) :
