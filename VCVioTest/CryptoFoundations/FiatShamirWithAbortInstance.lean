@@ -34,6 +34,7 @@ jointly satisfiable at a point where its loss is below `1`.
 public section
 
 open OracleComp OracleSpec ENNReal FiatShamirWithAbort
+open ProbComp (firstSome)
 
 namespace VCVioTest.FiatShamirWithAbortInstance
 

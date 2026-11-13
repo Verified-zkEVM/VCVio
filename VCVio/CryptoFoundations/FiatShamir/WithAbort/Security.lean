@@ -51,6 +51,7 @@ discarded from the returned cache), and the assembled headlines `euf_cma_to_nma`
 universe u v
 
 open OracleComp OracleSpec
+open ProbComp (firstSome)
 open scoped BigOperators ENNReal
 
 variable {Stmt Wit Commit PrvState Chal Resp : Type} {rel : Stmt → Wit → Bool}

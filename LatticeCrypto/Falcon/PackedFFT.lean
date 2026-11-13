@@ -21,7 +21,9 @@ the polynomial at `exp(rootAngle k j · I)`. Everything else follows from that d
   `X^n + 1` (`exp_rootAngle`);
 - `toCoeffs_ofCoeffs`: the split recursion `RealFFTPoly.toCoeffs` inverts `ofCoeffs`;
 - `Primitives.ffSampling_support_ofCoeffs`: every output of `ffSampling` is the packed FFT of a
-  pair of integer polynomials, because the leaves sample integers and the nodes merge.
+  pair of integer polynomials, because the leaves sample integers and the nodes merge;
+  `Primitives.ffSampling_support_ofCoeffs_of_samplerZ` carries any property of the values
+  `samplerZ` returns to those coefficients.
 -/
 
 public section
@@ -332,6 +334,19 @@ theorem coord_ofCoeffs : ∀ (k : ℕ) (f : Fin (2 * 2 ^ k) → ℝ) (j : Fin (2
         Complex.exp_pi_mul_I]
       ring
 
+/-- A coordinate of a packed FFT is at most `2^(k + 1)` times a bound on the coefficients. -/
+theorem norm_coord_ofCoeffs_le (k : ℕ) (f : Fin (2 * 2 ^ k) → ℝ) (Z : ℝ) (hf : ∀ i, |f i| ≤ Z)
+    (j : Fin (2 ^ k)) : ‖coord (ofCoeffs k f) j‖ ≤ 2 ^ (k + 1) * Z := by
+  rw [coord_ofCoeffs, evalAngle]
+  calc _ ≤ ∑ m : Fin (2 * 2 ^ k), ‖(f m : ℂ) * exp ((((m : ℕ) : ℝ) * rootAngle k j.1 : ℝ) * I)‖ :=
+        norm_sum_le _ _
+    _ ≤ ∑ _m : Fin (2 * 2 ^ k), Z := by
+        apply Finset.sum_le_sum
+        intro m _
+        rw [norm_mul, Complex.norm_exp_ofReal_mul_I, mul_one, Complex.norm_real, Real.norm_eq_abs]
+        exact hf m
+    _ = 2 ^ (k + 1) * Z := by simp [pow_succ, mul_comm]
+
 /-- **The packed FFT is multiplicative.** Negacyclic multiplication of coefficient functions
 becomes the pointwise complex multiplication `Primitives.mulFFT`. -/
 theorem ofCoeffs_negacyclic (k : ℕ) (a b : Fin (2 * 2 ^ k) → ℝ) :
@@ -430,29 +445,65 @@ end RealFFTPoly
 
 /-! ## The sampler outputs packed FFTs of integer polynomials -/
 
-/-- **Every `ffSampling` output is the packed FFT of a pair of integer polynomials.** The leaves
-sample integers into both coordinates and the nodes merge. -/
-theorem Primitives.ffSampling_support_ofCoeffs {p : Params} (prims : Primitives p) :
+/-- **Every `ffSampling` output is the packed FFT of a pair of integer polynomials whose
+coefficients are values `samplerZ` returns.** The leaves sample integers into both coordinates
+and the nodes merge, so every property `P` of the values of `samplerZ` holds for every
+coefficient. -/
+theorem Primitives.ffSampling_support_ofCoeffs_of_samplerZ {p : Params} (prims : Primitives p)
+    (P : ℤ → Prop) (hP : ∀ μ σ : ℝ, ∀ x ∈ support (prims.samplerZ μ σ), P x) :
     ∀ (κ : ℕ) (t : FFTPair κ) (tree : FalconTree κ) (z : FFTPair κ),
       z ∈ support (prims.ffSampling κ t tree) →
-        ∃ a b : Fin (2 * 2 ^ κ) → ℤ,
+        ∃ a b : Fin (2 * 2 ^ κ) → ℤ, (∀ i, P (a i)) ∧ (∀ i, P (b i)) ∧
           z.1 = RealFFTPoly.ofCoeffs κ (fun i => (a i : ℝ)) ∧
           z.2 = RealFFTPoly.ofCoeffs κ (fun i => (b i : ℝ))
   | 0, (t₀, t₁), .leaf σ, z, hz => by
     simp only [Primitives.ffSampling, mem_support_bind_iff, support_pure,
       Set.mem_singleton_iff] at hz
-    obtain ⟨z₀Re, -, z₀Im, -, z₁Re, -, z₁Im, -, rfl⟩ := hz
+    obtain ⟨z₀Re, h₀, z₀Im, h₁, z₁Re, h₂, z₁Im, h₃, rfl⟩ := hz
     refine ⟨fun i => if i.1 = 0 then z₀Re else z₀Im, fun i => if i.1 = 0 then z₁Re else z₁Im,
-      ?_, ?_⟩ <;> simp [RealFFTPoly.ofCoeffs]
+      fun i => ?_, fun i => ?_, ?_, ?_⟩
+    · dsimp only
+      split_ifs
+      · exact hP _ _ _ h₀
+      · exact hP _ _ _ h₁
+    · dsimp only
+      split_ifs
+      · exact hP _ _ _ h₂
+      · exact hP _ _ _ h₃
+    · simp [RealFFTPoly.ofCoeffs]
+    · simp [RealFFTPoly.ofCoeffs]
   | k + 1, (t₀, t₁), .node ℓ left right, z, hz => by
     simp only [Primitives.ffSampling, mem_support_bind_iff, support_pure,
       Set.mem_singleton_iff] at hz
     obtain ⟨z₁Split, hz₁, z₀Split, hz₀, rfl⟩ := hz
-    obtain ⟨a₁, b₁, ha₁, hb₁⟩ := ffSampling_support_ofCoeffs prims k _ right z₁Split hz₁
-    obtain ⟨a₀, b₀, ha₀, hb₀⟩ := ffSampling_support_ofCoeffs prims k _ left z₀Split hz₀
-    refine ⟨RealFFTPoly.interleave k a₀ b₀, RealFFTPoly.interleave k a₁ b₁, ?_, ?_⟩
-    · rw [RealFFTPoly.interleave_cast, RealFFTPoly.ofCoeffs_interleave, ← ha₀, ← hb₀]
-    · rw [RealFFTPoly.interleave_cast, RealFFTPoly.ofCoeffs_interleave, ← ha₁, ← hb₁]
+    obtain ⟨a₁, b₁, ha₁, hb₁, ea₁, eb₁⟩ :=
+      ffSampling_support_ofCoeffs_of_samplerZ prims P hP k _ right z₁Split hz₁
+    obtain ⟨a₀, b₀, ha₀, hb₀, ea₀, eb₀⟩ :=
+      ffSampling_support_ofCoeffs_of_samplerZ prims P hP k _ left z₀Split hz₀
+    have hint : ∀ a b : Fin (2 * 2 ^ k) → ℤ, (∀ i, P (a i)) → (∀ i, P (b i)) →
+        ∀ i, P (RealFFTPoly.interleave k a b i) := by
+      intro a b ha hb i
+      simp only [RealFFTPoly.interleave]
+      split_ifs
+      · exact ha _
+      · exact hb _
+    refine ⟨RealFFTPoly.interleave k a₀ b₀, RealFFTPoly.interleave k a₁ b₁,
+      hint _ _ ha₀ hb₀, hint _ _ ha₁ hb₁, ?_, ?_⟩
+    · rw [RealFFTPoly.interleave_cast, RealFFTPoly.ofCoeffs_interleave, ← ea₀, ← eb₀]
+    · rw [RealFFTPoly.interleave_cast, RealFFTPoly.ofCoeffs_interleave, ← ea₁, ← eb₁]
+
+/-- **Every `ffSampling` output is the packed FFT of a pair of integer polynomials.** The leaves
+sample integers into both coordinates and the nodes merge. -/
+theorem Primitives.ffSampling_support_ofCoeffs {p : Params} (prims : Primitives p)
+    (κ : ℕ) (t : FFTPair κ) (tree : FalconTree κ) (z : FFTPair κ)
+    (hz : z ∈ support (prims.ffSampling κ t tree)) :
+    ∃ a b : Fin (2 * 2 ^ κ) → ℤ,
+      z.1 = RealFFTPoly.ofCoeffs κ (fun i => (a i : ℝ)) ∧
+      z.2 = RealFFTPoly.ofCoeffs κ (fun i => (b i : ℝ)) := by
+  obtain ⟨a, b, -, -, ha, hb⟩ :=
+    ffSampling_support_ofCoeffs_of_samplerZ prims (fun _ => True) (fun _ _ _ _ => trivial) κ t
+      tree z hz
+  exact ⟨a, b, ha, hb⟩
 
 /-! ## Specification-level FFT primitives -/
 

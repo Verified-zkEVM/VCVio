@@ -838,6 +838,71 @@ def runFalconSigningTests (st : IO.Ref TestState) : IO Unit := do
           check st "wrong pk: Lean verify rejects pure-Lean sig" (!lv3)
   IO.println ""
 
+/-- The negacyclic product of two integer coefficient arrays of length `n`. -/
+private def intNegacyclicMul (n : Nat) (a b : Array Int) : Array Int := Id.run do
+  let mut out : Array Int := Array.replicate n 0
+  for i in [0:n] do
+    for j in [0:n] do
+      let p := a.getD i 0 * b.getD j 0
+      if i + j < n then
+        out := out.set! (i + j) (out.getD (i + j) 0 + p)
+      else
+        out := out.set! (i + j - n) (out.getD (i + j - n) 0 - p)
+  return out
+
+/-- Consistency check of the regime of `Falcon.Concrete.landsOnLattice_of_binary64FFTFields` on a
+real Falcon-512 key and a real `ffSampling` output of the binary64 signer: the key coefficients are
+in `[-127, 127]`, the sampled coefficients are below `2^16`, and the binary64 basis application
+rounds to the integer lattice point. Consistency only: the products here are binary64 too, and
+nothing about the distribution of sampled values is checked. -/
+def runFalconBinary64CosetTests (st : IO.Ref TestState) : IO Unit := do
+  IO.println "31. Binary64 coset regime (consistency only)"
+  flush
+  let seed : ByteArray := ⟨Array.ofFn fun (i : Fin 48) => i.val.toUInt8⟩
+  let (sk, pk) := Falcon.Concrete.FFI.falcon512KeygenSeeded seed
+  match decodeSecretKey 9 sk with
+  | none => check st "binary64 coset: secret key decodes" false
+  | some (f, g, capF) =>
+    match computeCapG512 capF pk with
+    | none => check st "binary64 coset: G computes" false
+    | some capG =>
+      let n : Nat := 512
+      let small (a : Array Int32) : Bool := a.all fun v => -127 ≤ v.toInt && v.toInt ≤ 127
+      check st "key coefficients in [-127, 127]" (small f && small g && small capF && small capG)
+      let msg : ByteArray := ⟨#[0x48, 0x65, 0x6C, 0x6C, 0x6F]⟩
+      let signSeed : ByteArray := ⟨Array.ofFn fun (i : Fin 48) => (0xFF - i.val).toUInt8⟩
+      let prng := PRNGState.init signSeed
+      let (salt, prng) := prngNextSalt prng
+      let hmArr := rqToUInt16Array (hashToPoint n salt pk msg.toList)
+      let (b00, b01, b10, b11) := basisToFFT (F := FPR) 9 f g capF capG
+      let (g00, g01, g11) := fpolyGramFFT 9 b00 b01 b10 b11
+      let (t0, t1) := fpolyApplyBasis 9 b01 b11 hmArr
+      let buf := packFFSampBuffer 9 t0 t1 g01 (selfAdjointCompress 9 g00)
+        (selfAdjointCompress 9 g11)
+      let (buf', _) := ffSampling 9 prng buf
+      let z0fft : Array FPR := (Array.range n).map fun i => buf'.getD i FPR.zero
+      let z1fft : Array FPR := (Array.range n).map fun i => buf'.getD (n + i) FPR.zero
+      let z0 : Array Int := (fpolyIFFT 9 z0fft).map fun x => (FPR.rint x).toInt
+      let z1 : Array Int := (fpolyIFFT 9 z1fft).map fun x => (FPR.rint x).toInt
+      let zMax := (z0 ++ z1).foldl (init := (0 : Int)) fun m v => max m v.natAbs
+      IO.println s!"  max |z| = {zMax}"
+      check st "sampled coefficients below 2^16" (zMax < 65536)
+      let toI (a : Array Int32) : Array Int := a.map (·.toInt)
+      let w0 := Array.zipWith (· + ·) (intNegacyclicMul n z0 (toI g))
+        (intNegacyclicMul n z1 (toI capG))
+      let w1 := Array.zipWith (· + ·) (intNegacyclicMul n z0 (toI f))
+        (intNegacyclicMul n z1 (toI capF))
+      let fz (a : Array Int) : Array FPR :=
+        fpolyFFT 9 (fpolySetSmall 9 (a.map fun v => Int32.ofInt v))
+      let v0 := fpolyIFFT 9 (fpolyAdd 9 (fpolyMulFFT 9 b00 (fz z0)) (fpolyMulFFT 9 b10 (fz z1)))
+      let v1 := fpolyIFFT 9 (fpolyAdd 9 (fpolyMulFFT 9 b01 (fz z0)) (fpolyMulFFT 9 b11 (fz z1)))
+      let mut ok := true
+      for i in [0:n] do
+        ok := ok && (FPR.rint (v0.getD i FPR.zero)).toInt == w0.getD i 0
+        ok := ok && (FPR.rint (v1.getD i FPR.zero)).toInt == -(w1.getD i 0)
+      check st "binary64 basis application rounds to z0*g + z1*G and -(z0*f + z1*F)" ok
+  IO.println ""
+
 def main : IO Unit := do
   let st ← IO.mkRef ({} : TestState)
   IO.println "=== Falcon Correctness Tests ==="
@@ -847,6 +912,7 @@ def main : IO Unit := do
   runFalconFloatingPointTests st
   runFalconLowLevelTests st
   runFalconSigningTests st
+  runFalconBinary64CosetTests st
   Falcon.Test.KeyGenDiff.runFalconKeyGenDiffTests st
   -- ── Summary ────────────────────────────────────
   let s ← st.get
