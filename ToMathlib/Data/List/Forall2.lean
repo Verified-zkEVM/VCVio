@@ -8,14 +8,17 @@ module
 
 public import Mathlib.Data.List.Forall2
 public import Mathlib.Data.List.Range
+public import Mathlib.Algebra.Order.BigOperators.Group.List
+public import Mathlib.Algebra.Order.Group.Nat
 
 /-!
-# `List.Forall₂` against `filterMap` and against the list of a vector
+# `List.Forall₂` transport and sum rigidity
 
 When a partial map `f` is defined at every entry of `l`, with values related by `R` to the
 matching entries of `l'`, the list `l.filterMap f` of its values is related to `l'` entrywise. A
 list read off along `List.range n` is related entrywise to the list of a vector of length `n`
-exactly when each read value is related to the vector's entry at the same index.
+exactly when each read value is related to the vector's entry at the same index. Pointwise-ordered
+natural-number lists with equal sums are equal.
 -/
 
 public section
@@ -33,6 +36,17 @@ theorem forall₂_filterMap_of_forall₂ {f : α → Option β} {R : β → γ �
   | _, _, .cons ⟨_, hb, h⟩ hl => by
     rw [filterMap_cons, hb]
     exact .cons h (forall₂_filterMap_of_forall₂ hl)
+
+/-- Pointwise-ordered natural-number lists with equal sums are equal. -/
+theorem Forall₂.eq_of_sum_eq {xs ys : List ℕ}
+    (hle : Forall₂ (· ≤ ·) xs ys) (hsum : xs.sum = ys.sum) : xs = ys := by
+  match xs, ys, hle with
+  | [], [], .nil => rfl
+  | a :: as, b :: bs, .cons hd htl =>
+    simp only [List.sum_cons] at hsum
+    have hsumLE : as.sum ≤ bs.sum := htl.sum_le_sum
+    obtain rfl : a = b := by omega
+    rw [Forall₂.eq_of_sum_eq htl (by omega)]
 
 end List
 

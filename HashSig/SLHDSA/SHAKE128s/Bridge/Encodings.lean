@@ -288,17 +288,6 @@ theorem frame_eq_encodePureMessage (request : Message) :
 
 /-! ## WOTS+ digits -/
 
-/-- The big-endian base-`w` digit `j` of `digitsOfBaseW`. -/
-theorem getElem?_digitsOfBaseW (x w : ℕ) :
-    ∀ (len j : ℕ), j < len →
-      (WotsChecksum.digitsOfBaseW x w len)[j]? = some (x / w ^ (len - 1 - j) % w)
-  | 0, j, h => absurd h (Nat.not_lt_zero j)
-  | len + 1, 0, _ => by simp [WotsChecksum.digitsOfBaseW]
-  | len + 1, j + 1, h => by
-    rw [WotsChecksum.digitsOfBaseW, List.getElem?_cons_succ,
-      getElem?_digitsOfBaseW x w len j (by omega),
-      show len + 1 - 1 - (j + 1) = len - 1 - j by omega]
-
 /-- The message digits FIPS 205 extracts from a node are the paper's `messageDigit`s. -/
 theorem wotsMsgDigitsCore_digestEquiv (d : Digest) :
     wotsMsgDigitsCore FIPS205.core (digestEquiv d) =
@@ -335,10 +324,10 @@ theorem chainStepsCore_digestEquiv (d : Digest) (i : Fin chains) :
     rw [List.getElem?_append_right (by simp; omega)]
     simp only [List.length_ofFn]
     have hlt : i.val - messageDigits < 3 := by simp only [messageDigits, n, winternitzBits]; omega
-    change (WotsChecksum.digitsOfBaseW _ 16 3)[i.val - messageDigits]?.getD 0 = _
-    rw [getElem?_digitsOfBaseW _ _ _ _ hlt]
+    change (VCVio.Algorithms.RadixEncoding.digitsOfBaseW _ 16 3)[i.val - messageDigits]?.getD 0 = _
+    rw [VCVio.Algorithms.RadixEncoding.digitsOfBaseW_getElem? _ _ _ _ hlt]
     simp only [Option.getD_some, Checksum.checksumDigit, Checksum.checksum,
-      WotsChecksum.wotsChecksumValue, List.map_ofFn, List.sum_ofFn, Function.comp_def]
+      WotsChecksum.wotsChecksumValue, VCVio.Algorithms.ComplementaryChecksum.value_ofFn]
     rfl
 
 /-- The WOTS+ chain lengths of any node, through its digest. -/
