@@ -48,25 +48,18 @@ theorem chain_eq_or_collision (publicSeed : Digest) (address : Address)
     actual = canonical ∨ ∃ offset < steps,
       ChainCollision publicSeed address start actual canonical offset := by
   classical
-  induction steps generalizing start actual canonical with
-  | zero => exact Or.inl hend
-  | succ steps ih =>
-      by_cases heq : actual = canonical
-      · exact Or.inl heq
-      let next : Digest → Digest := fun value => Hashing.tweakable (m := Id) publicSeed
-        { address with hashOrIndex := BitVec.ofNat 32 start } (bytesBE n value)
-      have hnext : SLHDSA.SHAKE128s.Wots.chain (m := Id) publicSeed address (start + 1) steps
-          (next actual) =
-        SLHDSA.SHAKE128s.Wots.chain (m := Id) publicSeed address (start + 1) steps
-          (next canonical) := hend
-      rcases ih (start + 1) (next actual) (next canonical) hnext with
-        hmerge | ⟨offset, hoffset, hcollision⟩
-      · exact Or.inr ⟨0, by omega, by
-          simpa only [ChainCollision, SLHDSA.SHAKE128s.Wots.chain, pure, Nat.add_zero]
-            using And.intro heq hmerge⟩
-      · refine Or.inr ⟨offset + 1, by omega, ?_⟩
-        simpa only [ChainCollision, SLHDSA.SHAKE128s.Wots.chain, bind, Nat.add_assoc,
-          Nat.add_comm 1 offset, next] using hcollision
+  by_cases heq : actual = canonical
+  · exact Or.inl heq
+  · have hend' := hend
+    simp only [SLHDSA.SHAKE128s.Wots.chain_eq_indexedChain] at hend'
+    obtain ⟨offset, hne, hmerge⟩ := VCVio.Algorithms.IndexedChain.exists_merge (H := Digest)
+      (fun j x => Hashing.tweakable (m := Id) publicSeed
+        { address with hashOrIndex := BitVec.ofNat 32 j } (bytesBE n x))
+      start steps actual canonical heq hend'
+    refine Or.inr ⟨offset, offset.isLt, ?_⟩
+    simp only [VCVio.Algorithms.IndexedChain.chain_succ] at hmerge
+    simpa only [ChainCollision, SLHDSA.SHAKE128s.Wots.chain_eq_indexedChain,
+      VCVio.Algorithms.IndexedChain.chain] using And.intro hne hmerge
 
 omit [HasQuery HashSpec Id] in
 /-- The concatenated byte encoding of a digest array is injective. -/
