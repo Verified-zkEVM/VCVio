@@ -26,6 +26,7 @@ public import VCVioTest.CryptoFoundations.SignatureAlgBudget
 public import VCVioTest.CryptoFoundations.SignatureAlgRouted
 public import VCVioTest.CryptoFoundations.SymmEncAlgMeasure
 public import VCVioTest.CryptoFoundations.UniversalHash
+public import VCVioTest.EncodedStateInv
 public import VCVioTest.EvalDist.BundledSemantics
 public import VCVioTest.EvalDist.Deterministic
 public import VCVioTest.EvalDist.DisagreementMeasure
@@ -102,6 +103,7 @@ public import VCVioTest.OracleComp.QueryTracking.QueryLog
 public import VCVioTest.OracleComp.RetryLoop
 public import VCVioTest.OracleComp.SchwartzZippel
 public import VCVioTest.OracleComp.SecurityFamily
+public import VCVioTest.OracleComp.SimulateQ
 public import VCVioTest.OracleComp.SpecInstanceSearch
 public import VCVioTest.OracleComp.SpecInstanceSearchLibrary
 public import VCVioTest.OracleComp.Sum

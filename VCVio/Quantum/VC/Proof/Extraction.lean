@@ -13,7 +13,6 @@ public import VCVio.Quantum.Oracle.ClassicalCalls
 public import VCVio.Quantum.Oracle.Compressed.Consistency
 public import VCVio.Quantum.VC.CheckedRead
 public import VCVio.Quantum.VC.Conditions
-import QuantumFoundations.Pure.Instrument
 
 /-!
 # Extraction correctness for compressed oracles
