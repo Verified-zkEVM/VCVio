@@ -1,17 +1,17 @@
 #!/usr/bin/env bash
 # Regenerate the Lean extractions of the hax examples with the hax CLI.
 #
-# Each example's Rust crate is `Interop/Hax/<Name>/`, next to the Lean file `Interop/Hax/<Name>.lean`
-# that proves it correct, and extracts into the modules `Interop.Hax.<Name>.Extraction.*`. The
-# extracted modules are committed, so building `Interop/` needs no Rust toolchain.
+# Each example's Rust crate is `Interop/Hax/<Name>/`. It extracts into the modules
+# `Interop.Hax.<Name>.Extraction.*` beside it, and its proofs are `Interop/Hax/<Name>/Verification.lean`.
+# The extracted modules are committed, so building `Interop/` needs no Rust toolchain.
 #
 #   scripts/regenerate-hax.sh          regenerate in place
 #   scripts/regenerate-hax.sh --check  extract into a temporary copy and fail if the committed
 #                                      modules differ (CI's `hax-extraction` job)
 #
 # After extraction, each `Extraction/` directory keeps aeneas's `Types`, `Funs` and `Specs`
-# modules. `ProofObligations.lean` holds `sorry` stubs for the contracts, which the proofs in
-# `Interop/Hax/<Name>.lean` discharge instead, so it is removed. The `*_Template.lean` models of
+# modules. `ProofObligations.lean` holds `sorry` stubs for the contracts, which
+# `Interop/Hax/<Name>/Verification.lean` discharges instead, so it is removed. The `*_Template.lean` models of
 # external definitions seed `FunsExternal.lean` and `TypesExternal.lean` when those are absent (none
 # of the examples has external definitions) and are then removed.
 #

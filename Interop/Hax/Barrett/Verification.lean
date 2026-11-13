@@ -68,8 +68,8 @@ namespace Interop.Hax.Examples.Barrett
 set_option mvcgen.warning false in
 set_option hax_mvcgen.warnings false in
 /-- `i32::rem_euclid` by a nonzero divisor, away from the overflowing `MIN % -1`, is `Int.emod`.
-hax's own Barrett example states this spec locally, as missing from its core models. -/
-@[spec]
+hax's own Barrett example states this spec locally, as missing from its core models; it is a
+`spec` only within this file's contract proofs. -/
 theorem I32_rem_euclid_spec (x y : I32) (hy : y.val ≠ 0)
     (hov : ¬(x.val = I32.min ∧ y.val = -1)) :
     ⦃⌜True⌝⦄ core.num.I32.rem_euclid x y ⦃⇓ r => ⌜r.val = x.val % y.val⌝⦄ := by
@@ -78,7 +78,7 @@ theorem I32_rem_euclid_spec (x y : I32) (hy : y.val ≠ 0)
 
 section Contract
 
-attribute [local spec] barrett_reduce core.I64.Insts.CoreConvertFromI32.from
+attribute [local spec] barrett_reduce core.I64.Insts.CoreConvertFromI32.from I32_rem_euclid_spec
 
 attribute [local grind =]
   Int32.toInt_toInt64 Int64.ofBitVec_int32ToBitVec

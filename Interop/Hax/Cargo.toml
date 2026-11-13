@@ -1,6 +1,6 @@
-# The Rust sources of the hax examples: one crate per example, each in the directory next to the
-# Lean file that proves it correct. `scripts/regenerate-hax.sh` extracts each crate into its
-# `Extraction/` directory.
+# The Rust sources of the hax examples: one crate per example, in `Interop/Hax/<Name>/` beside its
+# extracted modules (`Extraction/`, written by `scripts/regenerate-hax.sh`) and its proofs
+# (`Verification.lean`).
 [workspace]
 resolver = "2"
 members = ["Adc", "Barrett", "CenteredBinomial", "Computation", "Division", "Examples"]

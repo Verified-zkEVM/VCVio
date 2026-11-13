@@ -32,14 +32,14 @@ namespace hax_adc
 
 
 /-- [hax_adc::adc_u32::pre]:
-    Source: 'Adc/src/lib.rs', lines 64:0-64:35 -/
+    Source: 'Adc/src/lib.rs', lines 65:0-65:35 -/
 @[reducible]
 def adc_u32.pre
   (a : Std.U32) (b : Std.U32) (carry_in : Std.U32) : RustM Bool := do
   ok (carry_in <= 1#u32)
 
 /-- [hax_adc::adc_u32::post]:
-    Source: 'Adc/src/lib.rs', lines 65:0-70:3 -/
+    Source: 'Adc/src/lib.rs', lines 66:0-71:3 -/
 @[reducible]
 def adc_u32.post
   (a : Std.U32) (b : Std.U32) (carry_in : Std.U32)

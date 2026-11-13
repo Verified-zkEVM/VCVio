@@ -1,5 +1,6 @@
 //! Vendored from https://github.com/cryspen/hax at a045d15a3bf43fe05096146f488668b521a4ae44,
-//! `examples/adc/src/lib.rs` (Apache-2.0).
+//! `examples/adc/src/lib.rs` (Apache-2.0), with the verification paragraph pointing at the proof
+//! in this repository.
 //!
 //! # 32-bit Addition with Carry (ADC)
 //!
@@ -30,7 +31,7 @@
 //! `#[hax_lib::requires(..)]` and `#[hax_lib::ensures(..)]`. The Lean
 //! backend turns them into a specification `adc_u32.spec`
 //! in the generated `Extraction/Specs.lean`, proved correct in
-//! `proofs/adc/lean/Adc/Verification/ProofObligations.lean`.
+//! `Interop/Hax/Adc/Verification.lean` with hax's own proof script.
 //!
 //! The proof uses `hax_mvcgen` to generate the verification conditions, which in turn are
 //! discharged using `simp`, `grind`, and `scalar_tac`.

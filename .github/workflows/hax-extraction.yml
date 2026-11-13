@@ -5,19 +5,30 @@ name: hax Extraction
 # Rust. This job reruns the extraction with the `cargo-hax` release that `Interop/lakefile.toml`
 # pins and fails if a committed module differs from a fresh extraction.
 #
-# It runs when a crate, an extracted module, the pin or the script changes.
+# It runs when a crate, an extracted module, the workspace manifests, the pin or the script changes,
+# and not for edits to the proofs (`Verification.lean`).
 
 on:
   push:
     branches: [main]
     paths:
-      - "Interop/Hax/**"
+      - "Interop/Hax/*/src/**"
+      - "Interop/Hax/*/Cargo.toml"
+      - "Interop/Hax/*/hax.toml"
+      - "Interop/Hax/*/Extraction/**"
+      - "Interop/Hax/Cargo.toml"
+      - "Interop/Hax/Cargo.lock"
       - "Interop/lakefile.toml"
       - "scripts/regenerate-hax.sh"
       - ".github/workflows/hax-extraction.yml"
   pull_request:
     paths:
-      - "Interop/Hax/**"
+      - "Interop/Hax/*/src/**"
+      - "Interop/Hax/*/Cargo.toml"
+      - "Interop/Hax/*/hax.toml"
+      - "Interop/Hax/*/Extraction/**"
+      - "Interop/Hax/Cargo.toml"
+      - "Interop/Hax/Cargo.lock"
       - "Interop/lakefile.toml"
       - "scripts/regenerate-hax.sh"
       - ".github/workflows/hax-extraction.yml"
@@ -31,6 +42,7 @@ jobs:
   drift:
     name: Check the hax extractions are current
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Read the pinned hax release

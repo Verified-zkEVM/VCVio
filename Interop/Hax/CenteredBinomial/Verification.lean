@@ -7,7 +7,9 @@ Authors: Quang Dao, Devon Tuma
 module
 
 public import Aeneas.Std.Scalar
-public import Interop.Hax.CenteredBinomial.Extraction.Funs
+public import Hax
+public import Interop.Hax.CenteredBinomial.Extraction.Specs
+public import Interop.Hax.Holds
 public import Interop.Rust.RustM
 public import Interop.Rust.Run
 public import Interop.Rust.Triple
@@ -22,6 +24,7 @@ One step of ML-KEM's `SamplePolyCBD_η` at `η = 1`, as Rust, in the crate next 
 (`Interop/Hax/CenteredBinomial/src/lib.rs`):
 
 ```rust
+#[hax_lib::ensures(|result| -1 <= result && result <= 1)]
 pub fn sample_cbd1(b: u8) -> i32 {
     let a = (b & 1) as i32;
     let c = ((b >> 1) & 1) as i32;
@@ -30,8 +33,9 @@ pub fn sample_cbd1(b: u8) -> i32 {
 ```
 
 `scripts/regenerate-hax.sh` extracts it with the hax CLI into
-`Interop.Hax.CenteredBinomial.Extraction` as `hax_cbd.sample_cbd1`: the bitwise `&&&` and the casts
-are pure, lifted into `RustM`, while the shift and the subtraction are checked.
+`Interop.Hax.CenteredBinomial.Extraction` as `hax_cbd.sample_cbd1`, with its `ensures` clause as
+`sample_cbd1.post` and its contract `sample_cbd1.spec`: the bitwise `&&&` and the casts are pure,
+lifted into `RustM`, while the shift and the subtraction are checked.
 
 Lifted into `RustOracleComp unifSpec` by `Interop.Rust.liftRustM` and fed two uniform bits, it
 returns `0` with probability `1/2` and `±1` with probability `1/4` each: the centered binomial
@@ -39,6 +43,11 @@ distribution with parameter `1`.
 
 ## Main results
 
+* `Interop.Hax.Examples.CenteredBinomial.sample_cbd1_spec`: the extracted contract holds.
+* `Interop.Hax.Examples.CenteredBinomial.sample_cbd1_post_holds_iff`: the contract's clause in plain
+  arithmetic.
+* `Interop.Hax.Examples.CenteredBinomial.triple_sample_cbd1_lifted`: the lifted program returns
+  `-1`, `0` or `1`, as a core `Std.WP` triple.
 * `Interop.Hax.Examples.CenteredBinomial.sample_cbd1_zero` (and `_one`, `_two`, `_three`): the
   four bit patterns that matter.
 * `Interop.Hax.Examples.CenteredBinomial.prob_sampleRandomCbd1_zero`, `_pos_one`, `_neg_one`: the
@@ -67,6 +76,48 @@ theorem sample_cbd1_one : sample_cbd1 1#u8 = RustM.ok 1#i32 := by cbd_eval
 theorem sample_cbd1_two : sample_cbd1 2#u8 = RustM.ok (-1)#i32 := by cbd_eval
 
 theorem sample_cbd1_three : sample_cbd1 3#u8 = RustM.ok 0#i32 := by cbd_eval
+
+/-- A bit is its own balanced residue modulo `2 ^ 32`. -/
+theorem bmod_emod_two (x : ℤ) : (x % 2).bmod 4294967296 = x % 2 :=
+  Int.bmod_eq_of_le (by omega) (by omega)
+
+set_option mvcgen.warning false in
+set_option hax_mvcgen.warnings false in
+/-- hax's proof obligation for `sample_cbd1`: the extracted contract holds, so the result lies in
+`{-1, 0, 1}`. -/
+theorem sample_cbd1_spec (b : U8) : sample_cbd1.spec b := by
+  unfold sample_cbd1.spec sample_cbd1.post sample_cbd1
+  hax_mvcgen
+  all_goals
+    simp_all only [IScalar.toNat, IScalar.ofInt_val_eq, Int.toNat_one, UScalarTy.U8_numBits_eq,
+      Bvify.U8.UScalar_bv, Nat.one_lt_ofNat, UScalar.hcast_val_eq, UScalar.val_and,
+      UScalar.ofNatCore_val_eq, Nat.and_one_is_mod, Int.natCast_emod, Nat.cast_ofNat,
+      IScalarTy.I32_numBits_eq, Nat.reducePow, bmod_emod_two, Int.natCast_shiftRight, Int.reduceNeg,
+      IScalar.le_equiv, neg_le_sub_iff_le_add, tsub_le_iff_right, decide_eq_true_eq, not_le,
+      Bool.false_eq_true, IScalar.min_IScalarTy_I32_eq, IScalar.max_IScalarTy_I32_eq,
+      Std.Do.ExceptConds.fst_false, Std.Do.SPred.down_pure_nil]
+    scalar_tac
+
+/-- The extracted `ensures` clause: the result is `-1`, `0` or `1`. -/
+theorem sample_cbd1_post_holds_iff (b : U8) (r : I32) :
+    (sample_cbd1.post b r).holds ↔ -1 ≤ r.val ∧ r.val ≤ 1 := by
+  unfold sample_cbd1.post
+  split_ifs with h <;>
+    simp_all [IScalar.le_equiv, RustM.holds, Std.Do.Triple, Std.Do.WP.wp, Std.Do.PredTrans.apply,
+      Functor.map, RustM.match.ok]
+
+section Lifted
+
+variable {ι : Type} {spec : OracleSpec ι} [Std.WP.WPMonad (OracleComp spec) Prop Std.WP.EStackEnd]
+
+/-- The lifted program returns `-1`, `0` or `1`, and neither panics nor diverges. -/
+theorem triple_sample_cbd1_lifted (b : U8) :
+    Std.WP.Triple (Interop.Rust.liftRustM (sample_cbd1 b) : RustOracleComp spec I32)
+      True (fun r => -1 ≤ r.val ∧ r.val ≤ 1) (fun _ => False, fun _ => False, ()) := by
+  simpa only [sample_cbd1_post_holds_iff] using
+    Interop.Rust.triple_liftRustM_of_imp (spec := spec) (fun _ => sample_cbd1_spec b)
+
+end Lifted
 
 /-- The two low bits of a byte, as a byte. -/
 def lowBits : Fin 4 → U8

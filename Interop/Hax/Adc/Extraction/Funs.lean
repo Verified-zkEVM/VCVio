@@ -30,7 +30,7 @@ noncomputable section
 namespace hax_adc
 
 /-- [hax_adc::adc_u32]:
-    Source: 'Adc/src/lib.rs', lines 71:0-79:1
+    Source: 'Adc/src/lib.rs', lines 72:0-80:1
     Visibility: public -/
 def adc_u32
   (a : Std.U32) (b : Std.U32) (carry_in : Std.U32) :

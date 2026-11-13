@@ -45,7 +45,7 @@ because aeneas writes no module docstring.
 
 | Example | Shows |
 |---|---|
-| `CenteredBinomial` | ML-KEM's CBD(η = 1) step, through `RustM`, to its exact distribution, and its possible values by core's `vcgen` |
+| `CenteredBinomial` | ML-KEM's CBD(η = 1) step: its contract that the result is `-1`, `0` or `1`, its exact distribution, and its possible values by core's `vcgen` |
 | `Barrett` | ML-KEM's signed Barrett reduction modulo 3329: the result is reduced and congruent to the input, by hax's own proof |
 | `Adc` | 32-bit add-with-carry, the multi-precision building block, by hax's own proof |
 | `Computation` | `x + x + 1` from hax's Lean test suite, without overflow |

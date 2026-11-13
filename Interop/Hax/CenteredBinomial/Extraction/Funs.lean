@@ -30,7 +30,7 @@ noncomputable section
 namespace hax_cbd
 
 /-- [hax_cbd::sample_cbd1]:
-    Source: 'CenteredBinomial/src/lib.rs', lines 30:0-34:1
+    Source: 'CenteredBinomial/src/lib.rs', lines 31:0-35:1
     Visibility: public -/
 def sample_cbd1 (b : Std.U8) : RustM Std.I32 := do
   let i ← lift (b &&& 1#u8)
