@@ -15,7 +15,7 @@ public import VCVio.OracleComp.ProbComp.Basic
 # Discrete total variation on a finite type as half the L1 distance
 
 For `ProbComp` computations with a finite output type, `discreteTVDist` is half the L1 distance of
-the singleton probabilities, by `MeasureTheory.Measure.tvDist_eq_half_sum_abs`.
+the singleton probabilities, by `MeasureTheory.Measure.statDist_eq_half_sum_abs`.
 -/
 
 public section
@@ -31,6 +31,6 @@ theorem eq_half_sum_abs {α : Type} [Fintype α] (mx my : ProbComp α) :
       (∑ x, |(Pr{let y ← mx}[y = x]).toReal - (Pr{let y ← my}[y = x]).toReal|) / 2 := by
   let : MeasurableSpace α := ⊤
   simp only [prEvent_eq_evalDist_singleton]
-  exact Measure.tvDist_eq_half_sum_abs _ _
+  exact Measure.statDist_eq_half_sum_abs _ _
 
 end discreteTVDist

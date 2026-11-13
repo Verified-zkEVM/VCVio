@@ -541,8 +541,8 @@ LEGACY_TOKENS: list[tuple[str, str]] = [
     (r"@(?:OracleSpec\.)?UniformAnswerMeasure\.ofFiniteNonempty\b",
      "takes the specification and its `Finite` and `Nonempty` instances only"),
     (r"(?<![\w'.])SPMF(?![\w'])", "`Measure`; see *Notation and definitions*"),
-    (r"(?<![\w'.])(?![\w'.]*Measure\.e?tvDist)[\w'.]*?(?:evalSPMF|probOutput|probEvent|probFailure|"
-     r"(?<!e)tvDist)_[\w'.]*",
+    (r"(?<![\w'.])(?![\w'.]*MeasureTheory\.e?tvDist)[\w'.]*?"
+     r"(?:evalSPMF|probOutput|probEvent|probFailure|(?<!e)tvDist)_[\w'.]*",
      "a legacy lemma name; see *Lemma names*"),
 ]
 

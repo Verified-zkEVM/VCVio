@@ -19,7 +19,7 @@ judgments (`Emulates`, `UCSecure`) in terms of distributional
 distinguishing advantage. It deliberately keeps the fixed-`ε` notion
 `ObservedCompEmulates` separate from the abstract `Emulates`-as-equivalence
 judgment, because the relation
-`fun c₁ c₂ => etvDist (sem c₁) (sem c₂) ≤ ε` is not transitive at fixed
+`fun c₁ c₂ => Measure.statEDist (sem c₁) (sem c₂) ≤ ε` is not transitive at fixed
 `ε` (the triangle inequality only gives `2ε`) and therefore cannot be
 packaged as `Observation T`. The principled bridge to abstract
 `Emulates` lives at the asymptotic level (`AsympObservedCompEmulates`), where
@@ -38,7 +38,7 @@ A `Semantics T` bundles:
    associated to each closed system.
 
 The observation target is `Measure Result`, with failure represented by missing mass.
-Distinguishing advantage is the measure-theoretic total variation distance between the
+Distinguishing advantage is the statistical distance `Measure.statEDist` between the
 two resulting denotations.
 This lets the same framework express:
 
@@ -57,7 +57,7 @@ This lets the same framework express:
   sub-probabilistic semantics, and a `run` function extracting a game
   from each closed system.
 * `Semantics.evalDist` is the `Measure Result` denotation of a closed system.
-* `Semantics.distAdvantage` is the total variation distance between two
+* `Semantics.distAdvantage` is the statistical distance between two
   such denotations.
 * `Execution T` is a closed-system execution experiment consumed by
   textbook UC statements.
@@ -112,7 +112,7 @@ systems in the open-composition theory `T`:
 
 The visible denotation of a closed system is therefore a `Measure Result`; missing mass records
 failure (for example, a `guard` that rejected the sampled value). Distinguishing advantage is
-measure-theoretic total variation on those subprobability measures.
+the statistical distance `Measure.statEDist` of those subprobability measures.
 -/
 structure Semantics (T : OpenTheory.{u}) where
   /-- Externally visible output type of the closed-system observation. -/
@@ -142,23 +142,23 @@ noncomputable def evalDist (S : Semantics T) (p : T.Closed) : MeasureTheory.Meas
   S.sem.evalDist (S.run p)
 
 /-- Distinguishing advantage between two closed systems under `S`,
-defined as the total variation distance of their visible measure denotations. -/
+defined as the statistical distance of their visible measure denotations. -/
 noncomputable def distAdvantage (S : Semantics T) (p q : T.Closed) : ℝ≥0∞ :=
-  (S.evalDist p).etvDist (S.evalDist q)
+  (S.evalDist p).statEDist (S.evalDist q)
 
 @[simp]
 lemma distAdvantage_self (S : Semantics T) (p : T.Closed) :
-    S.distAdvantage p p = 0 := MeasureTheory.Measure.etvDist_self _
+    S.distAdvantage p p = 0 := MeasureTheory.Measure.statEDist_self _
 
 lemma distAdvantage_comm (S : Semantics T) (p q : T.Closed) :
-    S.distAdvantage p q = S.distAdvantage q p := MeasureTheory.Measure.etvDist_comm _ _
+    S.distAdvantage p q = S.distAdvantage q p := MeasureTheory.Measure.statEDist_comm _ _
 
 lemma distAdvantage_triangle (S : Semantics T) (p q r : T.Closed) :
     S.distAdvantage p r ≤ S.distAdvantage p q + S.distAdvantage q r :=
-  MeasureTheory.Measure.etvDist_triangle _ _ _
+  MeasureTheory.Measure.statEDist_triangle _ _ _
 
 lemma distAdvantage_le_one (S : Semantics T) (p q : T.Closed) :
-    S.distAdvantage p q ≤ 1 := MeasureTheory.Measure.etvDist_le_one _ _
+    S.distAdvantage p q ≤ 1 := MeasureTheory.Measure.statEDist_le_one _ _
       (S.sem.evalDist_apply_univ_le_one (S.run p))
       (S.sem.evalDist_apply_univ_le_one (S.run q))
 
@@ -199,11 +199,11 @@ noncomputable def ofSemantics (sem : Semantics T) : Execution T where
 
 /-- Distinguishing advantage between closed executions. -/
 noncomputable def distAdvantage (exec : Execution T) (p q : T.Closed) : ℝ≥0∞ :=
-  (exec.eval p).etvDist (exec.eval q)
+  (exec.eval p).statEDist (exec.eval q)
 
 @[simp]
 theorem distAdvantage_self (exec : Execution T) (p : T.Closed) :
-    exec.distAdvantage p p = 0 := MeasureTheory.Measure.etvDist_self _
+    exec.distAdvantage p p = 0 := MeasureTheory.Measure.statEDist_self _
 
 theorem distAdvantage_ofSemantics (sem : Semantics T) (p q : T.Closed) :
     (ofSemantics sem).distAdvantage p q = sem.distAdvantage p q := rfl
@@ -214,7 +214,7 @@ end Execution
 `ObservedCompEmulates sem ε real ideal` asserts that `real` computationally
 emulates `ideal` up to advantage `ε` under semantics `sem`.
 
-For every plug `K : T.Plug Δ`, the total variation distance between the
+For every plug `K : T.Plug Δ`, the statistical distance between the
 real-world and ideal-world closed-system denotations is at most `ε`.
 -/
 def ObservedCompEmulates (sem : Semantics T) (ε : ℝ≥0∞)
@@ -231,7 +231,7 @@ theorem refl (sem : Semantics T) {Δ : PortBoundary} (W : T.Obj Δ) :
 
 /--
 Computational emulation composes transitively with additive advantage
-bounds (triangle inequality on total variation distance).
+bounds (triangle inequality on statistical distance).
 -/
 theorem triangle {sem : Semantics T} {ε₁ ε₂ : ℝ≥0∞}
     {Δ : PortBoundary} {W₁ W₂ W₃ : T.Obj Δ}
@@ -468,7 +468,7 @@ theorem AsympObservedCompEmulates.plug_compose
 
 /--
 The UC distinguishing game: a `SecurityGame` whose advantage at adversary
-`A` and security parameter `n` is the total variation distance between
+`A` and security parameter `n` is the statistical distance between
 the real and ideal closed executions under the environment chosen by `A`.
 -/
 noncomputable def observedDistGame (T : ℕ → OpenTheory.{u}) (sem : ∀ n, Semantics (T n))

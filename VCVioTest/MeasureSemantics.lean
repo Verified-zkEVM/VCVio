@@ -308,8 +308,8 @@ example (a : ℝ) : renyiMGF a (gaussianReal 0 1) (gaussianReal 0 1) = 1 := reny
 Cauchy-Schwarz against the Hellinger affinity and log-convexity of the Rényi MGF, reduce to the
 same Mathlib inequality, `ENNReal.lintegral_mul_norm_pow_le`. -/
 example (n : ℕ) (a : ℝ) (ha : 1 < a) (mx my : ProbComp (BitVec n)) :
-    𝒟[mx].etvDist 𝒟[my] ^ (2 : ℝ) ≤ 1 - (renyiDiv a 𝒟[mx] 𝒟[my])⁻¹ :=
-  etvDist_rpow_two_le_one_sub_inv_renyiDiv ha _ _
+    𝒟[mx].statEDist 𝒟[my] ^ (2 : ℝ) ≤ 1 - (renyiDiv a 𝒟[mx] 𝒟[my])⁻¹ :=
+  statEDist_rpow_two_le_one_sub_inv_renyiDiv ha _ _
 
 /-- **Probability preservation**, the form security reductions consume: an event of one program
 keeps probability under a program at bounded Rényi divergence. -/

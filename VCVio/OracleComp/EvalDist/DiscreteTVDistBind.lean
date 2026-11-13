@@ -48,7 +48,7 @@ theorem bind_bind_le_of_forall_le [Monad m] [LawfulEvalDistSemantics m]
   let : MeasurableSpace β := ⊤
   have hle : ∀ a, measureETVDist (f a) (g a) ≤ ENNReal.ofReal ε := fun a => by
     have hne : measureETVDist (f a) (g a) ≠ ⊤ :=
-      Measure.etvDist_ne_top _ _ (evalDist_apply_univ_le_one _) (evalDist_apply_univ_le_one _)
+      Measure.statEDist_ne_top _ _ (evalDist_apply_univ_le_one _) (evalDist_apply_univ_le_one _)
     rw [← ENNReal.ofReal_toReal hne]
     exact ENNReal.ofReal_le_ofReal (h a)
   have hfinite : (∫⁻ _, ENNReal.ofReal ε ∂𝒟[mx]) ≠ ⊤ := by

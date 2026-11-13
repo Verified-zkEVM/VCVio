@@ -99,22 +99,22 @@ theorem law_univ_le_one (system : System Δ) (context : Context Δ) :
 
 /-- Statistical distance between the two actual experiments against one fixed context. -/
 noncomputable def advantage (real ideal : System Δ) (context : Context Δ) : ℝ≥0∞ :=
-  (law real context).etvDist (law ideal context)
+  (law real context).statEDist (law ideal context)
 
 /-- The distinguishing advantage compares the actual observation measures. -/
-theorem advantage_eq_etvDist (real ideal : System Δ) (context : Context Δ) :
-    advantage real ideal context = (law real context).etvDist (law ideal context) := by
+theorem advantage_eq_statEDist (real ideal : System Δ) (context : Context Δ) :
+    advantage real ideal context = (law real context).statEDist (law ideal context) := by
   unfold advantage
   rfl
 
 /-- Reversing the two experiments preserves their statistical distance. -/
 theorem advantage_comm (real ideal : System Δ) (context : Context Δ) :
-    advantage real ideal context = advantage ideal real context := Measure.etvDist_comm _ _
+    advantage real ideal context = advantage ideal real context := Measure.statEDist_comm _ _
 
 /-- Sequential comparisons add their distinguishing-error bounds. -/
 theorem advantage_triangle (first middle last : System Δ) (context : Context Δ) :
     advantage first last context ≤ advantage first middle context + advantage middle last context :=
-  Measure.etvDist_triangle _ _ _
+  Measure.statEDist_triangle _ _ _
 
 namespace Context
 
@@ -197,7 +197,7 @@ namespace Contextual
 /-- A concrete system has zero advantage against itself at every finite horizon. -/
 theorem refl (system : System Δ) : Contextual 0 system system := by
   intro context
-  simp only [advantage, Measure.etvDist_self, le_refl]
+  simp only [advantage, Measure.statEDist_self, le_refl]
 
 /-- Sequential statistical comparisons add their error bounds. -/
 theorem trans {first middle last : System Δ} {error₁ error₂ : ℝ≥0∞}

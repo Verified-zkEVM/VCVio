@@ -107,9 +107,9 @@ theorem law_server_uniform : law (server ($ᵗ Bool)) (context 5) =
     Measure.map_smul _ Measurable.of_discrete.aemeasurable]
   simp [Measure.map_dirac' Measurable.of_discrete]
 
-private theorem etvDist_dirac_half {α : Type} [MeasurableSpace α]
+private theorem statEDist_dirac_half {α : Type} [MeasurableSpace α]
     [MeasurableSingletonClass α] (x y : α) (hxy : x ≠ y) :
-    (Measure.dirac x).etvDist
+    (Measure.dirac x).statEDist
       ((2 : ℝ≥0∞)⁻¹ • Measure.dirac x + (2 : ℝ≥0∞)⁻¹ • Measure.dirac y) = 2⁻¹ := by
   have hhalf : (2 : ℝ≥0∞)⁻¹ ≤ 1 := ENNReal.inv_le_one.mpr (by norm_num)
   apply le_antisymm
@@ -117,7 +117,7 @@ private theorem etvDist_dirac_half {α : Type} [MeasurableSpace α]
     by_cases hx : x ∈ s.1 <;> by_cases hy : y ∈ s.1 <;>
       simp [Measure.dirac_apply' _ s.2, hx, hy, ENNReal.absDiff,
         ENNReal.inv_two_add_inv_two, tsub_eq_zero_of_le hhalf]
-  · have h := Measure.absDiff_apply_le_etvDist (Measure.dirac x)
+  · have h := Measure.absDiff_apply_le_statEDist (Measure.dirac x)
       ((2 : ℝ≥0∞)⁻¹ • Measure.dirac x + (2 : ℝ≥0∞)⁻¹ • Measure.dirac y)
       (measurableSet_singleton x)
     simpa [Measure.dirac_apply', hxy, Ne.symm hxy, ENNReal.absDiff,
@@ -126,19 +126,19 @@ private theorem etvDist_dirac_half {α : Type} [MeasurableSpace α]
 /-- Each adjacent executed comparison has error one half. -/
 theorem advantage_pure_uniform (bit : Bool) :
     advantage (server (pure bit)) (server ($ᵗ Bool)) (context 5) = 2⁻¹ := by
-  rw [advantage_eq_etvDist, law_server_pure, law_server_uniform]
+  rw [advantage_eq_statEDist, law_server_pure, law_server_uniform]
   cases bit
-  · exact etvDist_dirac_half _ _ (by decide)
+  · exact statEDist_dirac_half _ _ (by decide)
   · rw [add_comm]
-    exact etvDist_dirac_half _ _ (by decide)
+    exact statEDist_dirac_half _ _ (by decide)
 
 /-- The two deterministic communicating servers are perfectly distinguishable. -/
 theorem advantage_false_true :
     advantage (server (pure false)) (server (pure true)) (context 5) = 1 := by
-  rw [advantage_eq_etvDist, law_server_pure, law_server_pure]
+  rw [advantage_eq_statEDist, law_server_pure, law_server_pure]
   apply le_antisymm
-  · exact Measure.etvDist_le_one _ _ (by simp) (by simp)
-  · simpa [ENNReal.absDiff] using Measure.absDiff_apply_le_etvDist
+  · exact Measure.statEDist_le_one _ _ (by simp) (by simp)
+  · simpa [ENNReal.absDiff] using Measure.absDiff_apply_le_statEDist
       (Measure.dirac (some (some false) : Result)) (Measure.dirac (some (some true)))
       (measurableSet_singleton (some (some false)))
 
