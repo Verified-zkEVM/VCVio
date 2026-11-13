@@ -73,6 +73,7 @@ public import VCVioTest.GroupModel.ToExplained
 public import VCVioTest.GroupModel.Typed
 public import VCVioTest.GroupModel.Virtualize
 public import VCVioTest.ITSR
+public import VCVioTest.IndexedChain
 public import VCVioTest.KernelSemantics
 public import VCVioTest.ListCache
 public import VCVioTest.LoggedRunInvariant

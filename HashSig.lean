@@ -99,6 +99,7 @@ public import HashSig.SLHDSA.SHAKE128s.Proof.CarrierTail
 public import HashSig.SLHDSA.SHAKE128s.Proof.CarrierTailRecordings
 public import HashSig.SLHDSA.SHAKE128s.Proof.CarrierThin
 public import HashSig.SLHDSA.SHAKE128s.Proof.CarrierThinStages
+public import HashSig.SLHDSA.SHAKE128s.Proof.Chain
 public import HashSig.SLHDSA.SHAKE128s.Proof.ChargedProbe
 public import HashSig.SLHDSA.SHAKE128s.Proof.Checksum
 public import HashSig.SLHDSA.SHAKE128s.Proof.ChecksumAntichain

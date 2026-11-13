@@ -5,6 +5,7 @@ Authors: Nicolas Consigny, Alexander Hicks
 -/
 
 module
+public import VCVio.Algorithms.IndexedChain.Basic
 public import HashSig.SLHDSA.Oracle
 public import HashSig.SLHDSA.WotsEncoding
 public import ToMathlib.Data.Vector
@@ -48,11 +49,25 @@ variable {p : Params}
 
 /-- Low-level callback-parametric implementation of the WOTS+ chain. -/
 def chainWith {Y : Type} {m : Type → Type*} [Monad m]
-    (hash : Adrs → Y → m Y) (adrs : Adrs) (x : Y) (i : ℕ) : ℕ → m Y
-  | 0 => pure x
-  | s + 1 => do
-      let y ← chainWith hash adrs x i s
-      hash (adrs.setHashAddress (i + s)) y
+    (hash : Adrs → Y → m Y) (adrs : Adrs) (x : Y) (i s : ℕ) : m Y :=
+  VCVio.Algorithms.IndexedChain.chainM (fun j => hash (adrs.setHashAddress j)) i s x
+
+@[simp] theorem chainWith_zero {Y : Type} {m : Type → Type*} [Monad m]
+    (hash : Adrs → Y → m Y) (adrs : Adrs) (x : Y) (i : ℕ) :
+    chainWith hash adrs x i 0 = pure x := rfl
+
+/-- The final WOTS callback uses the zero-based FIPS hash address `i + s`. -/
+theorem chainWith_succ {Y : Type} {m : Type → Type*} [Monad m]
+    (hash : Adrs → Y → m Y) (adrs : Adrs) (x : Y) (i s : ℕ) :
+    chainWith hash adrs x i (s + 1) =
+      chainWith hash adrs x i s >>= hash (adrs.setHashAddress (i + s)) := rfl
+
+/-- Splitting the callback chain preserves all calls in their original order. -/
+theorem chainWith_add {Y : Type} {m : Type → Type*} [Monad m] [LawfulMonad m]
+    (hash : Adrs → Y → m Y) (adrs : Adrs) (x : Y) (i a b : ℕ) :
+    chainWith hash adrs x i (a + b) =
+      chainWith hash adrs x i a >>= fun y => chainWith hash adrs y (i + a) b :=
+  VCVio.Algorithms.IndexedChain.chainM_add _ i a b x
 
 /-- Canonical explicit-public-hash WOTS+ chain program. -/
 def chainM (core : CorePrimitives p) {m : Type → Type*} [Monad m]
@@ -76,7 +91,7 @@ def chain (prims : Primitives p) (pkSeed : prims.PkSeed) (adrs : Adrs) (x : prim
     (adrs : Adrs) (x : prims.Y) (i s : ℕ) :
     chain prims pkSeed adrs x i (s + 1) =
       prims.F pkSeed (adrs.setHashAddress (i + s)) (chain prims pkSeed adrs x i s) := by
-  simp only [chain, chainM, chainWith, simulateQ_bind, PublicHash.f,
+  simp only [chain, chainM, chainWith_succ, simulateQ_bind, PublicHash.f,
     simulateQ_HasQuery_query, PublicHash.impl]
   rfl
 
@@ -86,9 +101,8 @@ theorem chainWith_natural {Y : Type} {m n : Type → Type*} [Monad m] [Monad n]
     (F : m →ᵐ n) (hashm : Adrs → Y → m Y) (hashn : Adrs → Y → n Y)
     (hhash : ∀ a y, F (hashm a y) = hashn a y) (adrs : Adrs) (x : Y) (i s : ℕ) :
     F (chainWith hashm adrs x i s) = chainWith hashn adrs x i s := by
-  induction s with
-  | zero => simp [chainWith, F.mmap_pure]
-  | succ s ih => simp [chainWith, F.mmap_bind, ih, hhash]
+  exact VCVio.Algorithms.IndexedChain.chainM_natural F _ _
+    (fun j y => hhash (adrs.setHashAddress j) y) i s x
 
 /-- Query-preserving monad morphisms commute with the explicit-public-hash WOTS+ chain. -/
 theorem chainM_natural (core : CorePrimitives p) {m n : Type → Type*} [Monad m] [Monad n]
@@ -106,16 +120,28 @@ theorem chainM_natural (core : CorePrimitives p) {m n : Type → Type*} [Monad m
       (PublicHashQuery.thash pkSeed (core.adrsToKey a) [y])
   exact HasQuery.map_query F _
 
+/-- The deterministic WOTS interpretation is the shared pure indexed chain. -/
+theorem chain_eq_indexedChain (prims : Primitives p) (pkSeed : prims.PkSeed) (adrs : Adrs)
+    (x : prims.Y) (i s : ℕ) :
+    chain prims pkSeed adrs x i s =
+      VCVio.Algorithms.IndexedChain.chain
+        (fun j => prims.F pkSeed (adrs.setHashAddress j)) i s x := by
+  change (simulateQ' (PublicHash.impl prims))
+      (chainWith (PublicHash.f prims.core pkSeed) adrs x i s) =
+    chainWith (m := Id) (prims.F pkSeed) adrs x i s
+  apply chainWith_natural
+  intro a y
+  simp only [PublicHash.f, simulateQ_HasQuery_query, PublicHash.impl]
+
 /-- Hash-chain composition: chaining `a` steps then `b` more (from index `i + a`) equals
 chaining `a + b` steps from `i`. The deterministic backbone of WOTS+ correctness. -/
 theorem chain_compose (prims : Primitives p) (pkSeed : prims.PkSeed) (adrs : Adrs)
     (x : prims.Y) (i a b : ℕ) :
     chain prims pkSeed adrs (chain prims pkSeed adrs x i a) (i + a) b
       = chain prims pkSeed adrs x i (a + b) := by
-  induction b with
-  | zero => rfl
-  | succ b ih =>
-      rw [← Nat.add_assoc, chain_succ, chain_succ, ih, Nat.add_assoc]
+  unfold chain chainM
+  rw [chainWith_add _ adrs x i a b, simulateQ_bind]
+  rfl
 
 /-! ### WOTS+ addresses -/
 
