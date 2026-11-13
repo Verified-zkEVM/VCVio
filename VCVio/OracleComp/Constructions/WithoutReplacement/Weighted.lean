@@ -6,7 +6,6 @@ Authors: Quang Dao
 
 module
 public import VCVio.OracleComp.Constructions.WithoutReplacement.Basic
-import ToMathlib.Data.List.Count
 
 /-!
 # Weighted sampling without replacement
@@ -58,9 +57,7 @@ theorem sum_fin_ite_countP (p : S → Bool) (l : List S) (a : ℝ≥0) :
       (l.countP p : ℝ≥0) := by
     exact_mod_cast List.countP_eq_sum_fin_ite l p
   rw [← hc, Finset.sum_mul]
-  apply Finset.sum_congr rfl
-  intro i _
-  split <;> simp_all
+  grind
 
 /-- Summing the removal equation over all positions selected by a predicate. -/
 theorem sum_ite_listWeight_eraseIdx (p : S → Bool) (w : S → ℝ≥0) (l : List S) :
@@ -130,9 +127,7 @@ theorem sum_fin_ite_add (p : S → Bool) (l : List S) (f g : Fin l.length → �
       (∑ i : Fin l.length, if p l[(i : ℕ)] then f i else 0) +
       (∑ i : Fin l.length, if !p l[(i : ℕ)] then g i else 0) := by
   rw [← Finset.sum_add_distrib]
-  apply Finset.sum_congr rfl
-  intro i _
-  cases p l[(i : ℕ)] <;> simp
+  grind
 
 /-- The four sums produced by a weighted first-draw decomposition. -/
 theorem sum_fin_weighted_eraseIdx (p : S → Bool) (w : S → ℝ≥0) (l : List S)
@@ -174,11 +169,7 @@ theorem sum_fin_weighted_eraseIdx (p : S → Bool) (w : S → ℝ≥0) (l : List
         w y + drawWeight accept w (if accept y then r else r + 1)
           ((x :: xs).eraseIdx i)) / (xs.length + 1)
   termination_by _ l => l.length
-  decreasing_by
-    have hi : (i : ℕ) < (x :: xs).length := by simpa using i.isLt
-    rw [List.length_eraseIdx_of_lt hi]
-    simp only [List.length_cons] at hi ⊢
-    omega
+  decreasing_by grind
 
 @[simp] theorem drawWeight_zero (accept : S → Bool) (w : S → ℝ≥0) (l : List S) :
     drawWeight accept w 0 l = 0 := by rw [drawWeight]

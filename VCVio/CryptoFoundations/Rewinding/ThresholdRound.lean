@@ -39,12 +39,7 @@ list contains every successful child encountered, including when the pool is exh
       | none => collectChildren sample child (r + 1) ((c :: cs).eraseIdx i)
       | some w => (w :: ·) <$> collectChildren sample child r ((c :: cs).eraseIdx i)
   termination_by _ l => l.length
-  decreasing_by
-    all_goals
-      have hi : (i : ℕ) < (c :: cs).length := by simpa using i.isLt
-      rw [List.length_eraseIdx_of_lt hi]
-      simp only [List.length_cons] at hi ⊢
-      omega
+  decreasing_by all_goals grind
 
 /-- A threshold attempt aborts after an unsuccessful first child. Otherwise it collects the
 remaining successful children without replacement and returns them only when all are found. -/
@@ -116,10 +111,8 @@ theorem length_collectChildren_le
           cases pool with
           | nil => simp at hp
           | cons c cs =>
-              rw [collectChildren_cons, mem_support_bind_iff] at hw
-              obtain ⟨i, -, hw⟩ := hw
-              rw [mem_support_bind_iff] at hw
-              obtain ⟨w, -, hw⟩ := hw
+              simp only [collectChildren_cons, mem_support_bind_iff] at hw
+              obtain ⟨i, -, w, -, hw⟩ := hw
               have hi : (i : ℕ) < (c :: cs).length := by simpa using i.isLt
               have hlen : ((c :: cs).eraseIdx i).length = n := by
                 rw [List.length_eraseIdx_of_lt hi]; omega
@@ -147,16 +140,7 @@ theorem length_of_mem_support_thresholdChildren
           obtain ⟨i, -, w, -, hw⟩ := hw
           cases w with
           | none => simp at hw
-          | some w =>
-              dsimp only at hw
-              rw [mem_support_bind_iff] at hw
-              obtain ⟨tail, -, hw⟩ := hw
-              split at hw
-              next h =>
-                simp only [support_pure, Set.mem_singleton_iff, Option.some.injEq] at hw
-                subst ws
-                simpa using h
-              next h => simp at hw
+          | some w => grind
 
 /-- Distinct challenges give distinct keys, and every returned witness satisfies the child's
 soundness predicate. -/
@@ -480,10 +464,8 @@ theorem expectedCalls_thresholdRound (f : C → Bool) (r : ℕ) (c : C) (cs : Li
       if f (c :: cs)[(i : ℕ)] then E else 0) = (M : ℝ≥0∞) * E := by
     calc
       _ = ∑ i : Fin (cs.length + 1),
-          (if f (c :: cs)[(i : ℕ)] then (1 : ℝ≥0∞) else 0) * E := by
-        apply Finset.sum_congr rfl
-        intro i _
-        split <;> simp
+          (if f (c :: cs)[(i : ℕ)] then (1 : ℝ≥0∞) else 0) * E :=
+        Finset.sum_congr rfl fun _ _ => by split <;> simp
       _ = (∑ i : Fin (cs.length + 1),
           if f (c :: cs)[(i : ℕ)] then (1 : ℝ≥0∞) else 0) * E :=
         (Finset.sum_mul ..).symm

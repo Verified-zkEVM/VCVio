@@ -9,7 +9,6 @@ module
 public import PolyFun.Interaction.Execution.ReactiveNetwork.Budget
 public import VCVio.Interaction.UC.ReactiveRuntime
 public import VCVio.OracleComp.CanReturn
-import VCVio.OracleComp.EvalDist.Measure
 
 /-!
 # Activation certificates for probabilistic reactive execution

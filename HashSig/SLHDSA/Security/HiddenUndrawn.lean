@@ -8,7 +8,6 @@ module
 
 public import HashSig.SLHDSA.Security.LabReadSet
 import HashSig.SLHDSA.Security.AddressKeys
-import VCVio.CryptoFoundations.MerkleTree.Addressed.NatIndexed.Option
 import VCVio.OracleComp.QueryTracking.RandomOracle.Settled
 
 /-!
