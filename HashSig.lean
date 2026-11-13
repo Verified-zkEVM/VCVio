@@ -1,5 +1,8 @@
 module  -- shake: keep-all --deprecated_module: ignore
 
+public import HashSig.GXMSS.Interval.PRFDerived.OracleQueries
+public import HashSig.GXMSS.PRFDerived.SamplingLaws
+public import HashSig.GXMSS.Security.Interval.Reductions.PRFDerivedOracleInteraction
 public import HashSig.SLHDSA.Address
 public import HashSig.SLHDSA.AddressDiscipline
 public import HashSig.SLHDSA.C13.Concrete
