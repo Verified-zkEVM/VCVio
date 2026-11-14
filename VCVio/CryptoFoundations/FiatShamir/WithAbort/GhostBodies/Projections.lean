@@ -29,32 +29,30 @@ variable {Stmt Wit Commit PrvState Chal Resp : Type} {rel : Stmt → Wit → Boo
 
 namespace FiatShamirWithAbort
 
-variable [DecidableEq Commit] [SampleableType Chal]
-variable (ids : IdenSchemeWithAbort Stmt Wit Commit PrvState Chal Resp rel)
-  (M : Type) [DecidableEq M] (maxAttempts : ℕ)
-variable (sim : Stmt → ProbComp (Option (Commit × Chal × Resp)))
-
 /-! ## Projections of the ghost-instrumented run
 
 The ghost-instrumented run projects onto the Prog hybrid by overlaying the ghost layer
 onto the real one, and onto the Trans hybrid by forgetting the ghost layer. Both are
 per-step state projections in the sense of `OracleComp.map_run_simulateQ_eq_of_query_map_eq`. -/
 
-omit [DecidableEq Commit] [SampleableType Chal] [DecidableEq M] in
-lemma onCache_run {α : Type}
+lemma onCache_run (M : Type) {α : Type}
     (action : StateT ((M × Commit →ₒ Chal).QueryCache) ProbComp α)
     (s : (M × Commit →ₒ Chal).QueryCache × List M) :
     (onCache M action).run s = (fun ac : α × (M × Commit →ₒ Chal).QueryCache =>
       (ac.1, (ac.2, s.2))) <$> action.run s.1 := rfl
 
-omit [DecidableEq Commit] [SampleableType Chal] [DecidableEq M] in
-lemma hybridSignImpl_run
+lemma hybridSignImpl_run (M : Type)
     (signBody : M → StateT ((M × Commit →ₒ Chal).QueryCache) ProbComp
       (Option (Commit × Resp)))
     (msg : M) (c : (M × Commit →ₒ Chal).QueryCache) (l : List M) :
     (hybridSignImpl M signBody msg).run (c, l) =
       (fun ac : Option (Commit × Resp) × (M × Commit →ₒ Chal).QueryCache =>
         (ac.1, (ac.2, msg :: l))) <$> (signBody msg).run c := rfl
+
+variable [DecidableEq Commit] [SampleableType Chal]
+variable (ids : IdenSchemeWithAbort Stmt Wit Commit PrvState Chal Resp rel)
+  (M : Type) [DecidableEq M] (maxAttempts : ℕ)
+variable (sim : Stmt → ProbComp (Option (Commit × Chal × Resp)))
 
 lemma roStep_of_some {re : (M × Commit →ₒ Chal).QueryCache} {mc : M × Commit} {v : Chal}
     (h : re mc = some v) : roStep M re mc = pure (v, re) := by
