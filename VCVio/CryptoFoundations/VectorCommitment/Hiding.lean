@@ -13,11 +13,12 @@ public import VCVio.OracleComp.QueryTracking.QueryBound.Basic
 /-!
 # Hiding of vector commitments
 
-Two-message hiding of commitment and opening (Chiesa and Yogev, *Building Cryptographic Proofs
-from Hash Functions*, §18.6). A hiding adversary chooses two messages and a set `Q` of positions
-on which they agree, receives the commitment to one of them and the opening proof for `Q`, and
-outputs a bit. Its advantage is the difference between the probabilities that it outputs `true`
-in the two worlds.
+Two-message hiding of commitment and opening. A hiding adversary chooses two messages and a set
+`Q` of positions on which they agree, receives the commitment to one of them and the opening proof
+for `Q`, and outputs a bit. Its advantage is the difference between the probabilities that it
+outputs `true` in the two worlds. Chiesa and Yogev (*Building Cryptographic Proofs from Hash
+Functions*, §18.6, Lemma 18.6.3) state hiding with a simulator; the two-message form follows from
+it with twice the error.
 
 The adversary chooses `Q`, including its size, after seeing its own oracle answers and before the
 commitment. A notion with the size of `Q` fixed in advance is weaker and follows by restricting
@@ -25,7 +26,10 @@ the adversary.
 
 Probabilities are relative to a distribution `D` on oracle functions, as for completeness
 (`VectorCommitment.completenessProb`): each is the lower integral over `D` of the probability
-against each fixed function.
+against each fixed function. For an advantage, undercounting is the unsafe direction: under a
+coarse σ-algebra on `X → Y` the lower integral can drop below the true probability, which makes a
+bound easier to prove. State security bounds for every σ-algebra, or for one under which the
+integrand is measurable, such as the discrete σ-algebra on a countable function space.
 
 ## Main definitions
 
@@ -76,8 +80,9 @@ def hidingExperiment [DecidableEq Msg] (vc : VectorCommitment X Y Msg Cm Td Pf �
 
 /-- The hiding advantage with the oracle sampled from `D`: the distance between the lower
 integrals over `D` of the probabilities that `hidingExperiment` returns `true` in the two worlds.
-As for `completenessProb`, the lower integral may undercount when the integrand is not
-measurable. -/
+When the integrand is not measurable, the lower integral may undercount; for an advantage that
+makes bounds easier to prove, so bounds should hold for every σ-algebra on `X → Y` (see the module
+docstring). -/
 @[expose]
 noncomputable def hidingAdvantage [MeasurableSpace (X → Y)] [DecidableEq Msg]
     (vc : VectorCommitment X Y Msg Cm Td Pf ℓ) (D : Measure (X → Y))

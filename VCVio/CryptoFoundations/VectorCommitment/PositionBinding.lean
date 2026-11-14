@@ -8,6 +8,7 @@ module
 
 public import VCVio.CryptoFoundations.VectorCommitment.Basic
 public import VCVio.OracleComp.EvalDist.Measure
+public import VCVio.OracleComp.QueryTracking.QueryBound.Basic
 
 /-!
 # Position binding of vector commitments
@@ -19,13 +20,19 @@ Cryptographic Proofs from Hash Functions*, §18.4).
 
 The winning probability is relative to a distribution `D` on oracle functions, as for
 completeness (`VectorCommitment.completenessProb`): it is the lower integral over `D` of the
-winning probability against each fixed function.
+winning probability against each fixed function. For an advantage, undercounting is the unsafe
+direction: under a coarse σ-algebra on `X → Y` the lower integral can drop below the true
+probability, which makes a bound easier to prove. State security bounds for every σ-algebra, or for
+one under which the integrand is measurable, such as the discrete σ-algebra on a countable
+function space.
 
 ## Main definitions
 
 * `PartialVec.Conflict`: two partial vectors disagree at a position both define.
 * `VectorCommitment.PositionBindingAdversary`, `VectorCommitment.positionBindingExperiment` and
   `VectorCommitment.positionBindingAdvantage`.
+* `VectorCommitment.PositionBindingAdversary.MakesAtMostQueries`: an oracle-query budget for the
+  adversary.
 -/
 
 public section
@@ -56,6 +63,8 @@ end PartialVec
 
 namespace VectorCommitment
 
+section Experiment
+
 variable {X : Type uX} {Y : Type} {Msg : Type} {Cm Td Pf : Type} {ℓ : ℕ}
 
 /-- A position-binding adversary outputs a commitment and two claimed openings, each a partial
@@ -80,13 +89,31 @@ def positionBindingExperiment [DecidableEq Msg] (vc : VectorCommitment X Y Msg C
     return false
 
 /-- The position-binding advantage with the oracle sampled from `D`: the lower integral over `D`
-of the probability that `positionBindingExperiment` accepts against each fixed function. As for
-`completenessProb`, the lower integral may undercount when the integrand is not measurable. -/
+of the probability that `positionBindingExperiment` accepts against each fixed function. When the
+integrand is not measurable, the lower integral may undercount; for an advantage that makes bounds
+easier to prove, so bounds should hold for every σ-algebra on `X → Y` (see the module
+docstring). -/
 @[expose]
 noncomputable def positionBindingAdvantage [MeasurableSpace (X → Y)] [DecidableEq Msg]
     (vc : VectorCommitment X Y Msg Cm Td Pf ℓ) (D : Measure (X → Y))
     (adversary : PositionBindingAdversary X Y Msg Cm Pf ℓ) : ENNReal :=
   ∫⁻ H, Pr{let b ←
     simulateQ (fixedOracleImpl H) (vc.positionBindingExperiment adversary)}[b = true] ∂D
+
+end Experiment
+
+section QueryBound
+
+variable {X : Type} {Y : Type} {Msg : Type} {Cm Pf : Type} {ℓ : ℕ}
+
+/-- A position-binding adversary `MakesAtMostQueries q` when it makes at most `q` queries to the
+oracle on every path. Coins are free. The oracle input type is in `Type` here, as `IsQueryBoundP`
+requires of the index type. -/
+@[expose]
+def PositionBindingAdversary.MakesAtMostQueries
+    (adversary : PositionBindingAdversary X Y Msg Cm Pf ℓ) (q : ℕ) : Prop :=
+  IsQueryBoundP adversary (fun i : ℕ ⊕ X ↦ i.isRight = true) q
+
+end QueryBound
 
 end VectorCommitment

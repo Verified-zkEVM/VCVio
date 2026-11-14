@@ -15,7 +15,7 @@ public import VCVio.CryptoFoundations.VectorCommitment.PositionBinding
 A scheme that commits to nothing is hiding against every adversary. A scheme that commits to the
 message in the clear is not: an adversary that reads the commitment has advantage one. A check
 that accepts everything is not position binding: two conflicting openings of one commitment win
-with probability one. An adversary that makes no oracle queries meets the zero query budget.
+with probability one. Adversaries that make no oracle queries meet the zero query budget.
 -/
 
 public section
@@ -85,6 +85,10 @@ example [MeasurableSpace (Unit → Unit)] (D : Measure (Unit → Unit)) [IsProba
     constant.positionBindingAdvantage D forger = 1 := by
   simp [positionBindingAdvantage, positionBindingExperiment, forger, constant,
     PartialVec.Conflict]
+
+/-- The forger makes no oracle queries. -/
+example : PositionBindingAdversary.MakesAtMostQueries forger 0 := by
+  simp [PositionBindingAdversary.MakesAtMostQueries, forger]
 
 /-- Identical openings never conflict. -/
 example (a : PartialVec 1 Bool) : ¬ PartialVec.Conflict a a := PartialVec.not_conflict_self a
