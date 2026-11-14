@@ -8,6 +8,7 @@ module
 
 public import VCVio.CryptoFoundations.VectorCommitment.Hiding
 public import VCVio.CryptoFoundations.VectorCommitment.PositionBinding
+public import VCVio.CryptoFoundations.MerkleTree.Salted.Defs
 
 /-!
 # Vector commitment security checks
@@ -15,7 +16,8 @@ public import VCVio.CryptoFoundations.VectorCommitment.PositionBinding
 A scheme that commits to nothing is hiding against every adversary. A scheme that commits to the
 message in the clear is not: an adversary that reads the commitment has advantage one. A check
 that accepts everything is not position binding: two conflicting openings of one commitment win
-with probability one. Adversaries that make no oracle queries meet the zero query budget.
+with probability one. Adversaries that make no oracle queries meet the zero query budget. Both
+advantages apply to the salted Merkle commitment.
 -/
 
 public section
@@ -49,15 +51,14 @@ example (adversary : HidingAdversary Unit Unit Bool Unit Unit 1) :
     constant.hidingExperiment adversary true = constant.hidingExperiment adversary false := rfl
 
 /-- The constant scheme gives every adversary advantage zero. -/
-example [MeasurableSpace (Unit → Unit)] (D : Measure (Unit → Unit))
-    (adversary : HidingAdversary Unit Unit Bool Unit Unit 1) :
-    constant.hidingAdvantage D adversary = 0 := by
-  simp [hidingAdvantage, show constant.hidingExperiment adversary true =
-    constant.hidingExperiment adversary false from rfl]
+example (adversary : HidingAdversary Unit Unit Bool Unit Unit 1) :
+    constant.hidingAdvantage adversary = 0 := by
+  rw [hidingAdvantage, show constant.hidingExperiment adversary true =
+    constant.hidingExperiment adversary false from rfl, Measure.boolDist_self]
 
-/-- Against a fixed function, the reader's bit is the world bit. -/
-theorem transparent_hidingExperiment (H : Unit → Unit) (b : Bool) :
-    simulateQ (fixedOracleImpl H) (transparent.hidingExperiment reader b) = pure b := by
+/-- The reader's experiment returns the world bit. -/
+theorem transparent_hidingExperiment (b : Bool) :
+    transparent.hidingExperiment reader b = pure b := by
   have agree : PartialVec.restrict (fun _ : Fin 1 ↦ false) ∅ =
       PartialVec.restrict (fun _ ↦ true) ∅ := by
     funext i
@@ -65,9 +66,8 @@ theorem transparent_hidingExperiment (H : Unit → Unit) (b : Bool) :
   cases b <;> simp [hidingExperiment, transparent, reader, agree]
 
 /-- The transparent scheme gives the reader advantage one. -/
-example [MeasurableSpace (Unit → Unit)] (D : Measure (Unit → Unit)) [IsProbabilityMeasure D] :
-    transparent.hidingAdvantage D reader = 1 := by
-  simp [hidingAdvantage, transparent_hidingExperiment]
+example : transparent.hidingAdvantage reader = 1 := by
+  simp [hidingAdvantage_eq, transparent_hidingExperiment, ProbCompRuntime.rom_evalDist]
 
 /-- The reader makes no oracle queries. -/
 example : reader.MakesAtMostQueries 0 := by
@@ -81,10 +81,9 @@ def forger : PositionBindingAdversary Unit Unit Bool Unit Unit 1 :=
   pure ((), (fun _ ↦ some false, ()), (fun _ ↦ some true, ()))
 
 /-- A check that accepts everything is broken with probability one. -/
-example [MeasurableSpace (Unit → Unit)] (D : Measure (Unit → Unit)) [IsProbabilityMeasure D] :
-    constant.positionBindingAdvantage D forger = 1 := by
+example : constant.positionBindingAdvantage forger = 1 := by
   simp [positionBindingAdvantage, positionBindingExperiment, forger, constant,
-    PartialVec.Conflict]
+    PartialVec.Conflict, ProbCompRuntime.rom_evalDist]
 
 /-- The forger makes no oracle queries. -/
 example : PositionBindingAdversary.MakesAtMostQueries forger 0 := by
@@ -92,5 +91,25 @@ example : PositionBindingAdversary.MakesAtMostQueries forger 0 := by
 
 /-- Identical openings never conflict. -/
 example (a : PartialVec 1 Bool) : ¬ PartialVec.Conflict a a := PartialVec.not_conflict_self a
+
+/-! ## The salted Merkle commitment -/
+
+section SaltedMerkle
+
+variable {X Y Salt Msg : Type} [DecidableEq X] [DecidableEq Y] [SampleableType Y]
+  [SampleableType Salt] [DecidableEq Msg]
+  (enc : MerkleTreeHashing.QueryEncoding X Unit Unit (Msg × Salt) Y) (d : ℕ)
+
+/-- Position binding applies to the salted Merkle commitment. -/
+noncomputable example
+    (adversary : PositionBindingAdversary X Y Msg Y (SaltedMerkle.Pf Y Salt d) (2 ^ d)) : ENNReal :=
+  (SaltedMerkle.scheme enc d).toVectorCommitment.positionBindingAdvantage adversary
+
+/-- Hiding applies to the salted Merkle commitment. -/
+noncomputable example
+    (adversary : HidingAdversary X Y Msg Y (SaltedMerkle.Pf Y Salt d) (2 ^ d)) : ENNReal :=
+  (SaltedMerkle.scheme enc d).toVectorCommitment.hidingAdvantage adversary
+
+end SaltedMerkle
 
 end VectorCommitmentTest

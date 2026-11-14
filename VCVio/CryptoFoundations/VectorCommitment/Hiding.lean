@@ -7,15 +7,16 @@ Authors: Alexander Hicks
 module
 
 public import VCVio.CryptoFoundations.VectorCommitment.Basic
-public import VCVio.OracleComp.EvalDist.Measure
 public import VCVio.OracleComp.QueryTracking.QueryBound.Basic
+public import VCVio.OracleComp.QueryTracking.RandomOracle.Simulation
+public import ToMathlib.MeasureTheory.Measure.Bool
 
 /-!
 # Hiding of vector commitments
 
 Two-message hiding of commitment and opening. A hiding adversary chooses two messages and a set
 `Q` of positions on which they agree, receives the commitment to one of them and the opening proof
-for `Q`, and outputs a bit. Its advantage is the difference between the probabilities that it
+for `Q`, and outputs a bit. Its advantage is the distance between the probabilities that it
 outputs `true` in the two worlds. Chiesa and Yogev (*Building Cryptographic Proofs from Hash
 Functions*, §18.6, Lemma 18.6.3) state hiding with a simulator, for each opening size `q` fixed in
 advance, with error `ζ(q)`. The fixed-size form of this game follows with error `2 ζ(q)`; this
@@ -25,12 +26,8 @@ The adversary chooses `Q`, including its size, after seeing its own oracle answe
 commitment. A notion with the size of `Q` fixed in advance is weaker and follows by restricting
 the adversary.
 
-Probabilities are relative to a distribution `D` on oracle functions, as for completeness
-(`VectorCommitment.completenessProb`): each is the lower integral over `D` of the probability
-against each fixed function. Under a coarse σ-algebra on `X → Y` either lower integral can drop
-below the true probability, so their difference can be wrong in either direction. State security
-bounds for every σ-algebra, or for one under which the integrand is measurable, such as the
-discrete σ-algebra on a countable function space.
+The advantage is stated in the random oracle model: both worlds run against the lazily sampled
+random oracle `ProbCompRuntime.rom (X →ₒ Y)`, shared by the adversary's two stages and the scheme.
 
 ## Main definitions
 
@@ -38,24 +35,25 @@ discrete σ-algebra on a countable function space.
   `VectorCommitment.hidingAdvantage`.
 * `VectorCommitment.HidingAdversary.MakesAtMostQueries`: one oracle-query budget shared by both
   stages of the adversary.
+
+## Main results
+
+* `VectorCommitment.hidingAdvantage_eq`: the hiding advantage is the distance between the
+  probabilities that the two worlds return `true`.
 -/
 
 public section
 
 open OracleComp OracleSpec MeasureTheory
 
-universe uX
-
 namespace VectorCommitment
 
-section Experiment
-
-variable {X : Type uX} {Y : Type} {Msg : Type} {Cm Td Pf : Type} {ℓ : ℕ}
+variable {X : Type} {Y : Type} {Msg : Type} {Cm Td Pf : Type} {ℓ : ℕ}
 
 /-- A two-stage hiding adversary. `choose` returns two messages, a set of positions to open and a
 state; `distinguish` sees the state, the commitment and the opening proof, and outputs a bit. The
 messages are outputs of an oracle computation, so `Msg` is in `Type`. -/
-structure HidingAdversary (X : Type uX) (Y : Type) (Msg : Type) (Cm Pf : Type) (ℓ : ℕ) where
+structure HidingAdversary (X : Type) (Y : Type) (Msg : Type) (Cm Pf : Type) (ℓ : ℕ) where
   /-- State carried from the first stage to the second. -/
   State : Type
   /-- Choose the two messages, the positions to open and a state. -/
@@ -79,30 +77,27 @@ def hidingExperiment [DecidableEq Msg] (vc : VectorCommitment X Y Msg Cm Td Pf �
   else
     return false
 
-/-- The hiding advantage with the oracle sampled from `D`: the distance between the lower
-integrals over `D` of the probabilities that `hidingExperiment` returns `true` in the two worlds.
-When an integrand is not measurable, its lower integral may undercount, so the difference can be
-wrong in either direction; bounds should hold for every σ-algebra on `X → Y` (see the module
-docstring). -/
+/-- The hiding advantage: the `Measure.boolDist` of the two worlds of `hidingExperiment`, each run
+against the lazily sampled random oracle. -/
 @[expose]
-noncomputable def hidingAdvantage [MeasurableSpace (X → Y)] [DecidableEq Msg]
-    (vc : VectorCommitment X Y Msg Cm Td Pf ℓ) (D : Measure (X → Y))
-    (adversary : HidingAdversary X Y Msg Cm Pf ℓ) : ENNReal :=
-  ENNReal.absDiff
-    (∫⁻ H, Pr{let r ←
-      simulateQ (fixedOracleImpl H) (vc.hidingExperiment adversary true)}[r = true] ∂D)
-    (∫⁻ H, Pr{let r ←
-      simulateQ (fixedOracleImpl H) (vc.hidingExperiment adversary false)}[r = true] ∂D)
+noncomputable def hidingAdvantage [DecidableEq X] [SampleableType Y] [DecidableEq Msg]
+    (vc : VectorCommitment X Y Msg Cm Td Pf ℓ) (adversary : HidingAdversary X Y Msg Cm Pf ℓ) :
+    ENNReal :=
+  ((ProbCompRuntime.rom (X →ₒ Y)).evalDist (vc.hidingExperiment adversary true)).boolDist
+    ((ProbCompRuntime.rom (X →ₒ Y)).evalDist (vc.hidingExperiment adversary false))
 
-end Experiment
-
-section QueryBound
-
-variable {X : Type} {Y : Type} {Msg : Type} {Cm Pf : Type} {ℓ : ℕ}
+/-- The hiding advantage is the distance between the probabilities that the two worlds return
+`true`, against the lazily sampled random oracle. -/
+theorem hidingAdvantage_eq [DecidableEq X] [SampleableType Y] [DecidableEq Msg]
+    (vc : VectorCommitment X Y Msg Cm Td Pf ℓ) (adversary : HidingAdversary X Y Msg Cm Pf ℓ) :
+    vc.hidingAdvantage adversary =
+      ENNReal.absDiff
+        ((ProbCompRuntime.rom (X →ₒ Y)).evalDist (vc.hidingExperiment adversary true) {true})
+        ((ProbCompRuntime.rom (X →ₒ Y)).evalDist (vc.hidingExperiment adversary false) {true}) := by
+  rw [hidingAdvantage, Measure.boolDist]
 
 /-- A hiding adversary `MakesAtMostQueries q` when, for every commitment and proof, running both
-stages makes at most `q` queries to the oracle on every path. Coins are free. The oracle input
-type is in `Type` here, as `IsQueryBoundP` requires of the index type. -/
+stages makes at most `q` queries to the oracle on every path. Coins are free. -/
 @[expose]
 def HidingAdversary.MakesAtMostQueries (adversary : HidingAdversary X Y Msg Cm Pf ℓ) (q : ℕ) :
     Prop :=
@@ -111,8 +106,6 @@ def HidingAdversary.MakesAtMostQueries (adversary : HidingAdversary X Y Msg Cm P
       (do
         let (_, _, _, st) ← adversary.choose
         adversary.distinguish st cm pf)
-      (fun i : ℕ ⊕ X ↦ i.isRight = true) q
-
-end QueryBound
+      (· matches .inr _) q
 
 end VectorCommitment

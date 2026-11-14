@@ -30,7 +30,10 @@ The pair `(Q, ans)` with `ans ∈ Σ^Q` is one partial vector `ans : Fin ℓ →
 (ePrint 2025/2166, p. 49).
 
 Security properties live beside this file: `Completeness`, `NonadaptiveCheck`, `PositionBinding`
-and `Hiding`.
+and `Hiding`. They use two oracle models. Completeness is relative to an arbitrary distribution
+`D` on oracle functions, following ePrint 2025/2166 (`completenessProb`). Position binding and
+hiding are stated in the random oracle model, against the lazily sampled random oracle
+`ProbCompRuntime.rom (X →ₒ Y)`, as in Chiesa and Yogev, Chapter 18.
 
 ## Universes
 

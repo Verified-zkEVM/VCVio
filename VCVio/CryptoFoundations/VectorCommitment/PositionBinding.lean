@@ -7,8 +7,8 @@ Authors: Alexander Hicks
 module
 
 public import VCVio.CryptoFoundations.VectorCommitment.Basic
-public import VCVio.OracleComp.EvalDist.Measure
 public import VCVio.OracleComp.QueryTracking.QueryBound.Basic
+public import VCVio.OracleComp.QueryTracking.RandomOracle.Simulation
 
 /-!
 # Position binding of vector commitments
@@ -18,13 +18,8 @@ vector of claimed values and a proof. It wins when both openings are accepted an
 conflict: some position is defined in both with different values (cf. Chiesa and Yogev,
 *Building Cryptographic Proofs from Hash Functions*, Lemma 18.4.1, stated there for Merkle trees).
 
-The winning probability is relative to a distribution `D` on oracle functions, as for
-completeness (`VectorCommitment.completenessProb`): it is the lower integral over `D` of the
-winning probability against each fixed function. For an advantage, undercounting is the unsafe
-direction: under a coarse σ-algebra on `X → Y` the lower integral can drop below the true
-probability, which makes a bound easier to prove. State security bounds for every σ-algebra, or for
-one under which the integrand is measurable, such as the discrete σ-algebra on a countable
-function space.
+The advantage is stated in the random oracle model: the experiment runs against the lazily
+sampled random oracle `ProbCompRuntime.rom (X →ₒ Y)`, shared by the adversary and `Check`.
 
 ## Main definitions
 
@@ -39,7 +34,7 @@ public section
 
 open OracleComp OracleSpec MeasureTheory
 
-universe u uX
+universe u
 
 namespace PartialVec
 
@@ -63,15 +58,12 @@ end PartialVec
 
 namespace VectorCommitment
 
-section Experiment
-
-variable {X : Type uX} {Y : Type} {Msg : Type} {Cm Td Pf : Type} {ℓ : ℕ}
+variable {X : Type} {Y : Type} {Msg : Type} {Cm Td Pf : Type} {ℓ : ℕ}
 
 /-- A position-binding adversary outputs a commitment and two claimed openings, each a partial
 vector of values with a proof. The openings are outputs of an oracle computation, so `Msg` is in
 `Type`. -/
-abbrev PositionBindingAdversary (X : Type uX) (Y : Type) (Msg : Type) (Cm Pf : Type)
-    (ℓ : ℕ) :=
+abbrev PositionBindingAdversary (X : Type) (Y : Type) (Msg : Type) (Cm Pf : Type) (ℓ : ℕ) :=
   OracleComp (unifSpec + (X →ₒ Y)) (Cm × (PartialVec ℓ Msg × Pf) × (PartialVec ℓ Msg × Pf))
 
 /-- The position-binding experiment: run the adversary, and accept when its openings conflict
@@ -88,32 +80,19 @@ def positionBindingExperiment [DecidableEq Msg] (vc : VectorCommitment X Y Msg C
   else
     return false
 
-/-- The position-binding advantage with the oracle sampled from `D`: the lower integral over `D`
-of the probability that `positionBindingExperiment` accepts against each fixed function. When the
-integrand is not measurable, the lower integral may undercount. For an advantage, that makes bounds
-easier to prove, so bounds should hold for every σ-algebra on `X → Y` (see the module
-docstring). -/
+/-- The position-binding advantage: the probability that `positionBindingExperiment` accepts,
+against the lazily sampled random oracle. -/
 @[expose]
-noncomputable def positionBindingAdvantage [MeasurableSpace (X → Y)] [DecidableEq Msg]
-    (vc : VectorCommitment X Y Msg Cm Td Pf ℓ) (D : Measure (X → Y))
+noncomputable def positionBindingAdvantage [DecidableEq X] [SampleableType Y] [DecidableEq Msg]
+    (vc : VectorCommitment X Y Msg Cm Td Pf ℓ)
     (adversary : PositionBindingAdversary X Y Msg Cm Pf ℓ) : ENNReal :=
-  ∫⁻ H, Pr{let b ←
-    simulateQ (fixedOracleImpl H) (vc.positionBindingExperiment adversary)}[b = true] ∂D
-
-end Experiment
-
-section QueryBound
-
-variable {X : Type} {Y : Type} {Msg : Type} {Cm Pf : Type} {ℓ : ℕ}
+  (ProbCompRuntime.rom (X →ₒ Y)).evalDist (vc.positionBindingExperiment adversary) {true}
 
 /-- A position-binding adversary `MakesAtMostQueries q` when it makes at most `q` queries to the
-oracle on every path. Coins are free. The oracle input type is in `Type` here, as `IsQueryBoundP`
-requires of the index type. -/
+oracle on every path. Coins are free. -/
 @[expose]
 def PositionBindingAdversary.MakesAtMostQueries
     (adversary : PositionBindingAdversary X Y Msg Cm Pf ℓ) (q : ℕ) : Prop :=
-  IsQueryBoundP adversary (fun i : ℕ ⊕ X ↦ i.isRight = true) q
-
-end QueryBound
+  IsQueryBoundP adversary (· matches .inr _) q
 
 end VectorCommitment
