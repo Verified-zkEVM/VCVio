@@ -15,8 +15,8 @@ public import VCVio.OracleComp.QueryTracking.QueryBound.Basic
 
 A position-binding adversary outputs one commitment together with two openings, each a partial
 vector of claimed values and a proof. It wins when both openings are accepted and they
-conflict: some position is defined in both with different values (Chiesa and Yogev, *Building
-Cryptographic Proofs from Hash Functions*, §18.4).
+conflict: some position is defined in both with different values (cf. Chiesa and Yogev,
+*Building Cryptographic Proofs from Hash Functions*, Lemma 18.4.1, stated there for Merkle trees).
 
 The winning probability is relative to a distribution `D` on oracle functions, as for
 completeness (`VectorCommitment.completenessProb`): it is the lower integral over `D` of the

@@ -27,10 +27,10 @@ the adversary.
 
 Probabilities are relative to a distribution `D` on oracle functions, as for completeness
 (`VectorCommitment.completenessProb`): each is the lower integral over `D` of the probability
-against each fixed function. For an advantage, undercounting is the unsafe direction: under a
-coarse σ-algebra on `X → Y` the lower integral can drop below the true probability, which makes a
-bound easier to prove. State security bounds for every σ-algebra, or for one under which the
-integrand is measurable, such as the discrete σ-algebra on a countable function space.
+against each fixed function. Under a coarse σ-algebra on `X → Y` either lower integral can drop
+below the true probability, so their difference can be wrong in either direction. State security
+bounds for every σ-algebra, or for one under which the integrand is measurable, such as the
+discrete σ-algebra on a countable function space.
 
 ## Main definitions
 
@@ -81,8 +81,8 @@ def hidingExperiment [DecidableEq Msg] (vc : VectorCommitment X Y Msg Cm Td Pf �
 
 /-- The hiding advantage with the oracle sampled from `D`: the distance between the lower
 integrals over `D` of the probabilities that `hidingExperiment` returns `true` in the two worlds.
-When the integrand is not measurable, the lower integral may undercount. For an advantage, that
-makes bounds easier to prove, so bounds should hold for every σ-algebra on `X → Y` (see the module
+When an integrand is not measurable, its lower integral may undercount, so the difference can be
+wrong in either direction; bounds should hold for every σ-algebra on `X → Y` (see the module
 docstring). -/
 @[expose]
 noncomputable def hidingAdvantage [MeasurableSpace (X → Y)] [DecidableEq Msg]
