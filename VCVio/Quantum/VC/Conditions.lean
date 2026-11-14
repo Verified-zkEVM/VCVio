@@ -7,7 +7,7 @@ Authors: Quang Dao
 module
 public import VCVio.Quantum.VC.MultiExtractor
 public import VCVio.Quantum.Oracle.Compressed.Basic
-public import VCVio.CryptoFoundations.VectorCommitment
+public import VCVio.CryptoFoundations.VectorCommitment.NonadaptiveCheck
 
 /-!
 # Sufficient conditions for post-quantum multi-extractability

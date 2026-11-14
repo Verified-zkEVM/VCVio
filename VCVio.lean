@@ -274,7 +274,11 @@ public import VCVio.CryptoFoundations.TimeLockPuzzle.LogSide
 public import VCVio.CryptoFoundations.TimeLockPuzzle.Truncate
 public import VCVio.CryptoFoundations.TweakableHash
 public import VCVio.CryptoFoundations.UniversalHash
-public import VCVio.CryptoFoundations.VectorCommitment
+public import VCVio.CryptoFoundations.VectorCommitment.Basic
+public import VCVio.CryptoFoundations.VectorCommitment.Completeness
+public import VCVio.CryptoFoundations.VectorCommitment.Hiding
+public import VCVio.CryptoFoundations.VectorCommitment.NonadaptiveCheck
+public import VCVio.CryptoFoundations.VectorCommitment.PositionBinding
 public import VCVio.EvalDist.BitVec.Measure
 public import VCVio.EvalDist.Defs.Instances
 public import VCVio.EvalDist.Defs.Measure
