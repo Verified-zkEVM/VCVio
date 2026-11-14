@@ -5,7 +5,7 @@ Authors: Quang Dao
 -/
 
 module
-public import VCVio.CryptoFoundations.VectorCommitment
+public import VCVio.CryptoFoundations.VectorCommitment.Basic
 public import Mathlib.Data.Fintype.Sigma
 public import Mathlib.Data.Fintype.Pi
 
