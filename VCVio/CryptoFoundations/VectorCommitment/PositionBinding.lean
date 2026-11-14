@@ -90,7 +90,7 @@ def positionBindingExperiment [DecidableEq Msg] (vc : VectorCommitment X Y Msg C
 
 /-- The position-binding advantage with the oracle sampled from `D`: the lower integral over `D`
 of the probability that `positionBindingExperiment` accepts against each fixed function. When the
-integrand is not measurable, the lower integral may undercount; for an advantage that makes bounds
+integrand is not measurable, the lower integral may undercount. For an advantage, that makes bounds
 easier to prove, so bounds should hold for every σ-algebra on `X → Y` (see the module
 docstring). -/
 @[expose]

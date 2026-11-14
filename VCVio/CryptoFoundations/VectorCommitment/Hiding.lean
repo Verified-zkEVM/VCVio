@@ -17,8 +17,9 @@ Two-message hiding of commitment and opening. A hiding adversary chooses two mes
 `Q` of positions on which they agree, receives the commitment to one of them and the opening proof
 for `Q`, and outputs a bit. Its advantage is the difference between the probabilities that it
 outputs `true` in the two worlds. Chiesa and Yogev (*Building Cryptographic Proofs from Hash
-Functions*, §18.6, Lemma 18.6.3) state hiding with a simulator; the two-message form follows from
-it with twice the error.
+Functions*, §18.6, Lemma 18.6.3) state hiding with a simulator, for each opening size `q` fixed in
+advance, with error `ζ(q)`. The fixed-size form of this game follows with error `2 ζ(q)`; this
+adaptive-size form follows with error `2 Σ_q ζ(q)`, summed over the `ℓ + 1` possible sizes.
 
 The adversary chooses `Q`, including its size, after seeing its own oracle answers and before the
 commitment. A notion with the size of `Q` fixed in advance is weaker and follows by restricting
@@ -80,7 +81,7 @@ def hidingExperiment [DecidableEq Msg] (vc : VectorCommitment X Y Msg Cm Td Pf �
 
 /-- The hiding advantage with the oracle sampled from `D`: the distance between the lower
 integrals over `D` of the probabilities that `hidingExperiment` returns `true` in the two worlds.
-When the integrand is not measurable, the lower integral may undercount; for an advantage that
+When the integrand is not measurable, the lower integral may undercount. For an advantage, that
 makes bounds easier to prove, so bounds should hold for every σ-algebra on `X → Y` (see the module
 docstring). -/
 @[expose]
