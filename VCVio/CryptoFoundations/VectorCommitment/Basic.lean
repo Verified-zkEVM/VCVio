@@ -29,11 +29,12 @@ The pair `(Q, ans)` with `ans ∈ Σ^Q` is one partial vector `ans : Fin ℓ →
 `Q = dom ans`; the same type holds the extracted messages `m ∈ (Σ ∪ {⊥})^ℓ` of §7
 (ePrint 2025/2166, p. 49).
 
-Security properties live beside this file: `Completeness`, `NonadaptiveCheck`, `PositionBinding`
-and `Hiding`. They use two oracle models. Completeness is relative to an arbitrary distribution
-`D` on oracle functions, following ePrint 2025/2166 (`completenessProb`). Position binding and
-hiding are stated in the random oracle model, against the lazily sampled random oracle
-`ProbCompRuntime.rom (X →ₒ Y)`, as in Chiesa and Yogev, Chapter 18.
+Security properties live beside this file: `Completeness`, `NonadaptiveCheck`, `PositionBinding`,
+`Hiding` and `RomCompleteness`. They use two oracle models. Completeness is relative to an
+arbitrary distribution `D` on oracle functions, following ePrint 2025/2166 (`completenessProb`).
+Position binding and hiding are stated in the random oracle model, against the lazily sampled
+random oracle `ProbCompRuntime.rom (X →ₒ Y)`, as in Chiesa and Yogev, Chapter 18.
+`RomCompleteness` transfers completeness against every fixed function to that oracle.
 
 ## Universes
 

@@ -8,6 +8,7 @@ module
 
 public import VCVio.CryptoFoundations.VectorCommitment.Hiding
 public import VCVio.CryptoFoundations.VectorCommitment.PositionBinding
+public import VCVio.CryptoFoundations.VectorCommitment.RomCompleteness
 public import VCVio.CryptoFoundations.MerkleTree.Salted.Defs
 
 /-!
@@ -16,8 +17,9 @@ public import VCVio.CryptoFoundations.MerkleTree.Salted.Defs
 A scheme that commits to nothing is hiding against every adversary. A scheme that commits to the
 message in the clear is not: an adversary that reads the commitment has advantage one. A check
 that accepts everything is not position binding: two conflicting openings of one commitment win
-with probability one. Adversaries that make no oracle queries meet the zero query budget. Both
-advantages apply to the salted Merkle commitment.
+with probability one. Adversaries that make no oracle queries meet the zero query budget. The
+salted Merkle commitment accepts honest openings with probability one under the lazily sampled
+random oracle of the two advantages, and both advantages can be stated for it.
 -/
 
 public section
@@ -100,12 +102,19 @@ variable {X Y Salt Msg : Type} [DecidableEq X] [DecidableEq Y] [SampleableType Y
   [SampleableType Salt] [DecidableEq Msg]
   (enc : MerkleTreeHashing.QueryEncoding X Unit Unit (Msg × Salt) Y) (d : ℕ)
 
-/-- Position binding applies to the salted Merkle commitment. -/
+/-- The salted Merkle commitment accepts every honest opening with probability one under the
+lazily sampled random oracle, the oracle of its binding and hiding advantages. -/
+example (msg : Fin (2 ^ d) → Msg) (Q : Finset (Fin (2 ^ d))) :
+    (ProbCompRuntime.rom (X →ₒ Y)).evalDist
+      ((SaltedMerkle.scheme enc d).toVectorCommitment.completenessExp msg Q) {true} = 1 :=
+  (SaltedMerkle.perfectlyComplete enc d).perfectlyCompleteForAll.evalDist_rom_completenessExp msg Q
+
+/-- Position binding can be stated for the salted Merkle commitment. -/
 noncomputable example
     (adversary : PositionBindingAdversary X Y Msg Y (SaltedMerkle.Pf Y Salt d) (2 ^ d)) : ENNReal :=
   (SaltedMerkle.scheme enc d).toVectorCommitment.positionBindingAdvantage adversary
 
-/-- Hiding applies to the salted Merkle commitment. -/
+/-- Hiding can be stated for the salted Merkle commitment. -/
 noncomputable example
     (adversary : HidingAdversary X Y Msg Y (SaltedMerkle.Pf Y Salt d) (2 ^ d)) : ENNReal :=
   (SaltedMerkle.scheme enc d).toVectorCommitment.hidingAdvantage adversary

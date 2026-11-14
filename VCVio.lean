@@ -279,6 +279,7 @@ public import VCVio.CryptoFoundations.VectorCommitment.Completeness
 public import VCVio.CryptoFoundations.VectorCommitment.Hiding
 public import VCVio.CryptoFoundations.VectorCommitment.NonadaptiveCheck
 public import VCVio.CryptoFoundations.VectorCommitment.PositionBinding
+public import VCVio.CryptoFoundations.VectorCommitment.RomCompleteness
 public import VCVio.EvalDist.BitVec.Measure
 public import VCVio.EvalDist.Defs.Instances
 public import VCVio.EvalDist.Defs.Measure
