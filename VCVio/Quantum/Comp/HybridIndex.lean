@@ -204,7 +204,6 @@ section L2Operator
 
 open scoped Matrix.Norms.L2Operator
 
-omit [∀ i, Fintype (κ i)] in
 /-- The constants of the blockwise bound, summed over the blocks of a port and against the
 weights of the blocks. -/
 private theorem tsum_tsum_mul_comm {ι K : Type*} (a : ι → K → ℝ≥0∞) (b : K → ℝ≥0∞) :
