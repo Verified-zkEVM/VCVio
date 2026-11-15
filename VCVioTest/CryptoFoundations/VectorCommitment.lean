@@ -18,10 +18,10 @@ A scheme that commits to nothing is hiding against every adversary. A scheme tha
 message in the clear is not: an adversary that reads the commitment has advantage one. A check
 that accepts everything is not position binding: two conflicting openings of one commitment win
 with probability one. Simulation-based hiding of the constant scheme gives its two-message hiding
-through the generic reduction. Adversaries that make no oracle queries meet the zero query budget.
-The
-salted Merkle commitment accepts honest openings with probability one under the lazily sampled
-random oracle of the two advantages, and both advantages can be stated for it.
+through the generic reduction, for zero-query adversaries. Adversaries that make no oracle queries
+meet the zero query budget. The salted Merkle commitment accepts honest openings with probability
+one under the lazily sampled random oracle of the two advantages, and both advantages can be stated
+for it.
 -/
 
 public section
@@ -86,11 +86,21 @@ theorem constant_simulationHidingAdvantage
       constantSimulator]
   rw [simulationHidingAdvantage, h, Measure.boolDist_self]
 
-/-- Simulation-based hiding with error `0` gives two-message hiding with error `0`. -/
-example (adversary : HidingAdversary Unit Unit Bool Unit Unit 1) :
-    constant.hidingAdvantage adversary ≤ 2 * 0 :=
-  hidingAdvantage_le_two_mul constant constantSimulator
-    (fun b ↦ (constant_simulationHidingAdvantage b).le) adversary
+/-- Simulation-based hiding with error `0` gives two-message hiding with error `0`, here for an
+adversary within a budget of `t` oracle queries. -/
+example (t : ℕ) (adversary : HidingAdversary Unit Unit Bool Unit Unit 1)
+    (hq : adversary.MakesAtMostQueries t) :
+    constant.hidingAdvantage adversary = 0 := by
+  refine le_antisymm ?_ (zero_le)
+  simpa using hidingAdvantage_le_two_mul constant constantSimulator
+    (fun b _ ↦ (constant_simulationHidingAdvantage b).le) adversary hq
+
+/-- The reader's world adversaries inherit its zero query budget and its opening size. -/
+example :
+    (reader.toSimulation true).MakesAtMostQueries 0 ∧ (reader.toSimulation false).OpensExactly 0 :=
+  ⟨HidingAdversary.makesAtMostQueries_toSimulation (by intro cm pf; simp [reader]) true,
+    HidingAdversary.opensExactly_toSimulation
+      (by intro c hc; rw [Set.mem_singleton_iff.mp hc]; rfl) false⟩
 
 /-- The reader makes no oracle queries. -/
 example : reader.MakesAtMostQueries 0 := by
