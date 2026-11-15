@@ -17,7 +17,9 @@ public import VCVio.CryptoFoundations.MerkleTree.Salted.Defs
 A scheme that commits to nothing is hiding against every adversary. A scheme that commits to the
 message in the clear is not: an adversary that reads the commitment has advantage one. A check
 that accepts everything is not position binding: two conflicting openings of one commitment win
-with probability one. Adversaries that make no oracle queries meet the zero query budget. The
+with probability one. Simulation-based hiding of the constant scheme gives its two-message hiding
+through the generic reduction. Adversaries that make no oracle queries meet the zero query budget.
+The
 salted Merkle commitment accepts honest openings with probability one under the lazily sampled
 random oracle of the two advantages, and both advantages can be stated for it.
 -/
@@ -70,6 +72,25 @@ theorem transparent_hidingExperiment (b : Bool) :
 /-- The transparent scheme gives the reader advantage one. -/
 example : transparent.hidingAdvantage reader = 1 := by
   simp [hidingAdvantage_eq, transparent_hidingExperiment, ProbCompRuntime.rom_evalDist]
+
+/-- A simulator for the constant scheme, which needs no information about the message. -/
+def constantSimulator : HidingSimulator Unit Unit Bool Unit Unit 1 := fun _ _ ↦ pure ((), ())
+
+/-- The constant scheme's real and simulated worlds are the same computation. -/
+theorem constant_simulationHidingAdvantage
+    (adversary : SimulationHidingAdversary Unit Unit Bool Unit Unit 1) :
+    constant.simulationHidingAdvantage constantSimulator adversary = 0 := by
+  have h : constant.simulationHidingRealExperiment adversary =
+      simulationHidingIdealExperiment constantSimulator adversary := by
+    simp [simulationHidingRealExperiment, simulationHidingIdealExperiment, constant,
+      constantSimulator]
+  rw [simulationHidingAdvantage, h, Measure.boolDist_self]
+
+/-- Simulation-based hiding with error `0` gives two-message hiding with error `0`. -/
+example (adversary : HidingAdversary Unit Unit Bool Unit Unit 1) :
+    constant.hidingAdvantage adversary ≤ 2 * 0 :=
+  hidingAdvantage_le_two_mul constant constantSimulator
+    (fun b ↦ (constant_simulationHidingAdvantage b).le) adversary
 
 /-- The reader makes no oracle queries. -/
 example : reader.MakesAtMostQueries 0 := by
