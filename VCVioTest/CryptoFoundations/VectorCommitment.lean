@@ -19,9 +19,9 @@ message in the clear is not: an adversary that reads the commitment has advantag
 that accepts everything is not position binding: two conflicting openings of one commitment win
 with probability one. Simulation-based hiding of the constant scheme gives its two-message hiding
 through the generic reduction, for adversaries within any query budget. Adversaries that make no
-oracle queries meet the zero query budget. The salted Merkle commitment accepts honest openings with probability
-one under the lazily sampled random oracle of the two advantages, and both advantages can be stated
-for it.
+oracle queries meet the zero query budget. The salted Merkle commitment accepts honest openings
+with probability one under the lazily sampled random oracle of the two advantages, and both
+advantages can be stated for it.
 -/
 
 public section
