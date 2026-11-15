@@ -49,9 +49,7 @@ wherever possible:
 
 * `proof : SpecProof` is reused directly, so entries can be global
   declarations (the common case for `@[vcspec]`), local hypotheses, or raw
-  proof expressions. This anticipates the Phase F bridge where a subset of
-  our entries (the `Triple`-shaped ones) is exposed to `mvcgen'` via the
-  core `SpecExtension`.
+  proof expressions.
 * `pattern : Sym.Pattern` is the Sym-side analogue of the combined
   `SpecTheorem.{prog, keys}` pair; it carries the program sub-expression,
   ∀-binder types, level parameters, and proof/instance slot metadata.
@@ -79,12 +77,10 @@ namespace OracleComp.ProgramLogic
 
 /-- A registered `@[vcspec]` lemma together with everything the planner needs.
 
-Layout mirrors `Lean.Elab.Tactic.Do.SpecAttr.SpecTheorem` so the Phase F
-bridge can lift entries into the core `SpecExtension` without an extra
-conversion pass: `proof` is a shared `SpecProof`, `pattern` is the Sym
-analogue of `SpecTheorem.{prog, keys}`, and `priority` uses the same default
-macro expansion. `spec` and `rightHead?` are VCVio-specific diagnostic /
-planner extras that core does not need. -/
+Layout mirrors `Lean.Elab.Tactic.Do.SpecAttr.SpecTheorem`: `proof` is a
+shared `SpecProof`, `pattern` is the Sym analogue of `SpecTheorem.{prog, keys}`,
+and `priority` uses the same default macro expansion. `spec` and `rightHead?`
+are VCVio-specific diagnostic / planner extras that core does not need. -/
 structure VCSpecEntry where
   /-- Origin of the proof: a global declaration, a local hypothesis, or a
   raw proof expression. For `@[vcspec]` attribute registrations this is
