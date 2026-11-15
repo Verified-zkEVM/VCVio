@@ -9,7 +9,6 @@ module
 public import Aeneas.Std.Scalar
 public import Hax
 public import Interop.Hax.CenteredBinomial.Extraction.Specs
-public import Interop.Hax.Holds
 public import Interop.Rust.RustM
 public import Interop.Rust.Run
 public import Interop.Rust.Triple

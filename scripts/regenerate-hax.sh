@@ -34,6 +34,11 @@ if [[ -z "$pin" || "$(wc -l <<<"$pin")" -ne 1 ]]; then
   echo "regenerate-hax: cannot find the hax rev in Interop/lakefile.toml" >&2
   exit 1
 fi
+# The Rust side's `hax-lib` must be the same release.
+if ! grep -q "^hax-lib = .*rev = \"$pin\"" Interop/Hax/Cargo.toml; then
+  echo "regenerate-hax: Interop/Hax/Cargo.toml must pin hax-lib to $pin, the rev in Interop/lakefile.toml." >&2
+  exit 1
+fi
 have="$(cargo hax --version 2>/dev/null | sed -n 's/^commit=\([0-9a-f]*\)$/\1/p')"
 if [[ "$have" != "$pin" ]]; then
   echo "regenerate-hax: cargo-hax is at '${have:-none}', but Interop/lakefile.toml pins $pin." >&2
