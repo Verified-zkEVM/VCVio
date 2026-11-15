@@ -387,7 +387,7 @@ component of the hybrid state. -/
       (StateT ((M × Commit →ₒ Chal).QueryCache × List M) ProbComp) :=
   let base : QueryImpl (unifSpec + (M × Commit →ₒ Chal))
       (StateT ((M × Commit →ₒ Chal).QueryCache) ProbComp) :=
-    unifFwdImpl (M × Commit →ₒ Chal) +
+    unifFwdImpl (M × Commit →ₒ Chal) +ₛ
       (randomOracle : QueryImpl (M × Commit →ₒ Chal)
         (StateT ((M × Commit →ₒ Chal).QueryCache) ProbComp))
   fun t => onCache M (base t)

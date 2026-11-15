@@ -262,7 +262,7 @@ mapped function's domain at the sum-spec `Range` type so keyed rewriting fires a
 private lemma loggedImpl_run_run_inl {ι : Type} {hashSpec : OracleSpec ι} [DecidableEq ι]
      [∀ t : hashSpec.Domain, SampleableType (hashSpec.Range t)]
     (i : unifSpec.Domain) (c : hashSpec.QueryCache) :
-    (((idImplW hashSpec + loggedROW hashSpec) (Sum.inl i)).run).run c =
+    (((idImplW hashSpec +ₛ loggedROW hashSpec) (Sum.inl i)).run).run c =
       (fun (u : (unifSpec + hashSpec).Range (Sum.inl i)) =>
           ((u, (∅ : QueryLog hashSpec)), c)) <$>
         (HasQuery.toQueryImpl (spec := unifSpec) (m := ProbComp) i) := by
@@ -274,7 +274,7 @@ private lemma loggedImpl_run_run_inr_some {ι : Type} {hashSpec : OracleSpec ι}
     [∀ t : hashSpec.Domain, SampleableType (hashSpec.Range t)]
     {j : hashSpec.Domain} {c : hashSpec.QueryCache}
     {u : hashSpec.Range j} (h : c j = some u) :
-    (((idImplW hashSpec + loggedROW hashSpec) (Sum.inr j)).run).run c =
+    (((idImplW hashSpec +ₛ loggedROW hashSpec) (Sum.inr j)).run).run c =
       pure (((u, ([⟨j, u⟩] : QueryLog hashSpec)), c) :
         ((unifSpec + hashSpec).Range (Sum.inr j) × QueryLog hashSpec) ×
           hashSpec.QueryCache) := by
@@ -289,7 +289,7 @@ private lemma loggedImpl_run_run_inr_none {ι : Type} {hashSpec : OracleSpec ι}
     [DecidableEq ι]
     [∀ t : hashSpec.Domain, SampleableType (hashSpec.Range t)]
     {j : hashSpec.Domain} {c : hashSpec.QueryCache} (h : c j = none) :
-    (((idImplW hashSpec + loggedROW hashSpec) (Sum.inr j)).run).run c =
+    (((idImplW hashSpec +ₛ loggedROW hashSpec) (Sum.inr j)).run).run c =
       (fun (u : (unifSpec + hashSpec).Range (Sum.inr j)) =>
           ((u, ([⟨j, u⟩] : QueryLog hashSpec)), c.cacheQuery j u)) <$>
         ($ᵗ hashSpec.Range j) := by
@@ -338,7 +338,7 @@ private theorem dropLog_run_eq {ι : Type} {hashSpec : OracleSpec ι} [Decidable
      [∀ t : hashSpec.Domain, SampleableType (hashSpec.Range t)]
     {α : Type} (oa : OracleComp (unifSpec + hashSpec) α) (cache : hashSpec.QueryCache) :
     (fun z => (z.1.1, z.2)) <$>
-        ((simulateQ (idImplW hashSpec + loggedROW hashSpec) oa).run).run cache
+        ((simulateQ (idImplW hashSpec +ₛ loggedROW hashSpec) oa).run).run cache
       = (simulateQ hashSpec.romImpl oa).run cache := by
   induction oa using OracleComp.inductionOn generalizing cache with
   | pure a =>
@@ -370,7 +370,7 @@ private theorem dropLog_wp {ι : Type} {hashSpec : OracleSpec ι} [DecidableEq �
     [∀ t : hashSpec.Domain, SampleableType (hashSpec.Range t)]
     {α : Type} (oa : OracleComp (unifSpec + hashSpec) α) (cache : hashSpec.QueryCache)
     (f : α → hashSpec.QueryCache → ℝ≥0∞) :
-    wp (((simulateQ (idImplW hashSpec + loggedROW hashSpec) oa).run).run cache)
+    wp (((simulateQ (idImplW hashSpec +ₛ loggedROW hashSpec) oa).run).run cache)
         (fun z => f z.1.1 z.2)
       = wp ((simulateQ hashSpec.romImpl oa).run cache) (fun w => f w.1 w.2) := by
   rw [← dropLog_run_eq oa cache, wp_map]
@@ -592,7 +592,7 @@ private lemma ksSample_prEvent_eq_wp
     Pr{let out ← ksSample σ hr ρ b S M prover x msg}[out.2 = true ∧
         fischlinFindWitness σ ρ b M x out.1.1 out.1.2 = none]
       = wp (((simulateQ (idImplW (fischlinROSpec Stmt Commit Chal Resp ρ b M)
-            + loggedROW (fischlinROSpec Stmt Commit Chal Resp ρ b M))
+            +ₛ loggedROW (fischlinROSpec Stmt Commit Chal Resp ρ b M))
           (prover x msg)).run).run ∅)
         (fun z =>
           (if fischlinFindWitness σ ρ b M x z.1.1 z.1.2 = none then 1 else 0) *
@@ -603,7 +603,7 @@ private lemma ksSample_prEvent_eq_wp
   classical
   have hks : ksSample σ hr ρ b S M prover x msg
       = ((simulateQ (idImplW (fischlinROSpec Stmt Commit Chal Resp ρ b M)
-            + loggedROW (fischlinROSpec Stmt Commit Chal Resp ρ b M))
+            +ₛ loggedROW (fischlinROSpec Stmt Commit Chal Resp ρ b M))
           (prover x msg)).run).run ∅ >>= fun z =>
             (simulateQ (fischlinImpl ρ b M)
               ((Fischlin (m := OracleComp (unifSpec
@@ -630,7 +630,7 @@ private lemma EP_scanMiss_eq_EP_ksLeaf
         (FischlinProof Commit Chal Resp ρ))
     (x : Stmt) (msg : M) :
     wp (((simulateQ (idImplW (fischlinROSpec Stmt Commit Chal Resp ρ b M)
-            + loggedROW (fischlinROSpec Stmt Commit Chal Resp ρ b M))
+            +ₛ loggedROW (fischlinROSpec Stmt Commit Chal Resp ρ b M))
           (prover x msg)).run).run ∅)
         (fun z =>
           (if fischlinFindWitness σ ρ b M x z.1.1 z.1.2 = none then 1 else 0) *
@@ -639,7 +639,7 @@ private lemma EP_scanMiss_eq_EP_ksLeaf
                   + fischlinROSpec Stmt Commit Chal Resp ρ b M))
                 σ hr ρ b S M).verify x msg z.1.1)).run' z.2] {true})
       = wp (((simulateQ (idImplW (fischlinROSpec Stmt Commit Chal Resp ρ b M)
-            + loggedROW (fischlinROSpec Stmt Commit Chal Resp ρ b M))
+            +ₛ loggedROW (fischlinROSpec Stmt Commit Chal Resp ρ b M))
           (prover x msg)).run).run ∅)
         (fun z => ksLeaf σ hr ρ b S M x msg z.1.1 z.2) := by
   classical

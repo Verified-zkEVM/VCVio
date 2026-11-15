@@ -110,16 +110,16 @@ example : ¬ IsQueryBoundP (simulateQ boolSpec.unbatch prog) (·.isRight) 0 := b
 
 /-- The batched handler: the challenge echoes `true`, the round negates it, the challenge echoes
 `false`, and the output is its negation. -/
-example : simulateQ ((zeroCoins + echoImpl) + notImpl).batch' prog = true := rfl
+example : simulateQ ((zeroCoins +ₛ echoImpl) +ₛ notImpl).batch' prog = true := rfl
 
 /-- Unbatching first and running the single queries gives the same result. -/
-example : simulateQ ((zeroCoins + echoImpl) + notImpl) (simulateQ boolSpec.unbatch prog) =
+example : simulateQ ((zeroCoins +ₛ echoImpl) +ₛ notImpl) (simulateQ boolSpec.unbatch prog) =
     true := by
   rw [QueryImpl.simulateQ_simulateQ_unbatch]
   rfl
 
 /-- The run completes one round. -/
-example : runCountingRounds ((zeroCoins + echoImpl) + notImpl).batch' prog = (true, 1) := by
+example : runCountingRounds ((zeroCoins +ₛ echoImpl) +ₛ notImpl).batch' prog = (true, 1) := by
   simp only [prog, runCountingRounds_query_bind, runCountingRounds_pure]
   rfl
 
@@ -167,7 +167,7 @@ example (k₀ : Bool) :
 
 /-- Under the deterministic handlers the truncation returns the fallback `false` instead of
 `true`. -/
-example : simulateQ ((zeroCoins + echoImpl) + notImpl).batch'
+example : simulateQ ((zeroCoins +ₛ echoImpl) +ₛ notImpl).batch'
     ((hideAdv.truncate 0 false).online () ()) = false := by
   simp only [TimeLockPuzzle.TwoPhaseAdversary.truncate, hideAdv, prog,
     truncate_query_bind_inl, truncate_zero_query_bind_inr]

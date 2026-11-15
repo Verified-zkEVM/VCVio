@@ -179,8 +179,8 @@ def oracles [DecidableEq Tweak] (world : World)
       (unifSpec +
         (challengeSpec Tweak Y + SourceFinalValidity.collectionSpec prob.thColl))
       (StateT (State Tweak) ProbComp) :=
-  (QueryImpl.ofLift unifSpec ProbComp).liftTarget (StateT (State Tweak) ProbComp) +
-    (challengeOracle world prob pk +
+  (QueryImpl.ofLift unifSpec ProbComp).liftTarget (StateT (State Tweak) ProbComp) +ₛ
+    (challengeOracle world prob pk +ₛ
       SourceFinalValidity.collectionOracle (Q := Tweak) id prob.thColl pk)
 
 /-- The source-final-validity SM-DT-UD experiment. The seed is hidden during `pick`, revealed to

@@ -676,7 +676,7 @@ theorem IsQueryBoundP.simulateQ_run_writerT_of_step {ι' : Type u} {spec' : Orac
         (isQueryBoundP_map_iff _ _ _).2 (ih u.1 (h.2 u.1))
 
 /-- Transfer a predicate-targeted bound through `simulateQ` with a sum-of-implementations
-`impl₁ + impl₂` on a sum source spec `spec₁ + spec₂`. The source predicate `p` is split into
+`impl₁ +ₛ impl₂` on a sum source spec `spec₁ + spec₂`. The source predicate `p` is split into
 its `.inl` and `.inr` branches, with separate step hypotheses for each impl on its own
 sub-predicate. -/
 theorem IsQueryBoundP.simulateQ_run_add_of_step
@@ -694,7 +694,7 @@ theorem IsQueryBoundP.simulateQ_run_add_of_step
     (hstep_p₂ : ∀ t, p (.inr t) → ∀ s, IsQueryBoundP ((impl₂ t).run s) q 1)
     (hstep_np₂ : ∀ t, ¬ p (.inr t) → ∀ s, IsQueryBoundP ((impl₂ t).run s) q 0)
     (s : σ) :
-    IsQueryBoundP ((simulateQ (impl₁ + impl₂) oa).run s) q n := by
+    IsQueryBoundP ((simulateQ (impl₁ +ₛ impl₂) oa).run s) q n := by
   refine IsQueryBoundP.simulateQ_run_of_step h ?_ ?_ s
   · rintro (t | t) hp s
     · exact hstep_p₁ t hp s
@@ -721,7 +721,7 @@ theorem IsQueryBoundP.simulateQ_run_add_inl_of_step
     (hstep_np₁ : ∀ t, ¬ p (.inl t) → ∀ s, IsQueryBoundP ((impl₁ t).run s) q 0)
     (hstep_right : ∀ t s, IsQueryBoundP ((impl₂ t).run s) q 0)
     (s : σ) :
-    IsQueryBoundP ((simulateQ (impl₁ + impl₂) oa).run s) q n :=
+    IsQueryBoundP ((simulateQ (impl₁ +ₛ impl₂) oa).run s) q n :=
   IsQueryBoundP.simulateQ_run_add_of_step h hstep_p₁ hstep_np₁
     (fun t hp _ => absurd hp (hp_inr t))
     (fun t _ s => hstep_right t s) s
@@ -744,7 +744,7 @@ theorem IsQueryBoundP.simulateQ_run_add_inr_of_step
     (hstep_p₂ : ∀ t, p (.inr t) → ∀ s, IsQueryBoundP ((impl₂ t).run s) q 1)
     (hstep_np₂ : ∀ t, ¬ p (.inr t) → ∀ s, IsQueryBoundP ((impl₂ t).run s) q 0)
     (s : σ) :
-    IsQueryBoundP ((simulateQ (impl₁ + impl₂) oa).run s) q n :=
+    IsQueryBoundP ((simulateQ (impl₁ +ₛ impl₂) oa).run s) q n :=
   IsQueryBoundP.simulateQ_run_add_of_step h
     (fun t hp _ => absurd hp (hp_inl t))
     (fun t _ s => hstep_left t s)
@@ -752,7 +752,7 @@ theorem IsQueryBoundP.simulateQ_run_add_inr_of_step
 
 /-! ### Total-bound sum-handler transfer
 
-`IsTotalQueryBound` lifts across `simulateQ (impl₁ + impl₂) oa` whenever each underlying
+`IsTotalQueryBound` lifts across `simulateQ (impl₁ +ₛ impl₂) oa` whenever each underlying
 handler makes at most one query per step. The signature mirrors
 `IsQueryBoundP.simulateQ_run_add_of_step` without the predicate machinery: every step on
 either side counts toward the same uniform budget. -/
@@ -768,7 +768,7 @@ theorem IsTotalQueryBound.simulateQ_run_add_of_step
     (hstep₁ : ∀ t : ι₁, ∀ s : σ, IsTotalQueryBound ((impl₁ t).run s) 1)
     (hstep₂ : ∀ t : ι₂, ∀ s : σ, IsTotalQueryBound ((impl₂ t).run s) 1)
     (s : σ) :
-    IsTotalQueryBound ((simulateQ (impl₁ + impl₂) oa).run s) n := by
+    IsTotalQueryBound ((simulateQ (impl₁ +ₛ impl₂) oa).run s) n := by
   refine IsTotalQueryBound.simulateQ_run_of_step h ?_ s
   rintro (t | t) s'
   · exact hstep₁ t s'
@@ -787,7 +787,7 @@ theorem IsTotalQueryBound.simulateQ_run_add_inl_of_step
     (hstep₁ : ∀ t : ι₁, ∀ s : σ, IsTotalQueryBound ((impl₁ t).run s) 1)
     (hstep₂ : ∀ t : ι₂, ∀ s : σ, IsTotalQueryBound ((impl₂ t).run s) 0)
     (s : σ) :
-    IsTotalQueryBound ((simulateQ (impl₁ + impl₂) oa).run s) n :=
+    IsTotalQueryBound ((simulateQ (impl₁ +ₛ impl₂) oa).run s) n :=
   IsTotalQueryBound.simulateQ_run_add_of_step h hstep₁
     (fun t s' => (hstep₂ t s').mono (Nat.zero_le _)) s
 
@@ -804,7 +804,7 @@ theorem IsTotalQueryBound.simulateQ_run_add_inr_of_step
     (hstep₁ : ∀ t : ι₁, ∀ s : σ, IsTotalQueryBound ((impl₁ t).run s) 0)
     (hstep₂ : ∀ t : ι₂, ∀ s : σ, IsTotalQueryBound ((impl₂ t).run s) 1)
     (s : σ) :
-    IsTotalQueryBound ((simulateQ (impl₁ + impl₂) oa).run s) n :=
+    IsTotalQueryBound ((simulateQ (impl₁ +ₛ impl₂) oa).run s) n :=
   IsTotalQueryBound.simulateQ_run_add_of_step h
     (fun t s' => (hstep₁ t s').mono (Nat.zero_le _))
     hstep₂ s
@@ -828,7 +828,7 @@ theorem IsPerIndexQueryBound.simulateQ_run_add_of_uniform_step
     (hstep₂ : ∀ t : ι₂, ∀ s : σ,
       IsPerIndexQueryBound ((impl₂ t).run s) (Function.update 0 (Sum.inr t) 1))
     (s : σ) :
-    IsPerIndexQueryBound ((simulateQ (impl₁ + impl₂) oa).run s) qb := by
+    IsPerIndexQueryBound ((simulateQ (impl₁ +ₛ impl₂) oa).run s) qb := by
   refine IsPerIndexQueryBound.simulateQ_run_of_uniform_step h ?_ s
   rintro (t | t) s'
   · exact hstep₁ t s'
@@ -848,7 +848,7 @@ theorem IsPerIndexQueryBound.simulateQ_run_add_inl_of_uniform_step
       IsPerIndexQueryBound ((impl₁ t).run s) (Function.update 0 (Sum.inl t) 1))
     (hstep₂ : ∀ t : ι₂, ∀ s : σ, IsPerIndexQueryBound ((impl₂ t).run s) 0)
     (s : σ) :
-    IsPerIndexQueryBound ((simulateQ (impl₁ + impl₂) oa).run s) qb :=
+    IsPerIndexQueryBound ((simulateQ (impl₁ +ₛ impl₂) oa).run s) qb :=
   IsPerIndexQueryBound.simulateQ_run_add_of_uniform_step h hstep₁
     (fun t s' => (hstep₂ t s').mono (fun _ => Nat.zero_le _)) s
 
@@ -866,7 +866,7 @@ theorem IsPerIndexQueryBound.simulateQ_run_add_inr_of_uniform_step
     (hstep₂ : ∀ t : ι₂, ∀ s : σ,
       IsPerIndexQueryBound ((impl₂ t).run s) (Function.update 0 (Sum.inr t) 1))
     (s : σ) :
-    IsPerIndexQueryBound ((simulateQ (impl₁ + impl₂) oa).run s) qb :=
+    IsPerIndexQueryBound ((simulateQ (impl₁ +ₛ impl₂) oa).run s) qb :=
   IsPerIndexQueryBound.simulateQ_run_add_of_uniform_step h
     (fun t s' => (hstep₁ t s').mono (fun _ => Nat.zero_le _))
     hstep₂ s

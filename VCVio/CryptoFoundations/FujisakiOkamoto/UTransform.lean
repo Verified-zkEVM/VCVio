@@ -152,7 +152,7 @@ def keyOracleImpl {M R KD K : Type} [DecidableEq KD] [SampleableType K] :
 def queryImpl {M R KD K : Type}
     [DecidableEq M] [DecidableEq KD] [SampleableType R] [SampleableType K] :
     QueryImpl (hashOracleSpec M R KD K) (StateT (QueryCache M R KD K) ProbComp) :=
-  coinOracleImpl (M := M) (R := R) (KD := KD) (K := K) +
+  coinOracleImpl (M := M) (R := R) (KD := KD) (K := K) +ₛ
     keyOracleImpl (M := M) (R := R) (KD := KD) (K := K)
 
 /-- Two-RO FO hash world: one oracle derives coins from the message, the other derives the shared

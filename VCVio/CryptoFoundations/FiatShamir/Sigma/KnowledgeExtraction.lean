@@ -48,7 +48,7 @@ cached oracle. Uniform queries remain internal randomness; cache misses request 
 @[expose]
 def knowledgeVerifyRun (prover : KnowledgeProver Stmt Commit Chal Resp M) (pk : Stmt) (msg : M) :
     OracleComp (Fork.wrappedSpec Chal) Bool :=
-  ((simulateQ (Fork.unifForward M Commit Chal + Fork.roImpl M Commit Chal) do
+  ((simulateQ (Fork.unifForward M Commit Chal +ₛ Fork.roImpl M Commit Chal) do
       let proof ← prover pk msg
       (FiatShamir σ hr M).verify pk msg proof).run' (∅, []))
 
@@ -58,7 +58,7 @@ private theorem cache_mem_log {α : Type}
     (hinv : ∀ t v, st.1 t = some v → t ∈ st.2)
     {z : α × Fork.SimState M Commit Chal}
     (hz : z ∈ support
-      ((simulateQ (Fork.unifForward M Commit Chal + Fork.roImpl M Commit Chal) oa).run st)) :
+      ((simulateQ (Fork.unifForward M Commit Chal +ₛ Fork.roImpl M Commit Chal) oa).run st)) :
     ∀ t v, z.2.1 t = some v → t ∈ z.2.2 := by
   induction oa using OracleComp.inductionOn generalizing st z with
   | pure a =>
@@ -110,7 +110,7 @@ private theorem runTrace_proverWithFinalQuery [SampleableType Chal]
     Fork.runTrace σ hr M (proverWithFinalQuery σ hr M prover msg) pk =
       (do
         let (proof, st) ← ((simulateQ
-          (Fork.unifForward M Commit Chal + Fork.roImpl M Commit Chal) (prover pk msg)).run
+          (Fork.unifForward M Commit Chal +ₛ Fork.roImpl M Commit Chal) (prover pk msg)).run
             (∅, []))
         finishTrace σ M pk msg proof st) := by
   simp only [Fork.runTrace, proverWithFinalQuery, simulateQ_bind, StateT.run_bind,

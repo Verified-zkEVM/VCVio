@@ -56,7 +56,7 @@ adversary's interaction, and the verification of what it returns. -/
   let ((forgery, adversaryCounts), signed) ←
     (simulateQ
       ((QueryImpl.ofLift OracleWorld (StateT SigningLog (OracleComp OracleWorld))).withAddCost
-          (fun input => Counts.single .hash (hashCost input)) + signingOracle sk)
+          (fun input => Counts.single .hash (hashCost input)) +ₛ signingOracle sk)
       (adversary.main pk)).run.run []
   let (verified, verifierCounts) ← countQueries
     (fun input => Counts.single .verification (hashCost input))

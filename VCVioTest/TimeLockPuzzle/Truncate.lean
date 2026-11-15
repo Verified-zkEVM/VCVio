@@ -113,13 +113,13 @@ example (k₀ : Bool) :
     truncate_succ_query_bind_inr, truncate_zero_query_bind_inr]
 
 /-- Under the negating handler the full online phase returns `true` after three rounds. -/
-example : runCountingRounds (zeroCoins + notImpl).batch' (threeAdv.online () ()) = (true, 3) := by
+example : runCountingRounds (zeroCoins +ₛ notImpl).batch' (threeAdv.online () ()) = (true, 3) := by
   simp only [threeAdv, threeRounds, runCountingRounds_query_bind, runCountingRounds_pure]
   rfl
 
 /-- Its truncation after one round returns the fallback `false` instead. -/
 example :
-    simulateQ (zeroCoins + notImpl).batch' ((threeAdv.truncate 1 false).online () ()) = false := by
+    simulateQ (zeroCoins +ₛ notImpl).batch' ((threeAdv.truncate 1 false).online () ()) = false := by
   simp only [TimeLockPuzzle.TwoPhaseAdversary.truncate, threeAdv, threeRounds,
     truncate_succ_query_bind_inr, truncate_zero_query_bind_inr]
   rfl

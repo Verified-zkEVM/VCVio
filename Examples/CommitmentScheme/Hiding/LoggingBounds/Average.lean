@@ -59,7 +59,7 @@ merging the left (uniform-salt) and right (commitment oracle) implementations. -
 def hidingAvgQueryImpl :
     QueryImpl (HidingAvgSpec M S C)
       (StateT (HidingCountState M S C) (OracleComp (HidingAvgSpec M S C))) :=
-  hidingAvgLeftImpl (M := M) (S := S) (C := C) +
+  hidingAvgLeftImpl (M := M) (S := S) (C := C) +ₛ
     hidingAvgRightImpl (M := M) (S := S) (C := C)
 
 /-- The averaged hiding computation: sample a uniform salt `s`, then run the

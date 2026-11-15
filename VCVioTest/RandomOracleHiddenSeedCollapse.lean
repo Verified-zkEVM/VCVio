@@ -40,7 +40,7 @@ oracle from the empty joint cache. -/
 example : Prod.map id (QueryCache.addEquiv (ℕ →ₒ Bool) (Unit →ₒ Bool)) <$>
       (simulateQ (SecretEncoding.idealImpl (ℕ →ₒ Bool) Unit Bool)
         (simulateQ (SecretEncoding.collapseFwd (ℕ →ₒ Bool) Unit Bool) sameTwice)).run (∅, ∅) =
-    (simulateQ (unifFwdImpl joint + AnswerTape.dupRandomOracle joint) sameTwice).run ∅ := by
+    (simulateQ (unifFwdImpl joint +ₛ AnswerTape.dupRandomOracle joint) sameTwice).run ∅ := by
   rw [SecretEncoding.map_run_simulateQ_idealImpl_collapseFwd, QueryCache.addEquiv_empty]
 
 end VCVioTest.HiddenSeedCollapse

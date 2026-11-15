@@ -254,7 +254,7 @@ def authReaderQueryImpl (hash : TagId → Nonce → Digest) :
 def authRealQueryImpl (hash : TagId → Nonce → Digest) :
     QueryImpl (AuthOracleSpec TagId Nonce Digest)
       (StateT (AuthState TagId Nonce Digest) ProbComp) :=
-  authTagQueryImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest) hash +
+  authTagQueryImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest) hash +ₛ
     authReaderQueryImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest) hash
 
 /-- Real active-authentication experiment. -/
@@ -319,7 +319,7 @@ def authIdealReaderQueryImpl :
 def authIdealQueryImpl :
     QueryImpl (AuthOracleSpec TagId Nonce Digest)
       (StateT (AuthIdealState TagId Nonce Digest) ProbComp) :=
-  authIdealTagQueryImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest) +
+  authIdealTagQueryImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest) +ₛ
     authIdealReaderQueryImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
 
 /-- Ideal active-authentication experiment. The keyed hash is replaced by a lazy random function on
@@ -380,7 +380,7 @@ oracle of the ideal world together with the fresh-drawing random-function reader
 noncomputable def authRFQueryImpl :
     QueryImpl (AuthOracleSpec TagId Nonce Digest)
       (StateT (AuthIdealState TagId Nonce Digest) ProbComp) :=
-  authIdealTagQueryImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest) +
+  authIdealTagQueryImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest) +ₛ
     authRFReaderQueryImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
 
 /-- Direct form of the random-function authentication experiment: run the adversary against
@@ -448,7 +448,7 @@ def unlinkMultipleQueryImpl {K : Type}
       (StateT (UnlinkState TagId) ProbComp) :=
   unlinkTagQueryImpl (TagId := TagId) (Slot := TagId) (Nonce := Nonce) (Digest := Digest)
     (fun tag nonce => prfs.evalMultiple k tag nonce)
-    (multiplePattern (TagId := TagId) sessionsPerTag) +
+    (multiplePattern (TagId := TagId) sessionsPerTag) +ₛ
     unlinkReaderQueryImpl (TagId := TagId) (Slot := TagId) (Nonce := Nonce) (Digest := Digest)
       (fun tag nonce => prfs.evalMultiple k tag nonce)
       (multiplePattern (TagId := TagId) sessionsPerTag)
@@ -462,7 +462,7 @@ def unlinkSingleQueryImpl {K : Type}
   unlinkTagQueryImpl (TagId := TagId) (Slot := TagId × Fin sessionsPerTag)
     (Nonce := Nonce) (Digest := Digest)
     (fun slot nonce => prfs.evalSingle k slot.1 slot.2 nonce)
-    (singlePattern (TagId := TagId) sessionsPerTag) +
+    (singlePattern (TagId := TagId) sessionsPerTag) +ₛ
     unlinkReaderQueryImpl (TagId := TagId) (Slot := TagId × Fin sessionsPerTag)
       (Nonce := Nonce) (Digest := Digest)
       (fun slot nonce => prfs.evalSingle k slot.1 slot.2 nonce)
@@ -543,7 +543,7 @@ def unlinkBadQueryImpl :
       (StateT (UnlinkBadState TagId Nonce Digest) ProbComp) :=
   unlinkBadTagQueryImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
     (sessionsPerTag := sessionsPerTag)
-    +
+    +ₛ
     unlinkBadReaderQueryImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
 
 /-- Bad-event experiment from the `RF_bad` multiple-session collision world. -/

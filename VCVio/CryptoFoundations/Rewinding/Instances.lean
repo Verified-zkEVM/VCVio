@@ -53,7 +53,7 @@ no execution-local state. -/
   answer := persistentAnswer impl
   faithful_coins oa := by
     have h := OracleComp.run'_simulateQ_eq_of_query_map_eq
-      (coins (S := W × Unit) + persistentAnswer impl) (coins (S := W) + impl) Prod.fst (by
+      (coins (S := W × Unit) +ₛ persistentAnswer impl) (coins (S := W) +ₛ impl) Prod.fst (by
         intro q s
         cases q with
         | inl q => simp [QueryImpl.add_apply_inl, coins, Functor.map_map, Prod.map]
@@ -114,7 +114,7 @@ private def uniformInl : QueryImpl unifSpec (OracleComp (unifSpec + spec)) :=
 
 private theorem simulateQ_uniformInl {σ α : Type}
     (handler : QueryImpl spec (StateT σ ProbComp)) (mx : ProbComp α) :
-    simulateQ (coins (S := σ) + handler) (simulateQ (uniformInl (spec := spec)) mx) =
+    simulateQ (coins (S := σ) +ₛ handler) (simulateQ (uniformInl (spec := spec)) mx) =
       (liftM mx : StateT σ ProbComp α) := by
   rw [QueryImpl.simulateQ_simulateQ_eq_of_apply
     (impl := coins (S := σ)) (by
@@ -132,12 +132,12 @@ private theorem stageRight_run {κ T σ α : Type} {ctxSpec : OracleSpec κ}
     (ctx : QueryImpl ctxSpec (StateT T ProbComp))
     (handler : QueryImpl spec (StateT σ ProbComp))
     (oa : OracleComp (ctxSpec + spec) α) (t : T) (s : σ) :
-    (simulateQ (coins (S := σ) + handler) ((simulateQ (stageRight ctx) oa).run t)).run s =
+    (simulateQ (coins (S := σ) +ₛ handler) ((simulateQ (stageRight ctx) oa).run t)).run s =
       (fun z : α × T × σ => ((z.1, z.2.1), z.2.2)) <$>
         (simulateQ (QueryImpl.parallelStateT ctx handler) oa).run (t, s) := by
   apply simulateQ_StateT_StateT_compose
   intro q t s
-  change (simulateQ (coins (S := σ) + handler) ((stageRight ctx q).run t)).run s =
+  change (simulateQ (coins (S := σ) +ₛ handler) ((stageRight ctx q).run t)).run s =
     (fun z : (ctxSpec + spec).Range q × T × σ => ((z.1, z.2.1), z.2.2)) <$>
       ((QueryImpl.parallelStateT ctx handler) q).run (t, s)
   cases q with
@@ -152,7 +152,7 @@ private theorem stageRight_run' {κ T σ α : Type} {ctxSpec : OracleSpec κ}
     (ctx : QueryImpl ctxSpec (StateT T ProbComp))
     (handler : QueryImpl spec (StateT σ ProbComp))
     (oa : OracleComp (ctxSpec + spec) α) (t : T) (s : σ) :
-    (simulateQ (coins (S := σ) + handler)
+    (simulateQ (coins (S := σ) +ₛ handler)
       (Prod.fst <$> (simulateQ (stageRight ctx) oa).run t)).run' s =
         (simulateQ (QueryImpl.parallelStateT ctx handler) oa).run' (t, s) := by
   simp [StateT.run'_eq, stageRight_run, Functor.map_map]
@@ -178,11 +178,11 @@ private theorem reassoc_run' {κ T σ α : Type} {ctxSpec : OracleSpec κ}
     (ctx : QueryImpl ctxSpec (StateT T ProbComp))
     (handler : QueryImpl spec (StateT σ ProbComp))
     (oa : OracleComp (unifSpec + (ctxSpec + spec)) α) (t : T) (s : σ) :
-    (simulateQ (coins (S := T × σ) + QueryImpl.parallelStateT ctx handler) oa).run' (t, s) =
-      (simulateQ (QueryImpl.parallelStateT (coins (S := T) + ctx) handler)
+    (simulateQ (coins (S := T × σ) +ₛ QueryImpl.parallelStateT ctx handler) oa).run' (t, s) =
+      (simulateQ (QueryImpl.parallelStateT (coins (S := T) +ₛ ctx) handler)
         (simulateQ reassocQueries oa)).run' (t, s) := by
-  have h : ∀ q, simulateQ (QueryImpl.parallelStateT (coins (S := T) + ctx) handler)
-      (reassocQueries q) = (coins (S := T × σ) + QueryImpl.parallelStateT ctx handler) q := by
+  have h : ∀ q, simulateQ (QueryImpl.parallelStateT (coins (S := T) +ₛ ctx) handler)
+      (reassocQueries q) = (coins (S := T × σ) +ₛ QueryImpl.parallelStateT ctx handler) q := by
     intro q
     rcases q with q | (q | q) <;>
       apply StateT.ext <;> intro z <;>
@@ -196,13 +196,13 @@ private theorem replaceRightCoins {κ T σ α : Type} {ctxSpec : OracleSpec κ}
     (P : ResetPolicy init impl) (ctx : QueryImpl ctxSpec (StateT T ProbComp))
     (oa : OracleComp (unifSpec + (ctxSpec + spec)) α) (t : T) :
     (simulateQ
-      (coins (S := T × (P.World × P.Cursor)) + QueryImpl.parallelStateT ctx P.answer) oa).run'
+      (coins (S := T × (P.World × P.Cursor)) +ₛ QueryImpl.parallelStateT ctx P.answer) oa).run'
       (t, (P.empty, P.begin)) =ᵈ
       (do
         let s ← init
-        (simulateQ (coins (S := T × σ) + QueryImpl.parallelStateT ctx impl) oa).run' (t, s)) := by
+        (simulateQ (coins (S := T × σ) +ₛ QueryImpl.parallelStateT ctx impl) oa).run' (t, s)) := by
   simpa only [← reassoc_run'] using
-    replaceRight P (coins (S := T) + ctx) (simulateQ reassocQueries oa) t
+    replaceRight P (coins (S := T) +ₛ ctx) (simulateQ reassocQueries oa) t
 
 private def swapInnerQueries {κ : Type} {ctxSpec : OracleSpec κ} :
     QueryImpl (unifSpec + (spec + ctxSpec)) (OracleComp (unifSpec + (ctxSpec + spec)))
@@ -214,8 +214,8 @@ private theorem parallel_swap_coins_run' {κ T σ α : Type} {ctxSpec : OracleSp
     (handler : QueryImpl spec (StateT σ ProbComp))
     (ctx : QueryImpl ctxSpec (StateT T ProbComp))
     (oa : OracleComp (unifSpec + (spec + ctxSpec)) α) (s : σ) (t : T) :
-    (simulateQ (coins (S := σ × T) + QueryImpl.parallelStateT handler ctx) oa).run' (s, t) =
-      (simulateQ (coins (S := T × σ) + QueryImpl.parallelStateT ctx handler)
+    (simulateQ (coins (S := σ × T) +ₛ QueryImpl.parallelStateT handler ctx) oa).run' (s, t) =
+      (simulateQ (coins (S := T × σ) +ₛ QueryImpl.parallelStateT ctx handler)
         (simulateQ swapInnerQueries oa)).run' (t, s) := by
   rw [← QueryImpl.simulateQ_compose]
   apply OracleComp.run'_simulateQ_eq_of_query_map_eq
@@ -231,11 +231,11 @@ private theorem replaceLeftCoins {κ T σ α : Type} {ctxSpec : OracleSpec κ}
     (P : ResetPolicy init impl) (ctx : QueryImpl ctxSpec (StateT T ProbComp))
     (oa : OracleComp (unifSpec + (spec + ctxSpec)) α) (t : T) :
     (simulateQ
-      (coins (S := (P.World × P.Cursor) × T) + QueryImpl.parallelStateT P.answer ctx) oa).run'
+      (coins (S := (P.World × P.Cursor) × T) +ₛ QueryImpl.parallelStateT P.answer ctx) oa).run'
       ((P.empty, P.begin), t) =ᵈ
       (do
         let s ← init
-        (simulateQ (coins (S := σ × T) + QueryImpl.parallelStateT impl ctx) oa).run' (s, t)) := by
+        (simulateQ (coins (S := σ × T) +ₛ QueryImpl.parallelStateT impl ctx) oa).run' (s, t)) := by
   rw [parallel_swap_coins_run' P.answer ctx oa (P.empty, P.begin) t]
   exact (replaceRightCoins P ctx (simulateQ swapInnerQueries oa) t).trans
     (EvalDistEq.bind_right init fun s => by
@@ -331,9 +331,9 @@ theorem productAnswer_commute (q₁ q₂ : (spec₁ + spec₂).Domain) (c₁ c�
 private theorem productAnswer_coins_run' {α : Type}
     (oa : OracleComp (unifSpec + (spec₁ + spec₂)) α) (w : P₁.World × P₂.World)
     (c : P₁.Cursor × P₂.Cursor) :
-    (simulateQ (coins (S := (P₁.World × P₂.World) × (P₁.Cursor × P₂.Cursor)) +
+    (simulateQ (coins (S := (P₁.World × P₂.World) × (P₁.Cursor × P₂.Cursor)) +ₛ
       productAnswer P₁ P₂) oa).run' (w, c) =
-      (simulateQ (coins (S := (P₁.World × P₁.Cursor) × (P₂.World × P₂.Cursor)) +
+      (simulateQ (coins (S := (P₁.World × P₁.Cursor) × (P₂.World × P₂.Cursor)) +ₛ
         QueryImpl.parallelStateT P₁.answer P₂.answer) oa).run'
         ((w.1, c.1), (w.2, c.2)) := by
   apply OracleComp.run'_simulateQ_eq_of_query_map_eq

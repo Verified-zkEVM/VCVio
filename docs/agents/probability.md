@@ -860,7 +860,7 @@ already grind-tags the `List.mapM` / `foldlM` / `forIn` layer), `Functor.map_map
 `simulateQ` routing layer (`QueryImpl.add_apply_inl/inr`, `simulateQ_add_liftComp_left/right`,
 the `withBadFlag`/`withBadUpdate`/`flattenStateT` run-shapes, `simulateQ_option_elim(M)`). The
 `simulateQ_add_liftComp_left`/`_right` pair also prevents a saturation: without it, bare `grind` times out on a
-routed `simulateQ (impl₁ + impl₂)` goal over a lifted computation.
+routed `simulateQ (impl₁ +ₛ impl₂)` goal over a lifted computation.
 
 `VCVioTest/ProbabilityTactics.lean` is the living benchmark and **gate** for all of this: outcome
 masses `𝒟[mx] {x}`, events `Pr{…}[…]`, success masses, and output measures over `ProbComp` (and

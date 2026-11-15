@@ -714,7 +714,7 @@ theorem programmedCache_pathInput {c : (oracleSpec n S L Salt Ctx).QueryCache}
     (fun v _ w _ hvw h => hbad (Or.inl ⟨v, w, hvw, h⟩)) (PathValue.mem_order v) c
 
 /-- The lazy random oracle answering the points of every round. -/
-local notation "H" => unifFwdImpl (oracleSpec n S L Salt Ctx) +
+local notation "H" => unifFwdImpl (oracleSpec n S L Salt Ctx) +ₛ
   QueryImpl.batch (OracleSpec.randomOracle (spec := oracleSpec n S L Salt Ctx))
 
 /-- Against the lazy random oracle from the cache `c`, the path queries of the distinct path

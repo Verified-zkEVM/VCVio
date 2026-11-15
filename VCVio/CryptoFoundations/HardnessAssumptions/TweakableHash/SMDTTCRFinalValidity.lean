@@ -90,8 +90,8 @@ def oracles [DecidableEq Tweak] (prob : Problem ι PkSeed Tweak M Y) (pk : PkSee
     QueryImpl
       (unifSpec + (challengeSpec Tweak M Y + SourceFinalValidity.collectionSpec prob.thColl))
       (StateT (State Tweak M) ProbComp) :=
-  (QueryImpl.ofLift unifSpec ProbComp).liftTarget (StateT (State Tweak M) ProbComp) +
-    (challengeOracle prob pk +
+  (QueryImpl.ofLift unifSpec ProbComp).liftTarget (StateT (State Tweak M) ProbComp) +ₛ
+    (challengeOracle prob pk +ₛ
       SourceFinalValidity.collectionOracle (Q := Tweak × M) Prod.fst prob.thColl pk)
 
 /-- The source-final-validity SM-DT-TCR experiment. An adversary wins exactly when final validity

@@ -116,10 +116,10 @@ theorem map_run_simulateQ_add_parallelStateT_randomOracle
     (p : spec₁.QueryCache × spec₂.QueryCache) :
     Prod.map id (QueryCache.addEquiv spec₁ spec₂) <$>
         (simulateQ (implBase.liftTarget
-              (StateT (spec₁.QueryCache × spec₂.QueryCache) ProbComp) +
+              (StateT (spec₁.QueryCache × spec₂.QueryCache) ProbComp) +ₛ
             QueryImpl.parallelStateT spec₁.randomOracle spec₂.randomOracle) oa).run p =
       (simulateQ (implBase.liftTarget
-            (StateT (spec₁ + spec₂).QueryCache ProbComp) +
+            (StateT (spec₁ + spec₂).QueryCache ProbComp) +ₛ
           (spec₁ + spec₂).randomOracle) oa).run (QueryCache.addEquiv spec₁ spec₂ p) := by
   refine map_run_simulateQ_eq_of_query_map_eq _ _ _ ?_ oa p
   rintro (i | t) s

@@ -20,7 +20,7 @@ has to widen, and this file holds the pieces of the widening.
 
 **It is three stages, and the three-stage shape is forced by the recording, not by the
 plumbing.** `PhaseFusion.fuse`'s `inl` branch runs `inner` before `outer`, and `inner` here is
-`recordedAdversaryImpl + recordedSigningOracle` — so lifting key generation into the fused
+`recordedAdversaryImpl +ₛ recordedSigningOracle` — so lifting key generation into the fused
 computation would charge key generation's queries to the adversary's record and count them as
 its work. Key generation and verification therefore run under the handler *directly*, and only
 the adversary's phase is fused.

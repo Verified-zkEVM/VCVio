@@ -289,7 +289,7 @@ lemma advantage_eq_keygen_average_realGameVerifyFresh
               (HasQuery.toQueryImpl (spec := (unifSpec + (Salt × M →ₒ Range)))
                 (m := OracleComp (unifSpec + (Salt × M →ₒ Range)))).liftTarget
                 (WriterT (QueryLog (M →ₒ (Salt × Domain)))
-                  (OracleComp (unifSpec + (Salt × M →ₒ Range)))) +
+                  (OracleComp (unifSpec + (Salt × M →ₒ Range)))) +ₛ
                 (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range)))
                   psf hr M Salt).signingOracle pksk.1 pksk.2
             let ((msg, σ), log) ← (simulateQ impl (adv.main pksk.1)).run

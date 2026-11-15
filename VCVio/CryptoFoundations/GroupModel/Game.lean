@@ -106,7 +106,8 @@ abbrev HandleAdversary (F : Type) (σ : Sig S) (E : S → Type)
     (enc : (s : S) → G s → E s) {N : Type → Type} [Monad N]
     (random : QueryImpl unifSpec N) (impl : QueryImpl (plainSpec G Query Reply) N)
     (input : Message Input G) : N (Message Result (fun _ : S => Handle) × Tbl G) :=
-  GroupModel.run M (fun _ => id) (encImpl (m := N) enc + (coinImpl (G := G) random + liftGame impl))
+  GroupModel.run M (fun _ => id)
+    (encImpl (m := N) enc +ₛ (coinImpl (G := G) random +ₛ liftGame impl))
     (A ⟨input.data, fun s => List.range (input.groups s).length⟩) input.groups
 
 /-- A handle adversary's final table extends its input table: encodings and coins leave the
@@ -147,8 +148,8 @@ theorem run_toAlgebraic {F : Type} [CommSemiring F] [DecidableEq S] {σ : Sig S}
     {N : Type → Type} [Monad N] [LawfulMonad N] (random : QueryImpl unifSpec N)
     {ι : Type} {Γ : OracleSpec ι} (game : QueryImpl Γ (StateT (Tbl G) N))
     {α : Type} (A : OracleComp (spec F σ + (unifSpec + Γ)) α) (tbl : Tbl G) :
-    run M obs (encImpl (m := N) enc + (coinImpl (G := G) random + game)) (toAlgebraic A) tbl =
-      run M obs (coinImpl (G := G) random + game) A tbl := by
+    run M obs (encImpl (m := N) enc +ₛ (coinImpl (G := G) random +ₛ game)) (toAlgebraic A) tbl =
+      run M obs (coinImpl (G := G) random +ₛ game) A tbl := by
   unfold run toAlgebraic
   congr 1
   rw [liftComp_def, ← QueryImpl.simulateQ_compose]

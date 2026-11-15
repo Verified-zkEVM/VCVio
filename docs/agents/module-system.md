@@ -114,11 +114,21 @@ Existing downstream `rfl` uses are grandfathered rather than a precedent; a
 review may ask a new one to go through the equation lemma.
 
 `@[reducible]` stays on the type-level constructors (`OracleComp`,
-`OracleSpec.toPFunctor`, `ofFn`, `unifSpec`, `ProbComp`, `QueryImpl`): their
+`OracleSpec.toPFunctor`, `ofFn`, `unifSpec`, `ProbComp`): their
 instance discrimination keys depend on it. It is not a substitute for
 `@[expose]` on a value-level definition, and a value-level definition that is
 reducible only so that a downstream `rfl` works is a sign that the equation
 lemma is missing.
+
+`QueryImpl` is reducible for a different reason, and no instance keys depend on
+it. Reducibility makes a handler the bare function that cslib's
+`PFunctor.FreeM.liftM` and PolyFun's `PFunctor.Handler` take, so their lemmas
+(`PFunctor.FreeM.liftM_bind`, `PFunctor.Handler.liftTarget_apply`, …) apply to
+`QueryImpl`-typed handlers unchanged. The same reducibility makes an instance
+stated for `QueryImpl` a candidate for every ordinary function type into a monad,
+so no instance may be keyed on `QueryImpl`. Handler sums are therefore the
+notation `+ₛ` (`QueryImpl.add`), not an `HAdd` instance; see gotcha 8b in
+[`gotchas.md`](gotchas.md).
 
 ### Visibility and transparency are separate
 

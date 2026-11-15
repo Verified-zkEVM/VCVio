@@ -66,10 +66,10 @@ example (j : Fin 2) :
   QueryImpl.batch_id_apply hetImpl [true, false] j
 
 /-- Running the round through the batched handler reads both answers. -/
-example : simulateQ (zeroCoins + hetImpl).batch' hetRound = ((2 : Fin 3), true) := rfl
+example : simulateQ (zeroCoins +ₛ hetImpl).batch' hetRound = ((2 : Fin 3), true) := rfl
 
 /-- Unbatching the round first and running the single queries gives the same result. -/
-example : simulateQ (zeroCoins + hetImpl) (simulateQ hetSpec.unbatch hetRound) =
+example : simulateQ (zeroCoins +ₛ hetImpl) (simulateQ hetSpec.unbatch hetRound) =
     ((2 : Fin 3), true) := by
   rw [QueryImpl.simulateQ_simulateQ_unbatch]
   rfl
@@ -96,7 +96,7 @@ example {α : Type} {oa : OracleComp (unifSpec + hetSpec.batch) α} {r q : ℕ}
 /-- In the random oracle model, unbatching a program is batching the random oracle. -/
 example {α : Type} (oa : OracleComp (unifSpec + hetSpec.batch) α) :
     simulateQ hetSpec.romImpl (simulateQ hetSpec.unbatch oa) =
-      simulateQ (unifFwdImpl hetSpec + hetSpec.randomOracle.batch) oa :=
+      simulateQ (unifFwdImpl hetSpec +ₛ hetSpec.randomOracle.batch) oa :=
   simulateQ_romImpl_simulateQ_unbatch oa
 
 /-! ## Execution order -/
@@ -167,7 +167,7 @@ example : IsQueryBoundP (simulateQ hetSpec.unbatch dupRound) (·.isRight) 2 := b
   simp [dupRound]
 
 /-- A deterministic handler gives a repeated point the same answer. -/
-example : simulateQ (zeroCoins + hetImpl).batch' dupRound = ((2 : Fin 3), (2 : Fin 3)) := rfl
+example : simulateQ (zeroCoins +ₛ hetImpl).batch' dupRound = ((2 : Fin 3), (2 : Fin 3)) := rfl
 
 /-- The lazy random oracle, batched, answers a repeated point from its cache: both answers agree
 on every run. -/
@@ -253,7 +253,7 @@ def typedRound : OracleComp (unifSpec + hetSpec.batch) (Fin 3 × Bool) := do
   let us ← queryRound₂ (fun _ : Fin 1 => true) (fun _ : Fin 1 => false)
   pure (us.1 0, us.2 0)
 
-example : simulateQ (zeroCoins + hetImpl).batch' typedRound = ((2 : Fin 3), true) := rfl
+example : simulateQ (zeroCoins +ₛ hetImpl).batch' typedRound = ((2 : Fin 3), true) := rfl
 
 /-- Against a fixed table, a single-point round returns the table's answer. -/
 example : simulateQ (unifFwdAnswerImpl hetImpl).batch' (queryPoint (spec := hetSpec) false) =

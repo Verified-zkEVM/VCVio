@@ -69,7 +69,7 @@ open Security RecordedQueries RecordedPhase KeygenValue
 theorem simulateQ_liftWorld {α : Type} {m : Type → Type} [Monad m] [LawfulMonad m]
     (world : QueryImpl OracleWorld m) (signing : QueryImpl SigningSpec m)
     (computation : OracleComp OracleWorld α) :
-    simulateQ (world + signing) (liftWorld computation) = simulateQ world computation :=
+    simulateQ (world +ₛ signing) (liftWorld computation) = simulateQ world computation :=
   QueryImpl.simulateQ_add_liftComp_left world signing computation
 
 /-- Simulating a world computation by the handler that forwards every query is that

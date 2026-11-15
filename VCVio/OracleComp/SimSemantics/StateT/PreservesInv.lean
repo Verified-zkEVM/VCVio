@@ -105,14 +105,14 @@ lemma PreservesInv.add {ι₁ ι₂ : Type u} {spec₁ : OracleSpec.{u, 0} ι₁
     {spec₂ : OracleSpec.{u, 0} ι₂} {σ : Type}
     {impl₁ : QueryImpl spec₁ (StateT σ m)} {impl₂ : QueryImpl spec₂ (StateT σ m)}
     {Inv : σ → Prop} (h₁ : PreservesInv impl₁ Inv) (h₂ : PreservesInv impl₂ Inv) :
-    PreservesInv (impl₁ + impl₂) Inv
+    PreservesInv (impl₁ +ₛ impl₂) Inv
   | .inl t => by rw [add_apply_inl]; exact h₁ t
   | .inr t => by rw [add_apply_inr]; exact h₂ t
 
 lemma preservesInv_add_iff {ι₁ ι₂ : Type u} {spec₁ : OracleSpec.{u, 0} ι₁}
     {spec₂ : OracleSpec.{u, 0} ι₂} {σ : Type} (impl₁ : QueryImpl spec₁ (StateT σ m))
     (impl₂ : QueryImpl spec₂ (StateT σ m)) (Inv : σ → Prop) :
-    PreservesInv (impl₁ + impl₂) Inv ↔ PreservesInv impl₁ Inv ∧ PreservesInv impl₂ Inv :=
+    PreservesInv (impl₁ +ₛ impl₂) Inv ↔ PreservesInv impl₁ Inv ∧ PreservesInv impl₂ Inv :=
   ⟨fun h => ⟨fun t => by simpa only [add_apply_inl] using h (.inl t),
     fun t => by simpa only [add_apply_inr] using h (.inr t)⟩, fun h => h.1.add h.2⟩
 

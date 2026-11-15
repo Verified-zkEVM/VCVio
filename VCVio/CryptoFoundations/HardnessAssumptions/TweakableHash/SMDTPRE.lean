@@ -135,8 +135,8 @@ noncomputable def SM_DT_PRE_oracles [DecidableEq Tweak] [SampleableType M']
     (prob : SM_DT_PRE_Problem ι PkSeed Tweak M M' Y) (pk : PkSeed) :
     QueryImpl (unifSpec + (SM_DT_PRE_challengeSpec Tweak Y + collectionSpec prob.thColl))
       (StateT (SM_DT_PRE_State Tweak M') ProbComp) :=
-  (QueryImpl.ofLift unifSpec ProbComp).liftTarget (StateT (SM_DT_PRE_State Tweak M') ProbComp) +
-    (SM_DT_PRE_challengeOracle prob pk +
+  (QueryImpl.ofLift unifSpec ProbComp).liftTarget (StateT (SM_DT_PRE_State Tweak M') ProbComp) +ₛ
+    (SM_DT_PRE_challengeOracle prob pk +ₛ
       collectionOracle (Q := Tweak × M') Prod.fst prob.thColl pk)
 
 /-- The SM-PRE experiment. The public seed is sampled, the first phase runs against both oracles

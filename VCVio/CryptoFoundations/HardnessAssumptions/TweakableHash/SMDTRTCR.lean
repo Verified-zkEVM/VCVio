@@ -200,7 +200,7 @@ uniform randomness, and the challenge oracle. -/
     QueryImpl (unifSpec + SM_DT_RTCR_challengeSpec Tweak M R Y)
       (StateT (SM_DT_RTCR_State Tweak M R) ProbComp) :=
   (QueryImpl.ofLift unifSpec ProbComp).liftTarget
-      (StateT (SM_DT_RTCR_State Tweak M R) ProbComp) +
+      (StateT (SM_DT_RTCR_State Tweak M R) ProbComp) +ₛ
     SM_DT_RTCR_challengeOracle prob pk
 
 /-- The winning condition, on a challenge history and the adversary's output. There are three arms,

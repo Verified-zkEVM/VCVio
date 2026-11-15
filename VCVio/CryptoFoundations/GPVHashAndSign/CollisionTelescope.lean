@@ -117,7 +117,7 @@ the cached entry, while the real signer answers from it. -/
           fun t' => if t' = (r, msg) then some s else st.2 t') : State)
         pure (r, s)
     let impl : QueryImpl ((unifSpec + (Salt × M →ₒ Range)) + (M →ₒ (Salt × Domain)))
-        (StateT State ProbComp) := (unifImpl + roImpl) + signImpl
+        (StateT State ProbComp) := (unifImpl +ₛ roImpl) +ₛ signImpl
     -- Run the adversary under the simulated oracle stack, then extract a collision candidate.
     let ((msgStar, (rStar, sStar)), st) ←
       (simulateQ impl (adv.main pk)).run (∅, fun _ => none)

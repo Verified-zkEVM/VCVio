@@ -147,7 +147,7 @@ def hidingExperiment (tlp : TimeLockPuzzle spec Puzzle Key)
     (adv : HidingAdversary spec Puzzle M C) (b : Bool) : OracleComp (unifSpec + spec) Bool := do
   let σ ← adv.preprocess
   let (puzzle, key) ← simulateQ spec.unbatch tlp.gen
-  simulateQ ((unifSpec.passthrough + LeftOrRight.oracle (dem.encrypt (puzzle, key)) leak b) +
+  simulateQ ((unifSpec.passthrough + LeftOrRight.oracle (dem.encrypt (puzzle, key)) leak b) +ₛ
       (QueryImpl.id' spec).liftTarget (OracleComp (unifSpec + spec)))
     (simulateQ spec.unbatch (adv.online σ puzzle))
 
@@ -243,7 +243,7 @@ def cappedHidingExperiment (tlp : TimeLockPuzzle spec Puzzle Key)
   let σ ← adv.preprocess
   let (puzzle, key) ← simulateQ spec.unbatch tlp.gen
   StateT.run' (simulateQ ((unifSpec.passthrough +
-        LeftOrRight.cappedOracle (dem.encrypt (puzzle, key)) leak qEnc b) +
+        LeftOrRight.cappedOracle (dem.encrypt (puzzle, key)) leak qEnc b) +ₛ
       (QueryImpl.id' spec).liftTarget (StateT ℕ (OracleComp (unifSpec + spec))))
     (simulateQ spec.unbatch (adv.online σ puzzle))) 0
 

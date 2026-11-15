@@ -173,7 +173,7 @@ theorem simulateQ_pure_eq_evalWithAnswerFn {m : Type → Type v} [Monad m] [Lawf
 answers every oracle query with the fixed function `H`. -/
 @[expose]
 def fixedOracleImpl (H : X → Y) : QueryImpl (unifSpec + (X →ₒ Y)) ProbComp :=
-  QueryImpl.id' unifSpec + fun x ↦ (pure (H x) : ProbComp Y)
+  QueryImpl.id' unifSpec +ₛ fun x ↦ (pure (H x) : ProbComp Y)
 
 /-- Against `fixedOracleImpl H`, a coin-free computation over `X →ₒ Y` is evaluated at `H`. -/
 theorem simulateQ_fixedOracleImpl_liftComp (H : X → Y) {α : Type}

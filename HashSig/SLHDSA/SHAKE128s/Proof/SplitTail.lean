@@ -67,7 +67,7 @@ out beside the tail's own value. -/
       (Scheme.keygenInternal walk.1.1.1 walk.1.1.2.1 walk.1.1.2.2)).run
     (startAt walk.2, (([], []), 0)) >>= fun keys =>
     (simulateQ (fuseServing (splitHandlerAt inClass inside outside rightKeep walk)
-        (recordedAdversaryImpl + recordedSigningOracle (Scheme.sign keys.1.1))
+        (recordedAdversaryImpl +ₛ recordedSigningOracle (Scheme.sign keys.1.1))
         ServedAgreement.startServingOn ServedAgreement.stopServingOn)
       (adversary.main keys.1.2)).run (1, [], keys.2) >>= fun middle =>
       (simulateQ (splitHandlerAt inClass inside outside rightKeep walk)
@@ -111,18 +111,18 @@ theorem split_middle_stage_bind (inClass : Bytes → Prop) {inside outside : Que
     (keys : (SecretKey × PublicKey) × (HandlerCarrier.State ×
       ((DigestTape.Record × DigestTape.Record) × Counts))) :
     (simulateQ (fuseServing (handlerAt rightKeep walk)
-        (recordedAdversaryImpl + recordedSigningOracle (Scheme.sign keys.1.1))
+        (recordedAdversaryImpl +ₛ recordedSigningOracle (Scheme.sign keys.1.1))
         ServedAgreement.startServingOn ServedAgreement.stopServingOn)
         (adversary.main keys.1.2)).run (1, [], sumSlots inside outside keys.2) =
       (simulateQ (fuseServing (splitHandlerAt inClass inside outside rightKeep walk)
-          (recordedAdversaryImpl + recordedSigningOracle (Scheme.sign keys.1.1))
+          (recordedAdversaryImpl +ₛ recordedSigningOracle (Scheme.sign keys.1.1))
           ServedAgreement.startServingOn ServedAgreement.stopServingOn)
           (adversary.main keys.1.2)).run (1, [], keys.2) >>= fun z =>
         (pure (z.1, (z.2.1, z.2.2.1, sumSlots inside outside z.2.2.2)) :
           ProbComp (Forgery × (Multiplicative Tally × SigningLog × CountedState))) := by
   rw [← ServingForget.run_fuseServing_conj (sumSlots inside outside)
       (splitHandlerAt inClass inside outside rightKeep walk) (handlerAt rightKeep walk)
-      (recordedAdversaryImpl + recordedSigningOracle (Scheme.sign keys.1.1))
+      (recordedAdversaryImpl +ₛ recordedSigningOracle (Scheme.sign keys.1.1))
       ServedAgreement.startServingOn ServedAgreement.stopServingOn
       ServedAgreement.startServingOn ServedAgreement.stopServingOn
       (fun request state => sumSlots_startServingOn inside outside request state)

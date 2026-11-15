@@ -18,7 +18,7 @@ public import VCVio.EvalDist.ProbabilityNotation
 A bad event of a random-oracle run is typically a predicate on the answer table that, once it
 holds, keeps holding, and that a *fresh* answer makes fire with mass at most `ε` whatever the
 query and whatever the not-yet-firing table.  This module turns that per-answer bound into a
-bound on the whole run: along a run of `unifFwdImpl spec + spec.randomOracle` started from the
+bound on the whole run: along a run of `unifFwdImpl spec +ₛ spec.randomOracle` started from the
 empty cache, such a predicate holds of the final cache with mass at most `q * ε` on the paths
 whose final cache has at most `q` entries (`evalDist_run_setOf_le_of_fresh_bound`).
 
@@ -357,7 +357,7 @@ untouched. -/
 theorem exists_run_unifFwdImpl_add_randomOracle_inl (i : unifSpec.Domain)
     (c : spec.QueryCache) :
     ∃ samp : ProbComp (unifSpec.Range i),
-      ((unifFwdImpl spec + spec.randomOracle) (Sum.inl i)).run c =
+      ((unifFwdImpl spec +ₛ spec.randomOracle) (Sum.inl i)).run c =
         (fun u => (u, c)) <$> samp :=
   ⟨liftM (OracleSpec.query i), by simp [unifFwdImpl]⟩
 
@@ -366,7 +366,7 @@ theorem exists_run_unifFwdImpl_add_randomOracle_inl (i : unifSpec.Domain)
 /-- **The fresh-answer bound for a shared lazy random oracle.**  `P` is a predicate on the
 public-hash cache that fails of the empty cache, and `ε` bounds, uniformly in the query and in
 the not-yet-firing cache, the mass of the fresh answers that make `P` fire.  Then along a whole
-run of `unifFwdImpl spec + spec.randomOracle` from the empty cache, `P` holds of the final cache
+run of `unifFwdImpl spec +ₛ spec.randomOracle` from the empty cache, `P` holds of the final cache
 with mass at most `q * ε` on the paths whose final cache has at most `q` entries.
 
 The measurable-space instance on `α × spec.QueryCache` is pinned to `⊤` inside the statement, so
@@ -378,11 +378,11 @@ theorem evalDist_run_setOf_le_of_fresh_bound (P : spec.QueryCache → Prop) (hP 
         𝒟[($ᵗ spec.Range t : ProbComp (spec.Range t))] {u | P (c.cacheQuery t u)} ≤ ε))
     {α : Type} (oa : OracleComp (unifSpec + spec) α) (q : ℕ) :
     (letI : MeasurableSpace (α × spec.QueryCache) := ⊤;
-      𝒟[(simulateQ (unifFwdImpl spec + spec.randomOracle) oa).run ∅]
+      𝒟[(simulateQ (unifFwdImpl spec +ₛ spec.randomOracle) oa).run ∅]
         {z | P z.2 ∧ QueryCache.enncard z.2 ≤ (q : ℝ≥0∞)} ≤ (q : ℝ≥0∞) * ε) := by
   let _ : MeasurableSpace (α × spec.QueryCache) := ⊤
   have hmono : ∀ (t : (unifSpec + spec).Domain) (c : spec.QueryCache),
-      ∀ z ∈ support (((unifFwdImpl spec + spec.randomOracle) t).run c),
+      ∀ z ∈ support (((unifFwdImpl spec +ₛ spec.randomOracle) t).run c),
         QueryCache.enncard c * ε ≤ QueryCache.enncard z.2 * ε := by
     intro t c z hz
     have hle : c ≤ z.2 := le_snd_of_mem_support_run_unifFwdImpl_add_withCaching uniformSampleImpl
@@ -391,10 +391,10 @@ theorem evalDist_run_setOf_le_of_fresh_bound (P : spec.QueryCache → Prop) (hP 
     gcongr
     exact QueryCache.enncard_mono hle
   have hstep : ∀ (t : (unifSpec + spec).Domain) (c : spec.QueryCache), ¬ P c →
-      (∃ a c', (((unifFwdImpl spec + spec.randomOracle) t).run c) = pure (a, c') ∧ ¬ P c') ∨
+      (∃ a c', (((unifFwdImpl spec +ₛ spec.randomOracle) t).run c) = pure (a, c') ∧ ¬ P c') ∨
       (∃ (samp : ProbComp ((unifSpec + spec).Range t))
         (upd : (unifSpec + spec).Range t → spec.QueryCache) (w : ℝ≥0∞),
-        (((unifFwdImpl spec + spec.randomOracle) t).run c) = (fun u => (u, upd u)) <$> samp ∧
+        (((unifFwdImpl spec +ₛ spec.randomOracle) t).run c) = (fun u => (u, upd u)) <$> samp ∧
         (letI : MeasurableSpace ((unifSpec + spec).Range t) := ⊤;
           𝒟[samp] {u | P (upd u)} ≤ w) ∧
         ∀ u, w + QueryCache.enncard c * ε ≤ QueryCache.enncard (upd u) * ε) := by
@@ -407,7 +407,7 @@ theorem evalDist_run_setOf_le_of_fresh_bound (P : spec.QueryCache → Prop) (hP 
           fun u => by rw [QueryCache.enncard_cacheQuery c t u h, add_mul, one_mul, add_comm]⟩
       · exact Or.inl ⟨u, c, QueryImpl.withCaching_run_some _ h, hc⟩
   have key := evalDist_apply_setOf_and_le_of_potential
-    (unifFwdImpl spec + spec.randomOracle) P (fun c => QueryCache.enncard c * ε) hmono hstep oa
+    (unifFwdImpl spec +ₛ spec.randomOracle) P (fun c => QueryCache.enncard c * ε) hmono hstep oa
     ((q : ℝ≥0∞) * ε) (ENNReal.mul_ne_top (by simp) hε) ∅ hP
   rw [QueryCache.enncard_empty, zero_mul, tsub_zero] at key
   refine le_trans (measure_mono fun z hz => ?_) key
@@ -416,14 +416,14 @@ theorem evalDist_run_setOf_le_of_fresh_bound (P : spec.QueryCache → Prop) (hP 
 /-- **The fresh-answer bound for a shared lazy random oracle, as an event probability.**  `P` is
 a predicate on the public-hash cache that fails of the empty cache, and `ε` bounds, uniformly in
 the query and in the not-yet-firing cache, the probability that a fresh answer makes `P` fire.
-Then a whole run of `unifFwdImpl spec + spec.randomOracle` from the empty cache ends with a cache
+Then a whole run of `unifFwdImpl spec +ₛ spec.randomOracle` from the empty cache ends with a cache
 of at most `q` entries satisfying `P` with probability at most `q * ε`. -/
 theorem prEvent_run_le_of_fresh_bound (P : spec.QueryCache → Prop) (hP : ¬ P ∅)
     (ε : ℝ≥0∞) (hε : ε ≠ ⊤)
     (hfresh : ∀ (t : spec.Domain) (c : spec.QueryCache), ¬ P c → c t = none →
       Pr{let u ← ($ᵗ spec.Range t : ProbComp (spec.Range t))}[P (c.cacheQuery t u)] ≤ ε)
     {α : Type} (oa : OracleComp (unifSpec + spec) α) (q : ℕ) :
-    Pr{let z ← (simulateQ (unifFwdImpl spec + spec.randomOracle) oa).run ∅}[
+    Pr{let z ← (simulateQ (unifFwdImpl spec +ₛ spec.randomOracle) oa).run ∅}[
       P z.2 ∧ QueryCache.enncard z.2 ≤ (q : ℝ≥0∞)] ≤ (q : ℝ≥0∞) * ε := by
   let _ : MeasurableSpace (α × spec.QueryCache) := ⊤
   rw [prEvent_eq_evalDist_of_discrete]
@@ -439,7 +439,7 @@ public-hash queries, ends with at most `q` cache entries. -/
 theorem enncard_le_of_mem_support_run_unifFwdImpl_add_randomOracle {α : Type}
     {oa : OracleComp (unifSpec + spec) α} {q : ℕ}
     (h : IsQueryBoundP oa (fun t => t.isRight = true) q) {z : α × spec.QueryCache}
-    (hz : z ∈ support ((simulateQ (unifFwdImpl spec + spec.randomOracle) oa).run ∅)) :
+    (hz : z ∈ support ((simulateQ (unifFwdImpl spec +ₛ spec.randomOracle) oa).run ∅)) :
     QueryCache.enncard z.2 ≤ q := by
   have key := h.resource_le_add_of_mem_support_run_simulateQ (fun c => c.toSet.encard)
     (fun t c w hw => ?_) hz
@@ -460,7 +460,7 @@ theorem enncard_le_of_mem_support_run_unifFwdImpl_add_randomOracle {α : Type}
 /-- **The fresh-answer bound under a query budget.**  `P` is a predicate on the public-hash cache
 that fails of the empty cache, and `ε` bounds, uniformly in the query and in the not-yet-firing
 cache, the probability that a fresh answer makes `P` fire.  Then a run of
-`unifFwdImpl spec + spec.randomOracle` from the empty cache, of a computation making at most `q`
+`unifFwdImpl spec +ₛ spec.randomOracle` from the empty cache, of a computation making at most `q`
 public-hash queries, ends with a cache satisfying `P` with probability at most `q * ε`. -/
 theorem prEvent_run_le_of_fresh_bound_of_isQueryBoundP (P : spec.QueryCache → Prop) (hP : ¬ P ∅)
     (ε : ℝ≥0∞) (hε : ε ≠ ⊤)
@@ -468,7 +468,7 @@ theorem prEvent_run_le_of_fresh_bound_of_isQueryBoundP (P : spec.QueryCache → 
       Pr{let u ← ($ᵗ spec.Range t : ProbComp (spec.Range t))}[P (c.cacheQuery t u)] ≤ ε)
     {α : Type} (oa : OracleComp (unifSpec + spec) α) {q : ℕ}
     (h : IsQueryBoundP oa (fun t => t.isRight = true) q) :
-    Pr{let z ← (simulateQ (unifFwdImpl spec + spec.randomOracle) oa).run ∅}[P z.2] ≤
+    Pr{let z ← (simulateQ (unifFwdImpl spec +ₛ spec.randomOracle) oa).run ∅}[P z.2] ≤
       (q : ℝ≥0∞) * ε :=
   le_trans (prEvent_mono_of_support _ _ _ fun _ hz hPz =>
       ⟨hPz, enncard_le_of_mem_support_run_unifFwdImpl_add_randomOracle h hz⟩)

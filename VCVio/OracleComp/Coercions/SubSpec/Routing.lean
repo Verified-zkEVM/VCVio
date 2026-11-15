@@ -56,7 +56,7 @@ variable {ι κ ν α : Type} {a : OracleSpec ι} {b : OracleSpec κ} {c : Oracl
 theorem simulateQ_swapRight {m : Type → Type} [Monad m] [LawfulMonad m]
     (ha : QueryImpl a m) (hb : QueryImpl b m) (hc : QueryImpl c m)
     (p : OracleComp ((a + b) + c) α) :
-    simulateQ ((ha + hc) + hb) p.swapRight = simulateQ ((ha + hb) + hc) p := by
+    simulateQ ((ha +ₛ hc) +ₛ hb) p.swapRight = simulateQ ((ha +ₛ hb) +ₛ hc) p := by
   apply QueryImpl.simulateQ_simulateQ_eq_of_apply
   intro q
   rcases q with (q | q) | q <;>
@@ -70,7 +70,7 @@ theorem simulateQ_swapRight {m : Type → Type} [Monad m] [LawfulMonad m]
 theorem simulateQ_insertMiddle {m : Type → Type} [Monad m] [LawfulMonad m]
     (ha : QueryImpl a m) (hb : QueryImpl b m) (hc : QueryImpl c m)
     (p : OracleComp (a + b) α) :
-    simulateQ ((ha + hc) + hb) p.insertMiddle = simulateQ (ha + hb) p := by
+    simulateQ ((ha +ₛ hc) +ₛ hb) p.insertMiddle = simulateQ (ha +ₛ hb) p := by
   apply QueryImpl.simulateQ_simulateQ_eq_of_apply
   intro q
   cases q <;> simp [QueryImpl.insertMiddle]
@@ -83,7 +83,7 @@ theorem simulateQ_insertMiddle {m : Type → Type} [Monad m] [LawfulMonad m]
 theorem simulateQ_mergeRight {m : Type → Type} [Monad m] [LawfulMonad m]
     (ha : QueryImpl a m) (hb : QueryImpl b m) (hc : QueryImpl c m)
     (p : OracleComp (((a + c) + b) + c) α) :
-    simulateQ ((ha + hb) + hc) p.mergeRight = simulateQ (((ha + hc) + hb) + hc) p := by
+    simulateQ ((ha +ₛ hb) +ₛ hc) p.mergeRight = simulateQ (((ha +ₛ hc) +ₛ hb) +ₛ hc) p := by
   apply QueryImpl.simulateQ_simulateQ_eq_of_apply
   intro q
   rcases q with ((q | q) | q) | q <;> simp [QueryImpl.mergeRight]

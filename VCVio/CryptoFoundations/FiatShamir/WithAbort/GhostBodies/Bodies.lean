@@ -164,7 +164,7 @@ caching random oracle. Each attempt queries the random oracle at `(msg, w)`, so 
 attempts leave their challenge in the cache exactly as in the real experiment. -/
 @[expose] noncomputable def realSignBody (pk : Stmt) (sk : Wit) (msg : M) :
     StateT ((M × Commit →ₒ Chal).QueryCache) ProbComp (Option (Commit × Resp)) :=
-  simulateQ (unifFwdImpl (M × Commit →ₒ Chal) +
+  simulateQ (unifFwdImpl (M × Commit →ₒ Chal) +ₛ
       (randomOracle : QueryImpl (M × Commit →ₒ Chal)
         (StateT ((M × Commit →ₒ Chal).QueryCache) ProbComp)))
     (fsAbortSignLoop ids M pk sk msg maxAttempts)

@@ -40,22 +40,22 @@ variable {ι₁ : Type uι₁} {ι₂ : Type uι₂} {ι₃ : Type uι₃}
 
 example (impl₁ : QueryImpl spec₁ target) (impl₂ : QueryImpl spec₂ target)
     (x : OracleComp spec₁ α) :
-    simulateQ (impl₁ + impl₂) (liftM x : OracleComp (spec₁ + spec₂) α) = simulateQ impl₁ x :=
+    simulateQ (impl₁ +ₛ impl₂) (liftM x : OracleComp (spec₁ + spec₂) α) = simulateQ impl₁ x :=
   QueryImpl.simulateQ_add_liftM_left impl₁ impl₂ x
 
 example (impl₁ : QueryImpl spec₁ target) (impl₂ : QueryImpl spec₂ target)
     (x : OracleComp spec₂ α) :
-    simulateQ (impl₁ + impl₂) (liftM x : OracleComp (spec₁ + spec₂) α) = simulateQ impl₂ x :=
+    simulateQ (impl₁ +ₛ impl₂) (liftM x : OracleComp (spec₁ + spec₂) α) = simulateQ impl₂ x :=
   QueryImpl.simulateQ_add_liftM_right impl₁ impl₂ x
 
 -- query-level routing, the rung the computation-level laws are built from
 example (impl₁ : QueryImpl spec₁ target) (impl₂ : QueryImpl spec₂ target) (t : spec₁.Domain) :
-    simulateQ (impl₁ + impl₂)
+    simulateQ (impl₁ +ₛ impl₂)
         (liftM (spec₁.query t) : OracleComp (spec₁ + spec₂) _) = impl₁ t :=
   QueryImpl.simulateQ_add_liftM_query_left impl₁ impl₂ t
 
 example (impl₁ : QueryImpl spec₁ target) (impl₂ : QueryImpl spec₂ target) (t : spec₂.Domain) :
-    simulateQ (impl₁ + impl₂)
+    simulateQ (impl₁ +ₛ impl₂)
         (liftM (spec₂.query t) : OracleComp (spec₁ + spec₂) _) = impl₂ t :=
   QueryImpl.simulateQ_add_liftM_query_right impl₁ impl₂ t
 
@@ -111,7 +111,7 @@ example {source₀ source : Type uQuery → Type uTarget}
 -- a query lifted from an inner component routes by `simp` alone at a nonzero universe
 example (impl : QueryImpl spec₁ target) (impl₂ : QueryImpl spec₂ target)
     (impl₃ : QueryImpl spec₃ target) (t : spec₃.Domain) :
-    simulateQ (impl + (impl₂ + impl₃))
+    simulateQ (impl +ₛ (impl₂ +ₛ impl₃))
       (liftM (spec₃.query t) : OracleComp (spec₁ + (spec₂ + spec₃)) (spec₃.Range t)) =
       impl₃ t := by
   simp

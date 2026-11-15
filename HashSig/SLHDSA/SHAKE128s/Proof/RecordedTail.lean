@@ -47,7 +47,7 @@ noncomputable def recordedAfterSeeds (adversary : Adversary) (sds : Digest × Di
     OracleComp OracleWorld (Outcome × Multiset Bytes) := do
   let (sk, pk) ← Scheme.keygenInternal sds.1 sds.2.1 sds.2.2
   let ((forgery, adversaryTally), signed) ←
-    (simulateQ (recordedAdversaryImpl + recordedSigningOracle (Scheme.sign sk))
+    (simulateQ (recordedAdversaryImpl +ₛ recordedSigningOracle (Scheme.sign sk))
       (adversary.main pk)).run.run []
   let (verified, verifierTally) ← countRecorded verifierCost
     (Scheme.verify pk forgery.message forgery.signature)
@@ -69,15 +69,15 @@ theorem map_recordedAfterSeeds (adversary : Adversary) (sds : Digest × Digest �
   rw [map_bind,
     show ((simulateQ
         (((QueryImpl.ofLift OracleWorld (StateT SigningLog (OracleComp OracleWorld))).withAddCost
-            fun input => Counts.single Game.QueryKind.hash (hashCost input)) +
+            fun input => Counts.single Game.QueryKind.hash (hashCost input)) +ₛ
           Security.signingOracle sk) (adversary.main pk)).run).run [] =
       (fun step => ((step.1.1, forget step.1.2), step.2)) <$>
-        ((simulateQ (recordedAdversaryImpl + recordedSigningOracle (Scheme.sign sk))
+        ((simulateQ (recordedAdversaryImpl +ₛ recordedSigningOracle (Scheme.sign sk))
           (adversary.main pk)).run).run [] from by
       rw [run_simulateQ_map_writer forget forget_one forget_mul
-        (recordedAdversaryImpl + recordedSigningOracle (Scheme.sign sk))
+        (recordedAdversaryImpl +ₛ recordedSigningOracle (Scheme.sign sk))
         (((QueryImpl.ofLift OracleWorld (StateT SigningLog (OracleComp OracleWorld))).withAddCost
-            fun input => Counts.single Game.QueryKind.hash (hashCost input)) +
+            fun input => Counts.single Game.QueryKind.hash (hashCost input)) +ₛ
           Security.signingOracle sk)
         (fun t => by
           rcases t with world | request

@@ -138,7 +138,7 @@ real seed. -/
 @[expose] noncomputable def innerAt (keys : SecretKey × PublicKey) :
     QueryImpl (OracleWorld + SigningSpec)
       (WriterT (Multiplicative Tally) (StateT SigningLog (OracleComp OracleWorld))) :=
-  recordedAdversaryImpl + recordedSigningOracle (Scheme.sign keys.1)
+  recordedAdversaryImpl +ₛ recordedSigningOracle (Scheme.sign keys.1)
 
 /-- **The carrier tail's tape run, at fixed blocks.** -/
 @[expose] noncomputable def tapeRun (adversary : Adversary) (walk : Walk)

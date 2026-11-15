@@ -105,7 +105,7 @@ def pickOracles [DecidableEq Tweak]
     QueryImpl (unifSpec + SourceFinalValidity.collectionSpec prob.thColl)
       (StateT (State Tweak M) ProbComp) :=
   (QueryImpl.ofLift unifSpec ProbComp).liftTarget
-      (StateT (State Tweak M) ProbComp) +
+      (StateT (State Tweak M) ProbComp) +ₛ
     SourceFinalValidity.collectionOracle (Q := Tweak × M) Prod.fst prob.thColl pk
 
 /-- Sample and record targets for precisely the supplied list. The experiment calls this on the
@@ -134,7 +134,7 @@ def openOracle [Inhabited M] (targets : List (Tweak × M)) :
 /-- Private randomness and adaptive target opening for the inversion phase. -/
 def findOracles [Inhabited M] (targets : List (Tweak × M)) :
     QueryImpl (unifSpec + openSpec M) (StateT (List ℕ) ProbComp) :=
-  (QueryImpl.ofLift unifSpec ProbComp).liftTarget (StateT (List ℕ) ProbComp) +
+  (QueryImpl.ofLift unifSpec ProbComp).liftTarget (StateT (List ℕ) ProbComp) +ₛ
     openOracle targets
 
 /-- The exact final-validity SM-DT-OpenPRE experiment. The committed tweak list is truncated before

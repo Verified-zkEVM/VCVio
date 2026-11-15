@@ -10,6 +10,15 @@
 | `⊂ₒ` | SubSpec relation | `VCVio/OracleComp/Coercions/SubSpec/Basic.lean` |
 | `ˡ⊂ₒ` | Lawful (fiberwise bijective) SubSpec, `LawfulSubSpec` | `VCVio/OracleComp/Coercions/SubSpec/Basic.lean` |
 | `∘ₛ` | QueryImpl composition | `VCVio/OracleComp/SimSemantics/QueryImpl/Compose.lean` |
+| `impl₁ +ₛ impl₂` | Handler sum `QueryImpl.add`: answers `spec₁ + spec₂`, `.inl` queries by `impl₁` and `.inr` queries by `impl₂` | `VCVio/OracleComp/SimSemantics/Append/Core.lean` |
+| `spec.passthrough + impl` | Handler for `spec + spec'`: `impl` answers `spec'`, `spec` queries pass through to the ambient oracles | `VCVio/OracleComp/SimSemantics/Append/Core.lean` |
+
+Specifications combine with `+` and their handlers with `+ₛ`, which has the same precedence (65)
+and left associativity, so `impl₁ +ₛ impl₂ +ₛ impl₃ : QueryImpl (spec₁ + spec₂ + spec₃) m`.
+`QueryImpl` has no `HAdd` instance: it is a reducible function type, so such an instance would
+also capture `+` on ordinary functions (gotcha 8b in [`gotchas.md`](gotchas.md)).
+`spec.passthrough + impl` keeps `+`: its left operand is the structure `QueryImpl.Passthrough`,
+so that instance does not capture function types.
 
 ## Probability Notations
 

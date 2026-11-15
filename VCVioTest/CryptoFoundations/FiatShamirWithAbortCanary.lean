@@ -192,7 +192,7 @@ and observed through `probeView`. -/
 noncomputable def probeRun : ProbComp ProbeView :=
   StateT.run'
     (simulateQ
-      (unifFwdImpl (Bool × Bool →ₒ Bool) +
+      (unifFwdImpl (Bool × Bool →ₒ Bool) +ₛ
         (randomOracle : QueryImpl (Bool × Bool →ₒ Bool)
           (StateT (Bool × Bool →ₒ Bool).QueryCache ProbComp)))
       (probeView <$>
@@ -256,7 +256,7 @@ theorem probeRun_pin_sign_false_erases :
 /-- The toy runtime is the caching random oracle over the empty cache. -/
 lemma runtime_evalDist_apply_singleton (oa : OracleComp toySpec Bool) (b : Bool) :
     (runtime (Commit := Bool) (Chal := Bool) Bool).evalDist oa {b} =
-      Pr{let x ← ((simulateQ (unifFwdImpl (Bool × Bool →ₒ Bool) +
+      Pr{let x ← ((simulateQ (unifFwdImpl (Bool × Bool →ₒ Bool) +ₛ
           (randomOracle : QueryImpl (Bool × Bool →ₒ Bool)
             (StateT (Bool × Bool →ₒ Bool).QueryCache ProbComp))) oa).run' ∅)}[x = b] := by
   rw [runtime_evalDist_eq_simulateQ_run', ← prEvent_eq_evalDist_singleton]

@@ -294,7 +294,7 @@ variable [DecidableEq ι] [DecidableEq ι'] [∀ t, SampleableType (spec.Range t
 private noncomputable abbrev sumRomImpl :
     QueryImpl (unifSpec + (spec + side)) (StateT (spec.QueryCache × side.QueryCache) ProbComp) :=
   (QueryImpl.ofLift unifSpec ProbComp).liftTarget
-      (StateT (spec.QueryCache × side.QueryCache) ProbComp) +
+      (StateT (spec.QueryCache × side.QueryCache) ProbComp) +ₛ
     QueryImpl.parallelStateT spec.randomOracle side.randomOracle
 
 /-- A preprocessing step of the simulation, run in the random oracle model on `spec`, is the step
@@ -322,7 +322,7 @@ private lemma sidePreprocessImpl_run_step (t : (unifSpec + (spec + side)).Domain
 step of the random oracle model on `spec + side` with the two caches kept apart. -/
 private lemma sideOnlineImpl_run_step (t : (unifSpec + (spec + side).batch).Domain)
     (sc : side.QueryCache) (c : spec.QueryCache) :
-    (simulateQ (unifFwdImpl spec + spec.randomOracle.batch) ((sideOnlineImpl t).run sc)).run c =ᵈ
+    (simulateQ (unifFwdImpl spec +ₛ spec.randomOracle.batch) ((sideOnlineImpl t).run sc)).run c =ᵈ
       (fun z => ((z.1, z.2.2), z.2.1)) <$>
         ((sumRomImpl (spec := spec) (side := side)).batch' t).run (c, sc) := by
   rcases t with n | ts

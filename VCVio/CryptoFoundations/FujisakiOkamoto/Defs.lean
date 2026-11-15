@@ -132,7 +132,7 @@ def OW_PCVA_queryImpl (encAlg : AsymmEncAlg (OracleComp spec) M PK SK C) [Decida
   let validImpl : QueryImpl (C →ₒ Bool) (OracleComp spec) := fun c => do
     let msg' ← encAlg.decrypt sk c
     return msg'.isSome
-  spec.passthrough + (checkImpl + validImpl)
+  spec.passthrough + (checkImpl +ₛ validImpl)
 
 /-- Main one-way under plaintext-checking and validity attacks (OW-PCVA) experiment.
 

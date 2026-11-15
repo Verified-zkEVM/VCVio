@@ -63,7 +63,7 @@ theorem run_rom_liftM {α : Type} (computation : OracleComp HashSpec α)
     (cache : QueryCache HashSpec) :
     (simulateQ KeygenUniform.rom (liftM computation : OracleComp OracleWorld α)).run cache =
       (simulateQ randomOracle computation).run cache := by
-  rw [show KeygenUniform.rom = unifFwdImpl HashSpec + (randomOracle :
+  rw [show KeygenUniform.rom = unifFwdImpl HashSpec +ₛ (randomOracle :
       QueryImpl HashSpec (StateT (QueryCache HashSpec) ProbComp)) from rfl,
     QueryImpl.simulateQ_add_liftM_right]
 

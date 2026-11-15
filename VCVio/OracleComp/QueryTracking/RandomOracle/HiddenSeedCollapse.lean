@@ -57,7 +57,7 @@ theorem map_run_simulateQ_idealImpl_collapseFwd {α : Type}
     (st : SplitCache pub X R) :
     Prod.map id (QueryCache.addEquiv pub (X →ₒ R)) <$>
         (simulateQ (idealImpl pub X R) (simulateQ (collapseFwd pub X R) oa)).run st =
-      (simulateQ (unifFwdImpl (pub + (X →ₒ R)) +
+      (simulateQ (unifFwdImpl (pub + (X →ₒ R)) +ₛ
           AnswerTape.dupRandomOracle (pub + (X →ₒ R))) oa).run
         (QueryCache.addEquiv pub (X →ₒ R) st) := by
   rw [← QueryImpl.simulateQ_compose]
