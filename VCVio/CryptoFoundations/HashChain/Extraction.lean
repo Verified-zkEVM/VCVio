@@ -15,10 +15,7 @@ A candidate reaching the honest endpoint starts at the honest value or first mer
 The merge uses distinct inputs at the same addressed step.
 The witness records the candidate's actual prefix and every earlier unequal prefix.
 The steps may fail, the labels may repeat, and neither carrier needs an equality instance.
-
-The total-chain dichotomy also appears as `SLHDSA.chain_diverge` in
-`HashSig/SLHDSA/Security/WotsWitnesses.lean`.
-Here the computation is the public `List.foldlM` over arbitrary partial steps.
+The chain is the public `List.foldlM` over arbitrary partial steps.
 -/
 
 public section
