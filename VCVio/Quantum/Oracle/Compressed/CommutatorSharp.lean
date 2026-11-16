@@ -149,23 +149,6 @@ section cell
 
 variable {Y : Type*} [Fintype Y] [DecidableEq Y] [AddCommGroup Y]
 
-/-- The phase cell is symmetric. -/
-theorem phaseCell_comm (χ : AddChar Y ℂ) (a b : Option Y) :
-    phaseCell Y χ a b = phaseCell Y χ b a := by
-  by_cases hχ : χ = 0
-  · subst hχ
-    rw [phaseCell_zero, one_apply, one_apply]
-    simp only [eq_comm]
-  rcases a with _ | u <;> rcases b with _ | w
-  · rfl
-  · rw [phaseCell_none_some hχ, phaseCell_some_none hχ]
-  · rw [phaseCell_none_some hχ, phaseCell_some_none hχ]
-  · rw [phaseCell_some_some hχ, phaseCell_some_some hχ]
-    by_cases h : u = w
-    · subst h; rfl
-    · simp only [h, Ne.symm h, ite_false, zero_add]
-      ring
-
 /-- **The row identity.** For a nontrivial character, the row of the phase cell at a filled
 content `u`, with the phase `χ u` removed from its diagonal entry, has squared norm
 `(4 - 2 Re χ u) / N`. -/
@@ -309,7 +292,7 @@ theorem sum_norm_truncatedPhaseOracle_sub_phaseDiagonal_sq_le {t : ℕ} {x : X}
       rw [this]; simp only [hblk]]
     simp only [truncatedPhaseOracle_sub_phaseDiagonal_apply x χ hsize]
     refine le_of_eq_of_le (Finset.sum_congr rfl fun a _ ↦ ?_) (sum_norm_phaseCell_sub_sq_le hχ u)
-    rw [hcell, phaseCell_comm]
+    rw [hcell, phaseCell_apply_comm]
     by_cases h : a = some u
     · subst h; simp
     · simp [h, Ne.symm h]
@@ -919,7 +902,7 @@ theorem le_l2_opNorm_commutator_truncatedOracle_sq (x₀ : X) {y₀ : Y} {χ : A
       field_simp
       ring
     · simp only [ha, ite_false, sub_zero]
-      rw [show (1 : ℂ) + 1 = 2 by norm_num, norm_mul, mul_pow, phaseCell_comm χ a]
+      rw [show (1 : ℂ) + 1 = 2 by norm_num, norm_mul, mul_pow, phaseCell_apply_comm χ a]
       norm_num
   rw [Finset.sum_congr rfl fun a _ ↦ hterm a, Finset.sum_sub_distrib, ← Finset.mul_sum,
     sum_norm_phaseCell_sub_sq hχ0, hχ, Finset.sum_ite_eq', ite_eq_left (Finset.mem_univ _)]
