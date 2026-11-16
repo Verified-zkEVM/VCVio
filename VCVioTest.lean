@@ -69,6 +69,7 @@ public import VCVioTest.GroupModel.Interaction.Basic
 public import VCVioTest.GroupModel.Interaction.MultiGroup
 public import VCVioTest.GroupModel.MasterBound
 public import VCVioTest.GroupModel.OfExplained
+public import VCVioTest.GroupModel.PairingVariants
 public import VCVioTest.GroupModel.SortedMasterBound
 public import VCVioTest.GroupModel.ToExplained
 public import VCVioTest.GroupModel.Typed
