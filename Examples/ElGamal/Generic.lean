@@ -100,26 +100,6 @@ section Interpretation
 
 variable [Field F] [AddCommGroup G] [Module F G] [DecidableEq G]
 
-private theorem runGen_bind {α β : Type} (A : OracleComp (genSpec F groupSig) α)
-    (k : α → OracleComp (genSpec F groupSig) β) (tbl : Tbl (fun _ : Unit => G)) :
-    runGen (Model.group G) (fun _ => id) (A >>= k) tbl =
-      (runGen (Model.group G) (fun _ => id) A tbl >>= fun r =>
-        runGen (Model.group G) (fun _ => id) (k r.1) r.2) := by
-  simp only [runGen, run, simulateQ_bind, StateT.run_bind]
-
-private theorem runGen_smul (tbl : Tbl (fun _ : Unit => G)) (d : F) (a : Handle) :
-    runGen (Model.group G) (fun _ => id)
-      (OracleComp.lift ((genSpec F groupSig).query (.inl (.smul () d a)))) tbl =
-      pure ((tbl ()).length, append tbl () (d • lookup tbl () a)) := rfl
-
-private theorem runGen_add (tbl : Tbl (fun _ : Unit => G)) (a b : Handle) :
-    runGen (Model.group G) (fun _ => id)
-      (OracleComp.lift ((genSpec F groupSig).query (.inl (.add () a b)))) tbl =
-      pure ((tbl ()).length, append tbl () (lookup tbl () a + lookup tbl () b)) := rfl
-
-private theorem runGen_pure {α : Type} (tbl : Tbl (fun _ : Unit => G)) (a : α) :
-    runGen (Model.group (F := F) G) (fun _ => id) (pure a) tbl = pure (a, tbl) := rfl
-
 private theorem runGen_coin (tbl : Tbl (fun _ : Unit => G)) :
     runGen (Model.group (F := F) G) (fun _ => id)
       (OracleComp.lift ((genSpec F groupSig).query (.inr 1))) tbl =
@@ -135,7 +115,7 @@ private theorem readBack_extend [AddCommGroup G]
       append (append (readBack τ tbl) () (lookup tbl () h)) () v := by
   funext u
   cases u
-  have hp := prefix_append tbl () () v
+  have hp := extends_append tbl () v ()
   have hm : (τ ()).map (lookup (append tbl () v) ()) = (τ ()).map (lookup tbl ()) := by
     apply List.map_congr_left
     intro a ha
@@ -154,7 +134,7 @@ private theorem wellFormed_extend [AddCommGroup G]
     WellFormed z (append (append τ () h) () (tbl ()).length) (append tbl () v) := by
   intro u
   cases u
-  have hp := prefix_append tbl () () v
+  have hp := extends_append tbl () v ()
   refine ⟨?_, lt_of_lt_of_le (hw ()).2.1 hp.length_le, ?_⟩
   · intro a ha
     simp only [append, Function.update_self, List.mem_append, List.mem_singleton] at ha
@@ -201,7 +181,7 @@ theorem oneTimeDDHReduction_toOneTime_eq [Field F] [Fintype F] [DecidableEq F]
   rintro ⟨⟨out, τ⟩, tbl⟩ hs
   have hw' := wellFormed_runGen_virtualize (Model.group G) (fun _ => id)
     A.chooseMessages hw ((out, τ), tbl) hs
-  have hp := runGen_prefix (Model.group G) (fun _ => id)
+  have hp := runGen_extends (Model.group G) (fun _ => id)
     ((virtualize (fun _ => 4) A.chooseMessages).run (fun _ => [0, 1]))
     (fun _ => [gen, X, Y, T, 0]) ((out, τ), tbl) hs ()
   have hlen : 5 ≤ (tbl ()).length := hp.length_le
@@ -224,7 +204,7 @@ theorem oneTimeDDHReduction_toOneTime_eq [Field F] [Fintype F] [DecidableEq F]
   have hm : lookup tbl () ((τ ()).getD (if bit then out.1 else out.2.1) 4) =
       if bit then lookup (readBack τ tbl) () out.1
       else lookup (readBack τ tbl) () out.2.1 := by
-    rw [← lookup_readBack hw']
+    rw [← lookup_readBack (z := fun _ => 4) () (hw' ()).2.2]
     cases bit <;> rfl
   rw [hT]
   erw [hm]
