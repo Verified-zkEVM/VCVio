@@ -45,8 +45,12 @@ This abstracts the core primitive in the GPV hash-and-sign framework. Unlike
 `TrapdoorPermutation` (in `OneWay.lean`), a PSF is many-to-one, the inversion is probabilistic,
 and acceptance depends on a quality predicate rather than exact inversion. -/
 structure PreimageSampleableFunction (PK SK Domain Range : Type) where
+  /-- The public evaluation map from the domain to the range under a public key. -/
   eval : PK → Domain → Range
+  /-- The trapdoor sampler: given a key pair and a target in the range, sample a candidate
+  preimage in the domain. -/
   trapdoorSample : PK → SK → Range → ProbComp Domain
+  /-- The shortness predicate the verifier checks on a purported preimage. -/
   isShort : Domain → Bool
 
 namespace PreimageSampleableFunction

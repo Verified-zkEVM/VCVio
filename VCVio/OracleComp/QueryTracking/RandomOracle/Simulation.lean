@@ -10,7 +10,6 @@ public import VCVio.OracleComp.QueryTracking.Structures
 public import VCVio.OracleComp.SimSemantics.Append
 public import VCVio.OracleComp.SimSemantics.QueryImpl.Basic
 public import VCVio.OracleComp.SimSemantics.StateT.BundledSemantics
-import VCVio.OracleComp.EvalDist.Measure
 
 /-!
 # The Random Oracle Model

@@ -11,7 +11,6 @@ public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.SMDTTCRF
 public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.SMDTUD
 public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.SMDTUDFinalValidity
 public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.ToFinalValidity.Core
-import Batteries.Tactic.Lint
 
 /-!
 # Converting rejection-on-arrival adversaries to source-final-validity adversaries

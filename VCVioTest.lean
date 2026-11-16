@@ -3,6 +3,7 @@ module  -- shake: keep-all --deprecated_module: ignore
 public import VCVioTest.AKE.UAKE.ExperimentFixtures
 public import VCVioTest.AKE.UAKE.TranscriptFixtures
 public import VCVioTest.Algorithms.Hash
+public import VCVioTest.AnswerTapeAdaptedUnion
 public import VCVioTest.Asymptotics.Negligible
 public import VCVioTest.CachedPointsBound
 public import VCVioTest.Computability
@@ -15,6 +16,7 @@ public import VCVioTest.CryptoFoundations.DiscreteLogRelation
 public import VCVioTest.CryptoFoundations.FiatShamirStateSteps
 public import VCVioTest.CryptoFoundations.FiatShamirWithAbortCanary
 public import VCVioTest.CryptoFoundations.FiatShamirWithAbortInstance
+public import VCVioTest.CryptoFoundations.FujisakiOkamotoOneWay
 public import VCVioTest.CryptoFoundations.KeyedHashCovering
 public import VCVioTest.CryptoFoundations.LeftOrRight
 public import VCVioTest.CryptoFoundations.OracleClosure
@@ -25,6 +27,7 @@ public import VCVioTest.CryptoFoundations.SignatureAlgBudget
 public import VCVioTest.CryptoFoundations.SignatureAlgRouted
 public import VCVioTest.CryptoFoundations.SymmEncAlgMeasure
 public import VCVioTest.CryptoFoundations.UniversalHash
+public import VCVioTest.EncodedStateInv
 public import VCVioTest.EvalDist.BundledSemantics
 public import VCVioTest.EvalDist.Deterministic
 public import VCVioTest.EvalDist.DisagreementMeasure
@@ -88,6 +91,7 @@ public import VCVioTest.MerkleTreeMultiExtractability
 public import VCVioTest.ModuleAPI.Cache
 public import VCVioTest.ModuleAPI.Counting
 public import VCVioTest.ModuleAPI.Heap
+public import VCVioTest.ModuleAPI.QueryImpl
 public import VCVioTest.MonadProbability
 public import VCVioTest.OracleComp.AdaptiveMeasure
 public import VCVioTest.OracleComp.BudgetedPotential
@@ -100,6 +104,7 @@ public import VCVioTest.OracleComp.QueryAndHandlerLaws
 public import VCVioTest.OracleComp.QueryTracking.QueryLog
 public import VCVioTest.OracleComp.SchwartzZippel
 public import VCVioTest.OracleComp.SecurityFamily
+public import VCVioTest.OracleComp.SimulateQ
 public import VCVioTest.OracleComp.SpecInstanceSearch
 public import VCVioTest.OracleComp.SpecInstanceSearchLibrary
 public import VCVioTest.OracleComp.Sum
@@ -172,9 +177,11 @@ public import VCVioTest.RandomOracleClassIndexedTape
 public import VCVioTest.RandomOracleControls
 public import VCVioTest.RandomOracleDefer
 public import VCVioTest.RandomOracleEncoded
+public import VCVioTest.RandomOracleEncodedFullCache
 public import VCVioTest.RandomOracleFreshAnswer
 public import VCVioTest.RandomOracleFreshQuery
 public import VCVioTest.RandomOracleHiddenSeed
+public import VCVioTest.RandomOracleHiddenSeedCacheExtension
 public import VCVioTest.RandomOracleHiddenSeedCollapse
 public import VCVioTest.RandomOracleHitPotential
 public import VCVioTest.RandomOracleJointPotential
@@ -237,3 +244,4 @@ public import VCVioTest.UniversePolymorphism
 public import VCVioTest.Unpredictability
 public import VCVioTest.UntilBadBind
 public import VCVioTest.VCGenAmbiguity
+public import VCVioTest.WriterCostStateT

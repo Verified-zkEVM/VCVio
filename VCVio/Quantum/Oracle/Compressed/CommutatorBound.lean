@@ -146,17 +146,19 @@ end Database
 
 section cell
 
-variable {Y : Type*} [Fintype Y] [DecidableEq Y] [AddCommGroup Y]
+variable {Y : Type*} [Fintype Y]
 
-omit [DecidableEq Y] [AddCommGroup Y] in
 /-- The squared amplitude of the uniform superposition over `Y` is `1 / |Y|`. -/
 theorem norm_cellAmp_sq : ‖cellAmp Y‖ ^ 2 = (Fintype.card Y : ℝ)⁻¹ := by
   rw [sq, ← norm_mul, cellAmp_mul_self, norm_inv, Complex.norm_natCast]
 
-omit [AddCommGroup Y] in
+variable [DecidableEq Y]
+
 /-- The one-cell compression is symmetric. -/
 theorem cellCompress_apply_comm (a' a : Option Y) : cellCompress Y a' a = cellCompress Y a a' := by
   rcases a' with _ | y <;> rcases a with _ | y' <;> simp [eq_comm]
+
+variable [AddCommGroup Y]
 
 /-- The phase cell is symmetric. -/
 theorem phaseCell_apply_comm (χ : AddChar Y ℂ) (a' a : Option Y) :

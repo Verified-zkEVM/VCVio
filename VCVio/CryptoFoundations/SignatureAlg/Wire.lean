@@ -7,8 +7,6 @@ Authors: Alexander Hicks
 module
 
 public import VCVio.CryptoFoundations.SignatureAlg.RomQueryCount
-import VCVio.OracleComp.QueryTracking.QueryBound.Simulation
-import VCVio.EvalDist.ProbabilityBounds
 
 /-!
 # Canonical wire interfaces for signatures
