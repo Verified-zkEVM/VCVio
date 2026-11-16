@@ -61,7 +61,7 @@ private theorem scanWithCost_none {A B : Type} (xs : List A) :
 
 variable {Stmt Wit Commit PrvState Chal Resp : Type} {rel : Stmt → Wit → Bool}
 variable [DecidableEq Stmt] [DecidableEq Commit] [DecidableEq Chal]
-variable (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel) (ρ b : ℕ) (M : Type)
+variable (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel ProbComp) (ρ b : ℕ) (M : Type)
 
 private def scanRecords (x : Stmt) (π : FischlinProof Commit Chal Resp ρ)
     (log : QueryLog (fischlinROSpec Stmt Commit Chal Resp ρ b M)) :

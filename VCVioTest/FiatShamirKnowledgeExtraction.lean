@@ -24,7 +24,7 @@ namespace FiatShamirKnowledgeExtractionTest
 
 /-- An always-valid relation with a challenge-independent verifier. -/
 @[expose]
-def protocol : SigmaProtocol Unit Unit Bool Unit Bool Unit (fun _ _ => true) where
+def protocol : SigmaProtocol Unit Unit Bool Unit Bool Unit (fun _ _ => true) ProbComp where
   commit _ _ := pure (false, ())
   respond _ _ _ _ := pure ()
   verify _ _ _ _ := true

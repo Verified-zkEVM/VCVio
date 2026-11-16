@@ -42,7 +42,7 @@ open scoped ENNReal
 open scoped OracleSpec.PrimitiveQuery
 
 variable {Stmt Wit Commit PrvState Chal Resp : Type} {rel : Stmt → Wit → Bool}
-variable (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
+variable (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel ProbComp)
   (hr : GenerableRelation Stmt Wit rel) (M : Type)
 
 /-- CMA-to-NMA reduction for Fiat-Shamir signatures built from a Sigma protocol: run the

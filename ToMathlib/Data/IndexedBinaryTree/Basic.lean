@@ -456,6 +456,25 @@ theorem FullData.get_internal_ofRight {α} {s_left s_right : Skeleton}
 
 end get
 
+section ofFn
+
+/-- The leaf data of a skeleton with the value `f j` at each leaf `j`. -/
+def LeafData.ofFn {α : Type _} : (s : Skeleton) → (SkeletonLeafIndex s → α) → LeafData α s
+  | .leaf, f => .leaf (f .ofLeaf)
+  | .internal l r, f =>
+      .internal (LeafData.ofFn l fun j => f (.ofLeft j)) (LeafData.ofFn r fun j => f (.ofRight j))
+
+/-- Reading a leaf of the leaf data built from a function recovers the function's value there. -/
+@[simp]
+theorem LeafData.get_ofFn {α : Type _} :
+    ∀ {s : Skeleton} (f : SkeletonLeafIndex s → α) (j : SkeletonLeafIndex s),
+      (LeafData.ofFn s f).get j = f j
+  | .leaf, _, .ofLeaf => rfl
+  | .internal _ _, f, .ofLeft j => LeafData.get_ofFn (fun i => f (.ofLeft i)) j
+  | .internal _ _, f, .ofRight j => LeafData.get_ofFn (fun i => f (.ofRight i)) j
+
+end ofFn
+
 section anySelected
 
 /-- Does a boolean selector select any leaf of the tree? -/
