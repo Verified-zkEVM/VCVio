@@ -37,7 +37,7 @@ The README and large amounts of commented-out code use `++ₒ` for combining ora
 Do not keep large commented-out Lean blocks around as reference material,
 especially if they use obsolete patterns (`Pr[= x | ...]`, `[= x | ...]`, `++ₒ`, `simulate'`,
 `getM`, `guard` via `Alternative`). Delete them instead. This is distinct from
-unfinished live proof attempts, which should be preserved with `stop`.
+unfinished live proof attempts on a working branch, which should be preserved with `stop`.
 Use `Examples/OneTimePad/Basic.lean` as the canonical reference for current style.
 
 ## Type System
@@ -257,6 +257,10 @@ Two failure classes recur:
   or be uniformly distributed on — a strictly larger space. A hypothesis asserting such an
   equality or uniformity is false at every parameter where the strict cardinality inequality
   holds.
+- **Bounds over every adversary**: a hypothesis `∀ adv, Adv adv ≤ ε` over an adversary type is
+  satisfiable only at `ε` as large as exhaustive search achieves, query budgets notwithstanding,
+  so the theorem is empty at real parameters. Assume the bound for the named distinguisher
+  ([crypto.md](crypto.md#name-the-reduction-in-the-theorem-statement)).
 
 **Fix**: when compatibility of a new hypothesis bundle is not immediate, ship a kernel-checked
 witness for the whole bundle (or at least each nontrivial compatibility pair) in the same PR.
@@ -283,14 +287,16 @@ ToMathlib → Prelude → EvalDist/Defs → OracleComp core → EvalDist bridge
 
 ### 16. Preserve partial proof attempts with `stop`
 
-When a proof attempt is not finished or is currently broken, insert a local `stop` marker instead of deleting large proof blocks. This preserves search context for later agents.
+When a proof attempt on a working branch is not finished or is currently broken, insert a local `stop` marker instead of deleting large proof blocks. This preserves search context for later agents. A `stop` leaves the proof incomplete, so the branch cannot merge until it is gone: `main` carries no `sorry` (see *Building* in `AGENTS.md`).
 
 ### 17. `OracleComp.inductionOn` is the canonical eliminator
 
-Pattern: `| pure x => ... | query_bind t oa ih => ...`. Use `simulateQ_bind`,
-`simulateQ_query`, `simulateQ_pure` simp lemmas in the `query_bind` case.
-See `simulateQ_id'` in `VCVio/OracleComp/SimSemantics/SimulateQ.lean` for a
-clean example.
+Pattern: `| pure x => ... | query_bind t oa ih => ...`. In the `query_bind` case, `simp`
+distributes `simulateQ` with the `@[simp]` lemmas `simulateQ_bind`, `simulateQ_query` and
+`simulateQ_pure`, and `rw [simulateQ_bind, simulateQ_spec_query]` lands on `impl t` directly.
+`simulateQ` is semireducible, so CSLib's `PFunctor.FreeM.liftM` simp lemmas do not rewrite it:
+the pieces stay `simulateQ`-headed after `simp`, and a later `rw [simulateQ_*]` still matches.
+See `simulateQ_id'` in `VCVio/OracleComp/SimSemantics/SimulateQ.lean` for a clean example.
 
 ### 18. Full cutover, no backward-compatibility shims
 
@@ -305,7 +311,7 @@ specific submodule it actually uses.
 
 **Allowed umbrellas** (strictly top-level roots only): root imports such as
 `VCVio.lean`, `ToMathlib.lean`, `Extern.lean`, `HashSig.lean`, `Examples.lean`,
-`LatticeCrypto.lean`, `Interop.lean`, `VCVioWidgets.lean`, `VCVioTest.lean`, and
+`LatticeCrypto.lean`, `VCVioTest.lean`, and
 `LatticeCryptoTest.lean`.
 When a new top-level root is added, extend this list alongside it.
 
@@ -388,10 +394,10 @@ and remaining migrations by their effect on callers.
 
 This regenerates the active module root files covered by the build import check:
 `ToMathlib.lean`, `VCVio.lean`, `LatticeCrypto.lean`, `Extern.lean`,
-`HashSig.lean`, `Examples.lean`, `VCVioWidgets.lean`, and `VCVioTest.lean`.
-It also updates the legacy `Interop.lean` umbrella without enabling module mode.
+`HashSig.lean`, `Examples.lean`, and `VCVioTest.lean`.
 CI runs `scripts/check-imports.sh`, which regenerates the umbrellas and fails if any differs
-from the committed file; `Interop` remains dormant and is migrated separately.
+from the committed file. The `Interop/` package lists its library roots in `Interop/lakefile.toml`
+and has no generated umbrella.
 
 ### 25. Active Lean sources use explicit module scopes
 
@@ -405,7 +411,7 @@ use opaque `public section` when downstream code does not need definitional unfo
 `backward.proofsInPublic`; make helper visibility explicit or give proof terms enough type
 information to avoid public metavariables.
 
-The dormant `Interop` library is intentionally excluded until its separate migration.
+The `Interop/` package builds separately; its unported hax examples are not built.
 `LatticeCryptoTest.lean` remains a curated umbrella and `HashSigTest` has no root umbrella because
 their executable modules contain colliding root-level `main` declarations.
 

@@ -116,49 +116,66 @@ lazy random oracle until the run queries `t`: an event of the unprogrammed run t
 uncached is at most as likely as the same event in the programmed run. -/
 theorem prEvent_run_uncached_le_run_cacheQuery {α : Type}
     (oa : OracleComp (unifSpec + hashSpec) α) (t : ι) (u : hashSpec.Range t) (E : α → Prop) :
-    ∀ s : hashSpec.QueryCache, s t = none →
+    ∀ s : hashSpec.QueryCache,
       Pr{let z ← (simulateQ hashSpec.romImpl oa).run s}[E z.1 ∧ z.2 t = none] ≤
         Pr{let z ← (simulateQ hashSpec.romImpl oa).run (s.cacheQuery t u)}[E z.1] := by
-  induction oa using OracleComp.inductionOn with
-  | pure a =>
-    intro s hs
-    simp only [simulateQ_pure, StateT.run_pure, map_pure]
-    by_cases hE : E a <;> simp [hE, hs]
-  | query_bind q k ih =>
-    intro s hs
-    simp only [simulateQ_bind, StateT.run_bind, simulateQ_query,
-      OracleQuery.input_query, OracleQuery.cont_query, id_map, map_bind]
-    cases q with
-    | inl n =>
-      simp only [run_apply_inl, bind_map_left]
-      exact OracleComp.prEvent_bind_mono_of_support _ _ _ fun v _ => ih v s hs
-    | inr x =>
-      simp only [QueryImpl.add_apply_inr, randomOracle.run_eq]
-      by_cases hxt : x = t
-      · subst hxt
-        refine le_of_eq_of_le ?_ bot_le
-        rw [hs, prEvent_def]
-        simp only [bind_assoc, pure_bind]
-        refine evalDist.apply_eq_zero_of_disjoint_support _ (measurableSet_singleton True) ?_
-        intro p hp
-        rw [mem_support_bind_iff] at hp
-        obtain ⟨v, _, hp⟩ := hp
-        rw [support_map, Set.mem_image] at hp
-        obtain ⟨z, hz, rfl⟩ := hp
-        have hcached := le_snd_of_mem_support_run_unifFwdImpl_add_withCaching
-          uniformSampleImpl (k v) hz
-          (QueryCache.cacheQuery_self s x v)
-        simp [hcached]
-      · rw [QueryCache.cacheQuery_of_ne _ _ hxt]
-        cases hsx : s x with
-        | some v =>
-          simp only [pure_bind]
-          exact ih v s hs
-        | none =>
+  have huncached : ∀ s : hashSpec.QueryCache, s t = none →
+      Pr{let z ← (simulateQ hashSpec.romImpl oa).run s}[E z.1 ∧ z.2 t = none] ≤
+        Pr{let z ← (simulateQ hashSpec.romImpl oa).run (s.cacheQuery t u)}[E z.1] := by
+    induction oa using OracleComp.inductionOn with
+    | pure a =>
+      intro s hs
+      simp only [simulateQ_pure, StateT.run_pure, map_pure]
+      by_cases hE : E a <;> simp [hE, hs]
+    | query_bind q k ih =>
+      intro s hs
+      simp only [simulateQ_bind, StateT.run_bind, simulateQ_query,
+        OracleQuery.input_query, OracleQuery.cont_query, id_map, map_bind]
+      cases q with
+      | inl n =>
+        simp only [run_apply_inl, bind_map_left]
+        exact OracleComp.prEvent_bind_mono_of_support _ _ _ fun v _ => ih v s hs
+      | inr x =>
+        simp only [QueryImpl.add_apply_inr, randomOracle.run_eq]
+        by_cases hxt : x = t
+        · subst hxt
+          refine le_of_eq_of_le ?_ bot_le
+          rw [hs, prEvent_def]
           simp only [bind_assoc, pure_bind]
-          refine OracleComp.prEvent_bind_mono_of_support _ _ _ fun v _ => ?_
-          rw [QueryCache.cacheQuery_comm s (Ne.symm hxt) u v]
-          exact ih v (s.cacheQuery x v)
-            (by rw [QueryCache.cacheQuery_of_ne _ _ (Ne.symm hxt)]; exact hs)
+          refine evalDist.apply_eq_zero_of_disjoint_support _ (measurableSet_singleton True) ?_
+          intro p hp
+          rw [mem_support_bind_iff] at hp
+          obtain ⟨v, _, hp⟩ := hp
+          rw [support_map, Set.mem_image] at hp
+          obtain ⟨z, hz, rfl⟩ := hp
+          have hcached := le_snd_of_mem_support_run_unifFwdImpl_add_withCaching
+            uniformSampleImpl (k v) hz
+            (QueryCache.cacheQuery_self s x v)
+          simp [hcached]
+        · rw [QueryCache.cacheQuery_of_ne _ _ hxt]
+          cases hsx : s x with
+          | some v =>
+            simp only [pure_bind]
+            exact ih v s hs
+          | none =>
+            simp only [bind_assoc, pure_bind]
+            refine OracleComp.prEvent_bind_mono_of_support _ _ _ fun v _ => ?_
+            rw [QueryCache.cacheQuery_comm s (Ne.symm hxt) u v]
+            exact ih v (s.cacheQuery x v)
+              (by rw [QueryCache.cacheQuery_of_ne _ _ (Ne.symm hxt)]; exact hs)
+  intro s
+  by_cases hs : s t = none
+  · exact huncached s hs
+  · refine le_of_eq_of_le ?_ bot_le
+    rw [prEvent_def]
+    refine evalDist.apply_eq_zero_of_disjoint_support _ (measurableSet_singleton True) ?_
+    rintro z hz
+    rw [support_map, Set.mem_image] at hz
+    obtain ⟨result, hresult, rfl⟩ := hz
+    have hmono := le_snd_of_mem_support_run_unifFwdImpl_add_withCaching
+      uniformSampleImpl oa hresult
+    cases hst : s t with
+    | none => exact (hs hst).elim
+    | some value => simp [hmono hst]
 
 end roSim

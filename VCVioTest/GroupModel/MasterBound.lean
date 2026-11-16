@@ -9,7 +9,7 @@ public import VCVio.CryptoFoundations.GroupModel.MasterBound
 public import Mathlib.Algebra.Field.ZMod
 
 /-!
-Sharpness of the master bound at a zero default
+# Sharpness of the master bound at a zero default
 
 Over `ZMod 5`, comparing the single polynomial `X` with the out-of-range handle `1`
 attains the `1/5` collision bound with no group operations.
@@ -62,7 +62,7 @@ theorem masterBound_zero_default :
     (Bool × Tbl (fun _ : Unit => MvPolynomial Unit (ZMod 5)))) := ⊤
   have hq : IsQueryBoundP oa (fun i => isGroupOp i = true) 0 := by
     exact ⟨by decide, fun _ => trivial⟩
-  have hd : DegreeLE 1 tbl := by
+  have hd : DegreeLE (fun _ => 1) tbl := by
     intro s p hp
     simp only [tbl, List.mem_singleton] at hp
     subst p

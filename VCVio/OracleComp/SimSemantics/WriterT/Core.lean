@@ -52,10 +52,10 @@ identity. Note that `m` cannot vary with `t`. -/
 /-- Reassociate a nested writer transformer into one product log.
 
 The outer log is the first component of the product; the inner/base log is the second. This
-is the writer-transformer analogue of `flattenStateT`. Requires `[Monoid ω₂]` to lift the
-inner writer's run; the resulting `WriterT (ω₁ × ω₂) m` carries both logs as a product. -/
+is the writer-transformer analogue of `flattenStateT`. The resulting `WriterT (ω₁ × ω₂) m`
+carries both logs as a product. -/
 @[expose] def flattenWriterT {ι : Type _} {spec : OracleSpec ι}
-    {m : Type u → Type v} [Monad m] {ω₁ ω₂ : Type u} [Monoid ω₂]
+    {m : Type u → Type v} [Monad m] {ω₁ ω₂ : Type u}
     (impl : QueryImpl spec (WriterT ω₁ (WriterT ω₂ m))) :
     QueryImpl spec (WriterT (ω₁ × ω₂) m) := fun t =>
   WriterT.mk <| do

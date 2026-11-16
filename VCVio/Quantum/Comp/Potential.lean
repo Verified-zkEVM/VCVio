@@ -5,6 +5,7 @@ Authors: Quang Dao
 -/
 
 module
+public import QuantumFoundations.MatrixMap.Comparison
 public import VCVio.Quantum.Comp.HybridProjected
 
 /-!
@@ -47,7 +48,8 @@ zero when the local leak estimate is exact; in that case the bound is
 
 Both conditions are stated on traces, so that runtimes with countably many outcomes and drops
 that are not given by operators are covered. Loewner inequalities between operators give them
-(`Quantum.QuantumRuntime.drop_of_posSemidef` and `Quantum.QuantumRuntime.leak_of_posSemidef`).
+(`Quantum.QuantumRuntime.drop_of_posSemidef` and
+`Quantum.MatrixMap.tsum_ofReal_trace_conj_le_of_posSemidef`).
 
 ## Proof
 
@@ -73,8 +75,7 @@ leak condition, optimized over `s`, bounds by `√(λₙ mₙ) + √Eₙ`, with 
 ## Main statements
 
 * `Quantum.QuantumRuntime.sum_range_queryWeight_le_potential`: telescoping of the drops.
-* `Quantum.QuantumRuntime.drop_of_posSemidef` and `Quantum.QuantumRuntime.leak_of_posSemidef`:
-  the two conditions from Loewner inequalities.
+* `Quantum.QuantumRuntime.drop_of_posSemidef`: the drop condition from a Loewner inequality.
 * `Quantum.QuantumRuntime.eventWeight_pinch_eq_zero`: the pinched runtime keeps the event
   empty; `Quantum.QuantumRuntime.krausWeight_sub_pinch`: it differs from the runtime by the
   Kraus weights of the commutators.
@@ -497,30 +498,6 @@ theorem drop_of_posSemidef (U : α → Matrix (O × D) (J × D) ℂ) (K K' : Mat
     Matrix.trace_sum, Complex.sub_re, Complex.add_re, Complex.re_sum]
   ring
 
-omit [Fintype Z] [DecidableEq J] [DecidableEq O] in
-/-- **The leak condition from operators.** If
-`(1 + s) λ Δ + (1 + s⁻¹) Ε - ∑ᵣ (C r)ᴴ (C r)` is positive semidefinite, then the Kraus weight of
-the `C r` on `σ` is at most `(1 + s) λ tr (Δ σ) + (1 + s⁻¹) tr (Ε σ)`. -/
-theorem leak_of_posSemidef (C : α → Matrix O J ℂ) (Δ Ε : Matrix J J ℂ) {lam s : ℝ}
-    (hlam : 0 ≤ lam) (hs : 0 < s) {σ : Matrix J J ℂ} (hσ : σ.PosSemidef) (hΔ : Δ.PosSemidef)
-    (hC : (((1 + s) * lam : ℝ) • Δ + ((1 + s⁻¹ : ℝ) : ℝ) • Ε - ∑ r, (C r)ᴴ * C r).PosSemidef) :
-    ∑' r, ENNReal.ofReal (MatrixMap.conj (C r) σ).trace.re ≤
-      ENNReal.ofReal (1 + s) * (ENNReal.ofReal lam * ENNReal.ofReal (Δ * σ).trace.re) +
-        ENNReal.ofReal (1 + s⁻¹) * ENNReal.ofReal (Ε * σ).trace.re := by
-  have hnn : ∀ r, 0 ≤ (MatrixMap.conj (C r) σ).trace.re := fun r ↦
-    (hσ.mul_mul_conjTranspose_same _).trace_re_nonneg
-  have hpos := hC.trace_mul_re_nonneg hσ
-  simp only [Matrix.sub_mul, Matrix.add_mul, Matrix.sum_mul, Matrix.smul_mul, Matrix.trace_sub,
-    Matrix.trace_add, Matrix.trace_sum, Matrix.trace_smul, Complex.sub_re, Complex.add_re,
-    Complex.re_sum, Complex.real_smul, Complex.re_ofReal_mul] at hpos
-  rw [tsum_fintype, ← ENNReal.ofReal_sum_of_nonneg fun r _ ↦ hnn r,
-    ← ENNReal.ofReal_mul hlam, ← ENNReal.ofReal_mul (by positivity),
-    ← ENNReal.ofReal_mul (by positivity)]
-  refine (ENNReal.ofReal_le_ofReal ?_).trans ENNReal.ofReal_add_le
-  simp only [MatrixMap.trace_conj_apply]
-  have := hΔ.trace_mul_re_nonneg hσ
-  nlinarith
-
 end Loewner
 
 /-! ## The event and the pinched runtime -/
@@ -542,7 +519,6 @@ variable {D : QReg} {s : ∀ i, SubInstrument (spec.In i × D) (spec.Out i × D)
   {U : ∀ i, spec.Result i → Matrix (spec.Out i × D) (spec.In i × D) ℂ}
   {Q : Matrix D D ℂ}
 
-omit [Fintype Z] in
 private theorem one_kronecker_proj {n : Type*} [Fintype n] [DecidableEq n] (hQ : Qᴴ = Q)
     (hQQ : Q * Q = Q) :
     ((1 : Matrix n n ℂ) ⊗ₖ Q)ᴴ = (1 : Matrix n n ℂ) ⊗ₖ Q ∧
@@ -569,7 +545,6 @@ noncomputable def pinchStep (hU : ∀ i r, (s i).branch r = MatrixMap.conj (U i 
 variable (hU : ∀ i r, (s i).branch r = MatrixMap.conj (U i r)) (hQ : Qᴴ = Q) (hQQ : Q * Q = Q)
   (σ₀ : SubState D)
 
-omit [Fintype Z] in
 /-- **The pinched runtime keeps the event empty**: run from an operator with no weight on
 `1 ⊗ Q`, it leaves no weight on `1 ⊗ Q`. -/
 theorem eventWeight_pinch_eq_zero (x : QuantumComp L spec X A)
@@ -590,7 +565,6 @@ theorem eventWeight_pinch_eq_zero (x : QuantumComp L spec X A)
   rw [← hp]
   simp
 
-omit [Fintype Z] in
 include hQ hQQ in
 /-- The Kraus weight of the difference between a step and its pinching is that of the
 commutators `[Q̂, U i r]`. -/
@@ -602,7 +576,6 @@ theorem krausWeight_sub_pinch (i : spec.Port) (σ : Matrix (spec.In i × D) (spe
   rw [MatrixMap.trace_conj_apply, MatrixMap.trace_conj_apply, conjTranspose_sub_pinch_mul
     (one_kronecker_proj hQ hQQ).1 (one_kronecker_proj hQ hQQ).1 (one_kronecker_proj hQ hQQ).2]
 
-omit [Fintype Z] in
 include hU hQ hQQ in
 /-- From zero initial event weight, the final event amplitude is bounded by the sum of
 commutator amplitudes at the actual query inputs. Local operations and all outcomes
@@ -743,7 +716,6 @@ theorem eventWeight_le_of_potential (x : QuantumComp L spec X A)
   simpa only [rpow_inv_two_rpow_two] using
     (ENNReal.le_rpow_inv_iff (by norm_num : (0 : ℝ) < 2)).mp h
 
-omit [Fintype Z] in
 /-- The weight on `1 ⊗ Q` is at most the trace of the initial operator. -/
 theorem eventWeight_le_trace (R : QuantumRuntime spec) {Q : Matrix R.D R.D ℂ} (hQ : Qᴴ = Q)
     (hQQ : Q * Q = Q) (x : QuantumComp L spec X A) {ρ : Matrix (A × R.D) (A × R.D) ℂ}

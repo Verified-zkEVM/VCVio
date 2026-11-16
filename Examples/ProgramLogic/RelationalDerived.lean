@@ -60,7 +60,11 @@ example (oa : OracleComp spec α) :
 
 /-! ## Registered `@[vcspec]` relational theorems -/
 
+/-- An irreducible wrapper around `pure true`, the left program of the relational
+`@[vcspec]` lookup tests. -/
 @[irreducible] def wrappedTrueLeft : OracleComp spec Bool := pure true
+/-- An irreducible wrapper around `pure true`, the right program of the relational
+`@[vcspec]` lookup tests. -/
 @[irreducible] def wrappedTrueRight : OracleComp spec Bool := pure true
 
 @[local vcspec] theorem relTriple_wrappedTruePair :
@@ -76,7 +80,11 @@ example :
     ⟪wrappedTrueLeft (spec := spec) ~ wrappedTrueRight (spec := spec) | fun _ _ => True⟫ := by
   rvcstep
 
+/-- An irreducible wrapper around `pure true`, the left program of the tests of a relational
+`@[vcspec]` theorem with an auxiliary hypothesis. -/
 @[irreducible] def wrappedAuxLeft : OracleComp spec Bool := pure true
+/-- An irreducible wrapper around `pure true`, the right program of the tests of a
+relational `@[vcspec]` theorem with an auxiliary hypothesis. -/
 @[irreducible] def wrappedAuxRight : OracleComp spec Bool := pure true
 
 @[local vcspec] theorem relTriple_wrappedAuxPairStep (_haux : True) :
@@ -108,7 +116,11 @@ example :
   intro a b
   split_ifs <;> simp
 
+/-- An irreducible wrapper around `pure true`, the left program of the tests of a raw `rwp`
+`@[vcspec]` theorem with an auxiliary hypothesis. -/
 @[irreducible] def rawAuxLeft : OracleComp spec Bool := pure true
+/-- An irreducible wrapper around `pure true`, the right program of the tests of a raw `rwp`
+`@[vcspec]` theorem with an auxiliary hypothesis. -/
 @[irreducible] def rawAuxRight : OracleComp spec Bool := pure true
 
 @[local vcspec] theorem rawRWP_wrappedAuxPairStep (_haux : True) :

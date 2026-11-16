@@ -7,7 +7,6 @@ Authors: Alexander Hicks
 module
 
 public import HashSig.SLHDSA.Security.CoverageBound
-import VCVio.OracleComp.Constructions.SampleableType.Measure
 
 /-!
 # The message-`PRF` key events

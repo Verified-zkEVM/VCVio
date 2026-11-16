@@ -79,7 +79,7 @@ through to a fresh uniform answer with no state change. -/
 theorem evalDist_simulateQ_run'_empty {α : Type} [MeasurableSpace α] (oa : OracleComp spec₀ α) :
     𝒟[(simulateQ (eagerRandomOracle (spec := spec₀)) oa).run' ∅] = 𝒟[oa] := by
   induction oa using OracleComp.inductionOn with
-  | pure a => simp [simulateQ_pure]
+  | pure a => simp
   | query_bind t f ih =>
     let : MeasurableSpace (spec₀.Range t) := ⊤
     rw [simulateQ_bind,
