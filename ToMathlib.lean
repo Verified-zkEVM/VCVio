@@ -2,6 +2,7 @@ module  -- shake: keep-all --deprecated_module: ignore
 
 public import ToMathlib.Algebra.BigOperators.Finset
 public import ToMathlib.Algebra.MvPolynomial.SchwartzZippel
+public import ToMathlib.Analysis.Calculus.TaylorSecondOrder
 public import ToMathlib.Analysis.MeanInequalities
 public import ToMathlib.Analysis.SumIntegralComparisons
 public import ToMathlib.Control.Except
@@ -71,6 +72,7 @@ public import ToMathlib.MeasureTheory.Measure.UniformTable
 public import ToMathlib.Order.RelClasses
 public import ToMathlib.OrderEnrichedCategory
 public import ToMathlib.Probability.Divergence.Renyi
+public import ToMathlib.Probability.Divergence.RenyiChain
 public import ToMathlib.Probability.Divergence.RenyiTotalVariation
 public import ToMathlib.Probability.Divergence.TotalVariation
 public import ToMathlib.Probability.Kernel.Bounds
@@ -78,6 +80,7 @@ public import ToMathlib.Probability.Kernel.Quadratic
 public import ToMathlib.Probability.Kernel.Subprobability
 public import ToMathlib.Probability.Kernel.TotalVariation
 public import ToMathlib.Probability.NegativeHypergeometric
+public import ToMathlib.Probability.SecondMoment
 public import ToMathlib.Probability.TailSums
 public import ToMathlib.Probability.UniformOn
 public import ToMathlib.ProbabilityTheory.FinRatPMF
