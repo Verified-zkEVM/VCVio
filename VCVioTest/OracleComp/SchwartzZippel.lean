@@ -10,8 +10,8 @@ public import Mathlib.Algebra.Field.ZMod
 
 /-! ## Schwartz–Zippel sampling API tests
 
-Concrete coordinate polynomials over `ZMod 5` exercise finite variable types and `Fin`-indexed
-callers of the uniform probability bound.
+Concrete coordinate polynomials over `ZMod 5` exercise finite variable types, `Fin`-indexed
+callers of the uniform probability bound, and the subset form over the nonzero residues.
 -/
 
 public section
@@ -27,7 +27,7 @@ theorem bool_coordinate :
       MvPolynomial.eval x (MvPolynomial.X true : MvPolynomial Bool (ZMod 5)) = 0] ≤
       (1 : ℝ≥0∞) / 5 := by
   let : Fact (Nat.Prime 5) := ⟨by decide⟩
-  simpa using prob_eval_zero_univ_le_div
+  simpa using prEvent_eval_eq_zero_univ_le_div
     (MvPolynomial.X true : MvPolynomial Bool (ZMod 5)) (MvPolynomial.X_ne_zero true)
     (d := 1) (by simp)
 
@@ -37,7 +37,7 @@ theorem fin_two_coordinate :
       MvPolynomial.eval x (MvPolynomial.X 0 : MvPolynomial (Fin 2) (ZMod 5)) = 0] ≤
       (1 : ℝ≥0∞) / 5 := by
   let : Fact (Nat.Prime 5) := ⟨by decide⟩
-  simpa using prob_eval_zero_univ_le_div
+  simpa using prEvent_eval_eq_zero_univ_le_div
     (MvPolynomial.X 0 : MvPolynomial (Fin 2) (ZMod 5)) (MvPolynomial.X_ne_zero 0)
     (d := 1) (by simp)
 
@@ -48,8 +48,22 @@ theorem fin_compatibility
     {n d : ℕ} (P : MvPolynomial (Fin n) R) (h_nonzero : P ≠ 0)
     (h_deg : P.totalDegree ≤ d) :
     Pr{let r ← $ᵗ (Fin n → R)}[MvPolynomial.eval r P = 0] ≤
-      (d : ℝ≥0∞) / Fintype.card R := open scoped Classical in by
-  let : Field R := @Fintype.fieldOfDomain R _ _ (Classical.decEq R) _
-  exact prob_eval_zero_univ_le_div P h_nonzero h_deg
+      (d : ℝ≥0∞) / Fintype.card R :=
+  prEvent_eval_eq_zero_univ_le_div P h_nonzero h_deg
+
+/-- The nonzero residues of `ZMod 5`, the factor set of the subset form of the bound. -/
+abbrev nonzeroResidues : Set (ZMod 5) := {x | x ≠ 0}
+
+instance : Nonempty ↥nonzeroResidues := ⟨⟨1, by decide⟩⟩
+
+/-- The subset form of the bound, over the four nonzero residues of `ZMod 5`. -/
+theorem bool_coordinate_nonzero :
+    Pr{let x ← $ᵗ (∀ _ : Bool, ↥nonzeroResidues)}[
+      MvPolynomial.eval (fun i => (x i : ZMod 5))
+        (MvPolynomial.X true : MvPolynomial Bool (ZMod 5)) = 0] ≤ (1 : ℝ≥0∞) / 4 := by
+  let : Fact (Nat.Prime 5) := ⟨by decide⟩
+  simpa using prEvent_eval_eq_zero_le_div (S := fun _ => nonzeroResidues)
+    (MvPolynomial.X true : MvPolynomial Bool (ZMod 5)) (MvPolynomial.X_ne_zero true) 1 4
+    (by simp) (fun _ => by decide)
 
 end SchwartzZippelTest

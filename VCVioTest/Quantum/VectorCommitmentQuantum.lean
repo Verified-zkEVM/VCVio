@@ -216,7 +216,7 @@ theorem checkAt_queryVC (B : QReg) (ans : PartialVec 0 Bool) :
       (checkedRead (X := Fin 2) (Y := Fin 2) (Cm := Unit) (Z := Z0) B (0 : Fin 1) 0).map
         (fun a ↦ (a.map (fun y ↦ y == 0)).getD false) := by
   simp only [checkAt, queryVC, runChecked_zeroCheck, QuantumComp₂.bind_eq,
-    QuantumComp₂.bind_assoc, QuantumComp₂.map]
+    QuantumComp₂.bind_assoc, QuantumComp₂.map_eq_bind_pure]
   apply congrArg (QuantumComp₂.bind
     (checkedRead (X := Fin 2) (Y := Fin 2) (Cm := Unit) (Z := Z0) B (0 : Fin 1) 0))
   funext a

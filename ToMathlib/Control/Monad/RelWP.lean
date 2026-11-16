@@ -20,8 +20,8 @@ when one side is pure. Oracle-specific interpretations live in
 `VCVio/ProgramLogic/Relational/WP/`.
 
 The design follows Maillard et al., *The Next 700 Relational Program Logics* (POPL 2020),
-and Avanzini, Barthe, Grégoire, Davoli, *eRHL* (POPL 2025). Its unary predecessor was
-Loom2 (`verse-lab/loom2`).
+and Avanzini, Barthe, Grégoire, Davoli, *eRHL* (POPL 2025). Its unary counterpart is core's
+`Std.WP`, whose design comes from Loom2 (`verse-lab/loom2`).
 -/
 
 @[expose] public section

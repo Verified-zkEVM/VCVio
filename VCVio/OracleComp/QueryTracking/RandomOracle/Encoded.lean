@@ -85,6 +85,9 @@ into a typed answer and a tail (`RandomOracleEncoding.ofSplit`).
 - `RandomOracleEncoding.prEvent_simulateQ_singleImpl_run_le`: the single-oracle world is bounded
   by the typed world or a clash; `RandomOracleEncoding.prEvent_simulateQ_romImpl_encodeImpl_run_le`
   is the same statement for the random oracle model of the single oracle after the encoding.
+- `RandomOracleEncoding.singleImpl_run_evalDistEq_typedImpl_fill_of_injective`: under an injective
+  encoding, the two worlds agree in distribution on the result together with the completed
+  full-reply cache.
 -/
 
 public section
@@ -416,6 +419,11 @@ theorem isSome_mark {c : spec.QueryCache} {u : (spec + (D →ₒ M)).Domain}
   · simp only [mark]
     cases E.route x <;> simp [QueryCache.isSome_cacheQuery_apply_iff, hq]
 
+/-- A routed full read records the typed point returned by the routing map. -/
+theorem isSome_mark_of_route {c : spec.QueryCache} {x : D} {q : ι}
+    (h : E.route x = some q) (a : M) : (E.mark c (.inr x) a q).isSome := by
+  simp [mark, h]
+
 /-- Recording a step that creates a clash, or any step from a state with a clash, leaves a
 clash. -/
 theorem clash_mark {c : spec.QueryCache} {u : (spec + (D →ₒ M)).Domain}
@@ -559,6 +567,13 @@ a clash every tabulated raw input read as a typed point has that point cached. -
 def StateInv (s : spec.QueryCache × (D →ₒ M).QueryCache) : Prop :=
   {q | (s.1 q).isSome}.Finite ∧
     (¬E.Clash s.1 → ∀ x, (s.2 x).isSome → ∀ q, E.route x = some q → (s.1 q).isSome)
+
+omit [DecidableEq ι] [DecidableEq D] in
+/-- The completion invariant consists of finite typed support and routed table coverage. -/
+theorem stateInv_iff (s : spec.QueryCache × (D →ₒ M).QueryCache) :
+    E.StateInv s ↔ {q | (s.1 q).isSome}.Finite ∧
+      (¬E.Clash s.1 → ∀ x, (s.2 x).isSome → ∀ q, E.route x = some q → (s.1 q).isSome) :=
+  Iff.rfl
 
 variable {E}
 
@@ -781,6 +796,31 @@ theorem intertwinesOn_fill_patchedImpl_singleImpl :
       obtain ⟨hc, hcol⟩ := not_or.1 hb
       exact evalDist_typedHashImpl_run_bind_fill hc hf (hraw hc) u hcol f
 
+/-- Every completed typed or raw query preserves finite typed support and routed coverage. -/
+theorem preservesInv_typedHashImpl_stateInv :
+    QueryImpl.PreservesInv E.typedHashImpl E.StateInv := by
+  intro q s hs z hz
+  -- A completed router records its typed point and adds at most its own auxiliary input.
+  obtain ⟨hmark, htab⟩ :=
+    E.mem_support_typedHashImpl_run hz
+  rw [RandomOracleEncoding.stateInv_iff] at hs ⊢
+  refine ⟨?_, ?_⟩
+  · rw [hmark]
+    exact E.finite_mark hs.1 q z.1
+  · intro hgood raw hraw point hpoint
+    -- Existing clashes survive recording, so a non-clashing result started without one.
+    have hold : ¬E.Clash s.1 := by
+      intro hclash
+      apply hgood
+      rw [hmark]
+      exact E.clash_mark (.inl hclash) z.1
+    rw [hmark]
+    rcases htab raw hraw with h | h
+    · exact E.isSome_mark z.1
+        (hs.2 hold raw h point hpoint)
+    · subst q
+      exact E.isSome_mark_of_route hpoint z.1
+
 /-- The patched typed world preserves `StateInv`. -/
 theorem preservesInv_patchedImpl_stateInv : QueryImpl.PreservesInv E.patchedImpl E.StateInv := by
   rintro (n | u) ⟨c, pv⟩ ⟨hf, hraw⟩ z hz
@@ -853,6 +893,43 @@ theorem prEvent_simulateQ_romImpl_encodeImpl_run_le {α : Type}
       Pr{let z ← (simulateQ E.typedImpl oa).run (∅, ∅)}[P z.1 ∨ E.Clash z.2.1] := by
   rw [simulateQ_romImpl_simulateQ_encodeImpl]
   exact E.prEvent_simulateQ_singleImpl_run_le oa P
+
+/-- Under an injective encoding, the single-oracle world run from an empty cache has the same
+distribution as the typed world run from empty caches and followed by `fill`, jointly in the
+result and the completed full-reply cache. -/
+theorem singleImpl_run_evalDistEq_typedImpl_fill_of_injective
+    (injective : Function.Injective E.encode) {α : Type}
+    (body : OracleComp (unifSpec + (spec + (D →ₒ M))) α) :
+    (simulateQ E.singleImpl body).run ∅ =ᵈ (do
+      let z ← (simulateQ E.typedImpl body).run (∅, ∅)
+      let fullCache ← E.fill z.2
+      pure (z.1, fullCache)) := by
+  classical
+  have noClash : ∀ cache, ¬E.Clash cache := by
+    rintro cache ⟨left, right, distinct, _, _, same⟩
+    exact distinct (injective same)
+  have noCollides : ∀ cache operation, ¬E.Collides cache operation := by
+    intro cache operation collision
+    let answer : (spec + (D →ₒ M)).Range operation := Classical.choice inferInstance
+    exact noClash (E.mark cache operation answer)
+      (E.clash_mark (Or.inr collision) answer)
+  -- With no possible clash, the existing patched handler is the typed handler.
+  have patched : E.patchedImpl = E.typedImpl := by
+    funext operation state
+    rcases operation with draw | operation
+    · rfl
+    · simp [patchedImpl, typedImpl, patchedHashImpl, noClash, noCollides]
+      rfl
+  have initial : E.StateInv (∅, ∅) :=
+    ⟨by simp, fun _ input present => by simp at present⟩
+  let : MeasurableSpace (α × (D →ₒ M).QueryCache) := ⊤
+  apply EvalDistEq.of_evalDist_eq
+  -- Existing intertwining retains the result and the whole completed cache jointly.
+  have joint := E.intertwinesOn_fill_patchedImpl_singleImpl.evalDist_simulateQ_run
+    E.preservesInv_patchedImpl_stateInv body (∅, ∅) initial
+    (fun result fullCache => pure (result, fullCache))
+  rw [patched] at joint
+  simpa only [fill_empty, pure_bind, Prod.mk.eta, bind_pure] using joint.symm
 
 end intertwining
 

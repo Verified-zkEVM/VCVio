@@ -8,7 +8,6 @@ module
 
 public import HashSig.SLHDSA.Security.CoverageRun
 public import HashSig.SLHDSA.Security.JointBound
-import VCVio.OracleComp.Constructions.SampleableType.Measure
 
 /-!
 # The coverage bound and the security target of SLH-DSA

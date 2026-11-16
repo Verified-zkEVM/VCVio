@@ -154,8 +154,8 @@ The handler catalogue consumes core `@[spec]` rules and `vcgen`, and
 `Unary/WP/{NecessarySpecs,LowerSpecs}.lean` register the oracle primitives (queries, uniform
 draws, `replicate`, `liftComp`) for core `vcgen` in both readings, exact by default and pointwise
 under `OracleComp.Lower.Pointwise`.
-VCVio's probability/coupling frontend still owns `@[vcspec]`/`@[wpStep]` dispatch, and its
-exhaustive `vcgen` hands quantitative triples to core `vcgen` (`tryCoreVCGen`): core takes the
+VCVio's probability/coupling frontend still owns `@[vcspec]` and raw-`wp` dispatch, and its
+exhaustive `pvcgen` hands quantitative triples to core `vcgen` (`tryCoreVCGen`): core takes the
 structural steps, VCVio the probability lowering, cuts, averages, loops with invariants in
 context, and relational steps. `Pr{…}[…]` keeps its meaning; events reach triples through the
 bridge lemmas `prEvent_eq_wp` and `triple_propInd_self_iff_*`.
@@ -199,13 +199,27 @@ ordinary additive counts. The API-boundary campaign removes the former custom mo
 instance that leaked additive multiplication onto unrelated functions. Its ordinary-import
 consumer checks the canonical function identity and multiplication as well as counting behavior.
 
-**NTT multiplication laws are assumed, not proved.** `multiplyNTTs` is defined as
-`ntt (negacyclicMul (invNTT f) (invNTT g))` (`LatticeCrypto/MLDSA/Concrete/NTT.lean:262–264`, likewise
-ML-KEM), so `toHat_mul` is tautological and the executable `loopMultiplyNTTs` is trusted through
-`implemented_by`; Falcon's `Primitives.Laws.transform : NTTRingLaws` (`LatticeCrypto/Falcon/Primitives.lean:297`)
-is a structure field. Mathlib supplies the twiddle half (`IsPrimitiveRoot` + `reduce_mod_char`) and the
+**NTT multiplication laws are proved for ML-DSA, ML-KEM and Falcon.** The Cooley–Tukey residue
+theorem `forwardStages_ofFn_dvd` (`LatticeCrypto/Ring/NTTSplitCert.lean`) shows that after `k`
+blocked butterfly stages each block is the input reduced modulo its factor of `X^n + 1`. ML-DSA's
+`multiplyNTTs` is the pointwise product of FIPS 204 `MultiplyNTT`, and coordinate `i` of `ntt f` is
+`f(ζ^(2·brv(i)+1))` (`MLDSA.Concrete.ntt_coeff_eq_eval`). ML-KEM's `multiplyNTTs` is FIPS 203
+`MultiplyNTTs`, `BaseCaseMultiply` on each coefficient pair (`MLKEM.Concrete.multiplyNTTs_pair`);
+pair `i` of `ntt f` is `f mod (X² − γᵢ)` (`MLKEM.Concrete.ntt_coeff_pair`), and
+`baseCaseMul_of_dvd` is the quadratic base case. In both schemes `toHat_mul` is
+`ntt_negacyclicMul` and `multiplyNTTs` has no `implemented_by`. Falcon's `ntt` and `invNTT` are the
+in-place `butterflyNTT` and `butterflyInvNTT` loops, proved equal to the blocked stages for
+`logn ≤ 11`, so `Falcon.Concrete.concreteNTTRingLaws` holds for the loops themselves and
+`Falcon.Concrete.concretePrimitives_transform` discharges
+`Falcon.Primitives.StructuralLaws.transform` for the concrete bundle. ML-DSA's `ntt` and `invNTT`
+are likewise its `loopNTT` / `loopInvNTT` kernels; both schemes go through the shared `while`-loop
+lemmas `ctForward_loop` / `ctInverse_loop` (`LatticeCrypto/Ring/NTTLoop.lean`). ML-KEM's `ntt` and `invNTT` are its `loopNTT` / `loopInvNTT`
+kernels too, whose seven-layer range loops go through `ctForward_range` / `ctInverse_range` in the
+same module, so no scheme has an NTT refinement boundary.
+Mathlib supplies the twiddle half (`IsPrimitiveRoot` + `reduce_mod_char`) and the
 CRT half (`Ideal.quotientInfRingEquivPiQuotient` and friends); the Cooley–Tukey bit-reversal lemma is
-not in Mathlib or core and is the several-hundred-line remainder. See the lattice reading below.
+not in Mathlib or core; `forwardStages_ofFn_dvd` proves it without the CRT. See the lattice reading
+below.
 
 **Matrix conventions.** SIS states `A *ᵥ x` (column), `NoisyLearning` states `s ᵥ* A` (row), ML-DSA
 uses nested-`Vector` `matVecMul`; pick one and route through `PolyMatrix.toMatrix`.
@@ -713,8 +727,7 @@ the "name is a hypothesis" trap, in the direction of false absence.
 ### Ring, polynomial, and lattice algebra
 
 **Premise correction.** Upstream `main` has **no** `native_decide` in `LatticeCrypto/`
-(`grep` → 0; `scripts/AxiomSweep.lean:90` has `grandfatheredNativeTrust := []`; the committed baseline
-has 40 `sorry` and 0 nonstandard axioms). #614 replaced the dense NTT matrix certificates with
+(`grep` → 0, and `lake exe axiomsweep --check` admits no non-standard axiom). #614 replaced the dense NTT matrix certificates with
 structural butterfly stages (`V:LatticeCrypto/Ring/NTTCert.lean:260–596`). Two docstrings still
 describe the retired certificate: `V:Extern/MLDSA/NonVacuity.lean:36–38,98` and
 `V:Extern/MLDSA/Laws.lean:236` (Adopt: docs fix).
@@ -773,23 +786,27 @@ ML-DSA uses nested-`Vector` `matVecMul`; `PolyMatrix.toMatrix` exists but no pro
 8. Make `modulus` an `abbrev` so `reduce_mod_char`/`norm_num` see the literal without the repeated
    `change … ZMod 8380417`.
 
-**NTT trust surface (honest assessment).** What remains trusted is not an axiom but two
-`implemented_by` gaps disclosed in the docstrings: the mutable-loop kernels are never shown
-extensionally equal to the structural stages, and pointwise multiplication is not verified —
-`multiplyNTTs fHat gHat := ntt (negacyclicMul (invNTT fHat) (invNTT gHat))`
-(`V:LatticeCrypto/MLDSA/Concrete/NTT.lean:262–264`) makes `toHat_mul` (`:371–373`) tautological,
-`loopMultiplyNTTs` is pure `implemented_by`, and Falcon's `Primitives.Laws.transform : NTTRingLaws`
-(`V:LatticeCrypto/Falcon/Primitives.lean:297`) is a structure field, i.e. assumed by every
-instantiation. Mathlib closes the twiddle half (item 2) and the CRT half
+**NTT trust surface (honest assessment).** No NTT refinement gap remains: in all three schemes the
+public `ntt` / `invNTT` are the loop kernels themselves, proved equal to the blocked stages by
+`ctForward_loop` / `ctInverse_loop` (ML-DSA; Falcon for `logn ≤ 11`) and `ctForward_range` /
+`ctInverse_range` (ML-KEM's seven-layer range loops), all in `LatticeCrypto/Ring/NTTLoop.lean`.
+Pointwise multiplication is verified in all three schemes: `multiplyNTTs` is the FIPS 204
+`MultiplyNTT` / FIPS 203 `MultiplyNTTs` table-driven body with no `implemented_by`, and `toHat_mul`
+is the theorem `ntt_negacyclicMul` rather than a definitional restatement.
+The concrete bundle satisfies `Falcon.Primitives.StructuralLaws`
+(`Falcon.Concrete.concretePrimitives_structuralLaws`: `concretePrimitives_transform` and
+`decompress_compress`). No `ProbComp` has the exact discrete Gaussian as its law
+(`LatticeCrypto.evalDist_ne_discreteGaussianMeasure`), so the sampler obligations are
+`Falcon.Primitives.SamplerEnvelope` (point mass on `[σ_min, σ_max]` with slack `δ`, consumed by
+`ffSampling_pointMass_le_of_samplerEnvelope`) and `Falcon.Primitives.SamplerQuality` (forward Rényi
+of order `a > 1`), which implies the envelope; neither is proved for the concrete sampler.
+The twiddle half came from Mathlib (item 2); the CRT half is available there too
 (`Ideal.quotientInfRingEquivPiQuotient`, `Ideal.iInf_span_singleton`, `Polynomial.pairwise_coprime_X_sub_C`,
 `Polynomial.quotientSpanXSubCAlgEquiv`, `prod_multiset_X_sub_C_of_monic_of_roots_card_eq`,
-`IsPrimitiveRoot.card_nthRoots`; ML-KEM's quadratic factors are `AdjoinRoot (X² − C γ)`). The
-un-Mathlib-able part is the Cooley–Tukey bit-reversal lemma "stage output `i` = `eval (ζ^(2·brv i + 1))`":
-no `Nat.bitRev`, no FFT anywhere in Mathlib or core (`grep bitRev\|reverseBits` → 0); several hundred
-kernel-checked lines over the existing `ButterflyLayout`. `Matrix.det_vandermonde` only certifies
-invertibility of a dense evaluation matrix, not the butterfly. Verdict: feasible and worthwhile, the
-only route that makes `multiplyNTTs` and the Falcon laws real; record as *track* with the Mathlib
-ingredients named.
+`IsPrimitiveRoot.card_nthRoots`; ML-KEM's quadratic factors are `AdjoinRoot (X² − C γ)`) but is not
+needed: the Cooley–Tukey bit-reversal lemma, which Mathlib and core lack (no `Nat.bitRev`, no FFT),
+is `forwardStages_ofFn_dvd` over the existing `ButterflyLayout`, stated as divisibility by each
+block's factor of `X^n + 1`. Verdict: *done*; no NTT loop refinement remains open.
 
 **Gaps confirmed** (`M:` grep): NTT / negacyclic convolution / skew-circulant (`Matrix.circulant` is
 cyclic only), bit reversal, `cyclotomic (2^(k+1)) = X^(2^k) + 1` as a stated lemma (2-line corollary
@@ -894,7 +911,7 @@ toolchain bump; none adds CI gating.
 | 7 | HashSig base-w `reverse` bridges to `Nat.digitsAppend`/`ofDigits`; `sum_le_card_nsmul`; `Forall₂` | data idioms | ≈150 lines of re-derived digit arithmetic |
 | 8 | cslib-inspired: dependent pairing lemma, finiteness-free `perfectSecrecy ↔ ciphertextRowsEqual`, Shannon `Nat.card K ≥ Nat.card M`; optionally a `SecretSharing` port reusing cslib's Lagrange lemma | crypto foundations | two missing textbook theorems and one missing generic lemma |
 | 9 | Prune the 0-reverse-dep `ToMathlib/Control` files; `Examples/{Regev,FrankingProtocol}.lean`; the 30 deprecated aliases; the 23 `BigOperators` opens | hygiene | dead surface |
-| 10 | Track items needing design: `QueryCount` monoid leak; cost-layer unification; NTT multiplication laws (twiddle + CRT halves from Mathlib, bit-reversal lemma by hand); Poisson summation for the discrete Gaussian; matrix conventions; selective-expose pilot; `implicit_reducible` canary | design | issues, not sweep PRs |
+| 10 | Track items needing design: `QueryCount` monoid leak; cost-layer unification; Poisson summation for the discrete Gaussian; matrix conventions; selective-expose pilot; `implicit_reducible` canary | design | issues, not sweep PRs |
 
 The tooling table below is deliberately last: nothing in it is urgent, and the maintainer's
 guardrails (no native rebuilds on the PR path, no convention gating by script) bound it.
@@ -942,7 +959,7 @@ audit before deletion (see Method).
 | 4 duplicates | this PR (#632) | |
 | 5 lattice | #634 | reviewed and queued; includes the explicit modulus-zero behavior change |
 | 9 hygiene | #647 (C1), #648 (C2) | merged; #648 retains the necessary ML-DSA/ML-KEM equality instances and adds an `Option.elim` measurability lemma |
-| 10 design track | #650 (transparency policy + expose ratchet), #651 (selective-expose pilot), #653 (program-logic) | all merged; cost-layer unification, NTT laws, Poisson summation, and matrix conventions remain open |
+| 10 design track | #650 (transparency policy + expose ratchet), #651 (selective-expose pilot), #653 (program-logic) | all merged; cost-layer unification, Poisson summation, and matrix conventions remain open |
 | tooling | #649 (SHA pins, dependabot, templates), Track A PR (drivers, `check-imports.sh`, dead scripts, options) | `CODEOWNERS` was dropped on review: routing files are boilerplate for a small team |
 | gates | #641 | merged; tactic contract and test warnings are checked, with detailed policy in `docs/agents/probability.md` |
 
@@ -1112,16 +1129,16 @@ The *Maintenance* pass for the v4.35.0 pins, read against the next releases as w
 - Core `List.map_const'`/`List.prod_replicate` replace the deleted `List.prod_map_const`.
 - Mathlib's variation distance is related to `Measure.etvDist` (see *Native TV composition*).
 - Core `vcgen` steps oracle programs with the rules of `Unary/WP/{NecessarySpecs,LowerSpecs}.lean`,
-  and VCVio's exhaustive `vcgen` delegates its quantitative triples to it.
+  and VCVio's exhaustive `pvcgen` delegates its quantitative triples to it.
 
 **Core `vcgen` (v4.35, experimental).** It works over any `Std.WP` lattice, splits
 `ite`/`dite`/`cond`/matchers keeping the branch hypotheses, takes loop invariants (`invariants`,
 `@[spec_invariant_type]`), frames, and a `with <grind step>` discharger, and with
 `errorOnMissingSpec := false` it leaves the programs it has no rule for as verification
 conditions. `@[spec]` is a scoped attribute, so alternative rule sets can be opened per call.
-VCVio's own `vcgen` syntax is a `tactic_alt` of core's `vcgenMacro`, and a bare `vcgen` parses as
-both. Core's `vcgen` does not descend under an integral or sum, which is why the exact rules of the
-lower reading leave the expectation of the rest of the program in the verification condition.
+VCVio's exhaustive driver is `pvcgen`, so a bare `vcgen` parses as core's tactic alone. Core's
+`vcgen` does not descend under an integral or sum, which is why the exact rules of the lower
+reading leave the expectation of the rest of the program in the verification condition.
 
 **v4.36.0-rc1 changes that strengthen core `vcgen`.**
 - lean4#15555: `vcgen` reuses the goal's `WP` instance; on v4.35 it rebuilds each rule for the
@@ -1138,9 +1155,9 @@ lower reading leave the expectation of the rest of the program in the verificati
 **Next bump (v4.36).**
 - lean4#15217 renames the `epost` binder of `Std.WP.Triple.iff` to `eposts`. A named argument
   would be a hard error; `triple_iff_le_wp` passes none.
-- lean4#15290 deprecates the `Std.Do` proof mode (`mintro`, `mspec`, …). The `Std.Do` examples
-  are term proofs, and `Unary/StdDoBridge.lean`, `Unary/WriterTBridge.lean` and
-  `Interaction/UC/StdDoBridge.lean` retire with it.
+- lean4#15290 deprecates the `Std.Do` proof mode (`mintro`, `mspec`, …). VCVio's `Std.Do`
+  bridges (`Unary/StdDoBridge.lean`, `Unary/WriterTBridge.lean`, `Unary/StdDoExamples.lean` and
+  `Interaction/UC/StdDoBridge.lean`) are already retired, so nothing here uses it.
 - lean4#15171 renames `Std.WP.WP.wp_consequence_le` to `wp_monotone_post_le` (cited by name in
   `Tactics/Common/Backward.lean`, where the deprecation is not linted) and the `WP.trans`
   family that `ToMathlib/Control/Monad/RelWP.lean` mirrors; PolyFun has sixteen such sites.

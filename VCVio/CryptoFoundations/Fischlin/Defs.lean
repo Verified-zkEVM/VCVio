@@ -75,11 +75,17 @@ open OracleComp OracleSpec
 /-- Input to the Fischlin random oracle. Defined as a structure rather than a nested product
 to give fast `DecidableEq` synthesis (avoiding deep product-type unfolding). -/
 structure FischlinROInput (Stmt Commit Chal Resp : Type) (ρ : ℕ) (M : Type) where
+  /-- The statement being proved, which is the signer's public key. -/
   stmt : Stmt
+  /-- The message being signed. -/
   msg : M
+  /-- The commitments of all `ρ` repetitions. -/
   comList : List Commit
+  /-- The repetition this query belongs to. -/
   rep : Fin ρ
+  /-- The candidate challenge for that repetition. -/
   chal : Chal
+  /-- The prover's response to the candidate challenge. -/
   resp : Resp
   deriving DecidableEq
 
@@ -147,7 +153,7 @@ def Fischlin
     {m : Type → Type v} [Monad m]
     (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
     (hr : GenerableRelation Stmt Wit rel) (ρ b S : ℕ) (M : Type)
-    [DecidableEq M] [MonadLiftT ProbComp m]
+    [MonadLiftT ProbComp m]
     [HasQuery (fischlinROSpec Stmt Commit Chal Resp ρ b M) m] :
     SignatureAlg m
       (M := M) (PK := Stmt) (SK := Wit) (S := FischlinProof Commit Chal Resp ρ) where

@@ -1,0 +1,85 @@
+/-
+Copyright (c) 2026 VCVio Contributors. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Chung Thai Nguyen, Yuxi Zheng, Michele Orrù
+-/
+
+module
+
+public import VCVio
+
+/-!
+# Discrete total variation and finite-support comparisons
+
+Two fixed values are at distance zero or one. A uniform bit against a fixed bit is the running
+example otherwise. Their distance is one half by the finite-type L1 formula, the event bound is
+attained on the bit the fixed computation never outputs, and a common continuation or an
+independent second draw stays within the stated bounds. Singleton masses decide equality of the
+discrete measures of finitely supported computations.
+-/
+
+open OracleComp
+
+namespace VCVioTest.DiscreteTVDist
+
+/-- Two fixed bits that differ are at distance one. -/
+example : discreteTVDist (pure false : ProbComp Bool) (pure true) = 1 := by
+  simp [discreteTVDist.pure_pure]
+
+/-- Two fixed bits that differ are also at `measureTVDist` one under a locally chosen discrete
+σ-algebra. -/
+example : letI : MeasurableSpace Bool := ⊤
+    measureTVDist (pure false : ProbComp Bool) (pure true) = 1 := by
+  simp [measureTVDist_pure_pure]
+
+/-- Distinct fixed values of a type without decidable equality are at distance one. -/
+example {α : Type} {a b : α} (h : a ≠ b) : discreteTVDist (pure a : ProbComp α) (pure b) = 1 :=
+  discreteTVDist.pure_pure_of_ne h
+
+/-- A uniform bit is at distance one half from a fixed bit. The examples below that use this
+distance take it as the hypothesis `h`. -/
+example : discreteTVDist ($ᵗ Bool) (pure true : ProbComp Bool) = 1 / 2 := by
+  rw [discreteTVDist.eq_half_sum_abs]
+  simp only [Fintype.sum_bool, SampleableType.prEvent_uniformSample_eq_singleton]
+  norm_num
+
+/-- The event bound is attained: the fixed bit never outputs `false`, and the uniform bit does so
+with exactly the distance between them. -/
+example (h : discreteTVDist ($ᵗ Bool) (pure true : ProbComp Bool) = 1 / 2) :
+    Pr{let b ← ($ᵗ Bool : ProbComp Bool)}[b = false] =
+      Pr{let b ← (pure true : ProbComp Bool)}[b = false] +
+        ENNReal.ofReal (discreteTVDist ($ᵗ Bool) (pure true : ProbComp Bool)) := by
+  rw [h, SampleableType.prEvent_uniformSample_eq_singleton]
+  simp
+
+/-- A common continuation, here negation, does not move the two bits further apart. -/
+example (h : discreteTVDist ($ᵗ Bool) (pure true : ProbComp Bool) = 1 / 2) :
+    discreteTVDist (do let b ← ($ᵗ Bool : ProbComp Bool); pure (!b))
+      (do let b ← (pure true : ProbComp Bool); pure (!b)) ≤ 1 / 2 :=
+  (discreteTVDist.bind_le _ _ _).trans_eq h
+
+/-- Two independent uniform bits are within the sum of the coordinate distances of two fixed
+bits. -/
+example (h : discreteTVDist ($ᵗ Bool) (pure true : ProbComp Bool) = 1 / 2) :
+    discreteTVDist
+      (do
+        let a ← ($ᵗ Bool : ProbComp Bool)
+        let b ← ($ᵗ Bool : ProbComp Bool)
+        pure (a, b))
+      (do
+        let a ← (pure true : ProbComp Bool)
+        let b ← (pure true : ProbComp Bool)
+        pure (a, b)) ≤ 1 / 2 + 1 / 2 :=
+  (discreteTVDist.pair_le _ _ _ _).trans_eq (by rw [h])
+
+/-- Negating a uniform bit leaves its discrete measure unchanged, decided on singleton masses. -/
+example :
+    (letI : MeasurableSpace Bool := ⊤;
+      𝒟[(not <$> ($ᵗ Bool) : ProbComp Bool)] = 𝒟[($ᵗ Bool : ProbComp Bool)]) :=
+  evalDist_eq_of_prEvent_eq_eq _ _ (Set.toFinite _) (Set.toFinite _) fun x => by
+    obtain ⟨x, rfl⟩ : ∃ z, x = !z := ⟨!x, by simp⟩
+    rw [prEvent_map_injective _ (Function.LeftInverse.injective Bool.not_not),
+      SampleableType.prEvent_uniformSample_eq_singleton,
+      SampleableType.prEvent_uniformSample_eq_singleton]
+
+end VCVioTest.DiscreteTVDist
