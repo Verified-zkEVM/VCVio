@@ -104,6 +104,7 @@ public import VCVio.CryptoFoundations.GroupModel.Cost
 public import VCVio.CryptoFoundations.GroupModel.Decisional
 public import VCVio.CryptoFoundations.GroupModel.Encoding
 public import VCVio.CryptoFoundations.GroupModel.Game
+public import VCVio.CryptoFoundations.GroupModel.GenericCoCDH
 public import VCVio.CryptoFoundations.GroupModel.GenericDDH
 public import VCVio.CryptoFoundations.GroupModel.GenericHardness
 public import VCVio.CryptoFoundations.GroupModel.GenericPairing
@@ -120,6 +121,7 @@ public import VCVio.CryptoFoundations.GroupModel.ToExplained
 public import VCVio.CryptoFoundations.GroupModel.Tracking
 public import VCVio.CryptoFoundations.GroupModel.Typed
 public import VCVio.CryptoFoundations.GroupModel.Virtualize
+public import VCVio.CryptoFoundations.HardnessAssumptions.CoCDH
 public import VCVio.CryptoFoundations.HardnessAssumptions.CollisionResistance
 public import VCVio.CryptoFoundations.HardnessAssumptions.DiffieHellman
 public import VCVio.CryptoFoundations.HardnessAssumptions.DiscreteLogRelation
