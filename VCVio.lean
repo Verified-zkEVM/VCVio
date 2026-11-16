@@ -289,6 +289,7 @@ public import VCVio.CryptoFoundations.SignatureAlg.WithPost
 public import VCVio.CryptoFoundations.SymmEncAlg
 public import VCVio.CryptoFoundations.SymmEncAlg.Defs
 public import VCVio.CryptoFoundations.SymmEncAlg.Deterministic
+public import VCVio.CryptoFoundations.SymmEncAlg.INDCCA
 public import VCVio.CryptoFoundations.SymmEncAlg.INDCPA
 public import VCVio.CryptoFoundations.SymmEncAlg.Measure
 public import VCVio.CryptoFoundations.SymmEncAlg.OneTimeINDCPA
@@ -672,6 +673,7 @@ public import VCVio.Quantum.VC.Proof.OnlineSecurity
 public import VCVio.Quantum.VC.Proof.Repeatability
 public import VCVio.Quantum.VC.Tuples
 public import VCVio.Quantum.VC.Unitaries
+public import VCVio.Schemes.EncryptThenMac
 public import VCVio.Schemes.KEMDEM
 public import VCVio.Schemes.KEMDEM.Measure
 public import VCVio.Schemes.MacFromPRF
