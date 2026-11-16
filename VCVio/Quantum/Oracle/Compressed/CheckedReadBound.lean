@@ -213,7 +213,7 @@ theorem sum_norm_checkedReadPhaseCell_sub_sq_le (χ : AddChar Y ℂ)
 theorem checkedReadPhaseCell_comm (χ : AddChar Y ℂ) (ε : ℂ) (a b : Option Y) :
     checkedReadPhaseCell χ ε a b = checkedReadPhaseCell χ ε b a := by
   simp only [checkedReadPhaseCell, Matrix.add_apply, Matrix.smul_apply, smul_eq_mul,
-    checkedReadEmptyCell_apply, phaseCell_comm χ a b, mul_comm (cellUniform Y a)]
+    checkedReadEmptyCell_apply, phaseCell_apply_comm χ a b, mul_comm (cellUniform Y a)]
 
 /-- Validity blocks have residual rows bounded by `4/N`. -/
 theorem sum_norm_validityPhaseCell_sub_sq_le {ε : ℂ} (hε : ε = 1 ∨ ε = -1) (u : Y) :
