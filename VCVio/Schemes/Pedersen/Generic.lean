@@ -75,35 +75,11 @@ theorem isQueryBoundP_dlogOfGeneric [Field F] [DecidableEq F]
   rintro ⟨c, m₁, d₁, m₂, d₂⟩ _
   simp [isQueryBoundP_query_bind_iff, isGroupOp, Query.isOp, OracleComp.lift]
 
-private theorem runGen_bind [Field F] [AddCommGroup G] [Module F G] [DecidableEq G]
-    {α β : Type} (A : OracleComp (genSpec F groupSig) α)
-    (B : α → OracleComp (genSpec F groupSig) β) (tbl : Tbl (fun _ : Unit => G)) :
-    runGen (Model.group G) (fun _ => id) (A >>= B) tbl =
-      (runGen (Model.group G) (fun _ => id) A tbl >>= fun z =>
-        runGen (Model.group G) (fun _ => id) (B z.1) z.2) := by
-  simp only [runGen, run, simulateQ_bind, StateT.run_bind]
-
-private theorem runGen_smul [Field F] [AddCommGroup G] [Module F G] [DecidableEq G]
-    (tbl : Tbl (fun _ : Unit => G)) (d : F) (a : Handle) :
-    runGen (Model.group G) (fun _ => id)
-      (OracleComp.lift ((genSpec F groupSig).query (.inl (.smul () d a)))) tbl =
-      pure ((tbl ()).length, append tbl () (d • lookup tbl () a)) := rfl
-
-private theorem runGen_add [Field F] [AddCommGroup G] [Module F G] [DecidableEq G]
-    (tbl : Tbl (fun _ : Unit => G)) (a b : Handle) :
-    runGen (Model.group G) (fun _ => id)
-      (OracleComp.lift ((genSpec F groupSig).query (.inl (.add () a b)))) tbl =
-      pure ((tbl ()).length, append tbl () (lookup tbl () a + lookup tbl () b)) := rfl
-
 private theorem runGen_eq [Field F] [AddCommGroup G] [Module F G] [DecidableEq G]
     (tbl : Tbl (fun _ : Unit => G)) (a b : Handle) :
     runGen (Model.group G) (fun _ => id)
       (OracleComp.lift ((genSpec F groupSig).query (.inl (.eq () a b)))) tbl =
       pure (decide (lookup tbl () a = lookup tbl () b), tbl) := rfl
-
-private theorem runGen_pure [Field F] [AddCommGroup G] [Module F G] [DecidableEq G]
-    {α : Type} (tbl : Tbl (fun _ : Unit => G)) (a : α) :
-    runGen (Model.group (F := F) G) (fun _ => id) (pure a) tbl = pure (a, tbl) := rfl
 
 private theorem getD_append_guard [Zero G] (xs ys : List G) (c : Handle) :
     (xs ++ ys).getD (if c < xs.length then c else xs.length + ys.length) 0 =
@@ -150,7 +126,7 @@ theorem dlogReduction_ofGeneric_eq [Field F] [DecidableEq F]
     he, runGen_bind, map_bind, bind_map_left]
   apply bind_congr_of_forall_mem_support
   rintro ⟨⟨c, m₁, d₁, m₂, d₂⟩, tbl⟩ hz
-  have hp := runGen_prefix (Model.group G) (fun _ => id) A (fun _ => [g, h])
+  have hp := runGen_extends (Model.group G) (fun _ => id) A (fun _ => [g, h])
     ((c, m₁, d₁, m₂, d₂), tbl) hz ()
   obtain ⟨tail, ht⟩ := hp
   have ht' : tbl = fun _ => g :: h :: tail := by
