@@ -112,6 +112,8 @@ mirroring how the probability of `bad` absorbs the tag-side nonce-collision mass
 Lives in this module (rather than `DirectCoupling.Compose`) so that the instrumented fine handler
 `multipleBadTableHandlerFine` defined below can reach it without inducing an import cycle. -/
 
+/-- Whether some slot-positive cell of the fine table `T` at the nonce of the reader
+transcript `t` already holds its authenticator `t.auth`. -/
 def cacheBadReader
     (T : ((TagId × Fin sessionsPerTag) × Nonce) → Digest)
     (t : TagTranscript Nonce Digest) : Bool :=
@@ -462,6 +464,9 @@ The per-step uniform-table bound `prEvent_cacheBadReader_uniformSample_le` below
 the probability that a single reader step of this handler flips `cacheBad` at a freshly
 sampled fine table. -/
 
+/-- The eager handler `multipleBadTableHandler g` with the fine table `gFine` threaded
+through reader queries, each of which ORs `cacheBadReader gFine` into the `cacheBad` flag
+through `multipleBadReaderAdvance`. -/
 noncomputable def multipleBadTableHandlerFine
     (g : TagId × Nonce → Digest)
     (gFine : ((TagId × Fin sessionsPerTag) × Nonce) → Digest) :

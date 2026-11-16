@@ -322,26 +322,34 @@ theorem run₂_classicalCall (B : QReg) (x : X) :
   change R.run₂ .instruments (H.classicalCall B x) = _
   rw [classicalCall, EmulatedOracle.read, QuantumRuntime.run₂_act_bind,
     SubInstrument.frame_relabel]
-  unfold SubInstrument.reindex
-  refine congrArg (fun f : Unit → SubInstrument ((Unit × B) × R.D) (B × R.D) Y ↦
-    (SubInstrument.relabel
-      ((Equiv.uniqueProd B Unit).prodCongr (Equiv.refl R.D)).symm).bind f) ?_
-  funext u
-  have hq := R.run₂_query_bind (A := QReg.of (Unit × B)) (B := B)
-    .instruments (.inr x) B
-    (Equiv.refl (Unit × B)) (fun a ↦
-      QuantumComp₂.bind (QComp.act (SubInstrument.relabel (Equiv.uniqueProd B Unit)))
-        fun _ ↦ QuantumComp₂.pure a)
-  refine hq.trans ?_
-  refine congrArg (fun f : Y → SubInstrument ((Unit × B) × R.D) (B × R.D) Y ↦
-    (R.queryStep (A := QReg.of (Unit × B)) (.inr x) B (Equiv.refl _)).bind f) ?_
-  funext a
-  rw [QuantumRuntime.run₂_act_bind]
-  erw [SubInstrument.frame_relabel]
-  exact congrArg (fun f : Unit → SubInstrument (B × R.D) (B × R.D) Y ↦
-    (SubInstrument.relabel
-      ((Equiv.uniqueProd B Unit).prodCongr (Equiv.refl R.D))).bind f)
-    (funext fun _ ↦ R.run₂_pure .instruments a)
+  trans (SubInstrument.relabel
+      ((Equiv.uniqueProd B Unit).prodCongr (Equiv.refl R.D)).symm).bind fun _ ↦
+    (R.queryStep (A := QReg.of (Unit × B)) (.inr x) B (Equiv.refl _)).bind fun a ↦
+      (SubInstrument.relabel
+        ((Equiv.uniqueProd B Unit).prodCongr (Equiv.refl R.D))).bind fun _ ↦
+          SubInstrument.pure a
+  · refine congrArg (fun f : Unit → SubInstrument ((Unit × B) × R.D) (B × R.D) Y ↦
+      (SubInstrument.relabel
+        ((Equiv.uniqueProd B Unit).prodCongr (Equiv.refl R.D)).symm).bind f) ?_
+    funext u
+    have hq := R.run₂_query_bind (A := QReg.of (Unit × B)) (B := B)
+      .instruments (.inr x) B (Equiv.refl (Unit × B)) (fun a ↦
+        QuantumComp₂.bind (QComp.act (SubInstrument.relabel (Equiv.uniqueProd B Unit)))
+          fun _ ↦ QuantumComp₂.pure a)
+    refine hq.trans ?_
+    refine congrArg (fun f : Y → SubInstrument ((Unit × B) × R.D) (B × R.D) Y ↦
+      (R.queryStep (A := QReg.of (Unit × B)) (.inr x) B (Equiv.refl _)).bind f) ?_
+    funext a
+    erw [QuantumRuntime.run₂_act_bind, SubInstrument.frame_relabel]
+    exact congrArg (fun f : Unit → SubInstrument (B × R.D) (B × R.D) Y ↦
+      (SubInstrument.relabel ((Equiv.uniqueProd B Unit).prodCongr (Equiv.refl R.D))).bind f)
+      (funext fun _ ↦ R.run₂_pure .instruments a)
+  · refine DSubInstrument.ext (funext fun a ↦ LinearMap.ext fun ρ ↦ ?_)
+    conv_rhs => erw [SubInstrument.branch_reindex_apply]
+    erw [DSubInstrument.branch_bind_unit, LinearMap.comp_apply,
+      SubInstrument.relabel_branch_apply, DSubInstrument.branch_bind_bind_unit_ret,
+      LinearMap.comp_apply, SubInstrument.relabel_branch_apply]
+    rfl
 
 /-- The implemented read has the framed answer-projector branch. -/
 theorem branch_classicalCall (B : QReg) (x : X) (y : Y) :

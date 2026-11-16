@@ -141,10 +141,10 @@ lemma bind_def' (x : WriterT ω m α) (f : α → WriterT ω m β) :
       (Prod.map id (w₁ ++ ·)) <$> (f a)) := rfl
 
 @[simp]
-lemma run_pure' [LawfulMonad m] (x : α) :
+lemma run_pure' (x : α) :
     (pure x : WriterT ω m α).run = pure (x, ∅) := rfl
 
-lemma run_bind' [LawfulMonad m] (x : WriterT ω m α) (f : α → WriterT ω m β) :
+lemma run_bind' (x : WriterT ω m α) (f : α → WriterT ω m β) :
     (x >>= f).run = x.run >>= fun (a, w₁) => Prod.map id (w₁ ++ ·) <$> (f a).run := rfl
 
 lemma run_map' (x : WriterT ω m α) (f : α → β) : (f <$> x).run = Prod.map f id <$> x.run := rfl
@@ -267,7 +267,7 @@ def costs (oa : AddWriterT ω M α) : M ω :=
   (fun z => Multiplicative.toAdd z.2) <$> oa.run
 
 /-- Record an additive cost `w` in the writer log. -/
-def addTell [AddMonoid ω] (w : ω) : AddWriterT ω M PUnit :=
+def addTell (w : ω) : AddWriterT ω M PUnit :=
   tell (Multiplicative.ofAdd w)
 
 @[simp]
@@ -285,19 +285,19 @@ lemma costs_pure [AddMonoid ω] [LawfulMonad M] (x : α) :
   simp [costs]
 
 @[simp]
-lemma run_addTell [AddMonoid ω] (w : ω) :
+lemma run_addTell (w : ω) :
     (addTell (M := M) w).run = pure (⟨⟩, Multiplicative.ofAdd w) := rfl
 
 @[simp]
-lemma runAdd_addTell [AddMonoid ω] [LawfulMonad M] (w : ω) :
+lemma runAdd_addTell [LawfulMonad M] (w : ω) :
     (addTell (M := M) w).runAdd = pure (⟨⟩, w) := by
   simp [runAdd]
 
-lemma outputs_addTell [AddMonoid ω] [LawfulMonad M] (w : ω) :
+lemma outputs_addTell [LawfulMonad M] (w : ω) :
     (addTell (M := M) w).outputs = pure ⟨⟩ := by
   simp [outputs, addTell]
 
-lemma costs_addTell [AddMonoid ω] [LawfulMonad M] (w : ω) :
+lemma costs_addTell [LawfulMonad M] (w : ω) :
     (addTell (M := M) w).costs = pure w := by
   simp [costs, addTell]
 

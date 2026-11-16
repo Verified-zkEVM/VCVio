@@ -379,7 +379,7 @@ theorem sens_le (publicSeed : Digest) (comp : PublicKey → OracleComp ShareSpec
       (fun w => ((w.2.1, w.2.2), w.1)) <$> BlindCharge.experiment ($ᵗ Padding : ProbComp Padding)
         (fun cells pad => blindRun comp (setupOf publicSeed cells (default, pad))) := by
     unfold tableGame BlindCharge.experiment
-    rw [BlockViews.uniformSample_prod_eq_bind]
+    rw [SampleableType.uniformSample_prod_eq_bind]
     simp only [bind_assoc, pure_bind, map_bind, map_pure]
     rfl
   rw [hmarginal, hexperiment, prEvent_map, BlindCharge.ex_map]

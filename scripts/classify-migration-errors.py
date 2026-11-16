@@ -1,7 +1,7 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S uv run --no-project --python 3.12 python
 """Classify the build errors of a migration dry run.
 
-usage: python3 scripts/classify-migration-errors.py OUT
+usage: uv run --no-project --python 3.12 python scripts/classify-migration-errors.py OUT
 
 OUT is the directory `scripts/migration-dry-run.sh` filled: one `pr-N/` per pull request with its
 `build.log`, `pr-files.txt` and `shared-files.txt`. Every `error:` of a build log becomes a row of

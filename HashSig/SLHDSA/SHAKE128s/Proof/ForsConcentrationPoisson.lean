@@ -69,41 +69,6 @@ theorem mul_descFactorial_eq (count degree : Nat) :
   · rw [Nat.descFactorial_eq_zero_iff_lt.mpr (by omega), Nat.mul_zero,
       Nat.descFactorial_eq_zero_iff_lt.mpr (by omega), Nat.mul_zero, Nat.add_zero]
 
-/-- A power expands in falling factorials with Stirling numbers of the second kind as
-coefficients. -/
-theorem power_eq_stirling_descFactorial (count degree : Nat) :
-    count ^ degree = ∑ order ∈ Finset.range (degree + 1),
-      Nat.stirlingSecond degree order * count.descFactorial order := by
-  induction degree with
-  | zero => simp
-  | succ degree ih =>
-      rw [pow_succ, ih, Finset.sum_mul,
-        Finset.sum_range_succ'
-          (fun order => Nat.stirlingSecond (degree + 1) order * count.descFactorial order)]
-      simp only [Nat.stirlingSecond_succ_zero, Nat.zero_mul, Nat.add_zero,
-        Nat.stirlingSecond_succ_succ, Nat.add_mul, Finset.sum_add_distrib]
-      have hshift :
-          (∑ order ∈ Finset.range (degree + 1),
-            (order + 1) * Nat.stirlingSecond degree (order + 1) * count.descFactorial (order + 1)) =
-          ∑ order ∈ Finset.range (degree + 1),
-            order * Nat.stirlingSecond degree order * count.descFactorial order := by
-        let f := fun order => order * Nat.stirlingSecond degree order * count.descFactorial order
-        change (∑ order ∈ Finset.range (degree + 1), f (order + 1)) =
-          ∑ order ∈ Finset.range (degree + 1), f order
-        calc
-          _ = ∑ order ∈ Finset.range (degree + 2), f order := by
-            simpa [f] using (Finset.sum_range_succ' f (degree + 1)).symm
-          _ = _ := by
-            rw [Finset.sum_range_succ]
-            simp [f, Nat.stirlingSecond_eq_zero_of_lt (Nat.lt_succ_self degree)]
-      simp only [Nat.add_mul, Finset.sum_add_distrib] at hshift
-      rw [hshift, ← Finset.sum_add_distrib]
-      apply Finset.sum_congr rfl
-      intro order _
-      calc
-        _ = Nat.stirlingSecond degree order * (count * count.descFactorial order) := by ring
-        _ = _ := by rw [mul_descFactorial_eq]; ring
-
 /-- Falling factorials are integrable against a Poisson distribution. -/
 lemma poisson_integrable_descFactorial (rate : ℝ≥0) (k : Nat) :
     Integrable (fun n : Nat => (n.descFactorial k : ℝ)) (poissonMeasure rate) := by
@@ -116,11 +81,11 @@ lemma poisson_integral_descFactorial (rate : ℝ≥0) (k : Nat) :
   rw [integral_poissonMeasure]
   simpa only [smul_eq_mul] using (poisson_hasSum_descFactorial rate k).tsum_eq
 
-/-- `power_eq_stirling_descFactorial`, cast to the reals. -/
+/-- `Nat.pow_eq_sum_stirlingSecond_mul_descFactorial`, cast to the reals. -/
 lemma power_eq_stirling_descFactorial_real (n degree : Nat) :
     (n : ℝ) ^ degree = ∑ k ∈ Finset.range (degree + 1),
       (Nat.stirlingSecond degree k : ℝ) * (n.descFactorial k : ℝ) := by
-  exact_mod_cast power_eq_stirling_descFactorial n degree
+  exact_mod_cast Nat.pow_eq_sum_stirlingSecond_mul_descFactorial n degree
 
 /-- Powers are integrable against a Poisson distribution. -/
 lemma poisson_integrable_power (rate : ℝ≥0) (degree : Nat) :

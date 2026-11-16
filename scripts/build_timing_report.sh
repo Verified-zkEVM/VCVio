@@ -21,7 +21,7 @@ append_result() {
   local sys_time="$5"
   local exit_code="$6"
 
-  python3 - "$results_file" "$label" "$real_time" "$user_time" "$sys_time" "$exit_code" <<'PY'
+  uv run --no-project --python 3.12 python - "$results_file" "$label" "$real_time" "$user_time" "$sys_time" "$exit_code" <<'PY'
 import json
 import pathlib
 import sys
@@ -96,7 +96,7 @@ render_report() {
 
   local results_file="$1"
 
-  python3 - "$results_file" <<'PY'
+  uv run --no-project --python 3.12 python - "$results_file" <<'PY'
 import json
 import os
 import pathlib

@@ -132,6 +132,26 @@ private theorem initial_zero_of_gram {S A : Type*} [Fintype S] [DecidableEq S]
 
 end algebra
 
+section recordSplit
+
+variable {k : ℕ} {X Y R : Type}
+
+/-- Split an ordinary query, one database, and all the spectator registers. -/
+@[expose]
+def recordSplit (i : Fin k) :
+    (X × Y) × ((Fin k → Database X Y) × R) ≃
+      ((X × Y) × Database X Y) × (({j // j ≠ i} → Database X Y) × R) :=
+  (Equiv.prodAssoc _ _ _).symm.trans
+    ((Equiv.prodCongr (splitAt (X × Y) (Database X Y) i) (Equiv.refl R)).trans
+      (Equiv.prodAssoc _ _ _))
+
+/-- The register splitting selects the queried database and leaves all spectators together. -/
+@[simp]
+theorem recordSplit_apply (i : Fin k) (xy : X × Y) (d : Fin k → Database X Y) (r : R) :
+    recordSplit i (xy, (d, r)) = ((xy, d i), ((fun j ↦ d j.1), r)) := rfl
+
+end recordSplit
+
 section family
 
 variable {k : ℕ} {X Y : Type} [Fintype X]
@@ -160,6 +180,11 @@ theorem familyPopulation_split (t n : ℕ) (i : Fin k) (d : Database X Y)
   simp only [Equiv.funSplitAt_symm_apply, dite_true]
   congr 1
   exact Finset.sum_congr rfl fun j _ ↦ by simp [j.property]
+
+/-- The empty family has zero initial potential. -/
+theorem familyPopulation_empty (t : ℕ) :
+    familyPopulation (k := k) (X := X) (Y := Y) t 0 (fun _ ↦ Database.empty) = 0 := by
+  simp [familyPopulation, collisionPotential]
 
 section baseOperators
 
@@ -201,15 +226,6 @@ private theorem extractPotentialFactor_gram (t n : ℕ) :
 end baseOperators
 
 variable {R : Type} [DecidableEq X] [DecidableEq Y] [DecidableEq R]
-
-/-- Split an ordinary query, one database, and all the spectator registers. -/
-@[expose]
-def recordSplit (i : Fin k) :
-    (X × Y) × ((Fin k → Database X Y) × R) ≃
-      ((X × Y) × Database X Y) × (({j // j ≠ i} → Database X Y) × R) :=
-  (Equiv.prodAssoc _ _ _).symm.trans
-    ((Equiv.prodCongr (splitAt (X × Y) (Database X Y) i) (Equiv.refl R)).trans
-      (Equiv.prodAssoc _ _ _))
 
 /-- The operator of the family potential on the database and recording registers. -/
 @[expose]
@@ -281,11 +297,57 @@ theorem familyCollisionMatrix_blocks (i : Fin k) :
   simp only [one_mul]
   rfl
 
-omit [Fintype X] [DecidableEq X] [DecidableEq Y] [DecidableEq R] in
-/-- The register splitting selects the queried database and leaves all spectators together. -/
-@[simp]
-theorem recordSplit_apply (i : Fin k) (xy : X × Y) (d : Fin k → Database X Y) (r : R) :
-    recordSplit i (xy, (d, r)) = ((xy, d i), ((fun j ↦ d j.1), r)) := rfl
+section
+
+variable [Fintype Y] [Fintype R]
+
+/-- Any interface preserving the databases commutes with database-diagonal operators. -/
+theorem commute_familyDiagonal {A : Type*} [Fintype A] [DecidableEq A]
+    (U : Matrix (A × ((Fin k → Database X Y) × R))
+      (A × ((Fin k → Database X Y) × R)) ℂ)
+    (hU : ∀ a b, U a b ≠ 0 → a.2.1 = b.2.1) (f : (Fin k → Database X Y) → ℂ) :
+    ((1 : Matrix A A ℂ) ⊗ₖ diagonal (fun d ↦ f d.1)) * U =
+      U * ((1 : Matrix A A ℂ) ⊗ₖ diagonal (fun d ↦ f d.1)) := by
+  rw [← diagonal_one, diagonal_kronecker_diagonal]
+  ext a b
+  rw [diagonal_mul, mul_diagonal]
+  by_cases hab : U a b = 0
+  · simp [hab]
+  · rw [hU a b hab]
+    ring
+
+/-- An interface preserving databases has nonnegative uncharged drop and zero collision leak. -/
+theorem familyIdle_bounds {A : Type*} [Fintype A] [DecidableEq A]
+    (U : Matrix (A × ((Fin k → Database X Y) × R))
+      (A × ((Fin k → Database X Y) × R)) ℂ) (hunit : Uᴴ * U = 1)
+    (hU : ∀ a b, U a b ≠ 0 → a.2.1 = b.2.1) {t n : ℕ} (hn : n < t) :
+    (chargedDrop U (1 ⊗ₖ familyPopulationMatrix t n)
+      (1 ⊗ₖ familyPopulationMatrix t (n + 1)) 0).PosSemidef ∧
+    (1 ⊗ₖ familyCollisionMatrix) * U - U * (1 ⊗ₖ familyCollisionMatrix) = 0 := by
+  rw [familyPopulationMatrix_diagonal, familyPopulationMatrix_diagonal,
+    familyCollisionMatrix_diagonal]
+  exact diagonalIdle_bounds U hunit
+    (fun d ↦ familyPopulation t n d.1) (fun d ↦ familyPopulation t (n + 1) d.1)
+    (fun d ↦ if Database.allCollisionLabel d.1 = true then 1 else 0)
+    (fun d ↦ familyPopulation_idle hn d.1)
+    (commute_familyDiagonal U hU (fun d ↦ (familyPopulation t (n + 1) d : ℂ)))
+    (commute_familyDiagonal U hU (fun d ↦ if Database.allCollisionLabel d = true then 1 else 0))
+
+/-- The diagonal square root factors the family population operator. -/
+@[expose]
+noncomputable def familyPotentialFactor (t n : ℕ) :
+    Matrix ((Fin k → Database X Y) × R) ((Fin k → Database X Y) × R) ℂ :=
+  extractPotentialFactor (k := k) (X := X) (Y := Y) t n ⊗ₖ (1 : Matrix R R ℂ)
+
+/-- The Gram matrix of the population factor is the population operator. -/
+theorem familyPotentialFactor_gram (t n : ℕ) :
+    (familyPotentialFactor (k := k) (X := X) (Y := Y) (R := R) t n)ᴴ *
+      familyPotentialFactor t n = familyPopulationMatrix t n := by
+  rw [familyPotentialFactor, conjTranspose_kronecker, ← mul_kronecker_mul,
+    extractPotentialFactor_gram, conjTranspose_one, Matrix.one_mul]
+  rfl
+
+end
 
 variable [Fintype Y] [AddCommGroup Y] [Fintype R]
 
@@ -339,7 +401,6 @@ private theorem familyOrdinaryBlock_bounds {t n : ℕ} (hn : n < t) (i : Fin k)
   · exact posSemidef_compressedPopulationDrop hn 0
   · exact posSemidef_compressedPopulationLeak hn 0 _ (familyCollision_block_count i r.1)
 
-omit [DecidableEq R] [Fintype R] in
 private theorem baseOrdinary_bounds {t n : ℕ} (hn : n < t) (i : Fin k) :
     let U : Matrix ((X × Y) × (Fin k → Database X Y))
       ((X × Y) × (Fin k → Database X Y)) ℂ := (compressedVCOracle k X Y).U i
@@ -458,61 +519,6 @@ theorem posSemidef_familyOrdinaryLeak {t n : ℕ} (hn : n < t) (i : Fin k) :
       (1 ⊗ₖ familyPopulationMatrix t n) (1 ⊗ₖ familyPopulationMatrix t (n + 1))
       ((t : ℝ) / 2) - (Q * U - U * Q)ᴴ * (Q * U - U * Q)).PosSemidef := by
   exact (recordedOrdinary_bounds (R := R) hn i).2
-
-omit [AddCommGroup Y] in
-/-- Any interface preserving the databases commutes with database-diagonal operators. -/
-theorem commute_familyDiagonal {A : Type*} [Fintype A] [DecidableEq A]
-    (U : Matrix (A × ((Fin k → Database X Y) × R))
-      (A × ((Fin k → Database X Y) × R)) ℂ)
-    (hU : ∀ a b, U a b ≠ 0 → a.2.1 = b.2.1) (f : (Fin k → Database X Y) → ℂ) :
-    ((1 : Matrix A A ℂ) ⊗ₖ diagonal (fun d ↦ f d.1)) * U =
-      U * ((1 : Matrix A A ℂ) ⊗ₖ diagonal (fun d ↦ f d.1)) := by
-  rw [← diagonal_one, diagonal_kronecker_diagonal]
-  ext a b
-  rw [diagonal_mul, mul_diagonal]
-  by_cases hab : U a b = 0
-  · simp [hab]
-  · rw [hU a b hab]
-    ring
-
-omit [AddCommGroup Y] in
-/-- An interface preserving databases has nonnegative uncharged drop and zero collision leak. -/
-theorem familyIdle_bounds {A : Type*} [Fintype A] [DecidableEq A]
-    (U : Matrix (A × ((Fin k → Database X Y) × R))
-      (A × ((Fin k → Database X Y) × R)) ℂ) (hunit : Uᴴ * U = 1)
-    (hU : ∀ a b, U a b ≠ 0 → a.2.1 = b.2.1) {t n : ℕ} (hn : n < t) :
-    (chargedDrop U (1 ⊗ₖ familyPopulationMatrix t n)
-      (1 ⊗ₖ familyPopulationMatrix t (n + 1)) 0).PosSemidef ∧
-    (1 ⊗ₖ familyCollisionMatrix) * U - U * (1 ⊗ₖ familyCollisionMatrix) = 0 := by
-  rw [familyPopulationMatrix_diagonal, familyPopulationMatrix_diagonal,
-    familyCollisionMatrix_diagonal]
-  exact diagonalIdle_bounds U hunit
-    (fun d ↦ familyPopulation t n d.1) (fun d ↦ familyPopulation t (n + 1) d.1)
-    (fun d ↦ if Database.allCollisionLabel d.1 = true then 1 else 0)
-    (fun d ↦ familyPopulation_idle hn d.1)
-    (commute_familyDiagonal U hU (fun d ↦ (familyPopulation t (n + 1) d : ℂ)))
-    (commute_familyDiagonal U hU (fun d ↦ if Database.allCollisionLabel d = true then 1 else 0))
-
-/-- The diagonal square root factors the family population operator. -/
-@[expose]
-noncomputable def familyPotentialFactor (t n : ℕ) :
-    Matrix ((Fin k → Database X Y) × R) ((Fin k → Database X Y) × R) ℂ :=
-  extractPotentialFactor (k := k) (X := X) (Y := Y) t n ⊗ₖ (1 : Matrix R R ℂ)
-
-omit [AddCommGroup Y] in
-/-- The Gram matrix of the population factor is the population operator. -/
-theorem familyPotentialFactor_gram (t n : ℕ) :
-    (familyPotentialFactor (k := k) (X := X) (Y := Y) (R := R) t n)ᴴ *
-      familyPotentialFactor t n = familyPopulationMatrix t n := by
-  rw [familyPotentialFactor, conjTranspose_kronecker, ← mul_kronecker_mul,
-    extractPotentialFactor_gram, conjTranspose_one, Matrix.one_mul]
-  rfl
-
-omit [DecidableEq X] [DecidableEq Y] [Fintype Y] [AddCommGroup Y] in
-/-- The empty family has zero initial potential. -/
-theorem familyPopulation_empty (t : ℕ) :
-    familyPopulation (k := k) (X := X) (Y := Y) t 0 (fun _ ↦ Database.empty) = 0 := by
-  simp [familyPopulation, collisionPotential]
 
 end family
 
