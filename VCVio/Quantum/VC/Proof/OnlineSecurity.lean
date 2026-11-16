@@ -5,6 +5,7 @@ Authors: Quang Dao
 -/
 
 module
+public import QuantumFoundations.ForMathlib.Analysis.Matrix.Contraction
 public import VCVio.Quantum.VC.Proof.Online
 
 /-!
@@ -217,7 +218,7 @@ theorem l2_opNorm_familyReadDefect_source_le (i : Fin k)
       · simp [hg]
     rw [he]
     apply le_trans ?_ (hlocal fix)
-    apply l2_opNorm_submatrix_mul_mask_le K f' f hf' hf
+    apply Matrix.l2_opNorm_submatrix_mul_mask_le K f' f hf' hf
     intro a
     split_ifs <;> norm_num
 end readFamily
@@ -344,7 +345,7 @@ theorem read_rotated_sum_gram (e : S → Equiv.Perm R) (M : A → Matrix S S ℂ
     rcases i with ⟨s, v⟩
     rcases j with ⟨s', w⟩
     dsimp only [V]
-    rw [Matrix.sub_apply, basisMatrix_equiv_mul_apply, mul_basisMatrix_perm_apply]
+    rw [Matrix.sub_apply, basisMatrix_equiv_mul_apply, mul_basisMatrix_apply]
     simp only [Equiv.prodCongrRight_symm, Equiv.prodCongrRight_apply, Function.comp_apply,
       kroneckerMap_apply, Matrix.one_apply, Equiv.symm_apply_eq, mul_sub]
   have hk : MatrixMap.stinespring (fun a ↦
@@ -445,14 +446,6 @@ end EmulatedOracle
 
 section
 variable {A : Type*} [Fintype A] [DecidableEq A]
-/-- Conjugating twice by a self-adjoint unitary fixes every operator. -/
-theorem conjugate_involution (V U : Matrix A A ℂ) (hv : Vᴴ = V) (hV : Vᴴ * V = 1) :
-    Vᴴ * (Vᴴ * U * V) * V = U := by
-  have hh : V * V = 1 := by rwa [hv] at hV
-  rw [hv]
-  calc
-    V * (V * U * V) * V = (V * V) * U * (V * V) := by simp only [Matrix.mul_assoc]
-    _ = U := by rw [hh, Matrix.one_mul, Matrix.mul_one]
 /-- Equal operators have zero source-projected discrepancy. -/
 theorem gram_zero_of_eq (U V P : Matrix A A ℂ) (h : V = U) :
     ((0 : ℝ) • 1 - ((U - V) * P)ᴴ * ((U - V) * P)).PosSemidef := by
@@ -604,7 +597,7 @@ theorem withRecord_rotated_record :
   have hh : ((1 : Matrix (TpIC k Cm × Yr) (TpIC k Cm × Yr) ℂ) ⊗ₖ
       RecReg.swapUnitary (Cell := Cell) ME)ᴴ = 1 ⊗ₖ RecReg.swapUnitary ME := by
     rw [conjTranspose_kronecker, conjTranspose_one, RecReg.swapUnitary_conjTranspose]
-  have he := conjugate_involution _ (recordUnitary (S := E.S) U) hh
+  have he := Matrix.conjugate_involution _ (recordUnitary (S := E.S) U) hh
     (mem_unitaryGroup_iff'.mp hv)
   rw [hc] at he
   exact he

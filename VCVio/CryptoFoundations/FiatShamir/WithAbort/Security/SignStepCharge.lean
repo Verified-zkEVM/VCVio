@@ -371,8 +371,7 @@ theorem ghostSignDrawBody_succ_charge {γ : Type}
             ENNReal.tsum_le_tsum fun oz => by gcongr; exact h_oz oz
         _ = Pr{let x ← ids.respond pk sk ws.2 ch}[x = none] * (H ws + L₀ * Rr) := by
             rw [tsum_eq_single (none : Option Resp) fun oz hoz => by
-              rw [ite_eq_right hoz, mul_zero]]
-            rw [ite_eq_left rfl]
+              rw [ite_eq_right hoz, mul_zero], ite_eq_left rfl]
     -- Sum over `ch`: factor out the reject probability and fold via `hR_eq`.
     calc (∑' ch : Chal, Pr{let x ← uniformSample Chal}[x = ch] *
             ∑' alc : (Option (Commit × Resp) × List Commit) × (M × Commit →ₒ Chal).QueryCache,
@@ -479,11 +478,10 @@ theorem ghostSignDrawBody_succ_charge {γ : Type}
               1 :=
             OracleComp.tsum_prEvent_eq_one _
           simp_rw [hRinner, mul_add, mul_one]
-          rw [ENNReal.tsum_add, hcommitMass, mul_add, mul_one]
-          rw [show (∑' ws : Commit × PrvState, Pr{let x ← ids.commit pk sk}[x = ws] * (L₀ * R ws))
+          rw [ENNReal.tsum_add, hcommitMass, mul_add, mul_one,
+            show (∑' ws : Commit × PrvState, Pr{let x ← ids.commit pk sk}[x = ws] * (L₀ * R ws))
               = L₀ * ∑' ws : Commit × PrvState, Pr{let x ← ids.commit pk sk}[x = ws] * R ws from by
-            rw [← ENNReal.tsum_mul_left]; exact tsum_congr fun ws => by ring]
-          rw [add_comm]
+              rw [← ENNReal.tsum_mul_left]; exact tsum_congr fun ws => by ring, add_comm]
 
 /-- **The constant-length body charge (the genuine per-attempt induction).** Over one signing body
 `ghostSignDrawBody n`, the expected continuation read-multiplicity of the body's *rejected* draws —

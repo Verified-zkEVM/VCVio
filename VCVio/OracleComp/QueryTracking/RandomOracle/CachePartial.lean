@@ -31,6 +31,12 @@ caches admissible at each state, when admissibility is closed backwards along ea
 every cache admissible after a step answers that step's query with its output
 (`OracleComp.simulateQ_toPartialImpl_of_mem_support_run_simulateQ`).
 
+A successful reading also frames a stateful run: a handler that answers each cached query from
+the cache without changing its state runs a settled computation as `pure` of the settled value,
+at the same state (`QueryImpl.run_simulateQ_eq_pure_of_toPartialImpl_frame`). For a cached run
+this is `QueryImpl.run_simulateQ_withCaching_eq_pure_of_toPartialImpl`, which holds for every
+answer sampler.
+
 The lazy random oracle `OracleSpec.romImpl` caches exactly the points it is queried at, so a
 predicate that every query of a program satisfies holds of every point a run of the program adds
 to the cache (`OracleComp.forall_isSome_of_mem_support_run_simulateQ_romImpl`).
@@ -84,10 +90,9 @@ end OracleSpec.QueryCache
 
 namespace QueryImpl
 
-/-- A successful partial reading determines an implementation that answers every cached query
-without changing the supplied full state.
-Only the reached response branch needs to be present in the partial cache.
--/
+/-- If `impl` answers every query cached in `cache` from the cache at state `s` and leaves `s`
+unchanged, then a computation that `cache` settles at `a` runs from `s` as `pure (a, s)`. Only
+the queries the computation reaches need to be cached. -/
 theorem run_simulateQ_eq_pure_of_toPartialImpl_frame
     {ι : Type u} {spec : OracleSpec ι} {m : Type u → Type v}
     [Monad m] [LawfulMonad m] {σ α : Type u}

@@ -324,14 +324,7 @@ theorem deferredDrawRead_run_expected_attemptCount_le {γ : Type} (pk : Stmt) (s
               ENNReal.tsum_le_tsum fun x => by gcongr; exact hcont x
           _ = (∑' x, Pr{let y ← (deferredDrawReadImpl ids M maxAttempts pk sk t).run s}[y = x] *
                   ((x.2.1.1.2.length + x.2.1.1.1.2.length : ℕ) : ℝ≥0∞)) + (b : ℝ≥0∞) * c := by
-              rw [show (∑' x,
-                    Pr{let y ← (deferredDrawReadImpl ids M maxAttempts pk sk t).run s}[y = x] *
-                    (((x.2.1.1.2.length + x.2.1.1.1.2.length : ℕ) : ℝ≥0∞) + (b : ℝ≥0∞) * c))
-                  = ∑' x,
-                    (Pr{let y ← (deferredDrawReadImpl ids M maxAttempts pk sk t).run s}[y = x] *
-                      ((x.2.1.1.2.length + x.2.1.1.1.2.length : ℕ) : ℝ≥0∞) +
-                    Pr{let y ← (deferredDrawReadImpl ids M maxAttempts pk sk t).run s}[y = x] *
-                      ((b : ℝ≥0∞) * c)) from tsum_congr fun x => by rw [mul_add]]
+              simp_rw [mul_add]
               rw [ENNReal.tsum_add, ENNReal.tsum_mul_right, hmass, one_mul]
           _ ≤ (((s.1.1.2.length + s.1.1.1.2.length : ℕ) : ℝ≥0∞) + extra) + (b : ℝ≥0∞) * c := by
               gcongr

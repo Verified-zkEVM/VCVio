@@ -1,8 +1,8 @@
 # Measure and kernel conversion checkpoints
 
 Status: historical record of the conversion of VCVio's probability semantics to Mathlib measures
-and kernels, checkpoint by checkpoint, through the removal of the discrete layer in PR #821. Each
-section describes the code at its checkpoint. The
+and kernels, checkpoint by checkpoint, through the removal of the discrete layer in the stack
+#829–#839 (the removal itself is #836). Each section describes the code at its checkpoint. The
 [probability guide](../agents/probability.md) describes the present, and the
 [migration guide](../agents/probability-migration.md) converts code written against the removed
 layer.

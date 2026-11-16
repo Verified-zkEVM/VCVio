@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S uv run --no-project --python 3.12 python
 """Exercise validation identity and cleanliness gates in isolated temporary repositories."""
 from pathlib import Path
 import json, os, subprocess, sys, tempfile
@@ -11,7 +11,7 @@ with tempfile.TemporaryDirectory(prefix='slhdsa-validation-gate-fixtures-') as t
     fakebin = base / 'bin'
     fakebin.mkdir()
     lake = fakebin / 'lake'
-    lake.write_text('#!/usr/bin/env python3\nprint("Lean (version 4.35.0, fixture)")\n')
+    lake.write_text('#!' + sys.executable + '\nprint("Lean (version 4.35.0, fixture)")\n')
     lake.chmod(493)
     env = os.environ.copy()
     env['PATH'] = str(fakebin) + os.pathsep + env['PATH']
@@ -50,7 +50,7 @@ with tempfile.TemporaryDirectory(prefix='slhdsa-validation-gate-fixtures-') as t
             counter = base / (label + '-version-calls')
             run_env['FIXTURE_VERSION_COUNTER'] = str(counter)
             lake.write_text(
-                '#!/usr/bin/env python3\n'
+                '#!' + sys.executable + '\n'
                 'from pathlib import Path\n'
                 'import os, subprocess\n'
                 'counter = Path(os.environ["FIXTURE_VERSION_COUNTER"])\n'
@@ -93,7 +93,7 @@ with tempfile.TemporaryDirectory(prefix='slhdsa-validation-gate-fixtures-') as t
     run('dirty-dependency-before', lambda r, d: (d / 'Source.lean').write_text('-- dirty dependency\n'), want=1)
     run('dirty-dependency-after', body="from pathlib import Path; Path('.lake/packages/PolyFun/Source.lean').write_text('-- dirty dependency\\n')", want=1)
     run('command-failed', body='raise SystemExit(7)', want=1)
-    lake.write_text('#!/usr/bin/env python3\nprint("Lean (version 4.36.0, fixture)")\n')
+    lake.write_text('#!' + sys.executable + '\nprint("Lean (version 4.36.0, fixture)")\n')
     run('wrong-active-lean', want=1)
     version_mutations = {
         'tracked-source-mutation': (

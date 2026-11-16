@@ -60,7 +60,6 @@ preimages short (the forged one by the verifier's `isShort` check, the hidden on
 This is the Step-2 collision extraction of the GPV proof, stated pinned over the concrete
 programmed forgery game and the concrete reductions. -/
 theorem gpv_progGameVerifyFreshAvg_le_collisionAdv_add_preimageAdv [DecidableEq Domain]
-    [Inhabited Range]
     (hcorrect : ∀ pk sk, (pk, sk) ∈ support hr.gen → psf.CorrectAt pk sk) (qSign qHash : ℕ)
     (adv : SignatureAlg.UnforgeableAdversary
       (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range))) psf hr M Salt))
@@ -81,6 +80,7 @@ theorem gpv_progGameVerifyFreshAvg_le_collisionAdv_add_preimageAdv [DecidableEq 
           programmedPreimageAdvantage (psf := psf) (hr := hr)
             (programmedPreimageReduction psf hr M Salt adv domainSample qSign qHash) := by
   classical
+  let : Inhabited Range := Classical.inhabited_of_nonempty inferInstance
   -- Reduce the keygen-average to a per-key `(pk, sk)` bound via
   -- `gpv_progGameVerifyFreshAvg_le_of_perKey`, then discharge that per-key bound (the
   -- distinct-collision transfer + the reservoir exact-match bound) — the Step-2 collision
@@ -122,7 +122,7 @@ The forger is assumed to query its forgery point (`hForge`, `ForgesQueriedPoint`
 ROM well-formedness condition that the forgery lands on a programmed random-oracle entry, so the
 collision/exact-match extraction observes the simulator's hidden preimage at that point. -/
 theorem forgery_yields_collision_or_exact_match [DecidableEq Domain]
-    [Inhabited Range] [Nonempty Salt]
+    [Nonempty Salt]
     (hcorrect : ∀ pk sk, (pk, sk) ∈ support hr.gen → psf.CorrectAt pk sk) (qSign qHash : ℕ)
     (adv : SignatureAlg.UnforgeableAdversary
       (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range))) psf hr M Salt))
@@ -162,7 +162,7 @@ programmed-preimage adversary by the largest pointwise output mass of `psf.trapd
 honest key.  The exact-match term cannot be dropped in general: an adversary that outputs the most
 likely trapdoor output wins the programmed-preimage experiment with positive probability. -/
 theorem forgery_yields_collision [DecidableEq Domain]
-    [Inhabited Range] [Nonempty Salt]
+    [Nonempty Salt]
     (hcorrect : ∀ pk sk, (pk, sk) ∈ support hr.gen → psf.CorrectAt pk sk) (qSign qHash : ℕ)
     (adv : SignatureAlg.UnforgeableAdversary
       (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range))) psf hr M Salt))
@@ -219,7 +219,7 @@ probability.
 
 References: GPV08 Section 6; BDF+11 for the QROM extension. -/
 theorem euf_cma_collision_bound [DecidableEq Domain]
-    [Inhabited Range] [Nonempty Salt]
+    [Nonempty Salt]
     (hcorrect : ∀ pk sk, (pk, sk) ∈ support hr.gen → psf.CorrectAt pk sk)
     (domainSample : PK → ProbComp Domain)
     (hreg : ∀ (pk : PK) (sk : SK), (pk, sk) ∈ support hr.gen →
@@ -260,7 +260,7 @@ This form carries the `ForgesQueriedPoint` convention as a hypothesis; the endpo
 is `euf_cma_split_bound_of_queryBound`, which discharges it for every adversary at one extra hash
 query via the append-forgery-query compiler. -/
 theorem euf_cma_split_bound [DecidableEq Domain]
-    [Inhabited Range] [Nonempty Salt]
+    [Nonempty Salt]
     (hcorrect : ∀ pk sk, (pk, sk) ∈ support hr.gen → psf.CorrectAt pk sk)
     (domainSample : PK → ProbComp Domain)
     (hreg : ∀ (pk : PK) (sk : SK), (pk, sk) ∈ support hr.gen →

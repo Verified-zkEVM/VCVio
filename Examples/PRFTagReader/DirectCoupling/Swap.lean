@@ -182,7 +182,7 @@ private lemma singleTableHandler_simulateQ_swap_invariant
   induction oa using OracleComp.inductionOn generalizing s with
   | pure b =>
     -- Both sides reduce to `pure b` via `simulateQ_pure` and `StateT.run'`.
-    simp [simulateQ_pure]
+    simp
   | query_bind t k ih =>
     -- Decompose via `singleTable_run'_query_bind'`, then case-split on `t`.
     rw [singleTable_run'_query_bind', singleTable_run'_query_bind']

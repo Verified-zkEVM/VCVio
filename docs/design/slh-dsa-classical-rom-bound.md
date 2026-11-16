@@ -146,7 +146,7 @@ floating-point presentation. Its checked-in output is
 [`slh-dsa-security-bounds.csv`](slh-dsa-security-bounds.csv); regenerate it with
 `lake exe slhdsa_bound_table > docs/design/slh-dsa-security-bounds.csv` and independently compare
 every exact rational using
-`python3 scripts/check-slh-dsa-bound-table.py docs/design/slh-dsa-security-bounds.csv`.
+`uv run --no-project --python 3.12 python scripts/check-slh-dsa-bound-table.py docs/design/slh-dsa-security-bounds.csv`.
 `lake test` builds the generator, regenerates its CSV into a temporary file, compares it
 byte-for-byte with the checked-in artifact, and runs that independent exact-arithmetic check
 on the generated output. This also runs through `scripts/validate.sh --test`; a mismatch

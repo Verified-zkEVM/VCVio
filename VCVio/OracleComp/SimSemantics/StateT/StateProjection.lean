@@ -276,7 +276,7 @@ theorem simulateQ_run_eq_of_snd_invariant
     (fun p => (p.1, (p.2, q₀))) <$> (simulateQ (QueryImpl.fixSndStateT impl q₀) oa).run s := by
   induction oa using OracleComp.inductionOn generalizing s with
   | pure x =>
-    simp [simulateQ_pure, StateT.run_pure]
+    simp [StateT.run_pure]
   | query_bind t oa ih =>
     simp only [simulateQ_bind, simulateQ_query, OracleQuery.input_query,
       OracleQuery.cont_query, id_map, StateT.run_bind]

@@ -167,7 +167,7 @@ theorem knowledgeVerifyRun_eq_trace [SampleableType Chal]
         Fork.runTrace σ hr M (proverWithFinalQuery σ hr M prover msg) pk := by
   rw [runTrace_proverWithFinalQuery]
   simp [knowledgeVerifyRun, finishTrace, FiatShamir, StateT.run'_eq, StateT.run_bind,
-    simulateQ_bind, HasQuery.query, QueryImpl.simulateQ_add_liftM_query_right, monad_norm]
+    HasQuery.query, QueryImpl.simulateQ_add_liftM_query_right, monad_norm]
 
 /-- Every supported wrapped trace has a usable fork point exactly when its verifier accepts.
 The bound includes the appended verifier slot, including a cache miss at that slot. -/

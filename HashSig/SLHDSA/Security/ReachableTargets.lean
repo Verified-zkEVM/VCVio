@@ -1232,7 +1232,7 @@ theorem encodeTargets_nodup_of_injOn (prims : Primitives p) (addresses : List Ad
     (hinj : ∀ a ∈ addresses, ∀ b ∈ addresses,
       prims.adrsToKey a = prims.adrsToKey b → a = b) :
     (encodeTargets prims addresses).Nodup :=
-  (encodeTargets_nodup_iff_injOn prims addresses haddresses).2 hinj
+  List.Nodup.map_on hinj haddresses
 
 /-- Encoded distinctness is inherited by any duplicate-free subset of a ledger.  The two WOTS
 selection roles are therefore covered by the complete chain-step ledger, through
