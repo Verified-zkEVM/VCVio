@@ -85,7 +85,7 @@ theorem IsQueryBoundP.simulateQ_of_step_le_total
     (hstep : ∀ t : spec.Domain, IsQueryBoundP (impl t) q step) :
     IsQueryBoundP (simulateQ impl oa) q (n * step) := by
   induction oa using OracleComp.inductionOn generalizing n with
-  | pure x => simp [simulateQ_pure]
+  | pure x => simp
   | query_bind t mx ih =>
       rw [isTotalQueryBound_query_bind_iff] at h
       simp only [simulateQ_query_bind, OracleQuery.input_query, monadLift_self]
@@ -600,7 +600,7 @@ theorem IsQueryBoundP.simulateQ_run_of_step {ι' : Type u} {spec' : OracleSpec �
     (s : σ) :
     IsQueryBoundP ((simulateQ impl oa).run s) q n := by
   induction oa using OracleComp.inductionOn generalizing n s with
-  | pure x => simp [simulateQ_pure]
+  | pure x => simp
   | query_bind t mx ih =>
       rw [isQueryBoundP_query_bind_iff] at h
       rw [simulateQ_query_bind, StateT.run_bind]
@@ -630,7 +630,7 @@ theorem IsQueryBoundP.simulateQ_of_step {ι' : Type u} {spec' : OracleSpec ι'}
     (hstep_np : ∀ t, ¬ p t → IsQueryBoundP (impl t) q 0) :
     IsQueryBoundP (simulateQ impl oa) q n := by
   induction oa using OracleComp.inductionOn generalizing n with
-  | pure x => simp [simulateQ_pure]
+  | pure x => simp
   | query_bind t mx ih =>
       rw [isQueryBoundP_query_bind_iff] at h
       simp only [simulateQ_query_bind, OracleQuery.input_query, monadLift_self]

@@ -5,6 +5,10 @@ Authors: Quang Dao
 -/
 
 module
+public import QuantumFoundations.ForMathlib.Analysis.Matrix.Contraction
+public import QuantumFoundations.ForMathlib.Analysis.Matrix.PosSemidef
+public import QuantumFoundations.MatrixMap.Conjugation
+public import QuantumFoundations.MatrixMap.Family
 public import PolyFun.IPFunctor.Free.Bound.Substitution
 public import VCVio.Quantum.Comp.Combinators
 public import VCVio.Quantum.Comp.HybridIndex
@@ -171,15 +175,6 @@ section cp
 
 variable {K : spec.Port → Type*} [∀ i, Fintype (K i)] {Φ : ∀ i, MatrixMap (spec.In i × R.D) (K i)}
 
-/-- A weight given by the trace of a completely positive map is countably additive on summable
-families of positive semidefinite operators. -/
-theorem ofReal_trace_re_tsum_of_isCP (hΦ : ∀ i, (Φ i).IsCP) {ι : Type*} (i : spec.Port)
-    (g : ι → Matrix (spec.In i × R.D) (spec.In i × R.D) ℂ) (hg : Summable g)
-    (hpos : ∀ b, (g b).PosSemidef) :
-    ENNReal.ofReal (Φ i (∑' b, g b)).trace.re = ∑' b, ENNReal.ofReal (Φ i (g b)).trace.re := by
-  rw [MatrixMap.map_tsum _ hg]
-  exact ofReal_trace_re_tsum (MatrixMap.summable_comp _ hg) fun b ↦ (hΦ i).posSemidef (hpos b)
-
 /-- On positive semidefinite inputs, the summed weight of the trace of completely positive maps
 is countably additive in the state. -/
 theorem totalWeight_tsum_state (hΦ : ∀ i, (Φ i).IsCP) (x : QuantumComp L spec X A) {ι : Type*}
@@ -188,7 +183,7 @@ theorem totalWeight_tsum_state (hΦ : ∀ i, (Φ i).IsCP) (x : QuantumComp L spe
       ∑' b, R.totalWeight I (fun i σ ↦ ENNReal.ofReal (Φ i σ).trace.re) x (f b) := by
   refine (tsum_congr fun j ↦ R.queryWeight_tsum_state I
     (w := fun i σ ↦ ENNReal.ofReal (Φ i σ).trace.re)
-    (fun i g hg hgpos ↦ R.ofReal_trace_re_tsum_of_isCP hΦ i g hg hgpos) x hf hpos j).trans ?_
+    (fun i _g hg hgpos ↦ (hΦ i).ofReal_trace_re_tsum hg hgpos) x hf hpos j).trans ?_
   exact ENNReal.tsum_comm
 
 /-- **Summed weights add under sequencing.** For a weight given by the trace of completely
@@ -259,28 +254,6 @@ structure EmulatedOracle (P : Type u) (In : P → QReg) where
   U : ∀ i, Matrix (In i × S) (In i × S) ℂ
   /-- Each `U i` is unitary. -/
   unitary : ∀ i, U i ∈ Matrix.unitaryGroup (In i × S) ℂ
-
-/-- A block-diagonal matrix of unitaries is unitary. -/
-theorem blockDiagonal'_mem_unitaryGroup {o : Type*} [Fintype o] [DecidableEq o]
-    {m : o → Type*} [∀ i, Fintype (m i)] [∀ i, DecidableEq (m i)] {M : ∀ i, Matrix (m i) (m i) ℂ}
-    (hM : ∀ i, M i ∈ Matrix.unitaryGroup (m i) ℂ) :
-    Matrix.blockDiagonal' M ∈ Matrix.unitaryGroup (Σ i, m i) ℂ := by
-  rw [Matrix.mem_unitaryGroup_iff', Matrix.star_eq_conjTranspose,
-    Matrix.blockDiagonal'_conjTranspose, ← Matrix.blockDiagonal'_mul]
-  simp_rw [← Matrix.star_eq_conjTranspose, fun i ↦ Matrix.mem_unitaryGroup_iff'.mp (hM i)]
-  exact Matrix.blockDiagonal'_one
-
-/-- The Kraus map of a matrix moved along a bijection of its basis moves the input back, applies
-the Kraus map of the matrix, and moves the result forward. -/
-theorem MatrixMap.conj_reindex_apply {m n : Type*} [Fintype m] [Fintype n] (e : m ≃ n)
-    (M : Matrix m m ℂ) (ρ : Matrix n n ℂ) :
-    MatrixMap.conj (Matrix.reindex e e M) ρ =
-      (M * ρ.submatrix e e * Mᴴ).submatrix e.symm e.symm := by
-  rw [MatrixMap.conj_apply, Matrix.conjTranspose_reindex, Matrix.reindex_apply,
-    Matrix.reindex_apply]
-  have h : ρ = (ρ.submatrix e e).submatrix e.symm e.symm := by simp
-  conv_lhs => rw [h]
-  rw [Matrix.submatrix_mul_equiv, Matrix.submatrix_mul_equiv]
 
 /-- The Kraus map of `U ⊗ 1`, regrouped along `Equiv.prodAssoc`, in the form of the steps of
 `Quantum.QuantumRuntime.addRegister`. -/
@@ -434,7 +407,7 @@ noncomputable def coherent : EmulatedOracle Unit fun _ ↦ cohIn In where
   U _ := Matrix.reindex (Equiv.sigmaProdDistrib _ _).symm (Equiv.sigmaProdDistrib _ _).symm
     (Matrix.blockDiagonal' E.U)
   unitary _ := Matrix.submatrix_equiv_mem_unitary.mpr
-    (blockDiagonal'_mem_unitaryGroup E.unitary)
+    (Matrix.blockDiagonal'_mem_unitaryGroup E.unitary)
 
 /-- The projector of the coherent register onto the index `i`, tensored with the identity on the
 private register (the paper's `P_mass^(i) = |i⟩⟨i|_I`, p. 28). -/
@@ -553,36 +526,10 @@ section matrixHelpers
 
 variable {l m n o : Type*}
 
-/-- Compressing by basis matrices picks out a submatrix. -/
-theorem conjTranspose_basisMatrix_mul_mul_basisMatrix [Fintype m] [Fintype n] [DecidableEq m]
-    [DecidableEq n] (f : l → m) (g : o → n) (M : Matrix m n ℂ) :
-    (basisMatrix f)ᴴ * M * basisMatrix g = M.submatrix f g := by
-  ext a b
-  simp [Matrix.mul_apply, apply_ite (star : ℂ → ℂ), ite_mul, mul_ite, Finset.sum_ite_eq']
-
 /-- The basis matrix of a bijection is the adjoint of the basis matrix of its inverse. -/
 theorem basisMatrix_equiv_eq_conjTranspose [DecidableEq m] [DecidableEq n] (e : m ≃ n) :
     basisMatrix e = (basisMatrix e.symm)ᴴ := by
   rw [conjTranspose_basisMatrix_equiv, Equiv.symm_symm]
-
-/-- A basis matrix beside an identity is the basis matrix of the product map. -/
-theorem basisMatrix_kronecker_one [DecidableEq m] [DecidableEq n] (f : l → m) :
-    basisMatrix f ⊗ₖ (1 : Matrix n n ℂ) = basisMatrix (Prod.map f id) := by
-  ext ⟨a, c⟩ ⟨b, d⟩
-  by_cases h1 : a = f b <;> by_cases h2 : c = d <;> simp [h1, h2]
-
-/-- If `K * Kᴴ = 1`, then `Kᴴ * K` is a projector, so `1 - Kᴴ * K` is positive semidefinite. -/
-theorem posSemidef_one_sub_conjTranspose_mul_self [Fintype m] [Fintype n] [DecidableEq m]
-    [DecidableEq n]
-    {K : Matrix m n ℂ} (hK : K * Kᴴ = 1) : (1 - Kᴴ * K).PosSemidef := by
-  have hQ : Kᴴ * K * (Kᴴ * K) = Kᴴ * K := by
-    rw [Matrix.mul_assoc, ← Matrix.mul_assoc K, hK, Matrix.one_mul]
-  have h : (1 - Kᴴ * K)ᴴ * (1 - Kᴴ * K) = 1 - Kᴴ * K := by
-    rw [Matrix.conjTranspose_sub, Matrix.conjTranspose_one, Matrix.conjTranspose_mul,
-      Matrix.conjTranspose_conjTranspose, Matrix.sub_mul, Matrix.mul_sub, Matrix.mul_sub,
-      Matrix.one_mul, Matrix.one_mul, Matrix.mul_one, hQ, sub_self, sub_zero]
-  rw [← h]
-  exact Matrix.posSemidef_conjTranspose_mul_self _
 
 end matrixHelpers
 
@@ -678,7 +625,7 @@ noncomputable def project (q : Q) (F : QReg) :
     SubInstrument (T × QReg.of (ι.G q × F)) (J q × F) PUnit.{v + 1} :=
   SubInstrument.ofMap (MatrixMap.conj (basisMatrix (ι.call q F))ᴴ)
     (MatrixMap.isCP_conj _)
-    (MatrixMap.isTNI_conj (posSemidef_one_sub_conjTranspose_mul_self (by
+    (MatrixMap.isTNI_conj (Matrix.posSemidef_one_sub_conjTranspose_mul_self (by
       rw [Matrix.conjTranspose_conjTranspose,
         conjTranspose_basisMatrix_mul_self (ι.call_injective q F)])))
 

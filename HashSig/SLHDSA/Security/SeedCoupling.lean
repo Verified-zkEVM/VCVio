@@ -113,12 +113,11 @@ at every address with key `k`, and the randomizer at `(opt_rand, M)` is the `PRF
     (s : core.SkSeed × core.SkPrf) (o : core.Y) (msg : List Byte) :
     (secretEncoding core e pkSeed).enc s (.inr (o, msg)) = .inr ⟨s.2, o, msg⟩ := rfl
 
-variable [SampleableType core.Y]
-
 /-- The derivation-backed secret provider: the secret value at a secret-key address is the
 derivation at its key. The honest programs read secrets only at secret-key addresses; at any
 other address the provider draws a uniform node. -/
-@[expose] def deriveSecret (a : Adrs) : OracleComp (deriveSpec core) core.Y :=
+@[expose] def deriveSecret [SampleableType core.Y] (a : Adrs) :
+    OracleComp (deriveSpec core) core.Y :=
   if h : a.IsSecretKey then
     (query (spec := deriveSpec core) (.inr (.inl ⟨core.adrsToKey a, a, h, rfl⟩)) :
       OracleComp (deriveSpec core) core.Y)
@@ -135,8 +134,8 @@ private def deriveHom (e : core.SkSeed ≃ core.Y) (pkSeed : core.PkSeed)
 
 /-- At a secret-key address, the derivation-backed secret answered through the encoding at secret
 seeds `s` is the oracle-backed secret `PRF(PK.seed, SK.seed, ADRS)`. -/
-theorem simulateQ_deriveImpl_deriveSecret (e : core.SkSeed ≃ core.Y) (pkSeed : core.PkSeed)
-    (s : core.SkSeed × core.SkPrf) {a : Adrs} (ha : a.IsSecretKey) :
+theorem simulateQ_deriveImpl_deriveSecret [SampleableType core.Y] (e : core.SkSeed ≃ core.Y)
+    (pkSeed : core.PkSeed) (s : core.SkSeed × core.SkPrf) {a : Adrs} (ha : a.IsSecretKey) :
     simulateQ ((secretEncoding core e pkSeed).deriveImpl s) (deriveSecret core a) =
       oracleSecret core e pkSeed s.1 a := by
   simp only [deriveSecret, ha, ↓reduceDIte, oracleSecret, PublicHash.f]
@@ -161,17 +160,15 @@ seeds `s`: its secret key carries `s` and the public part of the transcript's ke
     RomOutcome vp core :=
   z.mapSk (fillSecretKey core s)
 
-omit [SampleableType core.Y] in
 @[simp] theorem DeriveOutcome.fill_pk (s : core.SkSeed × core.SkPrf) (z : DeriveOutcome core) :
     (DeriveOutcome.fill core s z).pk = z.pk :=
   UnforgeableTranscript.mapSk_pk _ _
 
-omit [SampleableType core.Y] in
 @[simp] theorem DeriveOutcome.fill_sk_skSeed (s : core.SkSeed × core.SkPrf)
     (z : DeriveOutcome core) : (DeriveOutcome.fill core s z).sk.skSeed = s.1 := by
   simp only [DeriveOutcome.fill, UnforgeableTranscript.mapSk_sk, fillSecretKey]
 
-variable [DecidableEq core.Y]
+variable [SampleableType core.Y] [DecidableEq core.Y]
 
 /-- SLH-DSA at public seed `pkSeed` with no secret: key generation computes the root with every
 secret value drawn from `deriveSecret`, and signing draws `opt_rand` from `optRand`, the randomizer

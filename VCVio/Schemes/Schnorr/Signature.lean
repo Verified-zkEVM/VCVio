@@ -128,14 +128,14 @@ variable (G : Type) [AddCommGroup G] [Module F G] [DecidableEq G]
 with the discrete-log generable relation. The construction itself does not
 require a bijection between `F` and `G` via `· • g`; that hypothesis is only
 needed at the security theorem `signature_euf_cma`. -/
-def signature [SampleableType G] (g : G) (M : Type) [DecidableEq M] :
+def signature [SampleableType G] (g : G) (M : Type) :
     SignatureAlg (OracleComp (unifSpec + (M × G →ₒ F)))
       (M := M) (PK := G) (SK := F) (S := G × F) :=
   FiatShamir (Schnorr.sigma F G g) (dlogGenerable F g) M
 
 /-- Completeness of the Schnorr signature follows from completeness of the
 underlying Schnorr Σ-protocol via the generic Fiat-Shamir completeness theorem. -/
-theorem signature_complete [SampleableType G] (g : G) (M : Type) [DecidableEq M] :
+theorem signature_complete [SampleableType G] (g : G) (M : Type) :
     SignatureAlg.PerfectlyComplete
       (signature F G g M)
       (FiatShamir.runtime (Commit := G) (Chal := F) M) :=

@@ -530,10 +530,7 @@ theorem FullData.toLeafData_eq_leaf {α} (a : α) (tree : FullData α Skeleton.l
     (h : LeafData.leaf a = tree.toLeafData) :
     tree = FullData.leaf a := by
   cases tree with
-  | leaf value =>
-    simp only [FullData.toLeafData] at h
-    cases h
-    rfl
+  | leaf value => grind
 
 @[simp, grind =]
 theorem FullData.toLeafData_internal {α} {s_left s_right : Skeleton}

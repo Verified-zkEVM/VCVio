@@ -38,7 +38,7 @@ expect_line() {
   fi
 }
 
-CHECK=(python3 scripts/check-doc-names.py)
+CHECK=(uv run --no-project --python 3.12 python scripts/check-doc-names.py)
 EMPTY_ALLOWLIST="$FIXTURE_TMP/empty.txt"
 : > "$EMPTY_ALLOWLIST"
 

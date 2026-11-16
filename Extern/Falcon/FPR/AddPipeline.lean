@@ -610,7 +610,7 @@ private theorem addPipeline_yu'_eq (a b : FPR) :
         then 0 else (addPipeline a b).yu_ := by
   rw [addPipeline_yu', flushMask_eq]
   split_ifs
-  · exact and_zero_uint64 _
+  · exact UInt64.and_zero
   · exact and_allOnes_uint64 _
 
 /-- No flush below an exponent gap of `60`. -/

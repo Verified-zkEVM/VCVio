@@ -145,8 +145,6 @@ With the cover unconditional, `FusedCover`'s signing obligation `hsub` is discha
 a signing sub-run is a plain noticing run at the view the opening bracket produced, and the
 bracket keeps the cache, so `NoticingCover.mem_recordOf_of_cache_reaches` answers it. -/
 
-set_option maxHeartbeats 400000 in
--- The three-stage case split unfolds the fused handler's state tuple at every stage.
 open scoped Classical in
 /-- **A query the carrier tail ends holding is recorded on one side or the other.** The cover
 lemma, reached through all three stages. -/
@@ -184,11 +182,15 @@ theorem cover_carrierTail
   rw [mem_support_bind_iff] at hrest
   obtain ⟨final, hlast, hpure⟩ := hrest
   rw [support_pure, Set.mem_singleton_iff] at hpure
-  have h1 := mem_support_dropCount_run (keyAt walk) (rightKeep walk) _ _ keys hkeys
+  -- Support hypotheses are passed through `assumption`, not as terms: elaborating `h` as a term
+  -- puts its type in weak head normal form, which evaluates the whole run it is about.
+  have h1 := mem_support_dropCount_run (keyAt walk) (rightKeep walk) _ _ keys
+    (by revert hkeys; intro; assumption)
   have h2 := mem_support_dropCount_phase (keyAt walk) (rightKeep walk)
     (recordedAdversaryImpl + recordedSigningOracle (Scheme.sign keys.1.1)) _ 1 [] keys.2 middle
-    hmiddle
-  have h3 := mem_support_dropCount_run (keyAt walk) (rightKeep walk) _ _ final hlast
+    (by revert hmiddle; intro; assumption)
+  have h3 := mem_support_dropCount_run (keyAt walk) (rightKeep walk) _ _ final
+    (by revert hlast; intro; assumption)
   have hgoalRecord : result.2.2 = (dropCount final.2).2 := by rw [hpure]; rfl
   have hgoalCache : @CacheView.cacheOf HandlerCarrier.State (servingView (keyAt walk))
       (dropCount final.2).1 input = some answer := by
@@ -212,7 +214,8 @@ theorem cover_carrierTail
     intro request log state z hz _ hstateFresh hzFinal
     refine NoticingCover.mem_recordOf_of_cache_reaches (disclosingKeep (keyAt walk))
       (rightKeep walk) inClass (fun _ => True) hcover' (fun _ _ _ _ => trivial)
-      (fun _ _ _ => trivial) _ (startServingOn request state) z hz input answer hclass trivial
+      (fun _ _ _ => trivial) _ (startServingOn request state) z (by revert hz; intro; assumption)
+        input answer hclass trivial
       ?_ hzFinal
     rw [show @CacheView.cacheOf HandlerCarrier.State (servingView (keyAt walk))
         (startServingOn request state).1 =
@@ -236,12 +239,14 @@ theorem cover_carrierTail
         (dropCount middle.2.2.2).1 input = none
     · exact NoticingCover.mem_recordOf_of_cache_reaches (disclosingKeep (keyAt walk))
         (rightKeep walk) inClass (fun _ => True) hcover' (fun _ _ _ _ => trivial)
-        (fun _ _ _ => trivial) _ (dropCount middle.2.2.2) (final.1, dropCount final.2) h3
+        (fun _ _ _ => trivial) _ (dropCount middle.2.2.2) (final.1, dropCount final.2)
+          (by revert h3; intro; assumption)
         input answer hclass trivial htwo hgoalCache
     · obtain ⟨value, hvalue⟩ := Option.ne_none_iff_exists'.mp htwo
       have hsame : value = answer := by
         have := NoticingCover.cache_value_persists (disclosingKeep (keyAt walk)) (rightKeep walk)
-          _ (dropCount middle.2.2.2) (final.1, dropCount final.2) h3 input value hvalue
+          _ (dropCount middle.2.2.2) (final.1, dropCount final.2)
+            (by revert h3; intro; assumption) input value hvalue
         rw [this] at hgoalCache
         exact Option.some_injective _ hgoalCache
       subst hsame
@@ -251,18 +256,21 @@ theorem cover_carrierTail
         (fun _ _ _ _ => trivial) (fun _ _ _ => trivial)
         hbeforeRecord (fun _ => rfl) hbeforeCache (fun _ => rfl) (fun _ => trivial) hsub _
         (1, [], dropCount keys.2)
-        (middle.1, (middle.2.1, middle.2.2.1, dropCount middle.2.2.2)) h2 trivial hone hvalue
+        (middle.1, (middle.2.1, middle.2.2.1, dropCount middle.2.2.2))
+          (by revert h2; intro; assumption) trivial hone hvalue
       obtain ⟨hleftPrefix, hrightPrefix⟩ := NoticingCover.recordOf_prefix
         (disclosingKeep (keyAt walk)) (rightKeep walk) _ (dropCount middle.2.2.2)
-        (final.1, dropCount final.2) h3
+        (final.1, dropCount final.2) (by revert h3; intro; assumption)
       exact hmem.imp (fun h => hleftPrefix.subset h) (fun h => hrightPrefix.subset h)
   · obtain ⟨value, hvalue⟩ := Option.ne_none_iff_exists'.mp hone
     have htwo := FusedCover.cache_value_persists (disclosingKeep (keyAt walk)) (rightKeep walk)
       (recordedAdversaryImpl + recordedSigningOracle (Scheme.sign keys.1.1))
       startServingOn stopServingOn hbeforeCache (fun _ => rfl) _ (1, [], dropCount keys.2)
-      (middle.1, (middle.2.1, middle.2.2.1, dropCount middle.2.2.2)) h2 input value hvalue
+      (middle.1, (middle.2.1, middle.2.2.1, dropCount middle.2.2.2))
+        (by revert h2; intro; assumption) input value hvalue
     have hthree := NoticingCover.cache_value_persists (disclosingKeep (keyAt walk))
-      (rightKeep walk) _ (dropCount middle.2.2.2) (final.1, dropCount final.2) h3 input value htwo
+      (rightKeep walk) _ (dropCount middle.2.2.2) (final.1, dropCount final.2)
+        (by revert h3; intro; assumption) input value htwo
     have hsame : value = answer := by
       rw [hthree] at hgoalCache
       exact Option.some_injective _ hgoalCache
@@ -270,13 +278,16 @@ theorem cover_carrierTail
     have hmem := NoticingCover.mem_recordOf_of_cache_reaches (disclosingKeep (keyAt walk))
       (rightKeep walk) inClass (fun _ => True) hcover' (fun _ _ _ _ => trivial)
       (fun _ _ _ => trivial) _ (dropCount (startAt walk.2, (([], []), 0)))
-      (keys.1, dropCount keys.2) h1 input value hclass trivial hfresh hvalue
+      (keys.1, dropCount keys.2) (by revert h1; intro; assumption)
+        input value hclass trivial hfresh hvalue
     obtain ⟨hleftPhase, hrightPhase⟩ := FusedCover.recordOf_prefix (disclosingKeep (keyAt walk))
       (rightKeep walk) (recordedAdversaryImpl + recordedSigningOracle (Scheme.sign keys.1.1))
       startServingOn stopServingOn hbeforeRecord (fun _ => rfl) _ (1, [], dropCount keys.2)
-      (middle.1, (middle.2.1, middle.2.2.1, dropCount middle.2.2.2)) h2
+      (middle.1, (middle.2.1, middle.2.2.1, dropCount middle.2.2.2))
+        (by revert h2; intro; assumption)
     obtain ⟨hleftLast, hrightLast⟩ := NoticingCover.recordOf_prefix (disclosingKeep (keyAt walk))
-      (rightKeep walk) _ (dropCount middle.2.2.2) (final.1, dropCount final.2) h3
+      (rightKeep walk) _ (dropCount middle.2.2.2) (final.1, dropCount final.2)
+        (by revert h3; intro; assumption)
     exact hmem.imp (fun h => hleftLast.subset (hleftPhase.subset h))
       (fun h => hrightLast.subset (hrightPhase.subset h))
 

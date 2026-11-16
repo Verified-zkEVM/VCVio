@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S uv run --no-project --python 3.12 python
 """Check byte-model fixtures against a local copy of the pinned NIST ACVP corpus.
 
 Pass the corpus's gen-val/json-files directory as the only argument. This check

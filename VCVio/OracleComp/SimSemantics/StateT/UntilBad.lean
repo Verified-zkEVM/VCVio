@@ -333,3 +333,25 @@ theorem IntertwinesOn.prEvent_simulateQ_run_le_or_bad {σB : Type}
     (fun _ _ _ _ _ ↦ trivial) hbad oa s trivial fun z ↦ P z.1
 
 end QueryImpl
+
+namespace QueryImpl.DominatedUntilBad
+
+variable {ι : Type} {spec : OracleSpec ι} {σ₁ σ₂ : Type}
+  {impl₁ : QueryImpl spec (StateT σ₁ ProbComp)} {impl₂ : QueryImpl spec (StateT σ₂ ProbComp)}
+  {f : σ₁ → σ₂} {inv bad : σ₁ → Prop}
+
+/-- `impl₁` is dominated by `impl₂` until `bad` through `f` if, from every state satisfying `inv`
+and not `bad`, each step of `impl₁` with its post-state mapped through `f` is equal in distribution
+to the step of `impl₂` from the mapped state, or has only bad post-states. -/
+theorem of_evalDistEq_or_bad (h : ∀ t s, inv s → ¬bad s →
+      (fun z => (z.1, f z.2)) <$> (impl₁ t).run s =ᵈ (impl₂ t).run (f s) ∨
+        ∀ z ∈ support ((impl₁ t).run s), bad z.2) :
+    DominatedUntilBad impl₁ impl₂ f inv bad := by
+  intro t s hs hb Q
+  rcases h t s hs hb with he | hbad
+  · refine (prEvent_and_le_left _ _ _).trans (le_of_eq ?_)
+    rw [← he.prEvent_eq, prEvent_map]
+  · rw [prEvent_eq_zero_of_forall_mem_support _ _ fun z hz hz' => hz'.2 (hbad z hz)]
+    exact zero_le
+
+end QueryImpl.DominatedUntilBad

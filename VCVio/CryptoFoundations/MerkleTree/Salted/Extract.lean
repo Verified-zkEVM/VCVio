@@ -8,7 +8,7 @@ module
 public import VCVio.CryptoFoundations.MerkleTree.Salted.Defs
 public import VCVio.CryptoFoundations.MerkleTree.OrderedResolver
 public import VCVio.Quantum.VC.MultiExtractor
-public import VCVio.Quantum.Oracle.Compressed.Basic
+public import VCVio.Quantum.Oracle.Compressed.QueryCache
 public import VCVio.OracleComp.QueryTracking.Collision
 
 /-!

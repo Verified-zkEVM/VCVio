@@ -1132,6 +1132,8 @@ def hidingSim [Inhabited M] [Inhabited S]
     OracleComp (CMOracle M S C) Bool :=
   (simulateQ (hidingImplSim s) (hidingOa A s)).run' (∅, 0)
 
+/-- The oracles of the averaged hiding experiment: a random-salt oracle `Unit →ₒ S` beside
+the commitment oracle `CMOracle M S C`. -/
 abbrev HidingAvgSpec (M : Type) (S : Type) (C : Type) :=
   (Unit →ₒ S) + CMOracle M S C
 
@@ -1140,12 +1142,16 @@ noncomputable instance unitArrowSpecUniformAnswerMeasure (S : Type) [Fintype S] 
     OracleSpec.UniformAnswerMeasure (Unit →ₒ S) :=
   OracleSpec.UniformAnswerMeasure.ofFiniteNonempty _
 
+/-- The salt-oracle handler of the averaged hiding experiment: forwards each salt query to
+the ambient oracles, leaving the counting state unchanged. -/
 abbrev hidingAvgLeftImpl :
     QueryImpl (Unit →ₒ S)
       (StateT (HidingCountState M S C) (OracleComp (HidingAvgSpec M S C))) :=
   (QueryImpl.ofLift (Unit →ₒ S) (OracleComp (HidingAvgSpec M S C))).liftTarget
     (StateT (HidingCountState M S C) (OracleComp (HidingAvgSpec M S C)))
 
+/-- The commitment-oracle handler of the averaged hiding experiment: runs the counting
+handler `hidingImplCountAll` on each query, lifted into `HidingAvgSpec`. -/
 abbrev hidingAvgRightImpl :
     QueryImpl (CMOracle M S C)
       (StateT (HidingCountState M S C) (OracleComp (HidingAvgSpec M S C))) :=

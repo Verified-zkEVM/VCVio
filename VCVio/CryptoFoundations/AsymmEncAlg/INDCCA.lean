@@ -33,10 +33,13 @@ namespace AsymmEncAlg
 variable {m : Type → Type v} [Monad m] {M PK SK C : Type}
   (encAlg : AsymmEncAlg m M PK SK C)
 
-/-- Oracle that uses a secret key to respond to decryption requests.
-Invalid ciphertexts become oracle failure in `OptionT`. -/
-def decryptionOracle (sk : SK) : QueryImpl (C →ₒ M) (OptionT m) :=
-  fun c => OptionT.mk (encAlg.decrypt sk c)
+/-- The decryption oracle under `sk`: a ciphertext is answered with its decryption, and an invalid
+one with `none`, which the adversary receives as `⊥` before it continues. -/
+def decryptionOracle (sk : SK) : QueryImpl (C →ₒ Option M) m :=
+  fun c => encAlg.decrypt sk c
+
+@[simp] lemma decryptionOracle_apply (sk : SK) (c : C) :
+    encAlg.decryptionOracle sk c = encAlg.decrypt sk c := rfl
 
 section IND_CCA
 
@@ -63,8 +66,7 @@ structure IND_CCA_Adversary (encAlg : AsymmEncAlg (OracleComp spec) M PK SK C) w
 /-- Pre-challenge decryption oracle for the IND-CCA game. -/
 def IND_CCA_preChallengeImpl (encAlg : AsymmEncAlg (OracleComp spec) M PK SK C)
     (sk : SK) : QueryImpl (IND_CCA_oracleSpec encAlg) (OracleComp spec) :=
-  QueryImpl.add spec.passthrough
-    fun c => encAlg.decrypt sk c
+  QueryImpl.add spec.passthrough (encAlg.decryptionOracle sk)
 
 /-- Post-challenge decryption oracle for the IND-CCA game.
 The challenge ciphertext itself is answered with `none`, while all other ciphertexts are
@@ -72,7 +74,13 @@ decrypted normally. -/
 def IND_CCA_postChallengeImpl (encAlg : AsymmEncAlg (OracleComp spec) M PK SK C)
     (sk : SK) (cStar : C) : QueryImpl (IND_CCA_oracleSpec encAlg) (OracleComp spec) :=
   QueryImpl.add spec.passthrough fun c =>
-    if c = cStar then return none else encAlg.decrypt sk c
+    if c = cStar then return none else encAlg.decryptionOracle sk c
+
+/-- After the challenge, the decryption oracle answers the challenge ciphertext with `none`. -/
+@[simp] lemma IND_CCA_postChallengeImpl_apply_cStar
+    (encAlg : AsymmEncAlg (OracleComp spec) M PK SK C) (sk : SK) (cStar : C) :
+    encAlg.IND_CCA_postChallengeImpl sk cStar (.inr cStar) = return none :=
+  ite_eq_left rfl
 
 /-- IND-CCA security game in the standard two-phase form.
 The adversary chooses challenge messages with access to the decryption oracle, then receives

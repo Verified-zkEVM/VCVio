@@ -138,18 +138,21 @@ theorem prEvent_focusCollision_fork_le {main : OracleComp spec α} {i : ι} {n :
       AnswerMeasure.toMeasure (spec := spec) i {located.completion.answer} :=
   (prEvent_mono _ _ _ fun _ h ↦ h.1).trans_eq (prEvent_focusCollision_fork located)
 
-end answer
-
-/-- Under uniform answer measures, a guarded collision is bounded by inverse cardinality. -/
-theorem prEvent_focusCollision_fork_le_of_uniform
-    [UniformAnswerMeasure spec] {main : OracleComp spec α} {i : ι} [Fintype (spec.Range i)]
+/-- When query `i` is uniform, a guarded collision is bounded by inverse cardinality. -/
+theorem prEvent_focusCollision_fork_le_of_uniform {main : OracleComp spec α} {i : ι}
+    [AnswerMeasure.IsUniformAt spec i] [Fintype (spec.Range i)]
     {n : Nat} {path : PFunctor.FreeM.Path main}
     (located : PFunctor.FreeM.Cursor.Located i main path n) (accept : α → Prop) :
     Pr{let view ← ofFreeM located.fork}[view.firstAnswer = view.secondAnswer ∧
       accept (PFunctor.FreeM.output main view.firstPath)] ≤
       (Fintype.card (spec.Range i) : ℝ≥0∞)⁻¹ := by
-  simpa only [UniformAnswerMeasure.toMeasure_singleton] using
-    prEvent_focusCollision_fork_le located accept
+  let : MeasurableSpace (spec.Range i) := ⊤
+  have : Nonempty (spec.Range i) := ⟨located.completion.answer⟩
+  refine (prEvent_focusCollision_fork_le located accept).trans_eq ?_
+  rw [AnswerMeasure.IsUniformAt.toMeasure_eq_uniformOn,
+    ProbabilityTheory.uniformOn_univ_apply_singleton]
+
+end answer
 
 /-- Observe the outputs of both completions of a fixed typed occurrence. -/
 @[expose] def observedForkPair [DecidableEq ι]

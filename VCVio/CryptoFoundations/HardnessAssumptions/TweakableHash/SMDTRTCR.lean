@@ -8,7 +8,6 @@ module
 public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.Collection
 public import VCVio.OracleComp.Constructions.SampleableType.Measure
 public import VCVio.OracleComp.SimSemantics.Append
-import Batteries.Tactic.Lint
 
 /-!
 # Single-function, distinct-tweak, multi-target target-collision resistance with random sampling

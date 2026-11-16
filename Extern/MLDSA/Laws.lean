@@ -37,9 +37,9 @@ Two further fields are discharged from the concrete byte-encoding decode ranges 
 roundtrip in `LatticeCrypto/MLDSA/Concrete/Encoding.lean`:
 
 - `expandMask_bound` (`concrete_expandMask_bound`): every `expandMask` coefficient is a value
-  decoded by `polyZUnpack` over the range `[-γ₁ + 1, γ₁]`, so its centered infinity norm is at
-  most `γ₁`. This is a property of the decoder's output window (`bitUnpackPoly_z_cInfNorm_le`) and
-  is independent of the opaque SHAKE byte stream. It matches the abstract field's bound `γ₁`.
+  decoded by `polyZUnpack` over the range `[-γ₁ + 1, γ₁]`, which is the abstract field's
+  `maskBounded`. This is a property of the decoder's output window (`bitUnpackPoly_z_coeff_mem`)
+  and is independent of the opaque SHAKE byte stream.
 - `w1Encode_injective` (`concrete_w1Encode_injOn`): on the valid commitment range — every
   component an actual `highBits` output — each coefficient lies in `[0, (q-1)/(2γ₂) - 1]`
   (`highBits_coeff_val_lt_width`), which fits the `w₁` packer's bit width, so `simpleBitPackPoly`
@@ -66,18 +66,11 @@ infrastructure:
   count `‖SampleInBall(c̃)‖₁ ≤ τ` (`sampleInBall_l1Norm`, a Fisher–Yates nonzero-count fuel
   induction), and the component law `(c • s).get j = c · sⱼ` (`coeffScalarVecMul_get`).
 
-## What is NOT proven (and why)
+## The full witness
 
-One field remains, in a single honest category — there are no false-as-stated fields:
-
-**Random-oracle modeling assumption** (inherent to the ML-DSA security model, not derivable
-from any fixed deterministic instantiation — see its docstring in
-`LatticeCrypto/MLDSA/Primitives.lean`):
-- `keyVector_t0_determined`: a standard ROM idealization of the SHAKE XOFs
-  (`ExpandSeed` / `ExpandS`). This is a model assumption, left abstract.
-
-The abstract `Primitives.Laws` statement is **not** modified by this file; the banked `concrete_*`
-theorems make explicit which concrete obligations are discharged and which remain.
+With every field proved, `concretePrimitives_laws` assembles `Primitives.Laws (concretePrimitives p)
+concreteNTTRingOps` at every approved parameter set, so the `Laws`-gated theorems apply to the
+FIPS 204 primitives themselves.
 -/
 
 public section
@@ -141,21 +134,15 @@ theorem concrete_power2Round_bound (r : Rq) :
 
 /-! ## `expandMask_bound` at the FIPS-204 `z`-range
 
-The concrete `expandMask` decodes each coefficient through `polyZUnpack p`. The decode-range bound
-`bitUnpackPoly_z_cInfNorm_le` holds for any byte input, so it applies to the opaque SHAKE stream
-after generalizing the byte argument; the two side conditions on the `z`-range bit width come from
-`approved_gamma1_width`. -/
+The concrete `expandMask` decodes each coefficient through `polyZUnpack p`. The decode range
+`bitUnpackPoly_z_coeff_mem` holds for any byte input, so it applies to the opaque SHAKE stream;
+the two side conditions on the `z`-range bit width come from `approved_gamma1_width`. -/
 
-set_option maxRecDepth 1200 in
-/-- `Primitives.Laws.expandMask_bound` (bound `γ₁`) for the concrete instance, at any
-approved parameter set. -/
+/-- `Primitives.Laws.expandMask_bound` for the concrete instance, at any approved parameter set:
+every coefficient lies in `[-γ₁ + 1, γ₁]`. -/
 theorem concrete_expandMask_bound (hp : p.isApproved) (rhoDoublePrime : Bytes 64) (kappa : ℕ) :
-    polyVecBounded ((concretePrimitives p).expandMask rhoDoublePrime kappa) p.gamma1 := by
-  rw [polyVecBounded, polyVecNorm, LatticeCrypto.PolyVec.cInfNorm_le_iff]
-  intro j
-  change LatticeCrypto.cInfNorm
-      ((MLDSA.Concrete.expandMask rhoDoublePrime kappa p).get j) ≤ p.gamma1
-  exact MLDSA.Concrete.expandMask_get_cInfNorm_le p hp rhoDoublePrime kappa j
+    maskBounded ((concretePrimitives p).expandMask rhoDoublePrime kappa) p.gamma1 := fun j i =>
+  MLDSA.Concrete.expandMask_get_coeff_mem p hp rhoDoublePrime kappa j i
 
 /-! ## `w1Encode_injective` as `Set.InjOn` on the valid range
 
@@ -234,29 +221,36 @@ theorem concrete_sampleInBall_smul_bound
 
 Thirteen `Primitives.Laws` fields are proven for the concrete instance at any approved parameter
 set. The transform field is proved from the structural butterfly stages of
-`LatticeCrypto/Ring/NTTCert.lean` (no `native_decide`; the runtime loop kernels remain an
-`implemented_by` refinement boundary); the remaining proofs introduce no additional project-specific
-trust assumptions. These fields are: the eight algebraic fields (`concrete_transform`,
-`concrete_high_low_decomp`, `concrete_lowBits_bound`, `concrete_hide_low`,
+`LatticeCrypto/Ring/NTTCert.lean` and the Cooley–Tukey residue theorem of
+`LatticeCrypto/Ring/NTTSplitCert.lean`, including `toHat_mul` for the pointwise `multiplyNTTs`.
+The proof uses no `native_decide`, and `ntt`/`invNTT` are the runtime loop kernels themselves.
+The remaining proofs introduce no additional project-specific trust assumptions. These fields are:
+the eight algebraic fields
+(`concrete_transform`, `concrete_high_low_decomp`, `concrete_lowBits_bound`, `concrete_hide_low`,
 `concrete_highBitsShift_injective`, `concrete_useHint_makeHint`, `concrete_power2Round_decomp`,
 `concrete_power2Round_bound`); the two byte-encoding fields `concrete_expandMask_bound` and
 `concrete_w1Encode_injOn`; the two sampler-bound fields `concrete_sampleInBall_norm` and
 `concrete_expandS_bound` (extracted by fuel induction from the structural-recursion samplers in
 `Extern/MLDSA/Sampling.lean`); and the challenge-product bound `concrete_sampleInBall_smul_bound`
 (assembled from the generic negacyclic-convolution infinity-norm bound and the challenge `ℓ₁`
-count).
+count). -/
 
-We deliberately do **not** assemble a full `Primitives.Laws (concretePrimitives p) …` witness here,
-because one field remains undischarged for a reason that is not a statement bug:
-
-* `keyVector_t0_determined`: an inherent ROM modeling assumption, left abstract (see its docstring
-  in `LatticeCrypto/MLDSA/Primitives.lean`).
-
-A `sorry`-backed aggregate witness is intentionally omitted: it would assert the still-abstract ROM
-field, which is unsound to bank. The thirteen proven `concrete_*` lemmas above stand on their own
-and are safe to consume. A full `Primitives.Laws` witness is inhabitable once the single
-`keyVector_t0_determined` modeling assumption is supplied as a hypothesis — it is satisfiable, e.g.
-when `ExpandSeed` is injective on the relevant data, as exhibited by
-`MLDSA.seedRevealingPrims_laws` in `Extern/MLDSA/NonVacuity.lean`. -/
+/-- `Primitives.Laws` for the concrete FIPS 204 primitives at every approved parameter set: each
+field is one of the `concrete_*` theorems above. -/
+theorem concretePrimitives_laws (hp : p.isApproved) :
+    Primitives.Laws (concretePrimitives p) concreteNTTRingOps where
+  sampleInBall_norm        := concrete_sampleInBall_norm p
+  expandS_bound            := concrete_expandS_bound p
+  expandMask_bound         := concrete_expandMask_bound p hp
+  transform                := concrete_transform
+  high_low_decomp          := concrete_high_low_decomp p
+  lowBits_bound            := concrete_lowBits_bound p hp
+  hide_low                 := concrete_hide_low p hp
+  highBitsShift_injective  := concrete_highBitsShift_injective p hp
+  useHint_makeHint         := concrete_useHint_makeHint p hp
+  power2Round_decomp       := concrete_power2Round_decomp p
+  power2Round_bound        := concrete_power2Round_bound p
+  w1Encode_injective       := concrete_w1Encode_injOn p hp
+  sampleInBall_smul_bound  := concrete_sampleInBall_smul_bound p
 
 end MLDSA.Concrete
