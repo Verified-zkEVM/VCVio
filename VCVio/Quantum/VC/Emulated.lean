@@ -5,6 +5,7 @@ Authors: Quang Dao
 -/
 
 module
+public import QuantumFoundations.MatrixMap.Comparison
 public import VCVio.Quantum.VC.Unitaries
 public import QuantumFoundations.Oracle.Unitary
 public import VCVio.Quantum.Oracle.ClassicalRead
@@ -81,40 +82,6 @@ theorem QuantumRuntime.tsum_jointPost₂_trace_le_one {spec : QuantumOracleSpec.
   rw [DSubInstrument.outcomeMeasure_apply _ _ MeasurableSet.univ] at h
   simp only [Set.indicator_univ, Pi.one_apply, mul_one] at h
   exact h
-
-/-- The difference of two complete Kraus families has squared trace at most four times
-input trace, with the outcomes retained inside the sum. -/
-theorem sum_trace_conj_sub_le_four {n m ι : Type*} [Fintype n] [DecidableEq n]
-    [Fintype m] [Fintype ι] (F G : ι → Matrix m n ℂ)
-    (hF : ∑ a, (F a)ᴴ * F a = 1) (hG : ∑ a, (G a)ᴴ * G a = 1)
-    {ρ : Matrix n n ℂ} (hρ : ρ.PosSemidef) :
-    ∑ a, ENNReal.ofReal (MatrixMap.conj (F a - G a) ρ).trace.re ≤
-      4 * ENNReal.ofReal ρ.trace.re := by
-  have hpoint (a : ι) : (MatrixMap.conj (F a - G a) ρ).trace.re ≤
-      2 * ((MatrixMap.conj (F a) ρ).trace.re + (MatrixMap.conj (G a) ρ).trace.re) := by
-    have hp := (hρ.mul_mul_conjTranspose_same (F a + G a)).trace_re_nonneg
-    have he : MatrixMap.conj (F a - G a) ρ + MatrixMap.conj (F a + G a) ρ =
-        (MatrixMap.conj (F a) ρ + MatrixMap.conj (G a) ρ) +
-        (MatrixMap.conj (F a) ρ + MatrixMap.conj (G a) ρ) := by
-      simp only [MatrixMap.conj_apply, conjTranspose_sub, conjTranspose_add]
-      simp only [Matrix.sub_mul, Matrix.mul_sub, Matrix.add_mul, Matrix.mul_add]
-      abel
-    have ht := congrArg (fun M ↦ M.trace.re) he
-    simp only [trace_add, Complex.add_re] at ht
-    have hp' : 0 ≤ (MatrixMap.conj (F a + G a) ρ).trace.re := hp
-    linarith
-  have hf := congrArg Complex.re (MatrixMap.isTP_sum_conj hF ρ)
-  have hg := congrArg Complex.re (MatrixMap.isTP_sum_conj hG ρ)
-  simp only [LinearMap.sum_apply, trace_sum, Complex.re_sum] at hf hg
-  have hn (a : ι) : 0 ≤ (MatrixMap.conj (F a - G a) ρ).trace.re :=
-    (hρ.mul_mul_conjTranspose_same (F a - G a)).trace_re_nonneg
-  rw [← ENNReal.ofReal_sum_of_nonneg (fun a _ ↦ hn a),
-    ← ENNReal.ofReal_ofNat, ← ENNReal.ofReal_mul (by norm_num : (0 : ℝ) ≤ 4)]
-  apply ENNReal.ofReal_le_ofReal
-  calc
-    _ ≤ ∑ a, 2 * ((MatrixMap.conj (F a) ρ).trace.re +
-        (MatrixMap.conj (G a) ρ).trace.re) := Finset.sum_le_sum fun a _ ↦ hpoint a
-    _ = 4 * ρ.trace.re := by rw [← Finset.mul_sum, Finset.sum_add_distrib, hf, hg]; ring
 
 section extractionMeasurement
 

@@ -53,7 +53,7 @@ script lint (args) do
     IO.eprintln s!"lake lint: {uvMissingMessage}"
     return 1
   let root ← getRootPackage
-  let libraries := (root.defaultTargets.push `VCVioCslib).filterMap fun library =>
+  let libraries := root.defaultTargets.filterMap fun library =>
     (root.findLeanLib? library).map fun _ => library.toString
   let child ← IO.Process.spawn {
     cmd := "lake"
@@ -64,28 +64,10 @@ script lint (args) do
   child.wait
 
 /-
-Interop backends are intentionally disabled for the Lean 4.35 baseline. Their
-source remains under `Interop/`, isolated from the trusted libraries by
-`scripts/check-interop-isolation.sh`, but the aggregate module and CI do not
-build it. Re-enable a backend only once its upstream Lean library supports the
-repository's Lean version without a local compatibility layer.
-
-The pinned Hax revision still targets Lean 4.29.0-rc1 and is not part of the
-Lean 4.35 build. Subdirectory: `hax-lib/proof-libs/lean`.
+The Rust bridges under `Interop/` require hax and Aeneas, and every dependent of this package would
+resolve any `require` written here. They are built by the separate package in `Interop/lakefile.toml`
+instead, which requires this one by path.
 -/
--- require Hax from git
---   "https://github.com/cryspen/hax" @
---   "492a34e3" / "hax-lib/proof-libs/lean"
-
-/-
-Aeneas now natively pins Lean and Mathlib v4.31.0. This dormant pin follows its
-published `nightly-2026.07.11-15b9684`; keep it disabled until the VCVio bridge
-is tested separately and can be enabled without compatibility aliases.
-Subdirectory: `backends/lean`.
--/
--- require aeneas from git
---   "https://github.com/AeneasVerif/aeneas" @
---   "15b968482b0dcd7aae45020b6d1bca39b5024af5" / "backends/lean"
 
 /-
 List PolyFun and QuantumFoundations before the root Mathlib pin. Lake resolves
@@ -95,7 +77,7 @@ requirement authoritative over their inherited pins and makes
 -/
 require PolyFun from git
   "https://github.com/Verified-zkEVM/PolyFun" @
-  "d3ec3a414c233203e2050ed0f33fae8647f57eb7"
+  "ea3b29785cba402588ea79a1b71bfedc2cfaff49"
 
 /-
 The Mathlib-only quantum foundation (matrix maps, instruments, registers,
@@ -103,16 +85,12 @@ observation, pure states and oracle unitaries), shared with CatCrypt-core.
 -/
 require QuantumFoundations from git
   "https://github.com/lean-crypto-foundations/QuantumFoundations" @
-  "901aaab7967ceecd2240d0b38bbde7cf3e2c14ac"
+  "9bc93ed50a76d62b509dc1926638118e7b5cf5fe"
 
 require "leanprover-community" / "mathlib" @ git "v4.35.0"
 
 /-- Main library. -/
 @[default_target] lean_lib VCVio
-
-/-- Optional cslib-backed non-uniform complexity adapters. Kept outside the
-default `VCVio` umbrella so core VCVio remains backend-neutral. -/
-lean_lib VCVioCslib
 
 /-- Native FFI surface: `@[extern]` bindings (SHA-3/SHAKE, ML-KEM, ML-DSA,
 Falcon) and every module whose transitive imports reach them. Isolated here so
@@ -129,18 +107,11 @@ Peer of `LatticeCrypto`; may depend on `VCVio`/`ToMathlib` (and Mathlib), but no
 `VCVio`/`ToMathlib`/`Extern`/`Interop` may import it. -/
 @[default_target] lean_lib HashSig
 
-/-- Example constructions of cryptographic primitives. -/
+/-- Example constructions of cryptographic primitives, with the proof widgets they display
+(`Examples/Widgets/`). -/
 @[default_target] lean_lib Examples
-/-- Optional proof widget experiments and visualizations. -/
-@[default_target] lean_lib VCVioWidgets
 /-- Separate section of the project for things that should be ported. -/
 @[default_target] lean_lib ToMathlib
-
-/-- Dormant Interop bridges to Rust verification frontends (hax, aeneas).
-Strict TCB isolation: no other `lean_lib` may import from `Interop`. See
-`Interop/README.md` and `docs/agents/interop.md`. This target is intentionally
-excluded from the Lean 4.35 baseline build. -/
-lean_lib Interop
 
 /-
 The four `extern_lib` targets below compile C sources that live in git

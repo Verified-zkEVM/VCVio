@@ -252,7 +252,7 @@ theorem run_liftM_probComp {γ : Type} (sample : ProbComp γ) (cache : QueryCach
       QueryImpl HashSpec (StateT (QueryCache HashSpec) ProbComp)) from rfl,
     QueryImpl.simulateQ_add_liftM_left]
   induction sample using OracleComp.inductionOn generalizing cache with
-  | pure value => simp [simulateQ_pure, StateT.run_pure, map_pure]
+  | pure value => simp [StateT.run_pure, map_pure]
   | query_bind coin next ih =>
     simp only [simulateQ_bind, simulateQ_spec_query, StateT.run_bind, ih,
       map_eq_bind_pure_comp, Function.comp_def, bind_assoc]

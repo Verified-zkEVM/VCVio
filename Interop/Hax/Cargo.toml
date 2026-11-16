@@ -1,0 +1,16 @@
+# The Rust sources of the hax examples: one crate per example, in `Interop/Hax/<Name>/` beside its
+# extracted modules (`Extraction/`, written by `scripts/regenerate-hax.sh`) and its proofs
+# (`Verification.lean`).
+[workspace]
+resolver = "2"
+members = ["Adc", "Barrett", "CenteredBinomial", "Computation", "Division", "Examples"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[workspace.dependencies]
+# The hax release whose Lean library `Interop/lakefile.toml` requires; `cargo-hax` must be the
+# same release.
+hax-lib = { git = "https://github.com/cryspen/hax", rev = "a045d15a3bf43fe05096146f488668b521a4ae44" }

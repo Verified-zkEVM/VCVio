@@ -186,6 +186,17 @@ theorem expandMask_get_cInfNorm_le (p : Params) (hp : p.isApproved) (rhoPrime : 
   rw [Vector.get_ofFn]
   exact bitUnpackPoly_z_cInfNorm_le _ p.gamma1 hwidth
 
+/-- Every coefficient produced by `expandMask` has centered representative in the FIPS-204 `z`
+window `[-γ₁ + 1, γ₁]`, for an approved parameter set. -/
+theorem expandMask_get_coeff_mem (p : Params) (hp : p.isApproved) (rhoPrime : Bytes 64)
+    (kappa : ℕ) (j : Fin p.l) (i : Fin ringDegree) :
+    -(p.gamma1 : ℤ) < LatticeCrypto.centeredRepr (((expandMask rhoPrime kappa p).get j).get i) ∧
+      LatticeCrypto.centeredRepr (((expandMask rhoPrime kappa p).get j).get i) ≤ p.gamma1 := by
+  obtain ⟨hwidth, hq⟩ := approved_gamma1_width p hp
+  unfold expandMask
+  rw [Vector.get_ofFn]
+  exact bitUnpackPoly_z_coeff_mem _ p.gamma1 hwidth hq i
+
 /-! ## Challenge sampling -/
 
 private def shake256Prefix (input : ByteArray) (len : Nat) : ByteArray :=

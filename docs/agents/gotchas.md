@@ -257,6 +257,10 @@ Two failure classes recur:
   or be uniformly distributed on — a strictly larger space. A hypothesis asserting such an
   equality or uniformity is false at every parameter where the strict cardinality inequality
   holds.
+- **Bounds over every adversary**: a hypothesis `∀ adv, Adv adv ≤ ε` over an adversary type is
+  satisfiable only at `ε` as large as exhaustive search achieves, query budgets notwithstanding,
+  so the theorem is empty at real parameters. Assume the bound for the named distinguisher
+  ([crypto.md](crypto.md#name-the-reduction-in-the-theorem-statement)).
 
 **Fix**: when compatibility of a new hypothesis bundle is not immediate, ship a kernel-checked
 witness for the whole bundle (or at least each nontrivial compatibility pair) in the same PR.
@@ -287,10 +291,12 @@ When a proof attempt on a working branch is not finished or is currently broken,
 
 ### 17. `OracleComp.inductionOn` is the canonical eliminator
 
-Pattern: `| pure x => ... | query_bind t oa ih => ...`. Use `simulateQ_bind`,
-`simulateQ_query`, `simulateQ_pure` simp lemmas in the `query_bind` case.
-See `simulateQ_id'` in `VCVio/OracleComp/SimSemantics/SimulateQ.lean` for a
-clean example.
+Pattern: `| pure x => ... | query_bind t oa ih => ...`. In the `query_bind` case, `simp`
+distributes `simulateQ` with the `@[simp]` lemmas `simulateQ_bind`, `simulateQ_query` and
+`simulateQ_pure`, and `rw [simulateQ_bind, simulateQ_spec_query]` lands on `impl t` directly.
+`simulateQ` is semireducible, so CSLib's `PFunctor.FreeM.liftM` simp lemmas do not rewrite it:
+the pieces stay `simulateQ`-headed after `simp`, and a later `rw [simulateQ_*]` still matches.
+See `simulateQ_id'` in `VCVio/OracleComp/SimSemantics/SimulateQ.lean` for a clean example.
 
 ### 18. Full cutover, no backward-compatibility shims
 
@@ -305,7 +311,7 @@ specific submodule it actually uses.
 
 **Allowed umbrellas** (strictly top-level roots only): root imports such as
 `VCVio.lean`, `ToMathlib.lean`, `Extern.lean`, `HashSig.lean`, `Examples.lean`,
-`LatticeCrypto.lean`, `Interop.lean`, `VCVioWidgets.lean`, `VCVioTest.lean`, and
+`LatticeCrypto.lean`, `VCVioTest.lean`, and
 `LatticeCryptoTest.lean`.
 When a new top-level root is added, extend this list alongside it.
 
@@ -388,10 +394,10 @@ and remaining migrations by their effect on callers.
 
 This regenerates the active module root files covered by the build import check:
 `ToMathlib.lean`, `VCVio.lean`, `LatticeCrypto.lean`, `Extern.lean`,
-`HashSig.lean`, `Examples.lean`, `VCVioWidgets.lean`, and `VCVioTest.lean`.
-It also updates the legacy `Interop.lean` umbrella without enabling module mode.
+`HashSig.lean`, `Examples.lean`, and `VCVioTest.lean`.
 CI runs `scripts/check-imports.sh`, which regenerates the umbrellas and fails if any differs
-from the committed file; `Interop` remains dormant and is migrated separately.
+from the committed file. The `Interop/` package lists its library roots in `Interop/lakefile.toml`
+and has no generated umbrella.
 
 ### 25. Active Lean sources use explicit module scopes
 
@@ -405,7 +411,7 @@ use opaque `public section` when downstream code does not need definitional unfo
 `backward.proofsInPublic`; make helper visibility explicit or give proof terms enough type
 information to avoid public metavariables.
 
-The dormant `Interop` library is intentionally excluded until its separate migration.
+The `Interop/` package builds separately; its unported hax examples are not built.
 `LatticeCryptoTest.lean` remains a curated umbrella and `HashSigTest` has no root umbrella because
 their executable modules contain colliding root-level `main` declarations.
 

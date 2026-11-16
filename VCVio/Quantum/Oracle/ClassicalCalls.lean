@@ -5,6 +5,8 @@ Authors: Quang Dao
 -/
 
 module
+public import QuantumFoundations.DSubInstrument
+public import QuantumFoundations.SubInstrument
 public import VCVio.Quantum.Oracle.Classical
 public import VCVio.Quantum.Oracle.Emulated
 import VCVio.OracleComp.EvalDist.Sum
@@ -15,8 +17,8 @@ import VCVio.OracleComp.EvalDist.Sum
 Helpers for running randomized classical algorithms from inside a quantum experiment, as the
 challengers of the security experiments of ePrint 2025/2166 (§7, p. 51) do.
 
-* **Coins.** `Quantum.SubInstrument.uniform Ω A` draws a uniform outcome in `Ω` and leaves the
-  register `A` untouched; its branch at every outcome is the map `ρ ↦ ρ / |Ω|`. It is the
+* **Coins.** QuantumFoundations’ `Quantum.SubInstrument.uniform Ω A` draws a uniform outcome
+  in `Ω` and leaves the register `A` untouched; each branch is the map `ρ ↦ ρ / |Ω|`. It is the
   measurement of a fresh uniform register, and answers the queries of `unifSpec` through
   `Quantum.QComp.coinImpl`, so a `ProbComp` or an `OracleComp (unifSpec + _)` runs inside an
   experiment by `OracleComp.toQuantumAt`. For a `ProbComp`, every branch is its classical
@@ -36,13 +38,12 @@ challengers of the security experiments of ePrint 2025/2166 (§7, p. 51) do.
 
 ## Main definitions
 
-* `Quantum.SubInstrument.uniform`, `Quantum.QComp.coinImpl`, `Quantum.QComp.pi`,
+* `Quantum.QComp.coinImpl`, `Quantum.QComp.pi`,
   `Quantum.LocalSig.InstrumentOp.lift`, `Quantum.QuantumComp.liftInstruments`,
   `Quantum.EmulatedOracle.block`.
 
 ## Main results
 
-* `Quantum.SubInstrument.branch_uniform_apply`, `Quantum.SubInstrument.lossless_uniform`.
 * `Quantum.QComp.lossless_pi`, `Quantum.QComp.isQueryBound_pi`.
 * `Quantum.branch_run₂_toQuantumAt_coinImpl`,
   `Quantum.outcomeMeasure_run₂_toQuantumAt_coinImpl`.
@@ -59,59 +60,6 @@ open scoped Kronecker ENNReal
 universe u v u₁ v₁ w w₁
 
 namespace Quantum
-
-/-! ## Uniform coins -/
-
-namespace SubInstrument
-
-variable (Ω : Type*) [Fintype Ω] (A : Type*) [Fintype A] [DecidableEq A]
-
-/-- The Kraus operator of every outcome of a uniform coin: `|Ω|^(-1/2) • 1`. -/
-@[expose]
-noncomputable def uniformKraus : Matrix A A ℂ :=
-  ((Real.sqrt (Fintype.card Ω : ℝ)⁻¹ : ℝ) : ℂ) • (1 : Matrix A A ℂ)
-
-private theorem sqrt_inv_card_mul_self : (((Real.sqrt (Fintype.card Ω : ℝ)⁻¹ : ℝ) : ℂ)) *
-    ((Real.sqrt (Fintype.card Ω : ℝ)⁻¹ : ℝ) : ℂ) = (Fintype.card Ω : ℂ)⁻¹ := by
-  rw [← Complex.ofReal_mul, Real.mul_self_sqrt (by positivity)]
-  simp
-
-/-- The Kraus operator of a uniform coin, composed with its adjoint, is `|Ω|⁻¹ • 1`. -/
-theorem conjTranspose_uniformKraus_mul_self :
-    (uniformKraus Ω A)ᴴ * uniformKraus Ω A =
-      ((Fintype.card Ω : ℂ)⁻¹) • (1 : Matrix A A ℂ) := by
-  simp only [uniformKraus, conjTranspose_smul, conjTranspose_one, Complex.star_def,
-    Complex.conj_ofReal, smul_mul_smul, Matrix.mul_one, sqrt_inv_card_mul_self]
-
-variable [Nonempty Ω]
-
-/-- The Kraus operators of a uniform coin form a complete family. -/
-theorem sum_conjTranspose_uniformKraus_mul_self :
-    ∑ _ω : Ω, (uniformKraus Ω A)ᴴ * uniformKraus Ω A = 1 := by
-  rw [conjTranspose_uniformKraus_mul_self, Finset.sum_const, Finset.card_univ,
-    ← Nat.cast_smul_eq_nsmul ℂ, smul_smul,
-    mul_inv_cancel₀ (Nat.cast_ne_zero.mpr Fintype.card_ne_zero), one_smul]
-
-/-- **A uniform coin**: draw a uniform outcome in `Ω` and leave the register `A` untouched. Each
-branch is `ρ ↦ ρ / |Ω|` (`Quantum.SubInstrument.branch_uniform_apply`). It measures a
-fresh uniform register and discards the measured register. -/
-@[expose]
-noncomputable def uniform : SubInstrument A A Ω :=
-  ofKraus (fun _ ↦ uniformKraus Ω A) (sum_conjTranspose_uniformKraus_mul_self Ω A)
-
-/-- Each branch of a uniform coin scales the state by `1 / |Ω|`. -/
-theorem branch_uniform_apply (ω : Ω) (ρ : Matrix A A ℂ) :
-    (uniform Ω A).branch ω ρ = ((Fintype.card Ω : ℂ)⁻¹) • ρ := by
-  rw [uniform, DSubInstrument.branch_ofKraus_apply, MatrixMap.conj_apply]
-  simp only [uniformKraus, conjTranspose_smul, conjTranspose_one, Complex.star_def,
-    Complex.conj_ofReal, smul_mul, Matrix.one_mul, Matrix.mul_smul, Matrix.mul_one, smul_smul,
-    sqrt_inv_card_mul_self]
-
-/-- A uniform coin is lossless. -/
-theorem lossless_uniform : (uniform Ω A).Lossless :=
-  DSubInstrument.lossless_ofKraus _ (sum_conjTranspose_uniformKraus_mul_self Ω A)
-
-end SubInstrument
 
 /-! ## Coins and sequencing in programs -/
 
@@ -245,23 +193,6 @@ theorem outcomeMeasure_run₂_toQuantumAt_coinImpl_apply_singleton {α : Type}
       Pr{let x ← oa}[x = a] * ENNReal.ofReal ρ.matrix.trace.re := by
   rw [outcomeMeasure_run₂_toQuantumAt_coinImpl, MeasureTheory.Measure.smul_apply,
     smul_eq_mul, ← prEvent_eq_evalDist_singleton, mul_comm]
-
-/-! ## Lifting the outcomes of local operations -/
-
-namespace DSubInstrument
-
-variable {A : Type*} [Fintype A] {ι : Type*} {B : ι → Type*} [∀ i, Fintype (B i)] {κ : Type*}
-  {C : κ → Type*} [∀ c, Fintype (C c)]
-
-/-- Restricting the outcomes along `ULift.down` and continuing with a function of the unlifted
-outcome is the original sequencing. -/
-theorem comap_down_bind (p : DSubInstrument A ι B) (g : (i : ι) → DSubInstrument (B i) κ C) :
-    (p.comap ULift.down.{w} ULift.down_injective).bind (fun b ↦ g b.down) = p.bind g := by
-  refine DSubInstrument.ext (funext fun c ↦ LinearMap.ext fun ρ ↦ ?_)
-  rw [branch_bind_apply, branch_bind_apply]
-  exact Equiv.ulift.tsum_eq fun i ↦ (g i).branch c (p.branch i ρ)
-
-end DSubInstrument
 
 namespace LocalSig
 

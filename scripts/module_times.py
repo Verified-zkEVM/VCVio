@@ -25,12 +25,10 @@ SCHEMA_VERSION = 1
 MODULE_PREFIXES = (
     "ToMathlib",
     "VCVio",
-    "VCVioCslib",
     "Extern",
     "LatticeCrypto",
     "HashSig",
     "Examples",
-    "VCVioWidgets",
     "Interop",
     "VCVioTest",
     "LatticeCryptoTest",

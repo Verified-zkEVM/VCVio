@@ -201,7 +201,7 @@ theorem IsQueryBound.simulateQ_run_of_step
     IsQueryBound ((simulateQ impl oa).run s) (mapBudget budget) canQuery' cost' := by
   induction oa using OracleComp.inductionOn generalizing budget s with
   | pure x =>
-      simp [simulateQ_pure]
+      simp
   | query_bind t mx ih =>
       rw [isQueryBound_query_bind_iff] at h
       rw [simulateQ_query_bind, StateT.run_bind]
@@ -331,6 +331,17 @@ lemma isQueryBoundP_bind_zero (oa : OracleComp spec α) (ob : α → OracleComp 
     (h : IsQueryBoundP oa p 0) (h' : ∀ x, IsQueryBoundP (ob x) p 0) :
     IsQueryBoundP (oa >>= ob) p 0 :=
   isQueryBoundP_bind h fun x _ => h' x
+
+/-- A probabilistic computation lifted to `unifSpec + hs` makes no query to `hs`. -/
+theorem isQueryBoundP_liftM_isRight {ι : Type} {hs : OracleSpec ι} {α : Type} (oa : ProbComp α) :
+    IsQueryBoundP (liftM oa : OracleComp (unifSpec + hs) α) (fun t => t.isRight) 0 := by
+  induction oa using OracleComp.inductionOn with
+  | pure a => trivial
+  | query_bind n k ih =>
+    simp only [liftM_bind]
+    exact isQueryBoundP_bind_zero _ _
+      ((isQueryBoundP_query_iff (spec := unifSpec + hs) _ (.inl n) 0).2 fun h => by
+        simp at h) ih
 
 /-- Transfer a predicate-targeted query bound through a `StateT` simulation
 whose handler step consumes at most one target-side predicate query exactly when

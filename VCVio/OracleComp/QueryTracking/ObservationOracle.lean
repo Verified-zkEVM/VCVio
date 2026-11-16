@@ -171,7 +171,7 @@ lemma runObs_bind [LawfulMonad m] (base : QueryImpl spec m) (encode : Ev → ω)
       let ⟨a, w₁⟩ ← runObs base encode oa
       let ⟨b, w₂⟩ ← runObs base encode (ob a)
       return (b, w₁ * w₂) := by
-  simp [runObs, simulateQ_bind, WriterT.run_bind]
+  simp [runObs, WriterT.run_bind]
 
 @[simp]
 lemma runObs_map [LawfulMonad m] (base : QueryImpl spec m) (encode : Ev → ω)

@@ -343,8 +343,7 @@ theorem not_covered_satList_erase_coord {S : Finset (Fin (2 ^ h))} {d : Digest h
   obtain ⟨p, -, hp⟩ := Finset.mem_image.mp (Finset.mem_of_mem_erase hd')
   obtain ⟨p0, -, hp0⟩ := Finset.mem_image.mp hd
   have hdd : d' = d := by
-    subst hp
-    subst hp0
+    subst hp hp0
     simp only [Prod.mk.injEq] at h1 h2 ⊢
     exact ⟨h1, funext fun _ => h2⟩
   exact Finset.notMem_erase d _ (hdd ▸ hd')
@@ -564,8 +563,7 @@ theorem evalDist_answerTape_coverWitness_le {q : ℕ} (j₀ : Fin q) (g : Fin k 
     · simp only [roleAssign, Fin.cons_succ, roleSet]
       rw [Finset.mem_coe, mem_multiFiber]
       refine ⟨(hv i').1, fun i'' hi'' => ?_⟩
-      rw [Finset.mem_singleton] at hi''
-      rw [hi'']
+      rw [Finset.mem_singleton.mp hi'']
       exact (hv i').2
   · simp only [Finset.sum_const, Finset.card_univ, nsmul_eq_mul]
     rw [← mul_assoc, ENNReal.mul_inv_cancel hN0 hNt, one_mul]

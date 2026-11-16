@@ -7,7 +7,7 @@ Authors: Quang Dao
 module
 public import VCVio.OracleComp.QueryTracking.QueryBound.Basic
 public import VCVio.OracleComp.QueryTracking.RandomOracle.EagerTable
-public import VCVio.Quantum.Oracle.Model
+public import VCVio.Quantum.Oracle.UniformSample
 public import PolyFun.IPFunctor.Free.Bound.Loops
 
 /-!

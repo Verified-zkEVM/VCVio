@@ -28,7 +28,9 @@ Provides:
   quotient embedding.
 - `NTTRingOps` / `NTTRingLaws`: transform-domain interface and law aliases.
 - `normOps`, `polyNorm`, `polyVecNorm`, `polyBounded`, `polyVecBounded`:
-  norm infrastructure.
+  norm infrastructure, with the coefficientwise characterization `polyVecNorm_le_iff` and the
+  triangle inequality `polyVecNorm_sub_le`.
+- `maskBounded`: the coefficient range `[-γ₁ + 1, γ₁]` of FIPS 204's `ExpandMask`.
 - `RoundingOps`, `Power2RoundOps`: rounding interface aliases.
 
 This module is mixed: the executable aliases are computable, while
@@ -127,6 +129,50 @@ def polyBounded (f : Rq) (b : ℕ) : Prop :=
 /-- Whether all coefficients of every component of a polynomial vector are in `[-b, b]`. -/
 def polyVecBounded {k : ℕ} (v : RqVec k) (b : ℕ) : Prop :=
   polyVecNorm v ≤ b
+
+/-- Whether the centered representative of every coefficient of every component of `v` lies in
+`[-γ₁ + 1, γ₁]`, the range of FIPS 204's `ExpandMask`. -/
+def maskBounded {k : ℕ} (v : RqVec k) (gamma1 : ℕ) : Prop :=
+  ∀ (j : Fin k) (i : Fin ringDegree),
+    -(gamma1 : ℤ) < LatticeCrypto.centeredRepr ((v.get j).get i) ∧
+      LatticeCrypto.centeredRepr ((v.get j).get i) ≤ gamma1
+
+/-- The centered norm of an ML-DSA polynomial is the canonical centered infinity norm. -/
+theorem polyNorm_eq_cInfNorm (f : Rq) : polyNorm f = LatticeCrypto.cInfNorm f :=
+  LatticeCrypto.zmodPolyNormOps_cInfNorm f
+
+/-- Each coefficient of each component is bounded by the vector's centered norm. -/
+theorem natAbs_centeredRepr_le_polyVecNorm {k : ℕ} (v : RqVec k) (j : Fin k)
+    (i : Fin ringDegree) :
+    (LatticeCrypto.centeredRepr ((v.get j).get i)).natAbs ≤ polyVecNorm v :=
+  calc (LatticeCrypto.centeredRepr ((v.get j).get i)).natAbs ≤ polyNorm (v.get j) :=
+        (polyNorm_eq_cInfNorm _).symm ▸ LatticeCrypto.coeff_le_cInfNorm (v.get j) i
+    _ ≤ polyVecNorm v := LatticeCrypto.PolyVec.component_cInfNorm_le normOps v j
+
+/-- A vector's centered norm is at most `b` exactly when every coefficient is. -/
+theorem polyVecNorm_le_iff {k b : ℕ} {v : RqVec k} :
+    polyVecNorm v ≤ b ↔
+      ∀ j i, (LatticeCrypto.centeredRepr ((v.get j).get i)).natAbs ≤ b := by
+  refine (LatticeCrypto.PolyVec.cInfNorm_le_iff normOps).trans (forall_congr' fun j => ?_)
+  change polyNorm (v.get j) ≤ b ↔ _
+  rw [polyNorm_eq_cInfNorm]
+  exact LatticeCrypto.cInfNorm_le_iff
+
+/-- The triangle inequality for the centered norm of a difference. -/
+theorem polyVecNorm_sub_le {k : ℕ} (z v : RqVec k) :
+    polyVecNorm (z - v) ≤ polyVecNorm z + polyVecNorm v := by
+  refine polyVecNorm_le_iff.mpr fun j i => ?_
+  have hz := natAbs_centeredRepr_le_polyVecNorm z j i
+  have hv := natAbs_centeredRepr_le_polyVecNorm v j i
+  have hget : ((z - v).get j).get i = (z.get j).get i + -(v.get j).get i := by
+    simp only [Vector.get_eq_getElem, Vector.getElem_sub]
+    exact (coeffRing.coeff_sub _ _ i).trans (sub_eq_add_neg _ _)
+  simp only [LatticeCrypto.centeredRepr_eq_valMinAbs] at hz hv ⊢
+  rw [hget]
+  have hneg := ZMod.natAbs_valMinAbs_neg ((v.get j).get i)
+  have hadd := ZMod.natAbs_valMinAbs_add_le ((z.get j).get i) (-(v.get j).get i)
+  have htri := Int.natAbs_add_le ((z.get j).get i).valMinAbs (-(v.get j).get i).valMinAbs
+  omega
 
 end Norms
 
