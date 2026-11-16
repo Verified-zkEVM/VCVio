@@ -136,9 +136,6 @@ private theorem sub_mask_of_lt (a c : UInt64) (ha : a.toNat < 2 ^ 63) (hc : c.to
     rw [hsh]
     decide
 
-private theorem uint64_zero_and (w : UInt64) : (0 : UInt64) &&& w = 0 := by
-  rw [← UInt64.toNat_inj, UInt64.toNat_and]; simp
-
 /-- The loop's closing sticky test: `r ||| (0 - r)` has its top bit set exactly when `r` is
 nonzero, since one of `r` and its two's-complement negation always does. -/
 private theorem or_neg_shiftRight_63 (r : UInt64) :

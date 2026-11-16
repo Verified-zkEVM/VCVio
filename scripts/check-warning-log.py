@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S uv run --no-project --python 3.12 python
 """Fail when a build log contains warnings that match a scoped warning budget."""
 
 from __future__ import annotations

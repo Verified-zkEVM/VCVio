@@ -249,13 +249,13 @@ theorem answer_eq_checked_projectors (x : Fin k × X) (y : Y) :
 /-- Every ordinary answer projector is Hermitian. -/
 theorem answer_hermitian (x : Fin k × X) (y : Y) : (answer x y)ᴴ = answer x y := by
   simp only [answer, conjTranspose_mul, conjTranspose_compressDatabases,
-    conjTranspose_diagonal_ite, Matrix.mul_assoc]
+    Matrix.conjTranspose_diagonal_ite, Matrix.mul_assoc]
 
 /-- Orthogonality of distinct ordinary answers, with idempotency for equal answers. -/
 theorem answer_orthogonal (x : Fin k × X) (z y : Y) :
     answer x z * answer x y = if z = y then answer x y else 0 := by
-  rw [answer, answer, compressed_conjugate_mul _ (compressDatabases_mul_self k X Y),
-    diagonal_ite_mul_diagonal_ite]
+  rw [answer, answer, conj_mul_conj_of_involution _ (compressDatabases_mul_self k X Y),
+    Matrix.diagonal_ite_mul_diagonal_ite]
   by_cases h : z = y
   · subst z
     simp only [and_self, ↓reduceIte]
@@ -284,8 +284,8 @@ theorem answer_complete (x : Fin k × X) : ∑ y : Y, answer x y = 1 := by
 /-- All ordinary answer projectors commute, including at different oracle indices. -/
 theorem answer_commute (x x' : Fin k × X) (y y' : Y) :
     answer x y * answer x' y' = answer x' y' * answer x y := by
-  simp only [answer, compressed_conjugate_mul _ (compressDatabases_mul_self k X Y),
-    diagonal_ite_mul_diagonal_ite]
+  simp only [answer, conj_mul_conj_of_involution _ (compressDatabases_mul_self k X Y),
+    Matrix.diagonal_ite_mul_diagonal_ite]
   simp only [and_comm]
 
 /-- Ordinary answer projectors commute with checked answers at every pair of cells. -/
@@ -293,7 +293,8 @@ theorem answer_commute_checked (x x' : Fin k × X) (y : Y) (a : Option Y) :
     answer x y * compressedReadProjector k X Y x' a =
       compressedReadProjector k X Y x' a * answer x y := by
   simp only [answer, compressedReadProjector,
-    compressed_conjugate_mul _ (compressDatabases_mul_self k X Y), diagonal_ite_mul_diagonal_ite]
+    conj_mul_conj_of_involution _ (compressDatabases_mul_self k X Y),
+    Matrix.diagonal_ite_mul_diagonal_ite]
   simp only [and_comm]
 
 /-- The classical basis-call branch of the ordinary oracle on an arbitrary reference register. -/
@@ -308,7 +309,7 @@ theorem branch_eq (B : QReg) (x : Fin k × X) (y : Y) :
             if t = x.2 ∧ (D x.1).lookup x.2 = z then 1 else 0) *
           compressDatabases k X Y := by
     ext d d'
-    have h := congrFun (congrFun (submatrix_one_kronecker_mul_mul_one_kronecker
+    have h := congrFun (congrFun (Matrix.submatrix_one_kronecker_mul_mul_one_kronecker
       (compressDatabases k X Y) (tableOracle fun D : Fin k → Database X Y ↦ (D x.1).lookup)
       ((t, z) : X × Y) ((x.2, 0) : X × Y)) d) d'
     rw [submatrix_tableOracle] at h
@@ -359,7 +360,7 @@ theorem answer_commute_ordinary (p : Fin k) (x : Fin k × X) (y : Y) :
     simp [C, D, answer, ← mul_kronecker_mul]
   rw [compressedVCOracle_U_eq_conj, hA]
   change (C * _ * C) * (C * _ * C) = (C * _ * C) * (C * _ * C)
-  rw [compressed_conjugate_mul C hCC, compressed_conjugate_mul C hCC, hT]
+  rw [conj_mul_conj_of_involution C hCC, conj_mul_conj_of_involution C hCC, hT]
 
 /-- The compressed oracle has complete projective classical answers on all states.
 The generic API supplies fixed-coin adaptive replay and rejection of contradictory lists. -/

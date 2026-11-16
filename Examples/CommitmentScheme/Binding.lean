@@ -219,7 +219,7 @@ private lemma binding_rest_noCollision_le_inv [Finite M] [Finite S] [Fintype C]
             (cont := fun u =>
               pure (decide (m₀ ≠ m₁) && (v₀ == c) && (u == c))) (by
               intro u hu
-              simp [simulateQ_pure, StateT.run_pure, hv₀, hneq, hu])
+              simp [StateT.run_pure, hv₀, hneq, hu])
         · rcases Option.ne_none_iff_exists'.mp hq₁_none with ⟨v₁, hq₁⟩
           have hv₁ : v₁ ≠ c := by
             intro hv₁

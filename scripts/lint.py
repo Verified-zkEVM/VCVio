@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S uv run --no-project --python 3.12 python
 """Coordinate upstream Lean linters and maintain an exact, shrink-only exception baseline."""
 
 from __future__ import annotations
