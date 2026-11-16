@@ -165,6 +165,8 @@ public import VCVioTest.ProbabilityTactics
 public import VCVioTest.ProductRelationControls
 public import VCVioTest.ProgramLogic.BoundedMeasureWP
 public import VCVioTest.ProgramLogic.CoreVCGen
+public import VCVioTest.ProgramLogic.CoreVCGenCanary
+public import VCVioTest.ProgramLogic.CoreVCGenSum
 public import VCVioTest.ProgramLogic.CoreWP
 public import VCVioTest.ProgramLogic.EventLowering
 public import VCVioTest.ProgramLogic.GCongr
@@ -175,6 +177,7 @@ public import VCVioTest.ProgramLogic.OracleWP
 public import VCVioTest.ProgramLogic.StepCoverage
 public import VCVioTest.ProgramLogic.UntilBad
 public import VCVioTest.ProgramLogic.VCGenCoreDelegation
+public import VCVioTest.ProgramLogic.VCGenCoreNecessary
 public import VCVioTest.Quantum.Basic
 public import VCVioTest.Quantum.CheckedRead
 public import VCVioTest.Quantum.CheckedReadAlgebra
