@@ -9,6 +9,7 @@ public import VCVio.OracleComp.Support
 public import VCVio.OracleComp.SimSemantics.SimulateQ
 public import ToMathlib.Control.WriterT
 public import ToMathlib.Control.StateT
+public import ToMathlib.Control.WriterT.State
 
 /-!
 # Simulation through `WriterT` Handlers
@@ -22,7 +23,7 @@ public section
 
 open OracleSpec Function Prod
 
-universe u v w x
+universe u v w x idx
 
 open scoped OracleSpec.PrimitiveQuery
 
@@ -157,5 +158,16 @@ theorem simulateQ_writerT_stateT_run_compose {ι₁ ι₂ : Type} {spec₁ : Ora
       StateT.run_map, bridge t, simulateQ_map]
     exact bind_congr fun p => by rw [ih p.1.1 p.2]
 
+
+/-- Product-state accumulation commutes with the existing free-oracle fold. -/
+theorem writerToState_simulateQ
+    {m : Type u → Type v} [Monad m] [LawfulMonad m] {σ ω α : Type u} {ι : Type idx}
+    {spec : OracleSpec.{idx, u} ι} [EmptyCollection ω] [Append ω] [LawfulAppend ω]
+    (impl : QueryImpl spec (WriterT ω (StateT σ m))) (program : OracleComp spec α) :
+    WriterT.appendToState (simulateQ impl program) =
+      simulateQ (fun input => WriterT.appendToState (impl input)) program := by
+  simpa only [simulateQ, WriterT.appendToStateHom] using
+    (PFunctor.FreeM.liftM_natural impl
+      (WriterT.appendToStateHom (m := m) (σ := σ) (ω := ω)) program)
 
 end OracleComp

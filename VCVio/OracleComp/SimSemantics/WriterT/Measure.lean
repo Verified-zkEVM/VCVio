@@ -24,17 +24,6 @@ open OracleComp OracleSpec
 
 namespace OracleComp
 
-/-- Product-state accumulation commutes with the existing free-oracle fold. -/
-theorem writerToState_simulateQ
-    {m : Type u → Type v} [Monad m] [LawfulMonad m] {σ ω α : Type u} {ι : Type idx}
-    {spec : OracleSpec.{idx, u} ι} [EmptyCollection ω] [Append ω] [LawfulAppend ω]
-    (impl : QueryImpl spec (WriterT ω (StateT σ m))) (program : OracleComp spec α) :
-    WriterT.appendToState (simulateQ impl program) =
-      simulateQ (fun input => WriterT.appendToState (impl input)) program := by
-  simpa only [simulateQ, WriterT.appendToStateHom] using
-    (PFunctor.FreeM.liftM_natural impl
-      (WriterT.appendToStateHom (m := m) (σ := σ) (ω := ω)) program)
-
 /-- Local joint response, append-log and state laws lift to complete adaptive runs. -/
 theorem evalDistEq_simulateQ_run_writerT_stateT_map :
   ∀ {ι : Type} {spec : OracleSpec ι} {σ τ ω ν α : Type}
