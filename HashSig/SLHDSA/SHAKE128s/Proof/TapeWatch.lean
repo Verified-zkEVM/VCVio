@@ -8,6 +8,7 @@ module
 
 public import HashSig.SLHDSA.SHAKE128s.Proof.FusedTape
 public import HashSig.SLHDSA.SHAKE128s.Proof.FiredCoverage
+import HashSig.SLHDSA.SHAKE128s.Proof.CoverageCount
 import VCVio.OracleComp.EvalDist.Sum
 
 /-!
