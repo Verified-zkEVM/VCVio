@@ -150,6 +150,11 @@ public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.ToFinalV
 public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.ToFinalValidity.Core
 public import VCVio.CryptoFoundations.HashCommitment
 public import VCVio.CryptoFoundations.IdenSchemeWithAbort
+public import VCVio.CryptoFoundations.IncomparableEncoding.TargetCollisionReduction
+public import VCVio.CryptoFoundations.IncomparableEncoding.TargetCollisionReduction.Basic
+public import VCVio.CryptoFoundations.IncomparableEncoding.TargetCollisionReduction.Reduction
+public import VCVio.CryptoFoundations.IncomparableEncoding.TargetCollisionReduction.Simulation
+public import VCVio.CryptoFoundations.IncomparableEncoding.TargetCollisionResistance
 public import VCVio.CryptoFoundations.KeyEncapMech
 public import VCVio.CryptoFoundations.LeftOrRight
 public import VCVio.CryptoFoundations.MacAlg
