@@ -110,8 +110,7 @@ private theorem average_affine {C : Type} [Fintype C] [Nonempty C]
   simp only [Finset.sum_add_distrib, Finset.sum_const, Finset.card_univ,
     nsmul_eq_mul, ← Finset.mul_sum, div_eq_mul_inv, add_mul]
   rw [mul_comm (Fintype.card C : ℝ≥0∞) b, mul_assoc b,
-    ENNReal.mul_inv_cancel hN (by finiteness), mul_one]
-  rw [mul_assoc]
+    ENNReal.mul_inv_cancel hN (by finiteness), mul_one, mul_assoc]
 
 /-- The affine success estimate for the explicit recursive threshold finder: the acceptance rate
 is at most `κ + (1 − κ) p` for the threshold error `κ` and success probability `p`, the sharper
