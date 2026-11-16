@@ -63,7 +63,7 @@ lemma measureTVDist_run_transSignBody_simSignBody_le
     (hzk : letI : MeasurableSpace (Option (Commit × Chal × Resp)) := ⊤
       measureETVDist (ids.honestExecution pk sk) (sim pk) ≤ ENNReal.ofReal ζ_zk)
     {q : ℝ} (hq : Pr{let x ← ids.honestExecution pk sk}[x = none].toReal ≤ q)
-    (hq0 : 0 ≤ q)
+    (_hq0 : 0 ≤ q)
     (s : (M × Commit →ₒ Chal).QueryCache) :
     measureTVDist (StateT.run (transSignBody ids M maxAttempts pk sk msg) s)
         (StateT.run (simSignBody M maxAttempts sim pk sk msg) s) ≤
@@ -77,7 +77,7 @@ lemma measureTVDist_run_transSignBody_simSignBody_le
         ζ_zk * ∑ j ∈ Finset.range maxAttempts, q ^ j := by
     rw [measureTVDist_comm]
     exact measureTVDist_firstSome_le_geometric (sim pk) (ids.honestExecution pk sk)
-      (by rw [measureTVDist_comm]; exact hzk) hq hq0 maxAttempts
+      (by rw [measureTVDist_comm]; exact hzk) hq maxAttempts
   have hrw : ∀ (loop : ProbComp (Option (Commit × Chal × Resp))),
       StateT.run (liftM loop >>= signProgramCont M msg) s =
         loop >>= fun r => StateT.run (signProgramCont M msg r) s := by

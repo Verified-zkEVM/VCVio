@@ -8,6 +8,7 @@ module
 public import VCVio.OracleComp.QueryTracking.QueryBound
 public import VCVio.OracleComp.EvalDist.Measure
 public import VCVio.EvalDist.ProbabilityNotation
+public import PolyFun.PFunctor.Handler.Charge
 
 /-!
 # Enforcement Oracle
@@ -22,8 +23,11 @@ the budget. This implements EasyCrypt's `Enforce`/`Bounder` pattern.
 
 ## Main Results
 
+- `enforceOracle.run_simulateQ_sub_eq`: Enforcement is PolyFun's budget gate with fallback,
+  `PFunctor.Handler.withBudgetOr`, for that charge and the same `default` fallback. Enforcement
+  keeps the remaining budget `qb - spent` as state where `withBudgetOr` keeps the amount spent.
 - `enforceOracle.fst_map_run_simulateQ`: Enforcement is transparent for computations
-  within their query bound.
+  within their query bound (`PFunctor.Handler.run_liftM_withBudgetOr_of_isChargeBound`).
 -/
 
 @[expose] public section
@@ -59,21 +63,58 @@ lemma run_apply (t : ι) (budget : ι → ℕ) :
       else
         pure (default, budget) := rfl
 
+/-- **Remaining and spent budgets.** Enforcement from the remaining budget `qb - spent` is
+PolyFun's budget gate with fallback from the amount `spent`, charging `Pi.single t 1` for a query
+at `t` against the budget `qb` and answering `default` past it, with the final state read back as
+the remaining budget. The correspondence needs `spent ≤ qb`: the gate compares every index, while
+enforcement checks only the queried one. -/
+theorem run_simulateQ_sub_eq [DecidableLE (ι → ℕ)] (oa : OracleComp spec α)
+    {qb spent : ι → ℕ} (hspent : spent ≤ qb) :
+    (simulateQ spec.enforceOracle oa).run (qb - spent) =
+      Prod.map id (qb - ·) <$> (simulateQ (PFunctor.Handler.withBudgetOr (P := spec.toPFunctor)
+        (QueryImpl.ofLift spec (OracleComp spec)) (fun t => Pi.single t 1) qb
+        (fun _ => default)) oa).run spent := by
+  induction oa using OracleComp.inductionOn generalizing spent with
+  | pure x => simp
+  | query_bind t mx ih =>
+    rw [run_simulateQ_query_bind, run_simulateQ_query_bind, run_apply]
+    by_cases h : spent + Pi.single t 1 ≤ qb
+    · have hpos : 0 < (qb - spent) t := by
+        have := h t
+        simp at this ⊢
+        omega
+      have hupd : Function.update (qb - spent) t ((qb - spent) t - 1) =
+          qb - (spent + Pi.single t 1) := by
+        funext j
+        by_cases hj : j = t
+        · subst hj; simp; omega
+        · simp [hj]
+      simp only [ite_eq_left hpos, ite_eq_left h, PFunctor.Handler.withBudgetOr, StateT.run, hupd,
+        bind_map_left, map_bind]
+      exact bind_congr fun u => ih u h
+    · have hpos : ¬ 0 < (qb - spent) t := by
+        refine fun hlt => h fun j => ?_
+        by_cases hj : j = t
+        · subst hj; simp at hlt ⊢; omega
+        · simpa [Pi.single_apply, hj] using hspent j
+      simp only [ite_eq_right hpos, ite_eq_right h, PFunctor.Handler.withBudgetOr, StateT.run,
+        pure_bind]
+      exact ih default hspent
+
 /-- When the computation is within its query bound, enforcement is transparent:
 the output distribution is identical to running without enforcement. -/
 theorem fst_map_run_simulateQ {oa : OracleComp spec α} {qb : ι → ℕ}
     (h : IsPerIndexQueryBound oa qb) :
     Prod.fst <$> (simulateQ enforceOracle oa).run qb = oa := by
-  induction oa using OracleComp.inductionOn generalizing qb with
-  | pure _ => simp
-  | query_bind t mx ih =>
-    rw [isPerIndexQueryBound_query_bind_iff] at h
-    obtain ⟨hpos, hcont⟩ := h
-    rw [run_simulateQ_query_bind (so := spec.enforceOracle) t mx qb,
-      run_apply, ite_eq_left hpos]
-    simp only [monad_norm, Function.comp]
-    exact bind_congr fun u => by
-      simpa only [map_eq_bind_pure_comp] using ih u (hcont u)
+  classical
+  have hrun := run_simulateQ_sub_eq oa (qb := qb) (spent := 0) zero_le
+  rw [tsub_zero] at hrun
+  rw [hrun, Functor.map_map,
+    show (fun z : α × (ι → ℕ) => (Prod.map id (qb - ·) z).1) = Prod.fst from rfl, simulateQ,
+    PFunctor.Handler.run_liftM_withBudgetOr_of_isChargeBound _ _ _
+      ((isPerIndexQueryBound_iff_isChargeBound oa qb).1 h),
+    PFunctor.Handler.fst_map_run_liftM_withCharge]
+  exact simulateQ_ofLift_eq_self oa
 
 section Probability
 

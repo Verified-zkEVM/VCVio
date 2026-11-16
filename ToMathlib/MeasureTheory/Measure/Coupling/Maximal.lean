@@ -9,6 +9,7 @@ module
 public import ToMathlib.MeasureTheory.Measure.Coupling
 public import ToMathlib.MeasureTheory.Measure.TotalVariation
 public import Mathlib.MeasureTheory.Measure.Dirac.Basic
+public import Mathlib.MeasureTheory.Measure.Sub
 
 /-!
 # Maximal couplings of finitely supported measures
@@ -17,6 +18,8 @@ Two probability measures concentrated on a common finite set `F` overlap by
 `∑ a ∈ F, min (μ {a}) (ν {a})`, and their total variation is one minus this overlap. No coupling
 puts more than the overlap `min (μ {a}) (ν {a})` on a diagonal point, and `maximalCoupling`, which
 puts the overlap on the diagonal and spreads the residual masses independently, attains it.
+
+Singleton domination by a measure concentrated on a finite set gives measure domination.
 -/
 
 public section
@@ -216,5 +219,17 @@ theorem min_le_maximalCoupling_apply_diag {a : α} (ha : a ∈ F) :
   simp
 
 end maximal
+
+/-- Singleton domination by a measure concentrated on a finite set gives measure domination. -/
+theorem le_of_singleton_le_of_compl_null {μ ν : Measure α} (F : Finset α)
+    (hF : μ (↑F)ᶜ = 0) (h : ∀ x ∈ F, μ {x} ≤ ν {x}) : μ ≤ ν := by
+  classical
+  refine Measure.le_iff.mpr fun T hT => ?_
+  rw [apply_eq_sum_indicator_of_compl_eq_zero hF T, Finset.sum_indicator_eq_sum_filter]
+  calc
+    _ ≤ ∑ x ∈ F with x ∈ T, ν {x} :=
+      Finset.sum_le_sum fun x hx => h x (Finset.mem_filter.mp hx).1
+    _ = ν ↑(F.filter (· ∈ T)) := sum_measure_singleton
+    _ ≤ ν T := measure_mono fun x hx => (Finset.mem_filter.mp hx).2
 
 end MeasureTheory.Measure
