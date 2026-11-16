@@ -289,6 +289,7 @@ public import VCVio.CryptoFoundations.SignatureAlg.WithPost
 public import VCVio.CryptoFoundations.SymmEncAlg
 public import VCVio.CryptoFoundations.SymmEncAlg.Defs
 public import VCVio.CryptoFoundations.SymmEncAlg.Deterministic
+public import VCVio.CryptoFoundations.SymmEncAlg.INDCPA
 public import VCVio.CryptoFoundations.SymmEncAlg.Measure
 public import VCVio.CryptoFoundations.SymmEncAlg.OneTimeINDCPA
 public import VCVio.CryptoFoundations.TimeLockPuzzle
@@ -675,6 +676,7 @@ public import VCVio.Schemes.KEMDEM
 public import VCVio.Schemes.KEMDEM.Measure
 public import VCVio.Schemes.MacFromPRF
 public import VCVio.Schemes.MerkleDamgard
+public import VCVio.Schemes.PRFEncryption
 public import VCVio.Schemes.Pedersen
 public import VCVio.Schemes.Pedersen.Generic
 public import VCVio.Schemes.PointerChainPuzzle.Bad
