@@ -116,7 +116,8 @@ binds, conditionals, matchers and transformer layers with the `@[spec]` rules in
 triples in the local context, but it does not lower probability goals or close a precondition
 stated as the expectation of an opaque oracle computation. Use core `vcgen` when its rules close
 the goal and `pvcgen` otherwise; `VCVioTest/VCGenAmbiguity.lean` pins that the two names parse
-to distinct tactics.
+to distinct tactics. [How `pvcgen` divides work with core
+`vcgen`](#how-pvcgen-divides-work-with-core-vcgen) lists what stays VCVio's.
 
 | Tactic | What it does |
 |--------|--------------|
@@ -759,8 +760,33 @@ existing transformer equality lemmas. The scoped `WriterT.MonoidWP` interpretati
 uses multiplication; `WriterT.AppendWP` handles append-based logs.
 
 The handler catalogue uses core lattice-generic triples under the necessary interpretation
-and core `vcgen`; it does not require Loom. The small `Std.Do` adapter remains for its legacy
-SPred consumers.
+and core `vcgen`.
+
+#### How `pvcgen` divides work with core `vcgen`
+
+Core `Std.WP` is the only unary program logic: VCVio defines readings of `OracleComp` on top of
+it and no parallel WP class. `Pr{…}[…]` denotes `prEvent` of the output measure, not a weakest
+precondition, and the tactics reach triples from probability goals through the bridge lemmas
+`prEvent_eq_wp`, `triple_propInd_self_iff_prEvent_eq_one` and
+`triple_propInd_self_iff_le_prEvent`. Generic rules for transformers, lists and loops are core's
+or PolyFun's `@[spec]` rules; `@[vcspec]` holds only rules specific to VCVio, and no rule is
+registered in both.
+
+`pvcgen` is meant to hand core every goal that core can step, and to keep only what core cannot
+do:
+
+- probability lowering and the probability-equality planner, since core rejects those goals;
+- exact `ℝ≥0∞` expectations: core's lattice splits are a fixed table, so `vcgen` stops at
+  `∫⁻`, `∑'`, `+` and `*`, and the `ExactWPMonad` equations compute the inner expectations;
+- support leaves, cut and invariant search, and the `?` replays;
+- the `simulateQ` and `liftComp` transport rules, with the query and handler specifications;
+- the relational logic (`RelTriple`, eRHL, `rvcgen`), which has no counterpart in core.
+
+`pvcgen` calls core from `tryCoreVCGen` in `Tactics/Unary/Internals/Driver.lean`, in exhaustive
+passes, for triples whose precondition is in `ℝ≥0∞`; the shape of the precondition selects the
+pointwise or the exact rules of the lower reading. `vcstep` and the `?` replays do not call core.
+The rest of the unary stepping (binds, conditionals, matchers, loops, the transformer
+normalization set `vcspec_simp` and the `wpStepRules` table) is VCVio's own.
 
 #### Core `vcgen` rules for oracle computations
 
