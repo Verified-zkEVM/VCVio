@@ -26,8 +26,6 @@ namespace GroupModel
 for a degree-two SRS over `ZMod 101`. -/
 theorem tsdh_zmod_101 :
     letI : Fact (Nat.Prime 101) := ⟨by decide⟩
-    letI : ∀ s, DecidableEq (PFam (ZMod 101) (ZMod 101) (ZMod 101) s) :=
-      fun s => by cases s <;> exact inferInstanceAs (DecidableEq (ZMod 101))
     let A : OracleComp (genSpec (ZMod 101) pairingSig) (ZMod 101 × Handle) := do
       let h ← (genSpec (ZMod 101) pairingSig).query (.inl (.bil () 1 1))
       let _ ← (genSpec (ZMod 101) pairingSig).query (.inl (.eq .gₜ h 0))
@@ -36,11 +34,9 @@ theorem tsdh_zmod_101 :
       (TSDH.Adversary.ofGeneric (D := 2) (LinearMap.mul (ZMod 101) (ZMod 101)) A))}[b = true] ≤
       (21 / 100 : ℝ≥0∞) := by
   let : Fact (Nat.Prime 101) := ⟨by decide⟩
-  let : ∀ s, DecidableEq (PFam (ZMod 101) (ZMod 101) (ZMod 101) s) :=
-    fun s => by cases s <;> exact inferInstanceAs (DecidableEq (ZMod 101))
   dsimp only
   apply (TSDH.experiment_ofGeneric_le
-    (LinearMap.mul (ZMod 101) (ZMod 101)) 1 1 one_ne_zero one_ne_zero
+    (LinearMap.mul (ZMod 101) (ZMod 101)) 1 1
     (by simpa only [LinearMap.mul_apply', one_mul] using (one_ne_zero : (1 : ZMod 101) ≠ 0))
     2 _ 0 0 1 ?_ ?_ ?_).trans
   · norm_num [ZMod.card, Nat.choose]
@@ -52,8 +48,6 @@ theorem tsdh_zmod_101 :
 for a degree-two SRS and a three-element output set over `ZMod 101`. -/
 theorem arsdh_zmod_101 :
     letI : Fact (Nat.Prime 101) := ⟨by decide⟩
-    letI : ∀ s, DecidableEq (PFam (ZMod 101) (ZMod 101) (ZMod 101) s) :=
-      fun s => by cases s <;> exact inferInstanceAs (DecidableEq (ZMod 101))
     let A : OracleComp (genSpec (ZMod 101) pairingSig)
         (Finset (ZMod 101) × Handle × Handle) := do
       let h ← (genSpec (ZMod 101) pairingSig).query (.inl (.bil () 1 1))
@@ -63,11 +57,9 @@ theorem arsdh_zmod_101 :
       (ARSDH.Adversary.ofGeneric (D := 2) (LinearMap.mul (ZMod 101) (ZMod 101)) A))}[b = true] ≤
       (23 / 100 : ℝ≥0∞) := by
   let : Fact (Nat.Prime 101) := ⟨by decide⟩
-  let : ∀ s, DecidableEq (PFam (ZMod 101) (ZMod 101) (ZMod 101) s) :=
-    fun s => by cases s <;> exact inferInstanceAs (DecidableEq (ZMod 101))
   dsimp only
   apply (ARSDH.experiment_ofGeneric_le
-    (LinearMap.mul (ZMod 101) (ZMod 101)) 1 1 one_ne_zero one_ne_zero
+    (LinearMap.mul (ZMod 101) (ZMod 101)) 1 1
     (by simpa only [LinearMap.mul_apply', one_mul] using (one_ne_zero : (1 : ZMod 101) ≠ 0))
     2 _ 0 0 1 ?_ ?_ ?_).trans
   · norm_num [ZMod.card, Nat.choose]

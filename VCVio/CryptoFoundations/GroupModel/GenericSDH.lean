@@ -7,7 +7,6 @@ Authors: Quang Dao
 module
 public import VCVio.CryptoFoundations.GroupModel.GenericPairing
 public import VCVio.CryptoFoundations.HardnessAssumptions.SDH
-import all VCVio.CryptoFoundations.GroupModel.Instances
 import Mathlib.Algebra.Module.Torsion.Free
 import Mathlib.Algebra.MvPolynomial.NoZeroDivisors
 import Mathlib.Algebra.Polynomial.BigOperators
@@ -33,7 +32,7 @@ namespace TSDH
 in the first source group, with zero for an out-of-range handle. -/
 @[expose] def Adversary.ofGeneric [Field F]
     [AddCommGroup G₁] [Module F G₁] [AddCommGroup G₂] [Module F G₂]
-    [AddCommGroup Gₜ] [Module F Gₜ] [∀ s, DecidableEq (PFam G₁ G₂ Gₜ s)]
+    [AddCommGroup Gₜ] [Module F Gₜ] [DecidableEq G₁] [DecidableEq G₂] [DecidableEq Gₜ]
     {D : ℕ} (e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ)
     (A : OracleComp (genSpec F pairingSig) (F × Handle)) : Adversary F G₁ G₂ D :=
   fun xs ys => (fun z => (z.1.1, lookup z.2 .g₁ z.1.2)) <$>
@@ -48,7 +47,7 @@ namespace ARSDH
 handles in the first source group, with zero for out-of-range handles. -/
 @[expose] def Adversary.ofGeneric [Field F]
     [AddCommGroup G₁] [Module F G₁] [AddCommGroup G₂] [Module F G₂]
-    [AddCommGroup Gₜ] [Module F Gₜ] [∀ s, DecidableEq (PFam G₁ G₂ Gₜ s)]
+    [AddCommGroup Gₜ] [Module F Gₜ] [DecidableEq G₁] [DecidableEq G₂] [DecidableEq Gₜ]
     {D : ℕ} (e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ)
     (A : OracleComp (genSpec F pairingSig) (Finset F × Handle × Handle)) :
     Adversary F G₁ G₂ D :=
@@ -67,19 +66,12 @@ private theorem sampleTrapdoor_root_le [Field F] [Fintype F] [DecidableEq F]
   classical
   let : Nonempty {x : F // x ≠ 0} := ⟨⟨1, one_ne_zero⟩⟩
   let := SampleableType.subtype F (· ≠ 0)
-  have hu : (fun a (_ : Unit) => a) <$> ($ᵗ {x : F // x ≠ 0}) =ᵈ
-      ($ᵗ (Unit → {x : F // x ≠ 0})) := by
-    apply SampleableType.map_uniformSample_evalDistEq_of_bijective
-    exact ⟨fun _ _ h => congrFun h (), fun f => ⟨f (), by funext u; cases u; rfl⟩⟩
+  have hu := SampleableType.map_const_uniformSample_evalDistEq (α := {x : F // x ≠ 0})
   have hc : ({x : F | x ≠ 0}).toFinset.card = Fintype.card F - 1 := by
     simp [Finset.filter_ne', Finset.card_erase_of_mem]
-  have hm : 0 < Fintype.card F - 1 := by
-    have := Fintype.one_lt_card (α := F)
-    omega
-  have hb := @prob_eval_zero_le_div F _ Unit _ (fun _ => {x : F | x ≠ 0})
-    (fun _ => inferInstance) (fun _ => ⟨⟨1, one_ne_zero⟩⟩)
-    (inferInstanceAs (SampleableType (Unit → {x : F // x ≠ 0})))
-    f hf d (Fintype.card F - 1) hd hm (fun _ => hc.ge)
+  have hb := @prEvent_eval_eq_zero_le_div F _ _ Unit _ (fun _ => {x : F | x ≠ 0})
+    (fun _ => inferInstance) (inferInstanceAs (SampleableType (Unit → {x : F // x ≠ 0})))
+    f hf d (Fintype.card F - 1) hd (fun _ => hc.ge)
   have he := hu.prEvent_eq (fun x => MvPolynomial.eval (fun i => (x i).val) f = 0)
   simpa only [SDH.sampleTrapdoor, prEvent_norm] using he.le.trans hb
 
@@ -110,9 +102,9 @@ private theorem sdhTable_degreeLE [Field F] (D : ℕ) :
 
 private theorem sdh_run_map [Field F] [DecidableEq F]
     [AddCommGroup G₁] [Module F G₁] [AddCommGroup G₂] [Module F G₂]
-    [AddCommGroup Gₜ] [Module F Gₜ] [∀ s, DecidableEq (PFam G₁ G₂ Gₜ s)]
+    [AddCommGroup Gₜ] [Module F Gₜ] [DecidableEq G₁] [DecidableEq G₂] [DecidableEq Gₜ]
     (e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ) (g₁ : G₁) (g₂ : G₂)
-    (hg₁ : g₁ ≠ 0) (hg₂ : g₂ ≠ 0) (he : e g₁ g₂ ≠ 0)
+    (he : e g₁ g₂ ≠ 0)
     (D : ℕ) (A : OracleComp (genSpec F pairingSig) α) (a : F) :
     runGen (pairingReal e) (fun _ => id) A (fun
       | .g₁ => List.ofFn (fun i : Fin (D + 1) => a ^ (i : ℕ) • g₁)
@@ -138,7 +130,7 @@ private theorem sdh_run_map [Field F] [DecidableEq F]
     | g₂ => simp [mapTbl, sdhTable, evalHom.pairing_apply_g₂, evalAt_apply, List.ofFn_succ]
     | gₜ => rfl
   rw [← ht]
-  exact runGen_pairing_mapTbl_evalHom e g₁ g₂ hg₁ hg₂ he _ A _
+  exact runGen_pairing_mapTbl_evalHom e g₁ g₂ he _ A _
 
 private theorem sdh_lookup_map [Field F]
     [AddCommGroup G₁] [Module F G₁] [AddCommGroup G₂] [Module F G₂]
@@ -167,7 +159,6 @@ private theorem sdh_symbolic_bound [Field F] [Fintype F] [DecidableEq F]
         (nₜ + 1).choose 2 * (D + 1) + k : ℕ) : ℝ≥0∞) /
         (Fintype.card F - 1 : ℕ) := by
   classical
-  let : Fintype PSort := ⟨{.g₁, .g₂, .gₜ}, by intro s; cases s <;> simp⟩
   let n : PSort → ℕ := fun | .g₁ => n₁ | .g₂ => n₂ | .gₜ => nₜ
   have hn : ∀ s, IsQueryBoundP A (appendsTo s) (n s) := by
     intro s
@@ -209,9 +200,9 @@ three per-sort collision terms plus `D + 1`, divided by the number of nonzero sc
 Equality queries are free; each source or target append is charged to its own budget. -/
 theorem experiment_ofGeneric_le [Field F] [Fintype F] [DecidableEq F]
     [AddCommGroup G₁] [Module F G₁] [AddCommGroup G₂] [Module F G₂]
-    [AddCommGroup Gₜ] [Module F Gₜ] [∀ s, DecidableEq (PFam G₁ G₂ Gₜ s)]
+    [AddCommGroup Gₜ] [Module F Gₜ] [DecidableEq G₁] [DecidableEq G₂] [DecidableEq Gₜ]
     (e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ) (g₁ : G₁) (g₂ : G₂)
-    (hg₁ : g₁ ≠ 0) (hg₂ : g₂ ≠ 0) (he : e g₁ g₂ ≠ 0)
+    (he : e g₁ g₂ ≠ 0)
     (D : ℕ) (A : OracleComp (genSpec F pairingSig) (F × Handle)) (n₁ n₂ nₜ : ℕ)
     (hn₁ : IsQueryBoundP A (appendsTo .g₁) n₁)
     (hn₂ : IsQueryBoundP A (appendsTo .g₂) n₂)
@@ -223,7 +214,8 @@ theorem experiment_ofGeneric_le [Field F] [Fintype F] [DecidableEq F]
   classical
   let E := fun (x : Unit → F) (z : (F × Handle) × Tbl (fun _ : PSort => MvPolynomial Unit F)) =>
     x () + z.1.1 ≠ 0 ∧ MvPolynomial.eval x (lookup z.2 .g₁ z.1.2) = (x () + z.1.1)⁻¹
-  have hr := sdh_run_map e g₁ g₂ hg₁ hg₂ he D A
+  have hg₁ : g₁ ≠ 0 := by rintro rfl; simp at he
+  have hr := sdh_run_map e g₁ g₂ he D A
   have hl := sdh_lookup_map e g₁ g₂
   have hevent : Pr{let b ← experiment g₁ g₂ (Adversary.ofGeneric (D := D) e A)}[b = true] =
       Pr{let a ← SDH.sampleTrapdoor F; let z ← (runGen (symbolic F pairingSig Unit)
@@ -260,16 +252,16 @@ theorem experiment_ofGeneric_le [Field F] [Fintype F] [DecidableEq F]
 for the generic `t`-SDH bound. Equality queries are free. -/
 theorem experiment_ofGeneric_le_of_total [Field F] [Fintype F] [DecidableEq F]
     [AddCommGroup G₁] [Module F G₁] [AddCommGroup G₂] [Module F G₂]
-    [AddCommGroup Gₜ] [Module F Gₜ] [∀ s, DecidableEq (PFam G₁ G₂ Gₜ s)]
+    [AddCommGroup Gₜ] [Module F Gₜ] [DecidableEq G₁] [DecidableEq G₂] [DecidableEq Gₜ]
     (e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ) (g₁ : G₁) (g₂ : G₂)
-    (hg₁ : g₁ ≠ 0) (hg₂ : g₂ ≠ 0) (he : e g₁ g₂ ≠ 0)
+    (he : e g₁ g₂ ≠ 0)
     (D : ℕ) (A : OracleComp (genSpec F pairingSig) (F × Handle)) (q : ℕ)
     (hq : IsQueryBoundP A (fun i => isGroupOp i = true) q) :
     Pr{let b ← experiment g₁ g₂ (Adversary.ofGeneric (D := D) e A)}[b = true] ≤
       (((D + q + 2).choose 2 * D + (q + 3).choose 2 +
         (q + 1).choose 2 * (D + 1) + (D + 1) : ℕ) : ℝ≥0∞) /
         (Fintype.card F - 1 : ℕ) := by
-  exact experiment_ofGeneric_le e g₁ g₂ hg₁ hg₂ he D A q q q
+  exact experiment_ofGeneric_le e g₁ g₂ he D A q q q
     (hq.appendsTo .g₁) (hq.appendsTo .g₂) (hq.appendsTo .gₜ)
 
 end TSDH
@@ -303,9 +295,9 @@ Nonvanishing of the output polynomial follows from the nonzero first output and 
 strict degree gap between source entries and the vanishing polynomial. -/
 theorem experiment_ofGeneric_le [Field F] [Fintype F] [DecidableEq F]
     [AddCommGroup G₁] [Module F G₁] [AddCommGroup G₂] [Module F G₂]
-    [AddCommGroup Gₜ] [Module F Gₜ] [∀ s, DecidableEq (PFam G₁ G₂ Gₜ s)]
+    [AddCommGroup Gₜ] [Module F Gₜ] [DecidableEq G₁] [DecidableEq G₂] [DecidableEq Gₜ]
     (e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ) (g₁ : G₁) (g₂ : G₂)
-    (hg₁ : g₁ ≠ 0) (hg₂ : g₂ ≠ 0) (he : e g₁ g₂ ≠ 0)
+    (he : e g₁ g₂ ≠ 0)
     (D : ℕ) (A : OracleComp (genSpec F pairingSig) (Finset F × Handle × Handle))
     (n₁ n₂ nₜ : ℕ)
     (hn₁ : IsQueryBoundP A (appendsTo .g₁) n₁)
@@ -324,7 +316,8 @@ theorem experiment_ofGeneric_le [Field F] [Fintype F] [DecidableEq F]
       MvPolynomial.eval x (lookup z.2 .g₁ z.1.2.1) ≠ 0 ∧
       MvPolynomial.eval x (lookup z.2 .g₁ z.1.2.2) =
         (MvPolynomial.eval x (Z z.1.1))⁻¹ * MvPolynomial.eval x (lookup z.2 .g₁ z.1.2.1)
-  have hr := sdh_run_map e g₁ g₂ hg₁ hg₂ he D A
+  have hg₁ : g₁ ≠ 0 := by rintro rfl; simp at he
+  have hr := sdh_run_map e g₁ g₂ he D A
   have hl := sdh_lookup_map e g₁ g₂
   have hevent : Pr{let b ← experiment g₁ g₂ (Adversary.ofGeneric (D := D) e A)}[b = true] =
       Pr{let a ← SDH.sampleTrapdoor F; let z ← (runGen (symbolic F pairingSig Unit)
@@ -390,16 +383,16 @@ theorem experiment_ofGeneric_le [Field F] [Fintype F] [DecidableEq F]
 for the generic ARSDH bound. Equality queries are free. -/
 theorem experiment_ofGeneric_le_of_total [Field F] [Fintype F] [DecidableEq F]
     [AddCommGroup G₁] [Module F G₁] [AddCommGroup G₂] [Module F G₂]
-    [AddCommGroup Gₜ] [Module F Gₜ] [∀ s, DecidableEq (PFam G₁ G₂ Gₜ s)]
+    [AddCommGroup Gₜ] [Module F Gₜ] [DecidableEq G₁] [DecidableEq G₂] [DecidableEq Gₜ]
     (e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ) (g₁ : G₁) (g₂ : G₂)
-    (hg₁ : g₁ ≠ 0) (hg₂ : g₂ ≠ 0) (he : e g₁ g₂ ≠ 0)
+    (he : e g₁ g₂ ≠ 0)
     (D : ℕ) (A : OracleComp (genSpec F pairingSig) (Finset F × Handle × Handle)) (q : ℕ)
     (hq : IsQueryBoundP A (fun i => isGroupOp i = true) q) :
     Pr{let b ← experiment g₁ g₂ (Adversary.ofGeneric (D := D) e A)}[b = true] ≤
       (((D + q + 2).choose 2 * D + (q + 3).choose 2 +
         (q + 1).choose 2 * (D + 1) + (2 * D + 1) : ℕ) : ℝ≥0∞) /
         (Fintype.card F - 1 : ℕ) := by
-  exact experiment_ofGeneric_le e g₁ g₂ hg₁ hg₂ he D A q q q
+  exact experiment_ofGeneric_le e g₁ g₂ he D A q q q
     (hq.appendsTo .g₁) (hq.appendsTo .g₂) (hq.appendsTo .gₜ)
 
 end ARSDH
