@@ -500,7 +500,7 @@ private lemma prEvent_idealFlagged_good_le_cpaGame (adv : CPA_Adversary PK Rand 
       fun h _ => ?_
     simp only [QueryCache.isCached, Option.isSome_eq_false_iff, Option.isNone_iff_eq_none]
     simpa only [prEvent_def, map_eq_bind_pure_comp, Function.comp_def] using
-      roSim.prEvent_run_uncached_le_run_cacheQuery _ r h (fun b' => E (b == b')) choice.2 hcr
+      roSim.prEvent_run_uncached_le_run_cacheQuery _ r h (fun b' => E (b == b')) choice.2
 
 /-- Both one-sided up-to-bad bounds between the real game and Game 1, as event masses. -/
 private lemma evalDist_cpaGame_game1_le_badEventExperiment (adv : CPA_Adversary PK Rand M) :

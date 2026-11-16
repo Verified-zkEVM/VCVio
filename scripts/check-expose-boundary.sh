@@ -29,7 +29,7 @@ BASELINE="${EXPOSE_BOUNDARY_BASELINE:-scripts/expose_boundary_baseline.tsv}"
 if [[ -n "${EXPOSE_BOUNDARY_LIBS:-}" ]]; then
   read -r -a LIBS <<< "$EXPOSE_BOUNDARY_LIBS"
 else
-  LIBS=(VCVio VCVioCslib ToMathlib LatticeCrypto HashSig Examples Extern VCVioWidgets VCVioTest
+  LIBS=(VCVio ToMathlib LatticeCrypto HashSig Examples Extern VCVioTest
     LatticeCryptoTest HashSigTest)
 fi
 
@@ -37,7 +37,7 @@ fi
 count_tree() {
   local tree_root="$1"
   local output="$2"
-  python3 "$REPO_ROOT/scripts/count-expose-boundary.py" "$tree_root" "${LIBS[@]}" > "$output"
+  uv run --no-project --python 3.12 python "$REPO_ROOT/scripts/count-expose-boundary.py" "$tree_root" "${LIBS[@]}" > "$output"
 }
 
 CURRENT="$(mktemp "${TMPDIR:-/tmp}/vcvio-expose-boundary.XXXXXX")"

@@ -10,7 +10,9 @@ public import Mathlib.Data.ZMod.Basic
 
 /-! # Group-operation budget regressions
 
-Concrete runs over seven elements distinguish operation costs from free comparisons.
+Concrete runs over seven elements distinguish operation costs from free comparisons. One addition
+has positive worst-case cost, and an auxiliary oracle with no answers separates the worst-case
+cost bound from the structural budget.
 -/
 
 public section
@@ -65,5 +67,36 @@ theorem equality_only (tbl : Tbl (fun _ : Unit => ZMod 7)) :
   · intro z hz
     simpa [runGen, run, impl, StateT.run] using
       congrArg Prod.snd ((mem_support_pure_iff _ _).mp hz)
+
+/-- One group addition has positive worst-case cost. -/
+example : ¬ WorstCaseCostBound (spec := genSpec (ZMod 7) groupSig)
+    ((genSpec (ZMod 7) groupSig).query (.inl (.add () 0 0)) >>= fun _ => pure ())
+    (unitCostSum unifSpec) 0 := by
+  rw [worstCaseCostBound_query_bind_iff]
+  intro h
+  have := h (0 : Handle) ((), Multiplicative.ofAdd 0) (by simp [costDist, instrumentedRun])
+  simp [unitCostSum, isGroupOp, Query.isOp] at this
+
+/-- An auxiliary oracle with no answers. -/
+private def emptySpec : OracleSpec Unit := fun _ => Empty
+
+/-- A group addition followed by a query that cannot be answered. -/
+private def opThenStuck : OracleComp (spec (ZMod 7) groupSig + emptySpec) Unit := do
+  let _ ← (spec (ZMod 7) groupSig + emptySpec).query (.inl (.add () 0 0))
+  let e ← (spec (ZMod 7) groupSig + emptySpec).query (.inr ())
+  pure (Empty.elim e)
+
+/-- The converse of `worstCaseCostBound_unitCostSum` fails: a run that reaches an auxiliary query
+with no answers has worst-case cost zero although it makes a group operation. -/
+example : WorstCaseCostBound opThenStuck (unitCostSum emptySpec) 0 ∧
+    ¬ IsQueryBoundP opThenStuck (fun i => isGroupOp i = true) 0 := by
+  constructor
+  · rw [worstCaseCostBound_iff_support_bound]
+    intro z hz
+    simp [opThenStuck, costDist, instrumentedRun, emptySpec] at hz
+  · intro h
+    have := h.1
+    revert this
+    decide
 
 end GroupModel

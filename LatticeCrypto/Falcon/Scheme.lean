@@ -14,9 +14,12 @@ public import VCVio.OracleComp.Coercions.Add.Basic
 /-!
 # Falcon Signature Scheme
 
-This file defines the core Falcon signature scheme algorithms: key generation, signing,
-and verification. It also establishes the bridge to the generic GPV hash-and-sign framework
-via a `PreimageSampleableFunction` instantiation.
+This file defines the core Falcon signature scheme: key types and validity, the one-shot
+signing core (`signAttempt`), the fresh-salt retry-loop signer (`sign`), and verification
+(`verify`), together with the bridge to the generic GPV hash-and-sign framework via a
+`PreimageSampleableFunction` instantiation. Key generation enters the security statements only as
+a `GenerableRelation` on `validKeyPair`; the executable seeded key generator is
+`Falcon.Concrete.KeyGen.keyGen` in `Extern.Falcon.KeyGen`.
 
 ## Architecture
 
@@ -33,7 +36,7 @@ The Falcon scheme is an instantiation of the GPV hash-and-sign framework over NT
   `‖(s₁, s₂)‖₂² ≤ ⌊β²⌋`.
 
 The signing flow follows the Falcon+ convention (fresh salt per retry, pk-bound hashing),
-matching the concrete executable signer in `LatticeCrypto.Falcon.Concrete.Sign`.
+matching the concrete executable signer in `Extern.Falcon.Sign`.
 
 ## References
 
@@ -55,6 +58,7 @@ variable (p : Params) (prims : Primitives p)
 
 /-- The Falcon public key: a single polynomial `h ∈ R_q` where `h = g · f⁻¹ mod q`. -/
 structure PublicKey where
+  /-- The public polynomial `h = g · f⁻¹ mod q`. -/
   h : Rq p.n
 
 noncomputable instance : DecidableEq (PublicKey p) := by
@@ -72,16 +76,28 @@ The FFT recursion depth is `p.fftDepth = p.logn - 1`. The tree encodes the norma
 LDL decomposition of the Gram matrix `[[g, -f], [G, -F]]^T · [[g, -f], [G, -F]]`
 in packed FFT representation. -/
 structure SecretKey where
+  /-- The short polynomial `f` of the NTRU basis; the matching public key is
+  `h = g · f⁻¹ mod q`. -/
   f : IntPoly p.n
+  /-- The short polynomial `g` of the NTRU basis. -/
   g : IntPoly p.n
+  /-- The polynomial `F` of the NTRU basis, which with `G` solves the NTRU equation
+  `fG - gF = q`. -/
   capF : IntPoly p.n
+  /-- The polynomial `G` of the NTRU basis, which with `F` solves the NTRU equation
+  `fG - gF = q`. -/
   capG : IntPoly p.n
+  /-- The normalized Falcon tree of the basis, which `ffSampling` uses to sample short
+  preimages. -/
   tree : FalconTree p.fftDepth
 
 /-- A Falcon signature: a 40-byte random salt `r` paired with the compressed
 representation of the short polynomial `s₂`. -/
 structure Signature where
+  /-- The 40-byte random salt `r`, hashed with the public key and the message to the
+  target `c = HashToPoint(r, pk, message)`. -/
   salt : Bytes 40
+  /-- The compressed encoding `Compress(s₂, sbytelen)` (Algorithm 17) of `s₂`. -/
   compressedS2 : List Byte
 
 /-! ### NTRU Equation -/
@@ -110,19 +126,6 @@ theorem validKeyPair_eq_true_iff (pk : PublicKey p) (sk : SecretKey p) :
       ntruEquation p sk.f sk.g sk.capF sk.capG ∧
       negacyclicMul (IntPoly.toRq sk.f) pk.h = IntPoly.toRq sk.g := by
   simp [validKeyPair]
-
-/-! ### Core Algorithms -/
-
-/-- Falcon key generation (Algorithms 4–9).
-
-1. Generate short polynomials `(f, g)` via NTRUGen (Algorithm 5).
-2. Compute `(F, G)` satisfying the NTRU equation `fG - gF = q` (Algorithm 6).
-3. Compute `h = g · f⁻¹ mod q`.
-4. Build the Falcon tree via `ffLDL*` and normalize (Algorithms 8–9).
-
-This is modeled as a deterministic function from a seed. The actual NTRUGen uses
-rejection sampling, but that detail is abstracted away. -/
-noncomputable def keyGenFromSeed (_seed : List Byte) : PublicKey p × SecretKey p := sorry
 
 /-! ### GPV Bridge -/
 

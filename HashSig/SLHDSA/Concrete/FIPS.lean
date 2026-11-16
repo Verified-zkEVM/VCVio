@@ -73,6 +73,8 @@ def zeroByteArray (n : ℕ) : ByteArray := ByteArray.mk (Array.replicate n 0)
 compression. A value of this type cannot be constructed for an address rejected by the checked
 adapter. -/
 structure Sha2Address where
+  /-- The underlying address, which the remaining fields require to be canonical, with a
+  one-byte layer and an eight-byte tree. -/
   value : Adrs
   canonical : value.isCanonical = true
   layerFits : Adrs.Fits 1 value.layer = true
