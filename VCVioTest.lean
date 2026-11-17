@@ -35,9 +35,6 @@ public import VCVioTest.ElGamal.Generic
 public import VCVioTest.ElGamal.GenericINDCPA
 public import VCVioTest.EncodedStateInv
 public import VCVioTest.EvalDist.BundledSemantics
-public import VCVioTest.EvalDist.DeprecatedImports.Lossless
-public import VCVioTest.EvalDist.DeprecatedImports.OptionT
-public import VCVioTest.EvalDist.DeprecatedImports.WithFailure
 public import VCVioTest.EvalDist.Deterministic
 public import VCVioTest.EvalDist.DisagreementMeasure
 public import VCVioTest.EvalDist.DiscreteTVDist
