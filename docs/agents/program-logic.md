@@ -748,7 +748,9 @@ expectation does not provide a general structural reachability certificate. The
 probability-one coherence theorems state their additional uniformity assumptions.
 
 The coupling interface `VCVio.ProgramLogic.RelWP` is local to VCVio and shares core's
-assertion lattices. Its three carriers in `Relational/WP/` also use explicit scopes
+assertion lattices. Instances provide `trans`, `trans_monotone`, `trans_pure` and
+`trans_bind_le`. The last law allows sequential composition to give a lower bound on the
+optimal coupling. Its three carriers in `Relational/WP/` also use explicit scopes
 (`OracleComp.Rel.Quantitative`, `.Qualitative`, `.Probabilistic`).
 
 VCVio's probability/coupling tactics continue to consume `@[vcspec]` and the `wpStepRules` table.
