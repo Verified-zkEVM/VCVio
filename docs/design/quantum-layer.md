@@ -273,18 +273,28 @@ and a width cap, avoiding a sum of separate per-port maxima. The analytic cutoff
 square-root aggregation lemmas in `Foundations/Hybrid.lean` import only QuantumFoundations and
 are staged for that dependency.
 
+`Comp/ChargeWeight.lean` gives the pathwise natural-number port budget `IsQueryChargeBound`.
+`totalWeight_le_of_isQueryChargeBound` bounds total query weight by the budget times the input
+trace when each call's weight is bounded by its port charge times its input trace. Local steps
+are free; zero-charge calls remain present, and a call with no possible answer still spends its
+prefix charge. Unit charges recover total calls, and width charges recover `IsPointBound`.
+`totalWeight_le_of_isPointBound` retains the actual adaptive sum of widths without per-port maxima.
+
 `Oracle/ParallelSearch.lean` applies this hybrid to one uniformly hidden marked input in a finite
 nonempty domain, using the additive `ZMod 2` oracle `markedFunction`.
-`markedSearchAdvantage_le` bounds success by `min 1 ((1 + 2 * q * sqrt k)^2 / N)`, where
-`N` is the domain cardinality, `q` bounds rounds and `k` bounds each width. The interpretation,
+`markedSearchAdvantage_le_of_isPointBound` bounds success by
+`min 1 ((1 + 2 * sqrt (q * Q))^2 / N)`, where `N` is the domain cardinality, `q` bounds rounds
+and `Q` bounds the sum of widths along every branch. It requires no maximum width.
+`markedSearchAdvantage_le` is the width-cap corollary with `Q = k * q`, giving
+`min 1 ((1 + 2 * q * sqrt k)^2 / N)`. The interpretation,
 program, initial substate and guessing rule are fixed independently of the mark. Adaptive widths,
 measurements, mixed or subnormalized states, duplicate inputs and width zero are allowed.
 The bound includes zero-query guessing; loss and postselection remain missing mass without
 renormalization.
 
-These results implement the direct reprogramming, adaptive hybrid and capped-width unique-mark
-search part of M3a. Random-function preimage search, deterministic varying-width profiles and
-round/point refinements remain open. The changing-property directional recurrence and its adaptive
+These results implement the direct reprogramming, adaptive hybrid and round/point unique-mark
+search part of M3a. Random-function preimage search and exact sums of square roots for deterministic
+width profiles remain open. The changing-property directional recurrence and its adaptive
 mixed-state and total-budget transports (M−1), the general final-measurement lemma (M0), and CFHL
 compressed-oracle bounds are separate obligations. The state-conditioned hybrid is a prerequisite
 for endpoint-only results (M6b); preprocessing and the exact `PointerChainPuzzle` encoding remain

@@ -71,11 +71,12 @@ QROM; variable-width parallel oracle rounds and their sequentialization with poi
 transfer; classical algorithms with private uniform coins through `OracleComp.toQuantumRandomized`
 and `OracleComp.toQuantumBatch`, preserving function-query or round and point budgets;
 the compressed-oracle runtime and its parallel QROM equivalence; common-finisher parallel
-reprogramming, adaptive hybrids and unique-mark search under round and width caps;
-the representation theorems for CP maps; the classical instability calculus.
+reprogramming, adaptive hybrids and unique-mark search under round and total-point budgets,
+with width-cap corollaries; the representation theorems for CP maps; the classical instability
+calculus.
 
 Not covered: infinite-dimensional systems; measurements with continuous outcomes; loops that may not
 terminate; coherent choice of oracle port; putting general programs in comb form; random-function
-preimage search and varying-width-profile search refinements; endpoint and preprocessing results;
-changing-property compressed-oracle bounds. The plans for these are in
+preimage search and exact square-root-sum bounds for deterministic width profiles; endpoint and
+preprocessing results; changing-property compressed-oracle bounds. The plans for these are in
 [`docs/design/quantum-layer.md`](../../design/quantum-layer.md).

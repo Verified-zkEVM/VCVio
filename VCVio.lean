@@ -564,6 +564,7 @@ public import VCVio.ProgramLogic.Unary.WP.OracleMeasure
 public import VCVio.ProgramLogic.Unary.WP.Probabilistic
 public import VCVio.ProgramLogic.Unary.WP.Probabilistic.Measure
 public import VCVio.Quantum.Comp.Basic
+public import VCVio.Quantum.Comp.ChargeWeight
 public import VCVio.Quantum.Comp.Combinators
 public import VCVio.Quantum.Comp.GradedRuntime
 public import VCVio.Quantum.Comp.Hybrid

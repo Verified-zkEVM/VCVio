@@ -194,26 +194,38 @@ cutoff counts all ports together, so adaptive choices of widths incur no sum of 
 per-port maxima. `Foundations/Hybrid.lean` stages the analytic cutoff and square-root
 aggregation helpers for QuantumFoundations; it imports only that dependency.
 
+`Comp/ChargeWeight.lean` exposes `IsQueryChargeBound` for natural-number port charges.
+If a query weight is at most its port charge times its input trace,
+`totalWeight_le_of_isQueryChargeBound` bounds all query weights together by the pathwise budget
+times the initial trace. Local steps cost zero. Zero-charge calls are allowed, and calls with
+no possible answer still spend their charge before aborting. Charging each port one recovers
+the total call budget; charging batch widths recovers `IsPointBound` and
+`totalWeight_le_of_isPointBound`. The proof follows residual budgets through adaptive branches,
+including trace loss, without adding per-port maxima.
+
 For search, sample one uniform `y : X` and answer every slot and round with
 `markedFunction y : X → ZMod 2`, which is one at `y` and zero elsewhere. Fix the interpretation
 `I`, program `x`, initial substate `ρ` and leaf-to-input guessing rule independently of `y`.
 `markedSearchAdvantage` measures the unconditional probability that the guess equals the same
 mark used by the oracle. For a finite nonempty domain of cardinality `N`,
-`markedSearchAdvantage_le` states
+`markedSearchAdvantage_le_of_isPointBound` states
 
-$$\Pr[\mathrm{guess}=y]\ \leq\ \min\!\left(1,\frac{(1+2q\sqrt{k})^2}{N}\right)$$
+$$\Pr[\mathrm{guess}=y]\ \leq\ \min\!\left(1,\frac{(1+2\sqrt{qQ})^2}{N}\right)$$
 
-under `x.IsTotalQueryBound q` and `x.IsWidthBound k`. Widths may depend on earlier outcomes;
-the caps cover every branch, including outcomes of weight zero. The result allows entangled
+under `x.IsTotalQueryBound q` and `x.IsPointBound Q`. Widths may depend on earlier outcomes;
+`Q` bounds their sum on every branch, including outcomes of weight zero. No width cap is needed.
+For example, adaptive two-round profiles `(0, 2)` and `(1, 1)` both have `q = Q = 2`.
+The width-cap theorem `markedSearchAdvantage_le` follows by taking `Q = k * q`, recovering
+`min 1 ((1 + 2 * q * sqrt k)^2 / N)`. The result allows entangled
 query slots, duplicate inputs, mixed states, subnormalized states and width-zero calls. At
-`q = 0`, the guessing term gives `1 / N`. Failure and postselection retain their missing mass;
+`q = 0` or `Q = 0`, the guessing term gives `1 / N`. Failure and postselection retain their missing mass;
 the success probability is never renormalized on survival.
 The proof sums singleton union weights over all marks in the mark-independent zero-oracle
 reference execution before aggregating the square-root errors.
 
-This is the unique-mark oracle experiment. Random-function preimage search, sharper bounds
-for deterministic varying-width profiles or combined round/point budgets, endpoint and
-preprocessing results, and changing-property compressed-oracle bounds remain separate work.
+This is the unique-mark oracle experiment. Random-function preimage search, exact sums of
+square roots for deterministic width profiles, endpoint and preprocessing results, and
+changing-property compressed-oracle bounds remain separate work.
 
 ## Checks
 
@@ -241,3 +253,7 @@ cache correlation, empty-round accounting and the semantic classical-unbatch end
 nonbinary spectator and common-finisher comparisons, weighted incidence, exact no-query and
 width-zero guessing, and full-domain two-slot search. Its adaptive, potentially lossy example
 uses a rank-two subnormalized input and the unsaturated bound `9 / 16`.
+Two-round adaptive profiles `(0, 2)` and `(1, 1)` give the round/point bound `25 / 64`,
+and their total weighted mass is at most one from a half-trace input.
+`VCVioTest/Quantum/ChargeWeight.lean` checks prefix charges and exact pre-answer query weight
+for a call with no possible answer, including zero-charge calls at budget zero.

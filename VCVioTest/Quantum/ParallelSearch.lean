@@ -7,6 +7,7 @@ Authors: Alexander Hicks
 module
 public import VCVio.Quantum.Oracle.ParallelSearch
 public import VCVio.Quantum.Oracle.ClassicalParallel
+public import VCVio.Quantum.Comp.ChargeWeight
 
 /-!
 # Parallel reprogramming and marked-search regressions
@@ -321,5 +322,104 @@ example (p : DSubInstrument Bool Bool
     mixedInput (fun out ↦ out.2)
   convert h.trans (min_le_right _ _) using 1
   norm_num
+
+/-! ## Adaptive total-point budgets -/
+
+/-- Two-round profiles `(0, 2)` and `(1, 1)` have the same total point cost.
+Local instruments may lose mass; neither their register sizes nor widths are fixed. -/
+noncomputable def adaptivePoints
+    (p : DSubInstrument Bool Bool
+      (fun b ↦ (Fin (if b then 0 else 1) → Fin 64 × ZMod 2) × Bool))
+    (s : ∀ b : Bool,
+      SubInstrument ((Fin (if b then 0 else 1) → Fin 64 × ZMod 2) × Bool)
+        ((Fin (if b then 2 else 1) → Fin 64 × ZMod 2) × Bool) Unit) :
+    QuantumComp LocalSig.instruments (qromBatchSpec (Fin 64) (ZMod 2))
+      (fun _ ↦ Fin 64) (QReg.of Bool) :=
+  QuantumComp.primBind
+    ⟨Bool, fun b ↦ QReg.of ((Fin (if b then 0 else 1) → Fin 64 × ZMod 2) × Bool), p⟩
+    fun b ↦ QuantumComp.queryBind ((), if b then 0 else 1) (QReg.of Bool) (Equiv.refl _)
+      fun _ ↦ QuantumComp.primBind
+        ⟨Unit, fun _ ↦ QReg.of ((Fin (if b then 2 else 1) → Fin 64 × ZMod 2) × Bool), s b⟩
+        fun _ ↦ QuantumComp.queryBind ((), if b then 2 else 1) (QReg.of Bool) (Equiv.refl _)
+          fun _ ↦ QuantumComp.pure (if b then 0 else 1)
+
+/-- Two total points suffice, even though the width cap times the round count is four. -/
+theorem adaptivePoints_budgets
+    (p : DSubInstrument Bool Bool
+      (fun b ↦ (Fin (if b then 0 else 1) → Fin 64 × ZMod 2) × Bool))
+    (s : ∀ b : Bool,
+      SubInstrument ((Fin (if b then 0 else 1) → Fin 64 × ZMod 2) × Bool)
+        ((Fin (if b then 2 else 1) → Fin 64 × ZMod 2) × Bool) Unit) (n : ℕ) :
+    (adaptivePoints p s).IsTotalQueryBound n ↔ 2 ≤ n := by
+  simp [adaptivePoints, LocalSig.InstrumentOp.Outcome]
+  omega
+
+/-- The exact total-point budget follows each adaptive branch's residual cost. -/
+theorem adaptivePoints_points
+    (p : DSubInstrument Bool Bool
+      (fun b ↦ (Fin (if b then 0 else 1) → Fin 64 × ZMod 2) × Bool))
+    (s : ∀ b : Bool,
+      SubInstrument ((Fin (if b then 0 else 1) → Fin 64 × ZMod 2) × Bool)
+        ((Fin (if b then 2 else 1) → Fin 64 × ZMod 2) × Bool) Unit) (n : ℕ) :
+    (adaptivePoints p s).IsPointBound n ↔ 2 ≤ n := by
+  simp [adaptivePoints, LocalSig.InstrumentOp.Outcome, Bool.forall_bool]
+  omega
+
+/-- The `qQ` bound gives twenty-five sixty-fourths for `q = Q = 2`, on a mixed,
+subnormalized input, rather than deriving the point budget from a maximum width. -/
+example
+    (p : DSubInstrument Bool Bool
+      (fun b ↦ (Fin (if b then 0 else 1) → Fin 64 × ZMod 2) × Bool))
+    (s : ∀ b : Bool,
+      SubInstrument ((Fin (if b then 0 else 1) → Fin 64 × ZMod 2) × Bool)
+        ((Fin (if b then 2 else 1) → Fin 64 × ZMod 2) × Bool) Unit) :
+    markedSearchAdvantage .instruments (adaptivePoints p s) mixedInput (fun out ↦ out.2) ≤
+      25 / 64 := by
+  have h := markedSearchAdvantage_le_of_isPointBound .instruments
+    ((adaptivePoints_budgets p s 2).mpr le_rfl) ((adaptivePoints_points p s 2).mpr le_rfl)
+    mixedInput (fun out ↦ out.2)
+  convert h.trans (min_le_right _ _) using 1
+  have hsqrt : Real.sqrt (4 : ℝ) = 2 := by
+    convert Real.sqrt_sq_eq_abs (2 : ℝ) using 1 <;> norm_num
+  norm_num [hsqrt, show (2 : ℝ) * 2 = 4 by norm_num]
+
+/-- Weighted query mass is bounded by the path sum two, rather than by maxima for the
+different width ports. The half-mass input therefore contributes at most one. -/
+example
+    (p : DSubInstrument Bool Bool
+      (fun b ↦ (Fin (if b then 0 else 1) → Fin 64 × ZMod 2) × Bool))
+    (s : ∀ b : Bool,
+      SubInstrument ((Fin (if b then 0 else 1) → Fin 64 × ZMod 2) × Bool)
+        ((Fin (if b then 2 else 1) → Fin 64 × ZMod 2) × Bool) Unit) :
+    (parallelOracleRuntime (0 : Fin 64 → ZMod 2)).totalWeight .instruments
+      (fun ik σ ↦ (ik.2 : ℝ≥0∞) * ENNReal.ofReal σ.trace.re) (adaptivePoints p s)
+      (mixedInput.prod (parallelOracleRuntime (0 : Fin 64 → ZMod 2)).init).matrix ≤ 1 := by
+  have h := (parallelOracleRuntime (0 : Fin 64 → ZMod 2)).totalWeight_le_of_isPointBound
+    .instruments (fun _ _ _ ↦ le_rfl) ((adaptivePoints_points p s 2).mpr le_rfl)
+    (mixedInput.prod (parallelOracleRuntime (0 : Fin 64 → ZMod 2)).init).posSemidef
+  refine h.trans_eq ?_
+  change (2 : ℝ≥0∞) * ENNReal.ofReal (mixedInput.prod (SubState.basis ())).matrix.trace.re = 1
+  rw [SubState.trace_re_prod, SubState.trace_basis]
+  norm_num [mixedInput, Matrix.trace, Matrix.diag, Fintype.sum_bool,
+    ENNReal.ofReal_div_of_pos, ENNReal.mul_inv_cancel]
+
+/-- The total-point bound retains the zero-query guessing term. -/
+example : markedSearchAdvantage .instruments (noQuery (0 : Fin 3)) (SubState.basis false)
+    (QuantumComp₂.leafEquiv (QReg.of Bool) (Fin 3)).symm ≤ 1 / 3 := by
+  have h := markedSearchAdvantage_le_of_isPointBound .instruments
+    (show (noQuery (0 : Fin 3)).IsTotalQueryBound 0 from QuantumComp.isTotalQueryBound_pure _ _)
+    (show (noQuery (0 : Fin 3)).IsPointBound 0 from QuantumComp.isPointBound_pure _ _)
+    (SubState.basis false) (QuantumComp₂.leafEquiv (QReg.of Bool) (Fin 3)).symm
+  simpa using h.trans (min_le_right _ _)
+
+/-- A real zero-width call fits `Q = 0` while still spending a round. -/
+example : markedSearchAdvantage .instruments emptyGuess.toQuantumBatch (SubState.basis ())
+    (QuantumComp₂.leafEquiv (QReg.of Unit) Bool).symm ≤ 1 / 2 := by
+  have hQ : emptyGuess.toQuantumBatch.IsPointBound 0 := by
+    have h : emptyGuess.IsPointQueryBound 0 := by simp [emptyGuess, IsPointQueryBound]
+    exact h.isPointBound_toQuantumBatch
+  have h := markedSearchAdvantage_le_of_isPointBound .instruments emptyGuess_round hQ
+    (SubState.basis ()) (QuantumComp₂.leafEquiv (QReg.of Unit) Bool).symm
+  simpa using h.trans (min_le_right _ _)
 
 end VCVioTest.QuantumParallelSearch

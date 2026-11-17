@@ -153,6 +153,7 @@ public import VCVioTest.ProgramLogic.StepCoverage
 public import VCVioTest.ProgramLogic.UntilBad
 public import VCVioTest.ProgramLogic.VCGenCoreDelegation
 public import VCVioTest.Quantum.Basic
+public import VCVioTest.Quantum.ChargeWeight
 public import VCVioTest.Quantum.CheckedRead
 public import VCVioTest.Quantum.CheckedReadAlgebra
 public import VCVioTest.Quantum.ClassicalRandomized
