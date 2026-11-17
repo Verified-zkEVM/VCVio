@@ -122,7 +122,7 @@ needs an instance-synthesis check, not a grep.
 | `ToMathlib/General.lean` core-`Vector` `cases`/`induction`/`cases₂`/`induction₂` | core `Init/Data/Vector/` | core has only `elimAsArray`/`elimAsList` (`Init/Data/Vector/Basic.lean:71,78`) |
 | `ToMathlib/Control/WriterT.lean:30` `LawfulAppend` | core (or just use `Monoid`) | no `LawfulAppend` in core/Batteries/Mathlib |
 | `LawfulMonadFunctor(T)`, `LawfulMonadControl(T)`, now in PolyFun's `PolyFun/Control/Lawful/MonadFunctor.lean` and `MonadControl.lean` | core `Init/Control/Lawful/` next to `LawfulMonadLift(T)` (`Init/Control/Lawful/MonadLift/Basic.lean:29,44`, the exact template) | class-keyword grep across five trees |
-| `HashSig/SLHDSA/WotsChecksum.lean` `Forall₂.eq_of_sum_eq` | `Mathlib/Data/List/Forall2.lean` | no statement of this shape upstream |
+| `ToMathlib/Data/List/Forall2.lean` `List.Forall₂.eq_of_sum_eq` | `Mathlib/Data/List/Forall2.lean` | no statement of this shape upstream |
 | `ToMathlib/Data/Set/Functor.lean` `SetM.run_*`; `BitVec.xor_self_xor` | Mathlib / core | see Keep |
 
 ### Track — heading into core, or blocked on a design decision
@@ -693,6 +693,14 @@ UInt8.ofNat`, `fromBaseW` is `Nat.ofDigits w ds.reverse`, `digitsOfBaseW` is
 `reverse` bridge lemmas would connect `digitsOfBaseW_lt`, `fromBaseW_digitsOfBaseW_*`, `toInt_toByte_mod`
 to `lt_of_mem_digitsAppend`, `setInvOn_digitsAppend_ofDigits`, `ofDigits_lt_base_pow_length`
 (`M:Data/Nat/Digits/Lemmas.lean:344,363`, `Defs.lean:380`).
+
+**Shared checksum alignment.** `VCVio/Algorithms/RadixEncoding.lean` provides the big-endian
+radix codec and its `Nat.ofDigits` reversal bridge. General ordered digit and padded-coordinate
+facts live in `ToMathlib/Data/Nat/Digits.lean`; equal-sum list rigidity lives in
+`ToMathlib/Data/List/Forall2.lean`. `VCVio/Algorithms/ComplementaryChecksum/Basic.lean` proves
+payload equality through a monotone checksum decoder and reconstruction laws. Generic SLH-DSA
+and SHAKE128s use that shared law with their existing data layouts. FIPS byte padding and the
+wire-specific `toInt`/`toByte` codecs remain in their scheme adapters.
 
 **Lemma-level duplicates verified by reading both declarations** (all added to the Adopt table):
 `List.length_eq_countP_add_countP_not` ↔ core `List.length_eq_countP_add_countP`
