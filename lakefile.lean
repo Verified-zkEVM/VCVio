@@ -85,7 +85,7 @@ observation, pure states and oracle unitaries), shared with CatCrypt-core.
 -/
 require QuantumFoundations from git
   "https://github.com/lean-crypto-foundations/QuantumFoundations" @
-  "a1638ff1d4f30866c079da078cd9bcf2ad25e95f"
+  "5ecbeec205ce3e9e4a5b7cb900c181884856ba19"
 
 require "leanprover-community" / "mathlib" @ git "v4.36.0"
 
