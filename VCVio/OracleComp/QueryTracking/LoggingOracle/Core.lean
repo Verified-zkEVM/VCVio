@@ -666,7 +666,7 @@ theorem withQueryLog_simulateQ {ι κ : Type} {source : OracleSpec ι}
 @[expose, reducible] def pathLogResult {i : Type} {oSpec : OracleSpec.{0, 0} i} {β : Type}
     (mx : OracleComp oSpec β) (path : PFunctor.FreeM.Path mx) :
     β × QueryLog oSpec :=
-  (PFunctor.FreeM.output mx path, PFunctor.FreeM.Path.trace mx path)
+  (PFunctor.FreeM.output mx path, (PFunctor.FreeM.Path.trace mx path).toList)
 
 @[reducible] private def loggedPath
     {i : Type} {oSpec : OracleSpec.{0, 0} i} {β : Type}

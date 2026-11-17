@@ -21,9 +21,8 @@ simulation oracles and implementation transformers defined in the same directory
 
 open ENNReal OracleSpec OracleComp
 
-/- Query logs are definitionally PolyFun traces for an oracle specification. These reducers
-must remain available at implicit transparency when specializing that generic API. -/
-attribute [local implicit_reducible] PFunctor.Idx FreeMonoid
+/- Oracle query/answer pairs inhabit the index type of the corresponding polynomial functor. -/
+attribute [local implicit_reducible] PFunctor.Idx
 
 universe u v w
 
@@ -147,7 +146,7 @@ lemma isSome_mono {c₁ c₂ : QueryCache spec} (h : c₁ ≤ c₂) {t : spec.Do
 
 /-- The set of all `(query, response)` pairs stored in the cache. -/
 def toSet (cache : QueryCache spec) : Set ((t : spec.Domain) × spec.Range t) :=
-  fun ⟨t, r⟩ => cache t = some r
+  {entry | cache entry.1 = some entry.2}
 
 @[simp]
 lemma mem_toSet {cache : QueryCache spec} {t : spec.Domain} {r : spec.Range t} :
@@ -550,23 +549,10 @@ lemma single_le_iff_pos [DecidableEq ι] (i : ι) (qc : QueryCount ι) :
 
 end QueryCount
 
-/-- Log of queries represented by a list of dependent product's tagging the oracle's index.
-`(t : spec.Domain) × (spec.Range t)` is slightly more restricted as it doesn't
-keep track of query ordering between different oracles.
-
-A `QueryLog spec` is morally a free monoid on `Idx spec.toPFunctor`, with
-identity `[]` and product `(++)`. By Mathlib reducibility this is exactly
-`FreeMonoid (Idx spec.toPFunctor) = TraceList spec.toPFunctor`, so a
-trace-valued boundary description such as `BoundaryAction.emit` (in
-`PolyFun/Interaction/Open/OpenProcess.lean`) and a per-call `QueryLog`-valued
-writer share the same underlying free-monoid carrier.
-
-We do *not* declare a global `Monoid (QueryLog spec)` instance: doing so
-would conflict with the `[EmptyCollection ω] [Append ω] → Monad (WriterT ω M)`
-instance Mathlib already provides for `WriterT (QueryLog spec) M`, which the append-based reading
-`WriterT.AppendWP` relies on. The
-`QueryImpl.withTrace`/`withLogging` API instead uses the Append-based
-`Monad (WriterT _ _)` directly via `QueryImpl.withTraceAppend`. -/
+/-- The list of queries and their answers in execution order. For a PolyFun trace of
+`spec.toPFunctor`, `FreeMonoid.toList` returns its query log and `FreeMonoid.ofList`
+reconstructs the trace. Logging uses the list's append operation through
+`QueryImpl.withTraceAppend` and `WriterT.AppendWP`. -/
 @[reducible] def QueryLog (spec : OracleSpec.{u, v} ι) : Type (max u v) :=
   List ((t : spec.Domain) × spec.Range t)
 
@@ -718,7 +704,7 @@ lemma getQueryValue?_append_self_at_countQ [DecidableEq ι]
 generic occurrence count on erased polynomial traces. -/
 lemma countQ_eq_occurrences [DecidableEq ι] (log : QueryLog spec) (t : ι) :
     log.countQ (· = t) = PFunctor.TraceList.occurrences (P := spec.toPFunctor) t
-      (show PFunctor.TraceList spec.toPFunctor from log) := by
+      (FreeMonoid.ofList log) := by
   change log.countQ (· = t) = log.countP (fun event => decide (event.1 = t))
   induction log with
   | nil => rfl
@@ -739,11 +725,12 @@ on PolyFun traces. -/
 lemma getQueryValue?_eq_getAt? [DecidableEq ι]
     (log : QueryLog spec) (t : ι) (n : Nat) :
     getQueryValue? log t n =
-      PFunctor.TraceList.getAt?
-        (show PFunctor.TraceList spec.toPFunctor from log) t n := by
+      PFunctor.TraceList.getAt? (P := spec.toPFunctor)
+        (FreeMonoid.ofList log) t n := by
   induction log generalizing n with
   | nil => rfl
   | cons entry log ih =>
+      rw [FreeMonoid.ofList_cons]
       rcases entry with ⟨t', u⟩
       by_cases h : t' = t
       · subst t'

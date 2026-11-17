@@ -84,7 +84,7 @@ private theorem output_cast {ι : Type} {spec : OracleSpec.{0, 0} ι} {α : Type
 /-- Equal low halves do not erase the exact HIGH answers in the saved primitive history. -/
 private theorem retains_full_high_trace :
     ∃ h : LoggedHistory ambient service (client 7) 0,
-      Path.trace _ h.fullPath =
+      (Path.trace _ h.fullPath).toList =
         ([⟨7, (0 : BitVec 256)⟩, ⟨99, BitVec.ofNat 256 (2^128)⟩,
           ⟨7, BitVec.ofNat 256 (2^128)⟩] : QueryLog rawSpec) ∧
       output _ h.fullPath =
@@ -97,7 +97,7 @@ private theorem retains_full_high_trace :
   let saved : LoggedRunPath ambient service (client 7) 0 :=
     (Equiv.cast (congrArg (fun p => Path p) (run_eq_primitive 7 0))).symm primitive
   obtain ⟨h, same⟩ := LoggedHistory.fullPath_surjective ambient service (client 7) 0 saved
-  have traceSaved : Path.trace _ saved =
+  have traceSaved : (Path.trace _ saved).toList =
       ([⟨7, (0 : BitVec 256)⟩, ⟨99, high⟩, ⟨7, high⟩] : QueryLog rawSpec) := by
     rw [trace_cast (run_eq_primitive 7 0) primitive]
     rfl
@@ -124,7 +124,7 @@ private noncomputable def zeroService :
 private theorem zero_query_completion (initial : Nat) :
     ∃ h : LoggedHistory ambient zeroService
         (liftM ((rawSpec + (Nat →ₒ Option Nat)).query (.inr 6))) initial,
-      h.checkpoints.length = 1 ∧ Path.trace _ h.fullPath = [] ∧
+      h.checkpoints.length = 1 ∧ Path.trace _ h.fullPath = 1 ∧
       output _ h.fullPath =
         (((if initial % 2 = 0 then none else some initial),
           [⟨6, if initial % 2 = 0 then none else some initial⟩]), initial + 6) := by
@@ -143,7 +143,7 @@ private theorem zero_query_completion (initial : Nat) :
     (liftM ((rawSpec + (Nat →ₒ Option Nat)).query (.inr 6))) initial _ supported
   have count := congrArg List.length logs
   simp only [List.length_map, List.length_cons, List.length_nil] at count
-  have noPrimitive : Path.trace _ h.fullPath = [] := by
+  have noPrimitive : Path.trace _ h.fullPath = 1 := by
     let changePath := Equiv.cast (congrArg (fun p => Path p) eqn)
     have transfer := trace_cast eqn (changePath h.fullPath)
     simpa only [changePath, Equiv.symm_apply_apply, Path.trace_pure] using transfer
