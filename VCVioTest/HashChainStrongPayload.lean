@@ -7,6 +7,9 @@ Authors: Alexander Hicks
 module
 
 public import VCVio.CryptoFoundations.HashChain.Antichain.StrongPayload
+public import Mathlib.Data.Fin.VecNotation
+public import Mathlib.Data.Fintype.Basic
+public import Mathlib.Tactic.FinCases
 
 /-!
 # Strong-payload boundary controls
@@ -14,6 +17,7 @@ public import VCVio.CryptoFoundations.HashChain.Antichain.StrongPayload
 An unchanged message with a changed nonce still has distinct encoded inputs.
 Rejected digests need not have distinct decoder outputs.
 No control interprets a projected digest collision as equality of full raw replies.
+A concrete instance with two height-three chains satisfies every premise of the dichotomy.
 -/
 
 public section
@@ -66,5 +70,41 @@ theorem rejected_digests_need_not_separate {Code : Type u} :
   refine ⟨?_, rfl, by simp⟩
   intro left right code hl hr
   cases left <;> cases right <;> simp_all
+
+/-! ## A concrete instance -/
+
+/-- Two-chain digit vectors whose coordinates sum to three. -/
+def sumThree : Set (Fin 2 → Nat) := {digits | digits 0 + digits 1 = 3}
+
+/-- Digit vectors with a fixed coordinate sum are pairwise incomparable. -/
+theorem sumThree_antichain : IsAntichain (· ≤ ·) sumThree := by
+  intro left hl right hr different le
+  apply different
+  have h0 : left 0 ≤ right 0 := le 0
+  have h1 : left 1 ≤ right 1 := le 1
+  simp only [sumThree, Set.mem_ofPred_eq] at hl hr
+  funext i
+  revert i
+  rw [Fin.forall_fin_two]
+  exact ⟨by omega, by omega⟩
+
+/-- A message hash with two digests, one per message bit. -/
+def bitHash (point : Bool × Unit) : Option (Fin 2 → Nat) :=
+  some (if point.1 then ![1, 2] else ![2, 1])
+
+/-- Every premise of the strong-payload dichotomy holds for two height-three chains over `Nat`
+whose steps add one, the sum-three antichain, `decode := some` and `bitHash`. -/
+example :=
+  HashChain.same_strong_payload_or_first_merge_or_earlier_or_collision
+    (fun _ => 3) (fun _ k => k) (fun _ value => some (value + 1)) (fun _ k => k)
+    (fun _ _ _ => rfl) sumThree
+    (fun digits h i => by
+      simp only [sumThree, Set.mem_ofPred_eq] at h
+      fin_cases i <;> simp <;> omega)
+    sumThree_antichain id Function.injective_id bitHash some
+    (fun _ _ _ hl hr => Option.some_injective _ (hl.trans hr.symm))
+    (true, ()) (false, ()) ![1, 2] ![2, 1] ![1, 2] ![2, 1] ![2, 1] rfl rfl rfl rfl
+    (by simp [sumThree]) (by simp [sumThree])
+    (by intro i; fin_cases i <;> rfl)
 
 end HashChainStrongPayloadTest
