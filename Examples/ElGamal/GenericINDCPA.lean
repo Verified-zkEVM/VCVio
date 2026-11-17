@@ -805,7 +805,8 @@ private theorem translate_read [Zero G] {z : Handle} {st : SimState}
     {T : Tbl (fun _ : Unit => G)} (h : WellFormed (fun _ => z) st.translation T)
     (mm : HandlePair) :
     readPair T (translate z st mm) = readPair (readBack st.translation T) mm := by
-  exact Prod.ext (lookup_readBack h () mm.1).symm (lookup_readBack h () mm.2).symm
+  exact Prod.ext (lookup_readBack (z := fun _ => z) () (h ()).2.2 mm.1).symm
+    (lookup_readBack (z := fun _ => z) () (h ()).2.2 mm.2).symm
 
 private theorem record_read [Zero G] [DecidableEq G] (st : SimState)
     (T : Tbl (fun _ : Unit => G)) (c : HandlePair) :
@@ -901,10 +902,10 @@ private theorem groupResult_inv [DecidableEq G] {gen pk : G} {z : Handle} {st : 
   have hs : r ∈ support (runGen (Model.group G) (fun _ => id) ((groupStep z t).run st) T) := by
     rw [runGen_groupStep]
     exact (mem_support_pure_iff _ _).2 rfl
-  have hp := runGen_prefix (Model.group G) (fun _ => id) ((groupStep z t).run st) T r hs ()
+  have hp := runGen_extends (Model.group G) (fun _ => id) ((groupStep z t).run st) T r hs ()
   have hv := h.mono hp
   have ht : WellFormed (fun _ => z) r.1.2.translation r.2 :=
-    wellFormed_runGen_virtualizeImpl (Model.group (F := F) G) (fun _ => id)
+    virtualize_step_wellFormed (Model.group (F := F) G) (fun _ => id)
       h.wf (.inl t)
       ((r.1.1, r.1.2.translation), r.2) (by
         cases t <;> change _ ∈ support (pure _ : ProbComp _) <;>
@@ -923,7 +924,7 @@ private theorem groupResult_read [DecidableEq G] {gen pk : G} {z : Handle} {st :
   have hs : r ∈ support (runGen (Model.group G) (fun _ => id) ((groupStep z t).run st) T) := by
     rw [runGen_groupStep]
     exact (mem_support_pure_iff _ _).2 rfl
-  have hp := runGen_prefix (Model.group G) (fun _ => id) ((groupStep z t).run st) T r hs ()
+  have hp := runGen_extends (Model.group G) (fun _ => id) ((groupStep z t).run st) T r hs ()
   have hv := runGen_virtualize (Model.group (F := F) G) (fun _ => id)
     (liftM ((genSpec F groupSig).query (.inl t))) h.wf
   have he : (pure ((realGroup t (readState st T)).1, (realGroup t (readState st T)).2.table) :
@@ -977,12 +978,12 @@ private theorem runGen_encrypt [DecidableEq G] [SampleableType F] (T : Tbl (fun 
   change (pure (((append T () (r • lookup T () 0)) ()).length,
     append (append T () (r • lookup T () 0)) ()
       (r • lookup (append T () (r • lookup T () 0)) () 1)) >>= _) = _
-  rw [lookup_eq_of_prefix () (prefix_append T () () _) 1 hkey]
+  rw [lookup_eq_of_prefix () (extends_append T () _ ()) 1 hkey]
   erw [pure_bind, runGen_bind]
   let T₁ := append T () (r • lookup T () 0)
   let T₂ := append T₁ () (r • lookup T () 1)
-  have hp₁ : T () <+: T₁ () := prefix_append T () () _
-  have hp₂ : T₁ () <+: T₂ () := prefix_append T₁ () () _
+  have hp₁ : T () <+: T₁ () := extends_append T () _ ()
+  have hp₂ : T₁ () <+: T₂ () := extends_append T₁ () _ ()
   change (pure ((T₂ ()).length,
     append T₂ () (lookup T₂ () m + lookup T₂ () (T₁ ()).length)) >>= _) = _
   rw [lookup_eq_of_prefix () (hp₁.trans hp₂) m hm]
@@ -997,9 +998,9 @@ private theorem runGen_encrypt [DecidableEq G] [SampleableType F] (T : Tbl (fun 
 
 private theorem cipherResult_prefix (T : Tbl (fun _ : Unit => G)) (m : Handle) (r : F) :
     T () <+: (cipherResult T m r).2 () := by
-  exact (prefix_append T () () _).trans
-    ((prefix_append (append T () _) () () _).trans
-      (prefix_append (append (append T () _) () _) () () _))
+  exact (extends_append T () _ ()).trans
+    ((extends_append (append T () _) () _ ()).trans
+      (extends_append (append (append T () _) () _) () _ ()))
 
 private theorem cipherResult_valid (T : Tbl (fun _ : Unit => G)) (m : Handle) (r : F) :
     ValidPair (cipherResult T m r).2 (cipherResult T m r).1 := by
@@ -1306,8 +1307,8 @@ theorem evalDist_step_branch (gen pk : G) (A : GenericAdversary F) (k : ℕ) (bi
       refine evalDist_bind_congr _ _ _ fun c => ?_
       let T' := append (append T () c.1) () c.2
       let cc : HandlePair := ((T ()).length, (T ()).length + 1)
-      have ht : T () <+: T' () := (prefix_append T () () _).trans
-        (prefix_append (append T () _) () () _)
+      have ht : T () <+: T' () := (extends_append T () _ ()).trans
+        (extends_append (append T () _) () _ ())
       have hc : ValidPair T' cc := by simp [ValidPair, T', cc, append]
       have hv : readPair T' cc = c := by
         simp [readPair, T', cc, append, lookup, List.getD_eq_getElem?_getD]
