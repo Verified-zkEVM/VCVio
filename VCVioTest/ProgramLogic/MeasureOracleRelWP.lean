@@ -41,6 +41,13 @@ example (mx my : ProbComp ℝ) (f g : ℝ → ProbComp ℝ) (R : ℝ → ℝ →
     MAlgRelOrdered.RelWP (mx >>= f) (my >>= g) R :=
   MAlgRelOrdered.relWP_bind_le mx my f g R h
 
+/-- Sequential coupling works for countable answer spaces and arbitrary real-valued outputs. -/
+example {ι : Type} {spec : OracleSpec ι} [AnswerMeasure spec] [∀ t, Countable (spec.Range t)]
+    (mx my : OracleComp spec ℝ) (f g : ℝ → OracleComp spec ℝ) (R : ℝ → ℝ → Prop)
+    (h : CouplingPost mx my fun a b ↦ CouplingPost (f a) (g b) R) :
+    CouplingPost (mx >>= f) (my >>= g) R :=
+  h.bind
+
 /-- Equality couplings of real-valued computations identify every event probability. -/
 example (mx my : ProbComp ℝ) (h : RelTriple mx my (EqRel ℝ)) (p : ℝ → Prop) :
     Pr{let x ← mx}[p x] = Pr{let y ← my}[p y] :=

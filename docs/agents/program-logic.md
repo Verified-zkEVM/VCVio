@@ -656,7 +656,7 @@ rewrite works).
 | `VCVio/ProgramLogic/Tactics/Common/Registry.lean` | `@[vcspec]` | Unary and relational `Triple` / `RelTriple` / `RelWP` / quantitative `VCVio.ProgramLogic.RelTriple` rules, indexed by a `Sym.Pattern` on the computation slot (`oa` for unary, `oa` with a secondary `rightHead?` filter for relational) |
 
 Each entry carries a `SpecProof` (reusing the core-Lean type from
-`Lean.Elab.Tactic.Do.SpecAttr`) so origins can be distinguished between a
+`Lean.Elab.Tactic.VCGen.SpecAttr`) so origins can be distinguished between a
 global declaration, a local hypothesis, or a raw term. Priorities are parsed
 from the attribute's optional priority argument (`@[vcspec (prio := 200)]`).
 
@@ -700,9 +700,7 @@ entries are tried first within the same candidate pool.
 `Lean.Meta.Sym.*` is still under active development in core Lean. The APIs
 we depend on today (`Sym.Pattern`, `Sym.DiscrTree`, `Sym.insertPattern`,
 `Sym.getMatch`, `Sym.mkPatternFromDeclWithKey`, and `SpecProof` in
-`Lean.Elab.Tactic.Do.SpecAttr`) are all used by core's `mvcgen` and `vcgen`
-too, so their direction is broadly stable, but none of them carry a
-compat-preservation promise yet. Expect the following classes of churn each
+`Lean.Elab.Tactic.VCGen.SpecAttr`) are also used by core’s `vcgen`. Their interfaces can change between Lean releases. Expect the following classes of churn each
 time we bump the toolchain:
 
 - **Signature changes on `Sym.mkPatternFromDeclWithKey`**. If the selector
@@ -731,7 +729,7 @@ stage degrade gracefully.
 
 ### Core WP and the symbolic rewriter boundary
 
-Lean v4.35 provides lattice-generic `Std.WP.WPMonad`, `Triple`, transformer
+Lean v4.36 provides lattice-generic `Std.WP.WPMonad`, `Triple`, transformer
 instances, and `vcgen`. The unary carriers in `Unary/WP/` consume these directly:
 
 - `open scoped OracleComp.Lower` selects expectation in `ℝ≥0∞` for `OracleComp spec`
