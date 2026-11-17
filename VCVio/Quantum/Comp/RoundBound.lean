@@ -161,6 +161,20 @@ theorem IsWidthBound.bind {x : QuantumComp L (uBatchSpec P In) X A}
     (fun _ _ _ _ _ _ ↦ ⟨rfl, rfl⟩) hx hn
   simpa only [IsWidthBound, max_self] using h
 
+/-- A total point budget bounds the width of every individual round on every branch. -/
+theorem IsPointBound.isWidthBound {x : QuantumComp L (uBatchSpec P In) X A} {n : ℕ}
+    (hx : x.IsPointBound n) : x.IsWidthBound n := by
+  induction x using QuantumComp.inductionOn generalizing n with
+  | pure _ _ => exact isWidthBound_pure _ _
+  | primBind _ o next ih =>
+      rw [isPointBound_primBind_iff] at hx
+      rw [isWidthBound_primBind_iff]
+      exact fun b ↦ ih b (hx b)
+  | queryBind _ ik E e next ih =>
+      rw [isPointBound_queryBind_iff] at hx
+      rw [isWidthBound_queryBind_iff]
+      exact ⟨hx.1, fun r ↦ (ih r (hx.2 r)).mono (Nat.sub_le _ _)⟩
+
 /-- A width cap and a total round bound imply a point bound on every adaptive branch. -/
 theorem IsTotalQueryBound.isPointBound {x : QuantumComp L (uBatchSpec P In) X A}
     {r k : ℕ} (hr : x.IsTotalQueryBound r) (hw : x.IsWidthBound k) :

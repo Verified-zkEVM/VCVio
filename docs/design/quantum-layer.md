@@ -247,7 +247,45 @@ These results allow arbitrary adaptive local signatures and interpretations, mix
 subnormalized input states, finite domains and finite abelian response groups. A plain compressed
 leaf observation does not read `H`; observations `f H leaf` require an explicit joint-oracle read.
 
-The M2a model and transport obligations are complete. Direct parallel reprogramming, hybrid and
-marked-search bounds (M3a) remain open. The changing-property directional transition recurrence
-and its adaptive mixed-state and total-budget transports (M−1), the general final-measurement
-lemma (M0), and the resulting CFHL compressed-oracle bounds are separate future work.
+The M2a model and transport obligations are complete.
+
+### 12. Parallel reprogramming, hybrids and search
+
+`Oracle/ParallelReprogramming.lean` defines `parallelInputProjector`, the union of slots whose
+inputs lie in a disagreement set. The difference of two parallel oracle unitaries is supported
+on this union; its squared Kraus weight is at most four times the union's input weight.
+`rpow_inv_two_parallel_reprogramming_le` compares acceptance weights after a common completely
+positive trace-nonincreasing finishing map, with arbitrary spectator memory. Both sides use
+the same input operator and fixed classical challenge data; the finishing map may depend on
+those data, preserving their correlation with the acceptance event.
+
+The expected-mass lemmas assume a finite challenge family with explicit nonnegative weights and
+a pointwise weighted incidence bound `δ` for the disagreement sets. They use the same positive
+semidefinite input operator for every challenge. Under these hypotheses a width-`k` union has
+expected weight at most `k * δ` times the input trace; the weights need not be normalized.
+Merely bounding the number of reprogrammed points does not supply these independence and
+incidence hypotheses.
+
+`Oracle/ParallelHybrid.lean` lifts the comparison to adaptive programs, charging union-query
+weights to a designated reference execution. The interpretation, program, initial state and
+final observation are shared. `Comp/HybridBudget.lean` uses a total call cutoff across all ports
+and a width cap, avoiding a sum of separate per-port maxima. The analytic cutoff and
+square-root aggregation lemmas in `Foundations/Hybrid.lean` import only QuantumFoundations and
+are staged for that dependency.
+
+`Oracle/ParallelSearch.lean` applies this hybrid to one uniformly hidden marked input in a finite
+nonempty domain, using the additive `ZMod 2` oracle `markedFunction`.
+`markedSearchAdvantage_le` bounds success by `min 1 ((1 + 2 * q * sqrt k)^2 / N)`, where
+`N` is the domain cardinality, `q` bounds rounds and `k` bounds each width. The interpretation,
+program, initial substate and guessing rule are fixed independently of the mark. Adaptive widths,
+measurements, mixed or subnormalized states, duplicate inputs and width zero are allowed.
+The bound includes zero-query guessing; loss and postselection remain missing mass without
+renormalization.
+
+These results implement the direct reprogramming, adaptive hybrid and capped-width unique-mark
+search part of M3a. Random-function preimage search, deterministic varying-width profiles and
+round/point refinements remain open. The changing-property directional recurrence and its adaptive
+mixed-state and total-budget transports (M−1), the general final-measurement lemma (M0), and CFHL
+compressed-oracle bounds are separate obligations. The state-conditioned hybrid is a prerequisite
+for endpoint-only results (M6b); preprocessing and the exact `PointerChainPuzzle` encoding remain
+future work.

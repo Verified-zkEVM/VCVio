@@ -31,7 +31,8 @@ The layer is the subject of issue #706. Open questions and planned work are in
 * [4-programs-and-runtimes](4-programs-and-runtimes.md) — Adaptive programs, runtimes, parallel
   query budgets, sequentialization and combs.
 * [5-qrom](5-qrom.md) — Classical queries, Deutsch's algorithm, the QROM runtime and classical
-  algorithms in the QROM; parallel rounds, private uniform coins and compressed execution.
+  algorithms in the QROM; parallel rounds, private uniform coins, compressed execution,
+  reprogramming and unique-mark search.
 * [6-instability](6-instability.md) — The classical instability calculus and its role in quantum
   proofs.
 
@@ -69,10 +70,12 @@ with several oracles and stateful oracle implementations; the QROM; classical al
 QROM; variable-width parallel oracle rounds and their sequentialization with point-budget
 transfer; classical algorithms with private uniform coins through `OracleComp.toQuantumRandomized`
 and `OracleComp.toQuantumBatch`, preserving function-query or round and point budgets;
-the compressed-oracle runtime and its parallel QROM equivalence; the representation theorems for
-CP maps; the classical instability calculus.
+the compressed-oracle runtime and its parallel QROM equivalence; common-finisher parallel
+reprogramming, adaptive hybrids and unique-mark search under round and width caps;
+the representation theorems for CP maps; the classical instability calculus.
 
 Not covered: infinite-dimensional systems; measurements with continuous outcomes; loops that may not
-terminate; coherent choice of oracle port; putting general programs in comb form; depth-sensitive
-parallel security bounds. The plans for these are in
+terminate; coherent choice of oracle port; putting general programs in comb form; random-function
+preimage search and varying-width-profile search refinements; endpoint and preprocessing results;
+changing-property compressed-oracle bounds. The plans for these are in
 [`docs/design/quantum-layer.md`](../../design/quantum-layer.md).

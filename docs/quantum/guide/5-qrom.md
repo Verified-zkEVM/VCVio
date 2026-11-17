@@ -1,7 +1,8 @@
 # 5. The quantum random-oracle model
 
 Covers: Classical queries, Deutsch's algorithm, the QROM runtime, classical algorithms in the
-QROM and parallel oracle rounds. See [conventions](../reference/conventions.md). Read first: tutorial
+QROM, parallel oracle rounds, reprogramming and marked search. See
+[conventions](../reference/conventions.md). Read first: tutorial
 [chapter 6](../tutorial/6-quantum-queries.md); builds on [guide 4](4-programs-and-runtimes.md).
 
 ## A classical query inside a quantum experiment
@@ -156,9 +157,63 @@ outcome-dependent final registers, and mixed or subnormalized input states, for 
 finite abelian `Y`. The compressed observation reads the leaf only. A function-dependent
 observation `f H leaf` needs an explicit joint-oracle read, beyond this theorem.
 
-Depth-sensitive security bounds remain open. Exact sequentialization and runtime equivalence
-provide the model and transports; direct parallel hybrid/search and changing-property bounds
-require separate proofs.
+## Reprogramming a parallel round
+
+Suppose `H` and `H'` agree outside `S`. `parallelInputProjector k S` projects onto the basis
+tuples with at least one input in `S`. Repeated inputs belong to this union once.
+`parallelOracleUnitary_sub_eq_mul_projector` says the unitary difference is supported on the
+union, and `re_trace_parallel_disagreement_le` bounds its squared Kraus weight by four times
+the union's input weight. Both statements allow width zero; the latter retains an arbitrary
+spectator register and a positive semidefinite input operator.
+
+`rpow_inv_two_parallel_reprogramming_le` compares square roots of acceptance weights after a
+common CP, trace-nonincreasing finishing map `Φ`. The oracle changes; the input operator and
+`Φ` are shared. After fixing hidden classical challenge data, `Φ` may include subsequent
+oracle-dependent computation and verification using those same data. This keeps their
+correlation with the final event.
+
+An expected union-weight estimate needs explicit sampling hypotheses.
+`sum_mul_re_trace_conj_parallelInputProjector_frame_le` takes a finite challenge family,
+nonnegative weights `w ω`, sets `S ω` and the incidence assumption
+
+$$\forall x,\quad \sum_\omega w_\omega\,\mathbf{1}_{x\in S_\omega}\leq\delta.$$
+
+For one common positive semidefinite input `ρ`, independent of `ω`, it bounds the weighted
+union mass by `k * δ * trace ρ`. The weights need not sum to one. For example, an incidence
+bound `δ = s / N` gives `k * s / N` times the trace. A size bound on each set alone does not
+establish the required incidence or independence.
+
+## Adaptive hybrids and marked search
+
+`rpow_inv_two_evalDistMap_parallel_le_support` compares an event under `H` and `H'` by the
+square-root hybrid argument. Its query-union weights come from the reference execution under
+`H'`. The local interpretation, adaptive program, initial substate and final observation are
+the same on both sides. Arbitrary measurements and trace loss are allowed.
+`Comp/HybridBudget.lean` aggregates weights under a total call budget and a width cap. The
+cutoff counts all ports together, so adaptive choices of widths incur no sum of separate
+per-port maxima. `Foundations/Hybrid.lean` stages the analytic cutoff and square-root
+aggregation helpers for QuantumFoundations; it imports only that dependency.
+
+For search, sample one uniform `y : X` and answer every slot and round with
+`markedFunction y : X → ZMod 2`, which is one at `y` and zero elsewhere. Fix the interpretation
+`I`, program `x`, initial substate `ρ` and leaf-to-input guessing rule independently of `y`.
+`markedSearchAdvantage` measures the unconditional probability that the guess equals the same
+mark used by the oracle. For a finite nonempty domain of cardinality `N`,
+`markedSearchAdvantage_le` states
+
+$$\Pr[\mathrm{guess}=y]\ \leq\ \min\!\left(1,\frac{(1+2q\sqrt{k})^2}{N}\right)$$
+
+under `x.IsTotalQueryBound q` and `x.IsWidthBound k`. Widths may depend on earlier outcomes;
+the caps cover every branch, including outcomes of weight zero. The result allows entangled
+query slots, duplicate inputs, mixed states, subnormalized states and width-zero calls. At
+`q = 0`, the guessing term gives `1 / N`. Failure and postselection retain their missing mass;
+the success probability is never renormalized on survival.
+The proof sums singleton union weights over all marks in the mark-independent zero-oracle
+reference execution before aggregating the square-root errors.
+
+This is the unique-mark oracle experiment. Random-function preimage search, sharper bounds
+for deterministic varying-width profiles or combined round/point budgets, endpoint and
+preprocessing results, and changing-property compressed-oracle bounds remain separate work.
 
 ## Checks
 
@@ -182,3 +237,7 @@ repeated inputs, zero-width calls, coherent two-slot inputs, and noncommuting sh
 `VCVioTest/Quantum/ParallelBridges.lean` checks joint compression and leaf observations on
 subnormalized mixed inputs, adaptive widths and private coins, ordered repeated inputs, cross-round
 cache correlation, empty-round accounting and the semantic classical-unbatch endpoint.
+`VCVioTest/Quantum/ParallelSearch.lean` checks union mass and coherence with repeated inputs,
+nonbinary spectator and common-finisher comparisons, weighted incidence, exact no-query and
+width-zero guessing, and full-domain two-slot search. Its adaptive, potentially lossy example
+uses a rank-two subnormalized input and the unsaturated bound `9 / 16`.

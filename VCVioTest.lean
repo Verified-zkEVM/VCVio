@@ -165,6 +165,7 @@ public import VCVioTest.Quantum.MultiExtractableModule
 public import VCVioTest.Quantum.Oracle
 public import VCVioTest.Quantum.Parallel
 public import VCVioTest.Quantum.ParallelBridges
+public import VCVioTest.Quantum.ParallelSearch
 public import VCVioTest.Quantum.Pure
 public import VCVioTest.Quantum.SaltedMerkleMultiExtractable
 public import VCVioTest.Quantum.Sequentialize
