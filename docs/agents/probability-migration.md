@@ -238,10 +238,11 @@ pass `ENNReal.ofReal ζ_zk` to `HVZK`, as `FiatShamirWithAbort.euf_cma_to_nma` d
 
 ### Measure imports on Lean v4.36
 
-The table lists the direct imports that recover each former module's public interface.
-Clients that use only the underlying declarations can import their defining module alone.
+The codemod expands each removed import to the direct imports in the table and preserves
+public re-exports. Clients that use only the underlying declarations can import their defining
+module alone.
 
-| Former module | Direct imports |
+| Removed module | Import instead |
 |---|---|
 | `ToMathlib.MeasureTheory.DiscreteInstances` | `ToCslib.MeasureTheory.MeasurableSpace.Instances` |
 | `ToMathlib.MeasureTheory.Function.AEMeasurable` | `ToCslib.MeasureTheory.Function.AEMeasurable` |

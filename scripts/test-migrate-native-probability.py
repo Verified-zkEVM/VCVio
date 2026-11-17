@@ -193,6 +193,43 @@ class ImportTests(unittest.TestCase):
                     "import VCVio.OracleComp.OracleComp\n")
         self.assertEqual(migrate(source)[0], expected)
 
+    def test_probability_forwarders_preserve_their_public_surface(self):
+        source = ("public import VCVio.EvalDist.PFunctorMeasure.Core\n"
+                  "public import VCVio.EvalDist.WithFailure\n"
+                  "import VCVio.EvalDist.Defs.Measure.OptionT\n"
+                  "import VCVio.EvalDist.Monad.Failure\n")
+        expected = ("public import PolyFun.PFunctor.Free.Measure.EvalDist\n"
+                    "public import Mathlib.MeasureTheory.Measure.ProbabilityMeasure\n"
+                    "public import VCVio.EvalDist.Defs.Measure.Core\n"
+                    "public import PolyFun.Control.Monad.Measure.WithFailure\n"
+                    "public import ToMathlib.MeasureTheory.Measure.GiryMonad\n"
+                    "public import VCVio.EvalDist.ProbabilityNotation\n"
+                    "import PolyFun.Control.Monad.Measure.OptionT\n"
+                    "import PolyFun.Control.Monad.Measure.Failure\n")
+        self.assertEqual(migrate(source)[0], expected)
+        self.assertEqual(migrate(expected)[0], expected)
+
+    def test_public_reexport_upgrades_existing_import_in_either_order(self):
+        old = "public import ToMathlib.Probability.UniformOn\n"
+        private = "import ToCslib.Probability.UniformOn\n"
+        for source in (private + old, old + private):
+            with self.subTest(source=source):
+                self.assertEqual(migrate(source)[0], "public " + private)
+
+    def test_shared_destination_uses_the_stronger_visibility(self):
+        source = ("import ToMathlib.MeasureTheory.Measure.Option\n"
+                  "public import ToMathlib.MeasureTheory.Measure.Except\n")
+        expected = ("import ToCslib.MeasureTheory.Measure.Option\n"
+                    "public import ToMathlib.MeasureTheory.Measure.GiryMonad\n"
+                    "public import ToCslib.MeasureTheory.Measure.Except\n")
+        self.assertEqual(migrate(source)[0], expected)
+
+    def test_normal_meta_and_all_imports_keep_their_own_visibility(self):
+        source = ("meta import ToCslib.Probability.UniformOn\n"
+                  "import all ToCslib.Probability.UniformOn\n"
+                  "public import ToMathlib.Probability.UniformOn\n")
+        self.assertEqual(migrate(source)[0], source.replace("ToMathlib.", "ToCslib."))
+
     def test_removed_namespaces_leave_open_commands(self):
         self.assertEqual(migrate("open ENNReal OracleComp.EvalDist OracleComp.ProgramLogic\n")[0],
                          "open ENNReal OracleComp.ProgramLogic\n")

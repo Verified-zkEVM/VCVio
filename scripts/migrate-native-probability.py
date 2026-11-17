@@ -405,6 +405,127 @@ MODULES: dict[str, list[str]] = {
     "VCVio.StateSeparating.MeasureDistEquiv": ["VCVio.StateSeparating.DistEquiv"],
     "VCVio.ProgramLogic.Unary.WP.Qualitative": ["VCVio.ProgramLogic.Unary.WP.Necessary"],
     "VCVio.ProgramLogic.Unary.WP.Quantitative": ["VCVio.ProgramLogic.Unary.WP.Lower"],
+    # The public imports of the former probability forwarding modules.
+    "ToMathlib.MeasureTheory.DiscreteInstances": [
+        "ToCslib.MeasureTheory.MeasurableSpace.Instances",
+    ],
+    "ToMathlib.MeasureTheory.Function.AEMeasurable": [
+        "ToCslib.MeasureTheory.Function.AEMeasurable",
+    ],
+    "ToMathlib.MeasureTheory.MeasurableSpace.Except": [
+        "ToCslib.MeasureTheory.MeasurableSpace.Except",
+    ],
+    "ToMathlib.MeasureTheory.MeasurableSpace.Option": [
+        "ToCslib.MeasureTheory.MeasurableSpace.Option",
+    ],
+    "ToMathlib.MeasureTheory.Measure.Coupling": ["ToCslib.MeasureTheory.Measure.Coupling"],
+    "ToMathlib.MeasureTheory.Measure.Coupling.Bind": [
+        "ToCslib.MeasureTheory.Measure.Coupling.Bind",
+        "ToCslib.MeasureTheory.Function.AEMeasurable",
+        "ToMathlib.MeasureTheory.Measure.GiryMonad",
+        "ToMathlib.MeasureTheory.Measure.Monotone",
+    ],
+    "ToMathlib.MeasureTheory.Measure.Except": [
+        "ToCslib.MeasureTheory.Measure.Except",
+        "ToMathlib.MeasureTheory.Measure.GiryMonad",
+    ],
+    "ToMathlib.MeasureTheory.Measure.Option": [
+        "ToCslib.MeasureTheory.Measure.Option",
+        "ToMathlib.MeasureTheory.Measure.GiryMonad",
+    ],
+    "ToMathlib.MeasureTheory.Measure.Prop": ["ToCslib.MeasureTheory.Measure.Prop"],
+    "ToMathlib.MeasureTheory.Measure.Subprobability": [
+        "ToCslib.MeasureTheory.Measure.Subprobability",
+    ],
+    "ToMathlib.Probability.Kernel.Subprobability": ["ToCslib.Probability.Kernel.Subprobability"],
+    "ToMathlib.Probability.UniformOn": ["ToCslib.Probability.UniformOn"],
+    "VCVio.EvalDist.Defs.Measure.Deterministic": [
+        "PolyFun.Control.Monad.Measure.Deterministic",
+        "ToMathlib.Control.Except",
+        "ToMathlib.Control.Option",
+        "VCVio.EvalDist.ProbabilityNotation",
+    ],
+    "VCVio.EvalDist.Defs.Measure.ExceptT": [
+        "PolyFun.Control.Monad.Measure.ExceptT",
+        "ToMathlib.MeasureTheory.Measure.GiryMonad",
+        "VCVio.EvalDist.Defs.Measure.Core",
+    ],
+    "VCVio.EvalDist.Defs.Measure.Failure": [
+        "PolyFun.Control.Monad.Measure.Failure",
+        "VCVio.EvalDist.Defs.Measure.Core",
+    ],
+    "VCVio.EvalDist.Defs.Measure.OptionT": [
+        "PolyFun.Control.Monad.Measure.OptionT",
+        "ToMathlib.MeasureTheory.Measure.GiryMonad",
+        "VCVio.EvalDist.Defs.Measure.Core",
+    ],
+    "VCVio.EvalDist.Defs.Semantics.Core": [
+        "PolyFun.Control.Monad.Measure.SemanticsVia",
+        "ToMathlib.MeasureTheory.Measure.GiryMonad",
+        "VCVio.EvalDist.Defs.Measure.Core",
+    ],
+    "VCVio.EvalDist.Lossless": [
+        "PolyFun.Control.Monad.Measure.Lossless",
+        "Mathlib.MeasureTheory.Measure.ProbabilityMeasure",
+        "VCVio.EvalDist.Defs.Measure.Core",
+    ],
+    "VCVio.EvalDist.Monad.Failure": [
+        "PolyFun.Control.Monad.Measure.Failure",
+        "VCVio.EvalDist.ProbabilityNotation",
+    ],
+    "VCVio.EvalDist.PFunctorKernel": [
+        "PolyFun.PFunctor.Free.Measure.Kernel",
+        "ToCslib.MeasureTheory.Function.AEMeasurable",
+        "ToCslib.MeasureTheory.Measure.Coupling.Bind",
+        "ToMathlib.MeasureTheory.Measure.GiryMonad",
+        "ToMathlib.MeasureTheory.Measure.Monotone",
+    ],
+    "VCVio.EvalDist.PFunctorKernelTransport": [
+        "PolyFun.PFunctor.Free.Measure.Kernel.Transport",
+        "ToCslib.MeasureTheory.Function.AEMeasurable",
+        "ToCslib.MeasureTheory.Measure.Coupling.Bind",
+        "ToMathlib.MeasureTheory.Measure.GiryMonad",
+        "ToMathlib.MeasureTheory.Measure.Monotone",
+    ],
+    "VCVio.EvalDist.PFunctorMeasure.Core": [
+        "PolyFun.PFunctor.Free.Measure.EvalDist",
+        "Mathlib.MeasureTheory.Measure.ProbabilityMeasure",
+        "VCVio.EvalDist.Defs.Measure.Core",
+    ],
+    "VCVio.EvalDist.PFunctorPath": [
+        "PolyFun.PFunctor.Free.Measure.Path",
+        "Mathlib.MeasureTheory.Measure.ProbabilityMeasure",
+        "PolyFun.PFunctor.Free.Measure.EvalDist",
+        "VCVio.EvalDist.Defs.Measure.Core",
+    ],
+    "VCVio.EvalDist.WiringKernel": [
+        "PolyFun.PFunctor.Wiring.Measure",
+        "ToCslib.MeasureTheory.Function.AEMeasurable",
+        "ToCslib.MeasureTheory.Measure.Coupling.Bind",
+        "ToMathlib.MeasureTheory.Measure.GiryMonad",
+        "ToMathlib.MeasureTheory.Measure.Monotone",
+    ],
+    "VCVio.EvalDist.WithFailure": [
+        "PolyFun.Control.Monad.Measure.WithFailure",
+        "ToMathlib.MeasureTheory.Measure.GiryMonad",
+        "VCVio.EvalDist.ProbabilityNotation",
+    ],
+    "VCVio.ProgramLogic.Relational.Measure": [
+        "PolyFun.Control.Monad.Measure.Relational",
+        "VCVio.EvalDist.Defs.Measure.Core",
+    ],
+    "VCVio.ProgramLogic.Relational.Measure.Bind": [
+        "PolyFun.Control.Monad.Measure.Relational.Bind",
+        "ToMathlib.MeasureTheory.Measure.GiryMonad",
+        "ToMathlib.MeasureTheory.Measure.Monotone",
+        "VCVio.EvalDist.Defs.Measure.Core",
+    ],
+    "VCVio.ProgramLogic.Relational.Measure.Deterministic": [
+        "PolyFun.Control.Monad.Measure.Relational.Deterministic",
+        "ToMathlib.Control.Except",
+        "ToMathlib.Control.Option",
+        "VCVio.EvalDist.ProbabilityNotation",
+    ],
     # The discrete layer itself.
     "ToMathlib.ProbabilityTheory.SPMF": [],
     "ToMathlib.Probability.ProbabilityMassFunction.Lemmas":
@@ -417,7 +538,8 @@ MODULES: dict[str, list[str]] = {
     "VCVio.EvalDist.Defs.NeverFails":
         ["VCVio.EvalDist.Defs.Support.Failure", "VCVio.EvalDist.Monad.Seq"],
     "VCVio.EvalDist.FailureMeasure":
-        ["VCVio.EvalDist.Defs.Measure", "PolyFun.Control.Monad.Measure.WithFailure"],
+        ["VCVio.EvalDist.Defs.Measure", "PolyFun.Control.Monad.Measure.WithFailure",
+         "ToMathlib.MeasureTheory.Measure.GiryMonad", "VCVio.EvalDist.ProbabilityNotation"],
     "VCVio.EvalDist.Bool": ["VCVio.EvalDist.Monad.Map"],
     "VCVio.EvalDist.BitVec": ["VCVio.EvalDist.Monad.Map"],
     "VCVio.EvalDist.Option": ["VCVio.EvalDist.Monad.Map"],
@@ -1017,24 +1139,48 @@ def text_at(m: re.Match[str], ch: str) -> bool:
     return m.string[m.end():m.end() + 1] == ch
 
 
-IMPORT_LINE = re.compile(r"(?m)^((?:public\s+)?(?:meta\s+)?import(?:\s+all)?\s+)(\S+)[ \t]*$")
+IMPORT_LINE = re.compile(
+    r"^(?P<public>public[ \t]+)?(?P<kind>(?:meta[ \t]+)?import(?:[ \t]+all)?)[ \t]+"
+    r"(?P<module>[^ \t]+)[ \t]*$"
+)
 
 
 def rewrite_imports(text: str) -> str:
-    """Replace imports of removed modules, skipping a target the file already imports."""
+    """Expand old imports in place, preserving visibility, meta imports and `import all`."""
     lines = text.split("\n")
-    imported = {m.group(2) for line in lines if (m := IMPORT_LINE.match(line))}
-    out: list[str] = []
-    for line in lines:
-        m = IMPORT_LINE.match(line)
-        if not m or m.group(2) not in MODULES:
-            out.append(line)
+    moves = []
+    # A normal import, a meta import and an `import all` grant different access.
+    # Keep an existing destination at its original position, preferring a public copy.
+    slots: dict[tuple[str, str], tuple[int, int]] = {}
+    for i, line in enumerate(lines):
+        match = IMPORT_LINE.fullmatch(line)
+        if not match:
             continue
-        for target in MODULES[m.group(2)]:
-            if target not in imported:
-                imported.add(target)
-                out.append(m.group(1) + target)
-    return "\n".join(out)
+        module = match["module"]
+        kind = " ".join(match["kind"].split())
+        public = bool(match["public"])
+        if module in MODULES:
+            moves.append((i, kind, public, MODULES[module]))
+        elif public or (module, kind) not in slots:
+            slots[module, kind] = (i, 0)
+    if not moves:
+        return text
+
+    # Each original line can expand to several imports. Remember the exact output slot so
+    # a later public reexport can upgrade an earlier private one, including a generated one.
+    output = [[line] for line in lines]
+    for i, kind, public, targets in moves:
+        output[i] = []
+        for target in targets:
+            key = (target, kind)
+            if key in slots:
+                row, col = slots[key]
+                if public and not output[row][col].startswith("public"):
+                    output[row][col] = "public " + output[row][col]
+            else:
+                slots[key] = i, len(output[i])
+                output[i].append(("public " if public else "") + kind + " " + target)
+    return "\n".join(line for group in output for line in group)
 
 
 OPEN_LINE = re.compile(r"^([ \t]*open(?:[ \t]+scoped)?)[ \t]+(.*?)([ \t]+in)?[ \t]*$")
