@@ -54,4 +54,26 @@ theorem rpow_inv_two_tsum_le_of_le_add_tsum_of_cutoff {Y : Type*}
   refine (rpow_inv_two_tsum_le_of_le_add_tsum h).trans (add_le_add le_rfl ?_)
   exact tsum_rpow_inv_two_le_of_cutoff _ n fun j hj ↦ by simp [hcut j hj]
 
+/-- The uniform average of square roots is at most the square root of the uniform
+average. Values may be infinite; the finite averaging space is nonempty. -/
+theorem average_rpow_inv_two_le {Ω : Type*} [Fintype Ω] [Nonempty Ω] (f : Ω → ℝ≥0∞) :
+    (Fintype.card Ω : ℝ≥0∞)⁻¹ * ∑ ω, f ω ^ (2⁻¹ : ℝ) ≤
+      ((Fintype.card Ω : ℝ≥0∞)⁻¹ * ∑ ω, f ω) ^ (2⁻¹ : ℝ) := by
+  have hn0 : (Fintype.card Ω : ℝ≥0∞) ≠ 0 := Nat.cast_ne_zero.mpr Fintype.card_ne_zero
+  have hnt : (Fintype.card Ω : ℝ≥0∞) ≠ ⊤ := ENNReal.natCast_ne_top _
+  have hsum : (∑ ω, f ω ^ (2⁻¹ : ℝ)) ^ (2 : ℕ) ≤
+      (Fintype.card Ω : ℝ≥0∞) * ∑ ω, f ω := by
+    have h := ENNReal.rpow_sum_le_const_mul_sum_rpow (Finset.univ : Finset Ω)
+      (fun ω ↦ f ω ^ (2⁻¹ : ℝ)) (show (1 : ℝ) ≤ 2 by norm_num)
+    simp only [rpow_inv_two_rpow_two] at h
+    simpa only [ENNReal.rpow_two, Finset.card_univ,
+      show (2 : ℝ) - 1 = 1 by norm_num, ENNReal.rpow_one] using h
+  rw [ENNReal.le_rpow_inv_iff (by norm_num : (0 : ℝ) < 2), ENNReal.rpow_two, mul_pow]
+  calc
+    _ ≤ (Fintype.card Ω : ℝ≥0∞)⁻¹ ^ (2 : ℕ) *
+        ((Fintype.card Ω : ℝ≥0∞) * ∑ ω, f ω) := mul_le_mul le_rfl hsum bot_le bot_le
+    _ = ((Fintype.card Ω : ℝ≥0∞)⁻¹ * (Fintype.card Ω : ℝ≥0∞)) *
+        ((Fintype.card Ω : ℝ≥0∞)⁻¹ * ∑ ω, f ω) := by ring
+    _ = _ := by rw [ENNReal.inv_mul_cancel hn0 hnt, one_mul]
+
 end Quantum

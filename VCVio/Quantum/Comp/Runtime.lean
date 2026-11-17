@@ -465,6 +465,17 @@ theorem evalDistMap_apply_univ {γ : Type*} [MeasurableSpace γ] (x : QuantumCom
     DSubInstrument.outcomeMeasure_apply _ _ MeasurableSet.univ]
   rfl
 
+/-- Observing a run preserves its subprobability mass. -/
+instance {γ : Type*} [MeasurableSpace γ] (x : QuantumComp L spec X A)
+    (ρ : SubState A) (f : (Σ u, X u) → γ) :
+    IsSubprobabilityMeasure (R.evalDistMap I x ρ f) where
+  measure_univ_le' := by
+    let : MeasurableSpace (Σ u, X u) := ⊤
+    have hmass : R.evalDistMap I x ρ f Set.univ = R.evalDist I x ρ Set.univ := by
+      rw [evalDistMap_apply_univ, evalDist, DSubInstrument.outcomeMeasure_apply_univ]
+    rw [hmass]
+    exact measure_univ_le (μ := R.evalDist I x ρ)
+
 /-- The weights of all leaves sum to the trace functional of the run at `ρ ⊗ init`. -/
 theorem tsum_jointPost_trace (x : QuantumComp L spec X A) (ρ : SubState A) :
     ∑' p, ENNReal.ofReal (R.jointPost I x ρ p).matrix.trace.re =

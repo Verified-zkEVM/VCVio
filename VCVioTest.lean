@@ -163,6 +163,7 @@ public import VCVioTest.Quantum.Hybrid
 public import VCVioTest.Quantum.InstabilityBound
 public import VCVioTest.Quantum.Kraus
 public import VCVioTest.Quantum.MultiExtractableModule
+public import VCVioTest.Quantum.NumberedQueries
 public import VCVioTest.Quantum.Oracle
 public import VCVioTest.Quantum.Parallel
 public import VCVioTest.Quantum.ParallelBridges

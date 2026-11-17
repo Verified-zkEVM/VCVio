@@ -574,6 +574,8 @@ public import VCVio.Quantum.Comp.HybridMeasure
 public import VCVio.Quantum.Comp.HybridProjected
 public import VCVio.Quantum.Comp.Lift
 public import VCVio.Quantum.Comp.LocalSig
+public import VCVio.Quantum.Comp.NumberedHybrid
+public import VCVio.Quantum.Comp.NumberedQueries
 public import VCVio.Quantum.Comp.Parallel
 public import VCVio.Quantum.Comp.Potential
 public import VCVio.Quantum.Comp.QueryBound
