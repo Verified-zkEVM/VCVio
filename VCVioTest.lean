@@ -31,6 +31,7 @@ public import VCVioTest.CryptoFoundations.SignatureAlgRouted
 public import VCVioTest.CryptoFoundations.SymmEncAlgMeasure
 public import VCVioTest.CryptoFoundations.UniversalHash
 public import VCVioTest.CryptoFoundations.VectorCommitment
+public import VCVioTest.ElGamal.Generic
 public import VCVioTest.EncodedStateInv
 public import VCVioTest.EvalDist.BundledSemantics
 public import VCVioTest.EvalDist.Deterministic
