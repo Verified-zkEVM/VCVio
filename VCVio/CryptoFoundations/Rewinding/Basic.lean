@@ -116,7 +116,9 @@ complete runs. Each attempt starts with an empty world and a zero run count. -/
   (fun z => (z.1, z.2.2)) <$>
     (simulateQ (coins (S := P.World × ℕ) + P.rerun run) alg).run (P.empty, 0)
 
-/-- Expected complete-run count, using the additive writer's natural-valued expectation. -/
+/-- Expected value of the natural-valued counter of an output-and-counter law, using the additive
+writer's natural-valued expectation. For `Rewinding.ResetPolicy.attempt` and for a run answered
+by `Rewinding.counted`, the counter is the number of complete runs. -/
 @[expose] noncomputable def expectedCalls {β : Type} (mx : ProbComp (β × ℕ)) : ℝ≥0∞ :=
   AddWriterT.expectedCostNat (WriterT.mk ((fun z => (z.1, Multiplicative.ofAdd z.2)) <$> mx))
 
