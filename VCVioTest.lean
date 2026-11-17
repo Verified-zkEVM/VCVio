@@ -76,6 +76,9 @@ public import VCVioTest.GroupModel.SortedMasterBound
 public import VCVioTest.GroupModel.ToExplained
 public import VCVioTest.GroupModel.Typed
 public import VCVioTest.GroupModel.Virtualize
+public import VCVioTest.HashChainAntichain
+public import VCVioTest.HashChainExtraction
+public import VCVioTest.HashChainStrongPayload
 public import VCVioTest.ITSR
 public import VCVioTest.IndexedChain
 public import VCVioTest.KernelSemantics
