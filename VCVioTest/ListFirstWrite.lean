@@ -56,4 +56,17 @@ private theorem recorded_none_survives
     lookup (events.foldl step initial) = some none :=
   List.lookup_foldl_eq_some_of_preserves_some lookup step preserves_some events initial none stored
 
+/-- A concrete first-write recorder over natural-number events: the state is the payload stored
+so far, and an empty state records the first even event. -/
+def recordFirstEven (state : Option ℕ) (event : ℕ) : Option ℕ :=
+  state <|> if event % 2 = 0 then some event else none
+
+/-- The recorder satisfies both laws, and the first even event of `[1, 4, 6]` is `4`. -/
+example : ∃ before event after, [1, 4, 6] = before ++ event :: after ∧
+    (∀ earlier ∈ before, ¬ earlier % 2 = 0) ∧ event % 2 = 0 ∧ event = 4 :=
+  List.exists_first_match_of_lookup_foldl_eq_some id recordFirstEven (· % 2 = 0) id
+    (fun state event payload (stored : state = some payload) => by subst stored; rfl)
+    (fun state event (empty : state = none) => by subst empty; rfl)
+    [1, 4, 6] none 4 rfl (by decide)
+
 end VCVioTest.ListFirstWrite
