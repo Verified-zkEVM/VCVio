@@ -322,7 +322,7 @@ theorem LoggedHistory.checkpoints_log
 
 This is a statement about possible paths, not a distribution on histories.
 -/
-theorem exists_indexed_history_of_mem_support
+theorem exists_loggedHistory_of_mem_support
     (ambient : QueryImpl spec (StateT σ (OracleComp targetSpec)))
     (service : QueryImpl sig (StateT σ (OracleComp targetSpec)))
     (body : OracleComp (spec + sig) α) (s : σ)
