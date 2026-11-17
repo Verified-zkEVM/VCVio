@@ -70,7 +70,7 @@ type is equivalent to some `Fin n`, so nothing is lost, and register-indexed fam
 the runtime's private register, through basis equivalences supplied by the program. The program
 cannot read the private register except through calls.
 
-## Open obligations
+## Coverage and remaining obligations
 
 ### 1. Putting programs in comb form
 
@@ -138,8 +138,12 @@ probability times that trace.
 samples become local coins, and each list round becomes one parallel basis call. Its fixed-function
 run and its law averaged over one random function agree with the corresponding classical
 execution, including the lazy cached random oracle. The source and result types lie in `Type`.
-The separate single-port API `OracleComp.toQuantum` still handles only function queries;
-distributional agreement for `OracleComp (unifSpec + (X →ₒ Y)) α` through that API remains open.
+`OracleComp.toQuantumRandomized` embeds the single-port source
+`OracleComp (unifSpec + (X →ₒ Y)) α` with ordinary basis calls and local coins.
+`qromEvalDist₂_toQuantumRandomized_eq_randomOracle` proves agreement with the lazy random oracle.
+Its query-bound transfer counts only function queries, leaving private samples uncharged.
+Both the single-port and batch APIs therefore cover classical algorithms with private uniform
+randomness. Their result-universe restriction is the separate obligation below.
 
 ### 5. Result universes of the classical embedding
 

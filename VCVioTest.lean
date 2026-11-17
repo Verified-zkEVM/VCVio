@@ -155,6 +155,7 @@ public import VCVioTest.ProgramLogic.VCGenCoreDelegation
 public import VCVioTest.Quantum.Basic
 public import VCVioTest.Quantum.CheckedRead
 public import VCVioTest.Quantum.CheckedReadAlgebra
+public import VCVioTest.Quantum.ClassicalRandomized
 public import VCVioTest.Quantum.Compressed
 public import VCVioTest.Quantum.Emulated
 public import VCVioTest.Quantum.Hybrid

@@ -22,6 +22,15 @@ VCVio's lazily sampled random oracle (`qromEvalDist₂_toQuantum_eq_randomOracle
 bound. So the QROM restricted to classical algorithms is the classical random-oracle model. Tests:
 `queryZero` returns $H(0)$; the adaptive `queryTwice` returns $H(H(0))$.
 
+For a classical algorithm that also samples private coins,
+`oa : OracleComp (unifSpec + (X →ₒ Y)) α`, use `oa.toQuantumRandomized` from
+`Oracle/ClassicalRandomized.lean`. Uniform samples become local operations via `QComp.coinImpl`;
+function queries become ordinary `classicalQuery` calls. `run_toQuantumRandomized` preserves the
+complete fixed-function run, and `qromEvalDist₂_toQuantumRandomized_eq_randomOracle` identifies
+its law with execution under one lazy random-oracle cache. The budget theorem
+`IsQueryBoundP.isQueryBound_toQuantumRandomized` counts the right-hand function queries and leaves
+all private samples uncharged. The source and result types lie in `Type`.
+
 ## Deutsch's algorithm
 
 One quantum query can do what needs two classical ones. Take $X = Y = $ `Fin 2` and start in
@@ -159,6 +168,7 @@ theorem says they agree:
 | Two descriptions | Agreement |
 |---|---|
 | the QROM on classical algorithms and the classical random oracle | `qromEvalDist₂_toQuantum_eq_randomOracle` |
+| classical private coins and ordinary queries under one lazy random oracle | `qromEvalDist₂_toQuantumRandomized_eq_randomOracle` |
 | ordered calls on disjoint slots and the simultaneous additive oracle | `batch_oracleQuery` |
 | the parallel oracle matrix and an ordinary oracle on product registers | `parallelOracleUnitary_eq_oracleUnitary_submatrix` |
 | parallel and sequential QROM programs, including observations of the sampled function | `qromEvalDistMap_sequentialize` |

@@ -585,6 +585,7 @@ public import VCVio.Quantum.Foundations.Parallel
 public import VCVio.Quantum.Oracle.Classical
 public import VCVio.Quantum.Oracle.ClassicalCalls
 public import VCVio.Quantum.Oracle.ClassicalParallel
+public import VCVio.Quantum.Oracle.ClassicalRandomized
 public import VCVio.Quantum.Oracle.ClassicalRead
 public import VCVio.Quantum.Oracle.ClassicalRepeatability
 public import VCVio.Quantum.Oracle.Comb

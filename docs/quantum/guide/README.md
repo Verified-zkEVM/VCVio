@@ -67,12 +67,12 @@ Covered: finite-dimensional systems; quantum operations that may fail; measureme
 of outcomes, countably many of nonzero weight; outputs that depend on the outcome; adaptive programs
 with several oracles and stateful oracle implementations; the QROM; classical algorithms in the
 QROM; variable-width parallel oracle rounds and their sequentialization with point-budget
-transfer; classical batch algorithms with private uniform coins, preserving round and point
-budgets; the compressed-oracle runtime and its parallel QROM equivalence; the representation
-theorems for CP maps; the classical instability calculus.
+transfer; classical algorithms with private uniform coins through `OracleComp.toQuantumRandomized`
+and `OracleComp.toQuantumBatch`, preserving function-query or round and point budgets;
+the compressed-oracle runtime and its parallel QROM equivalence; the representation theorems for
+CP maps; the classical instability calculus.
 
 Not covered: infinite-dimensional systems; measurements with continuous outcomes; loops that may not
-terminate; coherent choice of oracle port; a single-port classical embedding combining private
-coins with function queries; putting general programs in comb form; depth-sensitive parallel
-security bounds. The plans for these are in
+terminate; coherent choice of oracle port; putting general programs in comb form; depth-sensitive
+parallel security bounds. The plans for these are in
 [`docs/design/quantum-layer.md`](../../design/quantum-layer.md).
