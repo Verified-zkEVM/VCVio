@@ -584,6 +584,7 @@ public import VCVio.Quantum.Comp.TotalQueryBound
 public import VCVio.Quantum.Foundations.Parallel
 public import VCVio.Quantum.Oracle.Classical
 public import VCVio.Quantum.Oracle.ClassicalCalls
+public import VCVio.Quantum.Oracle.ClassicalParallel
 public import VCVio.Quantum.Oracle.ClassicalRead
 public import VCVio.Quantum.Oracle.ClassicalRepeatability
 public import VCVio.Quantum.Oracle.Comb
@@ -604,6 +605,7 @@ public import VCVio.Quantum.Oracle.Compressed.Instability
 public import VCVio.Quantum.Oracle.Compressed.LocalPotential
 public import VCVio.Quantum.Oracle.Compressed.Measurement
 public import VCVio.Quantum.Oracle.Compressed.Oracle
+public import VCVio.Quantum.Oracle.Compressed.Parallel
 public import VCVio.Quantum.Oracle.Compressed.Phase
 public import VCVio.Quantum.Oracle.Compressed.ProjectorEvent
 public import VCVio.Quantum.Oracle.Compressed.QueryCache

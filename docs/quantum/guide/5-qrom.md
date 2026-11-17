@@ -99,8 +99,57 @@ the output and the same hidden function that answered every slot and round.
 parallel program's point bound. The adapter is a separate module; `Oracle/Parallel.lean` does
 not depend on sequentialization.
 
-The classical batch bridge, concrete parallel compressed-runtime equivalence, and depth-sensitive
-security bounds remain open.
+## Classical rounds with private coins
+
+`OracleComp.toQuantumBatch` embeds
+`oa : OracleComp (unifSpec + (X →ₒ Y).batch) α`. Each list `ts` prepares the register
+`Fin ts.length → X × Y` with slot `j` in `|ts[j], 0⟩`, makes one batch call of width `ts.length`,
+and measures every response slot. Uniform samples use `QComp.coinImpl` as local operations, so
+they spend no oracle budget. Lists preserve order and duplicate positions. An empty list still
+makes one width-zero call: one round and zero points.
+
+`run_toQuantumBatch` identifies the full fixed-function run with classical execution against
+that table, followed by the coin-only quantum embedding. Adaptive continuations and private
+randomness are retained. `sampledEvalDist₂_toQuantumBatch` averages over one function;
+`sampledEvalDist₂_toQuantumBatch_eq_randomOracle` gives the same law using the classical lazy
+random oracle, with one cache shared across every slot and round. These APIs take `X`, `Y` and
+`α` in `Type`, finite `X` and `Y`, and an additive commutative group on `Y`; the sampling laws
+also require the corresponding `SampleableType` instances.
+
+The classical budget `IsOnlineQueryBound oa (r, q)` yields the quantum round bound `r` and point
+bound `q` by `IsOnlineQueryBound.isTotalQueryBound_toQuantumBatch` and
+`IsOnlineQueryBound.isPointBound_toQuantumBatch`. A point-only classical bound transfers by
+`IsPointQueryBound.isPointBound_toQuantumBatch`.
+`qromEvalDistMap_sequentialize_toQuantumBatch_eq_unbatch` closes the semantic square: embed then
+sequentialize, or classically unbatch in list order and run the lazy oracle, and the observed
+output laws agree. This is a law equality; the placements of measurements in the two quantum
+descriptions differ.
+
+## Parallel compressed execution
+
+`Oracle/Compressed/Parallel.lean` relates `(compressedRuntime X Y).batch` to the parallel QROM.
+One private database persists throughout all slots and adaptive rounds. Compression is an isometry
+from the purified function register into the compressed database register.
+`intertwines_purifiedRuntime_compressedRuntime_batch_step` lifts its intertwining law to each batch;
+`matrix_jointPost_compressedRuntime_batch` maps the complete purified joint post-state to the
+compressed joint post-state at every leaf, including private memory. The isometry preserves trace,
+and `reducedPost_compressedRuntime_batch` identifies the states after discarding private memory.
+
+The purified-to-sampled-function leg uses `trace_jointPost_purifiedRuntime_batch`, a uniform sum
+over the fixed functions. It follows the sequential purified row decomposition through exact
+stateful sequentialization. Individual `evalRow H` maps need not preserve trace, so this leg
+requires the row sum rather than the trace-preserving simulation theorem.
+
+`outcomeLaw_compressedRuntime_batch` identifies the output law with `qromBatchEvalDist`, and
+`outcomeLawWith_compressedRuntime_batch` identifies every classical observation `f leaf` with
+its parallel QROM law. The results cover arbitrary adaptive local signatures and interpretations,
+outcome-dependent final registers, and mixed or subnormalized input states, for finite `X` and
+finite abelian `Y`. The compressed observation reads the leaf only. A function-dependent
+observation `f H leaf` needs an explicit joint-oracle read, beyond this theorem.
+
+Depth-sensitive security bounds remain open. Exact sequentialization and runtime equivalence
+provide the model and transports; direct parallel hybrid/search and changing-property bounds
+require separate proofs.
 
 ## Checks
 
@@ -113,7 +162,13 @@ theorem says they agree:
 | ordered calls on disjoint slots and the simultaneous additive oracle | `batch_oracleQuery` |
 | the parallel oracle matrix and an ordinary oracle on product registers | `parallelOracleUnitary_eq_oracleUnitary_submatrix` |
 | parallel and sequential QROM programs, including observations of the sampled function | `qromEvalDistMap_sequentialize` |
+| randomized classical rounds and the lazy cached random oracle | `sampledEvalDist₂_toQuantumBatch_eq_randomOracle` |
+| quantum sequentialization of the classical embedding and classical unbatching | `qromEvalDistMap_sequentialize_toQuantumBatch_eq_unbatch` |
+| compressed parallel execution and the parallel QROM output law | `outcomeLaw_compressedRuntime_batch` |
 
 **They compute the right numbers.** The tests work small examples to exact values: Deutsch's
 algorithm. `VCVioTest/Quantum/Parallel.lean` checks cyclic ranges of orders three and five,
 repeated inputs, zero-width calls, coherent two-slot inputs, and noncommuting shared-memory steps.
+`VCVioTest/Quantum/ParallelBridges.lean` checks joint compression and leaf observations on
+subnormalized mixed inputs, adaptive widths and private coins, ordered repeated inputs, cross-round
+cache correlation, empty-round accounting and the semantic classical-unbatch endpoint.
