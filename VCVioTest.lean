@@ -75,6 +75,7 @@ public import VCVioTest.GroupModel.GenericHardness
 public import VCVioTest.GroupModel.GenericPairing
 public import VCVioTest.GroupModel.GenericRelation
 public import VCVioTest.GroupModel.GenericSDH
+public import VCVioTest.GroupModel.GenericSXDH
 public import VCVioTest.GroupModel.GenericXDH
 public import VCVioTest.GroupModel.Instances
 public import VCVioTest.GroupModel.Interaction.Axioms
