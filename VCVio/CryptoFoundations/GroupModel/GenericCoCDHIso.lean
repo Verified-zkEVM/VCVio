@@ -7,7 +7,6 @@ Authors: Quang Dao
 module
 public import VCVio.CryptoFoundations.GroupModel.PairingVariants
 public import VCVio.CryptoFoundations.HardnessAssumptions.CoCDH
-import all VCVio.CryptoFoundations.GroupModel.Instances
 import Mathlib.Algebra.MvPolynomial.NoZeroDivisors
 
 /-! # Generic hardness of Type 2 co-CDH
@@ -28,7 +27,7 @@ namespace GroupModel.CoCDH
 empty target table, and read its first-source output handle, with zero out of range. -/
 @[expose] def IsoAdversary.ofGeneric {F G₁ G₂ Gₜ : Type} [Field F]
     [AddCommGroup G₁] [Module F G₁] [AddCommGroup G₂] [Module F G₂]
-    [AddCommGroup Gₜ] [Module F Gₜ] [∀ s, DecidableEq (PFam G₁ G₂ Gₜ s)]
+    [AddCommGroup Gₜ] [Module F Gₜ] [DecidableEq G₁] [DecidableEq G₂] [DecidableEq Gₜ]
     (ψ : G₂ →ₗ[F] G₁) (e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ)
     (A : OracleComp (genSpec F pairingIsoSig) Handle) :
     _root_.CoCDH.IsoAdversary F G₁ G₂ :=
@@ -40,15 +39,15 @@ empty target table, and read its first-source output handle, with zero out of ra
 
 /-- A Type 2 generic co-CDH adversary with append budgets `n₁`, `n₂`, `nₜ` succeeds with
 probability at most `((n₁ + 2).choose 2 + (n₂ + 3).choose 2 +
-2 * (nₜ + 1).choose 2 + 2) / |F|`. The image `ψ g₂` parametrizes the first source bijectively;
-the second generator and their pairing are nonzero. Equality queries are free. -/
+2 * (nₜ + 1).choose 2 + 2) / |F|`. The image `ψ g₂` parametrizes the first source bijectively,
+and `ψ g₂` pairs with `g₂` to a nonzero element. Equality queries are free. -/
 theorem isoExperiment_ofGeneric_le {F G₁ G₂ Gₜ : Type}
     [Field F] [Fintype F] [SampleableType F]
     [AddCommGroup G₁] [Module F G₁] [SampleableType G₁] [DecidableEq G₁]
     [AddCommGroup G₂] [Module F G₂] [AddCommGroup Gₜ] [Module F Gₜ]
-    [∀ s, DecidableEq (PFam G₁ G₂ Gₜ s)]
+    [DecidableEq G₂] [DecidableEq Gₜ]
     (ψ : G₂ →ₗ[F] G₁) (e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ) (g₂ : G₂)
-    (hg : Function.Bijective (· • ψ g₂ : F → G₁)) (hg₂ : g₂ ≠ 0) (he : e (ψ g₂) g₂ ≠ 0)
+    (hg : Function.Bijective (· • ψ g₂ : F → G₁)) (he : e (ψ g₂) g₂ ≠ 0)
     (A : OracleComp (genSpec F pairingIsoSig) Handle) (n₁ n₂ nₜ : ℕ)
     (hn₁ : IsQueryBoundP A (appendsTo .g₁) n₁)
     (hn₂ : IsQueryBoundP A (appendsTo .g₂) n₂)
@@ -61,7 +60,6 @@ theorem isoExperiment_ofGeneric_le {F G₁ G₂ Gₜ : Type}
     intro h
     have hc : (0 : F) = 1 := hg.injective (by simp [h])
     exact zero_ne_one hc
-  let : Fintype PSort := ⟨{.g₁, .g₂, .gₜ}, by intro s; cases s <;> simp⟩
   let tbl : Tbl (fun _ : PSort => MvPolynomial (Fin 2) F) := fun
     | .g₁ => [MvPolynomial.X 1]
     | .g₂ => [1, MvPolynomial.X 0]
@@ -97,7 +95,7 @@ theorem isoExperiment_ofGeneric_le {F G₁ G₂ Gₜ : Type}
       cases s <;> simp [mapTbl, tbl, evalHom.pairingIso_apply_g₁,
         evalHom.pairingIso_apply_g₂, evalAt_apply]
     rw [← ht]
-    exact runGen_pairingIso_mapTbl_evalHom ψ e (ψ g₂) g₂ rfl hg₁ hg₂ he _ A tbl
+    exact runGen_pairingIso_mapTbl_evalHom ψ e (ψ g₂) g₂ rfl he _ A tbl
   have ha (a b : F) :
       IsoAdversary.ofGeneric ψ e A g₂ (a • g₂) (b • ψ g₂) =
         (fun z => MvPolynomial.eval ![a, b] (lookup z.2 .g₁ z.1) • ψ g₂) <$>
@@ -166,8 +164,8 @@ theorem isoExperiment_ofGeneric_le {F G₁ G₂ Gₜ : Type}
   have hb := prEvent_runGen_symbolic_le_add_of_polynomial ($ᵗ (Fin 2 → F)) hD
     (ε := fun s => (D s : ℝ≥0∞) / Fintype.card F)
     (ε' := (2 : ℝ≥0∞) / Fintype.card F)
-    (fun _ f hf hd => prob_eval_zero_univ_le_div f hf hd) A hn tbl hd W 2 hW E hE
-    (fun f hf hd => prob_eval_zero_univ_le_div f hf hd)
+    (fun _ f hf hd => prEvent_eval_eq_zero_univ_le_div f hf hd) A hn tbl hd W 2 hW E hE
+    (fun f hf hd => prEvent_eval_eq_zero_univ_le_div f hf hd)
   refine hb.trans_eq ?_
   change (∑ s ∈ ({.g₁, .g₂, .gₜ} : Finset PSort),
     (((tbl s).length + n s + 1).choose 2 : ℝ≥0∞) *
@@ -185,15 +183,15 @@ theorem isoExperiment_ofGeneric_le_of_total {F G₁ G₂ Gₜ : Type}
     [Field F] [Fintype F] [SampleableType F]
     [AddCommGroup G₁] [Module F G₁] [SampleableType G₁] [DecidableEq G₁]
     [AddCommGroup G₂] [Module F G₂] [AddCommGroup Gₜ] [Module F Gₜ]
-    [∀ s, DecidableEq (PFam G₁ G₂ Gₜ s)]
+    [DecidableEq G₂] [DecidableEq Gₜ]
     (ψ : G₂ →ₗ[F] G₁) (e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ) (g₂ : G₂)
-    (hg : Function.Bijective (· • ψ g₂ : F → G₁)) (hg₂ : g₂ ≠ 0) (he : e (ψ g₂) g₂ ≠ 0)
+    (hg : Function.Bijective (· • ψ g₂ : F → G₁)) (he : e (ψ g₂) g₂ ≠ 0)
     (A : OracleComp (genSpec F pairingIsoSig) Handle) (q : ℕ)
     (hq : IsQueryBoundP A (fun i => isGroupOp i = true) q) :
     Pr{let b ← _root_.CoCDH.isoExperiment g₂ (IsoAdversary.ofGeneric ψ e A)}[b = true] ≤
       (((q + 2).choose 2 + (q + 3).choose 2 + 2 * (q + 1).choose 2 + 2 : ℕ) :
         ℝ≥0∞) / Fintype.card F := by
-  exact isoExperiment_ofGeneric_le ψ e g₂ hg hg₂ he A q q q
+  exact isoExperiment_ofGeneric_le ψ e g₂ hg he A q q q
     (hq.appendsTo .g₁) (hq.appendsTo .g₂) (hq.appendsTo .gₜ)
 
 end GroupModel.CoCDH

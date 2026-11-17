@@ -26,8 +26,6 @@ namespace GroupModel
 at most `10/101`, including an out-of-range first-source output on one equality branch. -/
 theorem cocdh_iso_zmod_101 :
     letI : Fact (Nat.Prime 101) := ⟨by decide⟩
-    letI : ∀ s, DecidableEq (PFam (ZMod 101) (ZMod 101) (ZMod 101) s) :=
-      fun s => by cases s <;> exact inferInstanceAs (DecidableEq (ZMod 101))
     let A : OracleComp (genSpec (ZMod 101) pairingIsoSig) Handle := do
       let u : Handle ← (genSpec (ZMod 101) pairingIsoSig).query (.inl (.lin () 1))
       let t : Handle ← (genSpec (ZMod 101) pairingIsoSig).query (.inl (.bil () u 1))
@@ -38,8 +36,6 @@ theorem cocdh_iso_zmod_101 :
         (LinearMap.mul (ZMod 101) (ZMod 101)) A))}[b = true] ≤
         (10 / 101 : ℝ≥0∞) := by
   let : Fact (Nat.Prime 101) := ⟨by decide⟩
-  let : ∀ s, DecidableEq (PFam (ZMod 101) (ZMod 101) (ZMod 101) s) :=
-    fun s => by cases s <;> exact inferInstanceAs (DecidableEq (ZMod 101))
   dsimp only
   apply (CoCDH.isoExperiment_ofGeneric_le
     (LinearMap.id) (LinearMap.mul (ZMod 101) (ZMod 101)) 1
@@ -49,7 +45,6 @@ theorem cocdh_iso_zmod_101 :
         simpa only [LinearMap.id_apply, smul_eq_mul, mul_one] using h
       · intro a
         exact ⟨a, by simp⟩)
-    one_ne_zero
     (by simpa only [LinearMap.mul_apply', LinearMap.id_apply, one_mul] using
       (one_ne_zero : (1 : ZMod 101) ≠ 0))
     _ 1 0 1 ?_ ?_ ?_).trans

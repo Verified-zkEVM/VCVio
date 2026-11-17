@@ -167,19 +167,21 @@ theorem degreeClosed_symmPairingSig (d dₜ : ℕ) :
 
 open OracleComp
 
-/-- Evaluating symbolic tables commutes with a Type 2 run when the source map preserves
-the chosen generators and both generators and their pairing are nonzero. -/
+/-- Evaluating symbolic tables commutes with a Type 2 run when the source map carries the
+second chosen generator to the first and the two generators pair to a nonzero element. -/
 theorem runGen_pairingIso_mapTbl_evalHom {α : Type} [Field F] [DecidableEq F]
     [AddCommGroup G₁] [Module F G₁] [AddCommGroup G₂] [Module F G₂]
-    [AddCommGroup Gₜ] [Module F Gₜ] [∀ s, DecidableEq (PFam G₁ G₂ Gₜ s)]
+    [AddCommGroup Gₜ] [Module F Gₜ] [DecidableEq G₁] [DecidableEq G₂] [DecidableEq Gₜ]
     (ψ : G₂ →ₗ[F] G₁) (e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ) (g₁ : G₁) (g₂ : G₂)
-    (hψ : ψ g₂ = g₁) (hg₁ : g₁ ≠ 0) (hg₂ : g₂ ≠ 0) (he : e g₁ g₂ ≠ 0) (x : ι → F)
+    (hψ : ψ g₂ = g₁) (he : e g₁ g₂ ≠ 0) (x : ι → F)
     (A : OracleComp (genSpec F pairingIsoSig) α)
     (tbl : Tbl (fun _ : PSort => MvPolynomial ι F)) :
     runGen (pairingIsoReal ψ e) (fun _ => id) A
         (mapTbl (fun s => (evalHom.pairingIso ψ e g₁ g₂ x hψ).toFun s) tbl) =
       Prod.map id (mapTbl (fun s => (evalHom.pairingIso ψ e g₁ g₂ x hψ).toFun s)) <$>
         runGen (symbolic F pairingIsoSig ι) (fun _ p => MvPolynomial.eval x p) A tbl := by
+  have hg₁ : g₁ ≠ 0 := by rintro rfl; simp at he
+  have hg₂ : g₂ ≠ 0 := by rintro rfl; simp at he
   have h := runGen_map (evalHom.pairingIso ψ e g₁ g₂ x hψ) (fun _ => id) A tbl
   simp only [Function.comp_def, id_eq] at h
   rw [← h]
