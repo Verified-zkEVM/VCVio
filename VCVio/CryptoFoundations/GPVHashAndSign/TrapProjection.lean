@@ -181,7 +181,7 @@ lemma freshSig_winnerSlot_deferred_le_embed [DecidableEq Domain] [Inhabited Rang
   -- the win mass as a `tsum` over the run output `r`.
   rw [tsum_prEvent_embedTrapFreshIdxSig_mul_eq_frontDraw psf M Salt pk sk j (adv.main pk)
     ((((∅, 0), fun _ => none), ∅))]
-  refine ENNReal.tsum_le_tsum fun y => ?_
+  refine tsum_le_tsum fun y => ?_
   refine mul_le_mul' le_rfl ?_
   -- Lift the un-augmented embed run on the RHS to the signed-set-augmented run.
   rw [show (simulateQ (embedTrapIdxImpl psf M Salt pk sk j y) (adv.main pk)).run
@@ -196,7 +196,7 @@ lemma freshSig_winnerSlot_deferred_le_embed [DecidableEq Domain] [Inhabited Rang
   rw [bind_map_left]
   -- Express the win mass as a `tsum` over the Sig run output and compare termwise.
   rw [OracleComp.prEvent_bind_eq_tsum]
-  refine ENNReal.tsum_le_tsum fun w => ?_
+  refine tsum_le_tsum fun w => ?_
   simp only [Prod.map, id_eq]
   -- Compare `Pr{let x ← run}[x = w] · Wf w ≤ Pr{let x ← run}[x = w] · winContinuation w`;
   -- off-support both vanish, on-support the freshness recovery aligns the literals.
@@ -866,7 +866,7 @@ lemma trap_freshSig_le_winnerSlot_deferred [Inhabited Range]
       = ∑' p : (Salt × M) × Domain, ∑' z,
           Pr{let x ← run}[
               x = z] * (Gp p z.1 (proj2 z.2) * (if z.2.1.2 p.1 = some p.2 then 1 else 0)) := by
-    rw [ENNReal.tsum_comm]
+    rw [tsum_comm]
     refine tsum_congr fun z => ?_
     simp only [hGp, hproj2]
     rw [tsum_eq_single ((z.1.2.1, z.1.1), z.1.2.2) (fun p hp => by
@@ -921,7 +921,7 @@ lemma trap_freshSig_le_winnerSlot_deferred [Inhabited Range]
             (match (proj2 z.2).1.1.1 p.1 with
               | some w => Pr{let x ← psf.trapdoorSample pk sk w}[x = p.2]
               | none => 0)) := by
-    rw [ENNReal.tsum_comm]
+    rw [tsum_comm]
     refine tsum_congr fun z => ?_
     simp only [hGp, hproj2]
     rw [tsum_eq_single ((z.1.2.1, z.1.1), z.1.2.2) (fun p hp => by

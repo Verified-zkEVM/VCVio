@@ -408,11 +408,11 @@ theorem outcomeLawWith_purifiedRuntime {γ : Type*} [MeasurableSpace γ] (I : L.
     (x : QuantumComp L (qromSpec X Y) W A) (ρ : SubState A) (f : (Σ u, W u) → γ) :
     (purifiedRuntime X Y).evalDistMap I x ρ f = qromEvalDistMap I x ρ fun _ ↦ f := by
   refine Measure.ext fun s hs ↦ ?_
-  rw [qromEvalDistMap_eq_sum, Measure.smul_apply, Measure.coe_finsetSum, Finset.sum_apply,
+  rw [qromEvalDistMap_eq_sum, smul_apply, FunLike.coe_sum, Finset.sum_apply,
     smul_eq_mul, QuantumRuntime.evalDistMap_apply _ _ _ _ _ hs]
   simp only [QuantumRuntime.evalDistMap_apply _ _ _ _ _ hs,
     ofReal_trace_jointPost_purifiedRuntime, Finset.sum_mul, mul_assoc]
-  rw [Summable.tsum_finsetSum fun _ _ ↦ ENNReal.summable, Finset.mul_sum]
+  rw [Summable.tsum_finsetSum fun _ _ ↦ CompleteLattice.summable, Finset.mul_sum]
   simp only [ENNReal.tsum_mul_left]
 
 end purifiedQromRuntime

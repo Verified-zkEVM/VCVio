@@ -258,7 +258,7 @@ theorem prEvent_eq_tsum_prEvent_index_aux {ι : Type} (mx : ProbComp ι) (P : ι
       = ∑' x : ι, if P x ∧ idx x = some j then Pr{let y ← mx}[y = x] else 0 := fun j =>
     OracleComp.prEvent_eq_tsum_ite mx _
   simp_rw [hcongr]
-  rw [ENNReal.tsum_comm]
+  rw [tsum_comm]
   refine tsum_congr fun x => ?_
   by_cases hPx : P x
   · rcases eq_or_ne (Pr{let y ← mx}[y = x]) 0 with hp0 | hp0
@@ -272,7 +272,7 @@ theorem prEvent_eq_tsum_prEvent_index_aux {ι : Type} (mx : ProbComp ι) (P : ι
         exact hj (by rw [hj₀] at hjeq; exact (Option.some.inj hjeq).symm)
   · rw [ite_eq_right hPx]
     symm
-    exact ENNReal.tsum_eq_zero.mpr fun j => ite_eq_right (fun h => hPx h.1)
+    exact tsum_eq_zero_iff.mpr fun j => ite_eq_right (fun h => hPx h.1)
 
 omit [DecidableEq Range] [Fintype Salt] in
 /-- **Counter-augmented trap run: counter bound.** From any start state, every final state of the
@@ -1241,7 +1241,7 @@ lemma reservoir_embed_winnerIdx_le [DecidableEq Domain] (pk : PK) (sk : SK)
         pure (decide (r.1.2.2 = x) &&
           decide (r.2.1 (r.1.2.1, r.1.1) = some y)) : ProbComp Bool)}[z = true] := by
   rw [OracleComp.prEvent_bind_eq_tsum]
-  refine ENNReal.tsum_le_tsum fun y => ?_
+  refine tsum_le_tsum fun y => ?_
   refine mul_le_mul' le_rfl ?_
   -- Rewrite the un-augmented embed run as the projection of the index-augmented run.
   rw [show (simulateQ (embedTrapImpl psf M Salt pk sk j y) (adv.main pk)).run

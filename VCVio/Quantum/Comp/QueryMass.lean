@@ -228,7 +228,7 @@ theorem queryWeight_tsum_state {ι : Type*}
   | pure _ _ => simp
   | primBind _ o k ih =>
     simp only [queryWeight_primBind]
-    rw [ENNReal.tsum_comm]
+    rw [tsum_comm]
     refine tsum_congr fun c ↦ ?_
     rw [MatrixMap.map_tsum _ hf]
     exact ih c (MatrixMap.summable_comp _ hf)
@@ -241,7 +241,7 @@ theorem queryWeight_tsum_state {ι : Type*}
       exact hw i _ (MatrixMap.summable_comp _ hf) fun b ↦ posSemidef_callInput ℓ (hpos b)
     | succ j =>
       simp only [queryWeight_queryBind_succ]
-      rw [ENNReal.tsum_comm]
+      rw [tsum_comm]
       refine tsum_congr fun r ↦ ?_
       rw [MatrixMap.map_tsum _ hf]
       exact ih r (MatrixMap.summable_comp _ hf)
@@ -256,14 +256,14 @@ theorem queryWeight_mono {w' : ∀ i, Matrix (spec.In i × R.D) (spec.In i × R.
   | pure _ _ => simp
   | primBind _ o k ih =>
     simp only [queryWeight_primBind]
-    exact ENNReal.tsum_le_tsum fun b ↦
+    exact tsum_le_tsum fun b ↦
       ih b (((I o).frame R.D).posSemidef_branch_apply b hρ) j
   | queryBind _ i E ℓ k ih =>
     cases j with
     | zero => exact h i _ (posSemidef_callInput ℓ hρ)
     | succ j =>
       simp only [queryWeight_queryBind_succ]
-      exact ENNReal.tsum_le_tsum fun r ↦
+      exact tsum_le_tsum fun r ↦
         ih r ((R.queryStep i E ℓ).posSemidef_branch_apply r hρ) j
 
 /-- On positive semidefinite inputs, weights depend only on the values of `w` on positive
@@ -284,14 +284,14 @@ theorem tsum_queryWeight {κ : Type*}
   | pure _ _ => simp
   | primBind _ o k ih =>
     simp only [queryWeight_primBind]
-    rw [ENNReal.tsum_comm]
+    rw [tsum_comm]
     exact tsum_congr fun b ↦ ih b _ j
   | queryBind _ i E ℓ k ih =>
     cases j with
     | zero => rfl
     | succ j =>
       simp only [queryWeight_queryBind_succ]
-      rw [ENNReal.tsum_comm]
+      rw [tsum_comm]
       exact tsum_congr fun r ↦ ih r _ j
 
 /-- Weights are homogeneous in `w`. -/
@@ -318,7 +318,7 @@ theorem queryWeight_le_ofReal_trace
   | pure _ _ => simp
   | primBind _ o k ih =>
     simp only [queryWeight_primBind]
-    exact (ENNReal.tsum_le_tsum fun b ↦
+    exact (tsum_le_tsum fun b ↦
       ih b (((I o).frame R.D).posSemidef_branch_apply b hρ) j).trans
       ((((I o).frame R.D).isCPTNIFamily).tsum_ofReal_trace_re_le hρ)
   | queryBind _ i E ℓ k ih =>
@@ -327,7 +327,7 @@ theorem queryWeight_le_ofReal_trace
       simpa using hw i _ (posSemidef_callInput ℓ hρ)
     | succ j =>
       simp only [queryWeight_queryBind_succ]
-      exact (ENNReal.tsum_le_tsum fun r ↦
+      exact (tsum_le_tsum fun r ↦
         ih r ((R.queryStep i E ℓ).posSemidef_branch_apply r hρ) j).trans
         ((R.queryStep i E ℓ).isCPTNIFamily.tsum_ofReal_trace_re_le hρ)
 
@@ -343,7 +343,7 @@ theorem queryWeight_eq_zero_of_isQueryBound {x : QuantumComp L spec X A} {b : sp
   | pure _ _ => rfl
   | primBind _ o k ih =>
     simp only [queryWeight_primBind]
-    exact ENNReal.tsum_eq_zero.mpr fun c ↦
+    exact tsum_eq_zero_iff.mpr fun c ↦
       ih c ((QuantumComp.isQueryBound_primBind_iff o k b).mp hx c) hs hj _
   | queryBind _ i E ℓ k ih =>
     obtain ⟨hi, hk⟩ := (QuantumComp.isQueryBound_queryBind_iff i E ℓ k b).mp hx
@@ -356,7 +356,7 @@ theorem queryWeight_eq_zero_of_isQueryBound {x : QuantumComp L spec X A} {b : sp
     | zero => omega
     | succ j =>
       simp only [queryWeight_queryBind_succ]
-      refine ENNReal.tsum_eq_zero.mpr fun r ↦ ih r (hk r) (fun i' hi' ↦ ?_) (by omega) _
+      refine tsum_eq_zero_iff.mpr fun r ↦ ih r (hk r) (fun i' hi' ↦ ?_) (by omega) _
       rw [Function.update_of_ne (by rintro rfl; exact hi' his), hs i' hi']
 
 /-! ## Query mass -/
@@ -477,9 +477,9 @@ theorem tsum_queryWeight_le_tsum_mul_queryMass (C : spec.Port → ℝ≥0∞)
     (hw : ∀ i σ, σ.PosSemidef → w i σ ≤ C i * ENNReal.ofReal σ.trace.re)
     (x : QuantumComp L spec X A) {ρ : Matrix (A × R.D) (A × R.D) ℂ} (hρ : ρ.PosSemidef) :
     ∑' j, R.queryWeight I w x ρ j ≤ ∑' i, C i * R.queryMass I x ρ i := by
-  refine (ENNReal.tsum_le_tsum fun j ↦
+  refine (tsum_le_tsum fun j ↦
     R.queryWeight_le_tsum_mul_queryMassAt I C hw x hρ j).trans_eq ?_
-  rw [ENNReal.tsum_comm]
+  rw [tsum_comm]
   simp only [queryMass, ENNReal.tsum_mul_left]
 
 /-- A program that stops at once has no mass. -/
@@ -497,7 +497,7 @@ theorem queryMass_primBind (o : L.Op A)
     R.queryMass I (QuantumComp.primBind o k) ρ i =
       ∑' b, R.queryMass I (k b) (((I o).frame R.D).branch b ρ) i := by
   simp only [queryMass, queryMassAt_primBind]
-  exact ENNReal.tsum_comm
+  exact tsum_comm
 
 /-- A call of port `i` followed by a continuation adds the trace of the state to the mass of the
 continuations. -/
@@ -506,9 +506,9 @@ theorem queryMass_queryBind_self (i : spec.Port) (E : QReg) (ℓ : A ≃ spec.In
     (ρ : Matrix (A × R.D) (A × R.D) ℂ) :
     R.queryMass I (QuantumComp.queryBind i E ℓ k) ρ i =
       ENNReal.ofReal ρ.trace.re + ∑' r, R.queryMass I (k r) ((R.queryStep i E ℓ).branch r ρ) i := by
-  rw [queryMass, tsum_eq_zero_add' ENNReal.summable, queryMassAt_queryBind_self_zero]
+  rw [queryMass, tsum_eq_zero_add' CompleteLattice.summable, queryMassAt_queryBind_self_zero]
   simp only [queryMassAt_queryBind_succ, queryMass]
-  rw [ENNReal.tsum_comm]
+  rw [tsum_comm]
 
 /-- A call of another port followed by a continuation adds nothing to the mass on `i`. -/
 theorem queryMass_queryBind_of_ne {i' i : spec.Port} (h : i' ≠ i) (E : QReg)
@@ -517,10 +517,10 @@ theorem queryMass_queryBind_of_ne {i' i : spec.Port} (h : i' ≠ i) (E : QReg)
     (ρ : Matrix (A × R.D) (A × R.D) ℂ) :
     R.queryMass I (QuantumComp.queryBind i' E ℓ k) ρ i =
       ∑' r, R.queryMass I (k r) ((R.queryStep i' E ℓ).branch r ρ) i := by
-  rw [queryMass, tsum_eq_zero_add' ENNReal.summable, queryMassAt_queryBind_of_ne_zero R I h,
+  rw [queryMass, tsum_eq_zero_add' CompleteLattice.summable, queryMassAt_queryBind_of_ne_zero R I h,
     zero_add]
   simp only [queryMassAt_queryBind_succ, queryMass]
-  rw [ENNReal.tsum_comm]
+  rw [tsum_comm]
 
 /-- On the zero state there is no mass. -/
 theorem queryMass_zero (x : QuantumComp L spec X A) (i : spec.Port) :
@@ -533,7 +533,7 @@ theorem queryMass_tsum_state (x : QuantumComp L spec X A) {ι : Type*}
     (i : spec.Port) :
     R.queryMass I x (∑' b, f b) i = ∑' b, R.queryMass I x (f b) i := by
   simp only [queryMass, R.queryMassAt_tsum_state I x hf hpos]
-  exact ENNReal.tsum_comm
+  exact tsum_comm
 
 /-- **Mass and query budgets** (the analogue of Remark 4.2 of ePrint 2025/2166). A program that
 calls port `i` at most `n` times on every path has mass at most `n` times the trace of the
@@ -546,7 +546,7 @@ theorem queryMass_le_of_isQueryBoundAt {x : QuantumComp L spec X A} {i : spec.Po
   | primBind _ o k ih =>
     rw [QuantumComp.isQueryBoundAt_primBind_iff] at hx
     rw [queryMass_primBind]
-    refine (ENNReal.tsum_le_tsum fun b ↦
+    refine (tsum_le_tsum fun b ↦
       ih b (hx b) (((I o).frame R.D).posSemidef_branch_apply b hρ)).trans ?_
     rw [ENNReal.tsum_mul_left]
     have := (((I o).frame R.D).isCPTNIFamily).tsum_ofReal_trace_re_le hρ
@@ -558,7 +558,7 @@ theorem queryMass_le_of_isQueryBoundAt {x : QuantumComp L spec X A} {i : spec.Po
     · subst h
       obtain ⟨hn, hk⟩ := hx.1 rfl
       rw [queryMass_queryBind_self]
-      refine (add_le_add le_rfl (ENNReal.tsum_le_tsum fun r ↦
+      refine (add_le_add le_rfl (tsum_le_tsum fun r ↦
         ih r (hk r) ((R.queryStep i' E ℓ).posSemidef_branch_apply r hρ))).trans ?_
       rw [ENNReal.tsum_mul_left]
       calc ENNReal.ofReal ρ.trace.re + ((n - 1 : ℕ) : ℝ≥0∞) *
@@ -568,7 +568,7 @@ theorem queryMass_le_of_isQueryBoundAt {x : QuantumComp L spec X A} {i : spec.Po
         _ = n * ENNReal.ofReal ρ.trace.re := by
             rw [← one_add_mul, ← Nat.cast_one, ← Nat.cast_add, Nat.add_sub_cancel' hn]
     · rw [queryMass_queryBind_of_ne R I h]
-      refine (ENNReal.tsum_le_tsum fun r ↦
+      refine (tsum_le_tsum fun r ↦
         ih r (hx.2 h r) ((R.queryStep i' E ℓ).posSemidef_branch_apply r hρ)).trans ?_
       rw [ENNReal.tsum_mul_left]
       gcongr
@@ -590,9 +590,9 @@ theorem queryMass_bind (x : QuantumComp L spec X A) (k : ∀ u, X u → QuantumC
     have hb := fun b ↦ ((I o).frame R.D).posSemidef_branch_apply b hρ
     rw [QuantumComp.primBind_bind, queryMass_primBind, queryMass_primBind, run_primBind]
     simp only [fun b ↦ ih b (hb b), DSubInstrument.branch_bind_apply]
-    rw [ENNReal.tsum_add]
+    rw [tsum_add]
     congr 1
-    rw [ENNReal.tsum_comm]
+    rw [tsum_comm]
     refine tsum_congr fun p ↦ (R.queryMass_tsum_state I _
       ((((I o).frame R.D).isCPTNIFamily.comp_eval
         (fun b ↦ (R.run I (k' b)).isCPTNIFamily) p).summable_apply ρ)
@@ -606,7 +606,7 @@ theorem queryMass_bind (x : QuantumComp L spec X A) (k : ∀ u, X u → QuantumC
           ((R.run I (QuantumComp.queryBind i' E ℓ k')).branch p ρ) i =
         ∑' r, ∑' p, R.queryMass I (k p.1 p.2)
           ((R.run I (k' r)).branch p ((R.queryStep i' E ℓ).branch r ρ)) i := by
-      rw [ENNReal.tsum_comm]
+      rw [tsum_comm]
       refine tsum_congr fun p ↦ ?_
       rw [hrun p]
       exact R.queryMass_tsum_state I _
@@ -616,9 +616,9 @@ theorem queryMass_bind (x : QuantumComp L spec X A) (k : ∀ u, X u → QuantumC
     rw [QuantumComp.queryBind_bind, htail]
     by_cases h : i' = i
     · subst h
-      rw [queryMass_queryBind_self, queryMass_queryBind_self, add_assoc, ← ENNReal.tsum_add]
+      rw [queryMass_queryBind_self, queryMass_queryBind_self, add_assoc, ← tsum_add]
       simp only [fun r ↦ ih r (hb r)]
-    · rw [queryMass_queryBind_of_ne R I h, queryMass_queryBind_of_ne R I h, ← ENNReal.tsum_add]
+    · rw [queryMass_queryBind_of_ne R I h, queryMass_queryBind_of_ne R I h, ← tsum_add]
       simp only [fun r ↦ ih r (hb r)]
 
 
@@ -696,7 +696,7 @@ private theorem tsum_mul_tsum_ite_sigma (C : (Σ i, κ i) → ℝ≥0∞) (i : s
     ∑' c, C c * ∑' k : κ i, (if (⟨i, k⟩ : Σ i, κ i) = c then f k else 0) =
       ∑' k, C ⟨i, k⟩ * f k := by
   simp_rw [← ENNReal.tsum_mul_left]
-  rw [ENNReal.tsum_comm]
+  rw [tsum_comm]
   refine tsum_congr fun k ↦ ?_
   rw [tsum_eq_single ⟨i, k⟩ fun c hc ↦ by simp [Ne.symm hc]]
   simp
@@ -724,9 +724,9 @@ theorem tsum_queryWeight_le_tsum_mul_indexMass (C : (Σ i, κ i) → ℝ≥0∞)
       ENNReal.ofReal (MatrixMap.conj (B i k ⊗ₖ (1 : Matrix R.D R.D ℂ)) σ).trace.re)
     (x : QuantumComp L spec X A) {ρ : Matrix (A × R.D) (A × R.D) ℂ} (hρ : ρ.PosSemidef) :
     ∑' j, R.queryWeight I w x ρ j ≤ ∑' c, C c * R.indexMass I B x ρ c := by
-  refine (ENNReal.tsum_le_tsum fun j ↦
+  refine (tsum_le_tsum fun j ↦
     R.queryWeight_le_tsum_mul_indexMassAt I B C hw x hρ j).trans_eq ?_
-  rw [ENNReal.tsum_comm]
+  rw [tsum_comm]
   simp only [indexMass, ENNReal.tsum_mul_left]
 
 /-- **Index masses refine query masses** (the analogue of Remark 4.2 of ePrint 2025/2166 for a
@@ -742,7 +742,7 @@ theorem tsum_indexMassAt_eq_queryMassAt (i : spec.Port) [Fintype (κ i)]
   by_cases h : i' = i
   · subst h
     simp only [↓reduceIte]
-    rw [ENNReal.tsum_comm, ← MatrixMap.tsum_ofReal_trace_conj_kronecker_one hB hσ]
+    rw [tsum_comm, ← MatrixMap.tsum_ofReal_trace_conj_kronecker_one hB hσ]
     refine tsum_congr fun k ↦ ?_
     rw [tsum_eq_single k fun k' hk' ↦ by simp [Ne.symm hk']]
     simp
@@ -756,7 +756,7 @@ theorem tsum_indexMass_eq_queryMass (i : spec.Port) [Fintype (κ i)]
     {ρ : Matrix (A × R.D) (A × R.D) ℂ} (hρ : ρ.PosSemidef) :
     ∑' k, R.indexMass I B x ρ ⟨i, k⟩ = R.queryMass I x ρ i := by
   simp only [indexMass, queryMass]
-  rw [ENNReal.tsum_comm]
+  rw [tsum_comm]
   exact tsum_congr fun j ↦ R.tsum_indexMassAt_eq_queryMassAt I B i hB x hρ j
 
 end IndexMass

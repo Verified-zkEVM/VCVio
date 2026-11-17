@@ -291,7 +291,7 @@ theorem onFactor_slotFst₃_onFactor_splitAt (i : ι) (M : Matrix (XY × DB) (XY
         M ⊗ₖ (1 : Matrix (Z × Env) (Z × Env) ℂ)).submatrix (comSplit i) (comSplit i) := by
   ext ⟨⟨⟨xy, tc, z⟩, env⟩, d⟩ ⟨⟨⟨xy', tc', z'⟩, env'⟩, d'⟩
   simp only [onFactor_apply, slotFst₃, Equiv.coe_fn_mk, splitAt_apply, submatrix_apply,
-    comSplit_apply, blockDiagonal_apply, kroneckerMap_apply, one_apply, Prod.mk.injEq]
+    comSplit_apply, blockDiagonal_apply, kroneckerMap_apply, Matrix.one_apply, Prod.mk.injEq]
   by_cases h₁ : tc = tc' <;> by_cases h₂ : z = z' <;> by_cases h₃ : env = env' <;>
     by_cases h₄ : (fun j : {j // j ≠ i} ↦ d j.1) = fun j ↦ d' j.1 <;>
       simp [h₁, h₂, h₃, h₄]
@@ -306,7 +306,7 @@ theorem diagonal_apply_eq_blockDiagonal (i : ι) (p : DB → ℂ) :
         (comSplit i) (comSplit i) := by
   ext ⟨⟨⟨xy, tc, z⟩, env⟩, d⟩ ⟨⟨⟨xy', tc', z'⟩, env'⟩, d'⟩
   simp only [diagonal_apply, submatrix_apply, comSplit_apply, blockDiagonal_apply,
-    kroneckerMap_apply, one_apply, Prod.mk.injEq]
+    kroneckerMap_apply, Matrix.one_apply, Prod.mk.injEq]
   simp only [eq_iff_apply_eq_and_restrict_eq i (d := d)]
   by_cases h₁ : tc = tc' <;> by_cases h₂ : z = z' <;> by_cases h₃ : env = env' <;>
     by_cases h₄ : (fun j : {j // j ≠ i} ↦ d j.1) = fun j ↦ d' j.1 <;>
@@ -332,7 +332,7 @@ theorem onFactor_slotSnd₃_eq_blockDiagonal (i : ι) (f : Tc → (ι → DB) �
               (comSplit i) (comSplit i) := by
   ext ⟨⟨⟨xy, tc, z⟩, env⟩, d⟩ ⟨⟨⟨xy', tc', z'⟩, env'⟩, d'⟩
   simp only [onFactor_apply, slotSnd₃, Equiv.coe_fn_mk, hV, submatrix_apply,
-    comSplit_apply, blockDiagonal_apply, labelControlled_apply, kroneckerMap_apply, one_apply,
+    comSplit_apply, blockDiagonal_apply, labelControlled_apply, kroneckerMap_apply, Matrix.one_apply,
     xorShift_apply, Prod.mk.injEq]
   have hd : (Equiv.funSplitAt i DB).symm (d i, fun j : {j // j ≠ i} ↦ d j.1) = d :=
     (Equiv.funSplitAt i DB).symm_apply_apply d
@@ -381,7 +381,7 @@ theorem labelControlled_mul_sizeProjector_kronecker [Fintype W] [DecidableEq W] 
     ext ⟨a, w⟩ ⟨b, w'⟩
     by_cases hab : a = b <;> by_cases hw : w = w' <;> simp [sizeProjector, hab, hw]
   ext ⟨a, w⟩ ⟨b, w'⟩
-  rw [hP, mul_diagonal, diagonal_mul, labelControlled_apply, kroneckerMap_apply, one_apply]
+  rw [hP, mul_diagonal, diagonal_mul, labelControlled_apply, kroneckerMap_apply, Matrix.one_apply]
   by_cases hab : a = b
   · subst hab
     simp only [↓reduceIte]
@@ -870,7 +870,7 @@ theorem comBound_compressedVCOracle [UniformAnswerMeasure (X →ₒ Y)] :
           hpsd)
     calc comError (compressedVCOracle k X Y) ME code i x ρ
         ≤ ∑' a, ENNReal.ofReal (24 * S.toReal) * ENNReal.ofReal (σf a).trace.re :=
-          ENNReal.tsum_le_tsum hleaf
+          tsum_le_tsum hleaf
       _ = ENNReal.ofReal (24 * S.toReal) * ∑' a, ENNReal.ofReal (σf a).trace.re :=
           ENNReal.tsum_mul_left
       _ ≤ ENNReal.ofReal (24 * S.toReal) * 1 := by
@@ -905,7 +905,7 @@ theorem comBound_compressedVCOracle [UniformAnswerMeasure (X →ₒ Y)] :
     calc
       readComError (compressedVCOracle k X Y) ME code x ρ c
           ≤ ∑' l, comBoundError ME t * ENNReal.ofReal (σf l).trace.re :=
-        ENNReal.tsum_le_tsum hleaf
+        tsum_le_tsum hleaf
       _ = comBoundError ME t * ∑' l, ENNReal.ofReal (σf l).trace.re :=
         ENNReal.tsum_mul_left
       _ ≤ comBoundError ME t * 1 := by

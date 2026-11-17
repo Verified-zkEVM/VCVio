@@ -74,7 +74,7 @@ theorem onFactor_splitAt_one_kronecker (i : ι) (K : Matrix T T ℂ) :
       if (fun j : {j // j ≠ i} ↦ D j.1) = fun j ↦ D' j.1 then 1 else 0 := by
     have h1 (j : {j // j ≠ i}) : (Pi.mulSingle i K : ι → Matrix T T ℂ) j.1 = 1 :=
       Pi.mulSingle_eq_of_ne (M := fun _ ↦ Matrix T T ℂ) j.2 K
-    simp only [h1, one_apply, funext_iff]
+    simp only [h1, Matrix.one_apply, funext_iff]
     exact Fintype.prod_boole
   rw [hrest]
   split_ifs <;> simp
@@ -98,7 +98,7 @@ theorem tableOracle_mul_one_kronecker_comm (read : T → X → Y) {K : Matrix T 
   rw [tableOracle, basisMatrix_equiv_mul_apply, mul_basisMatrix_apply]
   change ((1 : Matrix (X × Y) (X × Y) ℂ) ⊗ₖ K) ((oracleEquiv (read t)).symm m, t) (m', t') =
     ((1 : Matrix (X × Y) (X × Y) ℂ) ⊗ₖ K) (m, t) (oracleEquiv (read t') m', t')
-  simp only [kroneckerMap_apply, one_apply]
+  simp only [kroneckerMap_apply, Matrix.one_apply]
   by_cases h : K t t' = 0
   · simp [h]
   · rw [hK t t' h]
@@ -252,7 +252,7 @@ theorem compressedReadProjector_complete (c : Fin k × X) :
     ext D D'
     by_cases he : D = D'
     · subst D'; simp [Matrix.sum_apply]
-    · simp [Matrix.sum_apply, one_apply, he]
+    · simp [Matrix.sum_apply, Matrix.one_apply, he]
   rw [h, Matrix.mul_one, compressDatabases_mul_self]
 
 /-- Reads commute across cells, including cells in different databases. -/
@@ -352,7 +352,7 @@ theorem onFactor_slotFst_one_kronecker (K : Matrix S S ℂ) :
     onFactor (slotFst M₁ M₂ S) ((1 : Matrix M₁ M₁ ℂ) ⊗ₖ K) =
       (1 : Matrix (M₁ × M₂) (M₁ × M₂) ℂ) ⊗ₖ K := by
   ext ⟨⟨a, b⟩, s⟩ ⟨⟨a', b'⟩, s'⟩
-  simp only [onFactor_apply, slotFst, Equiv.coe_fn_mk, kroneckerMap_apply, one_apply,
+  simp only [onFactor_apply, slotFst, Equiv.coe_fn_mk, kroneckerMap_apply, Matrix.one_apply,
     Prod.mk.injEq]
   by_cases ha : a = a' <;> by_cases hb : b = b' <;> simp [ha, hb]
 
@@ -362,7 +362,7 @@ theorem onFactor_slotSnd_one_kronecker (K : Matrix S S ℂ) :
     onFactor (slotSnd M₁ M₂ S) ((1 : Matrix M₂ M₂ ℂ) ⊗ₖ K) =
       (1 : Matrix (M₁ × M₂) (M₁ × M₂) ℂ) ⊗ₖ K := by
   ext ⟨⟨a, b⟩, s⟩ ⟨⟨a', b'⟩, s'⟩
-  simp only [onFactor_apply, slotSnd, Equiv.coe_fn_mk, kroneckerMap_apply, one_apply,
+  simp only [onFactor_apply, slotSnd, Equiv.coe_fn_mk, kroneckerMap_apply, Matrix.one_apply,
     Prod.mk.injEq]
   by_cases ha : a = a' <;> by_cases hb : b = b' <;> simp [ha, hb]
 
@@ -657,7 +657,7 @@ noncomputable def purifiedVCOracle : VCOracle k X Y where
     complete := by
       intro c
       ext H H'
-      by_cases h : H = H' <;> simp [Matrix.sum_apply, one_apply, h]
+      by_cases h : H = H' <;> simp [Matrix.sum_apply, Matrix.one_apply, h]
     commute_cells := by intros; simp only [diagonal_mul_diagonal, mul_comm]
     commute_ordinary := by
       intro i c a
@@ -808,10 +808,10 @@ private theorem runtimeLaw_eq_sum {spec : QuantumOracleSpec.{u₁, v₁}}
     rw [QuantumRuntime.matrix_jointPost, QuantumRuntime.matrix_jointPost, ← h', Matrix.trace_smul,
       smul_eq_mul]
   refine Measure.ext fun s hs ↦ ?_
-  rw [Measure.coe_finsetSum, Finset.sum_apply, QuantumRuntime.evalDistMap_apply _ _ _ _ _ hs]
-  simp only [Measure.smul_apply, smul_eq_mul, QuantumRuntime.evalDistMap_apply _ _ _ _ _ hs,
+  rw [FunLike.coe_sum, Finset.sum_apply, QuantumRuntime.evalDistMap_apply _ _ _ _ _ hs]
+  simp only [smul_apply, smul_eq_mul, QuantumRuntime.evalDistMap_apply _ _ _ _ _ hs,
     htr, Complex.re_sum, Complex.re_ofReal_mul, ← ENNReal.tsum_mul_left]
-  rw [← Summable.tsum_finsetSum fun _ _ ↦ ENNReal.summable]
+  rw [← Summable.tsum_finsetSum fun _ _ ↦ CompleteLattice.summable]
   refine tsum_congr fun p ↦ ?_
   rw [ENNReal.ofReal_sum_of_nonneg, Finset.sum_mul]
   · refine Finset.sum_congr rfl fun ω _ ↦ ?_

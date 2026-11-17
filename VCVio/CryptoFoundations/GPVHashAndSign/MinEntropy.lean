@@ -85,7 +85,7 @@ theorem programmedPreimageAdvantage_le_trapdoorGuessingProbability [DecidableEq 
         exact tsum_congr fun x => by rw [hinner]
     _ ≤ ∑' x : Domain, (⨆ z : Domain, Pr{let x ← psf.trapdoorSample pk sk y}[x = z]) *
           Pr{let z ← adversary pk y}[z = x] :=
-        ENNReal.tsum_le_tsum fun x => mul_le_mul'
+        tsum_le_tsum fun x => mul_le_mul'
           (le_iSup (fun z => Pr{let x ← psf.trapdoorSample pk sk y}[x = z]) x) le_rfl
     _ = (⨆ z : Domain, Pr{let x ← psf.trapdoorSample pk sk y}[x = z])
           * ∑' x : Domain, Pr{let z ← adversary pk y}[z = x] := ENNReal.tsum_mul_left

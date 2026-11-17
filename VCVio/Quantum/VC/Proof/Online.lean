@@ -371,7 +371,7 @@ theorem one_kronecker_swapUnitary (ME : MultiExtractor k Cm Dm S) :
     (1 : Matrix Yr Yr ℂ) ⊗ₖ RecReg.swapUnitary (Cell := Cell) ME =
       basisMatrix (Equiv.prodCongr (Equiv.refl Yr) (RecReg.privateSwapEquiv ME)) := by
   ext ⟨y, s, R⟩ ⟨z, r, R'⟩
-  simp only [RecReg.swapUnitary, kroneckerMap_apply, one_apply, basisMatrix_apply,
+  simp only [RecReg.swapUnitary, kroneckerMap_apply, Matrix.one_apply, basisMatrix_apply,
     Equiv.prodCongr_apply]
   split_ifs <;> simp_all
 
@@ -402,7 +402,7 @@ theorem extractUnitary_swap_conjugacy (ME : MultiExtractor k Cm Dm S)
   ext ⟨⟨q, y⟩, s, R⟩ ⟨⟨p, z⟩, r, R'⟩
   simp only [submatrix_apply, Equiv.prodCongr_apply, Prod.map_apply, Equiv.refl_apply,
     RecReg.privateSwapEquiv_apply, reindex_apply, Equiv.prodAssoc_symm_apply,
-    kroneckerMap_apply, extractUnitary_apply, one_apply]
+    kroneckerMap_apply, extractUnitary_apply, Matrix.one_apply]
   by_cases hs : s = r
   · subst r
     have hr : RecReg.swap ME s R = RecReg.swap ME s R' ↔ R = R' :=
@@ -428,7 +428,7 @@ theorem controlledPermutation_commutator_apply
   simp only [reindex_apply, submatrix_apply, Equiv.prodCongr_symm, Equiv.refl_symm,
     Equiv.prodCongr_apply, Prod.map_apply, Equiv.refl_apply, Equiv.prodCongrRight_symm,
     Equiv.prodCongrRight_apply, Function.comp_apply, Equiv.prodAssoc_symm_apply,
-    kroneckerMap_apply, one_apply, Equiv.symm_apply_eq, mul_sub]
+    kroneckerMap_apply, Matrix.one_apply, Equiv.symm_apply_eq, mul_sub]
 end
 
 namespace RecReg
@@ -514,7 +514,7 @@ theorem labelControlled_permutation_commutator_apply (π : S → ι)
       (fun l ↦ (1 : Matrix (Q × S) (Q × S) ℂ) ⊗ₖ basisMatrix (e l)) =
       basisMatrix (Equiv.prodCongrRight fun a : Q × S ↦ e (π a.2)) := by
     ext ⟨a, r⟩ ⟨b, s⟩
-    simp only [labelControlled_apply, kroneckerMap_apply, one_apply, basisMatrix_apply,
+    simp only [labelControlled_apply, kroneckerMap_apply, Matrix.one_apply, basisMatrix_apply,
       Equiv.prodCongrRight_apply, Prod.mk.injEq]
     by_cases h : a = b
     · subst b
@@ -523,7 +523,7 @@ theorem labelControlled_permutation_commutator_apply (π : S → ι)
   dsimp only
   rw [hl, Matrix.sub_apply, basisMatrix_equiv_mul_apply, mul_basisMatrix_apply]
   simp only [Equiv.prodCongrRight_symm, Equiv.prodCongrRight_apply, Function.comp_apply,
-    kroneckerMap_apply, one_apply, Equiv.symm_apply_eq, mul_sub]
+    kroneckerMap_apply, Matrix.one_apply, Equiv.symm_apply_eq, mul_sub]
 end
 
 section
@@ -1171,7 +1171,7 @@ theorem tsum_rpow_queryWeight_le_of_total_grade
       rw [← ENNReal.mul_rpow_of_nonneg _ _ (by norm_num : (0 : ℝ) ≤ 2⁻¹)]
       apply ENNReal.rpow_le_rpow _ (by norm_num)
       gcongr
-      exact ENNReal.sum_le_tsum _
+      exact sum_le_tsum _
 
 end QuantumRuntime
 
