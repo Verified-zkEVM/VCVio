@@ -86,7 +86,7 @@ theorem coherentBlocks_database (A : Matrix D D ℂ) :
   by_cases h : p = p'
   · subst p'
     simp [coherentBlocks, blockDiagonal'_apply_eq, Matrix.one_apply]
-  · simp [coherentBlocks, blockDiagonal'_apply_ne _ _ _ h, Matrix.one_apply, h]
+  · simp [coherentBlocks, blockDiagonal'_apply_ne _ _ _ h, h]
 
 /-- The coherent unitary is the coherent assembly of the individual port unitaries. -/
 theorem coherentBlocks_unitary (E : EmulatedOracle P In) :

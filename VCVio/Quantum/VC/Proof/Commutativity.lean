@@ -332,8 +332,8 @@ theorem onFactor_slotSnd₃_eq_blockDiagonal (i : ι) (f : Tc → (ι → DB) �
               (comSplit i) (comSplit i) := by
   ext ⟨⟨⟨xy, tc, z⟩, env⟩, d⟩ ⟨⟨⟨xy', tc', z'⟩, env'⟩, d'⟩
   simp only [onFactor_apply, slotSnd₃, Equiv.coe_fn_mk, hV, submatrix_apply,
-    comSplit_apply, blockDiagonal_apply, labelControlled_apply, kroneckerMap_apply, Matrix.one_apply,
-    xorShift_apply, Prod.mk.injEq]
+    comSplit_apply, blockDiagonal_apply, labelControlled_apply, kroneckerMap_apply,
+    Matrix.one_apply, xorShift_apply, Prod.mk.injEq]
   have hd : (Equiv.funSplitAt i DB).symm (d i, fun j : {j // j ≠ i} ↦ d j.1) = d :=
     (Equiv.funSplitAt i DB).symm_apply_apply d
   rw [hd]

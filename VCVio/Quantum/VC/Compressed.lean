@@ -252,7 +252,7 @@ theorem compressedReadProjector_complete (c : Fin k × X) :
     ext D D'
     by_cases he : D = D'
     · subst D'; simp [Matrix.sum_apply]
-    · simp [Matrix.sum_apply, Matrix.one_apply, he]
+    · simp [Matrix.sum_apply, he]
   rw [h, Matrix.mul_one, compressDatabases_mul_self]
 
 /-- Reads commute across cells, including cells in different databases. -/
