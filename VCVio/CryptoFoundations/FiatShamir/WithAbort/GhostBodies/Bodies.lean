@@ -96,14 +96,14 @@ hybrid step couples one more attempt, and attempt `j` is only reached when the f
 `j` attempts of the second loop all abort. -/
 lemma measureTVDist_firstSome_le_geometric {α : Type} [MeasurableSpace (Option α)]
     [DiscreteMeasurableSpace (Option α)] (a₁ a₂ : ProbComp (Option α))
-    {ζ q : ℝ} (hζ : measureTVDist a₁ a₂ ≤ ζ) (hq : Pr{let x ← a₂}[x = none].toReal ≤ q)
-    (hq0 : 0 ≤ q) :
+    {ζ q : ℝ} (hζ : measureTVDist a₁ a₂ ≤ ζ) (hq : Pr{let x ← a₂}[x = none].toReal ≤ q) :
     ∀ n : ℕ, measureTVDist (firstSome a₁ n) (firstSome a₂ n) ≤
       ζ * ∑ j ∈ Finset.range n, q ^ j
   | 0 => by simp [firstSome]
   | (n + 1) => by
+    have hq0 : 0 ≤ q := le_trans ENNReal.toReal_nonneg hq
     have hζ0 : 0 ≤ ζ := le_trans (measureTVDist_nonneg a₁ a₂) hζ
-    have ih := measureTVDist_firstSome_le_geometric a₁ a₂ hζ hq hq0 n
+    have ih := measureTVDist_firstSome_le_geometric a₁ a₂ hζ hq n
     have hGeomNonneg : (0 : ℝ) ≤ ∑ j ∈ Finset.range n, q ^ j :=
       Finset.sum_nonneg fun j _ => pow_nonneg hq0 j
     set k₁ : Option α → ProbComp (Option α) := fun r =>

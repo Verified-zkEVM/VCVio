@@ -50,18 +50,11 @@ info: 'PointerChainPuzzle.LeanSeal.hidingAdvantage_byteScheme_le' depends on axi
 #print axioms hidingAdvantage_byteScheme_le
 
 /--
-info: 'PointerChainPuzzle.LeanSeal.hidingSecure_byteScheme' depends on axioms:
+info: 'PointerChainPuzzle.LeanSeal.hidingSecureAgainst_byteScheme' depends on axioms:
 [propext, Classical.choice, Quot.sound]
 -/
 #guard_msgs (whitespace := lax) in
-#print axioms hidingSecure_byteScheme
-
-/--
-info: 'PointerChainPuzzle.LeanSeal.hidingSecure_byteScheme_of_budget' depends on axioms:
-[propext, Classical.choice, Quot.sound]
--/
-#guard_msgs (whitespace := lax) in
-#print axioms hidingSecure_byteScheme_of_budget
+#print axioms hidingSecureAgainst_byteScheme
 
 /--
 info: 'PointerChainPuzzle.LeanSeal.cappedHidingAdvantage_byteScheme_le' depends on axioms:
@@ -78,11 +71,11 @@ info: 'PointerChainPuzzle.LeanSeal.hidingAdvantage_byteScheme_le_of_valid' depen
 #print axioms hidingAdvantage_byteScheme_le_of_valid
 
 /--
-info: 'PointerChainPuzzle.LeanSeal.hidingSecure_byteScheme_of_valid' depends on axioms:
+info: 'PointerChainPuzzle.LeanSeal.hidingSecureAgainst_byteScheme_of_valid' depends on axioms:
 [propext, Classical.choice, Quot.sound]
 -/
 #guard_msgs (whitespace := lax) in
-#print axioms hidingSecure_byteScheme_of_valid
+#print axioms hidingSecureAgainst_byteScheme_of_valid
 
 /--
 info: 'PointerChainPuzzle.LeanSeal.cappedHidingAdvantage_byteScheme_le_of_valid' depends on axioms:

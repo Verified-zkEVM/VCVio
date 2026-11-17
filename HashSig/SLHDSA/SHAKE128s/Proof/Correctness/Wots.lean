@@ -7,6 +7,7 @@ Authors: Tom Wambsgans
 module
 
 public import HashSig.SLHDSA.SHAKE128s.Proof.Experiment
+public import HashSig.SLHDSA.SHAKE128s.Proof.Chain
 
 /-!
 # WOTS+ correctness
@@ -45,14 +46,8 @@ theorem chain_add (publicSeed : Digest) (address : Address)
     SLHDSA.SHAKE128s.Wots.chain (m := Id) publicSeed address start (first + second) value =
       SLHDSA.SHAKE128s.Wots.chain (m := Id) publicSeed address (start + first) second
         (SLHDSA.SHAKE128s.Wots.chain (m := Id) publicSeed address start first value) := by
-  induction first generalizing start value with
-  | zero => rw [Nat.zero_add]; rfl
-  | succ first ih =>
-      have hstart : start + 1 + first = start + (first + 1) := by omega
-      simpa only [Nat.succ_add, SLHDSA.SHAKE128s.Wots.chain, bind, hstart] using
-        ih (start + 1)
-          (Hashing.tweakable (m := Id) publicSeed
-            { address with hashOrIndex := BitVec.ofNat 32 start } (bytesBE n value))
+  simp only [SLHDSA.SHAKE128s.Wots.chain_eq_indexedChain]
+  exact VCVio.Algorithms.IndexedChain.chainM_add _ start first second value
 
 /-- Recovering the public key from an honest WOTS signature returns the WOTS public key. -/
 theorem publicKeyFromSignature_sign (message secretSeed publicSeed : Digest)

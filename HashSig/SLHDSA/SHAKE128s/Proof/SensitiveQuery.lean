@@ -138,7 +138,7 @@ theorem not_unavailable_of_obtainable (graph : Graph Node Index)
 The whole rate is this: a candidate input names one node, the node names one cell, and that
 cell is one coordinate of the uniform table. -/
 
-variable [Fintype Index] [DecidableEq Index]
+variable [Fintype Index]
 
 /-- A single coordinate of a uniform table of cells is a uniform cell. -/
 theorem coordinate_uniform (index : Index) :

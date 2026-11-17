@@ -1,6 +1,7 @@
 module  -- shake: keep-all --deprecated_module: ignore
 
 public import ToMathlib.Algebra.BigOperators.Finset
+public import ToMathlib.Algebra.MvPolynomial.SchwartzZippel
 public import ToMathlib.Analysis.MeanInequalities
 public import ToMathlib.Analysis.SumIntegralComparisons
 public import ToMathlib.Control.Except
@@ -32,6 +33,7 @@ public import ToMathlib.Data.IndexedBinaryTree.Perfect
 public import ToMathlib.Data.List.Count
 public import ToMathlib.Data.List.Forall2
 public import ToMathlib.Data.List.MapM
+public import ToMathlib.Data.Nat.Digits
 public import ToMathlib.Data.Set.Functor
 public import ToMathlib.Data.Vector
 public import ToMathlib.Data.Vector.Count
@@ -64,6 +66,7 @@ public import ToMathlib.MeasureTheory.Measure.Prop
 public import ToMathlib.MeasureTheory.Measure.Subprobability
 public import ToMathlib.MeasureTheory.Measure.TotalVariation
 public import ToMathlib.MeasureTheory.Measure.TotalVariation.Bind
+public import ToMathlib.MeasureTheory.Measure.TotalVariation.Fintype
 public import ToMathlib.MeasureTheory.Measure.TotalVariation.Variation
 public import ToMathlib.MeasureTheory.Measure.UniformTable
 public import ToMathlib.Order.RelClasses

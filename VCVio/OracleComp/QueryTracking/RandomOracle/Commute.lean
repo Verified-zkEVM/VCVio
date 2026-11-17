@@ -7,7 +7,6 @@ Authors: Alexander Hicks
 module
 
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
-import VCVio.OracleComp.EvalDist.Measure
 
 /-!
 # Commuting queries to the lazy random oracle

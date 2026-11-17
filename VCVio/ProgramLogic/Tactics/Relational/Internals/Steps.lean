@@ -53,7 +53,7 @@ attribute [vcspec]
   OracleComp.Rel.Quantitative.relTriple_uniformSample_refl
   OracleComp.Rel.Quantitative.relTriple_query_bij
   OracleComp.Rel.Quantitative.relTriple_query_refl
-  -- Raw relational WP rule from the Std.Do bridge
+  -- Raw relational WP rule of the lattice-generic `VCVio.ProgramLogic.RelWP` interface
   VCVio.ProgramLogic.RelWP.rwp_pure
   -- `simulateQ`-aware rules from `Relational/SimulateQ.lean`
   OracleComp.ProgramLogic.Relational.relTriple_simulateQ_run_eqRel_of_impl_eq_preservesInv

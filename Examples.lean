@@ -85,3 +85,16 @@ public import Examples.ResumptionRejection
 public import Examples.Schnorr.Basic
 public import Examples.SealedSender.AspectObservation
 public import Examples.SimpleTwoServerPIR
+public import Examples.Widgets.Component.RevealLocation
+public import Examples.Widgets.GameHop.Anchor
+public import Examples.Widgets.GameHop.Extract
+public import Examples.Widgets.GameHop.Hints
+public import Examples.Widgets.GameHop.Infer
+public import Examples.Widgets.GameHop.Lookup
+public import Examples.Widgets.GameHop.Model
+public import Examples.Widgets.GameHop.Panel
+public import Examples.Widgets.GameHop.Registry
+public import Examples.Widgets.GameHop.Render
+public import Examples.Widgets.OpenSyntax.Panel
+public import Examples.Widgets.OpenSyntax.Render
+public import Examples.Widgets.OpenSyntax.TreePanel

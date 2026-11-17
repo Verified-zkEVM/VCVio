@@ -12,7 +12,8 @@ public import VCVio.OracleComp.Constructions.Replicate.Basic
 /-!
 # Unary Triple / VCGen Examples
 
-This file validates unary `Triple` stepping and structural `vcgen` decomposition.
+This file validates unary `Triple` stepping, structural decomposition by core `vcgen`, and
+VCVio's exhaustive `pvcgen` driver.
 -/
 
 @[expose] public section
@@ -64,21 +65,24 @@ example (oa : OracleComp spec α) (n : ℕ) (pre : ℝ≥0∞) (post : List α �
     (h :
       pre ≤ wp⟦oa⟧(fun x => wp⟦oa.replicate n⟧(fun xs => post (x :: xs)))) :
     ⦃ pre ⦄ oa.replicate (n + 1) ⦃ post ⦄ := by
-  vcgen
+  pvcgen
 
 example (x : α) (xs : List α) (f : α → OracleComp spec β)
     (pre : ℝ≥0∞) (post : List β → ℝ≥0∞)
     (h : pre ≤ wp⟦f x⟧(fun y => wp⟦xs.mapM f⟧(fun ys => post (y :: ys)))) :
     ⦃ pre ⦄ (x :: xs).mapM f ⦃ post ⦄ := by
-  vcgen
+  pvcgen
 
 example (x : α) (xs : List α) (f : β → α → OracleComp spec β)
     (init : β) (pre : ℝ≥0∞) (post : β → ℝ≥0∞)
     (h : pre ≤ wp⟦f init x⟧(fun s => wp⟦xs.foldlM f s⟧post)) :
     ⦃ pre ⦄ (x :: xs).foldlM f init ⦃ post ⦄ := by
-  vcgen
+  pvcgen
 
-/-! ## `vcgen` exhaustive driver -/
+/-! ## Exhaustive drivers
+
+Core `vcgen` decomposes binds, conditionals and matchers and applies the triples in the local
+context. `pvcgen` adds VCVio's planned steps, replayed by `pvcgen?`, and loop invariants. -/
 
 example {oa : OracleComp spec α} {ob : α → OracleComp spec β}
     {cut : α → ℝ≥0∞} {post : β → ℝ≥0∞}
@@ -101,7 +105,7 @@ example {oa : OracleComp spec α} {ob : α → OracleComp spec β}
     {cut : α → ℝ≥0∞} {post : β → ℝ≥0∞}
     (h1 : ⦃ 1 ⦄ oa ⦃ cut ⦄) (h2 : ∀ x, ⦃ cut x ⦄ ob x ⦃ post ⦄) :
     ⦃ 1 ⦄ (oa >>= ob) ⦃ post ⦄ := by
-  vcgen?
+  pvcgen?
 
 example (x : α) (post : α → ℝ≥0∞) :
     ⦃ post x ⦄ (pure x : OracleComp spec α) ⦃ post ⦄ := by
@@ -160,19 +164,19 @@ example {f : α → OracleComp spec β} {g : OracleComp spec β}
 -- Constant postconditions are preserved without an invariant premise.
 example {oa : OracleComp spec α} {I : ℝ≥0∞} {n : ℕ} :
     ⦃ I ⦄ oa.replicate n ⦃ fun _ => I ⦄ := by
-  vcgen
+  pvcgen
 
 example {σ : Type} {f : σ → α → OracleComp spec σ} {l : List α} {s₀ : σ}
     {I : σ → ℝ≥0∞}
     (hstep : ∀ s x, x ∈ l → ⦃ I s ⦄ f s x ⦃ I ⦄) :
     ⦃ I s₀ ⦄ l.foldlM f s₀ ⦃ I ⦄ := by
-  vcgen
+  pvcgen
 
 example {f : α → OracleComp spec β} {l : List α} {I : ℝ≥0∞} :
     ⦃ I ⦄ l.mapM f ⦃ fun _ => I ⦄ := by
-  vcgen
+  pvcgen
 
-/-! ### `vcgen using cut` and `vcgen inv I` driver variants -/
+/-! ### `pvcgen using cut` and `pvcgen inv I` driver variants -/
 
 example {oa : OracleComp spec α} {f : α → OracleComp spec β}
     {g : β → OracleComp spec γ} {pre : ℝ≥0∞}
@@ -184,11 +188,11 @@ example {oa : OracleComp spec α} {f : α → OracleComp spec β}
   vcstep using cut
   · exact hoa
   · intro x
-    vcgen using cut2
+    pvcgen using cut2
 
 example {σ : Type} {f : σ → α → OracleComp spec σ} {l : List α} {s₀ : σ}
     {I : σ → ℝ≥0∞} {pre : ℝ≥0∞} {post : σ → ℝ≥0∞}
     (hpre : pre ≤ I s₀) (hpost : ∀ s, I s ≤ post s)
     (hstep : ∀ s x, x ∈ l → ⦃ I s ⦄ f s x ⦃ I ⦄) :
     ⦃ pre ⦄ l.foldlM f s₀ ⦃ post ⦄ := by
-  vcgen inv I
+  pvcgen inv I

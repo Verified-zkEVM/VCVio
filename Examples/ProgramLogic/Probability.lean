@@ -13,7 +13,7 @@ public import VCVio.ProgramLogic.Tactics.Unary
 
 This file validates probability-rewrite tactics from
 `VCVio.ProgramLogic.Tactics`: `vcstep rw`, `vcstep rw under`, `vcstep rw normalize`,
-`vcstep rw congr'`, and the exhaustive `vcgen` driver on equalities of `Pr{…}[…]` events.
+`vcstep rw congr'`, and the exhaustive `pvcgen` driver on equalities of `Pr{…}[…]` events.
 Oracle responses carry a chosen discrete measure specification; swaps use countable responses,
 and congruence leaves the continuations at the possible outputs of the shared prefix.
 -/
@@ -108,10 +108,10 @@ example {mx : OracleComp spec α} {f g : α → OracleComp spec β} {q : β → 
   vcstep rw congr'
   exact h _
 
-/-! ## Exhaustive `vcgen` on probability equalities -/
+/-! ## Exhaustive `pvcgen` on probability equalities -/
 
 example {mx : OracleComp spec α} {my : OracleComp spec β}
     {f : α → β → OracleComp spec γ} {q : γ → Prop} :
     Pr{let r ← mx >>= fun a => my >>= fun b => f a b}[q r] =
     Pr{let r ← my >>= fun b => mx >>= fun a => f a b}[q r] := by
-  vcgen
+  pvcgen

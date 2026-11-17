@@ -19,6 +19,11 @@ jobs:
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Set up uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          version: "0.13.6"
+          enable-cache: false
       - name: Set up Lean environment
         uses: leanprover/lean-action@fe408643ea7367d8c0404a8be3975bb145f5fb64 # v1
         with:
@@ -33,7 +38,7 @@ jobs:
         run: lake exe cache get
 
       - name: Test lint orchestration
-        run: python3 scripts/test-lint.py
+        run: uv run --no-project --python 3.12 python scripts/test-lint.py
 
       - name: Run text-based style linters
         run: lake lint -- --style-only

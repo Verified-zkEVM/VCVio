@@ -5,6 +5,8 @@ Authors: Quang Dao
 -/
 
 module
+public import QuantumFoundations.ForMathlib.Analysis.Matrix.Contraction
+public import QuantumFoundations.SubInstrument
 public import VCVio.Quantum.Comp.Hybrid
 
 /-!
@@ -45,8 +47,6 @@ second compressed runtime.
 
 ## Main definitions
 
-* `Quantum.SubInstrument.sandwich`: a subinstrument between two completely positive,
-  trace-nonincreasing maps.
 * `Quantum.Hybrid.InImageAt P s`: condition 1 at a call.
 * `Quantum.Hybrid.compressSteps` and `Quantum.Hybrid.rotateSteps`: the steps compressed by `P`
   and rotated by `V`.
@@ -82,102 +82,9 @@ universe u v u₁ v₁ w
 
 namespace Quantum
 
-/-! ## Sandwiched subinstruments -/
-
-namespace SubInstrument
-
-variable {A A' B B' : Type*} [Fintype A] [Fintype A'] [Fintype B] [Fintype B'] {α : Type*}
-
-/-- A subinstrument preceded by the completely positive, trace-nonincreasing map `Φ` and
-followed by `Ψ`. -/
-@[expose]
-noncomputable def sandwich (p : SubInstrument A B α) (Φ : MatrixMap A' A) (Ψ : MatrixMap B B')
-    (hΦ : Φ.IsCP) (hΦ' : Φ.IsTNI) (hΨ : Ψ.IsCP) (hΨ' : Ψ.IsTNI) : SubInstrument A' B' α where
-  branch a := Ψ ∘ₗ p.branch a ∘ₗ Φ
-  isCP_branch a := hΨ.comp ((p.isCP_branch a).comp hΦ)
-  trace_le s ρ hρ := by
-    have hΦρ := hΦ.posSemidef hρ
-    calc ∑ a ∈ s, ((Ψ ∘ₗ p.branch a ∘ₗ Φ) ρ).trace.re
-        ≤ ∑ a ∈ s, (p.branch a (Φ ρ)).trace.re :=
-          Finset.sum_le_sum fun a _ ↦ hΨ' _ ((p.isCP_branch a).posSemidef hΦρ)
-      _ = ((∑ a ∈ s, p.branch a) (Φ ρ)).trace.re := (MatrixMap.trace_re_sum_apply _ _ _).symm
-      _ ≤ (Φ ρ).trace.re := p.isTNI_sum s _ hΦρ
-      _ ≤ ρ.trace.re := hΦ' ρ hρ
-
-@[simp]
-theorem branch_sandwich (p : SubInstrument A B α) (Φ : MatrixMap A' A) (Ψ : MatrixMap B B')
-    (hΦ : Φ.IsCP) (hΦ' : Φ.IsTNI) (hΨ : Ψ.IsCP) (hΨ' : Ψ.IsTNI) (a : α) :
-    (p.sandwich Φ Ψ hΦ hΦ' hΨ hΨ').branch a = Ψ ∘ₗ p.branch a ∘ₗ Φ :=
-  rfl
-
-end SubInstrument
-
 namespace Hybrid
 
 /-! ## Contractions -/
-
-/-- A product of contractions is a contraction. -/
-theorem posSemidef_one_sub_mul {l m n : Type*} [Fintype l] [Fintype m] [Finite n]
-    [DecidableEq m] [DecidableEq n] {K : Matrix l m ℂ} {L : Matrix m n ℂ}
-    (hK : (1 - Kᴴ * K).PosSemidef) (hL : (1 - Lᴴ * L).PosSemidef) :
-    (1 - (K * L)ᴴ * (K * L)).PosSemidef := by
-  have h : 1 - (K * L)ᴴ * (K * L) = (1 - Lᴴ * L) + Lᴴ * (1 - Kᴴ * K) * L := by
-    simp only [Matrix.conjTranspose_mul, Matrix.mul_sub, Matrix.sub_mul, Matrix.mul_one,
-      Matrix.mul_assoc]
-    abel
-  rw [h]
-  exact hL.add (hK.conjTranspose_mul_mul_same L)
-
-/-- `1 ⊗ X` is a contraction when `X` is. -/
-theorem posSemidef_one_sub_one_kronecker {k m n : Type*} [Fintype k] [DecidableEq k] [Fintype m]
-    [Finite n] [DecidableEq n] {X : Matrix m n ℂ}
-    (h : (1 - Xᴴ * X).PosSemidef) :
-    (1 - ((1 : Matrix k k ℂ) ⊗ₖ X)ᴴ * ((1 : Matrix k k ℂ) ⊗ₖ X)).PosSemidef := by
-  have e : 1 - ((1 : Matrix k k ℂ) ⊗ₖ X)ᴴ * ((1 : Matrix k k ℂ) ⊗ₖ X) =
-      (1 : Matrix k k ℂ) ⊗ₖ (1 - Xᴴ * X) := by
-    rw [conjTranspose_kronecker, conjTranspose_one, ← mul_kronecker_mul, Matrix.one_mul]
-    ext ⟨a, b⟩ ⟨a', b'⟩
-    by_cases ha : a = a' <;> by_cases hb : b = b' <;> simp [ha, hb]
-  rw [e]
-  exact Matrix.PosSemidef.one.kronecker h
-
-/-- The adjoint of an isometry of a square matrix is a contraction. -/
-theorem posSemidef_one_sub_conjTranspose {n : Type*} [Fintype n] [DecidableEq n]
-    {V : Matrix n n ℂ} (hV : Vᴴ * V = 1) : (1 - Vᴴᴴ * Vᴴ).PosSemidef := by
-  rw [conjTranspose_conjTranspose, _root_.mul_eq_one_comm.mp hV, sub_self]
-  exact Matrix.PosSemidef.zero
-
-/-- An isometry is a contraction. -/
-theorem posSemidef_one_sub_of_isometry {m n : Type*} [Fintype m] [DecidableEq n]
-    {V : Matrix m n ℂ} (hV : Vᴴ * V = 1) : (1 - Vᴴ * V).PosSemidef := by
-  rw [hV, sub_self]
-  exact Matrix.PosSemidef.zero
-
-/-- The Kraus map of an isometry preserves the trace. -/
-theorem trace_conj_of_isometry {m n : Type*} [Fintype m] [Fintype n] [DecidableEq n]
-    {K : Matrix m n ℂ}
-    (hK : Kᴴ * K = 1) (M : Matrix n n ℂ) : (MatrixMap.conj K M).trace = M.trace :=
-  MatrixMap.isTP_conj hK M
-
-/-- `(1 ⊗ V)ᴴ (1 ⊗ V) = 1` for an isometry `V`. -/
-theorem one_kronecker_isometry {k m n : Type*} [Fintype k] [DecidableEq k] [Fintype m]
-    [DecidableEq n] {V : Matrix m n ℂ} (hV : Vᴴ * V = 1) :
-    ((1 : Matrix k k ℂ) ⊗ₖ V)ᴴ * ((1 : Matrix k k ℂ) ⊗ₖ V) = 1 := by
-  rw [conjTranspose_kronecker, conjTranspose_one, ← mul_kronecker_mul, Matrix.one_mul, hV,
-    one_kronecker_one]
-
-/-- `(1 ⊗ Vᴴ) (1 ⊗ V) = 1` for an isometry `V`. -/
-theorem one_kronecker_conjTranspose_mul {k m n : Type*} [Fintype k] [DecidableEq k] [Fintype m]
-    [DecidableEq n] {V : Matrix m n ℂ} (hV : Vᴴ * V = 1) :
-    ((1 : Matrix k k ℂ) ⊗ₖ Vᴴ) * ((1 : Matrix k k ℂ) ⊗ₖ V) = 1 := by
-  rw [← mul_kronecker_mul, Matrix.one_mul, hV, one_kronecker_one]
-
-/-- `(1 ⊗ V) (1 ⊗ Vᴴ) = 1` for a coisometry `V`. -/
-theorem one_kronecker_mul_conjTranspose {k m n : Type*} [Fintype k] [DecidableEq k] [Fintype n]
-    [DecidableEq m] {V : Matrix m n ℂ} (hV : V * Vᴴ = 1) :
-    ((1 : Matrix k k ℂ) ⊗ₖ V) * ((1 : Matrix k k ℂ) ⊗ₖ V)ᴴ = 1 := by
-  rw [conjTranspose_kronecker, conjTranspose_one, ← mul_kronecker_mul, Matrix.one_mul, hV,
-    one_kronecker_one]
 
 theorem one_kronecker_mul_one_kronecker {k m n l : Type*} [Fintype k] [DecidableEq k]
     [Fintype n] (A : Matrix m n ℂ) (B : Matrix n l ℂ) :
@@ -333,8 +240,8 @@ noncomputable def compressSteps (P : Matrix D D ℂ) (hP : (1 - Pᴴ * P).PosSem
     (s : ∀ i, SubInstrument (spec.In i × D) (spec.Out i × D) (spec.Result i)) :
     ∀ i, SubInstrument (spec.In i × D) (spec.Out i × D) (spec.Result i) := fun i ↦
   krausSandwich (s i) ((1 : Matrix (spec.In i) (spec.In i) ℂ) ⊗ₖ P)
-    ((1 : Matrix (spec.Out i) (spec.Out i) ℂ) ⊗ₖ P) (posSemidef_one_sub_one_kronecker hP)
-    (posSemidef_one_sub_one_kronecker hP)
+    ((1 : Matrix (spec.Out i) (spec.Out i) ℂ) ⊗ₖ P) (Matrix.posSemidef_one_sub_one_kronecker hP)
+    (Matrix.posSemidef_one_sub_one_kronecker hP)
 
 /-- The steps rotated by an isometry `V` of the runtime register: `conj (V̂ U V̂ᴴ)` for steps
 `conj U`, with `V̂ = 1 ⊗ V`. -/
@@ -344,8 +251,9 @@ noncomputable def rotateSteps (V : Matrix D D ℂ) (hV : Vᴴ * V = 1)
     ∀ i, SubInstrument (spec.In i × D) (spec.Out i × D) (spec.Result i) := fun i ↦
   krausSandwich (s i) ((1 : Matrix (spec.In i) (spec.In i) ℂ) ⊗ₖ Vᴴ)
     ((1 : Matrix (spec.Out i) (spec.Out i) ℂ) ⊗ₖ V)
-    (posSemidef_one_sub_one_kronecker (posSemidef_one_sub_conjTranspose hV))
-    (posSemidef_one_sub_one_kronecker (posSemidef_one_sub_of_isometry hV))
+    (Matrix.posSemidef_one_sub_one_kronecker
+      (Matrix.posSemidef_one_sub_conjTranspose_mul_self (K := Vᴴ) (by simpa using hV)))
+    (Matrix.posSemidef_one_sub_one_kronecker (by rw [hV, sub_self]; exact Matrix.PosSemidef.zero))
 
 /-- The operators whose Kraus weights bound the hybrid with a projector `P` and an isometry `V`:
 `V̂ P̂ U P̂ - P̂ W P̂ V̂`, with `P̂ = 1 ⊗ P` and `V̂ = 1 ⊗ V` on the input or output and the
@@ -391,7 +299,7 @@ theorem l2_opNorm_lemmaKraus {P V : Matrix D D ℂ} (hV : Vᴴ * V = 1) (hPV : P
     (U W : ∀ i, spec.Result i → Matrix (spec.Out i × D) (spec.In i × D) ℂ) (i : spec.Port)
     (r : spec.Result i) : ‖lemmaKraus P V U W i r‖ = ‖projDiff P V U W i r‖ := by
   rw [lemmaKraus_eq_projDiff_mul hV hPV, MatrixMap.l2_opNorm_mul_coisometry
-    (one_kronecker_mul_conjTranspose (_root_.mul_eq_one_comm.mp hV))]
+    (Matrix.one_kronecker_mul_conjTranspose (_root_.mul_eq_one_comm.mp hV))]
 
 variable {P V : Matrix D D ℂ} (hP : (1 - Pᴴ * P).PosSemidef) (hV : Vᴴ * V = 1)
   {s : ∀ i, SubInstrument (spec.In i × D) (spec.Out i × D) (spec.Result i)}
@@ -432,9 +340,95 @@ variable {spec : QuantumOracleSpec.{u₁, v₁}} {L : LocalSig.{u, v}} (I : L.In
   (hU : ∀ i r, (s₀ i).branch r = MatrixMap.conj (U i r))
   (hW : ∀ i r, (s₁ i).branch r = MatrixMap.conj (W i r))
   {P V : Matrix D D ℂ} (hP : (1 - Pᴴ * P).PosSemidef) (hV : Vᴴ * V = 1)
-include hU hW hP hV
 
-omit hU hW in
+private theorem conj_one_kronecker_kronecker (ρ : Matrix A A ℂ) {σ : Matrix D D ℂ}
+    (hVσ : MatrixMap.conj V σ = σ) :
+    MatrixMap.conj ((1 : Matrix A A ℂ) ⊗ₖ V) (ρ ⊗ₖ σ) = ρ ⊗ₖ σ := by
+  rw [MatrixMap.conj_apply] at hVσ ⊢
+  rw [conjTranspose_kronecker, conjTranspose_one, ← mul_kronecker_mul, ← mul_kronecker_mul,
+    Matrix.one_mul, Matrix.mul_one, hVσ]
+
+section
+
+include hV
+
+/-- The observable of a set of leaves, rotated by `1 ⊗ V`. -/
+private theorem tsum_indicator_eq_isometry {γ : Type*} (f : (Σ u, X u) → γ) (s : Set γ)
+    [DecidablePred (· ∈ s)] (B : ∀ p : Σ u, X u, Matrix (p.1 × D) (p.1 × D) ℂ) :
+    ∑' p, ENNReal.ofReal (B p).trace.re * s.indicator 1 (f p) =
+      ∑' p, ENNReal.ofReal (MatrixMap.conj
+        (if f p ∈ s then (1 : Matrix p.1 p.1 ℂ) ⊗ₖ V else 0) (B p)).trace.re := by
+  refine tsum_congr fun p ↦ ?_
+  by_cases h : f p ∈ s
+  · simp only [h, ↓reduceIte, Set.indicator_of_mem h, Pi.one_apply, mul_one]
+    rw [MatrixMap.isTP_conj (Matrix.conjTranspose_one_kronecker_mul_self hV) _]
+  · simp [h]
+
+private theorem tsum_indicator_eq_coisometry {γ : Type*} (f : (Σ u, X u) → γ) (s : Set γ)
+    [DecidablePred (· ∈ s)] (B : ∀ p : Σ u, X u, Matrix (p.1 × D) (p.1 × D) ℂ) :
+    ∑' p, ENNReal.ofReal (B p).trace.re * s.indicator 1 (f p) =
+      ∑' p, ENNReal.ofReal (MatrixMap.conj
+        ((if f p ∈ s then (1 : Matrix p.1 p.1 ℂ) ⊗ₖ V else 0) *
+          ((1 : Matrix p.1 p.1 ℂ) ⊗ₖ Vᴴ)) (B p)).trace.re := by
+  have hV' : V * Vᴴ = 1 := _root_.mul_eq_one_comm.mp hV
+  refine tsum_congr fun p ↦ ?_
+  by_cases h : f p ∈ s
+  · simp [h, one_kronecker_mul_one_kronecker, hV']
+  · simp [h]
+
+private theorem posSemidef_one_sub_indicator_isometry {γ : Type*} (f : (Σ u, X u) → γ)
+    (s : Set γ) [DecidablePred (· ∈ s)] (p : Σ u, X u) :
+    (1 - (if f p ∈ s then (1 : Matrix p.1 p.1 ℂ) ⊗ₖ V else 0)ᴴ *
+      (if f p ∈ s then (1 : Matrix p.1 p.1 ℂ) ⊗ₖ V else 0)).PosSemidef := by
+  by_cases h : f p ∈ s
+  · simp only [h, ↓reduceIte]
+    rw [Matrix.conjTranspose_one_kronecker_mul_self hV, sub_self]
+    exact Matrix.PosSemidef.zero
+  · simp [h, Matrix.PosSemidef.one]
+
+open scoped Matrix.Norms.L2Operator
+
+private theorem krausWeight_lemmaKraus_le (hPV : P * V = V * P) (i : spec.Port)
+    {τ : Matrix (spec.In i × D) (spec.In i × D) ℂ} (hτ : τ.PosSemidef) :
+    krausWeight (lemmaKraus P V U W) i τ ≤
+      (∑' r, ENNReal.ofReal (‖projDiff P V U W i r‖ ^ 2)) * ENNReal.ofReal τ.trace.re := by
+  refine (krausWeight_le _ i hτ).trans_eq ?_
+  simp only [l2_opNorm_lemmaKraus hV hPV]
+
+/-- The Kraus weights of `lemmaKraus P V U W` on the calls of a run, under condition 3, by the
+masses of the classical ports of that run. -/
+private theorem tsum_rpow_queryWeight_lemmaKraus_le_mass (hPV : P * V = V * P)
+    (x : QuantumComp L spec X A) (ρ : SubState A) :
+    ∑' j, (QuantumRuntime.mk D σ₀ s₀).queryWeight I (krausWeight (lemmaKraus P V U W)) x
+        (ρ.matrix ⊗ₖ σ₀.matrix) j ^ (2⁻¹ : ℝ) ≤
+      ∑' j, (∑' i, (∑' r, ENNReal.ofReal (‖projDiff P V U W i r‖ ^ 2)) *
+        (QuantumRuntime.mk D σ₀ s₀).queryMassAt I x (ρ.matrix ⊗ₖ σ₀.matrix) i j) ^
+          (2⁻¹ : ℝ) :=
+  ENNReal.tsum_le_tsum fun j ↦ ENNReal.rpow_le_rpow
+    ((QuantumRuntime.mk D σ₀ s₀).queryWeight_le_tsum_mul_queryMassAt I _
+      (fun i _ hτ ↦ krausWeight_lemmaKraus_le hV hPV i hτ) x (ρ.prod σ₀).posSemidef j)
+    (by norm_num)
+
+/-- The Kraus weights of `lemmaKraus P V U W` on the calls of a run within a query budget, under
+condition 3, by the total masses of the classical ports of that run. -/
+private theorem tsum_rpow_queryWeight_lemmaKraus_le_of_isQueryBound (hPV : P * V = V * P)
+    {x : QuantumComp L spec X A} {b : spec.Port → ℕ} (hx : x.IsQueryBound b)
+    (t : Finset spec.Port) (ht : ∀ i ∉ t, b i = 0) (ρ : SubState A) :
+    ∑' j, (QuantumRuntime.mk D σ₀ s₀).queryWeight I (krausWeight (lemmaKraus P V U W)) x
+        (ρ.matrix ⊗ₖ σ₀.matrix) j ^ (2⁻¹ : ℝ) ≤
+      (((∑ i ∈ t, b i : ℕ) : ℝ≥0∞) *
+        ∑' i, (∑' r, ENNReal.ofReal (‖projDiff P V U W i r‖ ^ 2)) *
+          (QuantumRuntime.mk D σ₀ s₀).queryMass I x (ρ.matrix ⊗ₖ σ₀.matrix) i) ^
+        (2⁻¹ : ℝ) := by
+  refine (tsum_rpow_inv_two_queryWeight_le_of_isQueryBound I _ hx t ht _).trans ?_
+  gcongr
+  exact (QuantumRuntime.mk D σ₀ s₀).tsum_queryWeight_le_tsum_mul_queryMass I _
+    (fun i _ hτ ↦ krausWeight_lemmaKraus_le hV hPV i hτ) x (ρ.prod σ₀).posSemidef
+
+end
+
+include hP hV
+
 /-- The three identities that reduce the bound to the core bound for the rotated compressed
 first runtime and the compressed second runtime. -/
 private theorem inImage_reduce (x : QuantumComp L spec X A) {ρ : Matrix (A × D) (A × D) ℂ}
@@ -457,6 +451,10 @@ private theorem inImage_reduce (x : QuantumComp L spec X A) {ρ : Matrix (A × D
             ((1 : Matrix (spec.Out i) (spec.Out i) ℂ) ⊗ₖ P) * W i r *
               ((1 : Matrix (spec.In i) (spec.In i) ℂ) ⊗ₖ P)) x ρ j =
       (QuantumRuntime.mk D σ₀ s₀).queryWeight I (krausWeight (lemmaKraus P V U W)) x ρ j := by
+  have hVV (B : QReg) :
+      ((1 : Matrix B B ℂ) ⊗ₖ Vᴴ) * ((1 : Matrix B B ℂ) ⊗ₖ V) = 1 := by
+    simpa only [conjTranspose_kronecker, conjTranspose_one] using
+      Matrix.conjTranspose_one_kronecker_mul_self (k := B) hV
   have hs₀ : ∀ i E τ, InImageAt P s₀ i E τ → ∀ r,
       ((s₀ i).frame E).branch r τ = ((compressSteps P hP s₀ i).frame E).branch r τ :=
     fun _ _ _ hτ r ↦ (compressSteps_frame_branch_eq hP hτ r).symm
@@ -472,7 +470,8 @@ private theorem inImage_reduce (x : QuantumComp L spec X A) {ρ : Matrix (A × D
       (V := MatrixMap.conj V) (rotateSteps_simulation hV) x p) ρ
     rw [LinearMap.comp_apply, LinearMap.comp_apply, ← hρV, MatrixMap.amplifyLeft_conj] at hsim
     rw [hsim, ← LinearMap.comp_apply (MatrixMap.conj (O p * ((1 : Matrix p.1 p.1 ℂ) ⊗ₖ Vᴴ))),
-      ← MatrixMap.conj_mul, Matrix.mul_assoc, one_kronecker_conjTranspose_mul hV, Matrix.mul_one,
+      ← MatrixMap.conj_mul, Matrix.mul_assoc,
+      hVV p.1, Matrix.mul_one,
       run_branch_apply_eq_of_forallQueries (σ₂ := σ₀) I hs₀ h₀ p]
   · rw [hρV, queryWeight_simulation I (R₁ := QuantumRuntime.mk D σ₀ (compressSteps P hP s₀))
       (R₂ := QuantumRuntime.mk D σ₀ (rotateSteps V hV (compressSteps P hP s₀)))
@@ -484,7 +483,9 @@ private theorem inImage_reduce (x : QuantumComp L spec X A) {ρ : Matrix (A × D
     refine tsum_congr fun r ↦ ?_
     rw [← LinearMap.comp_apply, ← MatrixMap.conj_mul, Matrix.sub_mul,
       Matrix.mul_assoc _ ((1 : Matrix (spec.In i) (spec.In i) ℂ) ⊗ₖ Vᴴ),
-      one_kronecker_conjTranspose_mul hV, Matrix.mul_one]
+      hVV (spec.In i), Matrix.mul_one]
+
+include hU hW
 
 /-- **The square-root hybrid bound with a projector and an isometry** (ePrint 2025/2166,
 Lemma 5.7, for general programs). Let the steps of two runtimes on the register `D` be the Kraus
@@ -510,8 +511,9 @@ theorem rpow_inv_two_tsum_trace_conj_run_le_of_inImage (x : QuantumComp L spec X
   obtain ⟨e₀, e₁, e₂⟩ := inImage_reduce I hP hV x hVρ h₀ h₁ O
   have hO' : ∀ p, (1 - (O p * ((1 : Matrix p.1 p.1 ℂ) ⊗ₖ Vᴴ))ᴴ *
       (O p * ((1 : Matrix p.1 p.1 ℂ) ⊗ₖ Vᴴ))).PosSemidef := fun p ↦
-    posSemidef_one_sub_mul (hO p)
-      (posSemidef_one_sub_one_kronecker (posSemidef_one_sub_conjTranspose hV))
+    Matrix.posSemidef_one_sub_mul (hO p)
+      (Matrix.posSemidef_one_sub_one_kronecker
+      (Matrix.posSemidef_one_sub_conjTranspose_mul_self (K := Vᴴ) (by simpa using hV)))
   have h := rpow_inv_two_tsum_trace_conj_run_le I σ₀ σ₁
     (s₀ := rotateSteps V hV (compressSteps P hP s₀)) (s₁ := compressSteps P hP s₁)
     (fun i r ↦ branch_krausSandwich_of_eq_conj
@@ -538,8 +540,9 @@ theorem rpow_inv_two_tsum_trace_conj_run_le_of_inImage' (x : QuantumComp L spec 
   obtain ⟨e₀, e₁, e₂⟩ := inImage_reduce I hP hV x hVρ h₀ h₁ O
   have hO' : ∀ p, (1 - (O p * ((1 : Matrix p.1 p.1 ℂ) ⊗ₖ Vᴴ))ᴴ *
       (O p * ((1 : Matrix p.1 p.1 ℂ) ⊗ₖ Vᴴ))).PosSemidef := fun p ↦
-    posSemidef_one_sub_mul (hO p)
-      (posSemidef_one_sub_one_kronecker (posSemidef_one_sub_conjTranspose hV))
+    Matrix.posSemidef_one_sub_mul (hO p)
+      (Matrix.posSemidef_one_sub_one_kronecker
+      (Matrix.posSemidef_one_sub_conjTranspose_mul_self (K := Vᴴ) (by simpa using hV)))
   have h := rpow_inv_two_tsum_trace_conj_run_le' I σ₀ σ₁
     (s₀ := rotateSteps V hV (compressSteps P hP s₀)) (s₁ := compressSteps P hP s₁)
     (fun i r ↦ branch_krausSandwich_of_eq_conj
@@ -551,50 +554,6 @@ theorem rpow_inv_two_tsum_trace_conj_run_le_of_inImage' (x : QuantumComp L spec 
   exact tsum_congr fun j ↦ congrArg (· ^ (2⁻¹ : ℝ)) (e₂ j)
 
 /-! ## Events -/
-
-omit hU hW hP in
-/-- The observable of a set of leaves, rotated by `1 ⊗ V`. -/
-private theorem tsum_indicator_eq_isometry {γ : Type*} (f : (Σ u, X u) → γ) (s : Set γ)
-    [DecidablePred (· ∈ s)] (B : ∀ p : Σ u, X u, Matrix (p.1 × D) (p.1 × D) ℂ) :
-    ∑' p, ENNReal.ofReal (B p).trace.re * s.indicator 1 (f p) =
-      ∑' p, ENNReal.ofReal (MatrixMap.conj
-        (if f p ∈ s then (1 : Matrix p.1 p.1 ℂ) ⊗ₖ V else 0) (B p)).trace.re := by
-  refine tsum_congr fun p ↦ ?_
-  by_cases h : f p ∈ s
-  · simp only [h, ↓reduceIte, Set.indicator_of_mem h, Pi.one_apply, mul_one]
-    rw [trace_conj_of_isometry (one_kronecker_isometry hV)]
-  · simp [h]
-
-omit hU hW hP in
-private theorem tsum_indicator_eq_coisometry {γ : Type*} (f : (Σ u, X u) → γ) (s : Set γ)
-    [DecidablePred (· ∈ s)] (B : ∀ p : Σ u, X u, Matrix (p.1 × D) (p.1 × D) ℂ) :
-    ∑' p, ENNReal.ofReal (B p).trace.re * s.indicator 1 (f p) =
-      ∑' p, ENNReal.ofReal (MatrixMap.conj
-        ((if f p ∈ s then (1 : Matrix p.1 p.1 ℂ) ⊗ₖ V else 0) *
-          ((1 : Matrix p.1 p.1 ℂ) ⊗ₖ Vᴴ)) (B p)).trace.re := by
-  have hV' : V * Vᴴ = 1 := _root_.mul_eq_one_comm.mp hV
-  refine tsum_congr fun p ↦ ?_
-  by_cases h : f p ∈ s
-  · simp [h, one_kronecker_mul_one_kronecker, hV']
-  · simp [h]
-
-omit hU hW hP in
-private theorem posSemidef_one_sub_indicator_isometry {γ : Type*} (f : (Σ u, X u) → γ)
-    (s : Set γ) [DecidablePred (· ∈ s)] (p : Σ u, X u) :
-    (1 - (if f p ∈ s then (1 : Matrix p.1 p.1 ℂ) ⊗ₖ V else 0)ᴴ *
-      (if f p ∈ s then (1 : Matrix p.1 p.1 ℂ) ⊗ₖ V else 0)).PosSemidef := by
-  by_cases h : f p ∈ s
-  · simp only [h, ↓reduceIte]
-    exact posSemidef_one_sub_of_isometry (one_kronecker_isometry hV)
-  · simp [h, Matrix.PosSemidef.one]
-
-omit hU hW hP hV in
-private theorem conj_one_kronecker_kronecker (ρ : Matrix A A ℂ) {σ : Matrix D D ℂ}
-    (hVσ : MatrixMap.conj V σ = σ) :
-    MatrixMap.conj ((1 : Matrix A A ℂ) ⊗ₖ V) (ρ ⊗ₖ σ) = ρ ⊗ₖ σ := by
-  rw [MatrixMap.conj_apply] at hVσ ⊢
-  rw [conjTranspose_kronecker, conjTranspose_one, ← mul_kronecker_mul, ← mul_kronecker_mul,
-    Matrix.one_mul, Matrix.mul_one, hVσ]
 
 /-- **The square-root hybrid bound with a projector and an isometry, for events** (ePrint
 2025/2166, Lemma 5.7, for general programs). Two runtimes with the same register and initial
@@ -650,46 +609,6 @@ theorem rpow_inv_two_outcomeLawWith_le_of_inImage' {γ : Type*} [MeasurableSpace
     (conj_one_kronecker_kronecker _ hVσ) h₀ h₁
 
 open scoped Matrix.Norms.L2Operator
-
-omit hU hW hP in
-private theorem krausWeight_lemmaKraus_le (hPV : P * V = V * P) (i : spec.Port)
-    {τ : Matrix (spec.In i × D) (spec.In i × D) ℂ} (hτ : τ.PosSemidef) :
-    krausWeight (lemmaKraus P V U W) i τ ≤
-      (∑' r, ENNReal.ofReal (‖projDiff P V U W i r‖ ^ 2)) * ENNReal.ofReal τ.trace.re := by
-  refine (krausWeight_le _ i hτ).trans_eq ?_
-  simp only [l2_opNorm_lemmaKraus hV hPV]
-
-omit hU hW hP in
-/-- The Kraus weights of `lemmaKraus P V U W` on the calls of a run, under condition 3, by the
-masses of the classical ports of that run. -/
-private theorem tsum_rpow_queryWeight_lemmaKraus_le_mass (hPV : P * V = V * P)
-    (x : QuantumComp L spec X A) (ρ : SubState A) :
-    ∑' j, (QuantumRuntime.mk D σ₀ s₀).queryWeight I (krausWeight (lemmaKraus P V U W)) x
-        (ρ.matrix ⊗ₖ σ₀.matrix) j ^ (2⁻¹ : ℝ) ≤
-      ∑' j, (∑' i, (∑' r, ENNReal.ofReal (‖projDiff P V U W i r‖ ^ 2)) *
-        (QuantumRuntime.mk D σ₀ s₀).queryMassAt I x (ρ.matrix ⊗ₖ σ₀.matrix) i j) ^
-          (2⁻¹ : ℝ) :=
-  ENNReal.tsum_le_tsum fun j ↦ ENNReal.rpow_le_rpow
-    ((QuantumRuntime.mk D σ₀ s₀).queryWeight_le_tsum_mul_queryMassAt I _
-      (fun i _ hτ ↦ krausWeight_lemmaKraus_le hV hPV i hτ) x (ρ.prod σ₀).posSemidef j)
-    (by norm_num)
-
-omit hU hW hP in
-/-- The Kraus weights of `lemmaKraus P V U W` on the calls of a run within a query budget, under
-condition 3, by the total masses of the classical ports of that run. -/
-private theorem tsum_rpow_queryWeight_lemmaKraus_le_of_isQueryBound (hPV : P * V = V * P)
-    {x : QuantumComp L spec X A} {b : spec.Port → ℕ} (hx : x.IsQueryBound b)
-    (t : Finset spec.Port) (ht : ∀ i ∉ t, b i = 0) (ρ : SubState A) :
-    ∑' j, (QuantumRuntime.mk D σ₀ s₀).queryWeight I (krausWeight (lemmaKraus P V U W)) x
-        (ρ.matrix ⊗ₖ σ₀.matrix) j ^ (2⁻¹ : ℝ) ≤
-      (((∑ i ∈ t, b i : ℕ) : ℝ≥0∞) *
-        ∑' i, (∑' r, ENNReal.ofReal (‖projDiff P V U W i r‖ ^ 2)) *
-          (QuantumRuntime.mk D σ₀ s₀).queryMass I x (ρ.matrix ⊗ₖ σ₀.matrix) i) ^
-        (2⁻¹ : ℝ) := by
-  refine (tsum_rpow_inv_two_queryWeight_le_of_isQueryBound I _ hx t ht _).trans ?_
-  gcongr
-  exact (QuantumRuntime.mk D σ₀ s₀).tsum_queryWeight_le_tsum_mul_queryMass I _
-    (fun i _ hτ ↦ krausWeight_lemmaKraus_le hV hPV i hτ) x (ρ.prod σ₀).posSemidef
 
 /-- **ePrint 2025/2166, Lemma 5.7, with the masses of the classical ports**, for general
 programs: under conditions 1 to 3, the square root of the probability of an event against the
