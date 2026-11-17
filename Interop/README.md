@@ -20,7 +20,10 @@ To build on these bridges, pin a VCVio commit and open an issue describing what 
 
 The Rust bridges need hax's and Aeneas's Lean libraries, and every package that requires VCVio
 would resolve any `require` in VCVio's root lakefile. So `Interop/lakefile.toml` is its own Lake
-package. It requires VCVio by path and hax by commit; hax brings Aeneas.
+package. It requires VCVio by path and pins hax and its Aeneas backend by commit. The Aeneas fork
+combines hax's `RustM` interface with the upstream Lean 4.36 fixes for enum declarations and
+scalar set-membership rules. The override can be removed when hax pins a compatible backend.
+[Aeneas Lean update](https://github.com/AeneasVerif/aeneas/pull/1547).
 - *Sources.* It reads them from the repository root (`srcDir = ".."`), so modules keep their
   `Interop.` names.
 - *Pins.* Its pins equal the root's (Lean v4.36.0, Mathlib v4.36.0), so it shares the root's
