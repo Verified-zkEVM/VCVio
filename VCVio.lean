@@ -674,6 +674,7 @@ public import VCVio.Schemes.KEMDEM.Measure
 public import VCVio.Schemes.MacFromPRF
 public import VCVio.Schemes.MerkleDamgard
 public import VCVio.Schemes.Pedersen
+public import VCVio.Schemes.Pedersen.Generic
 public import VCVio.Schemes.PointerChainPuzzle.Bad
 public import VCVio.Schemes.PointerChainPuzzle.Basic
 public import VCVio.Schemes.PointerChainPuzzle.Delay
