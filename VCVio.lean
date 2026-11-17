@@ -576,7 +576,9 @@ public import VCVio.Quantum.Comp.Parallel
 public import VCVio.Quantum.Comp.Potential
 public import VCVio.Quantum.Comp.QueryBound
 public import VCVio.Quantum.Comp.QueryMass
+public import VCVio.Quantum.Comp.RoundBound
 public import VCVio.Quantum.Comp.Runtime
+public import VCVio.Quantum.Comp.Sequentialize
 public import VCVio.Quantum.Comp.Simulation
 public import VCVio.Quantum.Comp.TotalQueryBound
 public import VCVio.Quantum.Foundations.Parallel
@@ -611,6 +613,7 @@ public import VCVio.Quantum.Oracle.Emulated
 public import VCVio.Quantum.Oracle.EmulatedTensor
 public import VCVio.Quantum.Oracle.Model
 public import VCVio.Quantum.Oracle.Parallel
+public import VCVio.Quantum.Oracle.Sequentialize
 public import VCVio.Quantum.Oracle.UniformSample
 public import VCVio.Quantum.Semantics
 public import VCVio.Quantum.Subprobability

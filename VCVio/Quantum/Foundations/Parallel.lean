@@ -248,4 +248,44 @@ theorem batch_relabel_frame (A D : QReg) (e : A ≃ A) (k : ℕ) :
 
 end SubInstrument
 
+namespace SubInstrument
+
+variable {ι A B : Type*} [Fintype A] [Fintype B]
+
+/-- Framing commutes with an ordered sequence of one-result operations. -/
+theorem sequenceUnit_frame (p : ι → SubInstrument A A Unit) (is : List ι) (F : QReg) :
+    sequenceUnit (fun i ↦ (p i).frame F) is = (sequenceUnit p is).frame F := by
+  induction is with
+  | nil => simp only [sequenceUnit_nil, SubInstrument.pure, DSubInstrument.frame_ret]
+  | cons i is ih =>
+    simp only [sequenceUnit_cons, ih, DSubInstrument.frame_bind]
+
+/-- Transporting every operation transports the entire ordered sequence. -/
+theorem sequenceUnit_reindex (p : ι → SubInstrument A A Unit) (is : List ι) (e : A ≃ B) :
+    sequenceUnit (fun i ↦ (p i).reindex e e) is = (sequenceUnit p is).reindex e e := by
+  induction is with
+  | nil =>
+    apply DSubInstrument.ext
+    funext u
+    cases u
+    apply LinearMap.ext
+    intro ρ
+    rw [sequenceUnit_nil, branch_reindex_apply]
+    simp
+  | cons i is ih =>
+    rw [sequenceUnit_cons, sequenceUnit_cons, ih]
+    apply DSubInstrument.ext
+    funext u
+    cases u
+    apply LinearMap.ext
+    intro ρ
+    rw [DSubInstrument.branch_bind_apply_univ, branch_reindex_apply]
+    simp only [Fintype.sum_unique, LinearMap.comp_apply]
+    rw [branch_reindex_apply, branch_reindex_apply,
+      DSubInstrument.branch_bind_apply_univ]
+    simp only [Fintype.sum_unique, LinearMap.comp_apply, Matrix.submatrix_submatrix,
+      Equiv.symm_comp_self, Matrix.submatrix_id_id]
+
+end SubInstrument
+
 end Quantum

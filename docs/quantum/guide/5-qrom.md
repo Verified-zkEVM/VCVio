@@ -82,8 +82,25 @@ receive answers from the same random oracle. Identifying the parallel oracle wit
 `xs ↦ H ∘ xs` is algebraic: sampling `H` induces a generally correlated law on these derived
 functions, rather than the uniform law on all functions between the product spaces.
 A width-zero call is the identity. Program-level translation into sequential queries,
-point-budget transfer, the classical batch bridge, the concrete parallel compressed-runtime
-equivalence, and depth-sensitive security bounds remain open.
+with exact point-budget transfer, is provided by `Comp/Sequentialize.lean` as described in
+[guide 4](4-programs-and-runtimes.md#sequentializing-batches).
+
+`Oracle/Sequentialize.lean` connects that translation to the QROM. For an arbitrary source
+local interpretation `I`, `qromEvalDist_sequentialize` states
+
+```lean
+qromEvalDist .instruments (x.sequentialize I) ρ = qromBatchEvalDist I x ρ
+```
+
+`qromEvalDistMap_sequentialize` also preserves every observation `f H leaf` of the sampled
+function and the classical leaf together. A challenger can therefore check a relation between
+the output and the same hidden function that answered every slot and round.
+`IsPointBound.qrom_sequentialize` supplies the matching single-port query certificate from the
+parallel program's point bound. The adapter is a separate module; `Oracle/Parallel.lean` does
+not depend on sequentialization.
+
+The classical batch bridge, concrete parallel compressed-runtime equivalence, and depth-sensitive
+security bounds remain open.
 
 ## Checks
 
@@ -95,6 +112,7 @@ theorem says they agree:
 | the QROM on classical algorithms and the classical random oracle | `qromEvalDist₂_toQuantum_eq_randomOracle` |
 | ordered calls on disjoint slots and the simultaneous additive oracle | `batch_oracleQuery` |
 | the parallel oracle matrix and an ordinary oracle on product registers | `parallelOracleUnitary_eq_oracleUnitary_submatrix` |
+| parallel and sequential QROM programs, including observations of the sampled function | `qromEvalDistMap_sequentialize` |
 
 **They compute the right numbers.** The tests work small examples to exact values: Deutsch's
 algorithm. `VCVioTest/Quantum/Parallel.lean` checks cyclic ranges of orders three and five,

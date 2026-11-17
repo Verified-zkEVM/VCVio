@@ -196,8 +196,26 @@ the entire program. Repeated inputs and entangled query registers are allowed.
 simulation transport applies directly with the same signature. A trace-preserving simulation
 that maps the initial private states gives output-law agreement for adaptive programs.
 
-Program-level sequentialization with point-budget transfer, the classical batch bridge, and
-the concrete parallel compressed-runtime equivalence remain open. The operator/runtime batching law
-does not itself establish those program translations or any improvement in depth-sensitive
-security bounds. Direct parallel hybrid/search bounds and changing-property compressed-oracle
-bounds are independent proof tracks.
+`Comp/RoundBound.lean` separates the number of rounds (`IsTotalQueryBound`), the per-batch width
+cap (`IsWidthBound`) and the sum of widths on each path (`IsPointBound`). These bounds constrain
+all branches, including zero-weight outcomes. A width-zero batch spends one round and zero points;
+a round bound `r` and width cap `k` imply a point bound `k * r`.
+
+`Comp/Sequentialize.lean` defines the named command substitution `sequentializeHandler I` and
+the program translation `x.sequentialize I`. An arbitrary source local signature is interpreted
+into `LocalSig.instruments`, which also supplies public register relabellings. For every stateful
+base runtime `R`, `run_sequentialize` identifies its full run with `R.batch.run I x`, including
+private memory and outcome-dependent final registers. The calls retain their order and one shared
+private register. `IsPointBound.sequentialize` transfers the same point budget to a total query
+budget; `IsTotalQueryBound.sequentialize` gives the `k * r` form. A zero-width translation makes
+no oracle calls but can retain a public relabelling. These are oracle-query certificates;
+local-operation and gate costs are not preserved by the statement.
+
+The separate adapter `Oracle/Sequentialize.lean` proves `qromEvalDist_sequentialize` and
+`qromEvalDistMap_sequentialize`. The latter preserves observations depending jointly on the sampled
+function `H` and the returned leaf, retaining their correlation. `Oracle/Parallel.lean` remains
+independent of the translation.
+
+The classical batch bridge and concrete parallel compressed-runtime equivalence remain open.
+Sequentialization does not establish improved depth-sensitive security bounds. Direct parallel
+hybrid/search bounds and changing-property compressed-oracle bounds are independent proof tracks.
