@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S uv run --no-project --python 3.12 python
 """Add ordinary-import semantic fixtures to an existing scratch Lake consumer."""
 
 import json
@@ -11,6 +11,7 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURES = {
     "APIHeap": "VCVioTest/ModuleAPI/Heap.lean",
+    "APIQueryImpl": "VCVioTest/ModuleAPI/QueryImpl.lean",
     "APIVector": "LatticeCryptoTest/Ring/VectorAPI.lean",
     "APIFacade": "VCVioTest/PFunctorFacade.lean",
     "APIMeasureWP": "VCVioTest/ProgramLogic/MeasureWP.lean",

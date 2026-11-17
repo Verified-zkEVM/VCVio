@@ -137,14 +137,29 @@ noncomputable def evalHom.symmPairing [Field F] [AddCommGroup G] [AddCommGroup G
     (e : G →ₗ[F] G →ₗ[F] Gₜ) (g : G) (x : ι → F) (P : MvPolynomial ι F) :
     (evalHom.symmPairing e g x).toFun true P = evalAt (e g g) x P := by rfl
 
-/-- The least closed Type 2 bounds extend the first source by the second source bound,
-then extend the target by the sum of the closed source bounds. -/
+/-- Type 2 degree bounds are closed exactly when the first-source bound is at least the
+second-source bound and the target bound is at least the sum of the source bounds. -/
+theorem pairingIsoSig_degreeClosed_iff (D : PSort → ℕ) :
+    pairingIsoSig.DegreeClosed D ↔ D .g₂ ≤ D .g₁ ∧ D .g₁ + D .g₂ ≤ D .gₜ :=
+  ⟨fun h => ⟨h.1 (), h.2 ()⟩, fun h => ⟨fun _ => h.1, fun _ => h.2⟩⟩
+
+/-- Raising the first-source bound to the second-source bound, then the target bound to the
+sum of the raised source bounds, closes Type 2 degree bounds. By
+`pairingIsoSig_degreeClosed_iff` these are the least closed bounds above `(d₁, d₂, dₜ)`. -/
 theorem degreeClosed_pairingIsoSig (d₁ d₂ dₜ : ℕ) :
     pairingIsoSig.DegreeClosed
       (fun | .g₁ => max d₁ d₂ | .g₂ => d₂ | .gₜ => max dₜ (max d₁ d₂ + d₂)) :=
   ⟨fun _ => Nat.le_max_right _ _, fun _ => Nat.le_max_right _ _⟩
 
-/-- The least closed Type 1 target bound extends the initial bound by twice the source bound. -/
+/-- Type 1 degree bounds are closed exactly when the target bound is at least twice the
+source bound. -/
+theorem symmPairingSig_degreeClosed_iff (D : Bool → ℕ) :
+    symmPairingSig.DegreeClosed D ↔ D false + D false ≤ D true :=
+  ⟨fun h => h.2 (), fun h => ⟨fun o => o.elim, fun _ => h⟩⟩
+
+/-- Raising the target bound to twice the source bound closes Type 1 degree bounds. By
+`symmPairingSig_degreeClosed_iff`, `max dₜ (2 * d)` is the least closed target bound above
+`dₜ`. -/
 theorem degreeClosed_symmPairingSig (d dₜ : ℕ) :
     symmPairingSig.DegreeClosed (fun | false => d | true => max dₜ (2 * d)) := by
   refine ⟨fun o => o.elim, fun _ => ?_⟩

@@ -1,0 +1,66 @@
+name: hax Extraction
+
+# The Lean modules under `Interop/Hax/<Name>/Extraction/` are extracted by the hax CLI from the Rust
+# crates next to them (`scripts/regenerate-hax.sh`) and committed, so building `Interop/` needs no
+# Rust. This job reruns the extraction with the `cargo-hax` release that `Interop/lakefile.toml`
+# pins and fails if a committed module differs from a fresh extraction.
+#
+# It runs when a crate, an extracted module, the workspace manifests, the pin or the script changes,
+# and not for edits to the proofs (`Verification.lean`).
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "Interop/Hax/*/src/**"
+      - "Interop/Hax/*/Cargo.toml"
+      - "Interop/Hax/*/hax.toml"
+      - "Interop/Hax/*/Extraction/**"
+      - "Interop/Hax/Cargo.toml"
+      - "Interop/Hax/Cargo.lock"
+      - "Interop/lakefile.toml"
+      - "scripts/regenerate-hax.sh"
+      - ".github/workflows/hax-extraction.yml"
+  pull_request:
+    paths:
+      - "Interop/Hax/*/src/**"
+      - "Interop/Hax/*/Cargo.toml"
+      - "Interop/Hax/*/hax.toml"
+      - "Interop/Hax/*/Extraction/**"
+      - "Interop/Hax/Cargo.toml"
+      - "Interop/Hax/Cargo.lock"
+      - "Interop/lakefile.toml"
+      - "scripts/regenerate-hax.sh"
+      - ".github/workflows/hax-extraction.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  drift:
+    name: Check the hax extractions are current
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Read the pinned hax release
+        id: pin
+        run: |
+          rev="$(sed -n 's/^rev = "\([0-9a-f]\{40\}\)"$/\1/p' Interop/lakefile.toml)"
+          test -n "$rev"
+          echo "rev=$rev" >> "$GITHUB_OUTPUT"
+      - name: Restore cargo-hax
+        id: cargo-hax
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cargo/bin/cargo-hax
+          key: cargo-hax-${{ runner.os }}-${{ runner.arch }}-${{ steps.pin.outputs.rev }}
+      - name: Install cargo-hax at the pinned release
+        if: steps.cargo-hax.outputs.cache-hit != 'true'
+        run: >-
+          cargo install --locked --git https://github.com/cryspen/hax
+          --rev "${{ steps.pin.outputs.rev }}" cargo-hax
+      - name: Extract afresh and compare with the committed modules
+        run: scripts/regenerate-hax.sh --check

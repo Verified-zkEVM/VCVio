@@ -563,8 +563,8 @@ writer share the same underlying free-monoid carrier.
 
 We do *not* declare a global `Monoid (QueryLog spec)` instance: doing so
 would conflict with the `[EmptyCollection ω] [Append ω] → Monad (WriterT ω M)`
-instance Mathlib already provides for `WriterT (QueryLog spec) M`, which the
-`Std.Do` bridge `WriterTBridge` and the append-based reading `WriterT.AppendWP` rely on. The
+instance Mathlib already provides for `WriterT (QueryLog spec) M`, which the append-based reading
+`WriterT.AppendWP` relies on. The
 `QueryImpl.withTrace`/`withLogging` API instead uses the Append-based
 `Monad (WriterT _ _)` directly via `QueryImpl.withTraceAppend`. -/
 @[reducible] def QueryLog (spec : OracleSpec.{u, v} ι) : Type (max u v) :=
@@ -820,6 +820,38 @@ protected def inr (log : QueryLog spec₂) : QueryLog (spec₁ + spec₂) :=
 
 instance : Coe (QueryLog spec₁) (QueryLog (spec₁ + spec₂)) := ⟨QueryLog.inl⟩
 instance : Coe (QueryLog spec₂) (QueryLog (spec₁ + spec₂)) := ⟨QueryLog.inr⟩
+
+/-- `QueryLog.fst` distributes over append. -/
+@[simp]
+lemma fst_append (l₁ l₂ : QueryLog (spec₁ + spec₂)) :
+    (l₁ ++ l₂).fst = l₁.fst ++ l₂.fst :=
+  List.filterMap_append
+
+/-- `QueryLog.snd` distributes over append. -/
+@[simp]
+lemma snd_append (l₁ l₂ : QueryLog (spec₁ + spec₂)) :
+    (l₁ ++ l₂).snd = l₁.snd ++ l₂.snd :=
+  List.filterMap_append
+
+/-- The left projection of a left-embedded log is the log itself. -/
+@[simp]
+lemma fst_inl (l : QueryLog spec₁) : (QueryLog.inl (spec₂ := spec₂) l).fst = l := by
+  simp [QueryLog.inl, QueryLog.fst]
+
+/-- The right projection of a left-embedded log is empty. -/
+@[simp]
+lemma snd_inl (l : QueryLog spec₁) : (QueryLog.inl (spec₂ := spec₂) l).snd = [] := by
+  simp [QueryLog.inl, QueryLog.snd]
+
+/-- The left projection of a right-embedded log is empty. -/
+@[simp]
+lemma fst_inr (l : QueryLog spec₂) : (QueryLog.inr (spec₁ := spec₁) l).fst = [] := by
+  simp [QueryLog.inr, QueryLog.fst]
+
+/-- The right projection of a right-embedded log is the log itself. -/
+@[simp]
+lemma snd_inr (l : QueryLog spec₂) : (QueryLog.inr (spec₁ := spec₁) l).snd = l := by
+  simp [QueryLog.inr, QueryLog.snd]
 
 end prod
 
