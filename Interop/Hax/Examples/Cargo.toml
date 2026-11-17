@@ -1,0 +1,8 @@
+[package]
+name = "hax_add_or_panic"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[dependencies]
+hax-lib.workspace = true
