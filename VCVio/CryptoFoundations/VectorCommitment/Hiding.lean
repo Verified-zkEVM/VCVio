@@ -36,6 +36,17 @@ the adversary.
 The advantage is stated in the random oracle model: both worlds run against the lazily sampled
 random oracle `ProbCompRuntime.rom (X →ₒ Y)`, shared by the adversary's two stages and the scheme.
 
+`TwoMessageHiding` and `SimulationHiding` are the statistical hiding notions: they bound the
+advantage of every adversary that makes at most `t` oracle queries and opens exactly `q` positions,
+whatever its computation. Such a bound is meaningful in the pure random oracle model, where security
+is statistical (Chiesa–Yogev, Version 1.2, Lemma 18.6.3). A computational notion instead bounds the
+advantage of a named reduction, or of polynomial-time adversary families
+(`SecurityGame.secureAgainst` with `SecurityFamily.IsOraclePPTBy`); bounding every adversary is
+meaningful only when security is statistical. `IsSimulationHiding` fixes one simulator for all
+adversaries, chosen before them, as in that lemma. It bounds the simulator's oracle queries
+(`HidingSimulator.MakesAtMostQueries`) but not its computation: the running time of a simulator is a
+property of a concrete simulator, stated where one is constructed.
+
 ## Main definitions
 
 * `VectorCommitment.HidingAdversary`, `VectorCommitment.hidingExperiment` and
@@ -46,6 +57,11 @@ random oracle `ProbCompRuntime.rom (X →ₒ Y)`, shared by the adversary's two 
   world `b` of a two-message adversary.
 * `MakesAtMostQueries` and `OpensExactly` on both adversary types: one oracle-query budget shared
   by both stages of the adversary, and the number of opened positions.
+* `VectorCommitment.HidingSimulator.MakesAtMostQueries`: an oracle-query budget for a simulator.
+* `VectorCommitment.TwoMessageHiding` and `VectorCommitment.SimulationHiding`: the advantage
+  bounds over every adversary within a query budget and an opening size.
+* `VectorCommitment.IsSimulationHiding`: some simulator within a query budget achieves
+  `SimulationHiding`.
 
 ## Main results
 
@@ -56,6 +72,9 @@ random oracle `ProbCompRuntime.rom (X →ₒ Y)`, shared by the adversary's two 
 * `VectorCommitment.HidingAdversary.makesAtMostQueries_toSimulation` and
   `VectorCommitment.HidingAdversary.opensExactly_toSimulation`: those adversaries keep the query
   budget and the opening size.
+* `VectorCommitment.SimulationHiding.twoMessageHiding` and
+  `VectorCommitment.IsSimulationHiding.twoMessageHiding`: simulation hiding at error `ε` gives
+  two-message hiding at error `2 ε`.
 
 ## References
 
@@ -220,6 +239,7 @@ two-message advantage at most `2 ε`. Simulation bounds hold for adversaries wit
 that open a fixed number of positions; the adversaries playing the two worlds inherit both
 restrictions from `adversary`
 (`HidingAdversary.makesAtMostQueries_toSimulation`, `HidingAdversary.opensExactly_toSimulation`).
+`SimulationHiding.twoMessageHiding` states the consequence for the named hiding notions.
 -/
 theorem hidingAdvantage_le_simulationHidingAdvantage [DecidableEq X] [SampleableType Y]
     [DecidableEq Msg] (vc : VectorCommitment X Y Msg Cm Td Pf ℓ)
@@ -274,6 +294,14 @@ def SimulationHidingAdversary.OpensExactly (adversary : SimulationHidingAdversar
     (q : ℕ) : Prop :=
   ∀ c ∈ support adversary.choose, match c with | (_, Q, _) => Q.card = q
 
+/-- A hiding simulator `MakesAtMostQueries s` when, for every set of positions and every partial
+vector, it makes at most `s` queries to the oracle on every path. Coins are free. -/
+@[expose]
+def HidingSimulator.MakesAtMostQueries (simulator : HidingSimulator X Y Msg Cm Pf ℓ) (s : ℕ) :
+    Prop :=
+  ∀ (Q : Finset (Fin ℓ)) (ans : PartialVec ℓ Msg),
+    IsQueryBoundP (simulator Q ans) (· matches .inr _) s
+
 /-- The adversaries playing the two worlds make no more oracle queries than the two-message
 adversary: they run its stages and add only pure steps. -/
 theorem HidingAdversary.makesAtMostQueries_toSimulation [DecidableEq Msg]
@@ -295,5 +323,54 @@ theorem HidingAdversary.opensExactly_toSimulation [DecidableEq Msg]
     MonadAttach.support_map] at hc
   obtain ⟨c', hc', rfl⟩ := hc
   exact h c' hc'
+
+/-! ## Hiding notions -/
+
+/-- Two-message hiding with error `ε`: every hiding adversary that makes at most `t` oracle queries
+and opens exactly `q` positions has `hidingAdvantage` at most `ε`. -/
+@[expose]
+def TwoMessageHiding [DecidableEq X] [SampleableType Y] [DecidableEq Msg]
+    (vc : VectorCommitment X Y Msg Cm Td Pf ℓ) (t q : ℕ) (ε : ENNReal) : Prop :=
+  ∀ adversary : HidingAdversary X Y Msg Cm Pf ℓ,
+    adversary.MakesAtMostQueries t → adversary.OpensExactly q → vc.hidingAdvantage adversary ≤ ε
+
+/-- Simulation hiding with simulator `simulator` and error `ε`: every simulation-hiding adversary
+that makes at most `t` oracle queries and opens exactly `q` positions has
+`simulationHidingAdvantage` at most `ε`. -/
+@[expose]
+def SimulationHiding [DecidableEq X] [SampleableType Y] (vc : VectorCommitment X Y Msg Cm Td Pf ℓ)
+    (simulator : HidingSimulator X Y Msg Cm Pf ℓ) (t q : ℕ) (ε : ENNReal) : Prop :=
+  ∀ adversary : SimulationHidingAdversary X Y Msg Cm Pf ℓ,
+    adversary.MakesAtMostQueries t → adversary.OpensExactly q →
+      vc.simulationHidingAdvantage simulator adversary ≤ ε
+
+/-- Simulation hiding with error `ε` by one simulator that makes at most `s` oracle queries. The
+simulator is chosen before the adversary, so it is the same for every adversary. -/
+@[expose]
+def IsSimulationHiding [DecidableEq X] [SampleableType Y]
+    (vc : VectorCommitment X Y Msg Cm Td Pf ℓ) (s t q : ℕ) (ε : ENNReal) : Prop :=
+  ∃ simulator : HidingSimulator X Y Msg Cm Pf ℓ,
+    simulator.MakesAtMostQueries s ∧ vc.SimulationHiding simulator t q ε
+
+/-- **Simulation hiding implies two-message hiding** at twice the error, for the same query budget
+and opening size. -/
+theorem SimulationHiding.twoMessageHiding [DecidableEq X] [SampleableType Y] [DecidableEq Msg]
+    {vc : VectorCommitment X Y Msg Cm Td Pf ℓ} {simulator : HidingSimulator X Y Msg Cm Pf ℓ}
+    {t q : ℕ} {ε : ENNReal} (h : vc.SimulationHiding simulator t q ε) :
+    vc.TwoMessageHiding t q (2 * ε) := fun adversary ht hq ↦
+  (hidingAdvantage_le_simulationHidingAdvantage vc simulator adversary).trans <|
+    (add_le_add
+      (h _ (HidingAdversary.makesAtMostQueries_toSimulation ht true)
+        (HidingAdversary.opensExactly_toSimulation hq true))
+      (h _ (HidingAdversary.makesAtMostQueries_toSimulation ht false)
+        (HidingAdversary.opensExactly_toSimulation hq false))).trans_eq (two_mul ε).symm
+
+/-- Simulation hiding by some query-bounded simulator implies two-message hiding at twice the
+error, for the same query budget and opening size. -/
+theorem IsSimulationHiding.twoMessageHiding [DecidableEq X] [SampleableType Y] [DecidableEq Msg]
+    {vc : VectorCommitment X Y Msg Cm Td Pf ℓ} {s t q : ℕ} {ε : ENNReal}
+    (h : vc.IsSimulationHiding s t q ε) : vc.TwoMessageHiding t q (2 * ε) :=
+  let ⟨_, _, hS⟩ := h
+  hS.twoMessageHiding
 
 end VectorCommitment
