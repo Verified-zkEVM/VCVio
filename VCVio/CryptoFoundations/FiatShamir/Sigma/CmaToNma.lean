@@ -43,25 +43,36 @@ variable (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
 
 /-! ### Simulator handler components -/
 
+/-- The oracles of the Fiat-Shamir scheme in the random oracle model: uniform sampling and
+the random oracle `M × Commit →ₒ Chal` that hashes a message and a commitment to a
+challenge. -/
 abbrev fsRoSpec (M Commit Chal : Type) : OracleSpec (ℕ ⊕ (M × Commit)) :=
   unifSpec + (M × Commit →ₒ Chal)
 
+/-- The oracles of a chosen-message adversary against the Fiat-Shamir scheme: `fsRoSpec`
+and a signing oracle that answers a message with a signature `(commitment, response)`. -/
 abbrev cmaOracleSpec (M Commit Chal Resp : Type) :
     OracleSpec ((ℕ ⊕ (M × Commit)) ⊕ M) :=
   fsRoSpec M Commit Chal + (M →ₒ (Commit × Resp))
 
+/-- The handler that forwards every `fsRoSpec` query to the ambient oracles unchanged,
+leaving the random-oracle cache as it is. -/
 def simulatedNmaFwd :
     QueryImpl (fsRoSpec M Commit Chal)
       (StateT (fsRoSpec M Commit Chal).QueryCache
         (OracleComp (fsRoSpec M Commit Chal))) :=
   (fsRoSpec M Commit Chal).passthrough
 
+/-- The uniform-sampling handler: each query is forwarded to the ambient `unifSpec` oracle
+by `simulatedNmaFwd`. -/
 def simulatedNmaUnifSim :
     QueryImpl unifSpec
       (StateT (fsRoSpec M Commit Chal).QueryCache
         (OracleComp (fsRoSpec M Commit Chal))) :=
   fun n => simulatedNmaFwd (M := M) (Commit := Commit) (Chal := Chal) (.inl n)
 
+/-- The random-oracle handler: a query found in the cache is answered from it, and any
+other query is forwarded to the ambient random oracle and its answer cached. -/
 def simulatedNmaRoSim
     [DecidableEq M] [DecidableEq Commit] :
     QueryImpl (M × Commit →ₒ Chal)
@@ -74,6 +85,8 @@ def simulatedNmaRoSim
       let v ← simulatedNmaFwd (M := M) (Commit := Commit) (Chal := Chal) (.inr mc)
       modifyGet fun cache => (v, cache.cacheQuery (.inr mc) v)
 
+/-- The handler for `fsRoSpec`: uniform sampling by `simulatedNmaUnifSim` and random-oracle
+queries by the caching `simulatedNmaRoSim`. -/
 def simulatedNmaBaseSim
     [DecidableEq M] [DecidableEq Commit] :
     QueryImpl (fsRoSpec M Commit Chal)
@@ -82,6 +95,9 @@ def simulatedNmaBaseSim
   simulatedNmaUnifSim (M := M) (Commit := Commit) (Chal := Chal) +
     simulatedNmaRoSim (M := M) (Commit := Commit) (Chal := Chal)
 
+/-- The signing handler: answers a message `msg` with `(c, s)` from a transcript
+`(c, ω, s)` drawn from `simTranscript pk`, and programs the cache at `(msg, c)` with `ω`
+unless that entry is already set. -/
 def simulatedNmaSigSim
     [DecidableEq M] [DecidableEq Commit]
     (simTranscript : Stmt → ProbComp (Commit × Chal × Resp)) (pk : Stmt) :
@@ -96,6 +112,8 @@ def simulatedNmaSigSim
     | some _ => ((c, s), cache)
     | none => ((c, s), cache.cacheQuery (.inr (msg, c)) ω)
 
+/-- The handler for all of a chosen-message adversary's oracles, using only the public key:
+`simulatedNmaBaseSim` for `fsRoSpec` and `simulatedNmaSigSim` for signing queries. -/
 def simulatedNmaImpl
     [DecidableEq M] [DecidableEq Commit]
     (simTranscript : Stmt → ProbComp (Commit × Chal × Resp)) (pk : Stmt) :

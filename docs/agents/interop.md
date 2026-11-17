@@ -17,9 +17,8 @@ The rules for agents:
   `Interop.Rust.liftRustM`, and do not add a second adapter per tool.
 - **Specifications go to `Std.WP`.** Core deprecated the `Std.Do` proof mode, while Aeneas and
   hax still emit `Std.Do`. Carry their facts into VCVio with `Interop.Rust.Triple`
-  (`Spec.liftRustM` for `vcgen`, the `triple_liftRustM_of_*` transports otherwise), and do not
-  import VCVio's `Std.Do` bridges here. VCVio's own driver takes the bare `vcgen` syntax, so call
-  core's as `vcgen []` or `vcgen [lemmas]`.
+  (`Spec.liftRustM` for `vcgen`, the `triple_liftRustM_of_*` transports otherwise). A bare
+  `vcgen` is core's tactic; VCVio's own driver is `pvcgen`.
 - **Extracted code.** A module holding hax or Aeneas output names its Rust source and states
   whether the code was emitted by the tool or transcribed.
 - **Building.** `cd Interop && lake build`. The `InteropRust` library lists its roots; add a module

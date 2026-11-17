@@ -128,16 +128,16 @@ theorem pure_function_of_explicit_realizer
 section FairCoin
 
 variable {coinInput coinOutput : Type} {CoinClass : StepClass}
-  [CoinClass.HasProd] [CoinClass.HasSum] [CoinClass.HasOption]
   (CoinQ : QuantitativeStepClass CoinClass)
   (coinBoundary : Boundary CoinClass coinSpec.toPFunctor coinInput coinOutput)
 
-omit [CoinClass.HasProd] [CoinClass.HasSum] [CoinClass.HasOption] in
 /-- The canonical fair-coin contract admits both Boolean replies. -/
 theorem fair_coin_allows_both_answers :
     (fairCoinResourceModel CoinQ coinBoundary.interface).allows PUnit.unit false ∧
       (fairCoinResourceModel CoinQ coinBoundary.interface).allows PUnit.unit true := by
   simp
+
+variable [CoinClass.HasProd] [CoinClass.HasSum] [CoinClass.HasOption]
 
 /-- The `true` trace remains charged under the fair-coin answer contract even if an independent
 semantics assigns all mass to `false`. This gives a concrete zero-probability instantiation of the

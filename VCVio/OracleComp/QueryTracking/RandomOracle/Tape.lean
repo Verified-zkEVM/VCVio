@@ -46,7 +46,11 @@ open scoped ENNReal
 
 namespace AnswerTape
 
-variable {D R : Type} [DecidableEq D] [SampleableType R]
+variable {D R : Type}
+
+section TapeOracle
+
+variable [DecidableEq D] [SampleableType R]
 
 /-! ## The tape draw, as a list -/
 
@@ -156,6 +160,8 @@ theorem evalDist_run_randomOracle_eq_tapeList {α : Type}
       simp only [tapeCachingImpl_run_some hc, pure_bind]
       exact ih u c m
 
+end TapeOracle
+
 /-! ## The position instrumentation -/
 
 /-- The position bookkeeping of one `tapeCachingImpl` step, as an auxiliary state
@@ -192,7 +198,6 @@ structure PositionInv (L : List R) (c : (D →ₒ R).QueryCache) (l : List R)
 
 namespace PositionInv
 
-omit [DecidableEq D] [SampleableType R] in
 /-- The empty cache with the full tape unconsumed satisfies the invariant. -/
 theorem empty (L : List R) :
     PositionInv L (∅ : (D →ₒ R).QueryCache) L (fun _ => none) 0 where
@@ -206,21 +211,22 @@ theorem empty (L : List R) :
 
 end PositionInv
 
-omit [SampleableType R] in
+variable [DecidableEq D]
+
 private theorem positionAux_of_some {t : D} {c : (D →ₒ R).QueryCache} {l : List R} {u : R}
     (h : c t = some u) (x : R) (s' : (D →ₒ R).QueryCache × List R) (p : (D → Option ℕ) × ℕ) :
     positionAux D R t (c, l) x s' p = p := by simp [positionAux, h]
 
-omit [SampleableType R] in
 private theorem positionAux_of_nil {t : D} {c : (D →ₒ R).QueryCache} (h : c t = none)
     (x : R) (s' : (D →ₒ R).QueryCache × List R) (p : (D → Option ℕ) × ℕ) :
     positionAux D R t (c, []) x s' p = p := by simp [positionAux, h]
 
-omit [SampleableType R] in
 private theorem positionAux_of_cons {t : D} {c : (D →ₒ R).QueryCache} {u : R} {l : List R}
     (h : c t = none) (x : R) (s' : (D →ₒ R).QueryCache × List R) (p : (D → Option ℕ) × ℕ) :
     positionAux D R t (c, u :: l) x s' p =
       (Function.update p.1 t (some p.2), p.2 + 1) := by simp [positionAux, h]
+
+variable [SampleableType R]
 
 /-- Every step of the instrumented tape oracle preserves `PositionInv`. -/
 private theorem positionInv_step (L : List R) (t : D)
