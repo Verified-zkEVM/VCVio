@@ -75,7 +75,10 @@ theorem findMerge_step_sound [DecidableEq H] (step : Nat → H → H) (start ste
   simpa only [chain_succ] using findMerge_sound step start steps x y hd
 
 /-- A predecessor at the cut, or a merge offset after the cut. The earlier trajectory starts
-at position `t`, and the first trajectory starts at the designated position `s`. -/
+at position `t`, and the first trajectory starts at the designated position `s`.
+
+The search is meaningful for `t < s ≤ b`, the range `findCut_preimage_sound` and `findCut_isSome`
+assume; outside it the truncated offsets `s - t` and `s - t - 1` give no predecessor guarantee. -/
 @[expose] def findCut [DecidableEq H] (step : Nat → H → H) (t s b : Nat) (x y : H) :
     Option (H ⊕ Fin (b - s)) :=
   if chain step t (s - t) y = x then
