@@ -109,6 +109,7 @@ public import VCVio.CryptoFoundations.GroupModel.Decisional
 public import VCVio.CryptoFoundations.GroupModel.Encoding
 public import VCVio.CryptoFoundations.GroupModel.Game
 public import VCVio.CryptoFoundations.GroupModel.GenericCoCDH
+public import VCVio.CryptoFoundations.GroupModel.GenericCoCDHIso
 public import VCVio.CryptoFoundations.GroupModel.GenericDDH
 public import VCVio.CryptoFoundations.GroupModel.GenericHardness
 public import VCVio.CryptoFoundations.GroupModel.GenericPairing
