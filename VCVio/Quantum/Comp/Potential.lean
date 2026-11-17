@@ -519,7 +519,6 @@ variable {D : QReg} {s : ∀ i, SubInstrument (spec.In i × D) (spec.Out i × D)
   {U : ∀ i, spec.Result i → Matrix (spec.Out i × D) (spec.In i × D) ℂ}
   {Q : Matrix D D ℂ}
 
-omit [Fintype Z] in
 private theorem one_kronecker_proj {n : Type*} [Fintype n] [DecidableEq n] (hQ : Qᴴ = Q)
     (hQQ : Q * Q = Q) :
     ((1 : Matrix n n ℂ) ⊗ₖ Q)ᴴ = (1 : Matrix n n ℂ) ⊗ₖ Q ∧
@@ -546,7 +545,6 @@ noncomputable def pinchStep (hU : ∀ i r, (s i).branch r = MatrixMap.conj (U i 
 variable (hU : ∀ i r, (s i).branch r = MatrixMap.conj (U i r)) (hQ : Qᴴ = Q) (hQQ : Q * Q = Q)
   (σ₀ : SubState D)
 
-omit [Fintype Z] in
 /-- **The pinched runtime keeps the event empty**: run from an operator with no weight on
 `1 ⊗ Q`, it leaves no weight on `1 ⊗ Q`. -/
 theorem eventWeight_pinch_eq_zero (x : QuantumComp L spec X A)
@@ -567,7 +565,6 @@ theorem eventWeight_pinch_eq_zero (x : QuantumComp L spec X A)
   rw [← hp]
   simp
 
-omit [Fintype Z] in
 include hQ hQQ in
 /-- The Kraus weight of the difference between a step and its pinching is that of the
 commutators `[Q̂, U i r]`. -/
@@ -579,7 +576,6 @@ theorem krausWeight_sub_pinch (i : spec.Port) (σ : Matrix (spec.In i × D) (spe
   rw [MatrixMap.trace_conj_apply, MatrixMap.trace_conj_apply, conjTranspose_sub_pinch_mul
     (one_kronecker_proj hQ hQQ).1 (one_kronecker_proj hQ hQQ).1 (one_kronecker_proj hQ hQQ).2]
 
-omit [Fintype Z] in
 include hU hQ hQQ in
 /-- From zero initial event weight, the final event amplitude is bounded by the sum of
 commutator amplitudes at the actual query inputs. Local operations and all outcomes
@@ -720,7 +716,6 @@ theorem eventWeight_le_of_potential (x : QuantumComp L spec X A)
   simpa only [rpow_inv_two_rpow_two] using
     (ENNReal.le_rpow_inv_iff (by norm_num : (0 : ℝ) < 2)).mp h
 
-omit [Fintype Z] in
 /-- The weight on `1 ⊗ Q` is at most the trace of the initial operator. -/
 theorem eventWeight_le_trace (R : QuantumRuntime spec) {Q : Matrix R.D R.D ℂ} (hQ : Qᴴ = Q)
     (hQQ : Q * Q = Q) (x : QuantumComp L spec X A) {ρ : Matrix (A × R.D) (A × R.D) ℂ}

@@ -147,6 +147,18 @@ Public book: <https://snargsbook.org/>
 Used in:
 - `VCVio/EvalDist/DiscreteTVDist.lean`
 
+### HHK17
+
+Dennis Hofheinz, Kathrin Hövelmanns, and Eike Kiltz.
+*A Modular Analysis of the Fujisaki-Okamoto Transformation*.
+In *Theory of Cryptography — TCC 2017*.
+Cryptology ePrint Archive, Report 2017/604, version of November 2, 2021; Definition 2.1 and
+Figure 3 (p. 8).
+Preprint: <https://eprint.iacr.org/2017/604>
+
+Used in:
+- `VCVio/CryptoFoundations/FujisakiOkamoto/Defs.lean`
+
 ## Projects and Repositories
 
 ### MATHLIB4

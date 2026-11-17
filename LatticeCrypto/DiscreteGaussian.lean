@@ -5,8 +5,7 @@ Authors: Quang Dao
 -/
 
 module
-public import ToMathlib.Analysis.SumIntegralComparisons
-public import Mathlib.Analysis.SpecialFunctions.Gaussian.GaussianIntegral
+public import Mathlib.NumberTheory.ModularForms.JacobiTheta.OneVariable
 public import Mathlib.MeasureTheory.Measure.WithDensity
 public import Mathlib.MeasureTheory.Measure.Count
 public import Mathlib.Topology.Algebra.InfiniteSum.Real
@@ -205,128 +204,112 @@ theorem discreteGaussianPMF_le_weight_round_div_sum (σ μ : ℝ) (hσ : 0 < σ)
   gcongr
   exact discreteGaussianWeight_le_weight_round σ μ z
 
+/-! ## Poisson Summation
+
+Poisson summation (`Complex.tsum_exp_neg_quadratic`) gives the exact theta form
+`∑_{z ∈ ℤ} ρ_{σ,μ}(z) = σ√(2π) · jacobiTheta₂ μ (2πσ²i)`, hence a two-sided bound
+`|∑_{z ∈ ℤ} ρ_{σ,μ}(z) - σ√(2π)| ≤ σ√(2π) · 2e^{-2π²σ²} / (1 - e^{-2π²σ²})` uniform in the
+center `μ`. This is the `Λ = ℤ` case of the smoothing-parameter estimate behind GPV08
+Lemma 2.10 at `s = σ√(2π)`, whose `ε = ∑_{n ≠ 0} e^{-2π²σ²n²}` is at most
+`2e^{-2π²σ²} / (1 - e^{-2π²σ²})`. -/
+
+section Poisson
+
+open Complex
+
+/-- **Poisson summation for the discrete Gaussian**: the normalizing constant is `σ√(2π)` times
+the Jacobi theta function `θ(μ, τ) = ∑_{n ∈ ℤ} exp(2πinμ + πin²τ)` at `τ = 2πσ²i`. -/
+theorem discreteGaussianSum_eq_jacobiTheta₂ (σ μ : ℝ) (hσ : 0 < σ) :
+    (discreteGaussianSum σ μ : ℂ) = σ * Real.sqrt (2 * π) * jacobiTheta₂ μ (2 * π * σ ^ 2 * I) := by
+  have hσ' : (σ : ℂ) ≠ 0 := ofReal_ne_zero.mpr hσ.ne'
+  have ha : 0 < ((2 * π * σ ^ 2 : ℝ) : ℂ).re := by rw [ofReal_re]; positivity
+  have hroot : ((2 * π * σ ^ 2 : ℝ) : ℂ) ^ (1 / 2 : ℂ) = σ * Real.sqrt (2 * π) := by
+    rw [show (1 / 2 : ℂ) = ((1 / 2 : ℝ) : ℂ) by push_cast; ring, ← ofReal_cpow (by positivity),
+      ← Real.sqrt_eq_rpow, Real.sqrt_mul' _ (sq_nonneg σ), Real.sqrt_sq hσ.le, mul_comm]
+    push_cast
+    ring
+  have h := Complex.tsum_exp_neg_quadratic ha (I * μ)
+  have hθ : ∀ n : ℤ, jacobiTheta₂_term n μ (2 * π * σ ^ 2 * I) =
+      cexp (-π * ((2 * π * σ ^ 2 : ℝ) : ℂ) * n ^ 2 + 2 * π * (I * μ) * n) := fun n => by
+    rw [jacobiTheta₂_term]
+    congr 1
+    push_cast
+    ring_nf
+    rw [I_sq]
+    ring
+  have hw : ∀ n : ℤ, ((discreteGaussianWeight σ μ n : ℝ) : ℂ) =
+      cexp (-π / ((2 * π * σ ^ 2 : ℝ) : ℂ) * (n + I * (I * μ)) ^ 2) := fun n => by
+    rw [discreteGaussianWeight, ofReal_exp]
+    congr 1
+    push_cast
+    field_simp
+    ring_nf
+    simp only [I_sq, I_pow_four]
+    ring
+  rw [hroot] at h
+  rw [discreteGaussianSum, ofReal_tsum, tsum_congr hw, jacobiTheta₂, tsum_congr hθ, h, one_div,
+    mul_inv_cancel_left₀ (mul_ne_zero hσ' (ofReal_ne_zero.mpr (by positivity)))]
+
+/-- **Two-sided bound on the normalizing constant**: uniformly in the center `μ`,
+`|∑_{z ∈ ℤ} ρ_{σ,μ}(z) - σ√(2π)| ≤ σ√(2π) · 2e^{-2π²σ²} / (1 - e^{-2π²σ²})`. -/
+theorem abs_discreteGaussianSum_sub_le (σ μ : ℝ) (hσ : 0 < σ) :
+    |discreteGaussianSum σ μ - σ * Real.sqrt (2 * π)| ≤ σ * Real.sqrt (2 * π) *
+      (2 / (1 - Real.exp (-2 * π ^ 2 * σ ^ 2)) * Real.exp (-2 * π ^ 2 * σ ^ 2)) := by
+  set τ : ℂ := 2 * π * σ ^ 2 * I with hτ_def
+  have hτi : τ.im = 2 * π * σ ^ 2 := by simp [hτ_def, sq]
+  have hτ : 0 < τ.im := by rw [hτi]; positivity
+  have h0 : ∀ z : ℂ, jacobiTheta₂_term 0 z τ = 1 := by simp [jacobiTheta₂_term]
+  have hf := (hasSum_jacobiTheta₂_term (μ : ℂ) hτ).update 0 0
+  have hg := (hasSum_jacobiTheta₂_term (0 : ℂ) hτ).update 0 0
+  rw [h0, zero_sub, neg_add_eq_sub] at hf hg
+  have hre : ∀ n : ℤ, (Function.update (jacobiTheta₂_term · 0 τ) 0 0 n).re =
+      ‖Function.update (jacobiTheta₂_term · (μ : ℂ) τ) 0 0 n‖ := fun n => by
+    rcases eq_or_ne n 0 with rfl | hn
+    · simp
+    rw [Function.update_of_ne hn, Function.update_of_ne hn, norm_jacobiTheta₂_term, ofReal_im,
+      jacobiTheta₂_term, exp_re, hτ_def]
+    simp [sq]
+  have hle := (hf.norm_le_of_bounded (Complex.hasSum_re hg) fun n => (hre n).ge).trans
+    ((re_le_norm _).trans (jacobiTheta_eq_jacobiTheta₂ τ ▸ norm_jacobiTheta_sub_one_le hτ))
+  rw [hτi, show -π * (2 * π * σ ^ 2) = -2 * π ^ 2 * σ ^ 2 by ring] at hle
+  have hS : ((discreteGaussianSum σ μ - σ * Real.sqrt (2 * π) : ℝ) : ℂ) =
+      ((σ * Real.sqrt (2 * π) : ℝ) : ℂ) * (jacobiTheta₂ μ τ - 1) := by
+    rw [ofReal_sub, discreteGaussianSum_eq_jacobiTheta₂ σ μ hσ]
+    push_cast
+    ring
+  rw [← Real.norm_eq_abs, ← Complex.norm_real, hS, norm_mul, Complex.norm_real,
+    Real.norm_of_nonneg (by positivity)]
+  gcongr
+
+end Poisson
+
 /-! ## Normalizing-Constant Lower Bound -/
 
-section LowerBound
-
-open Filter MeasureTheory Set
-
 /-- **Quantitative lower bound on the discrete Gaussian normalizing constant**:
-`σ√(2π) - 1 ≤ ∑_{z ∈ ℤ} ρ_{σ,μ}(z)`.
-
-The sum over `ℤ` splits at `⌊μ⌋` into two monotone tails, each of which dominates the
-corresponding tail of the Gaussian integral `∫ exp (-(x - μ)² / (2σ²)) dx = σ√(2π)`
-(`integral_Iic_le_tsum_of_monotoneOn`, `integral_Ioi_le_tsum_of_antitoneOn`); the missing
-unit interval `(⌊μ⌋, ⌊μ⌋ + 1]` carries integral mass at most `1` since the integrand is
-bounded by `1`. -/
+`σ√(2π) - 1 ≤ ∑_{z ∈ ℤ} ρ_{σ,μ}(z)`, from `abs_discreteGaussianSum_sub_le` once `1 < σ√(2π)`
+and from positivity otherwise. -/
 theorem le_discreteGaussianSum (σ μ : ℝ) (hσ : 0 < σ) :
     σ * Real.sqrt (2 * π) - 1 ≤ discreteGaussianSum σ μ := by
-  set f : ℝ → ℝ := fun x => Real.exp (-(x - μ) ^ 2 / (2 * σ ^ 2)) with hf_def
-  have hfz : ∀ z : ℤ, discreteGaussianWeight σ μ z = f z := fun z => rfl
-  have hb : (0 : ℝ) < (2 * σ ^ 2)⁻¹ := by positivity
-  have hfx : f = fun x => Real.exp (-(2 * σ ^ 2)⁻¹ * (x - μ) ^ 2) := by
-    funext x
-    simp only [hf_def]
-    congr 1
-    ring
-  have hint : Integrable f := by
-    rw [hfx]
-    exact (integrable_exp_neg_mul_sq hb).comp_sub_right μ
-  have hIval : ∫ x, f x = σ * Real.sqrt (2 * π) := by
-    rw [hfx, integral_sub_right_eq_self (fun y : ℝ => Real.exp (-(2 * σ ^ 2)⁻¹ * y ^ 2)) μ,
-      integral_gaussian,
-      show π / (2 * σ ^ 2)⁻¹ = σ ^ 2 * (2 * π) by rw [div_eq_mul_inv, inv_inv]; ring,
-      Real.sqrt_mul (sq_nonneg σ) (2 * π), Real.sqrt_sq hσ.le]
-  have hf_le_one : ∀ x : ℝ, f x ≤ 1 := by
-    intro x
-    simp only [hf_def]
-    rw [← Real.exp_zero]
-    apply exp_le_exp_of_le
-    rw [neg_div, neg_nonpos]
-    positivity
-  have hmono : MonotoneOn f (Iic ((⌊μ⌋ : ℤ) : ℝ)) := by
-    intro x hx y hy hxy
-    have hyμ : y ≤ μ := le_trans (mem_Iic.mp hy) (Int.floor_le μ)
-    simp only [hf_def]
-    apply exp_le_exp_of_le
-    rw [neg_div, neg_div, neg_le_neg_iff]
-    have hsq : (y - μ) ^ 2 ≤ (x - μ) ^ 2 := by
-      nlinarith [mul_nonneg (sub_nonneg.mpr hxy) (by linarith : (0 : ℝ) ≤ 2 * μ - x - y)]
-    gcongr
-  have hanti : AntitoneOn f (Ici (((⌊μ⌋ : ℤ) : ℝ) + 1)) := by
-    intro x hx y hy hxy
-    have hμx : μ ≤ x := le_trans (Int.lt_floor_add_one μ).le (mem_Ici.mp hx)
-    simp only [hf_def]
-    apply exp_le_exp_of_le
-    rw [neg_div, neg_div, neg_le_neg_iff]
-    have hsq : (x - μ) ^ 2 ≤ (y - μ) ^ 2 := by
-      nlinarith [mul_nonneg (sub_nonneg.mpr hxy) (by linarith : (0 : ℝ) ≤ x + y - 2 * μ)]
-    gcongr
-  have hw := discreteGaussianSum_summable σ μ hσ
-  have hFsummable : Summable fun z : ℤ => discreteGaussianWeight σ μ (z + (⌊μ⌋ + 1)) :=
-    hw.comp_injective (add_left_injective (⌊μ⌋ + 1))
-  have hFnat : Summable fun n : ℕ => discreteGaussianWeight σ μ ((n : ℤ) + (⌊μ⌋ + 1)) :=
-    hFsummable.comp_injective Nat.cast_injective
-  have hFneg :
-      Summable fun n : ℕ => discreteGaussianWeight σ μ (-((n : ℤ) + 1) + (⌊μ⌋ + 1)) :=
-    hFsummable.comp_injective fun a b h => by omega
-  have hR : ∀ n : ℕ, discreteGaussianWeight σ μ ((n : ℤ) + (⌊μ⌋ + 1))
-      = f (((⌊μ⌋ : ℤ) : ℝ) + 1 + n) := fun n => by
-    rw [hfz]
-    congr 1
-    push_cast
-    ring
-  have hL : ∀ n : ℕ, discreteGaussianWeight σ μ (-((n : ℤ) + 1) + (⌊μ⌋ + 1))
-      = f (((⌊μ⌋ : ℤ) : ℝ) - n) := fun n => by
-    rw [hfz]
-    congr 1
-    push_cast
-    ring
-  have hsplit : discreteGaussianSum σ μ
-      = (∑' n : ℕ, f (((⌊μ⌋ : ℤ) : ℝ) + 1 + n)) + ∑' n : ℕ, f (((⌊μ⌋ : ℤ) : ℝ) - n) := by
-    have h1 : ∑' z : ℤ, discreteGaussianWeight σ μ (z + (⌊μ⌋ + 1))
-        = discreteGaussianSum σ μ :=
-      (Equiv.addRight ((⌊μ⌋ : ℤ) + 1)).tsum_eq (discreteGaussianWeight σ μ)
-    have h2 : ∑' z : ℤ, discreteGaussianWeight σ μ (z + (⌊μ⌋ + 1))
-        = (∑' n : ℕ, discreteGaussianWeight σ μ ((n : ℤ) + (⌊μ⌋ + 1)))
-          + ∑' n : ℕ, discreteGaussianWeight σ μ (-((n : ℤ) + 1) + (⌊μ⌋ + 1)) :=
-      tsum_of_nat_of_neg_add_one
-        (f := fun z : ℤ => discreteGaussianWeight σ μ (z + (⌊μ⌋ + 1))) hFnat hFneg
-    rw [← h1, h2, tsum_congr hR, tsum_congr hL]
-  have hsumR : Summable fun n : ℕ => f (((⌊μ⌋ : ℤ) : ℝ) + 1 + n) := hFnat.congr hR
-  have hsumL : Summable fun n : ℕ => f (((⌊μ⌋ : ℤ) : ℝ) - n) := hFneg.congr hL
-  have hRle : ∫ x in Ioi (((⌊μ⌋ : ℤ) : ℝ) + 1), f x
-      ≤ ∑' n : ℕ, f (((⌊μ⌋ : ℤ) : ℝ) + 1 + n) :=
-    integral_Ioi_le_tsum_of_antitoneOn hanti hint.integrableOn hsumR
-  have hLle : ∫ x in Iic ((⌊μ⌋ : ℤ) : ℝ), f x ≤ ∑' n : ℕ, f (((⌊μ⌋ : ℤ) : ℝ) - n) :=
-    integral_Iic_le_tsum_of_monotoneOn hmono hint.integrableOn hsumL
-  have hmid : ∫ x in Ioc ((⌊μ⌋ : ℤ) : ℝ) (((⌊μ⌋ : ℤ) : ℝ) + 1), f x ≤ 1 := by
-    have hle : ∫ x in Ioc ((⌊μ⌋ : ℤ) : ℝ) (((⌊μ⌋ : ℤ) : ℝ) + 1), f x
-        ≤ ∫ _x in Ioc ((⌊μ⌋ : ℤ) : ℝ) (((⌊μ⌋ : ℤ) : ℝ) + 1), (1 : ℝ) :=
-      setIntegral_mono_on hint.integrableOn (integrableOn_const (hs := measure_Ioc_lt_top.ne))
-        measurableSet_Ioc fun x _ => hf_le_one x
-    have heq : ∫ _x in Ioc ((⌊μ⌋ : ℤ) : ℝ) (((⌊μ⌋ : ℤ) : ℝ) + 1), (1 : ℝ) = 1 := by
-      rw [setIntegral_const, smul_eq_mul, mul_one,
-        Real.volume_real_Ioc_of_le (by linarith)]
+  set t := σ * Real.sqrt (2 * π) with ht_def
+  rcases le_or_gt t 1 with ht | ht
+  · linarith [discreteGaussianSum_pos σ μ hσ]
+  set r := Real.exp (-2 * π ^ 2 * σ ^ 2) with hr_def
+  have hr : r * (2 * t + 1) ≤ 1 := by
+    have h1 : 2 * t ≤ π * t ^ 2 := by nlinarith [Real.two_le_pi]
+    have h2 : π * t ^ 2 = 2 * π ^ 2 * σ ^ 2 := by
+      rw [ht_def, mul_pow, Real.sq_sqrt (by positivity)]
       ring
+    have h3 : r * Real.exp (2 * π ^ 2 * σ ^ 2) = 1 := by
+      rw [hr_def, ← Real.exp_add, neg_mul, neg_mul, neg_add_cancel, Real.exp_zero]
+    calc r * (2 * t + 1) ≤ r * Real.exp (2 * π ^ 2 * σ ^ 2) := by
+          gcongr
+          linarith [Real.add_one_le_exp (2 * π ^ 2 * σ ^ 2)]
+      _ = 1 := h3
+  have hb : t * (2 / (1 - r) * r) ≤ 1 := by
+    rw [show t * (2 / (1 - r) * r) = 2 * t * r / (1 - r) by ring,
+      div_le_one (by nlinarith [Real.exp_pos (-2 * π ^ 2 * σ ^ 2)])]
     linarith
-  have hsplit2 : ∫ x in Ioi ((⌊μ⌋ : ℤ) : ℝ), f x
-      = (∫ x in Ioc ((⌊μ⌋ : ℤ) : ℝ) (((⌊μ⌋ : ℤ) : ℝ) + 1), f x)
-        + ∫ x in Ioi (((⌊μ⌋ : ℤ) : ℝ) + 1), f x := by
-    rw [← setIntegral_union Ioc_disjoint_Ioi_same measurableSet_Ioi
-      hint.integrableOn hint.integrableOn, Ioc_union_Ioi_eq_Ioi (by linarith)]
-  have hsplit1 : (∫ x in Iic ((⌊μ⌋ : ℤ) : ℝ), f x) + ∫ x in Ioi ((⌊μ⌋ : ℤ) : ℝ), f x
-      = ∫ x, f x :=
-    intervalIntegral.integral_Iic_add_Ioi hint.integrableOn hint.integrableOn
-  calc σ * Real.sqrt (2 * π) - 1
-      ≤ (∫ x in Iic ((⌊μ⌋ : ℤ) : ℝ), f x) + ∫ x in Ioi (((⌊μ⌋ : ℤ) : ℝ) + 1), f x := by
-        rw [← hIval, ← hsplit1, hsplit2]
-        linarith
-    _ ≤ (∑' n : ℕ, f (((⌊μ⌋ : ℤ) : ℝ) - n)) + ∑' n : ℕ, f (((⌊μ⌋ : ℤ) : ℝ) + 1 + n) :=
-        add_le_add hLle hRle
-    _ = discreteGaussianSum σ μ := by rw [hsplit]; ring
-
-end LowerBound
+  linarith [(abs_le.mp (abs_discreteGaussianSum_sub_le σ μ hσ)).1]
 
 /-! ## Guessing-Probability Bound
 
