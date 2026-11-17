@@ -753,7 +753,14 @@ The coupling interface `VCVio.ProgramLogic.RelWP` is local to VCVio and shares c
 assertion lattices. Instances provide `trans`, `trans_monotone`, `trans_pure` and
 `trans_bind_le`. The last law allows sequential composition to give a lower bound on the
 optimal coupling. Its three carriers in `Relational/WP/` also use explicit scopes
-(`OracleComp.Rel.Quantitative`, `.Qualitative`, `.Probabilistic`).
+(`OracleComp.Rel.Quantitative`, `.Qualitative`, `.Probabilistic`). The qualitative reading
+and the product coupling built by `relTriple_prod_of_wp` require countable oracle answer
+types on each side. The output types can be arbitrary.
+
+When migrating a `RelWP` instance declaration or record update, change the field labels
+`rwpTrans` to `trans`, `rwp_trans_monotone` to `trans_monotone`, `rwp_trans_pure` to
+`trans_pure`, and `rwp_trans_bind_le` to `trans_bind_le`. References to the old projections
+in expressions still elaborate through deprecated aliases.
 
 VCVio's probability/coupling tactics continue to consume `@[vcspec]` and the `wpStepRules` table.
 Core `vcgen` consumes the core `@[spec]` catalogue. Generic transformer WP comes from
