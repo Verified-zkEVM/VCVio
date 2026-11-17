@@ -35,6 +35,8 @@ The layer is the subject of issue #706. Open questions and planned work are in
   reprogramming and unique-mark search.
 * [6-instability](6-instability.md) — The classical instability calculus and its role in quantum
   proofs.
+* [7-time-lock-puzzles](7-time-lock-puzzles.md) — Quantum preprocessing, honest generation,
+  shared oracle memory and key-only recovery experiments.
 
 ## The layers
 
@@ -45,9 +47,10 @@ The layer is the subject of issue #706. Open questions and planned work are in
 | [Three descriptions of one map](3-choi-kraus-stinespring.md) | `QuantumFoundations/MatrixMap/Kraus.lean`, `MatrixMap/Stinespring.lean`, `MatrixMap/Dual.lean` | Choi matrices, Kraus operators, Stinespring form and its unitary version, the trace dual. |
 | [Oracles and programs](4-programs-and-runtimes.md), [QROM](5-qrom.md) | `VCVio/Quantum/Comp/*`, `VCVio/Quantum/Oracle/*` | Quantum programs, oracle implementations, the quantum random-oracle model, classical algorithms inside it. |
 | [Instability](6-instability.md) | `VCVio/OracleComp/QueryTracking/Instability/*` | The classical quantity that compressed-oracle proofs bound quantum queries by. |
+| [Time-lock puzzles](7-time-lock-puzzles.md) | `VCVio/CryptoFoundations/TimeLockPuzzle/Quantum.lean`, `QuantumClassical.lean` | Quantum preprocessing, shared oracle state across phases, and joint laws for classical honest generators. |
 
-Nothing in the layer is axiomatized: every statement below is a Lean theorem, and the examples are
-in `VCVioTest/Quantum/`.
+The layer introduces no additional quantum axioms. Its formal results are Lean theorems, and
+the examples are in `VCVioTest/Quantum/`.
 
 ## Seeing that it is right
 
@@ -57,8 +60,9 @@ The agreement rows and exact-example checks now appear under **Checks** in
 [states and instruments](1-states-and-instruments.md#checks),
 [vectors](2-vectors-and-hybrid-bound.md#checks),
 [representations](3-choi-kraus-stinespring.md#checks),
-[programs and runtimes](4-programs-and-runtimes.md#checks), [QROM](5-qrom.md#checks) and
-[instability](6-instability.md#checks). The textbook comparison is in
+[programs and runtimes](4-programs-and-runtimes.md#checks), [QROM](5-qrom.md#checks),
+[instability](6-instability.md#checks) and [time-lock puzzles](7-time-lock-puzzles.md#checks).
+The textbook comparison is in
 [states and instruments](1-states-and-instruments.md#checks), with page references in the
 [literature table](../reference/literature.md).
 
@@ -73,7 +77,8 @@ and `OracleComp.toQuantumBatch`, preserving function-query or round and point bu
 the compressed-oracle runtime and its parallel QROM equivalence; common-finisher parallel
 reprogramming, adaptive hybrids and unique-mark search under round and total-point budgets,
 with width-cap corollaries; the representation theorems for CP maps; the classical instability
-calculus.
+calculus; two-phase quantum time-lock puzzle experiments with separate preprocessing and online
+budgets, and exact classical-generator laws for adversaries without preprocessing.
 
 Not covered: infinite-dimensional systems; measurements with continuous outcomes; loops that may not
 terminate; coherent choice of oracle port; putting general programs in comb form; random-function

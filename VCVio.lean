@@ -271,6 +271,8 @@ public import VCVio.CryptoFoundations.TimeLockPuzzle.Encoding
 public import VCVio.CryptoFoundations.TimeLockPuzzle.Hiding
 public import VCVio.CryptoFoundations.TimeLockPuzzle.Lift
 public import VCVio.CryptoFoundations.TimeLockPuzzle.LogSide
+public import VCVio.CryptoFoundations.TimeLockPuzzle.Quantum
+public import VCVio.CryptoFoundations.TimeLockPuzzle.QuantumClassical
 public import VCVio.CryptoFoundations.TimeLockPuzzle.Truncate
 public import VCVio.CryptoFoundations.TweakableHash
 public import VCVio.CryptoFoundations.UniversalHash

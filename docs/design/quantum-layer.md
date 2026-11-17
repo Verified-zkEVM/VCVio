@@ -299,3 +299,22 @@ mixed-state and total-budget transports (M−1), the general final-measurement l
 compressed-oracle bounds are separate obligations. The state-conditioned hybrid is a prerequisite
 for endpoint-only results (M6b); preprocessing and the exact `PointerChainPuzzle` encoding remain
 future work.
+
+### 13. Quantum delay experiments
+
+`CryptoFoundations/TimeLockPuzzle/Quantum.lean` defines the two-phase quantum adversary and
+honest puzzle interface. The generator returns the public puzzle, key and auxiliary secret;
+the online adversary receives only the public puzzle and its own retained preprocessing state.
+`delayInstrument` composes preprocessing, framed honest generation and online execution with
+one persistent runtime-private register. `delayLawWith` initializes the joint state once and
+observes the full transcript, retaining correlations with hidden challenger data. Lost mass
+counts as failure. `DelayBudget` separates preprocessing points from online rounds, points and
+maximum width; honest generation is outside the online clock.
+
+`CryptoFoundations/TimeLockPuzzle/QuantumClassical.lean` embeds classical generators retaining
+arbitrary hidden data. Its no-preprocessing observed-law equality is an exact classical
+generator average of quantum online laws for the same fixed function. The observer may inspect
+the key and secret jointly with the leaf. The scalar-generation specialization uses the trivial
+private register of a fixed-function runtime; the underlying instrument factorization preserves
+private memory for general runtimes. The quantum experiment permits preprocessing, without
+asserting a delay theorem for positive preprocessing budgets.
