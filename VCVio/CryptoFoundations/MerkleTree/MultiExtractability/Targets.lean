@@ -8,7 +8,6 @@ module
 
 public import VCVio.CryptoFoundations.MerkleTree.MultiExtractability.Stateful
 public import VCVio.CryptoFoundations.MerkleTree.MultiExtractability.Potential
-import Mathlib.Data.Finset.Card
 
 /-!
 # Shared Target Sets for Stateful Merkle Extraction

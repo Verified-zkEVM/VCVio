@@ -122,7 +122,7 @@ needs an instance-synthesis check, not a grep.
 | `ToMathlib/General.lean` core-`Vector` `cases`/`induction`/`cases₂`/`induction₂` | core `Init/Data/Vector/` | core has only `elimAsArray`/`elimAsList` (`Init/Data/Vector/Basic.lean:71,78`) |
 | `ToMathlib/Control/WriterT.lean:30` `LawfulAppend` | core (or just use `Monoid`) | no `LawfulAppend` in core/Batteries/Mathlib |
 | `LawfulMonadFunctor(T)`, `LawfulMonadControl(T)`, now in PolyFun's `PolyFun/Control/Lawful/MonadFunctor.lean` and `MonadControl.lean` | core `Init/Control/Lawful/` next to `LawfulMonadLift(T)` (`Init/Control/Lawful/MonadLift/Basic.lean:29,44`, the exact template) | class-keyword grep across five trees |
-| `HashSig/SLHDSA/WotsChecksum.lean` `Forall₂.eq_of_sum_eq` | `Mathlib/Data/List/Forall2.lean` | no statement of this shape upstream |
+| `ToMathlib/Data/List/Forall2.lean` `List.Forall₂.eq_of_sum_eq` | `Mathlib/Data/List/Forall2.lean` | no statement of this shape upstream |
 | `ToMathlib/Data/Set/Functor.lean` `SetM.run_*`; `BitVec.xor_self_xor` | Mathlib / core | see Keep |
 
 ### Track — heading into core, or blocked on a design decision
@@ -694,6 +694,14 @@ UInt8.ofNat`, `fromBaseW` is `Nat.ofDigits w ds.reverse`, `digitsOfBaseW` is
 to `lt_of_mem_digitsAppend`, `setInvOn_digitsAppend_ofDigits`, `ofDigits_lt_base_pow_length`
 (`M:Data/Nat/Digits/Lemmas.lean:344,363`, `Defs.lean:380`).
 
+**Shared checksum alignment.** `VCVio/Algorithms/RadixEncoding.lean` provides the big-endian
+radix codec and its `Nat.ofDigits` reversal bridge. General ordered digit and padded-coordinate
+facts live in `ToMathlib/Data/Nat/Digits.lean`; equal-sum list rigidity lives in
+`ToMathlib/Data/List/Forall2.lean`. `VCVio/Algorithms/ComplementaryChecksum/Basic.lean` proves
+payload equality through a monotone checksum decoder and reconstruction laws. Generic SLH-DSA
+and SHAKE128s use that shared law with their existing data layouts. FIPS byte padding and the
+wire-specific `toInt`/`toByte` codecs remain in their scheme adapters.
+
 **Lemma-level duplicates verified by reading both declarations** (all added to the Adopt table):
 `List.length_eq_countP_add_countP_not` ↔ core `List.length_eq_countP_add_countP`
 (`C:Init/Data/List/Count.lean:66`, `¬p a` vs `!p x`); `vector_eq_nil` ↔ `List.Vector.eq_nil`
@@ -777,9 +785,12 @@ ML-DSA uses nested-`Vector` `matVecMul`; `PolyMatrix.toMatrix` exists but no pro
    `NTTCert.lean:58–258` restates `Matrix.mulVec` lemmas — delete rather than port.
 5. `decode12Pair_fst/snd` (`V:LatticeCrypto/MLKEM/Concrete/Encoding.lean:510–520`): `omega` alone (verified).
 6. Poisson summation `Real.tsum_exp_neg_mul_int_sq` (`M:Analysis/SpecialFunctions/Gaussian/PoissonSummation.lean:123`)
-   / `jacobiTheta₂` give the exact theta form of `discreteGaussianSum`, replacing the 106-line
-   `le_discreteGaussianSum` (`V:LatticeCrypto/DiscreteGaussian.lean:216–321`) without its `−1` loss and
-   opening the deferred smoothing-parameter bound.
+   / `jacobiTheta₂` give the exact theta form of `discreteGaussianSum`, which bounds it without a `−1`
+   loss and opens the deferred smoothing-parameter bound. `discreteGaussianSum_eq_jacobiTheta₂`
+   (`V:LatticeCrypto/DiscreteGaussian.lean:222`) proves the theta form through
+   `Complex.tsum_exp_neg_quadratic` (the real lemma is centered at `0`), and
+   `abs_discreteGaussianSum_sub_le` the two-sided bound `|∑ρ - σ√(2π)| ≤ σ√(2π) · 2e^{-2π²σ²} / (1 - e^{-2π²σ²})`;
+   `le_discreteGaussianSum` keeps its statement and follows from it.
 7. Pick one matrix convention (Mathlib literature: column `A *ᵥ x`) and route ML-DSA's `TqMatrix`
    through `PolyMatrix.toMatrix` so `mulVec_add`/`mulVec_sub` replace the `Vector`-induction proofs
    (`Transform.lean:306–346`).
@@ -959,7 +970,7 @@ audit before deletion (see Method).
 | 4 duplicates | this PR (#632) | |
 | 5 lattice | #634 | reviewed and queued; includes the explicit modulus-zero behavior change |
 | 9 hygiene | #647 (C1), #648 (C2) | merged; #648 retains the necessary ML-DSA/ML-KEM equality instances and adds an `Option.elim` measurability lemma |
-| 10 design track | #650 (transparency policy + expose ratchet), #651 (selective-expose pilot), #653 (program-logic) | all merged; cost-layer unification, Poisson summation, and matrix conventions remain open |
+| 10 design track | #650 (transparency policy + expose ratchet), #651 (selective-expose pilot), #653 (program-logic) | all merged; cost-layer unification and matrix conventions remain open; Poisson summation is `discreteGaussianSum_eq_jacobiTheta₂` |
 | tooling | #649 (SHA pins, dependabot, templates), Track A PR (drivers, `check-imports.sh`, dead scripts, options) | `CODEOWNERS` was dropped on review: routing files are boilerplate for a small team |
 | gates | #641 | merged; tactic contract and test warnings are checked, with detailed policy in `docs/agents/probability.md` |
 

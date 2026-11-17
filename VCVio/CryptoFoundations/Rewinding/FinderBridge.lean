@@ -9,7 +9,7 @@ public import VCVio.CryptoFoundations.Rewinding.Finder
 public import VCVio.CryptoFoundations.Rewinding.Eager
 
 /-!
-# Tree finders against frozen reruns
+# Finders against frozen reruns
 
 A frozen prover determines one random Boolean acceptance function on complete challenge vectors.
 The eager representation preserves the finder's joint output and complete-run counter, so uniform
@@ -54,10 +54,10 @@ theorem averageAcceptRate_eq_of_marginals [Fintype R] [DecidableEq R] [∀ r, Fi
   simp only [Finset.sum_boole]
 
 /-- Uniform affine finder success bounds average over a randomly chosen acceptance function. -/
-theorem IsTreeFinder.average_success [Fintype R] [LinearOrder R] [∀ r, Fintype (C r)]
-    {k : R → ℕ} {nodeOk : (r : R) → (Fin (k r) → C r) → Prop}
-    {find : OracleComp (unifSpec + accSpec C) (Option (VecTree C k))} {κ T : ℝ≥0∞}
-    (h : IsTreeFinder k nodeOk find κ T) (F : ProbComp (((r : R) → C r) → Bool)) :
+theorem IsFinder.average_success [Fintype R] [DecidableEq R] [∀ r, Fintype (C r)] {Out : Type}
+    {good : (((r : R) → C r) → Bool) → Out → Prop}
+    {find : OracleComp (unifSpec + accSpec C) (Option Out)} {κ T : ℝ≥0∞}
+    (h : IsFinder good find κ T) (F : ProbComp (((r : R) → C r) → Bool)) :
     averageAcceptRate F ≤
       κ + (1 - κ) * Pr{let z ← (do let f ← F; runFinder find f)}[z.1.isSome] := by
   let : MeasurableSpace (((r : R) → C r) → Bool) := ⊤
@@ -74,22 +74,22 @@ theorem IsTreeFinder.average_success [Fintype R] [LinearOrder R] [∀ r, Fintype
       gcongr
       exact mul_le_of_le_one_right zero_le (evalDist_apply_univ_le_one F)
 
-/-- A tree finder against a random acceptance function succeeds with probability at least the
+/-- A finder against a random acceptance function succeeds with probability at least the
 average acceptance rate minus its error. -/
-theorem IsTreeFinder.averageAcceptRate_sub_le [Fintype R] [LinearOrder R] [∀ r, Fintype (C r)]
-    {k : R → ℕ} {nodeOk : (r : R) → (Fin (k r) → C r) → Prop}
-    {find : OracleComp (unifSpec + accSpec C) (Option (VecTree C k))} {κ T : ℝ≥0∞}
-    (h : IsTreeFinder k nodeOk find κ T) (F : ProbComp (((r : R) → C r) → Bool)) :
+theorem IsFinder.averageAcceptRate_sub_le [Fintype R] [DecidableEq R] [∀ r, Fintype (C r)]
+    {Out : Type} {good : (((r : R) → C r) → Bool) → Out → Prop}
+    {find : OracleComp (unifSpec + accSpec C) (Option Out)} {κ T : ℝ≥0∞}
+    (h : IsFinder good find κ T) (F : ProbComp (((r : R) → C r) → Bool)) :
     averageAcceptRate F - κ ≤
       Pr{let z ← (do let f ← F; runFinder find f)}[z.1.isSome] :=
   tsub_le_iff_left.mpr ((h.average_success F).trans
     (add_le_add le_rfl (mul_le_of_le_one_left zero_le tsub_le_self)))
 
 /-- Uniform unconditional finder cost bounds average over a random acceptance function. -/
-theorem IsTreeFinder.average_cost [Fintype R] [LinearOrder R] [∀ r, Fintype (C r)]
-    {k : R → ℕ} {nodeOk : (r : R) → (Fin (k r) → C r) → Prop}
-    {find : OracleComp (unifSpec + accSpec C) (Option (VecTree C k))} {κ T : ℝ≥0∞}
-    (h : IsTreeFinder k nodeOk find κ T) (F : ProbComp (((r : R) → C r) → Bool)) :
+theorem IsFinder.average_cost [Fintype R] [DecidableEq R] [∀ r, Fintype (C r)] {Out : Type}
+    {good : (((r : R) → C r) → Bool) → Out → Prop}
+    {find : OracleComp (unifSpec + accSpec C) (Option Out)} {κ T : ℝ≥0∞}
+    (h : IsFinder good find κ T) (F : ProbComp (((r : R) → C r) → Bool)) :
     expectedCalls (do let f ← F; runFinder find f) ≤ T := by
   let : MeasurableSpace (((r : R) → C r) → Bool) := ⊤
   rw [expectedCalls_bind]
@@ -123,14 +123,14 @@ theorem averageAcceptRate_eagerTable [Fintype R] [DecidableEq R] [∀ r, Fintype
         Fintype.card ((r : R) → C r) :=
   averageAcceptRate_eq_of_marginals (P.eagerTable_marginal run)
 
-/-- A black-box tree finder retains its affine success guarantee and unconditional expected
+/-- A black-box finder retains its affine success guarantee and unconditional expected
 complete-run bound when its acceptance oracle is implemented by frozen reruns. The acceptance
 rate is averaged over the eager table of acceptance decisions. -/
-theorem finder_bounds [Fintype R] [LinearOrder R] [∀ r, Fintype (C r)]
-    (run : ((r : R) → C r) → OracleComp spec Bool)
-    {k : R → ℕ} {nodeOk : (r : R) → (Fin (k r) → C r) → Prop}
-    {find : OracleComp (unifSpec + accSpec C) (Option (VecTree C k))} {κ T : ℝ≥0∞}
-    (h : IsTreeFinder k nodeOk find κ T) :
+theorem finder_bounds [Fintype R] [DecidableEq R] [∀ r, Fintype (C r)]
+    (run : ((r : R) → C r) → OracleComp spec Bool) {Out : Type}
+    {good : (((r : R) → C r) → Bool) → Out → Prop}
+    {find : OracleComp (unifSpec + accSpec C) (Option Out)} {κ T : ℝ≥0∞}
+    (h : IsFinder good find κ T) :
     averageAcceptRate (P.eagerTable run) ≤
         κ + (1 - κ) * Pr{let z ← P.attempt run find}[z.1.isSome] ∧
       expectedCalls (P.attempt run find) ≤ T := by
@@ -144,11 +144,11 @@ theorem finder_bounds [Fintype R] [LinearOrder R] [∀ r, Fintype (C r)]
 /-- `ResetPolicy.finder_bounds` with the subtractive success bound: against frozen reruns, the
 finder succeeds with probability at least the average acceptance rate of the eager table minus
 its error. -/
-theorem finder_bounds_sub [Fintype R] [LinearOrder R] [∀ r, Fintype (C r)]
-    (run : ((r : R) → C r) → OracleComp spec Bool)
-    {k : R → ℕ} {nodeOk : (r : R) → (Fin (k r) → C r) → Prop}
-    {find : OracleComp (unifSpec + accSpec C) (Option (VecTree C k))} {κ T : ℝ≥0∞}
-    (h : IsTreeFinder k nodeOk find κ T) :
+theorem finder_bounds_sub [Fintype R] [DecidableEq R] [∀ r, Fintype (C r)]
+    (run : ((r : R) → C r) → OracleComp spec Bool) {Out : Type}
+    {good : (((r : R) → C r) → Bool) → Out → Prop}
+    {find : OracleComp (unifSpec + accSpec C) (Option Out)} {κ T : ℝ≥0∞}
+    (h : IsFinder good find κ T) :
     averageAcceptRate (P.eagerTable run) - κ ≤ Pr{let z ← P.attempt run find}[z.1.isSome] ∧
       expectedCalls (P.attempt run find) ≤ T := by
   refine ⟨?_, (P.finder_bounds run h).2⟩
@@ -158,11 +158,11 @@ theorem finder_bounds_sub [Fintype R] [LinearOrder R] [∀ r, Fintype (C r)]
 /-- `ResetPolicy.finder_bounds` with the honest acceptance probability: the probability that a
 complete run accepts, averaged uniformly over complete challenge vectors, is at most the error
 plus its complement times the success probability against frozen reruns. -/
-theorem finder_bounds_honest [Fintype R] [LinearOrder R] [∀ r, Fintype (C r)]
-    (run : ((r : R) → C r) → OracleComp spec Bool)
-    {k : R → ℕ} {nodeOk : (r : R) → (Fin (k r) → C r) → Prop}
-    {find : OracleComp (unifSpec + accSpec C) (Option (VecTree C k))} {κ T : ℝ≥0∞}
-    (h : IsTreeFinder k nodeOk find κ T) :
+theorem finder_bounds_honest [Fintype R] [DecidableEq R] [∀ r, Fintype (C r)]
+    (run : ((r : R) → C r) → OracleComp spec Bool) {Out : Type}
+    {good : (((r : R) → C r) → Bool) → Out → Prop}
+    {find : OracleComp (unifSpec + accSpec C) (Option Out)} {κ T : ℝ≥0∞}
+    (h : IsFinder good find κ T) :
     (∑ c, Pr{let b ← (do (simulateQ impl (run c)).run' (← init))}[b = true]) /
           Fintype.card ((r : R) → C r) ≤
         κ + (1 - κ) * Pr{let z ← P.attempt run find}[z.1.isSome] ∧

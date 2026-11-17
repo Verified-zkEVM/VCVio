@@ -7,8 +7,6 @@ Authors: Quang Dao
 module
 public import VCVio.CryptoFoundations.GroupModel.MasterBound
 public import VCVio.CryptoFoundations.HardnessAssumptions.PairingDLog
-import VCVio.CryptoFoundations.GroupModel.Instances
-import Mathlib.Algebra.Module.Torsion.Free
 
 /-!
 # Generic hardness in Type 3 pairing groups

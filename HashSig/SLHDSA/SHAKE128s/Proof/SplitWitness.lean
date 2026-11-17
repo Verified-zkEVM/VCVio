@@ -46,7 +46,7 @@ namespace Served
 
 open RecorderView
 
-variable {σ : Type} [CacheView σ]
+variable {σ : Type}
 
 /-- The right test: an input of the narrowed class that is not disclosing. The class may read the
 view; `AnswerCarrier.carrierRightKeep` is a class that does, excluding the signer's randomiser
@@ -55,7 +55,6 @@ probe by the frame in flight. -/
     Bytes → σ → Prop :=
   fun input view => narrow input view ∧ ¬ served input view
 
-omit [CacheView σ] in
 /-- The right test keeps the narrowed class. -/
 theorem targetKeep_narrow (narrow : Bytes → σ → Prop) (served : Bytes → σ → Prop)
     (input : Bytes) (view : σ) (hkeep : targetKeep narrow served input view) :

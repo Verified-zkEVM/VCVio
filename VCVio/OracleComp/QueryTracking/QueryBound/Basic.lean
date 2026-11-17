@@ -332,6 +332,17 @@ lemma isQueryBoundP_bind_zero (oa : OracleComp spec α) (ob : α → OracleComp 
     IsQueryBoundP (oa >>= ob) p 0 :=
   isQueryBoundP_bind h fun x _ => h' x
 
+/-- A probabilistic computation lifted to `unifSpec + hs` makes no query to `hs`. -/
+theorem isQueryBoundP_liftM_isRight {ι : Type} {hs : OracleSpec ι} {α : Type} (oa : ProbComp α) :
+    IsQueryBoundP (liftM oa : OracleComp (unifSpec + hs) α) (fun t => t.isRight) 0 := by
+  induction oa using OracleComp.inductionOn with
+  | pure a => trivial
+  | query_bind n k ih =>
+    simp only [liftM_bind]
+    exact isQueryBoundP_bind_zero _ _
+      ((isQueryBoundP_query_iff (spec := unifSpec + hs) _ (.inl n) 0).2 fun h => by
+        simp at h) ih
+
 /-- Transfer a predicate-targeted query bound through a `StateT` simulation
 whose handler step consumes at most one target-side predicate query exactly when
 the source query satisfies the source predicate.
