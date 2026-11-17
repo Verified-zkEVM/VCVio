@@ -53,9 +53,8 @@ theorem _root_.OracleComp.toQuantumAt_bind {ι : Type u} {ospec : OracleSpec.{u,
   rw [toQuantumAt, simulateQ_bind]
   rfl
 
-variable {X Y : Type} [Fintype Y] [DecidableEq Y]
+variable {X Y : Type} [DecidableEq Y]
 
-omit [Fintype Y] in
 /-- **Rechecking a query log against a conjugated table oracle.** Let every classical query
 `call t` have the branch at the reading `y` given by the Kraus map of `1_B ⊗ C D_{t,y} C`, where
 `C` is an involution of the runtime register and `D_{t,y}` the diagonal projector onto the
@@ -163,7 +162,6 @@ theorem branch_run₂_allIn {k : ℕ} (W : Finset (Fin k)) (f : Fin k → QComp 
 
 /-! ### Coins -/
 
-omit [Fintype Y] [DecidableEq Y] in
 /-- **Coins act as scalars.** A randomized classical algorithm without oracle queries, run from
 inside an experiment with its coins answered by uniform coins, has every branch a scalar multiple
 of the identity, and the scalar vanishes at every value outside the support of the algorithm. -/
@@ -175,7 +173,6 @@ theorem exists_branch_run₂_toQuantumAt_coinImpl_eq_smul {α : Type} (oa : Prob
   rw [prEvent_eq_zero_of_not_mem_support oa ha]
   simp
 
-omit [Fintype Y] [DecidableEq Y] in
 /-- **Sequenced scalar programs act as scalars.** If every program `f i` has its branches scalar
 multiples of the identity, vanishing off a set `S i`, so does `Quantum.QComp.pi f`, with the
 scalar vanishing at every tuple that leaves some `S i`. -/
@@ -221,10 +218,8 @@ end runs
 
 section oracleCall
 
-variable {X Y T : Type*} [Fintype X] [DecidableEq X] [Fintype Y] [DecidableEq Y]
-  [AddCommGroup Y] [Fintype T] [DecidableEq T]
+variable {X Y T : Type*} [DecidableEq X] [DecidableEq Y] [AddCommGroup Y] [DecidableEq T]
 
-omit [Fintype X] [Fintype Y] [Fintype T] in
 /-- A block of the table oracle on a query input `|t, 0⟩` is diagonal: it is the projector onto
 the tables that read `y'` at `t`, if the output is `|t', y'⟩` with `t' = t`,
 and zero otherwise. -/

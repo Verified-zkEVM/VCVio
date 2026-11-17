@@ -181,7 +181,7 @@ private theorem addPipeline_sigma_rel (a b : FPR) :
         (if (addPipeline a b).sx.toNat = 1 then (-1 : ℝ) else 1) := by
   rcases addPipeline_sx_eq_zero_or_one a b with hx | hx <;>
     rcases addPipeline_sy_eq_zero_or_one a b with hy | hy <;> rw [hx, hy] <;>
-      simp only [toNat_lit0, toNat_lit1, show ((0 : UInt32) = 1) = False from by simp,
+      simp only [UInt32.toNat_zero, UInt32.toNat_one, show ((0 : UInt32) = 1) = False from by simp,
         show ((1 : UInt32) = 0) = False from by simp] <;> norm_num
 
 private theorem addPipeline_zu_real (a b : FPR) (ha : FPR.IsNormal a) (hb : FPR.IsNormal b) :

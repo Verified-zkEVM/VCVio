@@ -156,9 +156,10 @@ jobs:
         run: >-
           lake exe axiomsweep --root Interop.Aeneas.ITree --root Interop.Aeneas.WP
           --root Interop.Rust.Common --root Interop.Rust.Run --root Interop.Rust.RustM
-          --root Interop.Rust.Triple --root Interop.Hax.Adc --root Interop.Hax.Barrett
-          --root Interop.Hax.CenteredBinomial --root Interop.Hax.Computation
-          --root Interop.Hax.Division --root Interop.Hax.Examples
+          --root Interop.Rust.Triple --root Interop.Hax.Holds
+          --root Interop.Hax.Adc.Verification --root Interop.Hax.Barrett.Verification
+          --root Interop.Hax.CenteredBinomial.Verification --root Interop.Hax.Computation.Verification
+          --root Interop.Hax.Division.Verification --root Interop.Hax.Examples.Verification
           --baseline ../scripts/axiom_baseline.json --check
 
   downstream_stub_link:
