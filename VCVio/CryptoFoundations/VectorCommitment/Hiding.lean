@@ -157,8 +157,7 @@ def simulationHidingIdealExperiment (simulator : HidingSimulator X Y Msg Cm Pf �
   adversary.distinguish st cm pf
 
 /-- The simulation-hiding advantage: the `Measure.boolDist` of the real and ideal worlds, each run
-against the lazily sampled random oracle. Chiesa and Yogev, Version 1.2, Lemma 18.6.3, bound the
-corresponding statistical distance for each opening size. -/
+against the lazily sampled random oracle. -/
 noncomputable def simulationHidingAdvantage [DecidableEq X] [SampleableType Y]
     (vc : VectorCommitment X Y Msg Cm Td Pf ℓ) (simulator : HidingSimulator X Y Msg Cm Pf ℓ)
     (adversary : SimulationHidingAdversary X Y Msg Cm Pf ℓ) : ENNReal :=
@@ -217,9 +216,9 @@ theorem simulationHidingIdealExperiment_toSimulation_eq_toSimulation_false [Deci
 the sum of the simulation-hiding advantages of the adversaries playing its two worlds.
 
 A simulation bound `ε` for the two adversaries `adversary.toSimulation b` therefore gives the
-two-message advantage at most `2 ε`. Simulation bounds such as Chiesa–Yogev's Lemma 18.6.3 hold
-for adversaries within a query budget that open a fixed number of positions; the adversaries
-playing the two worlds inherit both restrictions from `adversary`
+two-message advantage at most `2 ε`. Simulation bounds hold for adversaries within a query budget
+that open a fixed number of positions; the adversaries playing the two worlds inherit both
+restrictions from `adversary`
 (`HidingAdversary.makesAtMostQueries_toSimulation`, `HidingAdversary.opensExactly_toSimulation`).
 -/
 theorem hidingAdvantage_le_simulationHidingAdvantage [DecidableEq X] [SampleableType Y]
