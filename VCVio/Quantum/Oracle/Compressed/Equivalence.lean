@@ -78,20 +78,19 @@ namespace Quantum
 
 section uniform
 
-variable (X Y : Type*) [Fintype X] [DecidableEq X] [Fintype Y] [DecidableEq Y]
+variable (X Y : Type*) [Fintype X] [DecidableEq X] [Fintype Y]
 
 /-- The uniform superposition `|Y|^(-|X|/2) ∑ H, |H⟩` over the functions `X → Y`, as a column. -/
 @[expose]
 noncomputable def uniformColumn : Matrix (X → Y) Unit ℂ :=
   Matrix.of fun _ _ ↦ cellAmp Y ^ Fintype.card X
 
-omit [DecidableEq X] [DecidableEq Y] in
+omit [DecidableEq X] in
 @[simp]
 theorem uniformColumn_apply (H : X → Y) (u : Unit) :
     uniformColumn X Y H u = cellAmp Y ^ Fintype.card X :=
   rfl
 
-omit [DecidableEq Y] in
 /-- For nonempty `Y`, the uniform superposition over functions is a unit vector. -/
 theorem conjTranspose_uniformColumn_mul_self [Nonempty Y] :
     (uniformColumn X Y)ᴴ * uniformColumn X Y = 1 := by
@@ -109,7 +108,6 @@ noncomputable def uniformFunctionState [Nonempty Y] : SubState (X → Y) :=
   (SubInstrument.ofIsometry (uniformColumn X Y) (conjTranspose_uniformColumn_mul_self X Y)).post
     (SubState.basis ()) ()
 
-omit [DecidableEq Y] in
 theorem matrix_uniformFunctionState [Nonempty Y] :
     (uniformFunctionState X Y).matrix =
       MatrixMap.conj (uniformColumn X Y) (Matrix.single () () 1) := by
@@ -118,7 +116,7 @@ theorem matrix_uniformFunctionState [Nonempty Y] :
 
 /-- Tabulating the uniform superposition over functions gives the empty database with every cell
 compressed: `E |φ⟩ = S^{⊗X} |∅⟩`. -/
-theorem basisMatrix_ofFun_mul_uniformColumn :
+theorem basisMatrix_ofFun_mul_uniformColumn [DecidableEq Y] :
     basisMatrix (Database.ofFun : (X → Y) → Database X Y) * uniformColumn X Y =
       compressAll X Y * basisMatrix fun _ : Unit ↦ (Database.empty : Database X Y) := by
   ext D u

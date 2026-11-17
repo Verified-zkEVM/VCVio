@@ -179,7 +179,7 @@ theorem standardOracleEquiv_of_eq_some {m : X × Y} {D : Database X Y} {u : Y}
     (h : D m.1 = some u) : standardOracleEquiv (m, D) = ((m.1, m.2 + u), D) := by
   simp [h]
 
-variable [DecidableEq X] [DecidableEq Y] [Fintype X] [Fintype Y]
+variable [DecidableEq X] [DecidableEq Y] [Fintype X]
 
 variable (X Y) in
 /-- The standard oracle on `(X × Y) × Database X Y`, the permutation matrix sending
@@ -189,10 +189,11 @@ table oracle of `Quantum.Database.lookup`. -/
 def standardOracle : Matrix ((X × Y) × Database X Y) ((X × Y) × Database X Y) ℂ :=
   tableOracle Database.lookup
 
-omit [Fintype Y] in
 theorem standardOracle_apply (p p' : (X × Y) × Database X Y) :
     standardOracle X Y p p' = if p = standardOracleEquiv p' then 1 else 0 :=
   rfl
+
+variable [Fintype Y]
 
 /-- The standard oracle is an isometry. -/
 theorem conjTranspose_standardOracle_mul_self :

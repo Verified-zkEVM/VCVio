@@ -690,7 +690,6 @@ theorem indexMassAt_queryBind_succ (i : spec.Port) (E : QReg) (ℓ : A ≃ spec.
       ∑' r, R.indexMassAt I B (k r) ((R.queryStep i E ℓ).branch r ρ) c j :=
   rfl
 
-omit B in
 open Classical in
 /-- The blocks of a port, summed against constants. -/
 private theorem tsum_mul_tsum_ite_sigma (C : (Σ i, κ i) → ℝ≥0∞) (i : spec.Port) (f : κ i → ℝ≥0∞) :

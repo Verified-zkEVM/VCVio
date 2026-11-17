@@ -72,7 +72,7 @@ namespace Hybrid
 
 /-! ## The purified measurement -/
 
-variable {D : Type*} [Fintype D] [DecidableEq D]
+variable {D : Type*}
 
 /-- The bit flip `X` on `Bool`. -/
 @[expose]
@@ -87,11 +87,27 @@ theorem conjTranspose_bitFlip : bitFlipᴴ = bitFlip := by
   ext b c
   cases b <;> cases c <;> simp [bitFlip]
 
+section
+
+variable [DecidableEq D]
+
 /-- **The purified measurement** of ePrint 2025/2166, Cor 5.8: `Q ⊗ 1_B + (1 - Q) ⊗ X_B`, which
 flips the bit `B` on the complement of `Q`. -/
 @[expose]
 def purifiedMeas (Q : Matrix D D ℂ) : Matrix (D × Bool) (D × Bool) ℂ :=
   Q ⊗ₖ (1 : Matrix Bool Bool ℂ) + (1 - Q) ⊗ₖ bitFlip
+
+theorem conjTranspose_purifiedMeas {Q : Matrix D D ℂ} (hQ : Qᴴ = Q) :
+    (purifiedMeas Q)ᴴ = purifiedMeas Q := by
+  simp [purifiedMeas, conjTranspose_kronecker, conjTranspose_bitFlip, hQ]
+
+theorem conjTranspose_sel {Y : Type*} [DecidableEq Y] (b : Bool) :
+    (sel (D := D) Y b)ᴴ = (1 : Matrix Y Y ℂ) ⊗ₖ inj D b := by
+  rw [sel, conjTranspose_kronecker, conjTranspose_one, conjTranspose_conjTranspose]
+
+end
+
+variable [Fintype D] [DecidableEq D]
 
 theorem kronecker_one_mul_inj (M : Matrix D D ℂ) (b : Bool) :
     (M ⊗ₖ (1 : Matrix Bool Bool ℂ)) * inj D b = inj D b * M := by
@@ -108,11 +124,6 @@ theorem purifiedMeas_mul_inj_false (Q : Matrix D D ℂ) :
     purifiedMeas Q * inj D false = inj D false * Q + inj D true * (1 - Q) := by
   rw [purifiedMeas, Matrix.add_mul, kronecker_one_mul_inj, kronecker_bitFlip_mul_inj]
   rfl
-
-omit [Fintype D] in
-theorem conjTranspose_purifiedMeas {Q : Matrix D D ℂ} (hQ : Qᴴ = Q) :
-    (purifiedMeas Q)ᴴ = purifiedMeas Q := by
-  simp [purifiedMeas, conjTranspose_kronecker, conjTranspose_bitFlip, hQ]
 
 /-- The purified measurement of an orthogonal projector is unitary. -/
 theorem purifiedMeas_isometry {Q : Matrix D D ℂ} (hQ : Qᴴ = Q) (hQQ : Q * Q = Q) :
@@ -131,11 +142,6 @@ theorem conjTranspose_inj_true_mul_purifiedMeas_mul_inj_false {Q : Matrix D D �
   rw [conjTranspose_purifiedMeas hQ, Matrix.mul_assoc, purifiedMeas_mul_inj_false, Matrix.mul_add,
     ← Matrix.mul_assoc, ← Matrix.mul_assoc, conjTranspose_inj_mul_inj, conjTranspose_inj_mul_inj]
   simp
-
-omit [Fintype D] in
-theorem conjTranspose_sel {Y : Type*} [DecidableEq Y] (b : Bool) :
-    (sel (D := D) Y b)ᴴ = (1 : Matrix Y Y ℂ) ⊗ₖ inj D b := by
-  rw [sel, conjTranspose_kronecker, conjTranspose_one, conjTranspose_conjTranspose]
 
 theorem ctrl_mul_conjTranspose_sel_false {O J : Type*} [Fintype O] [DecidableEq O] [Fintype J]
     [DecidableEq J] (K : Matrix (O × D) (J × D) ℂ) :
@@ -251,14 +257,112 @@ section Extended
 variable {D : QReg} {σ : SubState D}
   {s : ∀ i, SubInstrument (spec.In i × D) (spec.Out i × D) (spec.Result i)}
   {U : ∀ i, spec.Result i → Matrix (spec.Out i × D) (spec.In i × D) ℂ}
-  (hU : ∀ i r, (s i).branch r = MatrixMap.conj (U i r))
-include hU
 
-omit hU in
 /-- The zero substate, the initial state of the extended runtime in the proofs: it is never
 used, since the extended runtime is run from a given joint operator. -/
 private noncomputable def zeroInit (B : QReg) : SubState B :=
   ⟨0, Matrix.PosSemidef.zero, by simp⟩
+
+private theorem trace_amplifyLeft_conj_inj {J : Type*} [Fintype J]
+    (τ : Matrix (J × D) (J × D) ℂ) :
+    ((MatrixMap.conj (inj D false)).amplifyLeft J τ).trace = τ.trace := by
+  classical
+  have h : (inj D false)ᴴ * inj D false = 1 := by
+    simpa using conjTranspose_inj_mul_inj (D := D) false false
+  rw [MatrixMap.amplifyLeft_conj,
+    MatrixMap.isTP_conj (Matrix.conjTranspose_one_kronecker_mul_self h) _]
+
+/-- Condition 2 for the purified measurement: the lifted initial operator is invariant. -/
+private theorem conj_purifiedMeas_lift {Q : Matrix D D ℂ} (ρ : SubState A)
+    (hQσ : Q * σ.matrix = σ.matrix) :
+    MatrixMap.conj ((1 : Matrix A A ℂ) ⊗ₖ purifiedMeas Q)
+        ((MatrixMap.conj (inj D false)).amplifyLeft A (ρ.matrix ⊗ₖ σ.matrix)) =
+      (MatrixMap.conj (inj D false)).amplifyLeft A (ρ.matrix ⊗ₖ σ.matrix) := by
+  have hσH : σ.matrixᴴ = σ.matrix := σ.posSemidef.isHermitian.eq
+  set K := inj D false * Q + inj D true * (1 - Q) with hK
+  have hKσ : K * σ.matrix = inj D false * σ.matrix := by
+    rw [hK, Matrix.add_mul, Matrix.mul_assoc, hQσ, Matrix.mul_assoc, Matrix.sub_mul,
+      Matrix.one_mul, hQσ, sub_self, Matrix.mul_zero, add_zero]
+  have hm : K * σ.matrix * Kᴴ = inj D false * σ.matrix * (inj D false)ᴴ := by
+    calc K * σ.matrix * Kᴴ = inj D false * σ.matrix * Kᴴ := by rw [hKσ]
+      _ = inj D false * (K * σ.matrixᴴ)ᴴ := by
+        rw [conjTranspose_mul, conjTranspose_conjTranspose, Matrix.mul_assoc]
+      _ = inj D false * (inj D false * σ.matrix)ᴴ := by rw [hσH, hKσ]
+      _ = inj D false * σ.matrix * (inj D false)ᴴ := by
+        rw [conjTranspose_mul, hσH, Matrix.mul_assoc]
+  rw [MatrixMap.amplifyLeft_conj, ← LinearMap.comp_apply (MatrixMap.conj _),
+    ← MatrixMap.conj_mul, ← mul_kronecker_mul, Matrix.one_mul, purifiedMeas_mul_inj_false, ← hK]
+  simp only [MatrixMap.conj_apply, conjTranspose_kronecker, conjTranspose_one,
+    ← mul_kronecker_mul, Matrix.one_mul, Matrix.mul_one, hm]
+
+private theorem posSemidef_one_sub_sel_true (p : Σ u, X u) :
+    (1 - (sel p.1 true : Matrix (p.1 × D) (p.1 × (D × Bool)) ℂ)ᴴ *
+      (sel p.1 true : Matrix (p.1 × D) (p.1 × (D × Bool)) ℂ)).PosSemidef := by
+  rw [← conjTranspose_sel_mul_sel_add (D := D) (Y := p.1), add_sub_cancel_right]
+  exact Matrix.posSemidef_conjTranspose_mul_self _
+
+private theorem conj_sel_true_lift (p : Σ u, X u) (τ : Matrix (p.1 × D) (p.1 × D) ℂ) :
+    MatrixMap.conj (sel (D := D) p.1 true)
+      ((MatrixMap.conj (inj D false)).amplifyLeft p.1 τ) = 0 := by
+  rw [MatrixMap.amplifyLeft_conj, ← LinearMap.comp_apply (MatrixMap.conj _),
+    ← MatrixMap.conj_mul, sel, ← mul_kronecker_mul, conjTranspose_inj_mul_inj]
+  simp
+
+private theorem conj_sel_true_purifiedMeas_lift {Q : Matrix D D ℂ} (hQ : Qᴴ = Q)
+    (p : Σ u, X u) (τ : Matrix (p.1 × D) (p.1 × D) ℂ) :
+    MatrixMap.conj (sel (D := D) p.1 true * ((1 : Matrix p.1 p.1 ℂ) ⊗ₖ (purifiedMeas Q)ᴴ))
+      ((MatrixMap.conj (inj D false)).amplifyLeft p.1 τ) =
+      MatrixMap.conj ((1 : Matrix p.1 p.1 ℂ) ⊗ₖ (1 - Q)) τ := by
+  rw [MatrixMap.amplifyLeft_conj, ← LinearMap.comp_apply (MatrixMap.conj _),
+    ← MatrixMap.conj_mul, sel]
+  simp only [← mul_kronecker_mul, Matrix.one_mul,
+    conjTranspose_inj_true_mul_purifiedMeas_mul_inj_false hQ]
+
+open scoped Matrix.Norms.L2Operator
+
+private theorem lemmaKraus_ext_eq_neg (P Q : Matrix D D ℂ) (i : spec.Port) (r : spec.Result i) :
+    lemmaKraus (D := QReg.of (D × Bool)) (P ⊗ₖ (1 : Matrix Bool Bool ℂ)) (purifiedMeas Q)
+        (fun i r ↦ ctrl (U i r) (U i r)) (fun i r ↦ ctrl (U i r) (U i r)) i r =
+      -measComm P Q U i r :=
+  (neg_sub _ _).symm
+
+private theorem l2_opNorm_lemmaKraus_ext (P Q : Matrix D D ℂ) (i : spec.Port)
+    (r : spec.Result i) :
+    ‖lemmaKraus (D := QReg.of (D × Bool)) (P ⊗ₖ (1 : Matrix Bool Bool ℂ)) (purifiedMeas Q)
+        (fun i r ↦ ctrl (U i r) (U i r)) (fun i r ↦ ctrl (U i r) (U i r)) i r‖ =
+      ‖measComm P Q U i r‖ := by
+  rw [lemmaKraus_ext_eq_neg, norm_neg]
+
+private theorem C_eq (P Q : Matrix D D ℂ) (i : spec.Port) (c : ℝ≥0∞) :
+    (∑' r, ENNReal.ofReal (‖lemmaKraus (D := QReg.of (D × Bool))
+        (P ⊗ₖ (1 : Matrix Bool Bool ℂ)) (purifiedMeas Q) (fun i r ↦ ctrl (U i r) (U i r))
+        (fun i r ↦ ctrl (U i r) (U i r)) i r‖ ^ 2)) * c =
+      (∑' r, ENNReal.ofReal (‖measComm P Q U i r‖ ^ 2)) * c :=
+  congrArg (· * c) (tsum_congr fun r ↦
+    congrArg (fun t ↦ ENNReal.ofReal (t ^ 2)) (l2_opNorm_lemmaKraus_ext P Q i r))
+
+private theorem trace_conj_kronecker_one_amplifyLeft {J : Type*} [Fintype J]
+    (M : Matrix J J ℂ) (τ : Matrix (J × D) (J × D) ℂ) :
+    (MatrixMap.conj (M ⊗ₖ (1 : Matrix (QReg.of (D × Bool)) (QReg.of (D × Bool)) ℂ))
+        ((MatrixMap.conj (inj D false)).amplifyLeft J τ)).trace =
+      (MatrixMap.conj (M ⊗ₖ (1 : Matrix D D ℂ)) τ).trace := by
+  classical
+  have h : (inj D false)ᴴ * inj D false = 1 := by
+    simpa using conjTranspose_inj_mul_inj (D := D) false false
+  rw [MatrixMap.amplifyLeft_conj, ← LinearMap.comp_apply (MatrixMap.conj _),
+    ← MatrixMap.conj_mul, Matrix.kronecker_one_mul_one_kronecker, MatrixMap.conj_mul,
+    LinearMap.comp_apply, MatrixMap.isTP_conj (Matrix.conjTranspose_one_kronecker_mul_self h) _]
+
+private theorem respectsIndex_lemmaKraus_ext {κ : spec.Port → Type*}
+    {B : ∀ i, κ i → Matrix (spec.In i) (spec.In i) ℂ}
+    {B' : ∀ i, κ i → Matrix (spec.Out i) (spec.Out i) ℂ} (hUB : RespectsIndex B B' U)
+    (P Q : Matrix D D ℂ) :
+    RespectsIndex B B' (lemmaKraus (D := QReg.of (D × Bool)) (P ⊗ₖ (1 : Matrix Bool Bool ℂ))
+      (purifiedMeas Q) (fun i r ↦ ctrl (U i r) (U i r)) (fun i r ↦ ctrl (U i r) (U i r))) :=
+  RespectsIndex.lemmaKraus hUB.ctrl hUB.ctrl _ _
+
+variable (hU : ∀ i r, (s i).branch r = MatrixMap.conj (U i r))
+include hU
 
 /-- The steps extended by a bit `B` that they leave alone, `U ⊗ 1_B`. -/
 private noncomputable def extSteps :
@@ -275,16 +379,6 @@ private theorem extSteps_simulation (i : spec.Port) (r : spec.Result i) :
   rw [hU, MatrixMap.amplifyLeft_conj, MatrixMap.amplifyLeft_conj, ← MatrixMap.conj_mul,
     ← MatrixMap.conj_mul, ← conjTranspose_sel, ← conjTranspose_sel]
   exact congrArg _ (ctrl_mul_conjTranspose_sel_false (U i r))
-
-omit hU in
-private theorem trace_amplifyLeft_conj_inj {J : Type*} [Fintype J]
-    (τ : Matrix (J × D) (J × D) ℂ) :
-    ((MatrixMap.conj (inj D false)).amplifyLeft J τ).trace = τ.trace := by
-  classical
-  have h : (inj D false)ᴴ * inj D false = 1 := by
-    simpa using conjTranspose_inj_mul_inj (D := D) false false
-  rw [MatrixMap.amplifyLeft_conj,
-    MatrixMap.isTP_conj (Matrix.conjTranspose_one_kronecker_mul_self h) _]
 
 private theorem queryMassAt_ext (x : QuantumComp L spec X A) (ρ : Matrix (A × D) (A × D) ℂ)
     (i : spec.Port) (j : ℕ) :
@@ -315,82 +409,6 @@ private theorem inImageAt_ext {P : Matrix D D ℂ} {i : spec.Port} {E : QReg}
         (extSteps_simulation hU i r)) τ
     rw [e, MatrixMap.amplifyLeft_conj, MatrixMap.amplify_conj]
     exact conj_lift_eq_of_conj_eq (hτ.2 r)
-
-omit hU in
-/-- Condition 2 for the purified measurement: the lifted initial operator is invariant. -/
-private theorem conj_purifiedMeas_lift {Q : Matrix D D ℂ} (ρ : SubState A)
-    (hQσ : Q * σ.matrix = σ.matrix) :
-    MatrixMap.conj ((1 : Matrix A A ℂ) ⊗ₖ purifiedMeas Q)
-        ((MatrixMap.conj (inj D false)).amplifyLeft A (ρ.matrix ⊗ₖ σ.matrix)) =
-      (MatrixMap.conj (inj D false)).amplifyLeft A (ρ.matrix ⊗ₖ σ.matrix) := by
-  have hσH : σ.matrixᴴ = σ.matrix := σ.posSemidef.isHermitian.eq
-  set K := inj D false * Q + inj D true * (1 - Q) with hK
-  have hKσ : K * σ.matrix = inj D false * σ.matrix := by
-    rw [hK, Matrix.add_mul, Matrix.mul_assoc, hQσ, Matrix.mul_assoc, Matrix.sub_mul,
-      Matrix.one_mul, hQσ, sub_self, Matrix.mul_zero, add_zero]
-  have hm : K * σ.matrix * Kᴴ = inj D false * σ.matrix * (inj D false)ᴴ := by
-    calc K * σ.matrix * Kᴴ = inj D false * σ.matrix * Kᴴ := by rw [hKσ]
-      _ = inj D false * (K * σ.matrixᴴ)ᴴ := by
-        rw [conjTranspose_mul, conjTranspose_conjTranspose, Matrix.mul_assoc]
-      _ = inj D false * (inj D false * σ.matrix)ᴴ := by rw [hσH, hKσ]
-      _ = inj D false * σ.matrix * (inj D false)ᴴ := by
-        rw [conjTranspose_mul, hσH, Matrix.mul_assoc]
-  rw [MatrixMap.amplifyLeft_conj, ← LinearMap.comp_apply (MatrixMap.conj _),
-    ← MatrixMap.conj_mul, ← mul_kronecker_mul, Matrix.one_mul, purifiedMeas_mul_inj_false, ← hK]
-  simp only [MatrixMap.conj_apply, conjTranspose_kronecker, conjTranspose_one,
-    ← mul_kronecker_mul, Matrix.one_mul, Matrix.mul_one, hm]
-
-omit hU in
-private theorem posSemidef_one_sub_sel_true (p : Σ u, X u) :
-    (1 - (sel p.1 true : Matrix (p.1 × D) (p.1 × (D × Bool)) ℂ)ᴴ *
-      (sel p.1 true : Matrix (p.1 × D) (p.1 × (D × Bool)) ℂ)).PosSemidef := by
-  rw [← conjTranspose_sel_mul_sel_add (D := D) (Y := p.1), add_sub_cancel_right]
-  exact Matrix.posSemidef_conjTranspose_mul_self _
-
-omit hU in
-private theorem conj_sel_true_lift (p : Σ u, X u) (τ : Matrix (p.1 × D) (p.1 × D) ℂ) :
-    MatrixMap.conj (sel (D := D) p.1 true)
-      ((MatrixMap.conj (inj D false)).amplifyLeft p.1 τ) = 0 := by
-  rw [MatrixMap.amplifyLeft_conj, ← LinearMap.comp_apply (MatrixMap.conj _),
-    ← MatrixMap.conj_mul, sel, ← mul_kronecker_mul, conjTranspose_inj_mul_inj]
-  simp
-
-omit hU in
-private theorem conj_sel_true_purifiedMeas_lift {Q : Matrix D D ℂ} (hQ : Qᴴ = Q)
-    (p : Σ u, X u) (τ : Matrix (p.1 × D) (p.1 × D) ℂ) :
-    MatrixMap.conj (sel (D := D) p.1 true * ((1 : Matrix p.1 p.1 ℂ) ⊗ₖ (purifiedMeas Q)ᴴ))
-      ((MatrixMap.conj (inj D false)).amplifyLeft p.1 τ) =
-      MatrixMap.conj ((1 : Matrix p.1 p.1 ℂ) ⊗ₖ (1 - Q)) τ := by
-  rw [MatrixMap.amplifyLeft_conj, ← LinearMap.comp_apply (MatrixMap.conj _),
-    ← MatrixMap.conj_mul, sel]
-  simp only [← mul_kronecker_mul, Matrix.one_mul,
-    conjTranspose_inj_true_mul_purifiedMeas_mul_inj_false hQ]
-
-open scoped Matrix.Norms.L2Operator
-
-omit hU in
-private theorem lemmaKraus_ext_eq_neg (P Q : Matrix D D ℂ) (i : spec.Port) (r : spec.Result i) :
-    lemmaKraus (D := QReg.of (D × Bool)) (P ⊗ₖ (1 : Matrix Bool Bool ℂ)) (purifiedMeas Q)
-        (fun i r ↦ ctrl (U i r) (U i r)) (fun i r ↦ ctrl (U i r) (U i r)) i r =
-      -measComm P Q U i r :=
-  (neg_sub _ _).symm
-
-omit hU in
-private theorem l2_opNorm_lemmaKraus_ext (P Q : Matrix D D ℂ) (i : spec.Port)
-    (r : spec.Result i) :
-    ‖lemmaKraus (D := QReg.of (D × Bool)) (P ⊗ₖ (1 : Matrix Bool Bool ℂ)) (purifiedMeas Q)
-        (fun i r ↦ ctrl (U i r) (U i r)) (fun i r ↦ ctrl (U i r) (U i r)) i r‖ =
-      ‖measComm P Q U i r‖ := by
-  rw [lemmaKraus_ext_eq_neg, norm_neg]
-
-omit hU in
-private theorem C_eq (P Q : Matrix D D ℂ) (i : spec.Port) (c : ℝ≥0∞) :
-    (∑' r, ENNReal.ofReal (‖lemmaKraus (D := QReg.of (D × Bool))
-        (P ⊗ₖ (1 : Matrix Bool Bool ℂ)) (purifiedMeas Q) (fun i r ↦ ctrl (U i r) (U i r))
-        (fun i r ↦ ctrl (U i r) (U i r)) i r‖ ^ 2)) * c =
-      (∑' r, ENNReal.ofReal (‖measComm P Q U i r‖ ^ 2)) * c :=
-  congrArg (· * c) (tsum_congr fun r ↦
-    congrArg (fun t ↦ ENNReal.ofReal (t ^ 2)) (l2_opNorm_lemmaKraus_ext P Q i r))
 
 /-- The core of Cor 5.8: the square root of `Pr[S ∉ Q]` is at most the sum over the calls of the
 square roots of the Kraus weights of the commutators on the inputs of the calls of the run
@@ -520,19 +538,6 @@ theorem tsum_trace_conj_one_sub_le_of_inImage_of_isQueryBound {x : QuantumComp L
 
 /-! ### Cor 5.8 with the masses of a coherent index -/
 
-omit hU in
-private theorem trace_conj_kronecker_one_amplifyLeft {J : Type*} [Fintype J]
-    (M : Matrix J J ℂ) (τ : Matrix (J × D) (J × D) ℂ) :
-    (MatrixMap.conj (M ⊗ₖ (1 : Matrix (QReg.of (D × Bool)) (QReg.of (D × Bool)) ℂ))
-        ((MatrixMap.conj (inj D false)).amplifyLeft J τ)).trace =
-      (MatrixMap.conj (M ⊗ₖ (1 : Matrix D D ℂ)) τ).trace := by
-  classical
-  have h : (inj D false)ᴴ * inj D false = 1 := by
-    simpa using conjTranspose_inj_mul_inj (D := D) false false
-  rw [MatrixMap.amplifyLeft_conj, ← LinearMap.comp_apply (MatrixMap.conj _),
-    ← MatrixMap.conj_mul, Matrix.kronecker_one_mul_one_kronecker, MatrixMap.conj_mul,
-    LinearMap.comp_apply, MatrixMap.isTP_conj (Matrix.conjTranspose_one_kronecker_mul_self h) _]
-
 private theorem indexMassAt_ext {κ : spec.Port → Type*}
     (B : ∀ i, κ i → Matrix (spec.In i) (spec.In i) ℂ) (x : QuantumComp L spec X A)
     (ρ : Matrix (A × D) (A × D) ℂ) (c : Σ i, κ i) (j : ℕ) :
@@ -548,15 +553,6 @@ private theorem indexMassAt_ext {κ : spec.Port → Type*}
   split_ifs
   · rw [trace_conj_kronecker_one_amplifyLeft]
   · rfl
-
-omit hU in
-private theorem respectsIndex_lemmaKraus_ext {κ : spec.Port → Type*}
-    {B : ∀ i, κ i → Matrix (spec.In i) (spec.In i) ℂ}
-    {B' : ∀ i, κ i → Matrix (spec.Out i) (spec.Out i) ℂ} (hUB : RespectsIndex B B' U)
-    (P Q : Matrix D D ℂ) :
-    RespectsIndex B B' (lemmaKraus (D := QReg.of (D × Bool)) (P ⊗ₖ (1 : Matrix Bool Bool ℂ))
-      (purifiedMeas Q) (fun i r ↦ ctrl (U i r) (U i r)) (fun i r ↦ ctrl (U i r) (U i r))) :=
-  RespectsIndex.lemmaKraus hUB.ctrl hUB.ctrl _ _
 
 /-- The Kraus weight of the commutators at the `j`-th call of the run against the extended
 runtime is at most the index masses of the `j`-th call of the run against the runtime. -/

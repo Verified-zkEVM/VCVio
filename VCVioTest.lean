@@ -6,6 +6,7 @@ public import VCVioTest.Algorithms.Hash
 public import VCVioTest.AnswerTapeAdaptedUnion
 public import VCVioTest.Asymptotics.Negligible
 public import VCVioTest.CachedPointsBound
+public import VCVioTest.ComplementaryChecksum
 public import VCVioTest.Computability
 public import VCVioTest.CryptoFoundations.BR93Measure
 public import VCVioTest.CryptoFoundations.ComplexityAdapters
@@ -16,6 +17,7 @@ public import VCVioTest.CryptoFoundations.DiscreteLogRelation
 public import VCVioTest.CryptoFoundations.FiatShamirStateSteps
 public import VCVioTest.CryptoFoundations.FiatShamirWithAbortCanary
 public import VCVioTest.CryptoFoundations.FiatShamirWithAbortInstance
+public import VCVioTest.CryptoFoundations.FujisakiOkamotoOneWay
 public import VCVioTest.CryptoFoundations.KeyedHashCovering
 public import VCVioTest.CryptoFoundations.LeftOrRight
 public import VCVioTest.CryptoFoundations.OracleClosure
@@ -47,6 +49,7 @@ public import VCVioTest.EvalDist.Transformers
 public import VCVioTest.EvalDist.UniformTable
 public import VCVioTest.FiatShamirAbort
 public import VCVioTest.FiatShamirKnowledgeExtraction
+public import VCVioTest.FiniteQuerySimulation
 public import VCVioTest.FirstSuccess
 public import VCVioTest.FischlinExpectedCost
 public import VCVioTest.FischlinExtraction
@@ -74,6 +77,7 @@ public import VCVioTest.GroupModel.ToExplained
 public import VCVioTest.GroupModel.Typed
 public import VCVioTest.GroupModel.Virtualize
 public import VCVioTest.ITSR
+public import VCVioTest.IndexedChain
 public import VCVioTest.KernelSemantics
 public import VCVioTest.ListCache
 public import VCVioTest.LoggedRunInvariant
@@ -81,6 +85,7 @@ public import VCVioTest.LongChainPrograms
 public import VCVioTest.MeasurabilityBoundary
 public import VCVioTest.MeasureSemantics
 public import VCVioTest.MerkleCheckpoints
+public import VCVioTest.MerkleHonestQueries
 public import VCVioTest.MerkleTreeBatch
 public import VCVioTest.MerkleTreeExtractability
 public import VCVioTest.MerkleTreeHashForest
@@ -91,6 +96,7 @@ public import VCVioTest.MerkleTreeMultiExtractability
 public import VCVioTest.ModuleAPI.Cache
 public import VCVioTest.ModuleAPI.Counting
 public import VCVioTest.ModuleAPI.Heap
+public import VCVioTest.ModuleAPI.QueryImpl
 public import VCVioTest.MonadProbability
 public import VCVioTest.OracleComp.AdaptiveMeasure
 public import VCVioTest.OracleComp.BudgetedPotential
@@ -215,6 +221,7 @@ public import VCVioTest.SMDTUDFinalValidity
 public import VCVioTest.SaltedMerkle
 public import VCVioTest.SampleableType
 public import VCVioTest.Schemes.KEMDEM
+public import VCVioTest.Schemes.MerkleDamgard
 public import VCVioTest.Schemes.Schnorr.ChallengeRestriction
 public import VCVioTest.Schemes.Schnorr.Transforms
 public import VCVioTest.Schemes.VectorPedersen
@@ -241,5 +248,6 @@ public import VCVioTest.ToMathlib.AbsDiff
 public import VCVioTest.UniformOn
 public import VCVioTest.UniversePolymorphism
 public import VCVioTest.Unpredictability
+public import VCVioTest.UntilBadBind
 public import VCVioTest.VCGenAmbiguity
 public import VCVioTest.WriterCostStateT

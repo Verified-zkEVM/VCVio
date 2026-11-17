@@ -1,9 +1,13 @@
 module  -- shake: keep-all --deprecated_module: ignore
 
+public import VCVio.Algorithms.ComplementaryChecksum.Basic
 public import VCVio.Algorithms.Encoding
 public import VCVio.Algorithms.FirstSuccess.Basic
+public import VCVio.Algorithms.IndexedChain.Basic
+public import VCVio.Algorithms.IndexedChain.Witnesses
 public import VCVio.Algorithms.Keccak
 public import VCVio.Algorithms.KeccakPrefix
+public import VCVio.Algorithms.RadixEncoding
 public import VCVio.Algorithms.Sha2
 public import VCVio.CryptoFoundations.AKE.UAKE.Defs
 public import VCVio.CryptoFoundations.AKE.UAKE.Party
@@ -155,12 +159,14 @@ public import VCVio.CryptoFoundations.KeyEncapMech
 public import VCVio.CryptoFoundations.LeftOrRight
 public import VCVio.CryptoFoundations.MacAlg
 public import VCVio.CryptoFoundations.MerkleTree.Addressed.Basic
+public import VCVio.CryptoFoundations.MerkleTree.Addressed.Congruence
 public import VCVio.CryptoFoundations.MerkleTree.Addressed.Extractability
 public import VCVio.CryptoFoundations.MerkleTree.Addressed.Extractor
 public import VCVio.CryptoFoundations.MerkleTree.Addressed.Level
 public import VCVio.CryptoFoundations.MerkleTree.Addressed.Monadic
 public import VCVio.CryptoFoundations.MerkleTree.Addressed.NatIndexed
 public import VCVio.CryptoFoundations.MerkleTree.Addressed.NatIndexed.Collision
+public import VCVio.CryptoFoundations.MerkleTree.Addressed.NatIndexed.Congruence
 public import VCVio.CryptoFoundations.MerkleTree.Addressed.NatIndexed.EqDistTriple
 public import VCVio.CryptoFoundations.MerkleTree.Addressed.NatIndexed.Monadic
 public import VCVio.CryptoFoundations.MerkleTree.Addressed.NatIndexed.Option
@@ -168,6 +174,7 @@ public import VCVio.CryptoFoundations.MerkleTree.Addressed.NatIndexed.OptionCove
 public import VCVio.CryptoFoundations.MerkleTree.Addressed.NatIndexed.QueryBound
 public import VCVio.CryptoFoundations.MerkleTree.Addressed.NatIndexed.Sibling
 public import VCVio.CryptoFoundations.MerkleTree.Addressed.Query
+public import VCVio.CryptoFoundations.MerkleTree.Addressed.Query.Honest
 public import VCVio.CryptoFoundations.MerkleTree.Addressed.QueryBound
 public import VCVio.CryptoFoundations.MerkleTree.Addressed.Uniqueness
 public import VCVio.CryptoFoundations.MerkleTree.BatchExtractability
@@ -389,6 +396,7 @@ public import VCVio.OracleComp.EvalDist.Sum
 public import VCVio.OracleComp.FinRatPMF
 public import VCVio.OracleComp.HasQuery.Basic
 public import VCVio.OracleComp.HasQuery.Morphism
+public import VCVio.OracleComp.MapLens
 public import VCVio.OracleComp.OracleComp
 public import VCVio.OracleComp.OracleContext
 public import VCVio.OracleComp.OracleQuery
@@ -425,6 +433,7 @@ public import VCVio.OracleComp.QueryTracking.QueryBound
 public import VCVio.OracleComp.QueryTracking.QueryBound.Basic
 public import VCVio.OracleComp.QueryTracking.QueryBound.Batch
 public import VCVio.OracleComp.QueryTracking.QueryBound.Counter
+public import VCVio.OracleComp.QueryTracking.QueryBound.FinMOfFn
 public import VCVio.OracleComp.QueryTracking.QueryBound.Hazard
 public import VCVio.OracleComp.QueryTracking.QueryBound.Partition
 public import VCVio.OracleComp.QueryTracking.QueryBound.Simulation
@@ -448,6 +457,7 @@ public import VCVio.OracleComp.QueryTracking.RandomOracle.Encoded
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Encoded.Batch
 public import VCVio.OracleComp.QueryTracking.RandomOracle.ExpectedFreshQuery
 public import VCVio.OracleComp.QueryTracking.RandomOracle.ExpectedFreshQueryInfinite
+public import VCVio.OracleComp.QueryTracking.RandomOracle.FinMOfFn
 public import VCVio.OracleComp.QueryTracking.RandomOracle.FiniteSupport
 public import VCVio.OracleComp.QueryTracking.RandomOracle.FreshAnswer
 public import VCVio.OracleComp.QueryTracking.RandomOracle.FreshQuery
@@ -491,6 +501,7 @@ public import VCVio.OracleComp.SimSemantics.QueryImpl.Constructions.Core
 public import VCVio.OracleComp.SimSemantics.QueryImpl.Tagged
 public import VCVio.OracleComp.SimSemantics.ReaderT.Basic
 public import VCVio.OracleComp.SimSemantics.SimulateQ
+public import VCVio.OracleComp.SimSemantics.SimulateQ.FinMOfFn
 public import VCVio.OracleComp.SimSemantics.SimulateQ.Option
 public import VCVio.OracleComp.SimSemantics.StateT.Basic
 public import VCVio.OracleComp.SimSemantics.StateT.BundledSemantics
@@ -501,6 +512,7 @@ public import VCVio.OracleComp.SimSemantics.StateT.PreservesInv
 public import VCVio.OracleComp.SimSemantics.StateT.StateProjection
 public import VCVio.OracleComp.SimSemantics.StateT.StateSeparating
 public import VCVio.OracleComp.SimSemantics.StateT.UntilBad
+public import VCVio.OracleComp.SimSemantics.StateT.UntilBad.Bind
 public import VCVio.OracleComp.SimSemantics.Wiring
 public import VCVio.OracleComp.SimSemantics.WriterT.Core
 public import VCVio.OracleComp.SimSemantics.WriterT.PreservesInv
@@ -637,6 +649,7 @@ public import VCVio.Quantum.VC.Unitaries
 public import VCVio.Schemes.KEMDEM
 public import VCVio.Schemes.KEMDEM.Measure
 public import VCVio.Schemes.MacFromPRF
+public import VCVio.Schemes.MerkleDamgard
 public import VCVio.Schemes.Pedersen
 public import VCVio.Schemes.PointerChainPuzzle.Bad
 public import VCVio.Schemes.PointerChainPuzzle.Basic
