@@ -18,15 +18,16 @@ A scheme that commits to nothing is hiding against every adversary. A scheme tha
 message in the clear is not: an adversary that reads the commitment has advantage one. A check
 that accepts everything is not position binding: two conflicting openings of one commitment win
 with probability one. Simulation-based hiding of the constant scheme gives its two-message hiding
-through the generic reduction, for adversaries within any query budget. Adversaries that make no
-oracle queries meet the zero query budget. The salted Merkle commitment accepts honest openings
-with probability one under the lazily sampled random oracle of the two advantages, and both
-advantages can be stated for it.
+through the adversaries playing the two worlds, and simulation bounds on those adversaries give
+twice the bound in general. Adversaries that make no oracle queries meet the zero query budget, and
+the adversaries playing the two worlds inherit it. The salted Merkle commitment accepts honest
+openings with probability one under the lazily sampled random oracle of the two advantages, and
+both advantages can be stated for it.
 -/
 
 public section
 
-open MeasureTheory OracleComp OracleSpec VectorCommitment
+open OracleComp OracleSpec VectorCommitment
 
 namespace VectorCommitmentTest
 
@@ -57,8 +58,8 @@ example (adversary : HidingAdversary Unit Unit Bool Unit Unit 1) :
 /-- The constant scheme gives every adversary advantage zero. -/
 example (adversary : HidingAdversary Unit Unit Bool Unit Unit 1) :
     constant.hidingAdvantage adversary = 0 := by
-  rw [hidingAdvantage, show constant.hidingExperiment adversary true =
-    constant.hidingExperiment adversary false from rfl, Measure.boolDist_self]
+  rw [hidingAdvantage_eq, show constant.hidingExperiment adversary true =
+    constant.hidingExperiment adversary false from rfl, ENNReal.absDiff_self]
 
 /-- The reader's experiment returns the world bit. -/
 theorem transparent_hidingExperiment (b : Bool) :
@@ -84,28 +85,38 @@ theorem constant_simulationHidingAdvantage
       simulationHidingIdealExperiment constantSimulator adversary := by
     simp [simulationHidingRealExperiment, simulationHidingIdealExperiment, constant,
       constantSimulator]
-  rw [simulationHidingAdvantage, h, Measure.boolDist_self]
+  rw [simulationHidingAdvantage_eq, h, ENNReal.absDiff_self]
 
-/-- Simulation-based hiding with error `0` gives two-message hiding with error `0`, here for an
-adversary within a budget of `t` oracle queries. -/
-example (t : ℕ) (adversary : HidingAdversary Unit Unit Bool Unit Unit 1)
-    (hq : adversary.MakesAtMostQueries t) :
+/-- Simulation-based hiding with error `0` gives two-message hiding with error `0`. -/
+example (adversary : HidingAdversary Unit Unit Bool Unit Unit 1) :
     constant.hidingAdvantage adversary = 0 := by
   refine le_antisymm ?_ (zero_le)
-  simpa using hidingAdvantage_le_two_mul constant constantSimulator
-    (fun b _ ↦ (constant_simulationHidingAdvantage b).le) adversary hq
+  simpa [constant_simulationHidingAdvantage] using
+    hidingAdvantage_le_simulationHidingAdvantage constant constantSimulator adversary
 
-/-- The reader's world adversaries inherit its zero query budget and its opening size. -/
-example :
-    (reader.toSimulation true).MakesAtMostQueries 0 ∧ (reader.toSimulation false).OpensExactly 0 :=
-  ⟨HidingAdversary.makesAtMostQueries_toSimulation (by intro cm pf; simp [reader]) true,
-    HidingAdversary.opensExactly_toSimulation
-      (by intro c hc; rw [Set.mem_singleton_iff.mp hc]; rfl) false⟩
+/-- A simulation bound `ε` for the adversaries playing the two worlds gives two-message advantage
+at most `2 ε`. -/
+example {X Y Msg Cm Td Pf : Type} {ℓ : ℕ} [DecidableEq X] [SampleableType Y] [DecidableEq Msg]
+    (vc : VectorCommitment X Y Msg Cm Td Pf ℓ) (simulator : HidingSimulator X Y Msg Cm Pf ℓ)
+    (adversary : HidingAdversary X Y Msg Cm Pf ℓ) {ε : ENNReal}
+    (h : ∀ b, vc.simulationHidingAdvantage simulator (adversary.toSimulation b) ≤ ε) :
+    vc.hidingAdvantage adversary ≤ 2 * ε :=
+  (hidingAdvantage_le_simulationHidingAdvantage vc simulator adversary).trans
+    ((add_le_add (h true) (h false)).trans_eq (two_mul ε).symm)
 
 /-- The reader makes no oracle queries. -/
-example : reader.MakesAtMostQueries 0 := by
+theorem reader_makesAtMostQueries_zero : reader.MakesAtMostQueries 0 := by
   intro cm pf
   simp [reader]
+
+/-- The reader's world adversaries inherit its zero query budget. -/
+example (b : Bool) : (reader.toSimulation b).MakesAtMostQueries 0 :=
+  HidingAdversary.makesAtMostQueries_toSimulation reader_makesAtMostQueries_zero b
+
+/-- The reader's world adversaries inherit its opening size. -/
+example (b : Bool) : (reader.toSimulation b).OpensExactly 0 :=
+  HidingAdversary.opensExactly_toSimulation
+    (by intro c hc; rw [Set.mem_singleton_iff.mp hc]; rfl) b
 
 /-! ## Position binding -/
 
@@ -115,15 +126,19 @@ def forger : PositionBindingAdversary Unit Unit Bool Unit Unit 1 :=
 
 /-- A check that accepts everything is broken with probability one. -/
 example : constant.positionBindingAdvantage forger = 1 := by
-  simp [positionBindingAdvantage, positionBindingExperiment, forger, constant,
+  simp [positionBindingAdvantage_eq, positionBindingExperiment, forger, constant,
     PartialVec.Conflict, ProbCompRuntime.rom_evalDist]
 
 /-- The forger makes no oracle queries. -/
-example : PositionBindingAdversary.MakesAtMostQueries forger 0 := by
+example : forger.MakesAtMostQueries 0 := by
   simp [PositionBindingAdversary.MakesAtMostQueries, forger]
 
 /-- Identical openings never conflict. -/
-example (a : PartialVec 1 Bool) : ¬ PartialVec.Conflict a a := PartialVec.not_conflict_self a
+example (a : PartialVec 1 Bool) : ¬ PartialVec.Conflict a a := by simp
+
+/-- Conflict is symmetric. -/
+example (a b : PartialVec 1 Bool) (h : PartialVec.Conflict a b) : PartialVec.Conflict b a :=
+  h.symm
 
 /-! ## The salted Merkle commitment -/
 
@@ -138,7 +153,15 @@ lazily sampled random oracle, the oracle of its binding and hiding advantages. -
 example (msg : Fin (2 ^ d) → Msg) (Q : Finset (Fin (2 ^ d))) :
     (ProbCompRuntime.rom (X →ₒ Y)).evalDist
       ((SaltedMerkle.scheme enc d).toVectorCommitment.completenessExp msg Q) {true} = 1 :=
-  (SaltedMerkle.perfectlyComplete enc d).perfectlyCompleteForAll.evalDist_rom_completenessExp msg Q
+  (SaltedMerkle.perfectlyComplete enc d).perfectlyCompleteForAll.evalDist_rom_completenessExp_eq_one
+    msg Q
+
+/-- The same holds for a random oracle programmed by an initial cache. -/
+example (cache : (X →ₒ Y).QueryCache) (msg : Fin (2 ^ d) → Msg) (Q : Finset (Fin (2 ^ d))) :
+    (ProbCompRuntime.rom (X →ₒ Y) cache).evalDist
+      ((SaltedMerkle.scheme enc d).toVectorCommitment.completenessExp msg Q) {true} = 1 :=
+  (SaltedMerkle.perfectlyComplete enc d).perfectlyCompleteForAll.evalDist_rom_completenessExp_eq_one
+    msg Q
 
 /-- Position binding can be stated for the salted Merkle commitment. -/
 noncomputable example

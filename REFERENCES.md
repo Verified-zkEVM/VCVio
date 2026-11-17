@@ -146,6 +146,21 @@ Public book: <https://snargsbook.org/>
 
 Used in:
 - `VCVio/EvalDist/DiscreteTVDist.lean`
+- `VCVio/CryptoFoundations/VectorCommitment/Basic.lean`
+- `VCVio/CryptoFoundations/VectorCommitment/Hiding.lean`
+- `VCVio/CryptoFoundations/VectorCommitment/PositionBinding.lean`
+
+### CDHZ25
+
+Alessandro Chiesa, Zijing Di, Zihan Hu, and Yuxi Zheng.
+*How to Prove Post-Quantum Security for Succinct Non-Interactive Reductions*.
+Cryptology ePrint Archive, Paper 2025/2166, 2025.
+Preprint: <https://eprint.iacr.org/2025/2166>
+
+Used in:
+- `VCVio/CryptoFoundations/VectorCommitment/Basic.lean`
+- `VCVio/CryptoFoundations/VectorCommitment/Completeness.lean`
+- `VCVio/CryptoFoundations/VectorCommitment/NonadaptiveCheck.lean`
 
 ### HHK17
 

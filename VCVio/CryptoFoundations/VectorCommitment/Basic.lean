@@ -29,11 +29,13 @@ The pair `(Q, ans)` with `ans ∈ Σ^Q` is one partial vector `ans : Fin ℓ →
 `Q = dom ans`; the same type holds the extracted messages `m ∈ (Σ ∪ {⊥})^ℓ` of §7
 (ePrint 2025/2166, p. 49).
 
-Security properties live beside this file: `Completeness`, `NonadaptiveCheck`, `PositionBinding`,
-`Hiding` and `RomCompleteness`. They use two oracle models. Completeness is relative to an
+The modules beside this file state completeness (`Completeness`, `RomCompleteness`) and the
+security properties position binding (`PositionBinding`) and hiding (`Hiding`) of a scheme, and
+`NonadaptiveCheck` records a structural property of `Check`: it rechecks a query log computed
+without the oracle. The properties use two oracle models. Completeness is relative to an
 arbitrary distribution `D` on oracle functions, following ePrint 2025/2166 (`completenessProb`).
 Position binding and hiding are stated in the random oracle model, against the lazily sampled
-random oracle `ProbCompRuntime.rom (X →ₒ Y)`, as in Chiesa and Yogev, Chapter 18.
+random oracle `ProbCompRuntime.rom (X →ₒ Y)`, as in Chiesa and Yogev, Version 1.2, Chapter 18.
 `RomCompleteness` transfers completeness against every fixed function to that oracle.
 
 ## Universes
@@ -47,9 +49,17 @@ universe-polymorphic.
 
 ## Main definitions
 
-* `PartialVec ℓ Msg`, with `PartialVec.dom`, `PartialVec.Agrees` and `PartialVec.restrict`.
+* `PartialVec ℓ Msg`, with `PartialVec.dom`, `PartialVec.Agrees`, `PartialVec.Conflict` and
+  `PartialVec.restrict`.
 * `VectorCommitment X Y Msg Cm Td Pf ℓ` and `VectorCommitment.fixedOracleImpl`.
 * `DetVectorCommitment X Y Msg Cm Td Pf ℓ` and `DetVectorCommitment.toVectorCommitment`.
+
+## References
+
+* [Chiesa, Di, Hu and Zheng, *How to Prove Post-Quantum Security for Succinct Non-Interactive
+  Reductions*, ePrint 2025/2166](https://eprint.iacr.org/2025/2166).
+* [Chiesa–Yogev, *Building Cryptographic Proofs from Hash Functions*, Version 1.2, Chapter 18,
+  Merkle commitment scheme](https://github.com/hash-based-snargs-book/hash-based-snargs-book/blob/305fa3d9d19ee6dba135de64b3156d1760df8426/snargs-book.tex#L12395-L14597).
 -/
 
 public section
@@ -87,6 +97,26 @@ def Agrees (m ans : PartialVec ℓ Msg) : Prop :=
 /-- Agreement is decidable: it is a finite conjunction. -/
 instance [DecidableEq Msg] (m ans : PartialVec ℓ Msg) : Decidable (Agrees m ans) :=
   decidable_of_iff (∀ q, ∀ a ∈ ans q, m q = some a) (by simp [Agrees])
+
+/-- Two partial vectors conflict when some position is defined in both with different values. -/
+@[expose]
+def Conflict (a b : PartialVec ℓ Msg) : Prop :=
+  ∃ q x y, a q = some x ∧ b q = some y ∧ x ≠ y
+
+/-- Conflict is decidable: it is a finite disjunction. -/
+instance [DecidableEq Msg] (a b : PartialVec ℓ Msg) : Decidable (Conflict a b) :=
+  decidable_of_iff (∃ q, ∃ x ∈ a q, ∃ y ∈ b q, x ≠ y) (by simp [Conflict])
+
+/-- Conflict is symmetric. -/
+theorem Conflict.symm {a b : PartialVec ℓ Msg} (h : Conflict a b) : Conflict b a :=
+  let ⟨q, x, y, hx, hy, hxy⟩ := h
+  ⟨q, y, x, hy, hx, hxy.symm⟩
+
+/-- A partial vector never conflicts with itself. -/
+@[simp]
+theorem not_conflict_self (a : PartialVec ℓ Msg) : ¬ Conflict a a := by
+  rintro ⟨q, x, y, hx, hy, hxy⟩
+  exact hxy (Option.some_injective _ (hx.symm.trans hy))
 
 /-- The restriction `m[Q]` of a total vector to the positions `Q`. -/
 @[expose]
