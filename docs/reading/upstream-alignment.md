@@ -777,10 +777,10 @@ ML-DSA uses nested-`Vector` `matVecMul`; `PolyMatrix.toMatrix` exists but no pro
    `NTTCert.lean:58–258` restates `Matrix.mulVec` lemmas — delete rather than port.
 5. `decode12Pair_fst/snd` (`V:LatticeCrypto/MLKEM/Concrete/Encoding.lean:510–520`): `omega` alone (verified).
 6. Poisson summation `Real.tsum_exp_neg_mul_int_sq` (`M:Analysis/SpecialFunctions/Gaussian/PoissonSummation.lean:123`)
-   / `jacobiTheta₂` give the exact theta form of `discreteGaussianSum`, replacing the 106-line
-   `le_discreteGaussianSum` (`V:LatticeCrypto/DiscreteGaussian.lean:216–321`) without its `−1` loss and
-   opening the deferred smoothing-parameter bound. `discreteGaussianSum_eq_jacobiTheta₂` proves the theta
-   form through `Complex.tsum_exp_neg_quadratic` (the real lemma is centered at `0`), and
+   / `jacobiTheta₂` give the exact theta form of `discreteGaussianSum`, which bounds it without a `−1`
+   loss and opens the deferred smoothing-parameter bound. `discreteGaussianSum_eq_jacobiTheta₂`
+   (`V:LatticeCrypto/DiscreteGaussian.lean:222`) proves the theta form through
+   `Complex.tsum_exp_neg_quadratic` (the real lemma is centered at `0`), and
    `abs_discreteGaussianSum_sub_le` the two-sided bound `|∑ρ - σ√(2π)| ≤ σ√(2π) · 2e^{-2π²σ²} / (1 - e^{-2π²σ²})`;
    `le_discreteGaussianSum` keeps its statement and follows from it.
 7. Pick one matrix convention (Mathlib literature: column `A *ᵥ x`) and route ML-DSA's `TqMatrix`
