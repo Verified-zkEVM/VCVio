@@ -52,6 +52,7 @@ public import VCVioTest.EvalDist.UniformTable
 public import VCVioTest.FiatShamirAbort
 public import VCVioTest.FiatShamirKnowledgeExtraction
 public import VCVioTest.FiniteQuerySimulation
+public import VCVioTest.FirstSuccess
 public import VCVioTest.FischlinExpectedCost
 public import VCVioTest.FischlinExtraction
 public import VCVioTest.ForkBounds
