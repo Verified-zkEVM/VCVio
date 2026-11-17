@@ -170,9 +170,11 @@ classes of probability goals:
 **Core `vcgen` steps**: in each exhaustive `pvcgen` pass, a quantitative `Triple` goal first goes
 to core `vcgen` (`tryCoreVCGen`) with the `@[spec]` rules of `Unary/WP/LowerSpecs.lean`. Core
 steps through binds, conditionals, matchers and transformer layers and uses the triples in the
-local context as rules. A triple with precondition `1` takes the pointwise rules
-(`OracleComp.Lower.Pointwise`) and descends through every draw; any other takes the exact rules,
-and the expectations of the rest of the program are computed under the averages of the draws.
+local context as rules. Core takes the WP interpretation from the triple itself, so callers can
+use a quantitative triple while another reading is in scope. A precondition of `1` takes the
+pointwise rules (`OracleComp.Lower.Pointwise`) and descends through every draw. Other
+preconditions take the exact rules, which compute the expectations of the rest of the program
+under the averages of the draws.
 Core's verification conditions are read back to `≤`, and those `simp` closes are closed. The step
 is skipped when core makes no progress or leaves a loop to an invariant, so the loop steps below
 and VCVio's own structural steps continue. `vcstep` and the `?` replays do not take it;
@@ -805,7 +807,9 @@ readings; `VCVioTest/ProgramLogic/CoreVCGen.lean` exercises them.
 - `open scoped OracleComp.Lower.Pointwise` registers the pointwise rules above the exact ones:
   a bound at every answer, as core's indexed infimum, which `vcgen` splits per answer. They serve
   for bounds that hold on every path, such as events of probability one.
-- `Spec.ofSupport` (in both readings) is passed explicitly for an opaque sub-program.
+- Pass `Spec.ofSupport` explicitly for an opaque sub-program in either reading. The condition
+  introduces the output and its support hypothesis. The pointwise replication rule also supplies
+  the length of the returned list and the support of each entry.
 
 The v4.35 port adopts the public `Std.WP` namespace and exception stacks (`EStack⟨⟩`,
 `EStack⟨ε → L⟩`). An optional failure postcondition is a function from `Unit`; core's
