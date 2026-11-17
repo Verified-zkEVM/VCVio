@@ -155,6 +155,33 @@ theorem verify_sign_correct (pk : PublicKey p) (sk : SecretKey p) (msg : List By
         rw [hs1]
         exact hshort
 
+/-- The payload of every signature the fuel-bounded signer returns is a successful compression
+at `p.sbytelen`: the signer emits `some ⟨salt, comp⟩` only when `prims.compress` returned
+`some comp`. -/
+theorem exists_compress_eq_of_mem_support_sign {pk : PublicKey p} {sk : SecretKey p}
+    {msg : List Byte} {maxAttempts : ℕ} {sig : Signature}
+    (hsig : some sig ∈ support (sign p prims pk sk msg maxAttempts)) :
+    ∃ s : IntPoly p.n, prims.compress s p.sbytelen = some sig.compressedS2 := by
+  induction maxAttempts with
+  | zero => simp [sign] at hsig
+  | succ k ih =>
+    rw [sign, mem_support_bind_iff] at hsig
+    obtain ⟨salt, -, hsig⟩ := hsig
+    rw [mem_support_bind_iff] at hsig
+    obtain ⟨r, -, hsig⟩ := hsig
+    rcases r with _ | ⟨s₁, s₂⟩
+    · exact ih hsig
+    · dsimp only at hsig
+      cases hcomp : prims.compress (rqToIntPolyCentered s₂) p.sbytelen with
+      | none =>
+        rw [hcomp] at hsig
+        exact ih hsig
+      | some comp =>
+        rw [hcomp] at hsig
+        simp only [support_pure, Set.mem_singleton_iff, Option.some.injEq] at hsig
+        subst hsig
+        exact ⟨_, hcomp⟩
+
 /-! ### NTRU-SIS Hardness Assumption -/
 
 /-- The NTRU-SIS problem: given `h ∈ R_q` (the Falcon public key), find short
