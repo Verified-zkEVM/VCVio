@@ -31,12 +31,13 @@ namespace OracleComp.Complexity.SoundnessTest
 
 /-! ## Output measures of free programs -/
 
-example {p : PFunctor.{u, v}} {α : Type*} [MeasurableSpace α] [∀ a, MeasurableSpace (p.B a)] [p.AnswerMeasure]
-    (program : FreeM p α) : 𝒟[program] = FreeM.denote program :=
+example {p : PFunctor.{u, v}} {α : Type*} [MeasurableSpace α] [∀ a, MeasurableSpace (p.B a)]
+    [p.AnswerMeasure] (program : FreeM p α) : 𝒟[program] = FreeM.denote program :=
   FreeM.evalDist_eq_denote program
 
-noncomputable example {p : PFunctor.{u, v}} {α : Type*} [MeasurableSpace α] [∀ a, MeasurableSpace (p.B a)]
-    [p.AnswerMeasure] [∀ a, DiscreteMeasurableSpace (p.B a)] (program : FreeM p α) :
+noncomputable example {p : PFunctor.{u, v}} {α : Type*} [MeasurableSpace α]
+    [∀ a, MeasurableSpace (p.B a)] [p.AnswerMeasure] [∀ a, DiscreteMeasurableSpace (p.B a)]
+    (program : FreeM p α) :
     MeasureTheory.ProbabilityMeasure α :=
   ⟨𝒟[program], inferInstance⟩
 
