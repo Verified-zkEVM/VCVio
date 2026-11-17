@@ -17,6 +17,7 @@ public import Examples.ElGamal.Basic
 public import Examples.ElGamal.Common
 public import Examples.ElGamal.ComputationalComplexity
 public import Examples.ElGamal.Generic
+public import Examples.ElGamal.GenericINDCPA
 public import Examples.ElGamal.HandlerExecution
 public import Examples.ElGamal.Hash
 public import Examples.ElGamal.ReductionCost
