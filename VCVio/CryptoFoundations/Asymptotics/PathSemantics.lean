@@ -8,6 +8,9 @@ module
 
 public import VCVio.CryptoFoundations.Asymptotics.ComputationalComplexity
 public import PolyFun.PFunctor.Free.Measure.Path
+public import PolyFun.PFunctor.Free.Measure.EvalDist
+public import Mathlib.MeasureTheory.Measure.ProbabilityMeasure
+public import VCVio.EvalDist.Defs.Measure.Core
 
 /-!
 # Expected path bounds for strict PPT witnesses

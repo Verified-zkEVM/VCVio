@@ -7,7 +7,7 @@ Authors: Alexander Hicks
 module
 
 public import VCVio.OracleComp.SimSemantics.StateT.UntilBad
-import ToMathlib.MeasureTheory.Measure.Coupling.Bind
+import ToCslib.MeasureTheory.Measure.Coupling.Bind
 
 /-!
 # A common random continuation after domination until bad

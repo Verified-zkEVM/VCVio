@@ -556,10 +556,11 @@ list-valued sampling, and `evalDist_replicate_apply_univ` gives its success mass
 Because Mathlib does not install a generic measurable space on `List α`, these laws require the
 chosen list measurable space and measurability of each `List.cons x` map explicitly.
 
-Failure is missing mass. `𝒟[mx]` measures successful outputs only, so the failure probability of
-`mx` is `prFail mx = 1 - Pr{let _ ← mx}[True]` (`prFail_def`; `prEvent_true_add_prFail` states that
-the two add up to one, and `prFail_eq_one_sub_evalDist_univ` identifies it with
-`1 - 𝒟[mx] Set.univ`), and `IsProbabilityMeasure 𝒟[mx]` states losslessness. `simp` evaluates
+`prFail mx` measures missing mass after mapping all outputs to `PUnit.unit`. This definition works
+in every result universe and requires no measurable space on the outputs. Under lawful monad and
+measure semantics, `prFail_eq_one_sub_evalDist_univ` gives `1 - 𝒟[mx] Set.univ` in any measurable
+space on the outputs. For computations on `Type`, `prFail_def` also gives
+`1 - Pr{let _ ← mx}[True]`. `IsProbabilityMeasure 𝒟[mx]` states losslessness. `simp` evaluates
 `prFail` on `pure` (`0`), maps, `if`, `failure` (`1`), `guard`, `OptionT.lift`, and oracle
 computations (`OracleComp.prFail_eq_zero`); `prFail_bind_eq_add_lintegral_of_discrete` is the bind
 law.
@@ -579,7 +580,7 @@ equivalently its run's `dropNone` (`OptionT.evalDist_eq_dropNone`, in PolyFun's
 |-----------|------|----------|------------|
 | `evalDist mx` | `Measure α` | `𝒟[mx]` | PolyFun's `PolyFun/Control/Monad/Measure.lean`; notation in `EvalDist/Defs/Measure/Core.lean` |
 | `prEvent mx` (`mx : m Prop`) | `ℝ≥0∞` | `Pr{let x ← mx; …}[p x]`, `Pr{let x ← mx}[x = a]` | PolyFun's `PolyFun/Control/Monad/Measure/Event.lean`; notation in `EvalDist/ProbabilityNotation.lean` |
-| `prFail mx` | `ℝ≥0∞` | `1 - Pr{let _ ← mx}[True]` | PolyFun's `PolyFun/Control/Monad/Measure/Event.lean` |
+| `prFail mx` | `ℝ≥0∞` | — | PolyFun's `PolyFun/Control/Monad/Measure/Event.lean` |
 | `evalDistWithFailure mx` | `Measure (Option α)` | — | PolyFun's `PolyFun/Control/Monad/Measure/WithFailure.lean` |
 | `EvalDistEq mx my` | `Prop` | `mx =ᵈ my` | PolyFun's `PolyFun/Control/Monad/Measure/EvalDistEq.lean`; notation in `EvalDist/EvalDistEq.lean` |
 | `support mx` | `Set α` | — | `EvalDist/Defs/Support.lean` |
