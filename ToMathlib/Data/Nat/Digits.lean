@@ -41,7 +41,7 @@ theorem ofDigits_reverse_eq_foldl (b : ℕ) (ds : List ℕ) :
     simp [Nat.mul_comm, Nat.add_comm]
 
 /-- The padded low-first digit at any coordinate is the corresponding quotient remainder. -/
-theorem digitsAppend_getD (b l n i : ℕ) (hb : 1 < b) (hn : n < b ^ l) :
+theorem getD_digitsAppend (b l n i : ℕ) (hb : 1 < b) (hn : n < b ^ l) :
     (digitsAppend b l n).getD i 0 = n / b ^ i % b := by
   let ds := digitsAppend b l n
   have hds := mapsTo_digitsAppend hb l hn
@@ -67,7 +67,7 @@ theorem digitsAppend_eq_ofFn (b l n : ℕ) (hb : 1 < b) (hn : n < b ^ l) :
   apply List.ext_getElem
   · simp [Nat.length_digitsAppend hb l hn]
   · intro i hi _
-    have hc := digitsAppend_getD b l n i hb hn
+    have hc := getD_digitsAppend b l n i hb hn
     rw [List.getD_eq_getElem _ 0 hi] at hc
     simpa only [List.getElem_ofFn] using hc
 

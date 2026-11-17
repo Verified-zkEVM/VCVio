@@ -325,7 +325,7 @@ theorem chainStepsCore_digestEquiv (d : Digest) (i : Fin chains) :
     simp only [List.length_ofFn]
     have hlt : i.val - messageDigits < 3 := by simp only [messageDigits, n, winternitzBits]; omega
     change (VCVio.Algorithms.RadixEncoding.digitsOfBaseW _ 16 3)[i.val - messageDigits]?.getD 0 = _
-    rw [VCVio.Algorithms.RadixEncoding.digitsOfBaseW_getElem? _ _ _ _ hlt]
+    rw [VCVio.Algorithms.RadixEncoding.getElem?_digitsOfBaseW _ _ _ _ hlt]
     simp only [Option.getD_some, Checksum.checksumDigit, Checksum.checksum,
       WotsChecksum.wotsChecksumValue, VCVio.Algorithms.ComplementaryChecksum.value_ofFn]
     rfl

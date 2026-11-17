@@ -6,6 +6,7 @@ Authors: Vitalik Buterin, Nicolas Consigny, Alexander Hicks, Matthias Meijers
 
 module
 public import ToMathlib.Data.Nat.Digits
+public import VCVio.Algorithms.Encoding
 
 /-!
 # Fixed-width big-endian radix encodings
@@ -123,9 +124,14 @@ theorem digitsOfBaseW_eq_range (n w len : ℕ) :
         omega
 
 /-- Lookup at a bounded big-endian digit position. -/
-theorem digitsOfBaseW_getElem? (n w len j : ℕ) (hj : j < len) :
+theorem getElem?_digitsOfBaseW (n w len j : ℕ) (hj : j < len) :
     (digitsOfBaseW n w len)[j]? = some (n / w ^ (len - 1 - j) % w) := by
   rw [digitsOfBaseW_eq_range]
   simp [hj]
+
+/-- The shared fixed-width big-endian byte encoding is the base-256 digit list, read as bytes. -/
+theorem natToBytesBE_eq_map_digitsOfBaseW (x width : ℕ) :
+    Encoding.natToBytesBE x width = (digitsOfBaseW x 256 width).map UInt8.ofNat := by
+  simp [Encoding.natToBytesBE, digitsOfBaseW_eq_range, List.map_map, Function.comp_def]
 
 end VCVio.Algorithms.RadixEncoding
