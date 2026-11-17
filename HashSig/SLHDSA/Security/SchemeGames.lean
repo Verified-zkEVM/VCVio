@@ -235,7 +235,7 @@ theorem advantage_eq_arms {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
       runtime.evalDist (instrumentedEufExperiment adv sel) {x | x.1 = true ∧ x.2 = true} +
       runtime.evalDist (instrumentedEufExperiment adv sel) {x | x.1 = true ∧ x.2 = false} := by
   rw [unforgeableAdvantage, instrumentedEufExperiment_fst runtime adv sel]
-  exact Measure.fst_apply_eq_add _ (measurableSet_singleton true)
+  exact Measure.fst_apply_eq_add _
 
 /-- **The dispatch split, generically.**  The advantage is at most the sum of the two selector
 branches of the success event.
@@ -312,7 +312,7 @@ theorem sameMessageAdvantage_eq_arms {sigAlg : SignatureAlg (OracleComp spec) M 
           {x | x.1 = true ∧ x.2 = true} := by
   rw [sameMessageStrongUnforgeableAdvantage,
     instrumentedSameMessageExperiment_fst runtime adv sel]
-  exact (Measure.fst_apply_eq_add _ (measurableSet_singleton true)).trans (add_comm _ _)
+  exact (Measure.fst_apply_eq_add _).trans (add_comm _ _)
 
 /-- **The same-message split, generically.**  The same-message advantage is at most the sum of the
 two selector branches of its own success event.

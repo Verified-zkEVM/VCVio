@@ -8,11 +8,12 @@ module
 public import Examples.ElGamal.Generic
 public import Mathlib.Algebra.Field.ZMod
 
-/-! # Generic ElGamal over the field with 101 elements
+/-! # Generic ElGamal over the field with 131 elements
 
 The adversary chooses the generator and an invalid handle, which denotes zero, without
 performing any group operations. Its second phase compares the second ciphertext component
-with the generator. The numerical bound and the interpreted computation are checked separately.
+with the generator. The numerical bound, which is below one at this field size, and the
+interpreted computation are checked separately.
 -/
 
 public section
@@ -22,19 +23,19 @@ open scoped ENNReal
 
 namespace ElGamalGenericTest
 
-local instance : Fact (Nat.Prime 101) := ⟨by decide⟩
+local instance : Fact (Nat.Prime 131) := ⟨by decide⟩
 
 local notation "testAdversary" =>
-  GenericOneTimeAdversary.mk (F := ZMod 101) Unit (pure (0, 2, ()))
+  GenericOneTimeAdversary.mk (F := ZMod 131) Unit (pure (0, 2, ()))
     (fun _ _ c₂ =>
-      OracleComp.lift (OracleSpec.query (spec := genSpec (ZMod 101) groupSig)
+      OracleComp.lift (OracleSpec.query (spec := genSpec (ZMod 131) groupSig)
         (Sum.inl (GroupModel.Query.eq () c₂ 0))))
 
-/-- The zero-operation adversary has one-time advantage at most `126 / 101`. -/
-theorem advantage_zmod101 :
-    AsymmEncAlg.IND_CPA_OneTime_Advantage (elGamalAsymmEnc (ZMod 101) (ZMod 101) 1)
-      ProbCompRuntime.probComp ((testAdversary).toOneTime 1) ≤ (126 : ℝ≥0∞) / 101 := by
-  have hg : Function.Bijective (· • (1 : ZMod 101) : ZMod 101 → ZMod 101) := by
+/-- The zero-operation adversary has one-time advantage at most `126 / 131`. -/
+theorem advantage_zmod131 :
+    AsymmEncAlg.IND_CPA_OneTime_Advantage (elGamalAsymmEnc (ZMod 131) (ZMod 131) 1)
+      ProbCompRuntime.probComp ((testAdversary).toOneTime 1) ≤ (126 : ℝ≥0∞) / 131 := by
+  have hg : Function.Bijective (· • (1 : ZMod 131) : ZMod 131 → ZMod 131) := by
     constructor
     · intro x y h
       simpa only [smul_eq_mul, mul_one] using h
@@ -45,7 +46,7 @@ theorem advantage_zmod101 :
   have h₂ : ∀ s a b, IsQueryBoundP ((testAdversary).distinguish s a b)
       (fun i => isGroupOp i = true) 0 := by
     intro s a b
-    change IsQueryBoundP (liftM ((genSpec (ZMod 101) groupSig).query (.inl (.eq () b 0)))) _ 0
+    change IsQueryBoundP (liftM ((genSpec (ZMod 131) groupSig).query (.inl (.eq () b 0)))) _ 0
     rw [isQueryBoundP_query_iff]
     simp [isGroupOp, Query.isOp]
   have h := oneTimeAdvantage_toOneTime_le hg testAdversary 0 0 h₁ (fun out _ => h₂ out.2.2)
@@ -54,7 +55,7 @@ theorem advantage_zmod101 :
 
 /-- The generic reduction reads the invalid message handle as zero even though its outer
 DDH table has a nonzero entry at that handle. -/
-theorem reduction_zmod101 (X Y T : ZMod 101) :
+theorem reduction_zmod131 (X Y T : ZMod 131) :
     DDHAdversary.ofGeneric (ddhOfGeneric testAdversary) 1 X Y T =
       (do
         let bit ← $ᵗ Bool

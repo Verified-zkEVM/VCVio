@@ -530,6 +530,7 @@ private noncomputable def forkLoggedVerifyBody
   forkVerifyFreshComp (M := M) (Commit := Commit) (Chal := Chal)
     (Resp := Resp) σ pk z.1 z.2
 
+omit [SampleableType Chal] in
 private lemma forkLogged_queryLog_length_le
     (adv : SignatureAlg.UnforgeableAdversary
       (FiatShamir.inROM σ hr M))

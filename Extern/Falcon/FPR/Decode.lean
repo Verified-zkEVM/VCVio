@@ -622,11 +622,6 @@ private theorem za'_shiftRight_63_eq_one_iff (p q x : UInt64)
       · exact h
       · exact absurd h heq
 
-/-- `0` is neutral for bitwise or. -/
-theorem or_zero (v : UInt64) : v ||| 0 = v := by
-  rw [← UInt64.toNat_inj, UInt64.toNat_or]
-  exact Nat.or_zero _
-
 /-- A value known to fit below `2 ^ k`, or-ed with a bit-`k` flag scaled by `2 ^ k`, is exactly
 their sum: the two contributions occupy disjoint bit ranges. -/
 private theorem or_two_pow_add_of_lt (a k : ℕ) (ha : a < 2 ^ k) : a ||| 2 ^ k = a + 2 ^ k := by

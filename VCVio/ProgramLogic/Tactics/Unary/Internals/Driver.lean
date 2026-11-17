@@ -65,7 +65,7 @@ inductive UnaryGoalKind where
   `List.foldlM` head. -/
   | tripleLoop (comp : Expr)
   /-- A unary `Triple` whose computation does not match the cases above; the
-  dispatcher unfolds to raw `wp` and lets `@[wpStep]` rewrite. -/
+  dispatcher unfolds to raw `wp` and rewrites with `wpStepRules`. -/
   | tripleOther
   /-- A raw `wp` / `≤ wp` goal. -/
   | rawWp
@@ -124,8 +124,8 @@ private def runTripleBindStep (comp : Expr) : TacticM Bool := do
     return true
   return false
 
-/-- Last-ditch triple step: unfold to a raw `wp` goal and dispatch via
-`@[wpStep]`. Used when the specialized triple dispatchers do not match. -/
+/-- Last-ditch triple step: unfold to a raw `wp` goal and rewrite with `wpStepRules`
+(`runWpStepRules`). Used when the specialized triple dispatchers do not match. -/
 private def runTripleFallback : TacticM Bool := do
   match ← observing? do
       evalTactic (← `(tactic| unfold OracleComp.ProgramLogic.Triple))
@@ -188,7 +188,7 @@ def runVCGenStructuralCore : TacticM Bool := withVCGenStructuralTiming do
 
 private def mkStructuralStepForTarget (target : Expr) : PlannedStep :=
   let step := mkVCGenPlannedStep
-    "vcgen structural step"
+    "pvcgen structural step"
     "vcstep"
     runVCGenStructuralCore
   if !(hasProbGoal target) && (tripleGoalComp? target |>.isNone) &&
@@ -209,7 +209,7 @@ private def chooseBestCutStep? : TacticM (Option (PlannedStep × PreviewResult))
   withVCGenLocalHintTiming do
     let steps := (← potentialLocalHintNames).map fun cutName =>
       mkVCGenPlannedStep
-        "vcgen explicit cut"
+        "pvcgen explicit cut"
         s!"vcstep using {cutName}"
         (runHoareStepRuleUsing (mkIdent cutName))
     chooseBestPlannedStepCandidate? steps
@@ -218,7 +218,7 @@ private def chooseBestInvariantStep? : TacticM (Option (PlannedStep × PreviewRe
   withVCGenLocalHintTiming do
     let steps := (← potentialLocalHintNames).map fun invName =>
       mkVCGenPlannedStep
-        "vcgen explicit invariant"
+        "pvcgen explicit invariant"
         s!"vcstep inv {invName}"
         (runLoopInvExplicit (mkIdent invName))
     chooseBestPlannedStepCandidate? steps
@@ -228,7 +228,7 @@ private def chooseBestTheoremStep? : TacticM (Option (PlannedStep × PreviewResu
     for tier in ← registeredVCGenRuleCandidateTiers do
       let steps := tier.map fun entry =>
         mkVCGenPlannedStep
-          "vcgen @[vcspec] theorem rule"
+          "pvcgen @[vcspec] theorem rule"
           s!"vcstep with {entry.theoremName!}"
           (runUnaryVCSpecRule entry)
       if let some chosen ← chooseBestPlannedStepCandidate? steps then
@@ -244,7 +244,7 @@ private def planExplicitProbEqStep? (plainPreview : PreviewResult) :
   for plan in ← probEqPlannerActionPlansForGoal do
     let replayText ← renderProbEqPlan plan
     steps := steps.push <| mkVCGenPlannedStep
-      "vcgen probability plan"
+      "pvcgen probability plan"
       replayText
       (tryProbEqActions plan)
   match ← chooseBestPlannedStepCandidate? steps with
@@ -263,7 +263,7 @@ def planVCGenStep? : TacticM (Option PlannedStep) := do
     let names ← getSuggestedIntroNames 1
     let introStep :=
       mkVCGenPlannedStep
-        "vcgen intro"
+        "pvcgen intro"
         s!"vcstep{renderAsClause names}"
         (introMainGoalNames names)
     if ← previewPlannedStep introStep then
@@ -274,14 +274,14 @@ def planVCGenStep? : TacticM (Option PlannedStep) := do
     if isBindExpr comp then
       let immediateBindStep :=
         mkVCGenPlannedStep
-          "vcgen bind step"
+          "pvcgen bind step"
           "vcstep"
           (tryBindImmediate comp)
       if ← previewPlannedStep immediateBindStep then
         let names ← getSuggestedIntroNames 1
         let namedStructuralStep :=
           mkVCGenPlannedStep
-            "vcgen named bind step"
+            "pvcgen named bind step"
             s!"vcstep{renderAsClause names}"
             (runVCGenStructuralCoreWithNames names)
         if ← previewPlannedStep namedStructuralStep then
@@ -292,7 +292,7 @@ def planVCGenStep? : TacticM (Option PlannedStep) := do
     if isReplicateHead comp || isListFoldlMHead comp || isListMapMHead comp then
       let autoInvariantStep :=
         mkVCGenPlannedStep
-          "vcgen automatic loop invariant"
+          "pvcgen automatic loop invariant"
           "vcstep"
           (tryLoopInvariantRuleAuto comp)
       if ← previewPlannedStep autoInvariantStep then
@@ -314,7 +314,7 @@ def planVCGenStep? : TacticM (Option PlannedStep) := do
     return some theoremStep
   let closeStep :=
     mkVCGenPlannedStep
-      "vcgen close/search"
+      "pvcgen close/search"
       "vcstep"
       tryCloseSpecGoal
   if ← previewPlannedStep closeStep then
@@ -435,8 +435,8 @@ def runVCGenPassPlanned : TacticM (Array PlannedStep) := do
   setGoals newGoals.toList
   return steps
 
-/-- Run one VCGen pass across all current goals. Exhaustive passes first hand a quantitative
-triple to core `vcgen` (`tryCoreVCGen`); single steps (`vcstep`) do not. -/
+/-- Run one VCGen pass across all current goals. Exhaustive `pvcgen` passes first hand a
+quantitative triple to core `vcgen` (`tryCoreVCGen`); single steps (`vcstep`) do not. -/
 def runVCGenPass : TacticM Bool := do
   let goals ← getGoals
   if goals.isEmpty then

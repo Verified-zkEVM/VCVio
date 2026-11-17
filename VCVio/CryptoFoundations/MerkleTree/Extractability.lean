@@ -193,17 +193,7 @@ private lemma extractedTargets_toFinset_card_le_cacheKeys
     rcases mem_extractedTargets_root_or_log_input model s addressKey log root htarget' with
       rfl | hinput
     · exact Finset.mem_insert_self _ _
-    · obtain ⟨entry, hentry, hside⟩ := hinput
-      have hkey : entry.1 ∈ keys := hkeys entry.1 (by
-        rw [hlogCache entry hentry]
-        exact Option.some_ne_none _)
-      rcases hside with hleft | hright
-      · subst target
-        exact Finset.mem_insert_of_mem (Finset.mem_union_left _ (Finset.mem_image.mpr
-          ⟨entry.1, hkey, rfl⟩))
-      · subst target
-        exact Finset.mem_insert_of_mem (Finset.mem_union_right _ (Finset.mem_image.mpr
-          ⟨entry.1, hkey, rfl⟩))
+    · grind
   calc
     (extractedTargets model s addressKey log root).toFinset.card ≤ candidates.card :=
       Finset.card_le_card hsubset
@@ -217,12 +207,7 @@ private lemma extractedTargets_toFinset_card_le_cacheKeys
           (keys.image (fun query => (model.view.input query).2)).card + 1 := by
       gcongr
       exact Finset.card_union_le _ _
-    _ ≤ 2 * keys.card + 1 := by
-      have hfst := Finset.card_image_le (s := keys)
-        (f := fun query => (model.view.input query).1)
-      have hsnd := Finset.card_image_le (s := keys)
-        (f := fun query => (model.view.input query).2)
-      omega
+    _ ≤ 2 * keys.card + 1 := by grind
 
 /--
 The oracle syntax underlying the extractability experiment. It runs the committing

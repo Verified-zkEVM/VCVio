@@ -13,6 +13,19 @@ public import ToMathlib.Control.OptionT
 /-!
 # Simulation Semantics for Oracles in a Computation
 
+`simulateQ impl` runs an oracle computation in the monad `r`, answering each query with `impl`.
+It is the free-monad fold `PFunctor.FreeM.liftM impl`, as a semireducible definition: `simp`
+normal forms stay `simulateQ`-headed, so `rw` with the `simulateQ_*` lemmas, or with hypotheses
+about `simulateQ`, still matches after a `simp` step. The structural equations `simulateQ_pure`,
+`simulateQ_bind`, `simulateQ_map`, `simulateQ_seq`, `simulateQ_seqLeft`, `simulateQ_seqRight` and
+`simulateQ_query` are `@[simp]`.
+
+`simulateQ_def` states the fold as `PFunctor.FreeM.liftMHom impl`, for transporting a
+`PFunctor.FreeM.liftM` fact of CSLib or PolyFun. The fold laws used most often have
+`simulateQ`-headed forms here and in sibling files: naturality along a monad morphism is
+`simulateQ_natural`, relabelling along a lens is `simulateQ_mapLens`, composition of
+implementations is `QueryImpl.simulateQ_compose`, and lifting the target monad is
+`simulateQ_liftTarget`.
 -/
 
 @[expose] public section
@@ -229,6 +242,21 @@ lemma simulateQ_liftTarget {m : Type u → Type v} {n : Type u → Type w}
   induction comp using OracleComp.inductionOn with
   | pure x => simp [liftM_pure]
   | query_bind t k ih => simp [ih, liftM_bind]
+
+/-- Naturality of `simulateQ` along a monad morphism: applying `F` to the simulation by `impl` is
+the simulation by the post-composed implementation `fun t => F (impl t)`. -/
+lemma simulateQ_natural [Monad n] (F : r →ᵐ n) (mx : OracleComp spec α) :
+    F (simulateQ impl mx) = simulateQ (fun t => F (impl t)) mx :=
+  PFunctor.FreeM.liftM_natural (P := spec.toPFunctor) (m := r) impl F mx
+
+/-- Simulating a computation relabelled along a lens `l` answers each query `t` with the answer
+to `l.toFunA t`, translated back by `l.toFunB t`. -/
+lemma simulateQ_mapLens [LawfulMonad r] {ι' : Type*} {spec' : OracleSpec ι'}
+    (l : PFunctor.Lens spec.toPFunctor spec'.toPFunctor) (impl' : QueryImpl spec' r)
+    (mx : OracleComp spec α) :
+    simulateQ impl' (mx.mapLens l) =
+      simulateQ (fun t => l.toFunB t <$> impl' (l.toFunA t)) mx :=
+  PFunctor.FreeM.liftM_mapLens l impl' mx
 
 end simulateQ
 

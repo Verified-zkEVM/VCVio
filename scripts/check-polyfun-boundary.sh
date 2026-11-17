@@ -25,7 +25,7 @@ else
 fi
 
 LIBS=(
-  VCVio VCVioCslib ToMathlib LatticeCrypto HashSig Examples Extern VCVioWidgets
+  VCVio ToMathlib LatticeCrypto HashSig Examples Extern
   VCVioTest LatticeCryptoTest HashSigTest Interop
 )
 
