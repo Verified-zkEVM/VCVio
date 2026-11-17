@@ -4,7 +4,7 @@ defaultTargets = ["InteropRust"]
 # Bridges from external verification tools whose Lean libraries VCVio's dependents must never
 # resolve: every dependent resolves every `require` in VCVio's root lakefile, so these requires live
 # here. See README.md. Sources stay at the repository root, so modules keep their `Interop.` names;
-# the pins equal the root's (Lean v4.35.0, Mathlib v4.35.0), so the root's dependency cache is
+# the pins equal the root's (Lean v4.36.0, Mathlib v4.36.0), so the root's dependency cache is
 # shared.
 srcDir = ".."
 packagesDir = "../.lake/packages"
@@ -37,7 +37,7 @@ rev = "a045d15a3bf43fe05096146f488668b521a4ae44"
 [[require]]
 name = "mathlib"
 scope = "leanprover-community"
-rev = "v4.35.0"
+rev = "v4.36.0"
 
 # The Rust bridges and the hax examples.
 [[lean_lib]]

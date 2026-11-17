@@ -23,7 +23,7 @@ would resolve any `require` in VCVio's root lakefile. So `Interop/lakefile.toml`
 package. It requires VCVio by path and hax by commit; hax brings Aeneas.
 - *Sources.* It reads them from the repository root (`srcDir = ".."`), so modules keep their
   `Interop.` names.
-- *Pins.* Its pins equal the root's (Lean v4.35.0, Mathlib v4.35.0), so it shares the root's
+- *Pins.* Its pins equal the root's (Lean v4.36.0, Mathlib v4.36.0), so it shares the root's
   dependency cache. A bridge with no Lake dependency of its own can build in the root package
   instead.
 
