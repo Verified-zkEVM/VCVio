@@ -17,7 +17,9 @@ The Mathlib-only base of the layer (matrix maps, instruments, registers, observa
 and oracle unitaries) is the
 [QuantumFoundations](https://github.com/lean-crypto-foundations/QuantumFoundations) dependency,
 shared with CatCrypt-core; paths below that start with `QuantumFoundations/` are in that
-repository. The layer is the subject of issue #706. Open questions and planned work are in
+repository. `VCVio/Quantum/Foundations/Parallel.lean` stages generic coordinate and subinstrument
+batching facts for that dependency and imports only QuantumFoundations and Mathlib.
+The layer is the subject of issue #706. Open questions and planned work are in
 [`docs/design/quantum-layer.md`](../../design/quantum-layer.md).
 
 * [1-states-and-instruments](1-states-and-instruments.md) — States, measurements, failure,

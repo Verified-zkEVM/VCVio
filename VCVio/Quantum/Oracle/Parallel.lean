@@ -187,10 +187,11 @@ section runtime
 
 variable (X Y : Type) [Fintype X] [DecidableEq X] [Fintype Y] [DecidableEq Y]
 
-/-- Variable-width QROM ports: port k submits k input/response register pairs in one round. -/
+/-- Variable-width QROM ports: port `((), k)` submits k input/response register pairs
+in one round. -/
 @[expose, reducible]
 def qromBatchSpec : QuantumOracleSpec.{0, 0} :=
-  uSpec ℕ fun k ↦ QReg.of (Fin k → X × Y)
+  uBatchSpec Unit fun _ ↦ QReg.of (X × Y)
 
 variable {X Y} [AddCommGroup Y]
 
@@ -198,26 +199,24 @@ variable {X Y} [AddCommGroup Y]
 shared by all slots and rounds. -/
 @[expose]
 noncomputable def parallelOracleRuntime (H : X → Y) :
-    QuantumRuntime (qromBatchSpec X Y) where
-  D := QReg.of Unit
-  init := SubState.basis ()
-  step k := (additiveOracleRuntime H).batch.step ((), k)
+    QuantumRuntime (qromBatchSpec X Y) :=
+  (additiveOracleRuntime H).batch
 
 /-- Each runtime step is the simultaneous additive oracle of the requested width. -/
 theorem parallelOracleRuntime_step (H : X → Y) (k : ℕ) :
-    (parallelOracleRuntime H).step k = (parallelOracleQuery H k).frame Unit :=
+    (parallelOracleRuntime H).step ((), k) = (parallelOracleQuery H k).frame Unit :=
   batch_oracleQuery H k (QReg.of Unit)
 
 /-- A width-zero runtime call is the identity, including its private memory. -/
 @[simp]
 theorem parallelOracleRuntime_step_zero (H : X → Y) :
-    (parallelOracleRuntime H).step 0 = SubInstrument.pure () := by
+    (parallelOracleRuntime H).step ((), 0) = SubInstrument.pure () := by
   rw [parallelOracleRuntime_step, parallelOracleQuery_zero_width, SubInstrument.frame_pure]
   rfl
 
 /-- Every step of a parallel oracle runtime is lossless. -/
 theorem lossless_parallelOracleRuntime_step (H : X → Y) (k : ℕ) :
-    ((parallelOracleRuntime H).step k).Lossless := by
+    ((parallelOracleRuntime H).step ((), k)).Lossless := by
   rw [parallelOracleRuntime_step]
   exact (lossless_parallelOracleQuery H k).frame Unit
 
@@ -227,7 +226,7 @@ variable {L : LocalSig.{u, v}} {W : QReg → Type w} {A : QReg}
 theorem lossless_run_parallelOracleRuntime (I : L.Interp)
     {x : QuantumComp L (qromBatchSpec X Y) W A} (hx : x.Lossless I) (H : X → Y) :
     ((parallelOracleRuntime H).run I x).Lossless :=
-  (parallelOracleRuntime H).lossless_run I hx (lossless_parallelOracleRuntime_step H)
+  (parallelOracleRuntime H).lossless_run I hx (fun ik ↦ lossless_parallelOracleRuntime_step H ik.2)
 
 /-- The output law of a parallel QROM program, sampling H once for the whole run. -/
 @[expose]

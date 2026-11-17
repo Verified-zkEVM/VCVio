@@ -182,13 +182,19 @@ bounds on the adversary's output are open (#966).
 
 ### 11. Parallel oracle rounds
 
-`Comp/Parallel.lean` constructs ordered batches of one-result endomorphism ports with a shared
-private register. `Oracle/Parallel.lean` supplies variable-width ports, proves that ordered
-additive calls agree with a simultaneous query on all slots, and defines the parallel QROM law
-by sampling one function for the entire program. Repeated inputs and entangled query registers
-are allowed. Private-memory simulations transport through batching. A trace-preserving simulation
+`Foundations/Parallel.lean` holds coordinate subsystems and ordered subinstrument batching facts.
+It imports only QuantumFoundations and Mathlib and is staged for upstreaming to QuantumFoundations.
+`Comp/Parallel.lean` constructs runtime batches with a shared private register. Its current API
+requires equal `In` and `Out` and `Result = Unit`; classical-result checked/read ports of vector
+commitments are outside this scope. General stateful batches carry no implicit commutation assumption.
+
+`Oracle/Parallel.lean` specializes `uBatchSpec` to base port `Unit`, so a classical port is
+`((), k)` with width in its second component. It proves that ordered additive calls agree with a
+simultaneous query on all slots and defines the parallel QROM law by sampling one function for
+the entire program. Repeated inputs and entangled query registers are allowed.
+`parallelOracleRuntime H` is `(additiveOracleRuntime H).batch`, so the generic private-memory
+simulation transport applies directly with the same signature. A trace-preserving simulation
 that maps the initial private states gives output-law agreement for adaptive programs.
-General stateful batches carry no implicit commutation assumption.
 
 Program-level sequentialization with point-budget transfer, the classical batch bridge, and
 the concrete parallel compressed-runtime equivalence remain open. The operator/runtime batching law

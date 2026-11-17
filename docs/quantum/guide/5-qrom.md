@@ -51,20 +51,30 @@ $H$ is sampled once per run, not once per call. Two consequences that justify th
 
 ## Parallel oracle rounds
 
-The ports of `qromBatchSpec X Y` are natural numbers. Port `k` acts on
-`Fin k → X × Y`, applying the same `H` to each input/response pair. The basis permutation is
+`qromBatchSpec X Y` is `uBatchSpec Unit (fun _ ↦ QReg.of (X × Y))`. Its classical ports are
+pairs `((), k)`, whose second component is the width; programs may vary it between calls.
+Port `((), k)` acts on `Fin k → X × Y`, applying the same `H` to each
+input/response pair. The basis permutation is
 `parallelOracleEquiv H k`, and `parallelOracleUnitary H k` is its matrix. Slots may be
 entangled and their inputs may repeat, including when the width exceeds the domain cardinality.
 
 `QuantumRuntime.batch` batches ports with the same input and output register and no classical
 result, in increasing slot order with one shared private register. Generic stateful steps need
-not commute. For the additive oracle,
+not commute. This API requires equal `In` and `Out` and `Result = Unit`, so it does not cover the
+classical-result checked/read ports of vector commitments. For the additive oracle,
 `batch_oracleQuery` proves equality with the simultaneous operation
 `parallelOracleQuery H k`, including an arbitrary untouched private register.
 `parallelOracleRuntime_step` gives that law for a variable-width runtime.
 `intertwines_batch_step` transports private-memory simulations through batching. If the
 simulation preserves trace and maps one initial private state to the other,
 `evalDist_batch_eq_of_simulation` gives agreement of output laws for adaptive programs.
+`parallelOracleRuntime H` is `(additiveOracleRuntime H).batch`, so these generic transport laws
+apply directly to the same `qromBatchSpec X Y` signature.
+
+The coordinate subsystems and ordered subinstrument operations live in
+`VCVio/Quantum/Foundations/Parallel.lean`. It imports only QuantumFoundations and Mathlib and is
+staged for upstreaming to QuantumFoundations; runtime signatures and simulations live in
+`VCVio/Quantum/Comp/Parallel.lean`.
 
 `qromBatchEvalDist` samples one function from `X → Y` for the entire run. Its mixture formula,
 `qromBatchEvalDist_eq_sum`, uses the original function space, so different slots and rounds

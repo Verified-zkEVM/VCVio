@@ -38,7 +38,7 @@ example :
   change ((), (4 : ZMod 5) + 2) = ((), 1)
   decide
 
-/-- On a cyclic group of order three, two equal queries do not cancel. -/
+/-- On a cyclic group of order three, two rounds of the same width-two query do not cancel. -/
 example :
     parallelOracleEquiv (fun _ : Unit ↦ (1 : ZMod 3)) 2
         (parallelOracleEquiv (fun _ : Unit ↦ (1 : ZMod 3)) 2 (fun _ ↦ ((), 0))) =
@@ -72,11 +72,11 @@ example (H : Unit → ZMod 3) (ρ : Matrix ((Fin 2 → Unit × ZMod 3) × Unit)
 
 /-- A zero-width call also leaves private memory unchanged. -/
 example (H : Unit → ZMod 3) :
-    (parallelOracleRuntime H).step 0 = SubInstrument.pure () :=
+    (parallelOracleRuntime H).step ((), 0) = SubInstrument.pure () :=
   parallelOracleRuntime_step_zero H
 
-/-- Port widths are classical natural numbers. -/
-example : (qromBatchSpec Unit (ZMod 3)).Port = ℕ :=
+/-- A QROM port pairs its sole base port with a classical natural-number width. -/
+example : (qromBatchSpec Unit (ZMod 3)).Port = (Unit × ℕ) :=
   rfl
 
 /-- The first oracle call selects width two, with the entire register as its input. -/
@@ -84,7 +84,7 @@ noncomputable def queryTwo :
     QComp (qromBatchSpec Unit (ZMod 3))
       (QReg.of (Fin 2 → Unit × ZMod 3))
       (QReg.of ((Fin 2 → Unit × ZMod 3) × Unit)) Unit :=
-  QuantumComp₂.query (spec := qromBatchSpec Unit (ZMod 3)) 2
+  QuantumComp₂.query (spec := qromBatchSpec Unit (ZMod 3)) ((), 2)
     (QReg.of Unit) (Equiv.prodPUnit _).symm
 
 /-- A two-slot batch consumes one oracle round. -/
@@ -101,7 +101,7 @@ noncomputable def chooseWidth
       (fun _ ↦ Unit) (QReg.of Unit) :=
   QuantumComp.primBind
     ⟨Bool, fun b ↦ QReg.of ((Fin (if b then 2 else 0) → Unit × ZMod 3) × Unit), p⟩
-    fun b ↦ QuantumComp.queryBind (if b then 2 else 0) (QReg.of Unit)
+    fun b ↦ QuantumComp.queryBind ((), if b then 2 else 0) (QReg.of Unit)
       (Equiv.refl _) fun _ ↦ QuantumComp.pure ()
 
 /-- Branch-dependent widths still consume one round on each branch. -/
@@ -110,6 +110,35 @@ example (p : DSubInstrument Unit Bool
     (chooseWidth p).IsTotalQueryBound 1 := by
   simp [chooseWidth, QuantumComp.isTotalQueryBound_primBind_iff,
     QuantumComp.isTotalQueryBound_queryBind_iff, QuantumComp.isTotalQueryBound_pure]
+
+/-- A base simulation applies directly to the actual parallel runtime's steps. -/
+example (H : Unit → ZMod 3) (S : QuantumRuntime (qromSpec Unit (ZMod 3)))
+    (V : MatrixMap (additiveOracleRuntime H).D S.D)
+    (h : ∀ i : Unit,
+      DSubInstrument.Intertwines (V.amplifyLeft (Unit × ZMod 3))
+        (fun _ ↦ V.amplifyLeft (Unit × ZMod 3))
+        ((additiveOracleRuntime H).step i) (S.step i)) (k : ℕ) :
+    DSubInstrument.Intertwines (V.amplifyLeft (Fin k → Unit × ZMod 3))
+      (fun _ ↦ V.amplifyLeft (Fin k → Unit × ZMod 3))
+      ((parallelOracleRuntime H).step ((), k)) (S.batch.step ((), k)) :=
+  QuantumRuntime.intertwines_batch_step V h ((), k)
+
+/-- The generic batch simulation theorem directly compares a parallel QROM program with
+another batched runtime, including adaptive choices of register size and width. -/
+example (H : Unit → ZMod 3) (S : QuantumRuntime (qromSpec Unit (ZMod 3)))
+    (V : MatrixMap (additiveOracleRuntime H).D S.D)
+    (h : ∀ i : Unit,
+      DSubInstrument.Intertwines (V.amplifyLeft (Unit × ZMod 3))
+        (fun _ ↦ V.amplifyLeft (Unit × ZMod 3))
+        ((additiveOracleRuntime H).step i) (S.step i))
+    (hV : V.IsTP) (hinit : V (additiveOracleRuntime H).init.matrix = S.init.matrix)
+    (p : DSubInstrument Unit Bool
+      (fun b ↦ (Fin (if b then 2 else 0) → Unit × ZMod 3) × Unit))
+    [MeasurableSpace (Σ _ : QReg, Unit)] (ρ : SubState Unit) :
+    S.batch.evalDist .instruments (chooseWidth p) ρ =
+      (parallelOracleRuntime H).evalDist .instruments (chooseWidth p) ρ :=
+  QuantumRuntime.evalDist_batch_eq_of_simulation V h hV hinit
+    .instruments (chooseWidth p) ρ
 
 /-- Batching swaps slots `[false, true]` with shared memory `false` in increasing order,
 producing slots `[false, false]` and memory `true`. -/
