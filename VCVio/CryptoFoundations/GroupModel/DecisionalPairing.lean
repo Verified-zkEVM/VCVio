@@ -61,7 +61,7 @@ noncomputable def symbolicToPolynomialPairing [Field F] :
   map_lin o := o.elim
   map_bil o r₁ r₂ := by
     change Unit at o
-    change Repr F at r₁ r₂
+    change Coeffs F at r₁ r₂
     exact evReprT_outer (LinearMap.mul F _) (T .g₁) (T .g₂) (T .gₜ) r₁ r₂
 
 /-- Equal shapes and equal kernels of free-model evaluation at the Type 3 signature.
@@ -69,31 +69,31 @@ The target kernel includes both supplied target entries and products of source e
 @[expose] def SameKernel.pairing [Field F]
     (T₀ T₁ : Tbl (fun _ : PSort => MvPolynomial ι F)) : Prop :=
   (∀ s, (T₀ s).length = (T₁ s).length) ∧
-    ∀ s (r : PFam (Repr F) (Repr F) (ReprT F) s),
+    ∀ s (r : PFam (Coeffs F) (Coeffs F) (CoeffsT F) s),
       (evHom.symbolicPairing T₀).toFun s r = 0 ↔
         (evHom.symbolicPairing T₁).toFun s r = 0
 
 /-- Equal Type 3 relation kernels identify the same pairs of free representations. -/
 theorem SameKernel.pairing.eq_iff [Field F]
     {T₀ T₁ : Tbl (fun _ : PSort => MvPolynomial ι F)} (h : SameKernel.pairing T₀ T₁)
-    (s : PSort) (r r' : PFam (Repr F) (Repr F) (ReprT F) s) :
+    (s : PSort) (r r' : PFam (Coeffs F) (Coeffs F) (CoeffsT F) s) :
     (evHom.symbolicPairing T₀).toFun s r = (evHom.symbolicPairing T₀).toFun s r' ↔
       (evHom.symbolicPairing T₁).toFun s r = (evHom.symbolicPairing T₁).toFun s r' := by
   cases s with
   | g₁ =>
-    change Repr F at r r'
+    change Coeffs F at r r'
     have hr := h.2 .g₁ (r - r')
     change evRepr (T₀ .g₁) (r - r') = 0 ↔ evRepr (T₁ .g₁) (r - r') = 0 at hr
     change evRepr (T₀ .g₁) r = evRepr (T₀ .g₁) r' ↔ evRepr (T₁ .g₁) r = evRepr (T₁ .g₁) r'
     simpa only [map_sub, sub_eq_zero] using hr
   | g₂ =>
-    change Repr F at r r'
+    change Coeffs F at r r'
     have hr := h.2 .g₂ (r - r')
     change evRepr (T₀ .g₂) (r - r') = 0 ↔ evRepr (T₁ .g₂) (r - r') = 0 at hr
     change evRepr (T₀ .g₂) r = evRepr (T₀ .g₂) r' ↔ evRepr (T₁ .g₂) r = evRepr (T₁ .g₂) r'
     simpa only [map_sub, sub_eq_zero] using hr
   | gₜ =>
-    change ReprT F at r r'
+    change CoeffsT F at r r'
     have hr := h.2 .gₜ (r - r')
     change evReprT (LinearMap.mul F _) (T₀ .g₁) (T₀ .g₂) (T₀ .gₜ) (r - r') = 0 ↔
       evReprT (LinearMap.mul F _) (T₁ .g₁) (T₁ .g₂) (T₁ .gₜ) (r - r') = 0 at hr
@@ -104,7 +104,7 @@ theorem SameKernel.pairing.eq_iff [Field F]
     simpa only [map_sub, sub_eq_zero] using hr
 
 private noncomputable def pairingUnits [Field F] (n : PSort → ℕ) :
-    Tbl (PFam (Repr F) (Repr F) (ReprT F))
+    Tbl (PFam (Coeffs F) (Coeffs F) (CoeffsT F))
   | .g₁ => List.ofFn (fun i : Fin (n .g₁) => Pi.single (i : Handle) 1)
   | .g₂ => List.ofFn (fun i : Fin (n .g₂) => Pi.single (i : Handle) 1)
   | .gₜ => List.ofFn (fun i : Fin (n .gₜ) => (Pi.single (i : Handle) 1, 0))
@@ -129,7 +129,7 @@ private theorem evReprT_eq_zero_iff [Field F]
     (xs ys zs : List (MvPolynomial ι F))
     (h : LinearIndependent F (Sum.elim zs.get
       (fun ij : Fin xs.length × Fin ys.length => xs.get ij.1 * ys.get ij.2)))
-    (r : ReprT F) :
+    (r : CoeffsT F) :
     evReprT (LinearMap.mul F _) xs ys zs r = 0 ↔
       (∀ k < zs.length, r.1 k = 0) ∧
         (∀ i < xs.length, ∀ j < ys.length, r.2 i j = 0) := by
@@ -173,15 +173,15 @@ theorem sameKernel_pairing_of_linearIndependent [Field F]
   intro s r
   cases s with
   | g₁ =>
-    change Repr F at r
+    change Coeffs F at r
     change evRepr (T₀ .g₁) r = 0 ↔ evRepr (T₁ .g₁) r = 0
     rw [evRepr_eq_zero_iff _ h₀₁, evRepr_eq_zero_iff _ h₁₁, hlen]
   | g₂ =>
-    change Repr F at r
+    change Coeffs F at r
     change evRepr (T₀ .g₂) r = 0 ↔ evRepr (T₁ .g₂) r = 0
     rw [evRepr_eq_zero_iff _ h₀₂, evRepr_eq_zero_iff _ h₁₂, hlen]
   | gₜ =>
-    change ReprT F at r
+    change CoeffsT F at r
     change evReprT _ _ _ _ r = 0 ↔ evReprT _ _ _ _ r = 0
     rw [evReprT_eq_zero_iff _ _ _ h₀ₜ, evReprT_eq_zero_iff _ _ _ h₁ₜ,
       hlen .g₁, hlen .g₂, hlen .gₜ]
@@ -193,7 +193,7 @@ theorem SameKernel.pairing.runGen_fst_eq [Field F] [DecidableEq F] [DecidableEq 
     Prod.fst <$> runGen (symbolic F pairingSig ι) (fun _ => id) oa T₀ =
       Prod.fst <$> runGen (symbolic F pairingSig ι) (fun _ => id) oa T₁ := by
   have hu : (fun s => (T₀ s).length) = (fun s => (T₁ s).length) := funext h.1
-  have he := run_fst_eq_of_kernel_eq (evHom.symbolicPairing T₀) (evHom.symbolicPairing T₁)
+  have he := runGen_fst_eq_of_kernel_eq (evHom.symbolicPairing T₀) (evHom.symbolicPairing T₁)
     h.eq_iff oa (pairingUnits (fun s => (T₀ s).length))
   rw [mapTbl_pairingUnits, hu, mapTbl_pairingUnits] at he
   exact he
@@ -201,7 +201,7 @@ theorem SameKernel.pairing.runGen_fst_eq [Field F] [DecidableEq F] [DecidableEq 
 /-- The master bound also controls the joint hidden point and returned value, after discarding
 both final tables. -/
 private theorem measureETVDist_pairing_symbolic_fst_le
-    [Fintype PSort] [Field F] [DecidableEq F] [DecidableEq ι]
+    [Field F] [DecidableEq F] [DecidableEq ι]
     {α : Type} [MeasurableSpace ((ι → F) × α)]
     (xs : ProbComp (ι → F)) {D : PSort → ℕ} {ε : PSort → ℝ≥0∞} {n : PSort → ℕ}
     (hD : pairingSig.DegreeClosed D)
@@ -229,7 +229,7 @@ private theorem measureETVDist_pairing_symbolic_fst_le
 /-- **T7, the decisional master theorem.** Equal shapes and relation kernels bound the
 joint hidden-point/output distance by the sum of the two T3 collision terms. Each side
 uses its own degree and root-probability bound. -/
-theorem measureETVDist_runGen_pairing_sameKernel_le [Fintype PSort] [Field F] [DecidableEq F]
+theorem measureETVDist_runGen_pairing_sameKernel_le [Field F] [DecidableEq F]
     {α : Type} [MeasurableSpace ((ι → F) × α)]
     (xs : ProbComp (ι → F)) {D₀ D₁ n : PSort → ℕ} {ε₀ ε₁ : PSort → ℝ≥0∞}
     (hD₀ : pairingSig.DegreeClosed D₀) (hD₁ : pairingSig.DegreeClosed D₁)
@@ -271,7 +271,7 @@ theorem measureETVDist_runGen_pairing_sameKernel_le [Fintype PSort] [Field F] [D
 
 /-- Every measurable event on the hidden point and returned value satisfies the decisional
 bound in both directions. -/
-theorem prEvent_runGen_pairing_sameKernel_le_add [Fintype PSort] [Field F] [DecidableEq F]
+theorem prEvent_runGen_pairing_sameKernel_le_add [Field F] [DecidableEq F]
     {α : Type} [MeasurableSpace ((ι → F) × α)]
     (xs : ProbComp (ι → F)) {D₀ D₁ n : PSort → ℕ} {ε₀ ε₁ : PSort → ℝ≥0∞}
     (hD₀ : pairingSig.DegreeClosed D₀) (hD₁ : pairingSig.DegreeClosed D₁)
@@ -313,10 +313,11 @@ theorem prEvent_runGen_pairing_sameKernel_le_add [Fintype PSort] [Field F] [Deci
   simpa only [left, right, map_bind, map_pure, bind_pure_comp, Functor.map_map,
     Function.comp_def] using And.intro hl hr
 
-/-- Uniform hidden points over a finite field give the two Schwartz–Zippel terms
-`choose (initial size + q + 1) 2 * (degree / card F)` in the decisional bound. -/
+/-- Uniform hidden points over a finite field give the per-sort Schwartz–Zippel terms
+`choose (initial size + n s + 1) 2 * (D₀ s / card F + D₁ s / card F)` in the decisional
+bound. -/
 theorem measureETVDist_runGen_pairing_sameKernel_uniform_le
-    [Fintype PSort] [Field F] [DecidableEq F]
+    [Field F] [DecidableEq F]
     [Fintype F] [SampleableType (ι → F)]
     {α : Type} [MeasurableSpace ((ι → F) × α)]
     {D₀ D₁ n : PSort → ℕ}
@@ -342,8 +343,8 @@ theorem measureETVDist_runGen_pairing_sameKernel_uniform_le
     simp [hij] at he)
   apply measureETVDist_runGen_pairing_sameKernel_le ($ᵗ (ι → F)) hD₀ hD₁ _ _ oa hn T₀ T₁ hd₀ hd₁ h
   · intro s f hf hdeg
-    exact prob_eval_zero_univ_le_div f hf hdeg
+    exact prEvent_eval_eq_zero_univ_le_div f hf hdeg
   · intro s f hf hdeg
-    exact prob_eval_zero_univ_le_div f hf hdeg
+    exact prEvent_eval_eq_zero_univ_le_div f hf hdeg
 
 end GroupModel

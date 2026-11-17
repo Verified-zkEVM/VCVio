@@ -1,9 +1,10 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S uv run --no-project --python 3.12 python
 """Check the downstream probability codemod on fixture sources, without invoking Lake."""
 
 from pathlib import Path
 import importlib.util
 import subprocess
+import sys
 import tempfile
 import unittest
 
@@ -372,7 +373,7 @@ class CommandLineTests(unittest.TestCase):
         (self.root / ".lake" / "Dep.lean").write_text("Pr[= a | mx]\n")
 
     def run_codemod(self, *extra):
-        return subprocess.run(["python3", str(SCRIPT), *extra, str(self.root)],
+        return subprocess.run([sys.executable, str(SCRIPT), *extra, str(self.root)],
                               text=True, capture_output=True, timeout=60)
 
     def test_dry_run_prints_a_diff(self):

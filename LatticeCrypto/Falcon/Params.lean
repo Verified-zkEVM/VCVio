@@ -55,6 +55,11 @@ structure Params where
   /-- Signature byte length (compressed signature encoding). -/
   sbytelen : ℕ
 
+/-- Maximum sampler standard deviation `σ_max = 1.8205`, shared by both parameter sets (Falcon
+spec v1.2, Table 3.3). Every leaf standard deviation passed to SamplerZ lies in `[σ_min, σ_max]`
+(Section 3.9.3). A definition rather than a field, so that `Params` literals stay computable. -/
+noncomputable def Params.sigmaMax (_p : Params) : ℝ := 18205 / 10000
+
 /-- The log₂ of the ring degree. For Falcon-512, `logn = 9`; for Falcon-1024, `logn = 10`. -/
 def Params.logn (p : Params) : ℕ := Nat.log2 p.n
 

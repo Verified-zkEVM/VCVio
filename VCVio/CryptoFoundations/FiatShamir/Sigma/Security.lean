@@ -44,6 +44,7 @@ variable [SampleableType Wit]
 variable (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
   (hr : GenerableRelation Stmt Wit rel) (M : Type)
 
+omit [SampleableType Wit] in
 /-- **CMA-to-NMA reduction via HVZK simulation and managed random-oracle programming.**
 
 For any EUF-CMA adversary `A` making at most `qS` signing-oracle queries and `qH`
@@ -60,8 +61,7 @@ plus an appended verifier-point query); the framework's `Fin (qH + 1)`
 indexing in `Fork.forkPoint qH` provides the matching `qH + 1` forkable slots.
 This step is independent of special soundness and the forking lemma. -/
 theorem euf_cma_to_nma
-    [Finite Stmt] [SampleableType Stmt] [DecidableEq M] [DecidableEq Commit]
-    [Finite Chal] [Inhabited Chal] [SampleableType Chal]
+    [DecidableEq M] [DecidableEq Commit] [Inhabited Chal] [SampleableType Chal]
     (simTranscript : Stmt → ProbComp (Commit × Chal × Resp))
     (ζ_zk : ℝ≥0∞)
     (hHVZK : σ.HVZK simTranscript ζ_zk)
@@ -126,7 +126,7 @@ The combined bound is:
 where `ε = Adv^{EUF-CMA}(A)`. The ENNReal subtraction truncates at zero, so the
 bound is trivially satisfied when the simulation loss exceeds the advantage. -/
 theorem euf_cma_bound
-    [Finite Stmt] [SampleableType Stmt] [DecidableEq M] [DecidableEq Commit] [DecidableEq Chal]
+    [DecidableEq M] [DecidableEq Commit] [DecidableEq Chal]
     [SampleableType Chal]
     (hss : σ.SpeciallySound)
     [Fintype Chal] [Inhabited Chal]

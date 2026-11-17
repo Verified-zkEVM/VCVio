@@ -5,6 +5,7 @@ Authors: Quang Dao
 -/
 
 module
+public import QuantumFoundations.Oracle.Basis
 public import VCVio.Quantum.Oracle.Compressed.Basic
 
 /-!
@@ -65,11 +66,6 @@ variable {X Y : Type*}
 
 section controlled
 
-/-- A product with a basis matrix on the right reads a column of the left factor. -/
-theorem mul_basisMatrix_apply {A B C : Type*} [Fintype B] [DecidableEq B] (K : Matrix C B ℂ)
-    (f : A → B) (c : C) (a : A) : (K * basisMatrix f) c a = K c (f a) := by
-  simp [Matrix.mul_apply]
-
 variable {C : Type*} [DecidableEq X] [DecidableEq Y]
 
 /-- The operator on `(X × Y) × C` that applies `A x` to the register `C` when the query input
@@ -112,13 +108,6 @@ def tableOracleEquiv (read : T → X → Y) : (X × Y) × T ≃ (X × Y) × T wh
 theorem tableOracleEquiv_apply (read : T → X → Y) (m : X × Y) (t : T) :
     tableOracleEquiv read (m, t) = (oracleEquiv (read t) m, t) :=
   rfl
-
-/-- The identity on the query register next to a basis matrix is the basis matrix of the
-product map. -/
-theorem one_kronecker_basisMatrix {A : Type*} [DecidableEq A] [DecidableEq T'] (g : T → T') :
-    (1 : Matrix A A ℂ) ⊗ₖ basisMatrix g = basisMatrix (Prod.map id g) := by
-  ext ⟨a, t'⟩ ⟨a', t⟩
-  by_cases h : a = a' <;> simp [h]
 
 variable [DecidableEq X] [DecidableEq Y] [DecidableEq T] [DecidableEq T']
 
@@ -190,7 +179,7 @@ theorem standardOracleEquiv_of_eq_some {m : X × Y} {D : Database X Y} {u : Y}
     (h : D m.1 = some u) : standardOracleEquiv (m, D) = ((m.1, m.2 + u), D) := by
   simp [h]
 
-variable [DecidableEq X] [DecidableEq Y] [Fintype X] [Fintype Y]
+variable [DecidableEq X] [DecidableEq Y] [Fintype X]
 
 variable (X Y) in
 /-- The standard oracle on `(X × Y) × Database X Y`, the permutation matrix sending
@@ -200,10 +189,11 @@ table oracle of `Quantum.Database.lookup`. -/
 def standardOracle : Matrix ((X × Y) × Database X Y) ((X × Y) × Database X Y) ℂ :=
   tableOracle Database.lookup
 
-omit [Fintype Y] in
 theorem standardOracle_apply (p p' : (X × Y) × Database X Y) :
     standardOracle X Y p p' = if p = standardOracleEquiv p' then 1 else 0 :=
   rfl
+
+variable [Fintype Y]
 
 /-- The standard oracle is an isometry. -/
 theorem conjTranspose_standardOracle_mul_self :
