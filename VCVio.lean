@@ -387,6 +387,7 @@ public import VCVio.OracleComp.Coinductive.Responder
 public import VCVio.OracleComp.Coinductive.SecurityFamily
 public import VCVio.OracleComp.Coinductive.WiredRun
 public import VCVio.OracleComp.Constructions.BitVec
+public import VCVio.OracleComp.Constructions.FirstSuccess.Distance
 public import VCVio.OracleComp.Constructions.FirstSuccess.Measure
 public import VCVio.OracleComp.Constructions.Fork.Basic
 public import VCVio.OracleComp.Constructions.GenerateSeed
