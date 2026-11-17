@@ -24,7 +24,7 @@ open OracleComp OracleSpec
 
 namespace SLHDSA.SHAKE128s.Correctness.Fors
 
-variable [HasQuery HashSpec Id]
+variable {hash : HasQuery HashSpec Id}
 
 /-- Recovering the FORS public key from an honest signature returns the compression of the
 `forsTrees` tree roots. -/

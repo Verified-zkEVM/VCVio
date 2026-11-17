@@ -120,7 +120,7 @@ theorem value_replay_eq_walk_cells (adversary : Adversary)
     (hwalk : walk ∈ support graphWalk)
     {result : (Outcome × Nat) × QueryCache HashSpec}
     (hresult : result ∈ support (tail adversary walk)) :
-    @CanonicalGraph.value (CacheReplay.replayQuery result.2) walk.1.1.1 walk.1.1.2.2 =
+    CanonicalGraph.value (CacheReplay.replayQuery result.2) walk.1.1.1 walk.1.1.2.2 =
       walk.1.2 := by
   obtain ⟨outputs, hcells, hcache⟩ := mem_support_graphWalk hwalk
   rw [hcells]
