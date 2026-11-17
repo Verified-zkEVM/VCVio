@@ -42,8 +42,6 @@ theorem xdh₂_randomExperiment_eq_ddhRandomExperiment {F G₁ G₂ : Type}
 `39/101` over `ZMod 101`, with multiplication as the bilinear map. -/
 theorem xdh₂_zmod_101 :
     letI : Fact (Nat.Prime 101) := ⟨by decide⟩
-    letI : ∀ s, DecidableEq (PFam (ZMod 101) (ZMod 101) (ZMod 101) s) :=
-      fun s => by cases s <;> exact inferInstanceAs (DecidableEq (ZMod 101))
     let A : OracleComp (genSpec (ZMod 101) pairingSig) Bool := do
       let t ← (genSpec (ZMod 101) pairingSig).query (.inl (.bil () 0 3))
       let a ← (genSpec (ZMod 101) pairingSig).query (.inl (.bil () 0 1))
@@ -52,11 +50,9 @@ theorem xdh₂_zmod_101 :
       (XDH₂.Adversary.ofGeneric (LinearMap.mul (ZMod 101) (ZMod 101)) A) ≤
         (39 / 101 : ℝ≥0∞) := by
   let : Fact (Nat.Prime 101) := ⟨by decide⟩
-  let : ∀ s, DecidableEq (PFam (ZMod 101) (ZMod 101) (ZMod 101) s) :=
-    fun s => by cases s <;> exact inferInstanceAs (DecidableEq (ZMod 101))
   dsimp only
   apply (XDH₂.advantage_ofGeneric_le
-    (LinearMap.mul (ZMod 101) (ZMod 101)) 1 1 one_ne_zero one_ne_zero
+    (LinearMap.mul (ZMod 101) (ZMod 101)) 1 1
     (by simpa only [LinearMap.mul_apply', one_mul] using (one_ne_zero : (1 : ZMod 101) ≠ 0))
     _ 0 0 2 ?_ ?_ ?_).trans
   · norm_num [ZMod.card, Nat.choose]
