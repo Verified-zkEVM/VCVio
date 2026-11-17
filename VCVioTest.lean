@@ -162,6 +162,7 @@ public import VCVioTest.Quantum.InstabilityBound
 public import VCVioTest.Quantum.Kraus
 public import VCVioTest.Quantum.MultiExtractableModule
 public import VCVioTest.Quantum.Oracle
+public import VCVioTest.Quantum.Parallel
 public import VCVioTest.Quantum.Pure
 public import VCVioTest.Quantum.SaltedMerkleMultiExtractable
 public import VCVioTest.Quantum.Subsystem

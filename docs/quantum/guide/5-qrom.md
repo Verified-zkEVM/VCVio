@@ -1,7 +1,7 @@
 # 5. The quantum random-oracle model
 
-Covers: Classical queries, Deutsch's algorithm, the QROM runtime and classical algorithms in the
-QROM. See [conventions](../reference/conventions.md). Read first: tutorial
+Covers: Classical queries, Deutsch's algorithm, the QROM runtime, classical algorithms in the
+QROM and parallel oracle rounds. See [conventions](../reference/conventions.md). Read first: tutorial
 [chapter 6](../tutorial/6-quantum-queries.md); builds on [guide 4](4-programs-and-runtimes.md).
 
 ## A classical query inside a quantum experiment
@@ -49,6 +49,32 @@ $H$ is sampled once per run, not once per call. Two consequences that justify th
 * If every call receives inputs in a set $S$, the run cannot tell $H$ from any $H'$ that agrees with
   it on $S$ (`evalDist_additiveOracleRuntime_eq_of_eqOn`).
 
+## Parallel oracle rounds
+
+The ports of `qromBatchSpec X Y` are natural numbers. Port `k` acts on
+`Fin k → X × Y`, applying the same `H` to each input/response pair. The basis permutation is
+`parallelOracleEquiv H k`, and `parallelOracleUnitary H k` is its matrix. Slots may be
+entangled and their inputs may repeat, including when the width exceeds the domain cardinality.
+
+`QuantumRuntime.batch` batches ports with the same input and output register and no classical
+result, in increasing slot order with one shared private register. Generic stateful steps need
+not commute. For the additive oracle,
+`batch_oracleQuery` proves equality with the simultaneous operation
+`parallelOracleQuery H k`, including an arbitrary untouched private register.
+`parallelOracleRuntime_step` gives that law for a variable-width runtime.
+`intertwines_batch_step` transports private-memory simulations through batching. If the
+simulation preserves trace and maps one initial private state to the other,
+`evalDist_batch_eq_of_simulation` gives agreement of output laws for adaptive programs.
+
+`qromBatchEvalDist` samples one function from `X → Y` for the entire run. Its mixture formula,
+`qromBatchEvalDist_eq_sum`, uses the original function space, so different slots and rounds
+receive answers from the same random oracle. Identifying the parallel oracle with an oracle for
+`xs ↦ H ∘ xs` is algebraic: sampling `H` induces a generally correlated law on these derived
+functions, rather than the uniform law on all functions between the product spaces.
+A width-zero call is the identity. Program-level translation into sequential queries,
+point-budget transfer, the classical batch bridge, the concrete parallel compressed-runtime
+equivalence, and depth-sensitive security bounds remain open.
+
 ## Checks
 
 **They agree with each other.** Wherever the library offers two descriptions of the same thing, a
@@ -57,6 +83,9 @@ theorem says they agree:
 | Two descriptions | Agreement |
 |---|---|
 | the QROM on classical algorithms and the classical random oracle | `qromEvalDist₂_toQuantum_eq_randomOracle` |
+| ordered calls on disjoint slots and the simultaneous additive oracle | `batch_oracleQuery` |
+| the parallel oracle matrix and an ordinary oracle on product registers | `parallelOracleUnitary_eq_oracleUnitary_submatrix` |
 
 **They compute the right numbers.** The tests work small examples to exact values: Deutsch's
-algorithm.
+algorithm. `VCVioTest/Quantum/Parallel.lean` checks cyclic ranges of orders three and five,
+repeated inputs, zero-width calls, coherent two-slot inputs, and noncommuting shared-memory steps.

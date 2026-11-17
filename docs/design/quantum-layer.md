@@ -179,3 +179,19 @@ Zhandry's compressed oracle is a runtime with the same law as the QROM for every
 and the Chiesa–Manohar–Spooner bound and its successors are proved on top of it (#856, #859, #862,
 #864, #873–#875, #877). The general final-measurement lemma and collision and zero-preimage
 bounds on the adversary's output are open (#966).
+
+### 11. Parallel oracle rounds
+
+`Comp/Parallel.lean` constructs ordered batches of one-result endomorphism ports with a shared
+private register. `Oracle/Parallel.lean` supplies variable-width ports, proves that ordered
+additive calls agree with a simultaneous query on all slots, and defines the parallel QROM law
+by sampling one function for the entire program. Repeated inputs and entangled query registers
+are allowed. Private-memory simulations transport through batching. A trace-preserving simulation
+that maps the initial private states gives output-law agreement for adaptive programs.
+General stateful batches carry no implicit commutation assumption.
+
+Program-level sequentialization with point-budget transfer, the classical batch bridge, and
+the concrete parallel compressed-runtime equivalence remain open. The operator/runtime batching law
+does not itself establish those program translations or any improvement in depth-sensitive
+security bounds. Direct parallel hybrid/search bounds and changing-property compressed-oracle
+bounds are independent proof tracks.

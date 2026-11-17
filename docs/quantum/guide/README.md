@@ -28,7 +28,7 @@ repository. The layer is the subject of issue #706. Open questions and planned w
   Stinespring form.
 * [4-programs-and-runtimes](4-programs-and-runtimes.md) — Adaptive programs, runtimes and combs.
 * [5-qrom](5-qrom.md) — Classical queries, Deutsch's algorithm, the QROM runtime and classical
-  algorithms in the QROM.
+  algorithms in the QROM; variable-width parallel oracle rounds.
 * [6-instability](6-instability.md) — The classical instability calculus and its role in quantum
   proofs.
 
@@ -63,9 +63,11 @@ The agreement rows and exact-example checks now appear under **Checks** in
 Covered: finite-dimensional systems; quantum operations that may fail; measurements with any number
 of outcomes, countably many of nonzero weight; outputs that depend on the outcome; adaptive programs
 with several oracles and stateful oracle implementations; the QROM; classical algorithms in the
-QROM; the representation theorems for CP maps; the classical instability calculus.
+QROM; variable-width parallel oracle rounds; the compressed-oracle runtime; the representation
+theorems for CP maps; the classical instability calculus.
 
 Not covered: infinite-dimensional systems; measurements with continuous outcomes; loops that may not
 terminate; coherent choice of oracle port; classical algorithms with private randomness; putting
-general programs in comb form; the compressed oracle itself. The plans for these are in
+general programs in comb form; parallel-program sequentialization, the classical batch bridge,
+parallel compressed-runtime equivalence and depth-sensitive security bounds. The plans for these are in
 [`docs/design/quantum-layer.md`](../../design/quantum-layer.md).
