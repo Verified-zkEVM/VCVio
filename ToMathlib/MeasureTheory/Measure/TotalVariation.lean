@@ -25,7 +25,7 @@ measures it is the statistical distance of the distributions completed by an exp
 point that carries the missing mass. Two probability measures differ by at most the mass missing
 from any common lower measure.
 
-Mathlib's `MeasureTheory.etvDist` is the total variation of `μ - ν`, valued in `[0, 2]`. On
+Mathlib's `MeasureTheory.etvDist` is the total variation of `μ - ν`, valued in `[0, 2]` on subprobability measures. On
 probability measures it is twice `Measure.statEDist`; on finite measures
 `Measure.two_mul_statEDist_eq_etvDist_add_absDiff` adds the discrepancy of the total masses, so on
 subprobability measures the two distances do not differ by a constant factor.
