@@ -13,15 +13,16 @@ public import VCVio.OracleComp.QueryTracking.QueryLogCheck
 # Non-adaptive checks of vector commitments
 
 The check of every vector commitment in §8 of ePrint 2025/2166 has a special form
-(Def 8.1 and Thm 8.4 condition 1, pp. 52–53): an oracle-free, non-adaptive step computes a query
-log, and `QueryLog.recheck` queries every logged input and compares the answer with the logged
-one. `VectorCommitment.NonadaptiveCheck` records this non-adaptive check, which makes `Check`
-deterministic and coin-free while leaving `Open` general, together with a non-decreasing bound
-`qVC` on the length of the log (§3.5, p. 27).
+(Def 8.1, p. 51, and Thm 8.4 condition 1, p. 52): an oracle-free, non-adaptive step computes a
+query log, and `QueryLog.recheck` queries every logged input and compares the answer with the
+logged one. `VectorCommitment.NonadaptiveCheck` records this non-adaptive check, which makes
+`Check` deterministic and coin-free while leaving `Open` general, together with a non-decreasing
+bound `qVC` on the length of the log (the check query complexity of §3.5, p. 26).
 
-In the paper's notation, the log is the output of `OutputIO`, a proof that does not parse gives
-the projector `P̂ = 0` (p. 52), and the second argument `ℓ` of `q_VC(qs, ℓ)` (p. 54) is fixed by
-the scheme and absorbed into `qVC`.
+In the paper's notation, the log is the output of `OutputIO` (p. 52). The paper leaves implicit
+what happens when the proof does not parse; here the check then rejects without a query, which
+corresponds to taking the projector `P̂` of Def 8.1 to be `0`. The second argument `ℓ` of
+`q_VC(qs, ℓ)` (p. 26) is fixed by the scheme and absorbed into `qVC`.
 
 ## Main definitions
 
@@ -38,7 +39,8 @@ the scheme and absorbed into `qVC`.
 ## References
 
 * [Chiesa, Di, Hu and Zheng, *How to Prove Post-Quantum Security for Succinct Non-Interactive
-  Reductions*, ePrint 2025/2166](https://eprint.iacr.org/2025/2166), §3.5 (p. 27), Def 8.1 and Thm 8.4 (pp. 52–54).
+  Reductions*, ePrint 2025/2166](https://eprint.iacr.org/2025/2166), §3.5 (p. 26), Def 8.1
+  (p. 51), `OutputIO` (p. 52) and Thm 8.4 condition 1 (p. 52).
 -/
 
 public section

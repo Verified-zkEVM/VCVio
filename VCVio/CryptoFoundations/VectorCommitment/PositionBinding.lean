@@ -16,7 +16,7 @@ public import VCVio.OracleComp.QueryTracking.RandomOracle.Simulation
 A position-binding adversary outputs one commitment together with two openings, each a partial
 vector of claimed values and a proof. It wins when both openings are accepted and they
 conflict (`PartialVec.Conflict`): some position is defined in both with different values (cf.
-Chiesa and Yogev, *Building Cryptographic Proofs from Hash Functions*, Version 1.2, Lemma 18.4.1,
+Chiesa–Yogev, *Building Cryptographic Proofs from Hash Functions*, Version 1.2, Lemma 18.4.1,
 stated there for Merkle trees).
 
 The advantage is stated in the random oracle model: the experiment runs against the lazily
@@ -31,7 +31,7 @@ sampled random oracle `ProbCompRuntime.rom (X →ₒ Y)`, shared by the adversar
 
 ## Main results
 
-* `VectorCommitment.positionBindingAdvantage_eq`: the position-binding advantage is the
+* `VectorCommitment.positionBindingAdvantage_def`: the position-binding advantage is the
   probability that the experiment accepts.
 
 ## References
@@ -77,18 +77,18 @@ noncomputable def positionBindingAdvantage [DecidableEq X] [SampleableType Y] [D
 
 /-- The position-binding advantage is the probability that `positionBindingExperiment` returns
 `true` against the lazily sampled random oracle. -/
-theorem positionBindingAdvantage_eq [DecidableEq X] [SampleableType Y] [DecidableEq Msg]
+theorem positionBindingAdvantage_def [DecidableEq X] [SampleableType Y] [DecidableEq Msg]
     (vc : VectorCommitment X Y Msg Cm Td Pf ℓ)
     (adversary : PositionBindingAdversary X Y Msg Cm Pf ℓ) :
     vc.positionBindingAdvantage adversary =
       (ProbCompRuntime.rom (X →ₒ Y)).evalDist (vc.positionBindingExperiment adversary) {true} := by
   rw [positionBindingAdvantage]
 
-/-- A position-binding adversary `MakesAtMostQueries q` when it makes at most `q` queries to the
+/-- A position-binding adversary `MakesAtMostQueries t` when it makes at most `t` queries to the
 oracle on every path. Coins are free. -/
 @[expose]
 def PositionBindingAdversary.MakesAtMostQueries
-    (adversary : PositionBindingAdversary X Y Msg Cm Pf ℓ) (q : ℕ) : Prop :=
-  IsQueryBoundP adversary (· matches .inr _) q
+    (adversary : PositionBindingAdversary X Y Msg Cm Pf ℓ) (t : ℕ) : Prop :=
+  IsQueryBoundP adversary (· matches .inr _) t
 
 end VectorCommitment

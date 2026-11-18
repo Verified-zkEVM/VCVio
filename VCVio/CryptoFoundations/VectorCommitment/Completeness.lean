@@ -38,7 +38,7 @@ deterministic scheme) is a sufficient condition for every `D`.
 ## References
 
 * [Chiesa, Di, Hu and Zheng, *How to Prove Post-Quantum Security for Succinct Non-Interactive
-  Reductions*, ePrint 2025/2166](https://eprint.iacr.org/2025/2166), Def 3.7 (p. 27).
+  Reductions*, ePrint 2025/2166](https://eprint.iacr.org/2025/2166), Def 3.7 (p. 26).
 -/
 
 public section
