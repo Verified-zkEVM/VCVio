@@ -569,7 +569,9 @@ public import VCVio.Quantum.Comp.Basic
 public import VCVio.Quantum.Comp.ChargeWeight
 public import VCVio.Quantum.Comp.Combinators
 public import VCVio.Quantum.Comp.DropEmptyBatches
+public import VCVio.Quantum.Comp.Finisher
 public import VCVio.Quantum.Comp.GradedRuntime
+public import VCVio.Quantum.Comp.Homogeneous
 public import VCVio.Quantum.Comp.Hybrid
 public import VCVio.Quantum.Comp.HybridBudget
 public import VCVio.Quantum.Comp.HybridIndex
@@ -589,7 +591,10 @@ public import VCVio.Quantum.Comp.Sequentialize
 public import VCVio.Quantum.Comp.Simulation
 public import VCVio.Quantum.Comp.TotalQueryBound
 public import VCVio.Quantum.Foundations.Hybrid
+public import VCVio.Quantum.Foundations.Observation
 public import VCVio.Quantum.Foundations.Parallel
+public import VCVio.Quantum.Foundations.PrivateUnit
+public import VCVio.Quantum.Foundations.SubState
 public import VCVio.Quantum.Oracle.Classical
 public import VCVio.Quantum.Oracle.ClassicalCalls
 public import VCVio.Quantum.Oracle.ClassicalParallel
@@ -622,13 +627,16 @@ public import VCVio.Quantum.Oracle.Compressed.Size
 public import VCVio.Quantum.Oracle.Compressed.Truncation
 public import VCVio.Quantum.Oracle.Emulated
 public import VCVio.Quantum.Oracle.EmulatedTensor
+public import VCVio.Quantum.Oracle.LocalExecution
 public import VCVio.Quantum.Oracle.MaskedChain.Bounds
 public import VCVio.Quantum.Oracle.MaskedChain.Coupling
+public import VCVio.Quantum.Oracle.MaskedChain.Homogeneous
 public import VCVio.Quantum.Oracle.MaskedChain.Hybrid
 public import VCVio.Quantum.Oracle.MaskedChain.Model
 public import VCVio.Quantum.Oracle.Model
 public import VCVio.Quantum.Oracle.Parallel
 public import VCVio.Quantum.Oracle.ParallelFinding
+public import VCVio.Quantum.Oracle.ParallelFinisher
 public import VCVio.Quantum.Oracle.ParallelHybrid
 public import VCVio.Quantum.Oracle.ParallelPreimage
 public import VCVio.Quantum.Oracle.ParallelReprogramming
