@@ -14,7 +14,7 @@ public import VCVio.OracleComp.SimSemantics.Append
 
 A vector commitment to messages `m : Fin ℓ → Msg` relative to one classical oracle `X →ₒ Y`
 (Chiesa, Di, Hu and Zheng, *How to Prove Post-Quantum Security for Succinct Non-Interactive
-Reductions*, ePrint 2025/2166, §3.5, pp. 25–26) consists of three algorithms:
+Reductions*, ePrint 2025/2166, §3.5, pp. 26–27) consists of three algorithms:
 
 * `Commit^f(m) → (cm, td)` samples coins and queries the oracle;
 * `Open(Q, td) → pf` is oracle-free and may sample coins;
@@ -27,7 +27,7 @@ Reductions*, ePrint 2025/2166, §3.5, pp. 25–26) consists of three algorithms:
 
 The pair `(Q, ans)` with `ans ∈ Σ^Q` is one partial vector `ans : Fin ℓ → Option Msg` with
 `Q = dom ans`; the same type holds the extracted messages `m ∈ (Σ ∪ {⊥})^ℓ` of §7
-(ePrint 2025/2166, p. 48). The paper's `Dom(m)` (§3, p. 21) and `m[Q] = ans` (Def 7.3, p. 50) are
+(ePrint 2025/2166, p. 49). The paper's `Dom(m)` (§3, p. 22) and `m[Q] = ans` (Def 7.3, p. 51) are
 `PartialVec.dom` and `PartialVec.Agrees`.
 
 The modules beside this file state completeness (`Completeness`, `RomCompleteness`) and the
@@ -58,9 +58,9 @@ universe-polymorphic.
 ## References
 
 * [Chiesa, Di, Hu and Zheng, *How to Prove Post-Quantum Security for Succinct Non-Interactive
-  Reductions*, ePrint 2025/2166](https://eprint.iacr.org/2025/2166), §3 (`Dom`, p. 21), §3.5
-  (vector commitments and Def 3.7, pp. 25–26), §7 (extracted messages, p. 48; `Dom(m)` and `m[Q]`
-  in Def 7.3, p. 50), §8 (deterministic schemes, Thm 8.4 condition 1, p. 52).
+  Reductions*, ePrint 2025/2166](https://eprint.iacr.org/2025/2166), §3 (`Dom`, p. 22), §3.5
+  (vector commitments and Def 3.7, pp. 26–27), §7 (extracted messages, p. 49; `Dom(m)` and `m[Q]`
+  in Def 7.3, pp. 50–51), §8 (deterministic schemes, Thm 8.4 condition 1, p. 53).
 * [Chiesa–Yogev, *Building Cryptographic Proofs from Hash Functions*, Version 1.2, Chapter 18,
   Merkle commitment scheme](https://github.com/hash-based-snargs-book/hash-based-snargs-book/blob/305fa3d9d19ee6dba135de64b3156d1760df8426/snargs-book.tex#L12395-L14597).
 -/

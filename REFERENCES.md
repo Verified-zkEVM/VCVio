@@ -160,7 +160,7 @@ Used in:
 Alessandro Chiesa, Zijing Di, Zihan Hu, and Yuxi Zheng.
 *How to Prove Post-Quantum Security for Succinct Non-Interactive Reductions*.
 Cryptology ePrint Archive, Paper 2025/2166, 2025.
-Version of November 28, 2025.
+Revision of March 2, 2026.
 Preprint: <https://eprint.iacr.org/2025/2166>
 
 Used in:
