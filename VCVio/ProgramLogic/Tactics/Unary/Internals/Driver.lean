@@ -376,8 +376,8 @@ private def supportForallComp? (target : Expr) : Option Expr := do
   some oa
 
 /-- Hand a core triple read by `OracleComp.Necessary.instWP` or PolyFun's demonic reading to
-core `vcgen`. A support statement `∀ x ∈ support oa, post x` is first restated as the triple `⦃ True ⦄ oa ⦃ post ⦄`
-(`OracleComp.Necessary.triple_true_iff_forall_support`). Core steps through the program with
+core `vcgen`. A support statement `∀ x ∈ support oa, post x` becomes the triple
+`⦃ True ⦄ oa ⦃ post ⦄` by `OracleComp.Necessary.triple_true_iff_forall_support`. Core uses
 the `@[spec]` rules of `VCVio.ProgramLogic.Unary.WP.NecessarySpecs`, a draw or query returning
 any value, and with the triples in the local context. The weakest precondition of an opaque
 sub-program is read back as a support statement (`OracleComp.Necessary.wp_iff_forall_support`),
