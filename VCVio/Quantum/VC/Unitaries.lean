@@ -74,7 +74,7 @@ def onFactor (e : n ≃ A × R) (M : Matrix A A ℂ) : Matrix n n ℂ :=
 /-- The entries of `onFactor e M`. -/
 theorem onFactor_apply (e : n ≃ A × R) (M : Matrix A A ℂ) (a b : n) :
     onFactor e M a b = if (e a).2 = (e b).2 then M (e a).1 (e b).1 else 0 := by
-  simp [onFactor, one_apply]
+  simp [onFactor, Matrix.one_apply]
 
 /-- `onFactor e M` does not change the rest of the register. -/
 theorem eq_of_onFactor_apply_ne_zero {e : n ≃ A × R} {M : Matrix A A ℂ} {a b : n}
@@ -242,7 +242,7 @@ theorem extractUnitary_eq_sum_labelControlled [Fintype Cm] :
     simp [extractRegroup, hb]) (by simp)]
   simp only [extractUnitary, basisMatrix_apply, extractPerm_apply, reindex_apply,
     submatrix_apply, extractRegroup, Equiv.coe_fn_symm_mk, kroneckerMap_apply, single_apply,
-    extractBlock, labelControlled_apply, one_apply, xorShift_apply, Prod.mk.injEq]
+    extractBlock, labelControlled_apply, Matrix.one_apply, xorShift_apply, Prod.mk.injEq]
   by_cases ht : t = t'
   · subst ht
     by_cases hs : s = s'

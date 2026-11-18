@@ -49,7 +49,6 @@ open Aeneas Aeneas.Std Std.Do Interop.Rust OracleSpec OracleComp OracleComp.Prog
 
 namespace Interop.Hax.Examples.Division
 
-set_option mvcgen.warning false in
 set_option hax_mvcgen.warnings false in
 /-- hax's proof obligation for `checked_div`: the extracted contract holds. -/
 theorem checked_div_spec (x y : U32) : checked_div.spec x y := by

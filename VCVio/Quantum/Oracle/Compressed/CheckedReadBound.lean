@@ -244,7 +244,7 @@ theorem checkedReadFourier_apply (x' : X) (χ : AddChar (Y × ZMod 2) ℂ)
     (D' : Database X Y) (x : X) (z : Y × ZMod 2) (D : Database X Y) :
     checkedReadFourier ((x', χ), D') ((x, z), D) =
       if x' = x ∧ D' = D then cellAmp (Y × ZMod 2) * χ z else 0 := by
-  simp only [checkedReadFourier, kroneckerMap_apply, one_apply, fourierMatrix_apply]
+  simp only [checkedReadFourier, kroneckerMap_apply, Matrix.one_apply, fourierMatrix_apply]
   split_ifs <;> simp_all
 
 /-- The response-pair Fourier transform is a coisometry. -/
@@ -329,7 +329,7 @@ theorem checkedReadFourier_conj_translation_apply (f : Option Y → Y × ZMod 2)
             if D' j = D j then 1 else 0 := by
       intro j hj
       simp only [Finset.ne_of_mem_erase hj, ite_false, one_mul]
-      rw [← mul_apply, cellCompress_mul_self, one_apply]
+      rw [← Matrix.mul_apply, cellCompress_mul_self, Matrix.one_apply]
     simp only [true_and, ite_true]
     rw [hsum, key, ← Finset.mul_prod_erase _ _ (Finset.mem_univ x'),
       Finset.prod_congr rfl hprod, Finset.prod_boole]

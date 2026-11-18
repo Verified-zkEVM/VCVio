@@ -111,9 +111,9 @@ would cost a factor of the number of address prefixes. -/
     ⟨0, by decide⟩
 
 /-- **The public root is that cell.** -/
-theorem value_topNode [HasQuery HashSpec Id] (secretSeed publicSeed : Digest) :
-    value secretSeed publicSeed (.structural topNode) =
-      Extraction.HypertreeChain.honestNode secretSeed publicSeed (layers - 1) 0 := rfl
+theorem value_topNode {hash : HasQuery HashSpec Id} (secretSeed publicSeed : Digest) :
+    value hash secretSeed publicSeed (.structural topNode) =
+      Extraction.HypertreeChain.honestNode hash secretSeed publicSeed (layers - 1) 0 := rfl
 
 /-- **A coordinate of the walk's output table, truncated, is a uniform digest.** -/
 theorem outputs_coordinate_uniform (parent : StructuralNode) :

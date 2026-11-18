@@ -249,7 +249,7 @@ lemma deferredDrawReadImpl_step_expected_attemptCount_le (pk : Stmt) (sk : Wit)
           ∑' alc : (Option (Commit × Resp) × List Commit) × (M × Commit →ₒ Chal).QueryCache,
             Pr{let x ← (ghostSignDrawBody ids M pk sk msg maxAttempts).run s.1.1.1.1}[x = alc] *
               (alc.1.2.length : ℝ≥0∞)) := by
-          rw [← ENNReal.tsum_add]; exact tsum_congr fun alc => by rw [mul_add]
+          rw [← tsum_add]; exact tsum_congr fun alc => by rw [mul_add]
       _ ≤ ((s.1.1.2.length + s.1.1.1.2.length : ℕ) : ℝ≥0∞) +
             ENNReal.ofReal (1 / (1 - p_abort)) := by
           rw [ENNReal.tsum_mul_right, OracleComp.tsum_prEvent_eq_one _, one_mul]
@@ -321,11 +321,11 @@ theorem deferredDrawRead_run_expected_attemptCount_le {γ : Type} (pk : Stmt) (s
                     ((z.2.1.1.2.length + z.2.1.1.1.2.length : ℕ) : ℝ≥0∞))
             ≤ ∑' x, Pr{let y ← (deferredDrawReadImpl ids M maxAttempts pk sk t).run s}[y = x] *
                 (((x.2.1.1.2.length + x.2.1.1.1.2.length : ℕ) : ℝ≥0∞) + (b : ℝ≥0∞) * c) :=
-              ENNReal.tsum_le_tsum fun x => by gcongr; exact hcont x
+              tsum_le_tsum fun x => by gcongr; exact hcont x
           _ = (∑' x, Pr{let y ← (deferredDrawReadImpl ids M maxAttempts pk sk t).run s}[y = x] *
                   ((x.2.1.1.2.length + x.2.1.1.1.2.length : ℕ) : ℝ≥0∞)) + (b : ℝ≥0∞) * c := by
               simp_rw [mul_add]
-              rw [ENNReal.tsum_add, ENNReal.tsum_mul_right, hmass, one_mul]
+              rw [tsum_add, ENNReal.tsum_mul_right, hmass, one_mul]
           _ ≤ (((s.1.1.2.length + s.1.1.1.2.length : ℕ) : ℝ≥0∞) + extra) + (b : ℝ≥0∞) * c := by
               gcongr
           _ ≤ ((s.1.1.2.length + s.1.1.1.2.length : ℕ) : ℝ≥0∞) + (qSrem : ℝ≥0∞) * c := by
@@ -459,7 +459,7 @@ theorem deferredDrawRead_attemptKn_mean_le {γ : Type} (pk : Stmt) (sk : Wit)
           = ∑' z : γ × DeferredReadState M Commit Chal, Pr{let x ← run}[x = z]
               * ((l.length : ℕ) : ℝ≥0∞) by
         rw [ENNReal.tsum_mul_right, hmass, one_mul]]
-    rw [← ENNReal.tsum_add]
+    rw [← tsum_add]
     refine tsum_congr fun z => ?_
     rw [← mul_add]
     by_cases hz : z ∈ support run

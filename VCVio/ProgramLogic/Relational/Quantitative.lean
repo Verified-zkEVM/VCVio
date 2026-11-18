@@ -80,9 +80,9 @@ private lemma ENNReal_tsum_iSup_le {ι : Type*} {J : ι → Type*}
     [∀ i, Nonempty (J i)] (g : (i : ι) → J i → ℝ≥0∞) :
     ∑' i, ⨆ j, g i j ≤ ⨆ (f : ∀ i, J i), ∑' i, g i (f i) := by
   let : DecidableEq ι := Classical.decEq ι
-  rw [ENNReal.tsum_eq_iSup_sum]
+  rw [tsum_eq_iSup_sum]
   refine iSup_le fun s => le_trans (Finset_sum_iSup_le_iSup_sum g s) ?_
-  exact iSup_mono fun f => ENNReal.sum_le_tsum _
+  exact iSup_mono fun f => sum_le_tsum _
 
 variable {ι₁ : Type u} {ι₂ : Type u}
 variable {spec₁ : OracleSpec.{u, 0} ι₁} {spec₂ : OracleSpec.{u, 0} ι₂}

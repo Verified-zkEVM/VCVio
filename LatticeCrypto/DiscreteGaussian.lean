@@ -134,7 +134,7 @@ theorem discreteGaussianPMF_summable (σ μ : ℝ) (hσ : 0 < σ) :
 
 private theorem hasSum_ofReal_discreteGaussian (σ μ : ℝ) (hσ : 0 < σ) :
     HasSum (fun z => ENNReal.ofReal (discreteGaussianPMF σ μ z)) 1 := by
-  rw [ENNReal.summable.hasSum_iff, ← ENNReal.ofReal_one,
+  rw [CompleteLattice.summable.hasSum_iff, ← ENNReal.ofReal_one,
     ← discreteGaussianPMF_sum_eq_one σ μ hσ]
   exact (ENNReal.ofReal_tsum_of_nonneg (discreteGaussianPMF_nonneg σ μ hσ)
     (discreteGaussianPMF_summable σ μ hσ)).symm

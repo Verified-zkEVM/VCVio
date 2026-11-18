@@ -77,7 +77,7 @@ requirement authoritative over their inherited pins and makes
 -/
 require PolyFun from git
   "https://github.com/Verified-zkEVM/PolyFun" @
-  "6237d5d7164e5949f53531fe9f8d9d024dce01f8"
+  "528b3b1fda285487e55704409bd1b058dc18fcad"
 
 /-
 The Mathlib-only quantum foundation (matrix maps, instruments, registers,
@@ -85,9 +85,9 @@ observation, pure states and oracle unitaries), shared with CatCrypt-core.
 -/
 require QuantumFoundations from git
   "https://github.com/lean-crypto-foundations/QuantumFoundations" @
-  "9bc93ed50a76d62b509dc1926638118e7b5cf5fe"
+  "5ecbeec205ce3e9e4a5b7cb900c181884856ba19"
 
-require "leanprover-community" / "mathlib" @ git "v4.35.0"
+require "leanprover-community" / "mathlib" @ git "v4.36.0"
 
 /-- Main library. -/
 @[default_target] lean_lib VCVio

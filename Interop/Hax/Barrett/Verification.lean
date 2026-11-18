@@ -65,7 +65,6 @@ open Aeneas Aeneas.Std Std.Do CoreModels hax_barrett
 
 namespace Interop.Hax.Examples.Barrett
 
-set_option mvcgen.warning false in
 set_option hax_mvcgen.warnings false in
 /-- `i32::rem_euclid` by a nonzero divisor, away from the overflowing `MIN % -1`, is `Int.emod`.
 hax's own Barrett example states this spec locally, as missing from its core models; it is a
@@ -88,22 +87,20 @@ attribute [local grind =]
 
 local grind_pattern Int32.toInt64_ofNat => (@OfNat.ofNat Int32 n _).toInt64
 
-set_option mvcgen.warning false in
 set_option hax_mvcgen.warnings false in
 /-- hax's proof obligation for `barrett_reduce`, by hax's own proof: the extracted contract
 holds. -/
 theorem barrett_reduce_spec (value : I32) : barrett_reduce.spec value := by
   unfold barrett_reduce.spec
   hax_mvcgen
-    <;> try simp [BARRETT_MULTIPLIER, BARRETT_R, BARRETT_SHIFT, FIELD_MODULUS] at *
-  all_goals try grind
+    <;> simp [BARRETT_MULTIPLIER, BARRETT_R, BARRETT_SHIFT, FIELD_MODULUS] at *
+  all_goals grind
 
 /-- The postcondition of the Rust contract, in plain arithmetic: Rust's `rem_euclid` by the
 positive modulus is `Int.emod`. -/
 def barrettPost (value r : I32) : Prop :=
   -3329 < r.val ∧ r.val < 3329 ∧ r.val % 3329 = value.val % 3329
 
-set_option mvcgen.warning false in
 set_option hax_mvcgen.warnings false in
 /-- The extracted `requires` clause: the input is at most `2 ^ 26` in absolute value. -/
 theorem barrett_reduce_pre_holds_iff (value : I32) :
@@ -111,10 +108,9 @@ theorem barrett_reduce_pre_holds_iff (value : I32) :
   Interop.Hax.holds_iff_of_triple (by
     unfold barrett_reduce.pre
     hax_mvcgen
-      <;> try simp [BARRETT_R] at *
-    all_goals try grind)
+      <;> simp [BARRETT_R] at *
+    all_goals grind)
 
-set_option mvcgen.warning false in
 set_option hax_mvcgen.warnings false in
 /-- The extracted `ensures` clause is `barrettPost`. -/
 theorem barrett_reduce_post_holds_iff (value r : I32) :
@@ -122,8 +118,8 @@ theorem barrett_reduce_post_holds_iff (value r : I32) :
   Interop.Hax.holds_iff_of_triple (by
     unfold barrett_reduce.post barrettPost
     hax_mvcgen
-      <;> try simp [FIELD_MODULUS] at *
-    all_goals try grind)
+      <;> simp [FIELD_MODULUS] at *
+    all_goals grind)
 
 end Contract
 

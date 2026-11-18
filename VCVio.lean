@@ -309,12 +309,7 @@ public import VCVio.EvalDist.BitVec.Measure
 public import VCVio.EvalDist.Defs.Instances
 public import VCVio.EvalDist.Defs.Measure
 public import VCVio.EvalDist.Defs.Measure.Core
-public import VCVio.EvalDist.Defs.Measure.Deterministic
-public import VCVio.EvalDist.Defs.Measure.ExceptT
-public import VCVio.EvalDist.Defs.Measure.Failure
 public import VCVio.EvalDist.Defs.Measure.FinRatPMF
-public import VCVio.EvalDist.Defs.Measure.OptionT
-public import VCVio.EvalDist.Defs.Semantics.Core
 public import VCVio.EvalDist.Defs.Support
 public import VCVio.EvalDist.Defs.Support.Failure
 public import VCVio.EvalDist.DiscreteTVDist
@@ -328,7 +323,6 @@ public import VCVio.EvalDist.Instances.ErrorT
 public import VCVio.EvalDist.Instances.OptionT
 public import VCVio.EvalDist.Kernel
 public import VCVio.EvalDist.List
-public import VCVio.EvalDist.Lossless
 public import VCVio.EvalDist.MeasureSemantics
 public import VCVio.EvalDist.MeasureTVDist.Basic
 public import VCVio.EvalDist.MeasureTVDist.Bind
@@ -340,7 +334,6 @@ public import VCVio.EvalDist.Monad.Branch
 public import VCVio.EvalDist.Monad.DependentTable
 public import VCVio.EvalDist.Monad.Disagreement.Measure
 public import VCVio.EvalDist.Monad.Discard
-public import VCVio.EvalDist.Monad.Failure
 public import VCVio.EvalDist.Monad.Map
 public import VCVio.EvalDist.Monad.Measure
 public import VCVio.EvalDist.Monad.Option
@@ -349,18 +342,12 @@ public import VCVio.EvalDist.Monad.Seq.Measure
 public import VCVio.EvalDist.Monad.Seq.Uniform
 public import VCVio.EvalDist.Monad.Support
 public import VCVio.EvalDist.Monad.UniformTable
-public import VCVio.EvalDist.PFunctorKernel
-public import VCVio.EvalDist.PFunctorKernelTransport
-public import VCVio.EvalDist.PFunctorMeasure.Core
-public import VCVio.EvalDist.PFunctorPath
 public import VCVio.EvalDist.PFunctorSupport
 public import VCVio.EvalDist.ProbabilityBounds
 public import VCVio.EvalDist.ProbabilityNotation
 public import VCVio.EvalDist.ProbabilityNotation.Attr
 public import VCVio.EvalDist.Prod
 public import VCVio.EvalDist.ResumptionMeasure
-public import VCVio.EvalDist.WiringKernel
-public import VCVio.EvalDist.WithFailure
 public import VCVio.Foundations
 public import VCVio.Interaction.UC.AsyncRuntime
 public import VCVio.Interaction.UC.AsyncSecurity
@@ -553,9 +540,6 @@ public import VCVio.ProgramLogic.Relational.FromUnary
 public import VCVio.ProgramLogic.Relational.HandlerFromUnary
 public import VCVio.ProgramLogic.Relational.KernelHandler
 public import VCVio.ProgramLogic.Relational.Leakage
-public import VCVio.ProgramLogic.Relational.Measure
-public import VCVio.ProgramLogic.Relational.Measure.Bind
-public import VCVio.ProgramLogic.Relational.Measure.Deterministic
 public import VCVio.ProgramLogic.Relational.ProgrammingOracle
 public import VCVio.ProgramLogic.Relational.Quantitative
 public import VCVio.ProgramLogic.Relational.QuantitativeDefs

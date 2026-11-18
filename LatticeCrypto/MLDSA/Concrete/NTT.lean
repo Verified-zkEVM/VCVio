@@ -89,12 +89,8 @@ of the NTT correctness argument. -/
 theorem zeta_isPrimitiveRoot : IsPrimitiveRoot (zeta : Coeff) 512 := by
   change IsPrimitiveRoot (1753 : ZMod 8380417) 512
   rw [IsPrimitiveRoot.iff_orderOf]
-  refine orderOf_eq_of_pow_and_pow_div_prime (by norm_num) (by reduce_mod_char) ?_
-  intro p hp hdvd
-  obtain rfl : p = 2 := (Nat.prime_dvd_prime_iff_eq hp Nat.prime_two).mp
-    (hp.dvd_of_dvd_pow (show p ∣ 2 ^ 9 by simpa using hdvd))
-  reduce_mod_char
-  decide
+  exact orderOf_eq_prime_pow (p := 2) (n := 8)
+    (by reduce_mod_char; decide) (by reduce_mod_char)
 
 /-- Forward and complementary inverse-table twiddles in one layer multiply to `-1`. -/
 private theorem zetaTable_layer_partner :

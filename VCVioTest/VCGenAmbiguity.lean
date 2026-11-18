@@ -10,7 +10,7 @@ public import VCVio
 /-!
 # `vcgen` and `pvcgen` name canary
 
-Core Lean ships a tactic spelled `vcgen` (`Std.Tactic.Do`), and VCVio's program logic ships its
+Core Lean ships a tactic spelled `vcgen` (`Std.WP.Tactic`), and VCVio's program logic ships its
 exhaustive driver as `pvcgen` (`VCVio.ProgramLogic.Tactics.Unary`). Both are in scope in any file
 that imports the root `VCVio` module. This file pins that a bare `vcgen` is core's tactic: it
 parses to core's syntax kind alone, without a `choice` node, it reports core's error on a
