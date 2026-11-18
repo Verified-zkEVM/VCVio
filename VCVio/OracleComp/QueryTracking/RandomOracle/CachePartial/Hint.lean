@@ -7,7 +7,7 @@ Authors: Devon Tuma
 module
 
 public import VCVio.OracleComp.QueryTracking.RandomOracle.CachePartial
-public import PolyFun.PFunctor.Handler.Hint
+import PolyFun.PFunctor.Handler.Hint
 
 /-!
 # A common cache for histories with the same hint
