@@ -123,19 +123,8 @@ lemma add_div_two_mul_nat (a b N : ℕ) :
     ((a : ℕ) : ℝ≥0∞) / (2 * N) +
       ((b : ℕ) : ℝ≥0∞) * (N : ℝ≥0∞)⁻¹ =
     ((a + 2 * b : ℕ) : ℝ≥0∞) / (2 * N) := by
-  set D := (2 * (N : ℝ≥0∞))
-  rw [ENNReal.div_eq_inv_mul, ENNReal.div_eq_inv_mul]
-  rw [mul_comm (((b : ℕ) : ℝ≥0∞)) ((N : ℝ≥0∞)⁻¹)]
-  have hD_inv : (N : ℝ≥0∞)⁻¹ = D⁻¹ * 2 := by
-    simp only [D]
-    rw [ENNReal.mul_inv (Or.inl (by norm_num : (2 : ℝ≥0∞) ≠ 0))
-      (Or.inl (by norm_num : (2 : ℝ≥0∞) ≠ ⊤)),
-      mul_comm (2 : ℝ≥0∞)⁻¹ _, mul_assoc,
-      ENNReal.inv_mul_cancel (by norm_num : (2 : ℝ≥0∞) ≠ 0)
-        (by norm_num : (2 : ℝ≥0∞) ≠ ⊤), mul_one]
-  rw [hD_inv, mul_assoc, ← mul_add]
-  congr 1
-  push_cast
-  ring
+  rw [← div_eq_mul_inv, ← ENNReal.mul_div_mul_left (b : ℝ≥0∞) N two_ne_zero ofNat_ne_top,
+    ENNReal.div_add_div_same]
+  norm_cast
 
 end ENNReal
