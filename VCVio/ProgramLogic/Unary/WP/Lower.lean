@@ -14,7 +14,9 @@ public import ToMathlib.Control.WriterT
 public import VCVio.ProgramLogic.Unary.WP.Measure
 public import VCVio.OracleComp.EvalDist.AnswerMeasure
 public import PolyFun.Control.Monad.Algebra.WP
+public import PolyFun.Control.Monad.WriterT.WP
 public import PolyFun.Control.Do.Spec
+public import PolyFun.PFunctor.Free.Measure.WP
 
 /-!
 # Quantitative weakest preconditions
@@ -31,7 +33,6 @@ interpretation are independent of the choice of probability semantics.
 @[expose] public section
 
 open ENNReal MeasureTheory
-open Lean.Order
 open Std.WP
 open scoped WriterT.MonoidWP
 
@@ -67,7 +68,19 @@ variable {α β : Type}
 Enable with `open scoped OracleComp.Lower`. -/
 noncomputable scoped instance instWP :
     Std.WP.WPMonad (OracleComp spec) ℝ≥0∞ EStack⟨⟩ :=
-  MAlgOrdered.toWPMonad
+  ExpectationWP.Lower.instWP (OracleComp spec)
+
+/-- The successful-output measure interpretation is the free-program expectation reading under
+the oracle's discrete answer measures. -/
+theorem instWP_eq_expectationWPMonad : instWP (spec := spec) =
+    @PFunctor.FreeM.expectationWPMonad spec.toPFunctor (fun _ => ⊤)
+      OracleSpec.AnswerMeasure.toMeasure := by
+  let : ∀ a, MeasurableSpace (spec.toPFunctor.B a) := fun _ => ⊤
+  let : ∀ a, DiscreteMeasurableSpace (spec.toPFunctor.B a) := fun _ =>
+    inferInstanceAs (@DiscreteMeasurableSpace _ ⊤)
+  exact ExpectationWP.toWPMonad_algebra_freeM (P := spec.toPFunctor)
+
+open Lean.Order
 
 /-! ## `StateT (OracleComp spec)` WP normalization -/
 

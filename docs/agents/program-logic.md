@@ -36,6 +36,13 @@ lower-priority fallback. The interpretation uses core `Std.WP.WP.wp` directly, a
 `wp_eq_lintegral` integrates a measurable assertion in the chosen result space;
 `wp_eq_lintegral_map` observes an arbitrary assertion without requiring a space on hidden results.
 
+Under `open scoped OracleComp.Lower`, `OracleComp.ProgramLogic.wp_eq_wpFold` computes the
+same expectation one call at a time, integrating each continuation under the configured answer
+measure. It applies to an arbitrary postcondition and needs no measurable space on results.
+`OracleComp.Lower.instWP_eq_expectationWPMonad` identifies this scoped interpretation with
+PolyFun's free-program expectation reading. The default query rule integrates the exact
+postcondition, while `OracleComp.Lower.Pointwise` lets `vcgen` descend through each answer.
+
 Use `finiteness` for `wp oa post ≠ ⊤` when the result type is finite and the postcondition is
 pointwise finite. An arbitrary quantitative postcondition may still take the value `⊤`.
 The regression module `VCVioTest/ProgramLogic/GCongr.lean` checks the support binders and the
