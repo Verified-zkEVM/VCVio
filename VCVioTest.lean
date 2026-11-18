@@ -168,6 +168,7 @@ public import VCVioTest.Quantum.NumberedQueries
 public import VCVioTest.Quantum.Oracle
 public import VCVioTest.Quantum.Parallel
 public import VCVioTest.Quantum.ParallelBridges
+public import VCVioTest.Quantum.ParallelPreimage
 public import VCVioTest.Quantum.ParallelSearch
 public import VCVioTest.Quantum.Pure
 public import VCVioTest.Quantum.SaltedMerkleMultiExtractable

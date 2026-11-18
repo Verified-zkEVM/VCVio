@@ -32,7 +32,8 @@ The layer is the subject of issue #706. Open questions and planned work are in
   query budgets, sequentialization and combs.
 * [5-qrom](5-qrom.md) — Classical queries, Deutsch's algorithm, the QROM runtime and classical
   algorithms in the QROM; parallel rounds, private uniform coins, compressed execution,
-  reprogramming, unique-mark search and idealized masked-chain endpoint recovery.
+  reprogramming, unique-mark and fixed-target preimage search, and idealized masked-chain
+  endpoint recovery.
 * [6-instability](6-instability.md) — The classical instability calculus and its role in quantum
   proofs.
 * [7-time-lock-puzzles](7-time-lock-puzzles.md) — Quantum preprocessing, honest generation,
@@ -75,15 +76,15 @@ QROM; variable-width parallel oracle rounds and their sequentialization with poi
 transfer; classical algorithms with private uniform coins through `OracleComp.toQuantumRandomized`
 and `OracleComp.toQuantumBatch`, preserving function-query or round and point budgets;
 the compressed-oracle runtime and its parallel QROM equivalence; common-finisher parallel
-reprogramming, adaptive hybrids and unique-mark search under round and total-point budgets,
-with width-cap corollaries; the representation theorems for CP maps; the classical instability
-calculus; two-phase quantum time-lock puzzle experiments with separate preprocessing and online
-budgets, exact classical-generator laws for adversaries without preprocessing, and endpoint-only
+reprogramming, adaptive hybrids, unique-mark and fixed-target preimage search under round and
+total-point budgets, with width-cap corollaries; the representation theorems for CP maps;
+the classical instability calculus; two-phase quantum time-lock puzzle experiments with separate
+preprocessing and online budgets, exact classical-generator laws for adversaries without preprocessing, and endpoint-only
 sequentiality for idealized masked chains without preprocessing.
 
 Not covered: infinite-dimensional systems; measurements with continuous outcomes; loops that may not
-terminate; coherent choice of oracle port; putting general programs in comb form; random-function
-preimage search and exact square-root-sum bounds for deterministic width profiles; delay bounds
+terminate; coherent choice of oracle port; putting general programs in comb form; exact
+square-root-sum bounds for deterministic width profiles; delay bounds
 with quantum preprocessing or for the exact `PointerChainPuzzle` encoding; changing-property
 compressed-oracle bounds. The plans for these are in
 [`docs/design/quantum-layer.md`](../../design/quantum-layer.md).

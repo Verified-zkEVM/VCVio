@@ -184,8 +184,8 @@ polynomial-time certificate. A gate-level account needs item 8 and a charge for 
 
 Zhandry's compressed oracle is a runtime with the same law as the QROM for every program (#855),
 and the Chiesa–Manohar–Spooner bound and its successors are proved on top of it (#856, #859, #862,
-#864, #873–#875, #877). The general final-measurement lemma and collision and zero-preimage
-bounds on the adversary's output are open (#966).
+#864, #873–#875, #877). The general final-measurement lemma and compressed-oracle collision and zero-preimage
+output bounds are open (#966). The direct hybrid preimage bound is described below.
 
 ### 11. Parallel oracle rounds
 
@@ -293,12 +293,28 @@ The bound includes zero-query guessing; loss and postselection remain missing ma
 renormalization.
 
 These results implement the direct reprogramming, adaptive hybrid and round/point unique-mark
-search part of M3a. Random-function preimage search and exact sums of square roots for deterministic
-width profiles remain open. The changing-property directional recurrence and its adaptive
+search part of M3a. Exact sums of square roots for deterministic width profiles remain open. The changing-property directional recurrence and its adaptive
 mixed-state and total-budget transports (M−1), the general final-measurement lemma (M0), and CFHL
 compressed-oracle bounds are separate obligations. The state-conditioned hybrid also supports
 the idealized endpoint result below; preprocessing and the exact `PointerChainPuzzle` encoding
 remain future work.
+
+`Oracle/ParallelFinding.lean` packages the shared search argument. A fixed reference execution
+and pointwise weighted incidence `δ` bound a weighted family of hidden-set finding experiments
+by `δ * (1 + 2 * sqrt (q * Q))^2`. The weights need not normalize. The final event keeps the
+same hidden set as its answering oracle; the reference state, program and guess are independent
+of the sampled set. Both marked search and random-function preimage search instantiate this theorem.
+
+`Oracle/ParallelPreimage.lean` completes M3b for a fixed target chosen independently of the uniform
+function. `preimageSearchAdvantage_le_of_isPointBound` gives
+`min 1 ((1 + 2 * sqrt (q * Q))^2 / |Y|)`; its width-cap corollary uses `Q = k * q`.
+One function answers every round and the endpoint verifier. The target is neither obtained by
+evaluating that function at a hidden input nor conditioned to lie in its image.
+`ToMathlib/MeasureTheory/Measure/UniformTable/Target.lean` supplies the exact joint decomposition
+into independent target labels and a reference table avoiding the target. Their incidence is
+`1 / |Y|`; singleton responses are handled separately by the probability cap. Exact zero-point
+laws retain successful mass divided by `|Y|`, permitting empty rounds and subnormalized inputs.
+No compressed-oracle result is used by this argument.
 
 ### 13. Quantum delay experiments
 
@@ -357,3 +373,23 @@ one function and jointly retained hidden tuple. `MaskedChainPuzzle.qromDelayAdva
 therefore gives the same explicit bound for that named scheme. This establishes the idealized
 no-preprocessing application without claiming security with oracle preprocessing or for the
 exact pointer-chain encoding.
+
+### 15. Proposed bounded-preprocessing extension
+
+A next target for the current idealized masked-chain puzzle is
+`min 1 (recoveryBound G q k + 4 * Qpre * sqrt ((q+1) / |G|))`, where `Qpre` bounds
+preprocessing points. This is a proposed direct-hybrid bound, not a proved theorem. The joint
+mask-first coupling could include the complete two-phase experiment. Comparing preprocessing
+under the patched oracle with a base oracle whose preprocessing prefix is independent of the
+vertex and mask coins suggests incidence `(q+1) / |G|` for the programmed input cells.
+Generation and online execution remain the same common finisher. Conditioning on that base oracle then permits an oracle-dependent preprocessing
+state in the existing conditional online argument. This limited target may require no salting
+or presampling; stronger preprocessing guarantees remain separate.
+
+The proof gates are a full two-phase classical-generator law, a multi-round common-finisher
+comparison with prefix query weights independent of its oracle-free suffix, and trace-homogeneous
+online bounds that can be summed over all preprocessing branches. Only the no-preprocessing
+scheme theorem is currently implemented. Security of the exact `PointerChainPuzzle` construction
+also needs ordinary-chain or ranked-path quantum analysis, truncation, accumulator and commitment
+handling, and a coherent finite-domain raw-oracle encoding bridge; byte transport alone does not
+supply that security theorem.

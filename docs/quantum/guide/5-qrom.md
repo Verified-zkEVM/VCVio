@@ -1,7 +1,7 @@
 # 5. The quantum random-oracle model
 
 Covers: Classical queries, Deutsch's algorithm, the QROM runtime, classical algorithms in the
-QROM, parallel oracle rounds, reprogramming and marked search. See
+QROM, parallel oracle rounds, reprogramming, marked and preimage search. See
 [conventions](../reference/conventions.md). Read first: tutorial
 [chapter 6](../tutorial/6-quantum-queries.md); builds on [guide 4](4-programs-and-runtimes.md).
 
@@ -223,9 +223,54 @@ the success probability is never renormalized on survival.
 The proof sums singleton union weights over all marks in the mark-independent zero-oracle
 reference execution before aggregating the square-root errors.
 
-This is the unique-mark oracle experiment. Random-function preimage search, exact sums of
-square roots for deterministic width profiles, preprocessing results, and
-changing-property compressed-oracle bounds remain separate work.
+This is the unique-mark oracle experiment. Exact sums of square roots for deterministic width
+profiles, preprocessing results and changing-property compressed-oracle bounds remain separate work.
+
+## Fixed-target preimage search
+
+`preimageSearchAdvantage target I x ρ guess` samples one uniform function `H : X → Y`
+and checks whether `H (guess leaf) = target` after the program finishes. The same `H` answers
+every slot and round and supplies this final check. The target, program, local operations,
+initial substate and guessing rule are fixed before `H` is sampled. They may depend on the
+fixed target. The experiment neither samples the target as `H(x*)` nor conditions it to have
+any preimage; those are different games.
+
+`preimageSearchAdvantage_le_of_isPointBound` proves
+
+\[
+ p \le \min\left(1,\;\frac{(1+2\sqrt{qQ})^2}{|Y|}\right)
+\]
+
+under `x.IsTotalQueryBound q` and `x.IsPointBound Q`. The width-cap corollary,
+`preimageSearchAdvantage_le`, gives `min 1 ((1 + 2q * sqrt k)^2 / |Y|)`.
+The denominator is the response-space size, whereas unique-mark search uses the input-space
+size. Both results permit adaptive widths, repeated inputs, mixed or subnormalized states
+and empty rounds. Missing mass counts as failure.
+
+The reference execution must be independent of the sampled preimage set. To ensure this,
+`ToMathlib/MeasureTheory/Measure/UniformTable/Target.lean` decomposes a uniform function into
+an independent avoiding table and a label table. The avoiding table contains no target values;
+the patched function returns the target exactly at target-labelled inputs. A permutation of
+the complete tables proves the joint law, including the target preimage set. Each input is
+labelled with probability `1 / |Y|`. A uniformly random unrestricted reference would introduce
+extra target values and would not give this decomposition. Singleton response spaces use the
+trivial probability cap, without sampling an empty target complement.
+
+`Oracle/ParallelFinding.lean` supplies the common argument for both search games.
+`sum_mul_evalDistMap_mem_parallel_le_of_isPointBound` bounds a weighted family of hidden-set
+finding experiments from a fixed reference oracle and a pointwise incidence bound `δ`.
+Each challenge's oracle agrees with the reference outside that challenge's set. The weights
+need not normalize: the conclusion is a weighted sum at most
+`δ * (1 + 2 * sqrt (q * Q))^2`. The reference runtime, input state, program and guess are held
+fixed across the sampled sets; each final event retains its own set. Marked search uses
+singleton sets, unit weights and `δ = 1`, then divides the resulting sum by `|X|` for the
+uniform hidden mark. Preimage search uses normalized target-label weights and `δ = 1 / |Y|`.
+
+The exact zero-point law, `preimageSearchAdvantage_eq_of_isPointBound_zero`, gives the successful
+execution mass at any reference function divided by `|Y|`, even with empty rounds and without
+a round bound. For lossless local execution,
+`preimageSearchAdvantage_eq_of_isPointBound_zero_of_lossless` gives initial trace divided by
+`|Y|`. In particular, a lossless normalized no-query guess succeeds with probability `1 / |Y|`.
 
 ## Endpoint recovery for an idealized masked chain
 
@@ -299,3 +344,7 @@ Two-round adaptive profiles `(0, 2)` and `(1, 1)` give the round/point bound `25
 and their total weighted mass is at most one from a half-trace input.
 `VCVioTest/Quantum/ChargeWeight.lean` checks prefix charges and exact pre-answer query weight
 for a call with no possible answer, including zero-charge calls at budget zero.
+
+`VCVioTest/Quantum/ParallelPreimage.lean` checks fixed-target guessing, singleton responses,
+empty domains, unnormalized input mass, adaptive total-point budgets and the avoiding-table
+coupling.

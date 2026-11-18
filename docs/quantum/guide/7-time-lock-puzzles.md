@@ -47,7 +47,9 @@ Recovery compares only the output with the actual key.
 `TwoPhaseAdversary.IsQueryBound` imposes these bounds on every possible continuation,
 including branches of weight zero. Honest generation consumes none of the online budget.
 `QROMDelaySecure` quantifies over adversaries satisfying such a budget; it is a security
-definition, not a theorem that every puzzle satisfies it.
+target to establish from an oracle argument. Assuming it for the puzzle under analysis
+would assume the required delay bound. A theorem about a named adversary adapter establishes
+the predicate only after proving that the adapter covers all admissible two-phase adversaries.
 
 Classical honest puzzles embed through `TimeLockPuzzle.toQuantum`, preserving generation
 round and point bounds. `Quantum.TimeLockPuzzle.ofClassicalGenerator` also allows arbitrary

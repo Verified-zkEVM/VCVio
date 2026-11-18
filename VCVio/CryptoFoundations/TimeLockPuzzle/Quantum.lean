@@ -301,7 +301,9 @@ noncomputable def qromDelayAdvantage (tlp : TimeLockPuzzle (qromBatchSpec X Y) P
   sampledDelayAdvantage parallelOracleRuntime tlp adv
 
 /-- Quantum delay security in the QROM under separate preprocessing and online resources.
-The adversary and its initial state are chosen independently of the sampled function. -/
+The adversary and its initial state are chosen independently of the sampled function.
+This predicate is a security target to establish by an oracle argument. A bound for a named
+adversary adapter yields it only with a coverage proof for all budget-bounded adversaries. -/
 @[expose]
 def QROMDelaySecure [DecidableEq Key] (tlp : TimeLockPuzzle (qromBatchSpec X Y) Puzzle Key)
     (b : DelayBudget) (ε : ℝ≥0∞) : Prop :=
