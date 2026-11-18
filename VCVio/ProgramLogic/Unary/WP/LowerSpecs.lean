@@ -139,21 +139,21 @@ theorem Spec.monadLift_query_iInf (t : spec.Domain) (post : spec.Range t → ℝ
       (MonadLift.monadLift (liftM (OracleSpec.query t) : OracleQuery spec (spec.Range t)) :
         OracleComp spec (spec.Range t))
     ⦃ post; epost ⦄ := by
-  rw [MAlgOrdered.iInf_eq_iInf]
+  rw [LeanOrder.iInf_eq_iInf]
   exact ⟨iInf_le_wp _ post⟩
 
 /-- A lower bound at every answer of a query bounds its expectation. -/
 theorem Spec.query_iInf (t : spec.Domain) (post : spec.Range t → ℝ≥0∞) {epost : EStack⟨⟩} :
     ⦃ Lean.Order.iInf post ⦄ (HasQuery.query t : OracleComp spec (spec.Range t))
     ⦃ post; epost ⦄ := by
-  rw [MAlgOrdered.iInf_eq_iInf]
+  rw [LeanOrder.iInf_eq_iInf]
   exact ⟨iInf_le_wp _ post⟩
 
 /-- A lower bound at every value of a uniform draw bounds its expectation. -/
 theorem Spec.uniformSample_iInf (β : Type) [SampleableType β] (post : β → ℝ≥0∞)
     {epost : EStack⟨⟩} :
     ⦃ Lean.Order.iInf post ⦄ ($ᵗ β) ⦃ post; epost ⦄ := by
-  rw [MAlgOrdered.iInf_eq_iInf]
+  rw [LeanOrder.iInf_eq_iInf]
   exact ⟨iInf_le_wp _ post⟩
 
 /-- A lower bound at every possible output bounds the expectation.
