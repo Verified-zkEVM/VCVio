@@ -136,7 +136,7 @@ is moved or wrapped for the new API.
 Native TV composition is published in [#762](https://github.com/Verified-zkEVM/VCVio/pull/762),
 independently based on `main`.
 
-`Measure.etvDist` contracts under measurable subprobability transitions on chosen spaces. Its
+`Measure.statEDist` contracts under measurable subprobability transitions on chosen spaces. Its
 bounded-observation law uses Mathlib's layer cake formula, without singleton probabilities,
 countability, discrete spaces, or probability-prefix assumptions. Conditional composition accepts
 an AE majorant under the actual prefix law; the distance function need not be measurable.
@@ -659,10 +659,10 @@ axiom/initialization ratchets. Prune obsolete lint entries; do not add exception
 | Conditional continuation | `evalDist_bind_ite`, `prEvent_bind_ite`, and `prEvent_bind_eq_mul_of_ite`; finite observation measures retain missing mass. |
 | Natural-valued expectation | `MeasureTheory.lintegral_coe_nat_eq_tsum`; countability applies to the observable range. |
 | Losslessness | Mathlib `IsProbabilityMeasure`; bind requires AE lossless continuations. |
-| Common-transition TV contraction | `Measure.etvDist_bind_le` / `Kernel.etvDist_comp_le`; measurable subprobability transitions on the chosen spaces. |
-| Conditional TV composition | `Measure.etvDist_bind_bind_le_lintegral` / `measureETVDist_bind_bind_le_lintegral`; AE majorants, without assuming measurable conditional TV or selecting couplings. |
-| Different prefix and transition laws | `Measure.etvDist_bind_bind_le_add_lintegral` / `Kernel.etvDist_comp_comp_le_add_lintegral`; charge prefix TV and the conditional majorant under the second prefix law. |
-| Exceptional conditional TV | `Measure.etvDist_bind_bind_le_of_bad`; retain exceptional prefix mass and the good complement's mass. |
+| Common-transition TV contraction | `Measure.statEDist_bind_le` / `Kernel.statEDist_comp_le`; measurable subprobability transitions on the chosen spaces. |
+| Conditional TV composition | `Measure.statEDist_bind_bind_le_lintegral` / `measureETVDist_bind_bind_le_lintegral`; AE majorants, without assuming measurable conditional TV or selecting couplings. |
+| Different prefix and transition laws | `Measure.statEDist_bind_bind_le_add_lintegral` / `Kernel.statEDist_comp_comp_le_add_lintegral`; charge prefix TV and the conditional majorant under the second prefix law. |
+| Exceptional conditional TV | `Measure.statEDist_bind_bind_le_of_bad`; retain exceptional prefix mass and the good complement's mass. |
 | Conditional measure/event equality | `evalDist_bind_congr_ae` / `prEvent_bind_congr_ae`, with measurable families on the chosen source space. |
 | AE output valuation | `lintegral_evalDist_bind_of_aemeasurable` / `lintegral_evalDist_map_of_aemeasurable`, relative to the resulting output measure. |
 | Hidden-output expectation comparison | `OracleComp.lintegral_evalDist_bind_mono_of_support`, observing the actual continuation results. |

@@ -23,7 +23,7 @@ Trace laws are compared in the discrete structure on the trace type.
   regardless of the result. This is the VCVio analogue of constant-time execution.
 * `ProbLeakFree`: distributional trace independence.
   The trace distribution does not depend on secrets.
-* `LeakageBound`: approximate trace independence via total variation distance.
+* `LeakageBound`: approximate trace independence via statistical distance.
   The trace distributions differ by at most `ε`.
 
 ## Main Results
@@ -72,12 +72,12 @@ def ProbLeakFree (oa₁ : OracleComp spec₁ (α × ω)) (oa₂ : OracleComp spe
 
 /-! ### LeakageBound -/
 
-/-- Approximate trace independence: the trace distributions differ by at most `ε` in total
-variation distance. This enables game-hopping arguments where each hop introduces a small
+/-- Approximate trace independence: the trace distributions differ by at most `ε` in statistical
+distance. This enables game-hopping arguments where each hop introduces a small
 leakage discrepancy. -/
 def LeakageBound (ε : ℝ≥0∞) (oa₁ : OracleComp spec₁ (α × ω))
     (oa₂ : OracleComp spec₂ (β × ω)) : Prop :=
-  letI : MeasurableSpace ω := ⊤; 𝒟[Prod.snd <$> oa₁].etvDist 𝒟[Prod.snd <$> oa₂] ≤ ε
+  letI : MeasurableSpace ω := ⊤; 𝒟[Prod.snd <$> oa₁].statEDist 𝒟[Prod.snd <$> oa₂] ≤ ε
 
 /-! ### Bridge Lemmas -/
 
@@ -95,7 +95,7 @@ theorem probLeakFree_iff_leakageBound_zero
     {oa₁ : OracleComp spec₁ (α × ω)} {oa₂ : OracleComp spec₂ (β × ω)} :
     ProbLeakFree oa₁ oa₂ ↔ LeakageBound 0 oa₁ oa₂ := by
   let : MeasurableSpace ω := ⊤
-  rw [ProbLeakFree, LeakageBound, nonpos_iff_eq_zero, Measure.etvDist_eq_zero_iff]
+  rw [ProbLeakFree, LeakageBound, nonpos_iff_eq_zero, Measure.statEDist_eq_zero_iff]
 
 /-- Transitivity of `LeakageBound` for game-hopping: if the first pair of computations
 has leakage at most `ε₁` and the second pair at most `ε₂`, then the outer pair has
@@ -107,7 +107,7 @@ theorem leakageBound_triangle
     (h₁₂ : LeakageBound ε₁ oa₁ oa₂) (h₂₃ : LeakageBound ε₂ oa₂ oa₃) :
     LeakageBound (ε₁ + ε₂) oa₁ oa₃ := by
   let : MeasurableSpace ω := ⊤
-  exact (Measure.etvDist_triangle _ _ _).trans (add_le_add h₁₂ h₂₃)
+  exact (Measure.statEDist_triangle _ _ _).trans (add_le_add h₁₂ h₂₃)
 
 /-- `ProbLeakFree` is reflexive. -/
 theorem probLeakFree_refl (oa : OracleComp spec₁ (α × ω)) :
@@ -131,7 +131,7 @@ theorem probLeakFree_of_leakageBound_zero
 theorem leakageBound_refl (oa : OracleComp spec₁ (α × ω)) :
     LeakageBound 0 oa oa := by
   let : MeasurableSpace ω := ⊤
-  exact (Measure.etvDist_self _).le
+  exact (Measure.statEDist_self _).le
 
 /-- `LeakageBound` is symmetric. -/
 theorem leakageBound_symm
@@ -139,7 +139,7 @@ theorem leakageBound_symm
     (h : LeakageBound ε oa₁ oa₂) :
     LeakageBound ε oa₂ oa₁ := by
   let : MeasurableSpace ω := ⊤
-  exact (Measure.etvDist_comm _ _).trans_le h
+  exact (Measure.statEDist_comm _ _).trans_le h
 
 /-- Monotonicity: a smaller leakage bound implies a larger one. -/
 theorem leakageBound_mono
@@ -194,11 +194,11 @@ theorem leakageBound_map_snd
     LeakageBound ε (Prod.map id g <$> oa₁) (Prod.map id g <$> oa₂) := by
   let : MeasurableSpace ω := ⊤
   let : MeasurableSpace ω' := ⊤
-  change 𝒟[Prod.snd <$> (Prod.map id g <$> oa₁)].etvDist
+  change 𝒟[Prod.snd <$> (Prod.map id g <$> oa₁)].statEDist
     𝒟[Prod.snd <$> (Prod.map id g <$> oa₂)] ≤ ε
   rw [snd_map_prod_map_eq_map, snd_map_prod_map_eq_map,
     evalDist_map_of_discrete (Prod.snd <$> oa₁), evalDist_map_of_discrete (Prod.snd <$> oa₂)]
-  exact (Measure.etvDist_map_le _ _ g Measurable.of_discrete).trans h
+  exact (Measure.statEDist_map_le _ _ g Measurable.of_discrete).trans h
 
 /-- Mapping the trace component with the same function preserves trace noninterference. -/
 theorem traceNoninterference_map_snd
@@ -263,12 +263,12 @@ theorem leakageBound_bind_of_trace_only
     LeakageBound ε (oa₁ >>= fun z => f z.2) (oa₂ >>= fun z => g z.2) := by
   let : MeasurableSpace ω := ⊤
   let : MeasurableSpace ω' := ⊤
-  change 𝒟[Prod.snd <$> (oa₁ >>= fun z => f z.2)].etvDist
+  change 𝒟[Prod.snd <$> (oa₁ >>= fun z => f z.2)].statEDist
     𝒟[Prod.snd <$> (oa₂ >>= fun z => g z.2)] ≤ ε
   rw [snd_map_bind_snd _ f, snd_map_bind_snd _ g, evalDist_bind_of_discrete (Prod.snd <$> oa₁),
     evalDist_bind_of_discrete (Prod.snd <$> oa₂),
     show (fun w => 𝒟[Prod.snd <$> g w]) = fun w => 𝒟[Prod.snd <$> f w] from
       funext fun w => (hfg w).symm]
-  exact (Measure.etvDist_bind_le _ _ _ Measurable.of_discrete).trans h
+  exact (Measure.statEDist_bind_le _ _ _ Measurable.of_discrete).trans h
 
 end OracleComp.Leakage

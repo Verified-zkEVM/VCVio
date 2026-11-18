@@ -645,13 +645,13 @@ constant-continuation laws.
 
 | Definition | Purpose | Defined in |
 |-----------|---------|------------|
-| `Measure.etvDist` / `Measure.tvDist` | Total variation on arbitrary subprobability measures | `ToMathlib/MeasureTheory/Measure/TotalVariation.lean` |
-| `Measure.two_mul_etvDist_eq_etvDist_add_absDiff`, `MeasureTheory.etvDist_eq_two_mul_etvDist` | Mathlib's `MeasureTheory.etvDist` (the total variation of `μ - ν`) is twice `Measure.etvDist` plus the total-mass discrepancy, and twice it on probability measures | `ToMathlib/MeasureTheory/Measure/TotalVariation/Variation.lean` |
-| `measureETVDist` / `measureTVDist` | Total variation directly on `𝒟[…]` | `EvalDist/MeasureTVDist/Basic.lean` |
+| `Measure.statEDist` / `Measure.statDist` | Statistical distance on arbitrary subprobability measures: the supremum over measurable events of `ENNReal.absDiff`, equal to the statistical distance of the distributions completed by a failure point | `ToMathlib/MeasureTheory/Measure/TotalVariation.lean` |
+| `Measure.two_mul_statEDist_eq_etvDist_add_absDiff`, `MeasureTheory.etvDist_eq_two_mul_statEDist` | Mathlib's `MeasureTheory.etvDist` (the total variation of `μ - ν`, valued in `[0, 2]`) plus the total-mass discrepancy is twice `Measure.statEDist`, and on probability measures Mathlib's distance is twice `Measure.statEDist` | `ToMathlib/MeasureTheory/Measure/TotalVariation/Variation.lean` |
+| `measureETVDist` / `measureTVDist` | `Measure.statEDist` / `Measure.statDist` directly on `𝒟[…]` | `EvalDist/MeasureTVDist/Basic.lean` |
 | `discreteTVDist` | Real total variation with the discrete σ-algebra chosen locally, so its statements carry no measurable-space hypothesis | `EvalDist/DiscreteTVDist.lean` |
-| `Measure.etvDist_bind_le` / `Kernel.etvDist_comp_le` | Common-transition contraction on chosen measurable spaces | `ToMathlib/MeasureTheory/Measure/TotalVariation/Bind.lean`, `ToMathlib/Probability/Kernel/TotalVariation.lean` |
+| `Measure.statEDist_bind_le` / `Kernel.statEDist_comp_le` | Common-transition contraction on chosen measurable spaces | `ToMathlib/MeasureTheory/Measure/TotalVariation/Bind.lean`, `ToMathlib/Probability/Kernel/TotalVariation.lean` |
 | `measureETVDist_bind_bind_le_lintegral` | Conditional composition with an AE majorant under the prefix law | `EvalDist/MeasureTVDist/Bind.lean` |
-| `Measure.etvDist_bind_bind_le_of_bad` | Exceptional prefix mass plus the good-branch allowance weighted by its mass | `ToMathlib/MeasureTheory/Measure/TotalVariation/Bind.lean` |
+| `Measure.statEDist_bind_bind_le_of_bad` | Exceptional prefix mass plus the good-branch allowance weighted by its mass | `ToMathlib/MeasureTheory/Measure/TotalVariation/Bind.lean` |
 | `Measure.Coupling` | Joint measure with prescribed marginals | `ToMathlib/MeasureTheory/Measure/Coupling.lean` |
 | `ExpectationWP.RelWP` | Almost-everywhere relational postcondition under a measure coupling | `ProgramLogic/Relational/Measure.lean` |
 | `ExpectationWP.eRelWP` | Best coupled `lintegral` post-expectation | `ProgramLogic/Relational/Measure.lean` |
