@@ -568,6 +568,7 @@ public import VCVio.ProgramLogic.Unary.WP.Probabilistic.Measure
 public import VCVio.Quantum.Comp.Basic
 public import VCVio.Quantum.Comp.ChargeWeight
 public import VCVio.Quantum.Comp.Combinators
+public import VCVio.Quantum.Comp.DropEmptyBatches
 public import VCVio.Quantum.Comp.GradedRuntime
 public import VCVio.Quantum.Comp.Hybrid
 public import VCVio.Quantum.Comp.HybridBudget
