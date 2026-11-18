@@ -145,7 +145,7 @@ restriction; the present online error uses the round and width bounds.
 Auxiliary-input security remains a separate target. Its advice budget must count all retained
 information, including the classical branch state. See the
 [model distinction and references](../../design/quantum-layer.md#16-auxiliary-input-security-remains-separate).
-The exact `PointerChainPuzzle` encoding also remains open.
+The quantum delay bound for the exact `PointerChainPuzzle` construction remains open.
 
 ## Finite windows for the exact pointer-chain encoding
 
@@ -178,8 +178,21 @@ The rank-frontier lemmas provide another prerequisite. A path input for the next
 query round depends only on labels received in preceding honest rounds; inputs further
 ahead have an unreached predecessor and a bounded per-point incidence. The commitment's
 output is already public, but its oracle cell cannot be made available early because its
-input contains the secret key. The remaining coupling, quantum schedule and final-guess
-obligations are listed in the [design note](../../design/quantum-layer.md#17-exact-pointer-chain-encoding-prerequisites).
+input contains the secret key. The remaining quantum schedule and final-guess obligations
+are listed in the [design note](../../design/quantum-layer.md#17-exact-pointer-chain-encoding-prerequisites).
+
+The rank-ordered programming coupling is proved separately.
+`PointerChainPuzzle.LeanSeal.qromDelayAdvantage_quantumWindowScheme_le_programmed` bounds
+actual recovery by `programmedWindowRecoveryAdvantage + solvePoints(n,m)^2 / |Bytes 32|`.
+The programmed game samples full raw path responses independently and uses the resulting
+completed oracle for both adversary phases. Its preprocessing memory is retained, and the
+hidden key remains joint with the endpoint event. The path-input collision allowance is
+charged once; the path responses are not conditioned on collision-freedom.
+
+This comparison needs no adversary query budget. Security against bounded-round attackers
+still requires a quantum bound on the programmed game. See the
+[coupling specification](../../design/quantum-layer.md#18-rank-ordered-programming-coupling)
+for the causal order, collision event and preprocessing conventions.
 
 ## Checks
 

@@ -314,7 +314,7 @@ generation and solving algorithms, whose recovery probability equals that of thi
 is `MaskedChainPuzzle.qromDelayAdvantage_le`. The
 [query-bounded preprocessing extension](7-time-lock-puzzles.md#query-bounded-preprocessing-security)
 adds a round-aware hybrid error while retaining the adversary's complete memory.
-The exact `PointerChainPuzzle` encoding remains separate work.
+The quantum delay bound for the exact `PointerChainPuzzle` construction remains separate work.
 
 ## Raw encodings and full-table completion
 

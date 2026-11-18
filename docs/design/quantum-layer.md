@@ -296,8 +296,8 @@ These results implement the direct reprogramming, adaptive hybrid and round/poin
 search part of M3a. Exact sums of square roots for deterministic width profiles remain open. The changing-property directional recurrence and its adaptive
 mixed-state and total-budget transports (M−1), the general final-measurement lemma (M0), and CFHL
 compressed-oracle bounds are separate obligations. The state-conditioned hybrid also supports
-the idealized endpoint result and its query-bounded preprocessing extension below. The exact
-`PointerChainPuzzle` encoding remains future work.
+the idealized endpoint result and its query-bounded preprocessing extension below. A quantum
+delay bound for the exact `PointerChainPuzzle` construction remains future work.
 
 `Oracle/ParallelFinding.lean` packages the shared search argument. A fixed reference execution
 and pointwise weighted incidence `δ` bound a weighted family of hidden-set finding experiments
@@ -373,7 +373,7 @@ two-phase experiment, using the no-preprocessing adversary adapter, to the endpo
 one function and jointly retained hidden tuple. `MaskedChainPuzzle.qromDelayAdvantage_le`
 therefore gives the same explicit bound for that named scheme. This establishes the idealized
 no-preprocessing application. The extension below handles query-bounded preprocessing;
-the exact pointer-chain encoding remains separate.
+the quantum delay bound for the exact pointer-chain construction remains separate.
 
 ### 15. Query-bounded preprocessing
 
@@ -468,8 +468,60 @@ resampled. Next-round inputs depend only on the preceding rank prefix. Resamplin
 the public commitment label, but its oracle cell must stay unprogrammed until its rank:
 that input contains the secret key.
 
-The remaining security obligations are an exact programmed-table coupling for the full
-honest generator, rank-cutoff oracle schedules and reference-state independence, the quantum
+The programmed-table coupling for the full honest generator is proved below. The remaining
+security obligations are rank-cutoff oracle schedules and reference-state independence, the quantum
 hybrid using that incidence bound, final key guessing with the hidden key jointly retained,
 query-bounded preprocessing, and a quantum truncation theorem for success before a deadline.
 Encoding equality and classical rank incidence alone do not establish those lower bounds.
+
+For planning, the coarse event-distance hybrid would contribute
+`4 * q * sqrt (k * hitBound)`. Both parts of `hitBound` matter. With `n ≥ 2`, `q ≈ solvePoints ≈ 2^60`,
+`k = 2^40`, `|S| = 2^256` and `b = 32`, the state term `solvePoints/|S| ≈ 2^-196`
+dominates the link term `1/|L| = 2^-256`; the coarse contribution is about `2^-16`.
+At `b = 16`, the link term makes that target vacuous. These are estimates for an unproved
+bound, rather than security parameters. Before converting each hybrid step to an event
+probability error, investigate accumulating the square-root probability bounds and squaring
+only at the end; the current template's square-root loss is not a general impossibility result.
+
+The intended finite-window delay bound should be uniform in the input-length limit. Its error
+terms should depend on query resources and state/link widths, while the window appears only
+in the oracle and adversary types. Such a statement would cover each fixed byte window without a
+claim that arbitrary-length extra oracle queries have already been simulated. A coherent
+embedding between different windows remains a separate transport lemma.
+
+### 18. Rank-ordered programming coupling
+
+`PointerChainPuzzle.LeanSeal.programPath` programs a complete raw oracle using one independent
+32-byte response for each path node. The typed path labels take the mask prefix and retain
+the full state response at every other node. Their distribution is the uniform typed-label
+distribution; all complementary raw bytes remain in the sampled path words.
+
+`Equiv.tableLabelExchangeList` exchanges table cells with auxiliary labels. Its addresses
+depend on predecessor labels, independently of the label being exchanged and of the table.
+Reverse execution writes the supplied labels in reverse rank order. The generic inverse-table
+identity requires a causal order and distinct nodes, but permits repeated oracle inputs.
+It preserves the complete joint uniform law, including displaced values and current response
+tails. The resulting programmed raw oracle has the uniform oracle marginal even on collisions.
+
+Distinct path inputs let the honest generator recover the prescribed labels. The event being
+charged is two different path nodes sharing an oracle input, rather than equal output labels.
+For one chain with one step, equal labels are harmless because its query families are distinct;
+with two steps, repeating an intermediate state can cause two queries to the same step cell.
+
+`PointerChainPuzzle.LeanSeal.real_le_programmed_add_collision` proves the resulting game hop
+for every observer `F(H, puzzle, key) ≤ 1`, retaining the completed oracle and hidden key jointly.
+The collision allowance is `solvePoints(n,m)^2 / |Bytes 32|`, charged once after averaging the
+salt, first link and masked links. The programmed experiment samples its path words
+unconditionally. Conditioning those words on collision-freedom would invalidate the freshness
+argument needed by the later quantum hybrid.
+
+`qromDelayAdvantage_quantumWindowScheme_le_programmed` transfers this bound to the actual
+quantum scheme experiment, with a separate `min 1` corollary. In its programmed game, both
+preprocessing and online execution use the same completed programmed oracle; the actual
+retained preprocessing register and classical state persist. No query budget or losslessness
+assumption is needed for this comparison. Replacing preprocessing by a run against the base
+oracle is a later hybrid step, and its query-dependent cost is not hidden in the collision term.
+
+The collision allowance is independent of the finite byte-window length. The adversary still
+has the explicit window scope and structured public puzzles. A quantum bound on recovery in
+the programmed game, and hence the exact construction's delay theorem, remains open.

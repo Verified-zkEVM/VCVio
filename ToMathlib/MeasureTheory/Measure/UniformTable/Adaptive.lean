@@ -16,7 +16,7 @@ label being exchanged and does not depend on the table. This makes the exchange 
 
 Composing exchanges in any order therefore preserves the complete uniform joint law, including
 all displaced values. For a causal order of distinct labels, the inverse table is obtained by
-writing the fixed original labels in reverse order. Each write retains the tail of the current
+writing the supplied labels in reverse order. Each write retains the tail of the current
 table response, even when two writes address the same cell.
 -/
 
@@ -88,7 +88,6 @@ theorem tableLabelExchange_symm_apply {T : Type*} (v : V) (input : (∀ w, A w) 
     (p : (D → M) × (∀ w, A w)) :
     (tableLabelExchange v input split hinput).symm p =
       tableLabelExchangeStep v input split p := rfl
-
 
 /-- Execute a list of adaptive exchanges from its head to its tail. -/
 @[expose]
@@ -187,7 +186,7 @@ theorem tableLabelProgram_apply_of_injective
     · rw [tableLabelProgram, Function.update_of_ne (fun he ↦ hvw (hinj he))]
       exact ih hn.2 ((List.mem_cons.mp hv).resolve_left hvw)
 
-/-- In a causal list of distinct labels, the inverse exchange table writes the original labels
+/-- In a causal list of distinct labels, the inverse exchange table writes the supplied labels
 in reverse order. No distinctness assumption is imposed on the addressed table cells. -/
 theorem tableLabelExchangeList_symm_fst [DecidableEq V]
     (input : V → (∀ w, A w) → D) (split : ∀ v, M ≃ A v × Tail v)
@@ -218,7 +217,7 @@ namespace ProbabilityTheory
 open MeasureTheory
 
 /-- Reversing an adaptive exchange permutation preserves every finite uniform joint experiment.
-The continuation may observe the complete table and all original labels together. -/
+The continuation may observe the complete table and all label coordinates together. -/
 theorem uniformOn_univ_bind_tableLabelExchangeList_symm
     {D V M : Type*} {A Tail : V → Type*} [DecidableEq D] [DecidableEq V]
     [Finite ((D → M) × (∀ w, A w))]
