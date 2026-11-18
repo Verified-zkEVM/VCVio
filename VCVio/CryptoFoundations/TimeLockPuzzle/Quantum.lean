@@ -266,6 +266,20 @@ theorem sampledDelayLawWith_apply {Ω β : Type*} [Fintype Ω] [MeasurableSpace 
   rw [sampledDelayLawWith, Measure.smul_apply, Measure.coe_finsetSum, Finset.sum_apply,
     smul_eq_mul, Finset.mul_sum]
 
+/-- A bijective reparameterization preserves the complete three-phase experiment. The
+observer retains the same sampled runtime parameter jointly with the hidden generator data,
+preprocessing branch and final output. No query or losslessness assumptions are needed. -/
+theorem sampledDelayLawWith_equiv {Ω Ω' β : Type*} [Fintype Ω] [Fintype Ω']
+    [MeasurableSpace β] (e : Ω ≃ Ω') (R : Ω' → QuantumRuntime spec)
+    (tlp : TimeLockPuzzle spec Puzzle Key) (adv : TwoPhaseAdversary spec Puzzle Out)
+    (f : Ω' → DelayTranscript tlp adv → β) :
+    sampledDelayLawWith R tlp adv f =
+      sampledDelayLawWith (fun ω ↦ R (e ω)) tlp adv (fun ω ↦ f (e ω)) := by
+  unfold sampledDelayLawWith
+  rw [Fintype.card_congr e]
+  congr 1
+  exact (e.sum_comp (fun ω ↦ delayLawWith (R ω) tlp adv (f ω))).symm
+
 /-- Recovery against one uniformly chosen runtime, with the adversary fixed before sampling. -/
 @[expose]
 noncomputable def sampledDelayAdvantage {Ω : Type*} [Fintype Ω] [DecidableEq Key]
@@ -281,6 +295,16 @@ theorem sampledDelayAdvantage_eq_sum {Ω : Type*} [Fintype Ω] [DecidableEq Key]
       ∑ ω, (Fintype.card Ω : ℝ≥0∞)⁻¹ * delayAdvantage (R ω) tlp adv := by
   rw [sampledDelayAdvantage, sampledDelayLawWith_apply]
   rfl
+
+/-- A bijective reparameterization preserves key-recovery probability for the actual
+three-phase experiment, including arbitrary retained preprocessing memory. -/
+theorem sampledDelayAdvantage_equiv {Ω Ω' : Type*} [Fintype Ω] [Fintype Ω']
+    [DecidableEq Key] (e : Ω ≃ Ω') (R : Ω' → QuantumRuntime spec)
+    (tlp : TimeLockPuzzle spec Puzzle Key) (adv : Adversary spec Puzzle Key) :
+    sampledDelayAdvantage R tlp adv =
+      sampledDelayAdvantage (fun ω ↦ R (e ω)) tlp adv := by
+  exact congrArg (fun μ : Measure Bool ↦ μ {true})
+    (sampledDelayLawWith_equiv e R tlp adv (fun _ t ↦ decide (t.output = t.key)))
 
 /-- Uniformly sampling a runtime preserves the unconditional probability bound. -/
 theorem sampledDelayAdvantage_le_one {Ω : Type*} [Fintype Ω] [Nonempty Ω] [DecidableEq Key]
