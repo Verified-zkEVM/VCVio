@@ -260,7 +260,10 @@ Two failure classes recur:
 - **Bounds over every adversary**: a hypothesis `∀ adv, Adv adv ≤ ε` over an adversary type is
   satisfiable only at `ε` as large as exhaustive search achieves, query budgets notwithstanding,
   so the theorem is empty at real parameters. Assume the bound for the named distinguisher
-  ([crypto.md](crypto.md#name-the-reduction-in-the-theorem-statement)).
+  ([crypto.md](crypto.md#name-the-reduction-in-the-theorem-statement)). The exception is security
+  that is statistical in the pure random oracle model, where the adversary's only access to the
+  secrets is through its bounded oracle queries, as for Merkle-tree commitments
+  (`VCVio/CryptoFoundations/VectorCommitment/Hiding.lean`).
 
 **Fix**: when compatibility of a new hypothesis bundle is not immediate, ship a kernel-checked
 witness for the whole bundle (or at least each nontrivial compatibility pair) in the same PR.
