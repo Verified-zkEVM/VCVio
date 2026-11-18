@@ -12,9 +12,16 @@ public import VCVio.OracleComp.QueryTracking.RandomOracle.CachePartial.Hint
 /-!
 # Replaying WOTS+ chain readings from a cache hint
 
-A public label can select one cache for several hidden oracle histories. Every settled WOTS+
-chain reading survives the choice when the selected cache contains each answer already present.
-A family with consistent answers within each label admits such a choice for all chain inputs.
+Consider two steps of a WOTS+ chain starting at `x`. At hash address `i`, the first query
+hashes `x` to `y`. At address `i + 1`, the next query hashes `y` to `z`. Its input depends
+on the first answer. If both entries occur in the same source cache, any cache extending it
+replays the two steps and returns `z`. The
+[two-step regression](../../../HashSigTest/SLHDSA/HintCache.lean)
+checks this with the public hash queries used by the chain reader.
+
+A public hint can select one replay cache for several source caches. If those sharing a hint
+agree on every query they both answer, `exists_hint_cache_for_chains` supplies a single choice
+per hint that preserves every successful chain read at every starting input and length.
 -/
 
 public section
