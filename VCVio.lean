@@ -697,7 +697,11 @@ public import VCVio.Schemes.PointerChainPuzzle.LeanSealHidingBridge
 public import VCVio.Schemes.PointerChainPuzzle.LeanSealHidingEncoding
 public import VCVio.Schemes.PointerChainPuzzle.Path
 public import VCVio.Schemes.PointerChainPuzzle.QuantumCoupling
+public import VCVio.Schemes.PointerChainPuzzle.QuantumCoupling.Incidence
 public import VCVio.Schemes.PointerChainPuzzle.QuantumCoupling.Programming
+public import VCVio.Schemes.PointerChainPuzzle.QuantumCoupling.RankBounds
+public import VCVio.Schemes.PointerChainPuzzle.QuantumCoupling.RankHybrid
+public import VCVio.Schemes.PointerChainPuzzle.QuantumCoupling.RankSchedule
 public import VCVio.Schemes.PointerChainPuzzle.QuantumCoupling.Scheme
 public import VCVio.Schemes.PointerChainPuzzle.QuantumEncoding
 public import VCVio.Schemes.PointerChainPuzzle.RankFrontier
