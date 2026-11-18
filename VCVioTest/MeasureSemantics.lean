@@ -9,17 +9,18 @@ public import VCVio.EvalDist.ResumptionMeasure
 public import VCVio.EvalDist.Divergence.KLDivergence
 public import VCVio.EvalDist.MeasureTVDist.Basic
 public import VCVio.OracleComp.EvalDist.Measure
-public import VCVio.ProgramLogic.Relational.Measure
+public import PolyFun.Control.Monad.Measure.Relational
+public import VCVio.EvalDist.Defs.Measure.Core
 public import ToMathlib.Probability.Divergence.RenyiTotalVariation
 public import Mathlib.Probability.Distributions.Gaussian.Real
-public import ToMathlib.MeasureTheory.DiscreteInstances
+public import ToCslib.MeasureTheory.MeasurableSpace.Instances
 public import Examples.OneTimePad.Basic
 
 /-!
 # Canaries for the measure denotation
 
-Checks on the measure denotation of `VCVio.EvalDist.PFunctorMeasure.Core`, kept in the test
-library so they stay out of the timed build.
+Checks on the measure denotation of `PolyFun.PFunctor.Free.Measure`, kept in the test library so
+they stay out of the timed build.
 
 The continuous oracle is the capability check. Its answers are drawn from
 `ProbabilityTheory.gaussianReal`, which has no atoms, so no countably supported distribution can

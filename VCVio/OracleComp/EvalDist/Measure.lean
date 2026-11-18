@@ -11,7 +11,7 @@ public import VCVio.OracleComp.EvalDist.AnswerMeasure
 public import VCVio.EvalDist.Monad.Option
 public import VCVio.EvalDist.EvalDistEq
 import VCVio.EvalDist.FiniteSupport
-import ToMathlib.Probability.UniformOn
+import ToCslib.Probability.UniformOn
 import ToMathlib.MeasureTheory.Measure.Bounds
 
 /-!

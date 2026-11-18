@@ -7,8 +7,12 @@ Authors: Devon Tuma
 module
 
 public import VCVio.EvalDist.MeasureTVDist.Bind
-public import VCVio.EvalDist.Defs.Measure.Deterministic
-public import ToMathlib.MeasureTheory.MeasurableSpace.Option
+public import PolyFun.Control.Monad.Measure.Deterministic
+public import VCVio.EvalDist.Defs.Measure.Core
+public import VCVio.EvalDist.ProbabilityNotation
+public import ToMathlib.Control.Except
+public import ToMathlib.Control.Option
+public import ToCslib.MeasureTheory.MeasurableSpace.Option
 public import Mathlib.Probability.Distributions.Gaussian.Real
 
 /-!

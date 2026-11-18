@@ -6,7 +6,7 @@ Authors: Devon Tuma
 
 module
 
-public import ToMathlib.MeasureTheory.Measure.Coupling
+public import ToCslib.MeasureTheory.Measure.Coupling
 public import ToMathlib.MeasureTheory.Measure.TotalVariation
 public import Mathlib.MeasureTheory.Measure.Dirac.Basic
 public import Mathlib.MeasureTheory.Measure.Sub

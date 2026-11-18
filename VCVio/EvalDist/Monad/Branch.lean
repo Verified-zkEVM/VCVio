@@ -7,7 +7,9 @@ Authors: Devon Tuma
 module
 
 public import VCVio.EvalDist.ProbabilityNotation
-public import VCVio.EvalDist.Lossless
+public import PolyFun.Control.Monad.Measure.Lossless
+public import Mathlib.MeasureTheory.Measure.ProbabilityMeasure
+public import VCVio.EvalDist.Defs.Measure.Core
 public import Mathlib.MeasureTheory.Integral.Lebesgue.Countable
 public import Mathlib.Data.Fintype.Sets
 

@@ -2,9 +2,12 @@
 # scripts/check-polyfun-boundary.sh
 #
 # Enforce the public package boundary between VCVio and PolyFun. A downstream
-# package must never use `import all PolyFun.…`: doing so makes VCVio depend on
-# declarations that PolyFun intentionally kept private and turns a module
-# migration into an accidental API expansion.
+# package must never use `import all PolyFun.…` or `import all ToCslib.…`: doing
+# so makes VCVio depend on declarations that PolyFun intentionally kept private
+# and turns a module migration into an accidental API expansion. `ToCslib` is
+# PolyFun's staging library for cslib and Mathlib, including the measure and
+# kernel lemmas under `ToCslib.MeasureTheory` and `ToCslib.Probability` that
+# VCVio's probability semantics imports.
 #
 # Exit code:
 #   0 — no violations.
@@ -38,7 +41,7 @@ else
   done
 fi
 
-forbidden_re='^[[:space:]]*(meta[[:space:]]+)?import[[:space:]]+all[[:space:]]+PolyFun(\.|[[:space:]]|$)'
+forbidden_re='^[[:space:]]*(meta[[:space:]]+)?import[[:space:]]+all[[:space:]]+(PolyFun|ToCslib)(\.|[[:space:]]|$)'
 violations=0
 
 for target in "${TARGETS[@]}"; do
