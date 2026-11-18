@@ -20,6 +20,7 @@ the PDF page of the version linked.
 | `norm_queryState_sub_queryState_le` | Bennett, Bernstein, Brassard, Vazirani, [arXiv quant-ph/9701001](https://arxiv.org/abs/quant-ph/9701001), Theorem 3.3, pp. 7–8 | the hybrid step, for contractions |
 | `oracleUnitary`, `qromEvalDist` | Boneh et al., *Random Oracles in a Quantum World*, [arXiv:1008.0931v2](https://arxiv.org/abs/1008.0931v2), §2.1, p. 7 | additive groups in place of XOR |
 | `parallelOracleUnitary`, `batch_oracleQuery`, `qromBatchEvalDist` | Chung, Fehr, Huang, Liao, [arXiv:2010.11658v4](https://arxiv.org/abs/2010.11658v4), §4.4, pp. 12–13 | simultaneous additive queries; variable classical widths and one shared random function |
+| `Quantum.MaskedChain.recoveryAdvantage_le` | Afshar, Chung, Hsieh, Lin, Mahmoody, [ePrint 2023/932](https://eprint.iacr.org/2023/932), §5, Definition 5.1, Theorem 5.3 and Lemmas 5.4–5.5, pp. 24–28 | endpoint-only adaptation of the full-tuple bound, retaining the hidden tuple jointly; finite abelian groups and explicit error terms |
 | `QueryCache.flip`, `instability`, `condFlip` | Chiesa, Manohar, Spooner, [ePrint 2019/834](https://eprint.iacr.org/2019/834), Definitions 5.4, 5.6, 5.11, pp. 23–26 | any answer measure |
 | `partitionInstability` | Chiesa, Di, Hu, Zheng, [ePrint 2025/2166](https://eprint.iacr.org/2025/2166), Definition 5.3, p. 31 | any indexed family |
 | `instability_cacheHasCollision_le` | CMS19 Lemma 6.11, p. 35; CDHZ Lemma 8.7, p. 56 | the sharper $(t-1)/n$ |

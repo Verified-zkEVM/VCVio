@@ -621,6 +621,10 @@ public import VCVio.Quantum.Oracle.Compressed.Size
 public import VCVio.Quantum.Oracle.Compressed.Truncation
 public import VCVio.Quantum.Oracle.Emulated
 public import VCVio.Quantum.Oracle.EmulatedTensor
+public import VCVio.Quantum.Oracle.MaskedChain.Bounds
+public import VCVio.Quantum.Oracle.MaskedChain.Coupling
+public import VCVio.Quantum.Oracle.MaskedChain.Hybrid
+public import VCVio.Quantum.Oracle.MaskedChain.Model
 public import VCVio.Quantum.Oracle.Model
 public import VCVio.Quantum.Oracle.Parallel
 public import VCVio.Quantum.Oracle.ParallelHybrid

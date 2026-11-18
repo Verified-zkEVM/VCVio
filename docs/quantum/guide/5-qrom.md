@@ -224,8 +224,47 @@ The proof sums singleton union weights over all marks in the mark-independent ze
 reference execution before aggregating the square-root errors.
 
 This is the unique-mark oracle experiment. Random-function preimage search, exact sums of
-square roots for deterministic width profiles, endpoint and preprocessing results, and
+square roots for deterministic width profiles, preprocessing results, and
 changing-property compressed-oracle bounds remain separate work.
+
+## Endpoint recovery for an idealized masked chain
+
+`Quantum.MaskedChain.recoveryLaw` samples one uniform function `H : G → G` and `q + 2`
+independent uniform vertices `x₀, …, x_{q+1}` in a finite abelian group. It publishes `x₀`
+and the `q + 1` masks `H(xᵢ) + xᵢ₊₁`. An online adversary receives this public puzzle,
+queries the same `H`, and outputs one candidate for `x_{q+1}`. It need not output the chain.
+Its program family, local operations and initial quantum substate are fixed before sampling;
+this experiment has no oracle preprocessing.
+
+`Quantum.MaskedChain.recoveryAdvantage_le` bounds that endpoint-only event. For at most `q`
+online rounds of width at most `k`, with `N = |G|`, it proves
+
+\[
+ p \le \min\left\{1,\;
+   \frac{1}{N} + \frac{\binom{q+2}{2}}{N}
+     + 4\sum_{h=0}^{q-1}\sqrt{\frac{k(q-h)}{N}}
+   \right\}.
+\]
+
+The expression inside the minimum is `Quantum.MaskedChain.recoveryBound`.
+The three terms account for fresh guessing, vertex collisions and the hybrid errors.
+The hybrid sum is at most `4q * sqrt(kq / N)`. Adaptive widths, repeated query inputs,
+zero-width rounds and mixed or subnormalized initial states are allowed. Missing mass
+counts as failure.
+
+The proof keeps the oracle, full hidden vertex tuple, public masks and endpoint comparison
+joint. A classical coupling moves randomness from oracle values to the public masks,
+charging vertex collisions. Each hybrid changes one numbered oracle call. Earlier calls
+depend only on the known prefix, so future input vertices can be resampled independently of
+that call's input state. Their incidence bounds the mean disagreement weight. In the last
+hybrid, the hidden endpoint is fresh, leaving the `1 / N` guessing term. This uses the
+parallel reprogramming argument rather than a compressed-oracle bound.
+
+The experiment and theorem are in `Oracle/MaskedChain/Model.lean` and
+`Oracle/MaskedChain/Bounds.lean`, with the classical coupling and scheduled hybrids in sibling
+modules. They follow Afshar et al., §5, while observing only the endpoint. The two-phase
+[puzzle interface](7-time-lock-puzzles.md) also permits preprocessing; this online theorem
+does not establish security with preprocessing or for the exact `PointerChainPuzzle` encoding.
 
 ## Checks
 

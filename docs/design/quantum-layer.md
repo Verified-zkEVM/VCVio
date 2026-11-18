@@ -296,9 +296,9 @@ These results implement the direct reprogramming, adaptive hybrid and round/poin
 search part of M3a. Random-function preimage search and exact sums of square roots for deterministic
 width profiles remain open. The changing-property directional recurrence and its adaptive
 mixed-state and total-budget transports (M−1), the general final-measurement lemma (M0), and CFHL
-compressed-oracle bounds are separate obligations. The state-conditioned hybrid is a prerequisite
-for endpoint-only results (M6b); preprocessing and the exact `PointerChainPuzzle` encoding remain
-future work.
+compressed-oracle bounds are separate obligations. The state-conditioned hybrid also supports
+the idealized endpoint result below; preprocessing and the exact `PointerChainPuzzle` encoding
+remain future work.
 
 ### 13. Quantum delay experiments
 
@@ -318,3 +318,32 @@ the key and secret jointly with the leaf. The scalar-generation specialization u
 private register of a fixed-function runtime; the underlying instrument factorization preserves
 private memory for general runtimes. The quantum experiment permits preprocessing, without
 asserting a delay theorem for positive preprocessing budgets.
+
+### 14. Idealized endpoint-only sequentiality
+
+`Oracle/MaskedChain/Model.lean` defines the no-preprocessing recovery experiment. One uniform
+function `H : G → G` supplies both the public masks and all online quantum answers. A challenge
+samples `q + 2` independent uniform vertices in a finite abelian group `G` and publishes the
+initial vertex and `q + 1` masks `H(xᵢ) + xᵢ₊₁`. The adversary outputs only a candidate endpoint.
+Its local interpretation, initial substate and public-puzzle-indexed program family are fixed
+before the function and challenge are sampled.
+
+`Quantum.MaskedChain.recoveryAdvantage_le` bounds success for `q` adaptive online rounds of
+width at most `k` by `min 1 (recoveryBound G q k)`. Writing `N = |G|`, the explicit bound is
+`1/N + choose(q+2, 2)/N + 4 * ∑ h < q, sqrt(k * (q-h) / N)`. The first term is final guessing,
+the second is the birthday collision bound, and the last has order `sqrt(kq³ / N)`.
+Repeated query inputs, zero-width rounds and mixed or subnormalized initial states are allowed.
+
+The classical coupling retains the full hidden tuple while replacing oracle-derived masks
+with independent public masks. Programmed inputs use their earliest occurrence on a collision;
+agreement is required only outside the explicitly charged collision event. Numbered-call
+hybrids then change one answering step at a time. Resampling future vertices keeps the earlier
+execution unchanged, supplying the independence needed by the averaged reprogramming estimate.
+Every comparison keeps the endpoint-dependent event joint with the challenger data. The final
+reference execution is independent of the endpoint.
+
+The generic table resampling, coordinate and collision facts live in
+`ToMathlib/MeasureTheory/Measure/UniformTable/Bounds.lean`; the masked-chain coupling and quantum
+hybrids remain in `Oracle/MaskedChain/`. This implements the idealized endpoint-only bound of
+the M6b track through the Afshar et al. §5 hybrid argument. Quantum preprocessing and the exact
+`PointerChainPuzzle` encoding are separate obligations, as are sharper compressed-oracle bounds.
