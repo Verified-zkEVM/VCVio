@@ -457,6 +457,7 @@ public import VCVio.OracleComp.QueryTracking.QueryLogCheck
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
 public import VCVio.OracleComp.QueryTracking.RandomOracle.CachePartial
 public import VCVio.OracleComp.QueryTracking.RandomOracle.CachePartial.Cost
+public import VCVio.OracleComp.QueryTracking.RandomOracle.CachePartial.Hint
 public import VCVio.OracleComp.QueryTracking.RandomOracle.ClassIndexedTape
 public import VCVio.OracleComp.QueryTracking.RandomOracle.ClassIndexedTape.HitPotential
 public import VCVio.OracleComp.QueryTracking.RandomOracle.ClassIndexedTape.Position
