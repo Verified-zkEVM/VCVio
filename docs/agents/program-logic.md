@@ -184,9 +184,9 @@ and VCVio's own structural steps continue. `vcstep` and the `?` replays do not t
 A core triple in the necessary reading (`open scoped OracleComp.Necessary`), and a support
 statement `∀ x ∈ support oa, post x`, which `pvcgen` first restates as `⦃ True ⦄ oa ⦃ post ⦄`
 (`OracleComp.Necessary.triple_true_iff_forall_support`), go to core `vcgen` in the same way,
-opening only the necessary reading, with the rules of `Unary/WP/NecessarySpecs.lean`: core
-descends through every draw and query. The verification conditions that `simp_all` closes are closed, and
-the weakest precondition of an opaque sub-program without a rule is read back as a support
+using the interpretation in the goal and the rules of `Unary/WP/NecessarySpecs.lean`. Core
+descends through draws and queries. `simp_all` discharges the resulting verification conditions
+where possible. The weakest precondition of an opaque sub-program is read back as a support
 statement, so the next pass introduces its output and continues into the rest of the program.
 `VCVioTest/ProgramLogic/VCGenCoreNecessary.lean` exercises it.
 

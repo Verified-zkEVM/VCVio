@@ -375,10 +375,8 @@ private def supportForallComp? (target : Expr) : Option Expr := do
   guard !oa.hasLooseBVars
   some oa
 
-/-- Hand a goal in the necessary reading to core `vcgen`, opening `OracleComp.Necessary` and no
-other reading: a core triple read by `OracleComp.Necessary.instWP` or PolyFun's demonic reading,
-or a support statement `∀ x ∈ support oa, post x`, which is
-first restated as the triple `⦃ True ⦄ oa ⦃ post ⦄`
+/-- Hand a core triple read by `OracleComp.Necessary.instWP` or PolyFun's demonic reading to
+core `vcgen`. A support statement `∀ x ∈ support oa, post x` is first restated as the triple `⦃ True ⦄ oa ⦃ post ⦄`
 (`OracleComp.Necessary.triple_true_iff_forall_support`). Core steps through the program with
 the `@[spec]` rules of `VCVio.ProgramLogic.Unary.WP.NecessarySpecs`, a draw or query returning
 any value, and with the triples in the local context. The weakest precondition of an opaque
@@ -396,9 +394,7 @@ private def tryCoreVCGenNecessary : TacticM Bool := withMainContext do
           return false
         pure oa
     | none, none => return false
-  unless ← runCoreVCGenFrom saved
-      (← `(tactic| open scoped OracleComp.Necessary in vcgen (errorOnMissingSpec := false)))
-      comp do
+  unless ← runCoreVCGenFrom saved (← `(tactic| vcgen (errorOnMissingSpec := false))) comp do
     return false
   let mut readBack := #[]
   for g in ← getGoals do
@@ -432,7 +428,7 @@ private def tryCoreVCGenLower : TacticM Bool := withMainContext do
       `(tactic| open scoped OracleComp.Lower.Pointwise in
           vcgen (errorOnMissingSpec := false))
     else
-      `(tactic| open scoped OracleComp.Lower in vcgen (errorOnMissingSpec := false))
+      `(tactic| vcgen (errorOnMissingSpec := false))
   unless ← runCoreVCGenFrom (← saveState) stx comp do return false
   let goals ← getGoals
   let mut readBack := #[]
@@ -456,7 +452,7 @@ private def tryCoreVCGenLower : TacticM Bool := withMainContext do
   setGoals readBack.toList
   return true
 
-/-- Hand the main goal to core `vcgen`, opening one reading of oracle computations: the
+/-- Hand the main goal to core `vcgen` in its existing oracle interpretation. Use the
 necessary reading for a core triple in that reading or a support statement
 `∀ x ∈ support oa, post x` (`tryCoreVCGenNecessary`), and the lower reading for a triple whose
 precondition is in `ℝ≥0∞` (`tryCoreVCGenLower`). Fails, restoring the state, when core makes no
