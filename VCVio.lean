@@ -633,6 +633,9 @@ public import VCVio.Quantum.Oracle.MaskedChain.Coupling
 public import VCVio.Quantum.Oracle.MaskedChain.Homogeneous
 public import VCVio.Quantum.Oracle.MaskedChain.Hybrid
 public import VCVio.Quantum.Oracle.MaskedChain.Model
+public import VCVio.Quantum.Oracle.MaskedChain.Preprocessing
+public import VCVio.Quantum.Oracle.MaskedChain.Preprocessing.DropEmpty
+public import VCVio.Quantum.Oracle.MaskedChain.Preprocessing.Model
 public import VCVio.Quantum.Oracle.Model
 public import VCVio.Quantum.Oracle.Parallel
 public import VCVio.Quantum.Oracle.ParallelFinding
@@ -670,6 +673,7 @@ public import VCVio.Schemes.KEMDEM
 public import VCVio.Schemes.KEMDEM.Measure
 public import VCVio.Schemes.MacFromPRF
 public import VCVio.Schemes.MaskedChainPuzzle
+public import VCVio.Schemes.MaskedChainPuzzle.Preprocessing
 public import VCVio.Schemes.Pedersen
 public import VCVio.Schemes.PointerChainPuzzle.Bad
 public import VCVio.Schemes.PointerChainPuzzle.Basic

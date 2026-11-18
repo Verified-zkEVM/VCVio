@@ -43,9 +43,12 @@ Recovery compares only the output with the actual key.
 
 ## Resources and classical generators
 
-`DelayBudget` separates preprocessing points from online rounds, points and maximum width.
+`DelayBudget` separates preprocessing rounds and points from online rounds, points and maximum width.
 `TwoPhaseAdversary.IsQueryBound` imposes these bounds on every possible continuation,
 including branches of weight zero. Honest generation consumes none of the online budget.
+This is query-bounded preprocessing with unrestricted retained classical and quantum memory.
+It differs from auxiliary-input security, which permits unbounded preprocessing and limits
+the advice retained for the online attack.
 `QROMDelaySecure` quantifies over adversaries satisfying such a budget; it is a security
 target to establish from an oracle argument. Assuming it for the puzzle under analysis
 would assume the required delay bound. A theorem about a named adversary adapter establishes
@@ -53,18 +56,19 @@ the predicate only after proving that the adapter covers all admissible two-phas
 
 Classical honest puzzles embed through `TimeLockPuzzle.toQuantum`, preserving generation
 round and point bounds. `Quantum.TimeLockPuzzle.ofClassicalGenerator` also allows arbitrary
-hidden classical generator data. For adversaries without preprocessing,
-`delayLawWith_withoutPreprocessing_ofClassicalGenerator` expresses the complete observed law
-as a classical generator average of online laws under the same fixed function. The observer
-may jointly inspect the key, secret and final leaf. The key-only corollary is
-`delayAdvantage_withoutPreprocessing_ofClassicalGenerator`.
+hidden classical generator data. `delayLawWith_ofClassicalGenerator` expresses the complete
+observed law as a classical generator average of online laws starting from the actual
+preprocessing post-states under the same fixed function. The observer may jointly inspect
+the preprocessing branch, key, secret and final leaf. `delayLawWith_ofClassicalGenerator_eq_sum`
+fuses preprocessing and online execution when the observer uses only generator data and the
+final leaf. Its key-recovery corollary is `delayAdvantage_ofClassicalGenerator`.
 
 That averaging result uses the trivial private register of a fixed-function runtime.
 The underlying instrument factorization, `delayInstrument_withoutPreprocessing`, applies to
 stateful runtimes too and keeps their private state throughout.
 
-The experiment interface permits preprocessing. A security theorem proved only for an
-online adversary without preprocessing does not establish `QROMDelaySecure` for arbitrary
+The corresponding laws without preprocessing remain available. A theorem proved only for
+that restricted adversary class does not establish `QROMDelaySecure` for arbitrary
 preprocessing budgets.
 
 ## The idealized masked-chain puzzle
@@ -99,8 +103,49 @@ with the full hidden tuple jointly sampled with the masks and endpoint check.
 an adversary using at most `q` online rounds of width at most `k` has recovery probability
 at most `min 1 (Quantum.MaskedChain.recoveryBound G q k)`. Generation is outside its online
 clock, and missing mass counts as failure. The adapter's preprocessing point budget is zero
-(`MaskedChainPuzzle.adversary_isQueryBound`). Bounds with quantum oracle preprocessing and
-for the exact `PointerChainPuzzle` encoding remain open.
+(`MaskedChainPuzzle.adversary_isQueryBound`).
+
+## Query-bounded preprocessing security
+
+`Quantum.MaskedChain.PreprocessingAdversary` is the full two-phase adversary type for the
+idealized puzzle. Its preprocessing output may select both a retained quantum register and
+an unrestricted classical state. Its online program can depend on these and on the public
+puzzle. The entire adversary and initial state are fixed before the oracle is sampled.
+
+`preprocessedRecoveryAdvantage_le` adds preprocessing error to the endpoint bound:
+
+\[
+\Pr[\mathrm{output}=x_{q+1}]\leq
+\min\left(1,\operatorname{recoveryBound}(G,q,k)
++4\sqrt{\frac{r_{\rm pre}Q_{\rm pre}(q+1)}{|G|}}\right).
+\]
+
+Here preprocessing has at most $r_{\rm pre}$ rounds and $Q_{\rm pre}$ points, while the online
+phase has at most `q` rounds of width at most `k`. The proof compares preprocessing under two oracles
+that differ on the freshly sampled chain inputs. It keeps the hidden tuple joint with the
+final endpoint event. The reference preprocessing may depend on the base oracle; the
+conditional online argument applies to each retained state with a bound proportional to its
+raw trace. Summing those traces charges the online error once, without conditioning on survival.
+
+`preprocessedRecoveryAdvantage_le_min` improves the preprocessing error by replacing `rpre`
+with `min rpre Qpre`. Width-zero calls can make the original round count exceed the point
+count. `dropEmptyPreprocessing` removes them while preserving the complete run, including
+retained state, and leaves at most $Q_{\rm pre}$ nonempty rounds. Consequently,
+`preprocessedRecoveryAdvantage_le_points` needs no preprocessing round bound and gives the
+linear error `4 * Qpre * sqrt ((q+1) / |G|)`.
+
+`MaskedChainPuzzle.qromDelayAdvantage_eq_preprocessedRecoveryAdvantage` identifies this game
+with the actual three-phase scheme experiment, for every two-phase adversary and without
+resource assumptions. `MaskedChainPuzzle.qromDelayAdvantage_le_of_preprocessing` transfers
+the round-aware bound. `MaskedChainPuzzle.qromDelaySecure` establishes `QROMDelaySecure` for
+every adversary satisfying a `DelayBudget` whose online round bound is at most `q`, using
+the stronger `min rpre Qpre` error. The online point bound is an additional admissibility
+restriction; the present online error uses the round and width bounds.
+
+Auxiliary-input security remains a separate target. Its advice budget must count all retained
+information, including the classical branch state. See the
+[model distinction and references](../../design/quantum-layer.md#16-auxiliary-input-security-remains-separate).
+The exact `PointerChainPuzzle` encoding also remains open.
 
 ## Checks
 
@@ -111,6 +156,9 @@ oracle initializations:
 |---|---|
 | three-phase execution without preprocessing and generation followed by online execution | `delayInstrument_withoutPreprocessing` |
 | a classical honest generator and its quantum execution under a fixed function | `generationInstrument_ofClassicalGenerator_branch` |
+| a classical generator after arbitrary quantum preprocessing and the joint phase average | `delayLawWith_ofClassicalGenerator` |
+| key recovery with arbitrary preprocessing and the classical generator average | `delayAdvantage_ofClassicalGenerator` |
 | the joint delay observation and the classical average of online observations | `delayLawWith_withoutPreprocessing_ofClassicalGenerator` |
 | key recovery and the classical average of online key guesses | `delayAdvantage_withoutPreprocessing_ofClassicalGenerator` |
 | the named masked-chain puzzle's two-phase recovery experiment and its endpoint game | `MaskedChainPuzzle.qromDelayAdvantage_eq_recoveryAdvantage` |
+| the named puzzle with arbitrary preprocessing and the complete endpoint game | `MaskedChainPuzzle.qromDelayAdvantage_eq_preprocessedRecoveryAdvantage` |

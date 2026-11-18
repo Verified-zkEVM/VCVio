@@ -117,7 +117,7 @@ example [MeasurableSpace (Option (ZMod 3))] :
 honest generator uses more points than the online adversary's one-point allowance. -/
 example (adv : OnlineAdversary LocalSig.instruments (ZMod 256) 1)
     (hb : adv.IsQueryBound 1 1) :
-    (MaskedChainPuzzle.adversary adv).IsQueryBound ⟨0, 1, 1, 1⟩ ∧
+    (MaskedChainPuzzle.adversary adv).IsQueryBound ⟨0, 0, 1, 1, 1⟩ ∧
       Quantum.TimeLockPuzzle.qromDelayAdvantage (MaskedChainPuzzle.scheme 1)
         (MaskedChainPuzzle.adversary adv) ≤ 17 / 64 := by
   refine ⟨MaskedChainPuzzle.adversary_isQueryBound adv hb, ?_⟩

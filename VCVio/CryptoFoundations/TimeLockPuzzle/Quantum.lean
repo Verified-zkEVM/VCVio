@@ -26,9 +26,12 @@ preprocessing may correlate retained adversary memory with a compressed or
 purified oracle database. The joint transcript retains the preprocessing branch, published puzzle,
 key, auxiliary secret and output. Lost mass remains failure, without postselection normalization.
 
-`DelayBudget` charges preprocessing points and online rounds, points and maximum width. The
-adversary's clock starts after generation publishes the puzzle. Honest generation queries and
-preprocessing calls are outside this online clock; local operations cost no oracle rounds.
+`DelayBudget` charges preprocessing rounds and points, and online rounds, points and maximum
+width. The adversary's clock starts after generation publishes the puzzle. Honest generation
+queries and preprocessing calls are outside this online clock. Local operations cost no
+oracle rounds.
+These are query-bounded preprocessing resources, with no bound on retained advice or memory.
+They do not describe the auxiliary-input model with unbounded preprocessing and bounded advice.
 
 `sampledDelayLawWith` averages complete three-phase runs over one hidden runtime parameter.
 `qromDelayAdvantage` specializes it to one uniformly sampled function shared across all phases.
@@ -82,8 +85,11 @@ structure TwoPhaseAdversary (spec : QuantumOracleSpec.{0, 0}) (Puzzle Out : Type
 abbrev Adversary (spec : QuantumOracleSpec.{0, 0}) (Puzzle Key : Type) :=
   TwoPhaseAdversary spec Puzzle Key
 
-/-- Phase-local query resources. Honest generation consumes none of the online budget. -/
+/-- Phase-local resources for query-bounded preprocessing and online execution. Retained
+classical and quantum memory is unrestricted. Honest generation consumes no online budget. -/
 structure DelayBudget where
+  /-- Total preprocessing oracle rounds before the puzzle exists. -/
+  preprocessingRounds : ℕ
   /-- Total points queried before the puzzle exists. -/
   preprocessingPoints : ℕ
   /-- Total online oracle rounds after publication. -/
@@ -98,7 +104,8 @@ The online bounds hold for every retained register, classical state and public p
 @[expose]
 def TwoPhaseAdversary.IsQueryBound {P : Type} {In : P → QReg}
     (adv : TwoPhaseAdversary (uBatchSpec P In) Puzzle Out) (b : DelayBudget) : Prop :=
-  adv.preprocess.IsPointBound b.preprocessingPoints ∧
+  adv.preprocess.IsTotalQueryBound b.preprocessingRounds ∧
+    adv.preprocess.IsPointBound b.preprocessingPoints ∧
     ∀ M state puzzle,
       (adv.online M state puzzle).IsTotalQueryBound b.onlineRounds ∧
         (adv.online M state puzzle).IsPointBound b.onlinePoints ∧
@@ -300,7 +307,8 @@ noncomputable def qromDelayAdvantage (tlp : TimeLockPuzzle (qromBatchSpec X Y) P
     (adv : Adversary (qromBatchSpec X Y) Puzzle Key) [DecidableEq Key] : ℝ≥0∞ :=
   sampledDelayAdvantage parallelOracleRuntime tlp adv
 
-/-- Quantum delay security in the QROM under separate preprocessing and online resources.
+/-- Quantum delay security with query-bounded preprocessing and online resources. Retained advice
+and memory are unrestricted; this is not auxiliary-input security with unbounded preprocessing.
 The adversary and its initial state are chosen independently of the sampled function.
 This predicate is a security target to establish by an oracle argument. A bound for a named
 adversary adapter yields it only with a coverage proof for all budget-bounded adversaries. -/

@@ -296,8 +296,8 @@ These results implement the direct reprogramming, adaptive hybrid and round/poin
 search part of M3a. Exact sums of square roots for deterministic width profiles remain open. The changing-property directional recurrence and its adaptive
 mixed-state and total-budget transports (M−1), the general final-measurement lemma (M0), and CFHL
 compressed-oracle bounds are separate obligations. The state-conditioned hybrid also supports
-the idealized endpoint result below; preprocessing and the exact `PointerChainPuzzle` encoding
-remain future work.
+the idealized endpoint result and its query-bounded preprocessing extension below. The exact
+`PointerChainPuzzle` encoding remains future work.
 
 `Oracle/ParallelFinding.lean` packages the shared search argument. A fixed reference execution
 and pointwise weighted incidence `δ` bound a weighted family of hidden-set finding experiments
@@ -324,16 +324,17 @@ the online adversary receives only the public puzzle and its own retained prepro
 `delayInstrument` composes preprocessing, framed honest generation and online execution with
 one persistent runtime-private register. `delayLawWith` initializes the joint state once and
 observes the full transcript, retaining correlations with hidden challenger data. Lost mass
-counts as failure. `DelayBudget` separates preprocessing points from online rounds, points and
-maximum width; honest generation is outside the online clock.
+counts as failure. `DelayBudget` separates preprocessing rounds and points from online rounds,
+points and maximum width; honest generation is outside the online clock. Retained memory is
+unrestricted. These are query-bounded preprocessing resources, not auxiliary-input advice bounds.
 
 `CryptoFoundations/TimeLockPuzzle/QuantumClassical.lean` embeds classical generators retaining
-arbitrary hidden data. Its no-preprocessing observed-law equality is an exact classical
-generator average of quantum online laws for the same fixed function. The observer may inspect
-the key and secret jointly with the leaf. The scalar-generation specialization uses the trivial
-private register of a fixed-function runtime; the underlying instrument factorization preserves
-private memory for general runtimes. The quantum experiment permits preprocessing, without
-asserting a delay theorem for positive preprocessing budgets.
+arbitrary hidden data. Its observed-law equality is an exact classical generator average of
+quantum preprocessing followed by online execution for the same fixed function. Each online
+branch receives its actual preprocessing post-state. The observer may inspect the preprocessing
+branch, key and secret jointly with the leaf. The scalar-generation specialization uses the
+trivial private register of a fixed-function runtime; the underlying instrument factorization
+preserves private memory for general runtimes.
 
 ### 14. Idealized endpoint-only sequentiality
 
@@ -361,8 +362,8 @@ reference execution is independent of the endpoint.
 The generic table resampling, coordinate and collision facts live in
 `ToMathlib/MeasureTheory/Measure/UniformTable/Bounds.lean`; the masked-chain coupling and quantum
 hybrids remain in `Oracle/MaskedChain/`. This implements the idealized endpoint-only bound of
-the M6b track through the Afshar et al. §5 hybrid argument. Quantum preprocessing and the exact
-`PointerChainPuzzle` encoding are separate obligations, as are sharper compressed-oracle bounds.
+the M6b track through the Afshar et al. §5 hybrid argument. The exact `PointerChainPuzzle`
+encoding and sharper compressed-oracle bounds are separate obligations.
 
 `Schemes/MaskedChainPuzzle.lean` gives the named honest idealized puzzle. Its generator samples
 the full hidden tuple and makes one round of `q + 1` point queries; its solver traverses the
@@ -371,25 +372,65 @@ and tuple. `MaskedChainPuzzle.qromDelayAdvantage_eq_recoveryAdvantage` connects 
 two-phase experiment, using the no-preprocessing adversary adapter, to the endpoint game with
 one function and jointly retained hidden tuple. `MaskedChainPuzzle.qromDelayAdvantage_le`
 therefore gives the same explicit bound for that named scheme. This establishes the idealized
-no-preprocessing application without claiming security with oracle preprocessing or for the
-exact pointer-chain encoding.
+no-preprocessing application. The extension below handles query-bounded preprocessing;
+the exact pointer-chain encoding remains separate.
 
-### 15. Proposed bounded-preprocessing extension
+### 15. Query-bounded preprocessing
 
-A next target for the current idealized masked-chain puzzle is
-`min 1 (recoveryBound G q k + 4 * Qpre * sqrt ((q+1) / |G|))`, where `Qpre` bounds
-preprocessing points. This is a proposed direct-hybrid bound, not a proved theorem. The joint
-mask-first coupling could include the complete two-phase experiment. Comparing preprocessing
+`Oracle/MaskedChain/Preprocessing.lean` proves
+`min 1 (recoveryBound G q k + 4 * sqrt (rpre * Qpre * (q+1) / |G|))`, where
+`rpre` bounds preprocessing rounds and `Qpre` bounds preprocessing points. The model leaves
+retained classical and quantum memory unrestricted. The joint mask-first coupling includes
+the complete two-phase experiment. Comparing preprocessing
 under the patched oracle with a base oracle whose preprocessing prefix is independent of the
-vertex and mask coins suggests incidence `(q+1) / |G|` for the programmed input cells.
-Generation and online execution remain the same common finisher. Conditioning on that base oracle then permits an oracle-dependent preprocessing
-state in the existing conditional online argument. This limited target may require no salting
-or presampling; stronger preprocessing guarantees remain separate.
+vertex and mask coins gives incidence `(q+1) / |G|` for the programmed input cells.
+The challenge-dependent online execution becomes a common oracle-free local observation.
+Conditioning on the base oracle permits an oracle-dependent preprocessing state in the
+conditional online argument. This query-bounded theorem requires no
+salting or presampling.
 
-The proof gates are a full two-phase classical-generator law, a multi-round common-finisher
-comparison with prefix query weights independent of its oracle-free suffix, and trace-homogeneous
-online bounds that can be summed over all preprocessing branches. Only the no-preprocessing
-scheme theorem is currently implemented. Security of the exact `PointerChainPuzzle` construction
+A point-only corollary has error `4 * Qpre * sqrt ((q+1) / |G|)`. Its proof must remove empty
+preprocessing rounds first: a width-zero call consumes a round but no points, so an arbitrary
+round bound need not be at most the point bound. Removing these calls preserves the entire run
+and yields at most `Qpre` remaining rounds without a separate round assumption.
+
+The reusable prerequisites are a full two-phase classical-generator law, a multi-round
+common-finisher comparison with prefix query weights independent of its oracle-free suffix,
+and trace-homogeneous online bounds that sum over all preprocessing branches. The latter count
+each branch's raw probability mass, so the online error is charged once. The birthday term is
+also charged once, by the outer classical coupling.
+
+`preprocessedRecoveryAdvantage_le` gives the round-aware bound;
+`preprocessedRecoveryAdvantage_le_min` uses the smaller of the supplied round and point bounds;
+`preprocessedRecoveryAdvantage_le_points` needs only a preprocessing point bound.
+`Schemes/MaskedChainPuzzle/Preprocessing.lean` transfers these bounds to the named scheme's
+actual three-phase experiment. `MaskedChainPuzzle.qromDelaySecure` establishes the security
+predicate for every budget-admitted two-phase adversary when the online round bound is at
+most `q`. The preprocessing state can depend on the sampled oracle, and no adversary adapter
+restricts that theorem's scope. The online point budget remains an admissibility condition;
+the online error currently uses only rounds and width.
+
+Security of the exact `PointerChainPuzzle` construction
 also needs ordinary-chain or ranked-path quantum analysis, truncation, accumulator and commitment
 handling, and a coherent finite-domain raw-oracle encoding bridge; byte transport alone does not
 supply that security theorem.
+
+### 16. Auxiliary-input security remains separate
+
+Auxiliary-input security allows an unbounded preprocessing computation on the oracle and
+limits the advice retained for the online attack. It is a different model from query-bounded
+preprocessing with unrestricted retained memory. See Chung–Guo–Liu–Qian,
+[*Tight Quantum Time-Space Tradeoffs for Function Inversion*](https://arxiv.org/abs/2006.05650v2),
+§3.1, Definition 3.1: the first algorithm is an arbitrary function of the oracle and outputs
+an `S`-qubit advice state; the second algorithm has a query bound. Classical advice and quantum
+advice require distinct statements.
+
+Fresh vertices motivate studying auxiliary-input security for the masked-chain puzzle, but
+the query-bounded hybrid does not establish it. An advice budget must count all retained
+information, including the classical branch state, rather than only the quantum register's
+dimension. Bit-fixing, presampling and their quantum variants are a separate proof track.
+Guo–Li–Liu–Zhang,
+[*Unifying Presampling via Concentration Bounds*](https://eprint.iacr.org/2020/1589), Definition 1,
+specifies unbounded preprocessing with bounded classical advice; its discussion of barriers
+to classical presampling against quantum queries is relevant when choosing that track's
+intermediate model. Neither this model nor bounded quantum advice is currently implemented.

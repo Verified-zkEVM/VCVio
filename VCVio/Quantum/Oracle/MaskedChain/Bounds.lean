@@ -356,7 +356,10 @@ private theorem average_eq_lintegral {Ω : Type*} [MeasurableSpace Ω]
   intro ω _
   exact mul_comm _ _
 
-private theorem game_le_of_patched_bound {q : ℕ} (I : L.Interp)
+/-- A uniform bound for the mask-first experiment transfers to endpoint recovery,
+with the birthday probability accounting for repeated hidden vertices. The supplied
+bound concerns one fixed adversary and retains its complete endpoint event. -/
+theorem recoveryAdvantage_le_of_patched_bound {q : ℕ} (I : L.Interp)
     (adv : OnlineAdversary L G q) (B : ℝ≥0∞)
     (hB : ∀ H masks,
       (∑ vertices : Fin (q + 2) → G,
@@ -429,7 +432,7 @@ theorem recoveryAdvantage_le {q k : ℕ} (I : L.Interp) (adv : OnlineAdversary L
           4 * ∑ h ∈ Finset.range q,
             ((k : ℝ≥0∞) * ((q - h : ℕ) : ℝ≥0∞) / Fintype.card G) ^ (2⁻¹ : ℝ)) +
         (((q + 2).choose 2 : ℕ) : ℝ≥0∞) / Fintype.card G := by
-      apply game_le_of_patched_bound I adv
+      apply recoveryAdvantage_le_of_patched_bound I adv
       intro H masks
       change averageHybridSuccess I adv H masks 0 ≤ _
       exact (averageHybridSuccess_le_last I adv H masks k (fun p ↦ (hbound p).2)).trans

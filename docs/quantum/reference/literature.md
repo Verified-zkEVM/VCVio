@@ -22,7 +22,16 @@ the PDF page of the version linked.
 | `parallelOracleUnitary`, `batch_oracleQuery`, `qromBatchEvalDist` | Chung, Fehr, Huang, Liao, [arXiv:2010.11658v4](https://arxiv.org/abs/2010.11658v4), §4.4, pp. 12–13 | simultaneous additive queries; variable classical widths and one shared random function |
 | `preimageSearchAdvantage_le_of_isPointBound` | Chung, Fehr, Huang, Liao, [arXiv:2010.11658v4](https://arxiv.org/abs/2010.11658v4), Example 5.18; Zalka, [arXiv:quant-ph/9711070v2](https://arxiv.org/abs/quant-ph/9711070v2), §4 | fixed-target preimage game; direct hybrid and joint-table coupling, with total-point budgets, rather than compressed-oracle transition capacities |
 | `Quantum.MaskedChain.recoveryAdvantage_le` | Afshar, Chung, Hsieh, Lin, Mahmoody, [ePrint 2023/932](https://eprint.iacr.org/2023/932), §5, Definition 5.1, Theorem 5.3 and Lemmas 5.4–5.5, pp. 24–28 | endpoint-only adaptation of the full-tuple bound, retaining the hidden tuple jointly; finite abelian groups and explicit error terms |
+| `Quantum.MaskedChain.preprocessedRecoveryAdvantage_le` | Afshar et al., §5, together with the Bennett–Bernstein–Brassard–Vazirani hybrid above | query-bounded preprocessing extension derived here; round/point common-finisher hybrid and trace-homogeneous conditional online bound, rather than an auxiliary-input theorem from that paper |
 | `QueryCache.flip`, `instability`, `condFlip` | Chiesa, Manohar, Spooner, [ePrint 2019/834](https://eprint.iacr.org/2019/834), Definitions 5.4, 5.6, 5.11, pp. 23–26 | any answer measure |
 | `partitionInstability` | Chiesa, Di, Hu, Zheng, [ePrint 2025/2166](https://eprint.iacr.org/2025/2166), Definition 5.3, p. 31 | any indexed family |
 | `instability_cacheHasCollision_le` | CMS19 Lemma 6.11, p. 35; CDHZ Lemma 8.7, p. 56 | the sharper $(t-1)/n$ |
 | (motivation only) | CMS19 Lemma 5.10, p. 24; CDHZ Theorem 5.4, p. 31 | not formalized here |
+
+The separate auxiliary-input model allows unbounded preprocessing and limits retained advice.
+Chung, Guo, Liu and Qian, *Tight Quantum Time-Space Tradeoffs for Function Inversion*,
+[arXiv:2006.05650v2](https://arxiv.org/abs/2006.05650v2), §3.1, Definition 3.1, distinguishes
+classical and quantum advice. Guo, Li, Liu and Zhang, *Unifying Presampling via Concentration
+Bounds*, [ePrint 2020/1589](https://eprint.iacr.org/2020/1589), Definition 1, specifies bounded
+classical advice after unbounded preprocessing. Neither advice model is implemented by the
+query-bounded preprocessing theorem.

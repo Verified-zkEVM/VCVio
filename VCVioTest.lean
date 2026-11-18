@@ -172,6 +172,7 @@ public import VCVioTest.Quantum.ParallelBridges
 public import VCVioTest.Quantum.ParallelPreimage
 public import VCVioTest.Quantum.ParallelSearch
 public import VCVioTest.Quantum.Pure
+public import VCVioTest.Quantum.QueryBoundedPreprocessing
 public import VCVioTest.Quantum.SaltedMerkleMultiExtractable
 public import VCVioTest.Quantum.Sequentialize
 public import VCVioTest.Quantum.SubState

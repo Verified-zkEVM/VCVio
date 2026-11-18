@@ -82,8 +82,9 @@ noncomputable def counterAdversary : TwoPhaseAdversary counterSpec Unit Unit whe
     exact oneCall
 
 /-- The syntactic phase clocks count preprocessing and online execution independently. -/
-example : counterAdversary.IsQueryBound ⟨1, 1, 1, 1⟩ := by
-  constructor
+example : counterAdversary.IsQueryBound ⟨1, 1, 1, 1, 1⟩ := by
+  refine ⟨?_, ?_, ?_⟩
+  · simp [counterAdversary]
   · simp [counterAdversary]
   · intro M state puzzle
     rcases state with ⟨h⟩
@@ -91,15 +92,15 @@ example : counterAdversary.IsQueryBound ⟨1, 1, 1, 1⟩ := by
     simp [oneCall]
 
 /-- Honest generation cannot consume the online round budget on behalf of the adversary. -/
-example : ¬ counterAdversary.IsQueryBound ⟨1, 0, 1, 1⟩ := by
+example : ¬ counterAdversary.IsQueryBound ⟨1, 1, 0, 1, 1⟩ := by
   intro h
-  have hb := (h.2 callReg ⟨rfl⟩ ()).1
+  have hb := (h.2.2 callReg ⟨rfl⟩ ()).1
   simp [oneCall] at hb
 
 /-- Preprocessing cannot borrow an unused online point budget. -/
-example : ¬ counterAdversary.IsQueryBound ⟨0, 1, 2, 2⟩ := by
+example : ¬ counterAdversary.IsQueryBound ⟨1, 0, 1, 2, 2⟩ := by
   intro h
-  simpa [counterAdversary] using h.1
+  simpa [counterAdversary] using h.2.1
 
 /-- The unique successful classical transcript includes the hidden generator marker. -/
 @[expose, reducible]

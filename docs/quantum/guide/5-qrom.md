@@ -224,7 +224,7 @@ The proof sums singleton union weights over all marks in the mark-independent ze
 reference execution before aggregating the square-root errors.
 
 This is the unique-mark oracle experiment. Exact sums of square roots for deterministic width
-profiles, preprocessing results and changing-property compressed-oracle bounds remain separate work.
+profiles and changing-property compressed-oracle bounds remain separate work.
 
 ## Fixed-target preimage search
 
@@ -311,8 +311,10 @@ modules. They follow Afshar et al., §5, while observing only the endpoint. The
 [named puzzle](7-time-lock-puzzles.md#the-idealized-masked-chain-puzzle) has honest
 generation and solving algorithms, whose recovery probability equals that of this game by
 `MaskedChainPuzzle.qromDelayAdvantage_eq_recoveryAdvantage`. Its no-preprocessing delay bound
-is `MaskedChainPuzzle.qromDelayAdvantage_le`. Bounds with quantum preprocessing or for the
-exact `PointerChainPuzzle` encoding remain separate work.
+is `MaskedChainPuzzle.qromDelayAdvantage_le`. The
+[query-bounded preprocessing extension](7-time-lock-puzzles.md#query-bounded-preprocessing-security)
+adds a round-aware hybrid error while retaining the adversary's complete memory.
+The exact `PointerChainPuzzle` encoding remains separate work.
 
 ## Checks
 

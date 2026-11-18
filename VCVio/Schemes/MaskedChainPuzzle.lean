@@ -219,12 +219,13 @@ theorem evalDist_scheme_solve_publicPuzzle [MeasurableSpace (Option G)] {q : ℕ
 
 omit [AddCommGroup G] in
 /-- The no-preprocessing adapter meets the two-phase budget obtained from its online rounds
-and width. All preprocessing points are zero. -/
+and width. Preprocessing rounds and points are zero. -/
 theorem adversary_isQueryBound {q k : ℕ}
     (adv : Quantum.MaskedChain.OnlineAdversary LocalSig.instruments G q)
     (hbound : adv.IsQueryBound q k) :
-    (adversary adv).IsQueryBound ⟨0, q, k * q, k⟩ := by
-  constructor
+    (adversary adv).IsQueryBound ⟨0, 0, q, k * q, k⟩ := by
+  refine ⟨?_, ?_, ?_⟩
+  · simp [adversary, Quantum.TimeLockPuzzle.TwoPhaseAdversary.withoutPreprocessing]
   · simp [adversary, Quantum.TimeLockPuzzle.TwoPhaseAdversary.withoutPreprocessing]
   · intro M state puzzle
     rcases state with ⟨h⟩
