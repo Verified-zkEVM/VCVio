@@ -227,7 +227,7 @@ theorem simulationHidingAdvantage_eq [DecidableEq X] [SampleableType Y]
           (simulationHidingIdealExperiment simulator adversary) {true}) := by
   rw [simulationHidingAdvantage, Measure.boolDist]
 
-/-! ## From two-message hiding to simulation hiding -/
+/-! ## Simulation hiding implies two-message hiding -/
 
 /-- The simulation-hiding adversary that plays the two-message adversary's world `b`. It commits to
 the message world `b` selects when the two messages agree on the chosen positions, and to the first
