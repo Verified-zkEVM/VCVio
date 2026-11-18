@@ -391,6 +391,11 @@ def negligible (f : ℕ → ℝ≥0∞) : Prop := SuperpolynomialDecay atTop (fu
 
 Closure properties: `negligible_add`, `negligible_const_mul`, `negligible_sum`,
 `negligible_of_le`, `negligible_pow_mul`, `negligible_polynomial_mul`.
+If `h : negligible ε` and `hq : Cslib.PolynomiallyBounded q`, then
+`h.polynomiallyBounded_mul hq` absorbs a query count or parameter size as a loss factor.
+`negligible_coe_nnreal_iff` transports CSLib's finite-valued notion directly.
+For extended values, `negligible_iff_eventually_ne_top_and_toNNReal` also requires
+eventual finiteness, since `toNNReal` sends infinity to zero.
 
 ### `SecurityGame` (`Security.lean`)
 

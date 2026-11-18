@@ -5,6 +5,7 @@ Authors: Devon Tuma
 -/
 
 module
+public import Cslib.Crypto.Negligible
 public import Mathlib.Algebra.Polynomial.Eval.Degree
 public import Mathlib.Analysis.Asymptotics.SuperpolynomialDecay
 public import Mathlib.Order.Filter.AtTopBot.Archimedean
@@ -34,6 +35,7 @@ as this is usually the situation for cryptographic reductions.
 @[expose] public section
 
 open ENNReal Asymptotics Filter
+open scoped NNReal
 
 /-- A function `f` is negligible if it decays faster than any polynomial function. -/
 def negligible (f : ℕ → ℝ≥0∞) : Prop :=
@@ -111,6 +113,39 @@ theorem negligible_pow_mul {f : ℕ → ℝ≥0∞} (hf : negligible f) (d : ℕ
     negligible (fun n => (↑n : ℝ≥0∞) ^ d * f n) :=
   hf.param_pow_mul d
 
+/-- A finite-valued advantage has the same decay after coercion to extended nonnegative reals. -/
+theorem negligible_coe_nnreal_iff (f : ℕ → ℝ≥0) :
+    negligible (fun n => (f n : ℝ≥0∞)) ↔ Cslib.Crypto.Negligible f := by
+  unfold negligible Cslib.Crypto.Negligible SuperpolynomialDecay
+  refine forall_congr' fun k => ?_
+  simpa only [ENNReal.coe_mul, ENNReal.coe_pow, ENNReal.coe_natCast, ENNReal.coe_zero] using
+    (ENNReal.tendsto_coe (f := atTop) (m := fun n : ℕ => (n : ℝ≥0) ^ k * f n) (a := 0))
+
+/-- An extended-valued advantage can attain infinity on a finite prefix. Beyond that prefix
+its decay is precisely CSLib's negligibility of the finite values. -/
+theorem negligible_iff_eventually_ne_top_and_toNNReal (f : ℕ → ℝ≥0∞) :
+    negligible f ↔ (∀ᶠ n in atTop, f n ≠ ⊤) ∧
+      Cslib.Crypto.Negligible (fun n => (f n).toNNReal) := by
+  have coe_back (h : ∀ᶠ n in atTop, f n ≠ ⊤) : (fun n => ((f n).toNNReal : ℝ≥0∞)) =ᶠ[atTop] f :=
+    h.mono fun _ hn => ENNReal.coe_toNNReal hn
+  constructor
+  · intro h
+    have hzero : Tendsto f atTop (nhds 0) := by simpa using h 0
+    have hfinite := hzero.eventually_ne ENNReal.zero_ne_top
+    exact ⟨hfinite, (negligible_coe_nnreal_iff _).mp (h.congr' (coe_back hfinite).symm)⟩
+  · rintro ⟨hfinite, h⟩
+    exact ((negligible_coe_nnreal_iff _).mpr h).congr' (coe_back hfinite)
+
+/-- Multiplication by an eventually polynomially bounded query count preserves negligible loss. -/
+theorem negligible.polynomiallyBounded_mul {f : ℕ → ℝ≥0∞} (hf : negligible f)
+    {p : ℕ → ℕ} (hp : Cslib.PolynomiallyBounded p) :
+    negligible (fun n => (p n : ℝ≥0∞) * f n) := by
+  obtain ⟨hfinite, h⟩ := (negligible_iff_eventually_ne_top_and_toNNReal f).mp hf
+  apply (negligible_iff_eventually_ne_top_and_toNNReal _).mpr
+  exact ⟨hfinite.mono fun n hn => ENNReal.mul_ne_top (ENNReal.natCast_ne_top _) hn,
+    by simpa only [ENNReal.toNNReal_mul, ENNReal.toNNReal_natCast]
+      using h.polynomiallyBounded_mul hp⟩
+
 /-- If `f` is negligible, then `fun n => ↑(p.eval n) * f n` is negligible for any polynomial `p`.
 This is the key lemma for handling polynomial-loss security reductions. -/
 theorem negligible_polynomial_mul {f : ℕ → ℝ≥0∞} (hf : negligible f)
@@ -135,6 +170,15 @@ theorem negligible_natMul_of_poly_bound {f : ℕ → ℝ≥0∞} (hf : negligibl
     (fun n => mul_le_mul' (by exact_mod_cast hg n) le_rfl)
     (negligible_polynomial_mul hf p)
 
+/-- Real division by a cardinality agrees with extended-real division at positive
+denominators and is bounded above by it at zero. -/
+theorem negligible_ofReal_natDiv {g C : ℕ → ℕ}
+    (h : negligible fun n => (g n : ℝ≥0∞) * (C n : ℝ≥0∞)⁻¹) :
+    negligible fun n => ENNReal.ofReal ((g n : ℝ) / (C n : ℝ)) :=
+  negligible_of_le (fun n => by
+    refine (ENNReal.ofReal_div_le (by positivity)).trans ?_
+    rw [div_eq_mul_inv, ENNReal.ofReal_natCast, ENNReal.ofReal_natCast]) h
+
 /-- A slack term `numerator / cardinality` is negligible when the numerator is polynomially bounded
 and the reciprocal cardinality is negligible. The `ENNReal.ofReal` wrapper is the framework idiom
 for treating an `ℝ`-valued nonnegative error family asymptotically. -/
@@ -142,11 +186,7 @@ theorem negligible_ofReal_natDiv_of_poly_bound {C : ℕ → ℕ}
     (hC : negligible (fun n => (C n : ℝ≥0∞)⁻¹))
     {g : ℕ → ℕ} {p : Polynomial ℕ} (hg : ∀ n, g n ≤ p.eval n) :
     negligible (fun n => ENNReal.ofReal ((g n : ℝ) / (C n : ℝ))) :=
-  negligible_of_le (g := fun n => (g n : ℝ≥0∞) * (C n : ℝ≥0∞)⁻¹)
-    (fun n => by
-      refine (ENNReal.ofReal_div_le (by positivity)).trans ?_
-      rw [div_eq_mul_inv, ENNReal.ofReal_natCast, ENNReal.ofReal_natCast])
-    (negligible_natMul_of_poly_bound hC hg)
+  negligible_ofReal_natDiv (negligible_natMul_of_poly_bound hC hg)
 
 /-! ## Bridge to real-valued asymptotics
 
