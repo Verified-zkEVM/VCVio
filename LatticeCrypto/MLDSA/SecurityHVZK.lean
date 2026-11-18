@@ -15,8 +15,8 @@ This file proves that the ML-DSA identification scheme with `t₀` in the statem
 `identificationSchemeFull`, is perfectly honest-verifier zero-knowledge for a named simulator,
 `hvzkSimulator` (`MLDSA.identificationSchemeFull_perfectHVZK`). An existential statement asserting
 only that *some* simulator with *some* error exists would be trivially dischargeable with
-`ζ_zk := 1` (because total variation is at most one, `Measure.etvDist_le_one`) and would carry no
-content.
+`ζ_zk := 1` (because the statistical distance is at most one, `Measure.statEDist_le_one`) and
+would carry no content.
 
 ## The simulator
 
