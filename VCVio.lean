@@ -627,6 +627,7 @@ public import VCVio.Quantum.Oracle.MaskedChain.Hybrid
 public import VCVio.Quantum.Oracle.MaskedChain.Model
 public import VCVio.Quantum.Oracle.Model
 public import VCVio.Quantum.Oracle.Parallel
+public import VCVio.Quantum.Oracle.ParallelFinding
 public import VCVio.Quantum.Oracle.ParallelHybrid
 public import VCVio.Quantum.Oracle.ParallelReprogramming
 public import VCVio.Quantum.Oracle.ParallelSearch

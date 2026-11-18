@@ -56,6 +56,27 @@ theorem sum_parallelInputWeight_singleton_le {D : QReg} (ik : Unit × ℕ)
     _ ≤ ENNReal.ofReal ((ik.2 : ℝ) * σ.trace.re) := ENNReal.ofReal_le_ofReal hc
     _ = _ := by rw [ENNReal.ofReal_mul (Nat.cast_nonneg _), ENNReal.ofReal_natCast]
 
+/-- Weighted incidence of a sampled disagreement set bounds its mean parallel-query
+weight. The input state is held fixed across the sampled sets. -/
+theorem sum_mul_parallelInputWeight_le {Ω : Type*} [Fintype Ω] {D : QReg}
+    (w : Ω → ℝ) (hw : ∀ ω, 0 ≤ w ω) (S : Ω → Set X) (δ : ℝ)
+    (hδ : 0 ≤ δ)
+    (hS : ∀ z, ∑ ω, Set.indicator (S ω) (fun _ ↦ w ω) z ≤ δ)
+    (i : Unit × ℕ) {σ : Matrix ((qromBatchSpec X Y).In i × D)
+      ((qromBatchSpec X Y).In i × D) ℂ} (hσ : σ.PosSemidef) :
+    ∑ ω, ENNReal.ofReal (w ω) * parallelInputWeight (D := D) (Y := Y) (S ω) i σ ≤
+      (i.2 : ℝ≥0∞) * ENNReal.ofReal δ * ENNReal.ofReal σ.trace.re := by
+  simp only [parallelInputWeight, ← ENNReal.ofReal_mul (hw _)]
+  have hn (ω : Ω) : 0 ≤ w ω * (MatrixMap.conj
+      (parallelInputProjector (Y := Y) i.2 (S ω) ⊗ₖ (1 : Matrix D D ℂ)) σ).trace.re :=
+    mul_nonneg (hw ω) ((hσ.mul_mul_conjTranspose_same _).trace_re_nonneg)
+  rw [← ENNReal.ofReal_sum_of_nonneg (fun ω _ ↦ hn ω)]
+  calc
+    _ ≤ ENNReal.ofReal ((i.2 : ℝ) * δ * σ.trace.re) := ENNReal.ofReal_le_ofReal
+      (sum_mul_re_trace_conj_parallelInputProjector_frame_le w hw S δ hS i.2 hσ)
+    _ = _ := by rw [ENNReal.ofReal_mul (mul_nonneg (Nat.cast_nonneg _) hδ),
+      ENNReal.ofReal_mul (Nat.cast_nonneg _), ENNReal.ofReal_natCast]
+
 variable [AddCommGroup Y]
 
 /-- The sole Kraus operator of a parallel oracle call, with arbitrary spectator memory. -/
