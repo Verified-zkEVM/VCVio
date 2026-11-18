@@ -637,6 +637,7 @@ public import VCVio.Quantum.Oracle.MaskedChain.Model
 public import VCVio.Quantum.Oracle.MaskedChain.Preprocessing
 public import VCVio.Quantum.Oracle.MaskedChain.Preprocessing.DropEmpty
 public import VCVio.Quantum.Oracle.MaskedChain.Preprocessing.Model
+public import VCVio.Quantum.Oracle.MaskedChain.RootBounds
 public import VCVio.Quantum.Oracle.Model
 public import VCVio.Quantum.Oracle.Parallel
 public import VCVio.Quantum.Oracle.ParallelFinding

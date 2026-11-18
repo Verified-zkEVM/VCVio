@@ -6,7 +6,7 @@ Authors: Alexander Hicks
 
 module
 public import VCVio.CryptoFoundations.TimeLockPuzzle.QuantumClassical
-public import VCVio.Quantum.Oracle.MaskedChain.Bounds
+public import VCVio.Quantum.Oracle.MaskedChain.RootBounds
 import VCVio.OracleComp.EvalDist.Sum
 
 /-!
@@ -283,6 +283,16 @@ theorem qromDelayAdvantage_le {q k : ℕ}
       min 1 (Quantum.MaskedChain.recoveryBound G q k) := by
   rw [qromDelayAdvantage_eq_recoveryAdvantage]
   exact Quantum.MaskedChain.recoveryAdvantage_le .instruments adv hbound
+
+/-- Root-accumulated quantum delay for the named puzzle without oracle preprocessing.
+The full endpoint event is retained, and the vertex-collision allowance is outside the square. -/
+theorem qromDelayAdvantage_le_root {q k : ℕ}
+    (adv : Quantum.MaskedChain.OnlineAdversary LocalSig.instruments G q)
+    (hbound : adv.IsQueryBound q k) :
+    Quantum.TimeLockPuzzle.qromDelayAdvantage (scheme q) (adversary adv) ≤
+      min 1 (Quantum.MaskedChain.rootRecoveryBound G q k) := by
+  rw [qromDelayAdvantage_eq_recoveryAdvantage]
+  exact Quantum.MaskedChain.recoveryAdvantage_le_root .instruments adv hbound
 
 end Experiment
 

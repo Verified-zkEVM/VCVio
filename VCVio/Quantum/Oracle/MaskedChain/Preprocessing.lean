@@ -5,7 +5,7 @@ Authors: Alexander Hicks
 -/
 
 module
-public import VCVio.Quantum.Oracle.MaskedChain.Homogeneous
+public import VCVio.Quantum.Oracle.MaskedChain.RootBounds
 public import VCVio.Quantum.Oracle.MaskedChain.Preprocessing.Model
 public import VCVio.Quantum.Oracle.MaskedChain.Preprocessing.DropEmpty
 public import VCVio.Quantum.Oracle.ParallelFinisher
@@ -286,5 +286,143 @@ theorem preprocessedRecoveryAdvantage_le_points {q k Q : ℕ}
     (isTotalQueryBound_dropEmptyPreprocessing_of_isPointBound adv hQ)
     (isPointBound_dropEmptyPreprocessing adv hQ) honline
   rwa [preprocessedRecoveryAdvantage_dropEmptyPreprocessing_eq, preprocessingError_self] at hb
+
+/-- Root-accumulated recovery with query-bounded preprocessing. The complete online and
+preprocessing root errors are combined before squaring; the vertex-collision allowance is
+added once outside the square. -/
+@[expose]
+noncomputable def rootPreprocessedRecoveryBound (G : Type) [Fintype G]
+    (q k r Q : ℕ) : ℝ≥0∞ :=
+  (rootPatchedRecoveryBound G q k ^ (2⁻¹ : ℝ) +
+    2 * ((r : ℝ≥0∞) * Q * (((q + 1 : ℕ) : ℝ≥0∞) / Fintype.card G)) ^ (2⁻¹ : ℝ)) ^ 2 +
+      (((q + 2).choose 2 : ℕ) : ℝ≥0∞) / Fintype.card G
+
+private theorem referenceSuccess_le_root {q k : ℕ} (H : G → G)
+    (adv : PreprocessingAdversary G q) (masks : Fin (q + 1) → G)
+    (honline : ∀ M state puzzle,
+      (adv.online M state puzzle).IsTotalQueryBound q ∧
+        (adv.online M state puzzle).IsWidthBound k) :
+    referenceSuccess H adv masks ≤ rootPatchedRecoveryBound G q k := by
+  unfold referenceSuccess
+  calc
+    _ ≤ ∑' pre : Σ M, adv.State M,
+        ((parallelOracleRuntime H).reducedPost .instruments adv.preprocess
+          adv.initialState pre).mass * rootPatchedRecoveryBound G q k := by
+      apply ENNReal.tsum_le_tsum
+      intro pre
+      let online : OnlineAdversary LocalSig.instruments G q :=
+        { initialReg := pre.1
+          initialState := (parallelOracleRuntime H).reducedPost .instruments
+            adv.preprocess adv.initialState pre
+          run := adv.online pre.1 pre.2 }
+      have hb := averageHybridSuccess_zero_le_root_mul_mass .instruments online H masks k
+        (fun puzzle ↦ (honline pre.1 pre.2 puzzle).1)
+        (fun puzzle ↦ (honline pre.1 pre.2 puzzle).2)
+      rw [averageHybridSuccess_zero_eq_sum] at hb
+      exact hb
+    _ = (∑' pre : Σ M, adv.State M,
+        ((parallelOracleRuntime H).reducedPost .instruments adv.preprocess
+          adv.initialState pre).mass) * rootPatchedRecoveryBound G q k :=
+      ENNReal.tsum_mul_right
+    _ ≤ rootPatchedRecoveryBound G q k :=
+      mul_le_of_le_one_left (by positivity) (sum_reducedPost_mass_le_one H adv)
+
+private theorem averageHybridSuccess_preprocessing_le_root {q k r Q : ℕ}
+    (adv : PreprocessingAdversary G q) (H : G → G) (masks : Fin (q + 1) → G)
+    (hr : adv.preprocess.IsTotalQueryBound r) (hQ : adv.preprocess.IsPointBound Q)
+    (honline : ∀ M state puzzle,
+      (adv.online M state puzzle).IsTotalQueryBound q ∧
+        (adv.online M state puzzle).IsWidthBound k) :
+    averageHybridSuccess .instruments (preprocessedRecoveryAdversary adv) H masks 0 ≤
+      (rootPatchedRecoveryBound G q k ^ (2⁻¹ : ℝ) +
+        2 * ((r : ℝ≥0∞) * Q * (((q + 1 : ℕ) : ℝ≥0∞) / Fintype.card G)) ^ (2⁻¹ : ℝ)) ^ 2 := by
+  let finish (xs : Fin (q + 2) → G) (M : QReg) (state : adv.State M) :=
+    QuantumComp.localObservation (spec := qromBatchSpec G G)
+      (parallelRunUnit .instruments (fullOracle H xs masks)
+        (adv.online M state (xs 0, masks)))
+  have hc : (0 : ℝ) < Fintype.card (Fin (q + 2) → G) := by
+    exact_mod_cast Fintype.card_pos
+  have hs (xs : Fin (q + 2) → G) (z : G)
+      (hz : z ∉ tailInputs (fun i : Fin (q + 1) ↦ xs i.castSucc) 0) :
+      fullOracle H xs masks z = H z := by
+    rw [fullOracle_eq_prefixOracle_of_not_mem_tailInputs H xs masks 0 z hz]
+    simp [prefixOracle]
+  have hb := rpow_inv_two_sum_mul_evalDistMap_bind_parallel_le .instruments H
+    (fun xs : Fin (q + 2) → G ↦ fullOracle H xs masks)
+    (fun _ ↦ (Fintype.card (Fin (q + 2) → G) : ℝ)⁻¹) (fun _ ↦ le_of_lt (inv_pos.mpr hc))
+    (fun xs ↦ tailInputs (fun i : Fin (q + 1) ↦ xs i.castSucc) 0) hs
+    ((q + 1 : ℝ) / Fintype.card G) (by positivity)
+    (all_input_hit_sum_le q) hr hQ finish
+    (fun xs M state ↦ QuantumComp.isTotalQueryBound_localObservation _ 0)
+    adv.initialState (fun xs leaf ↦ leaf.2 = xs (Fin.last (q + 1)))
+    (MeasurableSet.singleton True)
+  have hd : ENNReal.ofReal ((q + 1 : ℝ) / Fintype.card G) =
+      ((q + 1 : ℕ) : ℝ≥0∞) / Fintype.card G := by
+    rw [ENNReal.ofReal_div_of_pos (by exact_mod_cast Fintype.card_pos)]
+    simp [ENNReal.ofReal_add (by positivity : (0 : ℝ) ≤ q) zero_le_one]
+  dsimp only [finish] at hb
+  simp_rw [evalDistMap_bind_same_observed, evalDistMap_bind_observed] at hb
+  simp only [ENNReal.ofReal_inv_of_pos hc, ENNReal.ofReal_natCast, hd] at hb
+  have href :
+      (∑ xs : Fin (q + 2) → G,
+        (Fintype.card (Fin (q + 2) → G) : ℝ≥0∞)⁻¹ *
+          ∑' pre : Σ M, adv.State M,
+            (parallelOracleRuntime (fullOracle H xs masks)).evalDistMap .instruments
+              (adv.online pre.1 pre.2 (xs 0, masks))
+              ((parallelOracleRuntime H).reducedPost .instruments adv.preprocess
+                adv.initialState pre)
+              (fun leaf ↦ leaf.2 = xs (Fin.last (q + 1))) {True}) =
+        referenceSuccess H adv masks := by
+    simp only [← ENNReal.tsum_mul_left]
+    exact (Summable.tsum_finsetSum (fun _ _ ↦ ENNReal.summable)).symm
+  rw [href] at hb
+  have hroot := hb.trans (add_le_add
+    (ENNReal.rpow_le_rpow (referenceSuccess_le_root H adv masks honline) (by norm_num)) le_rfl)
+  rw [averageHybridSuccess_zero_eq_sum]
+  rw [← ENNReal.rpow_two,
+    ← rpow_inv_two_rpow_two (∑ vertices : Fin (q + 2) → G,
+      (Fintype.card (Fin (q + 2) → G) : ℝ≥0∞)⁻¹ *
+        (parallelOracleRuntime (fullOracle H vertices masks)).evalDistMap .instruments
+          ((preprocessedRecoveryAdversary adv).run (vertices 0, masks))
+          (preprocessedRecoveryAdversary adv).initialState
+          (fun leaf ↦ leaf.2 = vertices (Fin.last (q + 1))) {True})]
+  exact ENNReal.rpow_le_rpow hroot (by norm_num)
+
+/-- Endpoint security with one shared oracle and query-bounded preprocessing, accumulating
+online and preprocessing root errors before squaring. Retained memory is unrestricted and
+the vertex-collision allowance is charged once outside that square. -/
+theorem preprocessedRecoveryAdvantage_le_root {q k r Q : ℕ}
+    (adv : PreprocessingAdversary G q)
+    (hr : adv.preprocess.IsTotalQueryBound r) (hQ : adv.preprocess.IsPointBound Q)
+    (honline : ∀ M state puzzle,
+      (adv.online M state puzzle).IsTotalQueryBound q ∧
+        (adv.online M state puzzle).IsWidthBound k) :
+    preprocessedRecoveryAdvantage adv ≤ min 1 (rootPreprocessedRecoveryBound G q k r Q) := by
+  refine le_min (preprocessedRecoveryAdvantage_le_one adv) ?_
+  exact recoveryAdvantage_le_of_patched_bound .instruments
+    (preprocessedRecoveryAdversary adv)
+    ((rootPatchedRecoveryBound G q k ^ (2⁻¹ : ℝ) +
+      2 * ((r : ℝ≥0∞) * Q * (((q + 1 : ℕ) : ℝ≥0∞) / Fintype.card G)) ^ (2⁻¹ : ℝ)) ^ 2)
+    (fun H masks ↦ averageHybridSuccess_preprocessing_le_root adv H masks hr hQ honline)
+
+/-- Empty preprocessing calls can be omitted before applying the root-accumulated bound,
+so only the smaller of the supplied round and point budgets is needed. -/
+theorem preprocessedRecoveryAdvantage_le_root_min {q k r Q : ℕ}
+    (adv : PreprocessingAdversary G q)
+    (hr : adv.preprocess.IsTotalQueryBound r) (hQ : adv.preprocess.IsPointBound Q)
+    (honline : ∀ M state puzzle,
+      (adv.online M state puzzle).IsTotalQueryBound q ∧
+        (adv.online M state puzzle).IsWidthBound k) :
+    preprocessedRecoveryAdvantage adv ≤
+      min 1 (rootPreprocessedRecoveryBound G q k (min r Q) Q) := by
+  have hm : (dropEmptyPreprocessing adv).preprocess.IsTotalQueryBound (min r Q) := by
+    rcases le_total r Q with h | h
+    · rw [min_eq_left h]
+      exact isTotalQueryBound_dropEmptyPreprocessing adv hr
+    · rw [min_eq_right h]
+      exact isTotalQueryBound_dropEmptyPreprocessing_of_isPointBound adv hQ
+  have hb := preprocessedRecoveryAdvantage_le_root (dropEmptyPreprocessing adv) hm
+    (isPointBound_dropEmptyPreprocessing adv hQ) honline
+  rwa [preprocessedRecoveryAdvantage_dropEmptyPreprocessing_eq] at hb
 
 end Quantum.MaskedChain

@@ -120,4 +120,32 @@ theorem qromDelaySecure_points {q : ℕ} (b : Quantum.TimeLockPuzzle.DelayBudget
   have h := hbound.2.2 M state puzzle
   exact ⟨h.1.mono honline, h.2.2⟩
 
+/-- The named puzzle's query-bounded preprocessing theorem with root accumulation.
+The preprocessing and online phases retain one shared oracle and the actual prefix memory. -/
+theorem qromDelayAdvantage_le_of_preprocessing_root {q k r Q : ℕ}
+    (adv : PreprocessingAdversary G q)
+    (hr : adv.preprocess.IsTotalQueryBound r) (hQ : adv.preprocess.IsPointBound Q)
+    (honline : ∀ M state puzzle,
+      (adv.online M state puzzle).IsTotalQueryBound q ∧
+        (adv.online M state puzzle).IsWidthBound k) :
+    Quantum.TimeLockPuzzle.qromDelayAdvantage (scheme q) adv ≤
+      min 1 (rootPreprocessedRecoveryBound G q k r Q) := by
+  rw [qromDelayAdvantage_eq_preprocessedRecoveryAdvantage]
+  exact preprocessedRecoveryAdvantage_le_root adv hr hQ honline
+
+/-- The phase-local security predicate follows from the root-accumulated oracle bound.
+Empty preprocessing calls are omitted before charging rounds, while retained memory is
+unrestricted and every failed branch keeps its missing probability mass. -/
+theorem qromDelaySecure_root {q : ℕ} (b : Quantum.TimeLockPuzzle.DelayBudget)
+    (honline : b.onlineRounds ≤ q) :
+    Quantum.TimeLockPuzzle.QROMDelaySecure (scheme (G := G) q) b
+      (min 1 (rootPreprocessedRecoveryBound G q b.onlineWidth
+        (min b.preprocessingRounds b.preprocessingPoints) b.preprocessingPoints)) := by
+  intro adv hbound
+  rw [qromDelayAdvantage_eq_preprocessedRecoveryAdvantage]
+  apply preprocessedRecoveryAdvantage_le_root_min adv hbound.1 hbound.2.1
+  intro M state puzzle
+  have h := hbound.2.2 M state puzzle
+  exact ⟨h.1.mono honline, h.2.2⟩
+
 end MaskedChainPuzzle
