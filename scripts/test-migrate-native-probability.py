@@ -372,6 +372,70 @@ class EventLemmaTests(unittest.TestCase):
                            "(MeasureTheory.etvDist_ne_top _ _)")
         self.assertEqual(items, [])
 
+    def test_statistical_distance_has_conditional_manual_hints(self):
+        pairs = [
+            ("Measure.etvDist", "MeasureTheory.Measure.statEDist"),
+            ("Measure.tvDist_triangle", "MeasureTheory.Measure.statDist_triangle"),
+            ("MeasureTheory.Measure.etvDist_bind_bind_le_lintegral",
+             "MeasureTheory.Measure.statEDist_bind_bind_le_lintegral"),
+            ("_root_.MeasureTheory.Measure.absDiff_apply_le_etvDist",
+             "MeasureTheory.Measure.absDiff_apply_le_statEDist"),
+            ("Measure.two_mul_tvDist_eq_tvDist_add_abs",
+             "MeasureTheory.Measure.two_mul_statDist_eq_tvDist_add_abs"),
+            ("MeasureTheory.etvDist_eq_two_mul_etvDist",
+             "MeasureTheory.etvDist_eq_two_mul_statEDist"),
+            ("Kernel.etvDist_comp_le", "ProbabilityTheory.Kernel.statEDist_comp_le"),
+            ("InformationTheory.etvDist_le_one_sub_inv_maxDiv",
+             "InformationTheory.statEDist_le_one_sub_inv_maxDiv"),
+            ("Interaction.UC.ReactiveSecurity.advantage_eq_etvDist",
+             "Interaction.UC.ReactiveSecurity.advantage_eq_statEDist"),
+            ("OracleComp.ProgramLogic.Relational.approxRelTriple_eqRel_iff_etvDist_le",
+             "OracleComp.ProgramLogic.Relational.approxRelTriple_eqRel_iff_statEDist_le"),
+        ]
+        for old, target in pairs:
+            for prefix in ("#check ", "#check ``"):
+                with self.subTest(old=old, prefix=prefix):
+                    source = prefix + old
+                    out, items = migrate(source)
+                    self.assertEqual(out, source)
+                    self.assertEqual(items, [("Fixture.lean", 1,
+                        f"`{old}`: if this denotes VCVio's statistical distance, use `{target}`")])
+                    self.assertEqual(migrate(prefix + target), (prefix + target, []))
+
+    def test_statistical_distance_literals_and_unrelated_names_are_quiet(self):
+        names = ["Measure.tvDist_triangle", "_root_.MeasureTheory.Measure.etvDist"]
+        for name in names:
+            sources = [
+                f'#eval "{name}"',
+                f'#eval r##"a " {name} " b"##',
+                f'#eval "first line\n{name}\nlast line"',
+                f'syntax "{name}" : term',
+                f"#check «{name}»",
+                f"#check `{name}",
+                f"#check Foreign.{name}",
+                f"#check «Foreign».{name}",
+                f"#check {name}.lemma",
+                f"#check {name}.«lemma»",
+                f"#check {name}_custom",
+                f"#check {name}!",
+                f"/- /- nested -/ {name} -/ -- {name}",
+            ]
+            for source in sources:
+                with self.subTest(source=source):
+                    self.assertEqual(migrate(source), (source, []))
+        for name in ('"tvDist"', "`tvDist", "MeasureTheory.etvDist", "MeasureTheory.tvDist_triangle", "μ.etvDist",
+                     "etvDist_bind_bind_le_lintegral"):
+            with self.subTest(name=name):
+                self.assertEqual(migrate(name), (name, []))
+
+    def test_short_spelling_inside_user_namespace_stays_manual(self):
+        source = "namespace MyLibrary\n#check Measure.tvDist_triangle\nend MyLibrary"
+        result, items = migrate(source)
+        self.assertEqual(result, source)
+        self.assertEqual(items, [("Fixture.lean", 2,
+            "`Measure.tvDist_triangle`: if this denotes VCVio's statistical distance, "
+            "use `MeasureTheory.Measure.statDist_triangle`")])
+
     def test_statistical_distance_is_not_a_legacy_name(self):
         _, items = migrate("exact Measure.statDist_triangle _ _ _ h₁ h₂ h₃ |>.trans "
                            "(MeasureTheory.Measure.statEDist_le_one _ _ h₁ h₂)")

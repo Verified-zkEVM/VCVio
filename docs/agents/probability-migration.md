@@ -25,6 +25,12 @@ record is `docs/reading/denotational-probability-semantics.md`.
 3. Build. Work through the reported sites and the remaining errors with the *Symptoms* table.
 4. Check that definitions fix their σ-algebras (see *Semantic contract*).
 
+The codemod leaves statistical-distance names for manual review. For recognized qualified
+spellings, including `Measure` and `Kernel` forms, it suggests the corresponding VCVio
+declaration. Check which declaration the proof uses, especially for unqualified names, dot
+notation, and references inside string interpolations. VCVio’s `Measure.statEDist` takes the supremum over measurable events. Mathlib’s
+`MeasureTheory.etvDist` measures total variation.
+
 The codemod is textual: it never needs a build and is idempotent, so it can be rerun after a
 further repin. It does not convert proofs; a proof that computed with `probOutput` sums, `SPMF`
 equalities or `tvDist` follows the *Standard proof conversion* table of the roadmap.
@@ -45,6 +51,7 @@ remaining build errors by kind, file scope and whether the codemod knows the nam
 | `Pr{x ← mx}[p x]` (a bare draw) | `Pr{let x ← mx}[p x]`: the braces hold an ordinary `do` sequence |
 | `evalSPMF mx`, `𝒮[mx]`, `SPMF α` | `𝒟[mx] : Measure α`; `evalDistWithFailure mx : Measure (Option α)` records the failure mass at `none` |
 | `tvDist mx my` | `measureTVDist mx my` (real) or `measureETVDist mx my` (`ℝ≥0∞`); `Measure.statDist` and `Measure.statEDist` on measures |
+| `Measure.tvDist_triangle`, `Measure.etvDist_bind_bind_le_lintegral` | `Measure.statDist_triangle`, `Measure.statEDist_bind_bind_le_lintegral` |
 | `expectedValue mx f` | `∫⁻ x, f x ∂𝒟[mx]` |
 | `NeverFail mx` | nothing on `OracleComp`; `IsProbabilityMeasure 𝒟[mx]` for failing monads |
 | `RelTriple'` | `RelTriple` |

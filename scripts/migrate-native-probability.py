@@ -39,6 +39,8 @@ import re
 import sys
 from pathlib import Path
 
+from lean_source_tokens import token_matches
+
 GUIDE = "docs/agents/probability-migration.md"
 
 # Declarations renamed between the discrete API and the measure API, keyed by the old name.
@@ -652,7 +654,6 @@ LEGACY_TOKENS: list[tuple[str, str]] = [
     (r"(?<![\w'])evalSPMF(?![\w'])|𝒮\[", "`𝒟[mx]`; see *Notation and definitions*"),
     (r"(?<![\w'.])probOutput(?![\w'])", "`Pr{let y ← mx}[y = x]` or `𝒟[mx] {x}`"),
     (r"(?<![\w'.])probEvent(?![\w'])", "`Pr{let x ← mx}[p x]`"),
-    (r"(?<![\w'.])tvDist(?![\w'])", "`measureTVDist` (real) or `measureETVDist` (`ℝ≥0∞`)"),
     (r"(?<![\w'.])expectedValue(?![\w'])", "`∫⁻ x, f x ∂𝒟[mx]`"),
     (r"(?<![\w'.])NeverFail(?![\w'])", "nothing on `OracleComp`; see *Classes and binders*"),
     (r"EvalDistCompatible", "operational support lemmas; see *Classes and binders*"),
@@ -666,8 +667,15 @@ LEGACY_TOKENS: list[tuple[str, str]] = [
     (r"@(?:OracleSpec\.)?UniformAnswerMeasure\.ofFiniteNonempty\b",
      "takes the specification and its `Finite` and `Nonempty` instances only"),
     (r"(?<![\w'.])SPMF(?![\w'])", "`Measure`; see *Notation and definitions*"),
-    (r"(?<![\w'.])(?![\w'.]*MeasureTheory\.e?tvDist)[\w'.]*?"
-     r"(?:evalSPMF|probOutput|probEvent|probFailure|(?<!e)tvDist)_[\w'.]*",
+    (r"(?<![\w'.])[\w'.]*?(?:evalSPMF|probOutput|probEvent|probFailure)_[\w'.]*",
+     "a legacy lemma name; see *Lemma names*"),
+]
+
+# The same patterns check retired names in documentation. In source they apply only
+# to complete identifier tokens, since a Lean literal can contain an old spelling.
+LEGACY_DISTANCE_TOKENS = [
+    (r"(?<![\w'.])tvDist(?![\w'])", "`measureTVDist` (real) or `measureETVDist` (`ℝ≥0∞`)"),
+    (r"(?<![\w'.])(?![\w'.]*MeasureTheory\.e?tvDist)[\w'.]*?(?<!e)tvDist_[\w'.]*",
      "a legacy lemma name; see *Lemma names*"),
 ]
 
@@ -1122,6 +1130,112 @@ EXPLICIT_COMPUTATION_PATTERNS = [(rename_pattern(old), new)
                                  for old, new in EXPLICIT_COMPUTATION_RENAMES.items()]
 
 
+# VCVio's sup-event statistical distance has different normalization from Mathlib's
+# total variation. Only these declaration names appear in the manual migration hints.
+STAT_DISTANCE_RENAMES: dict[str, str] = {}
+for namespaces, current_names in (
+    (("MeasureTheory.Measure", "Measure"), (
+        "absDiff_apply_le_statEDist",
+        "absDiff_lintegral_le_statEDist",
+        "lintegral_le_add_statEDist",
+        "statDist",
+        "statDist_bind_bind_le_lintegral",
+        "statDist_bind_le",
+        "statDist_comm",
+        "statDist_dirac_dirac_of_ne",
+        "statDist_eq_half_sum_abs",
+        "statDist_eq_zero_iff",
+        "statDist_le_one",
+        "statDist_le_tvDist",
+        "statDist_map_le",
+        "statDist_nonneg",
+        "statDist_punit",
+        "statDist_self",
+        "statDist_triangle",
+        "statEDist",
+        "statEDist_bind_bind_le_add_lintegral",
+        "statEDist_bind_bind_le_add_lintegral_of_bad",
+        "statEDist_bind_bind_le_lintegral",
+        "statEDist_bind_bind_le_of_bad",
+        "statEDist_bind_le",
+        "statEDist_comm",
+        "statEDist_dirac_dirac_of_ne",
+        "statEDist_eq_max_of_isHahnDecomposition",
+        "statEDist_eq_one_sub_sum_min",
+        "statEDist_eq_sum_tsub",
+        "statEDist_eq_zero_iff",
+        "statEDist_le_etvDist",
+        "statEDist_le_one",
+        "statEDist_le_one_sub_of_le",
+        "statEDist_map_le",
+        "statEDist_ne_top",
+        "statEDist_nonneg",
+        "statEDist_self",
+        "statEDist_triangle",
+        "two_mul_statDist_eq_tvDist_add_abs",
+        "two_mul_statEDist_eq_etvDist_add_absDiff",
+    )),
+    (("MeasureTheory",), (
+        "etvDist_eq_two_mul_statEDist",
+        "tvDist_eq_two_mul_statDist",
+    )),
+    (("InformationTheory",), (
+        "statEDist_le_lintegral_absDiff_rnDeriv_div_two",
+        "statEDist_le_one_sub_inv_maxDiv",
+        "statEDist_rpow_two_le_one_sub_inv_renyiDiv",
+        "statEDist_rpow_two_le_one_sub_renyiMGF_half",
+    )),
+    (("ProbabilityTheory.Kernel", "Kernel"), (
+        "statEDist_comp_comp_le_add_lintegral",
+        "statEDist_comp_comp_le_lintegral",
+        "statEDist_comp_comp_le_of_bad",
+        "statEDist_comp_le",
+    )),
+    (("Interaction.UC.ReactiveSecurity",), (
+        "advantage_eq_statEDist",
+    )),
+    (("OracleComp.ProgramLogic.Relational",), (
+        "approxRelTriple_eqRel_iff_statEDist_le",
+        "statEDist_eq_one_sub_eRelWP_eqRel",
+    )),
+):
+    for namespace in namespaces:
+        for current in current_names:
+            old = current.replace("statEDist", "etvDist").replace("statDist", "tvDist")
+            STAT_DISTANCE_RENAMES[f"{namespace}.{old}"] = f"{namespaces[0]}.{current}"
+
+
+def report_stat_distance(text: str, report: Report, path: str) -> None:
+    if "tvDist" not in text:
+        return
+    for match in token_matches(text):
+        token = match[0]
+        if "tvDist" not in token:
+            continue
+        name = token.removeprefix("_root_.")
+        if match.start() and text[match.start() - 1] in ".«»":
+            continue
+        if text[match.end():match.end() + 1] in {".", "!", "?", "«", "»"}:
+            continue
+        # A single backtick constructs a Name as data. Two backticks resolve a declaration.
+        if match.start() and text[match.start() - 1] == "`" and not text.startswith(
+                "``", max(0, match.start() - 2)):
+            continue
+        if name in STAT_DISTANCE_RENAMES:
+            target = STAT_DISTANCE_RENAMES[name]
+            hint = f"if this denotes VCVio's statistical distance, use `{target}`"
+        else:
+            namespace, _, leaf = name.rpartition(".")
+            if namespace not in ("", "OracleComp") or "statDist" in leaf:
+                continue
+            hint = next((hint for pattern, hint in LEGACY_DISTANCE_TOKENS
+                         if re.fullmatch(pattern, leaf)), None)
+            if hint is None:
+                continue
+            hint = LEGACY_HINTS.get(leaf, hint)
+        report.add(path, text, match.start(), f"`{token}`: {hint}")
+
+
 def rewrite_names(text: str) -> str:
     for pattern, new in RENAME_PATTERNS:
         text = pattern.sub(new, text)
@@ -1207,6 +1321,7 @@ def rewrite_opens(text: str) -> str:
 
 
 def report_legacy(text: str, report: Report, path: str) -> None:
+    report_stat_distance(text, report, path)
     spans = comment_spans(text)
     for regex, hint in LEGACY_TOKENS:
         for m in re.finditer(regex, text):
