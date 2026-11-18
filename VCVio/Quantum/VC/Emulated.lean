@@ -30,7 +30,8 @@ Trusted classical checks use a projective read on the same private register, ret
 The mixed runtimes carry this read alongside ordinary, extraction, and recording ports. The read
 certificate concerns the base oracle; it asserts no commutation with extraction or recording.
 
-"Polynomial time" of the emulation (p. 50) is not part of the definitions.
+Running time is not part of the definitions. Def 7.3 (p. 50) bounds no running time of the
+emulation; it asks for a polynomial-time multi-extractor.
 
 ## Main definitions
 
@@ -87,8 +88,8 @@ section extractionMeasurement
 
 variable {k : ℕ} {Cm : Type} {Dm : Fin k → Type}
 
-/-- The projector onto the private states `s` with `MultiExtract(tic, s) = tdm` (the paper's
-`Π_tdm`, p. 59). -/
+/-- The projector onto the private states `s` with `MultiExtract(tic, s) = tdm` (the projector
+selecting `X^tdm` in the paper's decomposition of `U_MultiExtract`, p. 59). -/
 @[expose]
 noncomputable def extractProj {S : Type*} [DecidableEq S] [∀ i, DecidableEq (Dm i)]
     (ME : MultiExtractor k Cm Dm S) (tic : TpIC k Cm) (tdm : TpDLen k Dm tic.1) :

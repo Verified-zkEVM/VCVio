@@ -30,8 +30,8 @@ component of a basis element.
 
 ## Main definitions
 
-* `Quantum.DatabaseSupportedOn t ρ`: the condition `P_t` of ePrint 2025/2166 on an operator on
-  `M × Database X Y`, support on databases with at most `t` nonempty cells.
+* `Quantum.DatabaseSupportedOn t ρ`: support of an operator on `M × Database X Y` on databases
+  with at most `t` nonempty cells, the range of `P_size^(t)` of ePrint 2025/2166 (p. 29).
 
 ## Main results
 
@@ -59,8 +59,8 @@ section database
 
 variable {X Y M : Type*} [Fintype X]
 
-/-- The condition `P_t` of ePrint 2025/2166 for operators on `M × Database X Y`: every nonzero
-entry sits between databases with at most `t` nonempty cells. -/
+/-- Support in the range of `P_size^(t)` of ePrint 2025/2166 (p. 29) for operators on
+`M × Database X Y`: every nonzero entry sits between databases with at most `t` nonempty cells. -/
 abbrev DatabaseSupportedOn (t : ℕ) (ρ : Matrix (M × Database X Y) (M × Database X Y) ℂ) : Prop :=
   QuerySupportedOn (fun m : M × Database X Y ↦ m.2.size) (Set.Iic t) ρ
 

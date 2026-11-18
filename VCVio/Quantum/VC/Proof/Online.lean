@@ -16,7 +16,7 @@ public import VCVio.Quantum.Oracle.Compressed.CollisionRuntime
 
 Occupied commitment keys and database entries form a coherent joint grade. Summed branch Gram
 bounds give both directed square-root inequalities with the same source total weight.
-The recording swap follows Chiesa, Di, Hu and Zheng, ePrint 2025/2166, Definition 9.8 and
+The recording swap follows Chiesa, Di, Hu and Zheng, ePrint 2025/2166, Definition 9.9 and
 Lemmas 9.10–9.12, pp. 66–67. Ordinary coherent ports specialize to selected oracle mass.
 -/
 
@@ -332,7 +332,7 @@ theorem privateSwapEquiv_symm : (privateSwapEquiv (Cell := Cell) ME).symm =
     privateSwapEquiv ME := rfl
 variable [Fintype Cm] [∀ i, Fintype (Dm i)] [DecidableEq S] [DecidableEq Cell]
 /-- The unitary basis matrix of the private recording swap (ePrint 2025/2166,
-Definition 9.8, p. 66). -/
+Definition 9.9, p. 66). -/
 @[expose]
 noncomputable def swapUnitary : Matrix (S × RecReg k Cm Dm Cell)
     (S × RecReg k Cm Dm Cell) ℂ := basisMatrix (privateSwapEquiv ME)

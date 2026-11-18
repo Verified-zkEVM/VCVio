@@ -13,15 +13,15 @@ public import VCVio.Quantum.Oracle.Emulated
 /-!
 # The purified extractor and the record unitaries
 
-The unitaries of Def 7.2 of Chiesa, Di, Hu and Zheng (ePrint 2025/2166, §7, pp. 49–50):
+The unitaries of Chiesa, Di, Hu and Zheng (ePrint 2025/2166, §7, pp. 49–50):
 
 * `U_MultiExtract` (p. 49) on `(TpIC × Z) × S`: controlled on a commitment tuple `tic` and a
   basis state `s` of the oracle's private register, it adds an encoding of `MultiExtract(tic, s)`
   to the output register `Z` (`Quantum.extractUnitary`);
-* `Record(U)` (pp. 49–50) on `(TpIC × Yr) × (S × R)`: controlled on `tic`, it applies `U`
+* `Record(U)` (Def 7.2, pp. 49–50) on `(TpIC × Yr) × (S × R)`: controlled on `tic`, it applies `U`
   to `Yr` and the cell `R_tic` of the recording register (`Quantum.recordUnitary`);
-* `Record(MultiExtract, U)` (p. 50): controlled on `tic` and `s`, it applies `U` to `Yr` and
-  the cell `R_(tic, MultiExtract(tic, s))` (`Quantum.recordMEUnitary`).
+* `Record(MultiExtract, U)` (Def 7.2, p. 50): controlled on `tic` and `s`, it applies `U` to `Yr`
+  and the cell `R_(tic, MultiExtract(tic, s))` (`Quantum.recordMEUnitary`).
 
 ## Encodings
 
@@ -194,7 +194,7 @@ theorem extractPerm_apply (tic : TpIC k Cm) (z : Z) (s : S) :
 
 variable [DecidableEq Cm] [DecidableEq S] [DecidableEq Z]
 
-/-- **`U_MultiExtract`** (ePrint 2025/2166, Def 7.2, p. 49), the basis matrix of
+/-- **`U_MultiExtract`** (ePrint 2025/2166, §7, p. 49), the basis matrix of
 `Quantum.extractPerm`. -/
 @[expose]
 noncomputable def extractUnitary : Matrix ((TpIC k Cm × Z) × S) ((TpIC k Cm × Z) × S) ℂ :=
