@@ -39,6 +39,8 @@ lower-priority fallback. The interpretation uses core `Std.WP.WP.wp` directly, a
 Under `open scoped OracleComp.Lower`, `OracleComp.ProgramLogic.wp_eq_wpFold` computes the
 same expectation one call at a time, integrating each continuation under the configured answer
 measure. It applies to an arbitrary postcondition and needs no measurable space on results.
+The uniform-draw and constant-postcondition equations accept any empty exception postcondition,
+including the unit value that core normalization leaves in verification conditions.
 `OracleComp.Lower.instWP_eq_expectationWPMonad` identifies this scoped interpretation with
 PolyFun's free-program expectation reading. The default query rule integrates the exact
 postcondition, while `OracleComp.Lower.Pointwise` lets `vcgen` descend through each answer.
