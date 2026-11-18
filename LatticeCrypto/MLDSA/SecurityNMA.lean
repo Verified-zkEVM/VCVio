@@ -708,7 +708,7 @@ theorem stmsis_tail_le_of_verify_imp_valid
       𝒟[do
         let ((hashInput, response), cache) ←
           (simulateQ (roImpl p prims (M := M))
-            ((extractorC p prims main).run (params, pk))).run ∅
+            ((extractorC p prims nttOps main).run (params, pk))).run ∅
         match cache hashInput with
         | some hashOutput => pure (valid hashInput hashOutput response)
         | none => pure false] {true} := by
@@ -772,10 +772,10 @@ private theorem stmsis_tail_le
             ((extractorC p prims nttOps main).run (prims.expandA pk.rho, pk))).run ∅
         match cache hashInput with
         | some hashOutput =>
-            pure ((mldsaSTMSIS p prims nttOps M).isValid (prims.expandA pk.rho) pk hashInput hashOutput
-              response)
+            pure ((mldsaSTMSIS p prims nttOps M).isValid (prims.expandA pk.rho) pk
+              hashInput hashOutput response)
         | none => pure false] {true} :=
-  stmsis_tail_le_of_verify_imp_valid p prims (prims.expandA pk.rho) pk main
+  stmsis_tail_le_of_verify_imp_valid p prims nttOps (prims.expandA pk.rho) pk main
     ((FiatShamirWithAbort (identificationScheme p prims nttOps) hr M maxAttempts).verify pk)
     ((identificationScheme p prims nttOps).verify pk)
     ((mldsaSTMSIS p prims nttOps M).isValid (prims.expandA pk.rho) pk)
@@ -1033,7 +1033,7 @@ private theorem stmsis_tail_le_short
             pure ((mldsaSTMSISShort p prims nttOps M).isValid (prims.expandA pk.rho) pk
               hashInput hashOutput response)
         | none => pure false] {true} :=
-  stmsis_tail_le_of_verify_imp_valid p prims (prims.expandA pk.rho) pk main
+  stmsis_tail_le_of_verify_imp_valid p prims nttOps (prims.expandA pk.rho) pk main
     ((FiatShamirWithAbort (identificationSchemeShort p prims nttOps) hr M maxAttempts).verify pk)
     ((identificationSchemeShort p prims nttOps).verify pk)
     ((mldsaSTMSISShort p prims nttOps M).isValid (prims.expandA pk.rho) pk)
