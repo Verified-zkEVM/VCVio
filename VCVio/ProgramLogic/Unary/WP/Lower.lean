@@ -243,23 +243,17 @@ variable {α β : Type}
 
 namespace WriterT
 
-@[simp]
 theorem wp_bind {ω : Type} [Monoid ω] (x : _root_.WriterT ω (OracleComp spec) α)
     (f : α → _root_.WriterT ω (OracleComp spec) β) (post : β → ω → ℝ≥0∞) (epost : EStack⟨⟩) :
     Std.WP.wp (x >>= f) post epost =
       fun w => Std.WP.wp x
-        (fun a w' => Std.WP.wp (f a) post epost w') epost w := by
-  funext w
-  simp only [_root_.WriterT.wp_apply_eq,
-    _root_.WriterT.run_bind, ExactWPMonad.wp_bind, ExactWPMonad.wp_map, mul_assoc]
+        (fun a w' => Std.WP.wp (f a) post epost w') epost w :=
+  ExactWPMonad.wp_bind x f post epost
 
-@[simp]
 theorem wp_pure {ω : Type} [Monoid ω] (x : α) (post : α → ω → ℝ≥0∞) (epost : EStack⟨⟩) :
     Std.WP.wp (pure x : _root_.WriterT ω (OracleComp spec) α) post epost =
-      fun w => post x w := by
-  funext w
-  simp only [_root_.WriterT.wp_apply_eq,
-    _root_.WriterT.run_pure, ExactWPMonad.wp_pure, mul_one]
+      fun w => post x w :=
+  ExactWPMonad.wp_pure (m := _root_.WriterT ω (OracleComp spec)) x post epost
 
 @[simp]
 theorem wp_tell {ω : Type} [Monoid ω] (out : ω) (post : PUnit → ω → ℝ≥0∞) (epost : EStack⟨⟩) :
@@ -278,14 +272,11 @@ theorem wp_monadLift {ω : Type} [Monoid ω] (oa : OracleComp spec α)
   simp only [_root_.WriterT.wp_apply_eq,
     _root_.WriterT.run_core_monadLift, ExactWPMonad.wp_map, mul_one]
 
-@[simp]
 theorem wp_map {ω : Type} [Monoid ω] (f : α → β)
     (x : _root_.WriterT ω (OracleComp spec) α) (post : β → ω → ℝ≥0∞) (epost : EStack⟨⟩) :
     Std.WP.wp (f <$> x) post epost =
-      Std.WP.wp x (fun a w => post (f a) w) epost := by
-  funext w
-  simp only [_root_.WriterT.wp_apply_eq,
-    _root_.WriterT.run_map, ExactWPMonad.wp_map]
+      Std.WP.wp x (fun a w => post (f a) w) epost :=
+  ExactWPMonad.wp_map f x post epost
 
 end WriterT
 
