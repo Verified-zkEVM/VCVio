@@ -34,6 +34,11 @@ deterministic scheme) is a sufficient condition for every `D`.
   experiment accepts on every outcome, for `D`-almost every function.
 * `DetVectorCommitment.PerfectlyComplete.toVectorCommitment`: the same sufficient condition for a
   deterministic scheme.
+
+## References
+
+* [Chiesa, Di, Hu and Zheng, *How to Prove Post-Quantum Security for Succinct Non-Interactive
+  Reductions*, ePrint 2025/2166](https://eprint.iacr.org/2025/2166), Def 3.7 (p. 27).
 -/
 
 public section
@@ -46,7 +51,7 @@ namespace VectorCommitment
 
 variable {X : Type uX} {Y : Type} {Msg : Type uM} {Cm Td Pf : Type} {ℓ : ℕ}
 
-/-- The experiment of Def 3.7 (p. 27) for a message `m` and a query set `Q`, with the oracle
+/-- The honest completeness experiment for a message `m` and a query set `Q`, with the oracle
 left abstract: `(cm, td) ← Commit^f(m)`, `pf ← Open(Q, td)`, and return
 `Check^f(cm, Q, m[Q], pf)`. -/
 @[expose]
@@ -56,8 +61,8 @@ def completenessExp (vc : VectorCommitment X Y Msg Cm Td Pf ℓ) (m : Fin ℓ �
   let pf ← liftComp (vc.opening Q z.2) (unifSpec + (X →ₒ Y))
   vc.check z.1 (PartialVec.restrict m Q) pf
 
-/-- The acceptance probability of the experiment of Def 3.7 (p. 27) when the oracle is
-sampled from the measure `D` on functions,
+/-- The acceptance probability of `completenessExp` when the oracle is sampled from the measure
+`D` on functions,
 `Pr[Check^f(cm, Q, m[Q], pf) = 1 : f ← D, (cm, td) ← Commit^f(m), pf ← Open(Q, td)]`, extended to
 an arbitrary measurable space on `X → Y` as the lower integral over `D` of the acceptance
 probability against each fixed function. The integrand need not be measurable, and the lower
@@ -72,25 +77,25 @@ noncomputable def completenessProb [MeasurableSpace (X → Y)]
     (Q : Finset (Fin ℓ)) : ENNReal :=
   ∫⁻ H, Pr{let b ← simulateQ (fixedOracleImpl H) (vc.completenessExp m Q)}[b = true] ∂D
 
-/-- **Perfect completeness** in the `D`-oracle model (ePrint 2025/2166, Def 3.7, p. 27):
-for every message `m` and every query set `Q`, the experiment accepts with probability `1` when
-the oracle is sampled from `D`. `D` is meant to be a probability measure. -/
+/-- **Perfect completeness** in the `D`-oracle model: for every message `m` and every query set
+`Q`, the experiment accepts with probability `1` when the oracle is sampled from `D`. `D` is meant
+to be a probability measure. -/
 @[expose]
 def PerfectlyComplete [MeasurableSpace (X → Y)] (vc : VectorCommitment X Y Msg Cm Td Pf ℓ)
     (D : Measure (X → Y)) : Prop :=
   ∀ (m : Fin ℓ → Msg) (Q : Finset (Fin ℓ)), vc.completenessProb D m Q = 1
 
 /-- Perfect completeness against every fixed function `H`: for every message and query set, every
-outcome of the experiment with the oracle answered by `H` accepts. It implies Def 3.7 for every
-oracle distribution (`PerfectlyCompleteForAll.perfectlyComplete`). -/
+outcome of the experiment with the oracle answered by `H` accepts. It implies `PerfectlyComplete`
+for every oracle distribution (`PerfectlyCompleteForAll.perfectlyComplete`). -/
 @[expose]
 def PerfectlyCompleteForAll (vc : VectorCommitment X Y Msg Cm Td Pf ℓ) : Prop :=
   ∀ (H : X → Y) (m : Fin ℓ → Msg) (Q : Finset (Fin ℓ)),
     ∀ b ∈ support (simulateQ (fixedOracleImpl H) (vc.completenessExp m Q)), b = true
 
-/-- Def 3.7 holds for a probability measure `D` exactly when, for every message and query set and
-for `D`-almost every function `H`, every outcome of the experiment with the oracle answered by `H`
-accepts. No measurability of the acceptance probability in `H` is needed. -/
+/-- `PerfectlyComplete D` holds for a probability measure `D` exactly when, for every message and
+query set and for `D`-almost every function `H`, every outcome of the experiment with the oracle
+answered by `H` accepts. No measurability of the acceptance probability in `H` is needed. -/
 theorem perfectlyComplete_iff [MeasurableSpace (X → Y)]
     (vc : VectorCommitment X Y Msg Cm Td Pf ℓ) (D : Measure (X → Y)) [IsProbabilityMeasure D] :
     vc.PerfectlyComplete D ↔ ∀ (m : Fin ℓ → Msg) (Q : Finset (Fin ℓ)), ∀ᵐ H ∂D,
@@ -116,7 +121,8 @@ theorem perfectlyComplete_iff [MeasurableSpace (X → Y)]
     rw [lintegral_congr_ae (h.mono fun H hH ↦ (hp H).mpr hH), lintegral_const, measure_univ,
       mul_one]
 
-/-- Completeness against every fixed function gives Def 3.7 for every oracle distribution `D`. -/
+/-- Completeness against every fixed function gives `PerfectlyComplete D` for every oracle
+distribution `D`. -/
 theorem PerfectlyCompleteForAll.perfectlyComplete [MeasurableSpace (X → Y)]
     {vc : VectorCommitment X Y Msg Cm Td Pf ℓ} (h : vc.PerfectlyCompleteForAll)
     (D : Measure (X → Y)) [IsProbabilityMeasure D] : vc.PerfectlyComplete D :=
@@ -128,10 +134,10 @@ namespace DetVectorCommitment
 
 variable {X : Type uX} {Y : Type} {Msg : Type uM} {Cm Td Pf : Type} {ℓ : ℕ}
 
-/-- Perfect completeness of a deterministic scheme against every fixed function `H`
-(ePrint 2025/2166, Def 3.7, p. 27): for every message `m`, every query set `Q` and every outcome
-of `Commit^H(m)`, the honest opening of `Q` passes `Check^H` on `m[Q]`. It implies Def 3.7 for
-every oracle distribution (`PerfectlyComplete.toVectorCommitment`). -/
+/-- Perfect completeness of a deterministic scheme against every fixed function `H`: for every
+message `m`, every query set `Q` and every outcome of `Commit^H(m)`, the honest opening of `Q`
+passes `Check^H` on `m[Q]`. It implies `VectorCommitment.PerfectlyComplete` for every oracle
+distribution (`PerfectlyComplete.toVectorCommitment`). -/
 @[expose]
 def PerfectlyComplete (vc : DetVectorCommitment X Y Msg Cm Td Pf ℓ) : Prop :=
   ∀ (H : X → Y) (m : Fin ℓ → Msg) (Q : Finset (Fin ℓ)),
@@ -152,8 +158,8 @@ theorem PerfectlyComplete.perfectlyCompleteForAll {vc : DetVectorCommitment X Y 
     Set.mem_singleton_iff] at hb
   exact hb ▸ h H m Q z hz
 
-/-- **Perfect completeness relative to every oracle distribution** (Def 3.7, p. 27) of a
-deterministic scheme that is complete against every fixed function. -/
+/-- **Perfect completeness relative to every oracle distribution** of a deterministic scheme
+that is complete against every fixed function. -/
 theorem PerfectlyComplete.toVectorCommitment [MeasurableSpace (X → Y)]
     {vc : DetVectorCommitment X Y Msg Cm Td Pf ℓ} (h : vc.PerfectlyComplete)
     (D : Measure (X → Y)) [IsProbabilityMeasure D] : vc.toVectorCommitment.PerfectlyComplete D :=

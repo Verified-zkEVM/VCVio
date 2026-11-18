@@ -332,6 +332,23 @@ lemma isQueryBoundP_bind_zero (oa : OracleComp spec α) (ob : α → OracleComp 
     IsQueryBoundP (oa >>= ob) p 0 :=
   isQueryBoundP_bind h fun x _ => h' x
 
+/-- `oa >>= g` is `p`-bounded by `n` when `oa >>= f` is and, at every possible output `x` of
+`oa`, every `p`-budget of `f x` is a `p`-budget of `g x`. The comparison ranges over all budgets
+because a bound on the whole program leaves each continuation the budget its path through `oa` has
+not spent. -/
+theorem IsQueryBoundP.bind_mono_right {oa : OracleComp spec α} {f g : α → OracleComp spec β}
+    {n : ℕ} (h : IsQueryBoundP (oa >>= f) p n)
+    (hfg : ∀ x ∈ support oa, ∀ m, IsQueryBoundP (f x) p m → IsQueryBoundP (g x) p m) :
+    IsQueryBoundP (oa >>= g) p n := by
+  induction oa using OracleComp.inductionOn generalizing n with
+  | pure a =>
+    rw [pure_bind] at h ⊢
+    exact hfg a (by simp) n h
+  | query_bind t k ih =>
+    rw [bind_assoc, isQueryBoundP_query_bind_iff] at h ⊢
+    exact ⟨h.1, fun u ↦ ih u (h.2 u) fun x hx ↦
+      hfg x ((mem_support_bind_iff _ _ _).2 ⟨u, by simp, hx⟩)⟩
+
 /-- A probabilistic computation lifted to `unifSpec + hs` makes no query to `hs`. -/
 theorem isQueryBoundP_liftM_isRight {ι : Type} {hs : OracleSpec ι} {α : Type} (oa : ProbComp α) :
     IsQueryBoundP (liftM oa : OracleComp (unifSpec + hs) α) (fun t => t.isRight) 0 := by
