@@ -176,6 +176,7 @@ public import VCVioTest.Quantum.ParallelSearch
 public import VCVioTest.Quantum.PointerChainCoupling
 public import VCVioTest.Quantum.PointerChainEncoding
 public import VCVioTest.Quantum.PointerChainFrontier
+public import VCVioTest.Quantum.PointerChainPreprocessing
 public import VCVioTest.Quantum.PointerChainProgramming
 public import VCVioTest.Quantum.PointerChainRankBounds
 public import VCVioTest.Quantum.PointerChainRankSchedule

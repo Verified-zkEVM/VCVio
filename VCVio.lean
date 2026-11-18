@@ -698,6 +698,8 @@ public import VCVio.Schemes.PointerChainPuzzle.LeanSealHidingEncoding
 public import VCVio.Schemes.PointerChainPuzzle.Path
 public import VCVio.Schemes.PointerChainPuzzle.QuantumCoupling
 public import VCVio.Schemes.PointerChainPuzzle.QuantumCoupling.Incidence
+public import VCVio.Schemes.PointerChainPuzzle.QuantumCoupling.Preprocessing
+public import VCVio.Schemes.PointerChainPuzzle.QuantumCoupling.PreprocessingIncidence
 public import VCVio.Schemes.PointerChainPuzzle.QuantumCoupling.Programming
 public import VCVio.Schemes.PointerChainPuzzle.QuantumCoupling.RankBounds
 public import VCVio.Schemes.PointerChainPuzzle.QuantumCoupling.RankHybrid

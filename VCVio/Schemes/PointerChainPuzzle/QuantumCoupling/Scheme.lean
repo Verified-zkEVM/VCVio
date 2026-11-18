@@ -18,7 +18,7 @@ or losslessness assumptions are needed for this representation.
 
 The rank-programmed comparison charges path-input collisions once, with allowance
 `solvePoints n m ^ 2 / |Bytes 32|`. Its path responses remain unconditionally uniform.
-A bound on quantum recovery in that programmed game is a separate security obligation.
+The module `QuantumCoupling.Preprocessing` bounds recovery under phase-local query budgets.
 -/
 
 public section
@@ -179,8 +179,8 @@ theorem qromDelayAdvantage_quantumWindowScheme_le_programmed {m : ℕ} [NeZero n
   rw [← qromDelayAdvantage_quantumWindowScheme_eq_lintegral hB adv] at h
   exact h
 
-/-- The actual key-recovery probability is additionally capped by one. The programmed-game
-comparison is a coupling step; a quantum bound on that game remains a separate obligation. -/
+/-- The actual key-recovery probability is additionally capped by one. This coupling comparison
+precedes the resource-bounded recovery analysis in `QuantumCoupling.Preprocessing`. -/
 theorem qromDelayAdvantage_quantumWindowScheme_le_min_programmed {m : ℕ} [NeZero n]
     (hb : b ≤ 32) (hn : n < 2 ^ 32) (hB : hashInputBound b ≤ B)
     (adv : WindowAdversary b n B) :
