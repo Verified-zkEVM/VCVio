@@ -87,8 +87,9 @@ theorem wp_eq_lintegral (mx : m α) (post : α → ENNReal) (hpost : Measurable 
 
 /-- Constant postconditions retain the successful-output mass. -/
 @[simp]
-theorem wp_const (mx : m α) (c : ENNReal) :
-    wp mx (fun _ ↦ c) Lean.Order.bot = c * 𝒟[mx] Set.univ := by
+theorem wp_const (mx : m α) (c : ENNReal) (epost : EStack⟨⟩ := Lean.Order.bot) :
+    wp mx (fun _ ↦ c) epost = c * 𝒟[mx] Set.univ := by
+  change wp mx (fun _ ↦ c) Lean.Order.bot = _
   rw [wp_eq_lintegral mx _ measurable_const, lintegral_const]
 
 /-- Expectation is additive in measurable postconditions. -/
