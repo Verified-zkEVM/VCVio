@@ -347,3 +347,13 @@ The generic table resampling, coordinate and collision facts live in
 hybrids remain in `Oracle/MaskedChain/`. This implements the idealized endpoint-only bound of
 the M6b track through the Afshar et al. §5 hybrid argument. Quantum preprocessing and the exact
 `PointerChainPuzzle` encoding are separate obligations, as are sharper compressed-oracle bounds.
+
+`Schemes/MaskedChainPuzzle.lean` gives the named honest idealized puzzle. Its generator samples
+the full hidden tuple and makes one round of `q + 1` point queries; its solver traverses the
+`q + 1` links with one point per sequential round. Correctness holds for every fixed function
+and tuple. `MaskedChainPuzzle.qromDelayAdvantage_eq_recoveryAdvantage` connects the actual
+two-phase experiment, using the no-preprocessing adversary adapter, to the endpoint game with
+one function and jointly retained hidden tuple. `MaskedChainPuzzle.qromDelayAdvantage_le`
+therefore gives the same explicit bound for that named scheme. This establishes the idealized
+no-preprocessing application without claiming security with oracle preprocessing or for the
+exact pointer-chain encoding.

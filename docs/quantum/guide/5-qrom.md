@@ -262,9 +262,12 @@ parallel reprogramming argument rather than a compressed-oracle bound.
 
 The experiment and theorem are in `Oracle/MaskedChain/Model.lean` and
 `Oracle/MaskedChain/Bounds.lean`, with the classical coupling and scheduled hybrids in sibling
-modules. They follow Afshar et al., §5, while observing only the endpoint. The two-phase
-[puzzle interface](7-time-lock-puzzles.md) also permits preprocessing; this online theorem
-does not establish security with preprocessing or for the exact `PointerChainPuzzle` encoding.
+modules. They follow Afshar et al., §5, while observing only the endpoint. The
+[named puzzle](7-time-lock-puzzles.md#the-idealized-masked-chain-puzzle) has honest
+generation and solving algorithms, whose recovery probability equals that of this game by
+`MaskedChainPuzzle.qromDelayAdvantage_eq_recoveryAdvantage`. Its no-preprocessing delay bound
+is `MaskedChainPuzzle.qromDelayAdvantage_le`. Bounds with quantum preprocessing or for the
+exact `PointerChainPuzzle` encoding remain separate work.
 
 ## Checks
 

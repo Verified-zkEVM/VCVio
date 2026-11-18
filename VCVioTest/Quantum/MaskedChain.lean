@@ -5,7 +5,7 @@ Authors: Alexander Hicks
 -/
 
 module
-public import VCVio.Quantum.Oracle.MaskedChain.Bounds
+public import VCVio.Schemes.MaskedChainPuzzle
 public import Mathlib.Data.ZMod.Basic
 
 /-!
@@ -78,7 +78,7 @@ private theorem root_inv_256 : ((256 : ℝ≥0∞)⁻¹ ^ (2⁻¹ : ℝ)) = (16 
 
 /-- One round against two masked links has a nontrivial 17/64 endpoint bound; all three
 error terms contribute, so a missing hybrid or collision term changes this value. -/
-example (I : L.Interp) (adv : OnlineAdversary L (ZMod 256) 1)
+theorem oneRound_recoveryAdvantage_le (I : L.Interp) (adv : OnlineAdversary L (ZMod 256) 1)
     (hb : adv.IsQueryBound 1 1) : recoveryAdvantage I adv ≤ 17 / 64 := by
   have h := recoveryAdvantage_le I adv hb
   refine h.trans ((min_le_right _ _).trans_eq ?_)
@@ -98,5 +98,38 @@ theorem recoveryAdvantage_zero {G : Type} [Fintype G] [DecidableEq G] [AddCommGr
     Matrix.zero_kronecker, map_zero, Matrix.trace_zero, Complex.zero_re,
     ENNReal.ofReal_zero, zero_smul, Measure.sum_zero]
   simp
+
+/-! ## Named puzzle experiment -/
+
+/-- The nonbinary solver uses subtraction to unmask two successive links under one oracle. -/
+example [MeasurableSpace (Option (ZMod 3))] :
+    (parallelOracleRuntime (fun x : ZMod 3 ↦ x + 1)).evalDist₂ .instruments
+      ((MaskedChainPuzzle.scheme (G := ZMod 3) 1).solve (0, ![0, 1])) (SubState.basis ()) =
+        Measure.dirac (some (1 : ZMod 3)) := by
+  have hp : publicPuzzle (fun x : ZMod 3 ↦ x + 1) (![0, 2, 1] : Fin 3 → ZMod 3) =
+      (0, ![0, 1]) := by decide
+  have h := MaskedChainPuzzle.evalDist_scheme_solve_publicPuzzle
+    (fun x : ZMod 3 ↦ x + 1) (![0, 2, 1] : Fin 3 → ZMod 3)
+  rw [hp] at h
+  exact h
+
+/-- The actual two-phase experiment inherits the unsaturated endpoint bound, even though its
+honest generator uses more points than the online adversary's one-point allowance. -/
+example (adv : OnlineAdversary LocalSig.instruments (ZMod 256) 1)
+    (hb : adv.IsQueryBound 1 1) :
+    (MaskedChainPuzzle.adversary adv).IsQueryBound ⟨0, 1, 1, 1⟩ ∧
+      Quantum.TimeLockPuzzle.qromDelayAdvantage (MaskedChainPuzzle.scheme 1)
+        (MaskedChainPuzzle.adversary adv) ≤ 17 / 64 := by
+  refine ⟨MaskedChainPuzzle.adversary_isQueryBound adv hb, ?_⟩
+  rw [MaskedChainPuzzle.qromDelayAdvantage_eq_recoveryAdvantage]
+  exact oneRound_recoveryAdvantage_le .instruments adv hb
+
+/-- Zero initial adversary mass gives zero recovery probability in the named experiment. -/
+example {G : Type} [Fintype G] [DecidableEq G] [AddCommGroup G] {q : ℕ}
+    (adv : OnlineAdversary LocalSig.instruments G q) (hρ : adv.initialState.matrix = 0) :
+    Quantum.TimeLockPuzzle.qromDelayAdvantage (MaskedChainPuzzle.scheme q)
+      (MaskedChainPuzzle.adversary adv) = 0 := by
+  rw [MaskedChainPuzzle.qromDelayAdvantage_eq_recoveryAdvantage]
+  exact recoveryAdvantage_zero .instruments adv hρ
 
 end VCVioTest.QuantumMaskedChain
