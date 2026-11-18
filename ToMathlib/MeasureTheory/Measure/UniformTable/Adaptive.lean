@@ -165,6 +165,43 @@ theorem tableLabelProgram_apply_of_avoids
     rw [tableLabelProgram, Function.update_of_ne (Ne.symm (havoid v List.mem_cons_self))]
     exact ih (fun w hw ↦ havoid w (List.mem_cons_of_mem _ hw))
 
+/-- Programming depends only on the addresses and labels of the listed writes. -/
+theorem tableLabelProgram_congr
+    (input : V → (∀ w, A w) → D) (split : ∀ v, M ≃ A v × Tail v)
+    (vs : List V) (H : D → M) (l l' : ∀ w, A w)
+    (hinput : ∀ v ∈ vs, input v l = input v l') (hlabel : ∀ v ∈ vs, l v = l' v) :
+    tableLabelProgram input split vs H l = tableLabelProgram input split vs H l' := by
+  induction vs with
+  | nil => rfl
+  | cons v vs ih =>
+    simp only [tableLabelProgram, ih (fun w hw ↦ hinput w (List.mem_cons_of_mem _ hw))
+      (fun w hw ↦ hlabel w (List.mem_cons_of_mem _ hw)), hinput v List.mem_cons_self,
+      hlabel v List.mem_cons_self]
+
+/-- Removing writes whose addresses avoid a point preserves the programmed response there.
+The retained writes may have repeated addresses and arbitrary complementary response tails. -/
+theorem tableLabelProgram_filter_apply_of_avoids
+    (input : V → (∀ w, A w) → D) (split : ∀ v, M ≃ A v × Tail v)
+    (vs : List V) (H : D → M) (l : ∀ w, A w) (p : V → Bool) (d : D)
+    (havoid : ∀ v ∈ vs, p v = false → input v l ≠ d) :
+    tableLabelProgram input split vs H l d =
+      tableLabelProgram input split (vs.filter p) H l d := by
+  induction vs with
+  | nil => rfl
+  | cons v vs ih =>
+    have hi := ih (fun w hw ↦ havoid w (List.mem_cons_of_mem _ hw))
+    cases hv : p v with
+    | false =>
+      rw [List.filter_cons_of_neg (by simp [hv]), tableLabelProgram,
+        Function.update_of_ne (Ne.symm (havoid v List.mem_cons_self hv))]
+      exact hi
+    | true =>
+      rw [List.filter_cons_of_pos (by simp [hv]), tableLabelProgram, tableLabelProgram]
+      by_cases hd : d = input v l
+      · subst d
+        simp only [Function.update_self, hi]
+      · simpa only [Function.update_of_ne hd] using hi
+
 /-- At distinct written cells, programming rejoins each fixed label with that cell's original
 response tail. -/
 theorem tableLabelProgram_apply_of_injective

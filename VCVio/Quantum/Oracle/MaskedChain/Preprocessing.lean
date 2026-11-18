@@ -71,15 +71,8 @@ private theorem sum_reducedPost_mass_le_one {q : ℕ} (H : G → G)
     (adv : PreprocessingAdversary G q) :
     ∑' pre : Σ M, adv.State M,
       ((parallelOracleRuntime H).reducedPost .instruments adv.preprocess
-        adv.initialState pre).mass ≤ 1 := by
-  change ∑' pre : Σ M, adv.State M,
-    ((parallelOracleRuntime H).jointPost .instruments adv.preprocess
-      adv.initialState pre).traceRight.mass ≤ 1
-  simp only [SubState.mass_traceRight]
-  have h := measure_univ_le ((parallelOracleRuntime H).evalDistMap .instruments
-    adv.preprocess adv.initialState (fun _ ↦ ()))
-  rw [QuantumRuntime.evalDistMap_apply _ _ _ _ _ MeasurableSet.univ] at h
-  simpa only [SubState.mass, Set.indicator_univ, Pi.one_apply, mul_one] using h
+        adv.initialState pre).mass ≤ 1 :=
+  tsum_mass_reducedPost_parallel_le_one .instruments H adv.preprocess adv.initialState
 
 private theorem averageHybridSuccess_zero_eq_sum {q : ℕ}
     (adv : OnlineAdversary LocalSig.instruments G q) (H : G → G)
@@ -98,41 +91,6 @@ private theorem averageHybridSuccess_zero_eq_sum {q : ℕ}
     simp [hybridSchedule]
   rw [hs, evalDistMap_parallelScheduledRuntime_const]
 
-private theorem observed_event_eq {M : QReg} (H₀ : G → G)
-    (p : DSubInstrument (M × Unit) (Σ _B : QReg, G) (fun leaf ↦ leaf.1 × Unit))
-    (σ : SubState (M × Unit)) (key : G) :
-    letI : MeasurableSpace (Σ _B : QReg, G) := ⊤
-    (((parallelOracleRuntime H₀).run .instruments
-      (QuantumComp.localObservation p)).outcomeMeasure σ).map
-        (fun leaf ↦ leaf.2 = key) =
-      (p.outcomeMeasure σ).map (fun leaf ↦ leaf.2 = key) := by
-  let : MeasurableSpace G := ⊤
-  let : MeasurableSpace (Σ _B : QReg, G) := ⊤
-  have h := map_outcomeMeasure_parallel_localObservation H₀ p σ
-  have h' := congrArg (fun μ : Measure G ↦ μ.map (fun g ↦ g = key)) h
-  exact (Measure.map_map Measurable.of_discrete Measurable.of_discrete).symm.trans
-    (h'.trans (Measure.map_map Measurable.of_discrete Measurable.of_discrete))
-
-private theorem observed_evalDistMap_eq {M : QReg} (H₀ H₁ : G → G)
-    (online : QuantumComp LocalSig.instruments (qromBatchSpec G G) (fun _ ↦ G) M)
-    (σ : SubState (M × Unit)) (key : G) :
-    letI : MeasurableSpace (Σ _B : QReg, G) := ⊤
-    ((((parallelOracleRuntime H₀).run .instruments
-      (QuantumComp.localObservation (parallelRunUnit .instruments H₁ online))).outcomeMeasure σ).map
-        (fun leaf ↦ leaf.2 = key)) {True} =
-      (parallelOracleRuntime H₁).evalDistMap .instruments online σ.traceRight
-        (fun leaf ↦ leaf.2 = key) {True} := by
-  let : MeasurableSpace (Σ _B : QReg, G) := ⊤
-  rw [observed_event_eq]
-  rw [QuantumRuntime.evalDistMap_eq_map_evalDist _ _ _ _ _ Measurable.of_discrete]
-  change ((parallelRunUnit .instruments H₁ online).outcomeMeasure σ).map
-    (fun leaf ↦ leaf.2 = key) {True} =
-    ((parallelRunUnit .instruments H₁ online).outcomeMeasure
-      (σ.traceRight.prod (SubState.basis ()))).map (fun leaf ↦ leaf.2 = key) {True}
-  exact congrArg (fun τ : SubState (M × Unit) ↦
-    ((parallelRunUnit .instruments H₁ online).outcomeMeasure τ).map
-      (fun leaf ↦ leaf.2 = key) {True}) σ.prod_traceRight_basis_unit.symm
-
 private theorem evalDistMap_bind_observed {q : ℕ} (H₀ H₁ : G → G)
     (adv : PreprocessingAdversary G q) (puzzle : Puzzle G q) (key : G) :
     (parallelOracleRuntime H₀).evalDistMap .instruments
@@ -143,12 +101,10 @@ private theorem evalDistMap_bind_observed {q : ℕ} (H₀ H₁ : G → G)
       (parallelOracleRuntime H₁).evalDistMap .instruments
         (adv.online pre.1 pre.2 puzzle)
         ((parallelOracleRuntime H₀).reducedPost .instruments adv.preprocess adv.initialState pre)
-        (fun leaf ↦ leaf.2 = key) {True} := by
-  rw [QuantumRuntime.evalDistMap_bind]
-  rw [Measure.sum_apply _ (MeasurableSet.singleton True)]
-  apply tsum_congr
-  intro pre
-  exact observed_evalDistMap_eq H₀ H₁ (adv.online pre.1 pre.2 puzzle) _ key
+        (fun leaf ↦ leaf.2 = key) {True} :=
+  evalDistMap_bind_parallelLocalObservation H₀ H₁ adv.preprocess
+    (fun M state ↦ adv.online M state puzzle) adv.initialState
+    (fun leaf ↦ leaf = key) {True} (MeasurableSet.singleton True)
 
 private theorem evalDistMap_bind_same_observed {q : ℕ} (H : G → G)
     (adv : PreprocessingAdversary G q) (puzzle : Puzzle G q) (key : G) :
@@ -159,24 +115,10 @@ private theorem evalDistMap_bind_same_observed {q : ℕ} (H : G → G)
     (parallelOracleRuntime H).evalDistMap .instruments
       (preprocessedRecoveryProgram adv puzzle) adv.initialState
       (fun leaf ↦ leaf.2 = key) {True} := by
-  let : MeasurableSpace (Σ _B : QReg, G) := ⊤
-  rw [evalDistMap_bind_observed]
-  unfold preprocessedRecoveryProgram
-  rw [QuantumRuntime.evalDistMap_bind, Measure.sum_apply _ (MeasurableSet.singleton True)]
-  symm
-  apply tsum_congr
-  intro pre
-  rw [QuantumRuntime.evalDistMap_eq_map_evalDist _ _ _ _ _ Measurable.of_discrete]
-  let σ : SubState (pre.1 × Unit) :=
-    (parallelOracleRuntime H).jointPost .instruments adv.preprocess adv.initialState pre
-  change ((parallelRunUnit .instruments H (adv.online pre.1 pre.2 puzzle)).outcomeMeasure σ).map
-    (fun leaf ↦ leaf.2 = key) {True} =
-    ((parallelRunUnit .instruments H (adv.online pre.1 pre.2 puzzle)).outcomeMeasure
-      (σ.traceRight.prod (SubState.basis ()))).map (fun leaf ↦ leaf.2 = key) {True}
-  exact congrArg (fun τ : SubState (pre.1 × Unit) ↦
-    ((parallelRunUnit .instruments H (adv.online pre.1 pre.2 puzzle)).outcomeMeasure τ).map
-      (fun leaf ↦ leaf.2 = key) {True}) σ.prod_traceRight_basis_unit.symm
-
+  simpa only [preprocessedRecoveryProgram] using
+    evalDistMap_bind_same_parallelLocalObservation H adv.preprocess
+      (fun M state ↦ adv.online M state puzzle) adv.initialState
+      (fun leaf ↦ leaf = key) {True} (MeasurableSet.singleton True)
 
 private noncomputable def referenceSuccess {q : ℕ} (H : G → G) (adv : PreprocessingAdversary G q)
     (masks : Fin (q + 1) → G) : ℝ≥0∞ :=

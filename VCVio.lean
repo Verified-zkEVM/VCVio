@@ -644,6 +644,7 @@ public import VCVio.Quantum.Oracle.ParallelFinisher
 public import VCVio.Quantum.Oracle.ParallelHybrid
 public import VCVio.Quantum.Oracle.ParallelPreimage
 public import VCVio.Quantum.Oracle.ParallelReprogramming
+public import VCVio.Quantum.Oracle.ParallelSchedule
 public import VCVio.Quantum.Oracle.ParallelSearch
 public import VCVio.Quantum.Oracle.Sequentialize
 public import VCVio.Quantum.Oracle.UniformSample

@@ -7,6 +7,8 @@ Authors: Alexander Hicks
 module
 public import VCVio.Quantum.Oracle.ParallelFinding
 public import VCVio.Quantum.Comp.Finisher
+public import VCVio.Quantum.Oracle.LocalExecution
+public import VCVio.Quantum.Foundations.SubState
 
 /-!
 # Parallel reprogramming before a common finisher
@@ -143,5 +145,94 @@ theorem sum_mul_evalDistMap_bind_parallel_le
       I reference oracles weights hw S hsupport δ hδ hS hr hQ
       finish hfinish ρ f hs)
   simpa only [← mul_assoc, show (2 : ℝ≥0∞) * 2 = 4 by norm_num] using h
+
+/-! ## Complete continuations under a fixed oracle -/
+
+/-- The retained preprocessing branches have total successful mass at most one. No branch is
+renormalized and no bound is imposed on its retained register or classical output. -/
+theorem tsum_mass_reducedPost_parallel_le_one (I : L.Interp) (H : X → Y)
+    (pre : QuantumComp L (qromBatchSpec X Y) W A) (ρ : SubState A) :
+    ∑' leaf : Σ B, W B, ((parallelOracleRuntime H).reducedPost I pre ρ leaf).mass ≤ 1 := by
+  change ∑' leaf : Σ B, W B,
+    ((parallelOracleRuntime H).jointPost I pre ρ leaf).traceRight.mass ≤ 1
+  simp only [SubState.mass_traceRight]
+  have h := measure_univ_le ((parallelOracleRuntime H).evalDistMap I pre ρ (fun _ ↦ ()))
+  rw [QuantumRuntime.evalDistMap_apply _ _ _ _ _ MeasurableSet.univ] at h
+  simpa only [SubState.mass, Set.indicator_univ, Pi.one_apply, mul_one] using h
+
+private theorem observed_parallelRunUnit_eq {Out γ : Type} [MeasurableSpace γ]
+    {M : QReg} (H₀ H₁ : X → Y)
+    (online : QuantumComp LocalSig.instruments (qromBatchSpec X Y) (fun _ ↦ Out) M)
+    (σ : SubState (M × Unit)) (f : Out → γ) (s : Set γ) :
+    letI : MeasurableSpace (Σ _B : QReg, Out) := ⊤
+    ((((parallelOracleRuntime H₀).run .instruments
+      (QuantumComp.localObservation (parallelRunUnit .instruments H₁ online))).outcomeMeasure σ).map
+        (fun leaf ↦ f leaf.2)) s =
+      (parallelOracleRuntime H₁).evalDistMap .instruments online σ.traceRight
+        (fun leaf ↦ f leaf.2) s := by
+  let : MeasurableSpace Out := ⊤
+  let : MeasurableSpace (Σ _B : QReg, Out) := ⊤
+  have h := map_outcomeMeasure_parallel_localObservation H₀
+    (parallelRunUnit .instruments H₁ online) σ
+  have hm := congrArg (fun μ : Measure Out ↦ μ.map f) h
+  have he := (Measure.map_map Measurable.of_discrete Measurable.of_discrete).symm.trans
+    (hm.trans (Measure.map_map Measurable.of_discrete Measurable.of_discrete))
+  refine (congrArg (fun μ : Measure γ ↦ μ s) he).trans ?_
+  rw [QuantumRuntime.evalDistMap_eq_map_evalDist _ _ _ _ _ Measurable.of_discrete]
+  change (((parallelRunUnit .instruments H₁ online).outcomeMeasure σ).map
+    (fun leaf ↦ f leaf.2)) s =
+      (((parallelRunUnit .instruments H₁ online).outcomeMeasure
+        (σ.traceRight.prod (SubState.basis ()))).map (fun leaf ↦ f leaf.2)) s
+  exact congrArg (fun τ : SubState (M × Unit) ↦
+    (((parallelRunUnit .instruments H₁ online).outcomeMeasure τ).map
+      (fun leaf ↦ f leaf.2)) s) σ.prod_traceRight_basis_unit.symm
+
+/-- Localizing the complete continuation preserves its observed output law on each actual
+retained prefix state. The prefix and continuation may use different fixed raw oracles. -/
+theorem evalDistMap_bind_parallelLocalObservation {Out γ : Type} [MeasurableSpace γ]
+    (H₀ H₁ : X → Y)
+    (pre : QuantumComp LocalSig.instruments (qromBatchSpec X Y) W A)
+    (online : ∀ M, W M → QuantumComp LocalSig.instruments
+      (qromBatchSpec X Y) (fun _ ↦ Out) M)
+    (ρ : SubState A) (f : Out → γ) (s : Set γ) (hs : MeasurableSet s) :
+    (parallelOracleRuntime H₀).evalDistMap .instruments
+      (pre.bind fun M state ↦ QuantumComp.localObservation
+        (parallelRunUnit .instruments H₁ (online M state))) ρ (fun leaf ↦ f leaf.2) s =
+      ∑' leaf : Σ M, W M,
+        (parallelOracleRuntime H₁).evalDistMap .instruments (online leaf.1 leaf.2)
+          ((parallelOracleRuntime H₀).reducedPost .instruments pre ρ leaf)
+          (fun out ↦ f out.2) s := by
+  rw [QuantumRuntime.evalDistMap_bind, Measure.sum_apply _ hs]
+  exact tsum_congr fun leaf ↦ observed_parallelRunUnit_eq H₀ H₁ (online leaf.1 leaf.2) _ f s
+
+/-- For one fixed oracle, localizing a continuation leaves the complete prefix/continuation
+experiment unchanged. It preserves the actual retained prefix state supplied to the continuation. -/
+theorem evalDistMap_bind_same_parallelLocalObservation {Out γ : Type} [MeasurableSpace γ]
+    (H : X → Y)
+    (pre : QuantumComp LocalSig.instruments (qromBatchSpec X Y) W A)
+    (online : ∀ M, W M → QuantumComp LocalSig.instruments
+      (qromBatchSpec X Y) (fun _ ↦ Out) M)
+    (ρ : SubState A) (f : Out → γ) (s : Set γ) (hs : MeasurableSet s) :
+    (parallelOracleRuntime H).evalDistMap .instruments
+      (pre.bind fun M state ↦ QuantumComp.localObservation
+        (parallelRunUnit .instruments H (online M state))) ρ (fun leaf ↦ f leaf.2) s =
+      (parallelOracleRuntime H).evalDistMap .instruments (pre.bind online) ρ
+        (fun leaf ↦ f leaf.2) s := by
+  let : MeasurableSpace (Σ _B : QReg, Out) := ⊤
+  rw [evalDistMap_bind_parallelLocalObservation H H pre online ρ f s hs,
+    QuantumRuntime.evalDistMap_bind, Measure.sum_apply _ hs]
+  symm
+  apply tsum_congr
+  intro leaf
+  rw [QuantumRuntime.evalDistMap_eq_map_evalDist _ _ _ _ _ Measurable.of_discrete]
+  let σ : SubState (leaf.1 × Unit) :=
+    (parallelOracleRuntime H).jointPost .instruments pre ρ leaf
+  change (((parallelRunUnit .instruments H (online leaf.1 leaf.2)).outcomeMeasure σ).map
+    (fun out ↦ f out.2)) s =
+      (((parallelRunUnit .instruments H (online leaf.1 leaf.2)).outcomeMeasure
+        (σ.traceRight.prod (SubState.basis ()))).map (fun out ↦ f out.2)) s
+  exact congrArg (fun τ : SubState (leaf.1 × Unit) ↦
+    (((parallelRunUnit .instruments H (online leaf.1 leaf.2)).outcomeMeasure τ).map
+      (fun out ↦ f out.2)) s) σ.prod_traceRight_basis_unit.symm
 
 end Quantum

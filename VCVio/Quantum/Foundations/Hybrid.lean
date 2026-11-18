@@ -22,6 +22,18 @@ open scoped ENNReal
 
 namespace Quantum
 
+/-- Aggregate pointwise square-root comparisons with arbitrary nonnegative extended-real
+weights. The weights need not sum to one, and no summability assumption is required. -/
+theorem rpow_inv_two_tsum_mul_le_of_le_add {Ω : Type*} (w p a e : Ω → ℝ≥0∞)
+    (h : ∀ ω, p ω ^ (2⁻¹ : ℝ) ≤ a ω ^ (2⁻¹ : ℝ) + e ω ^ (2⁻¹ : ℝ)) :
+    (∑' ω, w ω * p ω) ^ (2⁻¹ : ℝ) ≤
+      (∑' ω, w ω * a ω) ^ (2⁻¹ : ℝ) + (∑' ω, w ω * e ω) ^ (2⁻¹ : ℝ) := by
+  apply rpow_inv_two_tsum_le_of_le_add
+  intro ω
+  simp only [ENNReal.mul_rpow_of_nonneg _ _ (by norm_num : (0 : ℝ) ≤ 2⁻¹)]
+  rw [← mul_add]
+  exact mul_le_mul le_rfl (h ω) bot_le bot_le
+
 /-- Cauchy–Schwarz for the square roots of a sequence supported below a finite cutoff. -/
 theorem tsum_rpow_inv_two_le_of_cutoff (f : ℕ → ℝ≥0∞) (n : ℕ)
     (hcut : ∀ j, n ≤ j → f j = 0) :
