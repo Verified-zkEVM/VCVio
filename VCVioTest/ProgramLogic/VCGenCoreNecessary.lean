@@ -108,7 +108,9 @@ example : ⦃ fun n => n = 0 ⦄
 example : ⦃ True ⦄ (do let b ← $ᵗ Bool; let c ← $ᵗ Bool; pure (b || c || true) : ProbComp Bool)
     ⦃ fun r => r = true ⦄ := by
   vcstep
-  exact ⟨fun _ _ _ => trivial⟩
+  refine ⟨fun _ _ => ?_⟩
+  repeat' refine fun _ => ?_
+  trivial
 
 end Necessary
 
