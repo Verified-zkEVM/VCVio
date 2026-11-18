@@ -147,6 +147,40 @@ information, including the classical branch state. See the
 [model distinction and references](../../design/quantum-layer.md#16-auxiliary-input-security-remains-separate).
 The exact `PointerChainPuzzle` encoding also remains open.
 
+## Finite windows for the exact pointer-chain encoding
+
+The exact pointer-chain construction has ordinary hash chains, an accumulator and a public
+commitment, in addition to masked links. Its quantum delay bound needs a separate argument.
+`PointerChainPuzzle.LeanSeal.quantumWindowScheme` gives its honest algorithms a concrete
+quantum-oracle interface while keeping that security obligation explicit.
+
+The raw input register is `ByteArray.Bounded`: every byte string up to the stated maximum
+length. It includes malformed encodings and inputs outside the six typed hash domains.
+The response register contains all 32 bytes, including the bytes discarded by honest mask
+truncation. `hashInputBound` is `max (54+b) 83`; every honest input fits, and 86 bytes suffices
+when the link width is at most 32. An adversary may query any superposition within the window.
+The interface does not model unrestricted-length byte queries.
+
+`windowTableEquiv` splits the complete raw table into typed answers, fixed mask tails and
+all outside-image answers. `sampledDelayLawWith_quantumWindowScheme` transports the entire
+preprocessing/generation/online experiment through that bijection. Its observer retains the
+answering table jointly with the transcript. `qromDelayAdvantage_quantumWindowScheme` is the
+key-recovery specialization. Neither equality assumes query budgets or bounds the success
+probability.
+
+The honest generator and checked solver agree with the source leanSeal algorithms for
+every fixed byte-answer function, restricted to the window. The public puzzle is the
+existing structured `PointerChainPuzzle.LeanSeal.Puzzle` type. Transport to serialized public
+puzzles and a statement for arbitrary serialized solver inputs remain separate; the honest oracle-input
+encoding alone does not establish that wire interface.
+
+The rank-frontier lemmas provide another prerequisite. A path input for the next honest
+query round depends only on labels received in preceding honest rounds; inputs further
+ahead have an unreached predecessor and a bounded per-point incidence. The commitment's
+output is already public, but its oracle cell cannot be made available early because its
+input contains the secret key. The remaining coupling, quantum schedule and final-guess
+obligations are listed in the [design note](../../design/quantum-layer.md#17-exact-pointer-chain-encoding-prerequisites).
+
 ## Checks
 
 The library relates the phase composition to its observed laws without introducing separate
@@ -162,3 +196,4 @@ oracle initializations:
 | key recovery and the classical average of online key guesses | `delayAdvantage_withoutPreprocessing_ofClassicalGenerator` |
 | the named masked-chain puzzle's two-phase recovery experiment and its endpoint game | `MaskedChainPuzzle.qromDelayAdvantage_eq_recoveryAdvantage` |
 | the named puzzle with arbitrary preprocessing and the complete endpoint game | `MaskedChainPuzzle.qromDelayAdvantage_eq_preprocessedRecoveryAdvantage` |
+| the finite-window pointer puzzle experiment and full raw-table completion | `PointerChainPuzzle.LeanSeal.sampledDelayLawWith_quantumWindowScheme` |

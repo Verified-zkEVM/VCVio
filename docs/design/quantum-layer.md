@@ -434,3 +434,42 @@ Guo–Li–Liu–Zhang,
 specifies unbounded preprocessing with bounded classical advice; its discussion of barriers
 to classical presampling against quantum queries is relevant when choosing that track's
 intermediate model. Neither this model nor bounded quantum advice is currently implemented.
+
+### 17. Exact pointer-chain encoding prerequisites
+
+The exact pointer-chain puzzle is not an instance of the masked-chain game. Its six oracle
+families have different state and link widths, ordinary iterated hash chains, an accumulator,
+and a published key commitment. Even with one chain and no public masked links, obtaining the
+key requires the internal chain, accumulator and key hash. leanSeal §4.4 states that its
+exact-encoding theorem is classical, and §8.3 item 4 leaves the quantum extension open.
+
+The first encoding step retains the entire raw oracle table. An injective encoding of typed
+inputs and a per-cell response split give a bijection between raw tables and typed-answer,
+tail and outside-image tables (`Equiv.tableSplit`). Uniform table reparameterization preserves
+the joint law of any raw quantum program, including observations of the hidden oracle.
+The query signature stays unchanged, so coherent superpositions across labels and arbitrary
+outside-image inputs remain available. This does not use the classical lazy-cache adapter
+as a quantum simulation or discard the unused mask bytes.
+
+The current homogeneous QROM model requires a finite input type. `ByteArray.Bounded`
+contains every byte string up to a stated maximum length, including malformed and unlabelled
+inputs. Honest leanSeal hash inputs have lengths `52` (steps), `54+b` (starts), `81` (masks),
+`80` (accumulator and key), and `83` (commitments). A window of at least `max(54+b,83)` includes
+them all; `86` suffices for valid link widths. An exact theorem in that window must retain
+its explicit input-length scope. It is not a theorem for arbitrary-length byte queries.
+The honest algorithms use structured public puzzles and agree with the source `gen` and
+`solve` for every fixed byte-answer function restricted to the window. A serialized public
+puzzle interface and a theorem for arbitrary serialized solver inputs remain separate.
+
+`PointerChainPuzzle.PathValue.rankPrefix` supplies a separate prerequisite for the quantum delay
+argument. Values beyond rank `r+1` have a predecessor beyond rank `r`; their inputs have
+incidence at most `hitBound = [n≥2]/|L| + solvePoints(n,m)/|S|` when unreached labels are
+resampled. Next-round inputs depend only on the preceding rank prefix. Resampling preserves
+the public commitment label, but its oracle cell must stay unprogrammed until its rank:
+that input contains the secret key.
+
+The remaining security obligations are an exact programmed-table coupling for the full
+honest generator, rank-cutoff oracle schedules and reference-state independence, the quantum
+hybrid using that incidence bound, final key guessing with the hidden key jointly retained,
+query-bounded preprocessing, and a quantum truncation theorem for success before a deadline.
+Encoding equality and classical rank incidence alone do not establish those lower bounds.

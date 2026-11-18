@@ -33,7 +33,7 @@ The layer is the subject of issue #706. Open questions and planned work are in
 * [5-qrom](5-qrom.md) — Classical queries, Deutsch's algorithm, the QROM runtime and classical
   algorithms in the QROM; parallel rounds, private uniform coins, compressed execution,
   reprogramming, unique-mark and fixed-target preimage search, and idealized masked-chain
-  endpoint recovery.
+  endpoint recovery; complete raw-table encodings retaining response tails and outside-image cells.
 * [6-instability](6-instability.md) — The classical instability calculus and its role in quantum
   proofs.
 * [7-time-lock-puzzles](7-time-lock-puzzles.md) — Quantum preprocessing, honest generation,
@@ -79,12 +79,17 @@ the compressed-oracle runtime and its parallel QROM equivalence; common-finisher
 reprogramming, adaptive hybrids, unique-mark and fixed-target preimage search under round and
 total-point budgets, with width-cap corollaries; the representation theorems for CP maps;
 the classical instability calculus; two-phase quantum time-lock puzzle experiments with separate
-preprocessing and online budgets, exact classical-generator laws for adversaries without preprocessing, and endpoint-only
-sequentiality for idealized masked chains without preprocessing.
+preprocessing and online budgets, exact classical-generator laws preserving arbitrary quantum
+preprocessing states, and endpoint-only sequentiality for idealized masked chains with
+query-bounded preprocessing and unrestricted retained memory.
+Full-table encoding equivalences preserve arbitrary raw quantum queries. The exact pointer-chain
+byte encoding has a finite input-length envelope and a table-completion law; a delay theorem
+for that construction remains separate.
 
 Not covered: infinite-dimensional systems; measurements with continuous outcomes; loops that may not
 terminate; coherent choice of oracle port; putting general programs in comb form; exact
-square-root-sum bounds for deterministic width profiles; delay bounds
-with quantum preprocessing or for the exact `PointerChainPuzzle` encoding; changing-property
+square-root-sum bounds for deterministic width profiles; auxiliary-input security with
+unbounded preprocessing and bounded advice; delay bounds for the exact `PointerChainPuzzle`
+encoding; changing-property
 compressed-oracle bounds. The plans for these are in
 [`docs/design/quantum-layer.md`](../../design/quantum-layer.md).

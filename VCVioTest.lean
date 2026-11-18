@@ -172,6 +172,7 @@ public import VCVioTest.Quantum.Parallel
 public import VCVioTest.Quantum.ParallelBridges
 public import VCVioTest.Quantum.ParallelPreimage
 public import VCVioTest.Quantum.ParallelSearch
+public import VCVioTest.Quantum.PointerChainEncoding
 public import VCVioTest.Quantum.PointerChainFrontier
 public import VCVioTest.Quantum.Pure
 public import VCVioTest.Quantum.QueryBoundedPreprocessing

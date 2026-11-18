@@ -7,6 +7,7 @@ Authors: Quang Dao
 module
 
 public import VCVio.CryptoFoundations.TimeLockPuzzle
+import Mathlib.Tactic.DeriveFintype
 
 /-!
 # The pointer-chain time-lock puzzle over typed oracles
@@ -91,7 +92,7 @@ inductive Point (n : ℕ) (S L Salt Ctx : Type)
   | key (ctx : Ctx) (a : S)
   /-- The commitment to the key. -/
   | commit (ctx : Ctx) (k : S)
-  deriving DecidableEq
+  deriving DecidableEq, Fintype
 
 /-- The six typed oracles of the pointer-chain puzzle as one specification: masks are links, every
 other answer is a state. -/

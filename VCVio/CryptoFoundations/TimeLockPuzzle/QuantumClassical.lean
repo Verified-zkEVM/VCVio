@@ -14,8 +14,9 @@ import VCVio.Quantum.Comp.Finisher
 A classical generator may retain arbitrary classical challenger data alongside its puzzle and key.
 `ofClassicalGenerator` embeds it in the quantum experiment without exposing those hidden outputs to
 the online adversary. For one fixed function, its framed generation branches are scalar identities
-on adversary memory. This gives an exact weighted online-family law for adversaries with no
-preprocessing, including observers of the key and hidden generator data jointly with the output.
+on adversary memory. This gives an exact weighted law for online execution from the actual
+preprocessing post-states, including joint observations of the preprocessing branch, key, hidden
+generator data and final output. No query bounds or losslessness assumptions are needed.
 
 The generic instrument factorization keeps the same runtime-private register across generation and
 online execution. The scalar identity and weighted-law specialization apply to a fixed-function
