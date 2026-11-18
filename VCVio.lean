@@ -248,6 +248,7 @@ public import VCVio.CryptoFoundations.MerkleTree.Salted.Extraction
 public import VCVio.CryptoFoundations.MerkleTree.Salted.HalfPreimage
 public import VCVio.CryptoFoundations.MerkleTree.Salted.Instability
 public import VCVio.CryptoFoundations.PRF
+public import VCVio.CryptoFoundations.PRF.Asymptotic
 public import VCVio.CryptoFoundations.PRF.HiddenBit
 public import VCVio.CryptoFoundations.PRG
 public import VCVio.CryptoFoundations.ReplayFork
@@ -661,6 +662,7 @@ public import VCVio.Schemes.MacFromPRF
 public import VCVio.Schemes.MerkleDamgard
 public import VCVio.Schemes.Pedersen
 public import VCVio.Schemes.Pedersen.Generic
+public import VCVio.Schemes.PointerChainPuzzle.AsymptoticHiding
 public import VCVio.Schemes.PointerChainPuzzle.Bad
 public import VCVio.Schemes.PointerChainPuzzle.Basic
 public import VCVio.Schemes.PointerChainPuzzle.Delay
