@@ -85,8 +85,9 @@ theorem rpow_inv_two_evalDistMap_rankHybridSchedule_le (I : L.Interp)
       (programPath_eq_prefixProgram_of_avoids_future hb hB salt x z (h + 1) H W d hd).symm
   · exact hs
 
-/-- The query weight before call `h` depends only on full raw path words reached by rank `h`.
-The weight itself is unchanged and may depend on the complete hidden challenge. -/
+/-- With the program, input operator and weight function fixed, changing raw words beyond
+rank `h` leaves the query weight at call `h` unchanged. The weight function may depend on
+the full hidden challenge, but the same function is used on both sides. -/
 theorem queryWeight_rankHybridSchedule_eq_of_prefix (I : L.Interp)
     (hb : b ≤ 32) (hB : hashInputBound b ≤ B)
     (salt : Bytes 16) (x : Bytes b) (z : Fin (n - 1) → Bytes b)
@@ -343,8 +344,8 @@ theorem sum_indicator_futureRawPathInputs_resample_le
   rw [Finset.sum_ite, Finset.sum_const_zero, add_zero, Finset.sum_const, nsmul_eq_mul]
   rfl
 
-/-- The expected future-input query weight is width times the classical rank incidence.
-Its reference pre-query state is fixed before the fresh suffix is sampled. -/
+/-- The expected future-input query weight is at most the width cap times the classical
+rank incidence. Its reference pre-query state is fixed before the fresh suffix is sampled. -/
 theorem sum_queryWeight_resampleFuturePathWords_le (I : L.Interp)
     (hb : b ≤ 32) (hn : n < 2 ^ 32) (hB : hashInputBound b ≤ B)
     (salt : Bytes 16) (x : Bytes b) (z : Fin (n - 1) → Bytes b)

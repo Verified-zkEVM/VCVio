@@ -14,8 +14,8 @@ public import Mathlib.Data.ZMod.Basic
 
 Guessing the published first vertex has exact success equal to the input mass divided by the
 vertex-space size. The patched zero-round bound keeps this baseline; its real-game coupling
-also charges a conservative birthday term. At sixteen vertices, the new one-round bound is
-nonvacuous where the previous event-distance estimate is capped at one.
+also charges a conservative birthday term. With sixteen vertices and one round of width one,
+the capped root-accumulated bound is three quarters, while the event-error bound is capped at one.
 -/
 
 public section
@@ -134,7 +134,8 @@ private theorem root_inv_16 :
   apply (ENNReal.toReal_eq_toReal_iff' (by finiteness) (by finiteness)).mp
   norm_num
 
-/-- The root method certifies a genuine improvement: three quarters versus a vacuous cap. -/
+/-- With sixteen vertices and one round of width one, the capped root-accumulated bound is
+three quarters, while the event-error bound is capped at one. -/
 example : min 1 (rootRecoveryBound (ZMod 16) 1 1) = 3 / 4 ∧
     min 1 (recoveryBound (ZMod 16) 1 1) = 1 := by
   have hn : rootRecoveryBound (ZMod 16) 1 1 = 3 / 4 := by
