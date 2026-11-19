@@ -181,11 +181,13 @@ public import VCVioTest.Quantum.CheckedRead
 public import VCVioTest.Quantum.CheckedReadAlgebra
 public import VCVioTest.Quantum.ClassicalRandomized
 public import VCVioTest.Quantum.Compressed
+public import VCVioTest.Quantum.DropEmptyBatches
 public import VCVioTest.Quantum.Emulated
 public import VCVioTest.Quantum.Hybrid
 public import VCVioTest.Quantum.InstabilityBound
 public import VCVioTest.Quantum.Kraus
 public import VCVioTest.Quantum.MultiExtractableModule
+public import VCVioTest.Quantum.NumberedQueries
 public import VCVioTest.Quantum.Oracle
 public import VCVioTest.Quantum.Parallel
 public import VCVioTest.Quantum.ParallelBridges
@@ -194,7 +196,9 @@ public import VCVioTest.Quantum.ParallelSearch
 public import VCVioTest.Quantum.Pure
 public import VCVioTest.Quantum.SaltedMerkleMultiExtractable
 public import VCVioTest.Quantum.Sequentialize
+public import VCVioTest.Quantum.SubState
 public import VCVioTest.Quantum.Subsystem
+public import VCVioTest.Quantum.TimeLockPuzzle
 public import VCVioTest.Quantum.VCCompressed
 public import VCVioTest.Quantum.VCOffline
 public import VCVioTest.Quantum.VCOnline

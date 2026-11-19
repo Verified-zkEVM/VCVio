@@ -31,7 +31,7 @@ beside it: [states and instruments](guide/1-states-and-instruments.md),
 [vectors and the hybrid bound](guide/2-vectors-and-hybrid-bound.md),
 [Choi, Kraus and Stinespring](guide/3-choi-kraus-stinespring.md),
 [programs and runtimes](guide/4-programs-and-runtimes.md), [the QROM](guide/5-qrom.md),
-[instability](guide/6-instability.md).
+[instability](guide/6-instability.md), and [time-lock puzzles](guide/7-time-lock-puzzles.md).
 
 ## Reference
 
