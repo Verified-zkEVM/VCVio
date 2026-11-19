@@ -32,7 +32,7 @@ The layer is the subject of issue #706. Open questions and planned work are in
   query budgets, sequentialization and combs.
 * [5-qrom](5-qrom.md) — Classical queries, Deutsch's algorithm and the QROM; parallel rounds,
   private uniform coins, classical and compressed execution bridges, parallel reprogramming,
-  marked search, fixed-target preimage search.
+  marked search, fixed-target preimage search, idealized masked-chain endpoint recovery.
 * [6-instability](6-instability.md) — The classical instability calculus and its role in quantum
   proofs.
 * [7-time-lock-puzzles](7-time-lock-puzzles.md) — Quantum preprocessing, honest generation,
@@ -73,7 +73,8 @@ adaptive oracle programs and the QROM; classical algorithms with private uniform
 variable-width parallel rounds and exact sequentialization at the point budget; parallel
 compressed-runtime output-law equivalence; parallel reprogramming and marked/fixed-target
 preimage bounds with adaptive round/point budgets; scheduled hybrids, retained-state finishers
-and two-phase time-lock experiments.
+and two-phase time-lock experiments; idealized masked-chain endpoint security with query-bounded
+preprocessing.
 
 Not covered: infinite-dimensional systems, continuous measurement outcomes, nonterminating loops,
 coherent choice of oracle port, or a general converse putting programs into comb form.
