@@ -379,3 +379,44 @@ its explicit input-length scope. It is not a theorem for arbitrary-length byte q
 The honest algorithms use structured public puzzles and agree with the source `gen` and
 `solve` for every fixed byte-answer function restricted to the window. A serialized public
 puzzle interface and a theorem for arbitrary serialized solver inputs remain separate.
+
+`PointerChainPuzzle.PathValue.rankPrefix` supplies a separate prerequisite for the quantum delay
+argument. Values beyond rank `r+1` have a predecessor beyond rank `r`; their inputs have
+incidence at most `hitBound = [n≥2]/|L| + solvePoints(n,m)/|S|` when unreached labels are
+resampled. Next-round inputs depend only on the preceding rank prefix.
+
+### 18. Rank-ordered programming coupling
+
+`PointerChainPuzzle.LeanSeal.programPath` programs a complete raw oracle using one independent
+32-byte response for each path node. The typed path labels take the mask prefix and retain
+the full state response at every other node. Their distribution is the uniform typed-label
+distribution; all complementary raw bytes remain in the sampled path words.
+
+`Equiv.tableLabelExchangeList` exchanges table cells with auxiliary labels. Its addresses
+depend on predecessor labels, independently of the label being exchanged and of the table.
+Reverse execution writes the supplied labels in reverse rank order. The generic inverse-table
+identity requires a causal order and distinct nodes, but permits repeated oracle inputs.
+It preserves the complete joint uniform law, including displaced values and current response
+tails. The resulting programmed raw oracle has the uniform oracle marginal even on collisions.
+
+Distinct path inputs let the honest generator recover the prescribed labels. The event being
+charged is two different path nodes sharing an oracle input, rather than equal output labels.
+For one chain with one step, equal labels are harmless because its query families are distinct;
+with two steps, repeating an intermediate state can cause two queries to the same step cell.
+
+`PointerChainPuzzle.LeanSeal.real_le_programmed_add_collision` proves the resulting game hop
+for every observer `F(H, puzzle, key) ≤ 1`, retaining the completed oracle and hidden key jointly.
+The collision allowance is `solvePoints(n,m)^2 / |Bytes 32|`, charged once after averaging the
+salt, first link and masked links. The programmed experiment samples its path words
+unconditionally. Conditioning those words on collision-freedom would invalidate the freshness
+argument needed by the later quantum hybrid.
+
+`qromDelayAdvantage_quantumWindowScheme_le_programmed` transfers this bound to the actual
+quantum scheme experiment, with a separate `min 1` corollary. In its programmed game, both
+preprocessing and online execution use the same completed programmed oracle; the actual
+retained preprocessing register and classical state persist. No query budget or losslessness
+assumption is needed for this comparison. Replacing preprocessing by a run against the base oracle requires a separate
+query-dependent comparison; no such cost is hidden in the collision term.
+
+The collision allowance is independent of the finite byte-window length. The adversary still
+has the explicit window scope and structured public puzzles. Resource-bounded quantum analysis of the programmed game remains a separate obligation.
