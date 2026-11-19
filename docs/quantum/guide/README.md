@@ -7,8 +7,8 @@ positivity, quantum queries), and VCVio's classical `OracleComp`. Readers who al
 information can start here directly and use the [conventions](../reference/conventions.md) page for
 VCVio's choices of tensor order, Choi matrix and so on.
 
-Each guide file starts from a small example worked by hand, with the Lean declaration beside each
-step, and ends with the general definition. The reference pages
+The guide combines worked examples with explanations of the general Lean definitions.
+The reference pages
 ([conventions](../reference/conventions.md), [glossary](../reference/glossary.md),
 [classical and quantum side by side](../reference/classical-quantum.md),
 [sources](../reference/literature.md)) are for looking things up.

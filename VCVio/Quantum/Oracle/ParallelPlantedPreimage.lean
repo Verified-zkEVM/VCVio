@@ -47,7 +47,7 @@ structure PlantedPreimageAdversary (X Y : Type) [Fintype X] [DecidableEq X]
   interp : Y → L.Interp
   /-- Parallel program selected from the public target. -/
   program : Y → QuantumComp L (qromBatchSpec X Y) W A
-  /-- Oracle-independent initial substate selected from the public target. -/
+  /-- Initial substate selected by the public target, with no additional oracle-dependent advice. -/
   initial : Y → SubState A
   /-- A returned input, which need not be the challenger's hidden input. -/
   guess : Y → (Σ B, W B) → X
