@@ -26,8 +26,8 @@ by what you already know.
 
 ## The guide
 
-One file per part of the library, each starting from a worked example with the Lean declarations
-beside it: [states and instruments](guide/1-states-and-instruments.md),
+The guide explains each part of the library with Lean declarations and worked examples:
+[states and instruments](guide/1-states-and-instruments.md),
 [vectors and the hybrid bound](guide/2-vectors-and-hybrid-bound.md),
 [Choi, Kraus and Stinespring](guide/3-choi-kraus-stinespring.md),
 [programs and runtimes](guide/4-programs-and-runtimes.md), [the QROM](guide/5-qrom.md),
