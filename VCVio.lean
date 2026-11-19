@@ -645,9 +645,11 @@ public import VCVio.Quantum.Oracle.Model
 public import VCVio.Quantum.Oracle.Parallel
 public import VCVio.Quantum.Oracle.ParallelFinding
 public import VCVio.Quantum.Oracle.ParallelHybrid
+public import VCVio.Quantum.Oracle.ParallelPlantedPreimage
 public import VCVio.Quantum.Oracle.ParallelPreimage
 public import VCVio.Quantum.Oracle.ParallelReprogramming
 public import VCVio.Quantum.Oracle.ParallelSearch
+public import VCVio.Quantum.Oracle.ParallelSecurity
 public import VCVio.Quantum.Oracle.Sequentialize
 public import VCVio.Quantum.Oracle.UniformSample
 public import VCVio.Quantum.Semantics
