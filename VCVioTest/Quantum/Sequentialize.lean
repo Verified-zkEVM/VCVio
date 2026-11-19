@@ -178,7 +178,7 @@ inductive Gate : QReg → Type
 def gates : LocalSig where
   Op := Gate
   Outcome _ := Unit
-  next {_} g _ := match g with | .flipSpectator => QReg.of ((Fin 2 → Bool) × Bool)
+  next {A} _ _ := A
 
 /-- The spectator flip leaves the oracle's two input slots unchanged. -/
 @[expose]
