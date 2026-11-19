@@ -31,7 +31,8 @@ The layer is the subject of issue #706. Open questions and planned work are in
 * [4-programs-and-runtimes](4-programs-and-runtimes.md) — Adaptive programs, runtimes, parallel
   query budgets, sequentialization and combs.
 * [5-qrom](5-qrom.md) — Classical queries, Deutsch's algorithm and the QROM; parallel rounds,
-  private uniform coins, classical and compressed execution bridges.
+  private uniform coins, classical and compressed execution bridges, parallel reprogramming,
+  marked search, fixed-target preimage search.
 * [6-instability](6-instability.md) — The classical instability calculus and its role in quantum
   proofs.
 
@@ -67,11 +68,12 @@ The textbook comparison is in
 Covered: finite-dimensional systems, operations and measurements with failure as missing mass;
 adaptive oracle programs and the QROM; classical algorithms with private uniform coins;
 variable-width parallel rounds and exact sequentialization at the point budget; parallel
-compressed-runtime output-law equivalence.
+compressed-runtime output-law equivalence; parallel reprogramming and marked/fixed-target
+preimage bounds with adaptive round/point budgets.
 
 Not covered: infinite-dimensional systems, continuous measurement outcomes, nonterminating loops,
 coherent choice of oracle port, or a general converse putting programs into comb form.
-Depth-sensitive search bounds require a separate analysis.
+Exact square-root-sum bounds for deterministic width profiles and the CFHL compressed-oracle track remain separate.
 Quantum delay security for the exact pointer-chain encoding is not established by this layer.
 Auxiliary-input preprocessing with unbounded queries and bounded advice remains separate.
 Serialized public puzzles, unrestricted-length hash queries and early-success quantum truncation

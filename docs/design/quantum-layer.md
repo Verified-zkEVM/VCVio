@@ -248,3 +248,68 @@ subnormalized input states, finite domains and finite abelian response groups. A
 leaf observation does not read `H`; observations `f H leaf` require an explicit joint-oracle read.
 
 The M2a model and transport obligations are complete.
+
+### 12. Parallel reprogramming, hybrids and search
+
+`Oracle/ParallelReprogramming.lean` defines `parallelInputProjector`, the union of slots whose
+inputs lie in a disagreement set. The difference of two parallel oracle unitaries is supported
+on this union; its squared Kraus weight is at most four times the union's input weight.
+`rpow_inv_two_parallel_reprogramming_le` compares acceptance weights after a common completely
+positive trace-nonincreasing finishing map, with arbitrary spectator memory. Both sides use
+the same input operator and fixed classical challenge data; the finishing map may depend on
+those data, preserving their correlation with the acceptance event.
+
+The expected-mass lemmas assume a finite challenge family with explicit nonnegative weights and
+a pointwise weighted incidence bound `δ` for the disagreement sets. They use the same positive
+semidefinite input operator for every challenge. Under these hypotheses a width-`k` union has
+expected weight at most `k * δ` times the input trace; the weights need not be normalized.
+Merely bounding the number of reprogrammed points does not supply these independence and
+incidence hypotheses.
+
+`Oracle/ParallelHybrid.lean` lifts the comparison to adaptive programs, charging union-query
+weights to a designated reference execution. The interpretation, program, initial state and
+final observation are shared. `Comp/HybridBudget.lean` uses a total call cutoff across all ports
+and a width cap, avoiding a sum of separate per-port maxima. The analytic cutoff and
+square-root aggregation lemmas in `Foundations/Hybrid.lean` import only QuantumFoundations and
+are staged for that dependency.
+
+`Comp/ChargeWeight.lean` gives the pathwise natural-number port budget `IsQueryChargeBound`.
+`totalWeight_le_of_isQueryChargeBound` bounds total query weight by the budget times the input
+trace when each call's weight is bounded by its port charge times its input trace. Local steps
+are free; zero-charge calls remain present, and a call with no possible answer still spends its
+prefix charge. Unit charges recover total calls, and width charges recover `IsPointBound`.
+`totalWeight_le_of_isPointBound` retains the actual adaptive sum of widths without per-port maxima.
+
+`Oracle/ParallelSearch.lean` applies this hybrid to one uniformly hidden marked input in a finite
+nonempty domain, using the additive `ZMod 2` oracle `markedFunction`.
+`markedSearchAdvantage_le_of_isPointBound` bounds success by
+`min 1 ((1 + 2 * sqrt (q * Q))^2 / N)`, where `N` is the domain cardinality, `q` bounds rounds
+and `Q` bounds the sum of widths along every branch. It requires no maximum width.
+`markedSearchAdvantage_le` is the width-cap corollary with `Q = k * q`, giving
+`min 1 ((1 + 2 * q * sqrt k)^2 / N)`. The interpretation,
+program, initial substate and guessing rule are fixed independently of the mark. Adaptive widths,
+measurements, mixed or subnormalized states, duplicate inputs and width zero are allowed.
+The bound includes zero-query guessing; loss and postselection remain missing mass without
+renormalization.
+
+These results implement the direct reprogramming, adaptive hybrid and round/point unique-mark
+search part of M3a. Exact sums of square roots for deterministic width profiles remain open. The changing-property directional recurrence and its adaptive
+mixed-state and total-budget transports (M−1), the general final-measurement lemma (M0), and CFHL
+compressed-oracle bounds are separate obligations.
+
+`Oracle/ParallelFinding.lean` packages the shared search argument. A fixed reference execution
+and pointwise weighted incidence `δ` bound a weighted family of hidden-set finding experiments
+by `δ * (1 + 2 * sqrt (q * Q))^2`. The weights need not normalize. The final event keeps the
+same hidden set as its answering oracle; the reference state, program and guess are independent
+of the sampled set. Both marked search and random-function preimage search instantiate this theorem.
+
+`Oracle/ParallelPreimage.lean` completes M3b for a fixed target chosen independently of the uniform
+function. `preimageSearchAdvantage_le_of_isPointBound` gives
+`min 1 ((1 + 2 * sqrt (q * Q))^2 / |Y|)`; its width-cap corollary uses `Q = k * q`.
+One function answers every round and the endpoint verifier. The target is neither obtained by
+evaluating that function at a hidden input nor conditioned to lie in its image.
+`ToMathlib/MeasureTheory/Measure/UniformTable/Target.lean` supplies the exact joint decomposition
+into independent target labels and a reference table avoiding the target. Their incidence is
+`1 / |Y|`; singleton responses are handled separately by the probability cap. Exact zero-point
+laws retain successful mass divided by `|Y|`, permitting empty rounds and subnormalized inputs.
+No compressed-oracle result is used by this argument.
