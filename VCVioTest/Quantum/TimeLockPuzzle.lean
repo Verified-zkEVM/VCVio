@@ -27,9 +27,15 @@ namespace VCVioTest.QuantumTimeLockPuzzle
 @[expose, reducible]
 def counterSpec : QuantumOracleSpec := uBatchSpec Unit (fun _ ↦ QReg.of Unit)
 
-/-- The register left by each width-one call. -/
+/-- The register left by each width-one call, using finiteness as a proposition. -/
 @[expose, reducible]
-def callReg : QReg := QReg.of ((Fin 1 → Unit) × Unit)
+noncomputable def callReg : QReg :=
+  @QReg.of ((Fin 1 → Unit) × Unit) (Fintype.ofFinite _) (Classical.decEq _)
+
+/-- The chosen finiteness and equality data describe the ordinary batch-output register. -/
+theorem callReg_eq : callReg = QReg.of ((Fin 1 → Unit) × Unit) := by
+  unfold callReg QReg.of
+  congr 1 <;> exact Subsingleton.elim _ _
 
 instance : Unique callReg := by
   change Unique ((Fin 1 → Unit) × Unit)
@@ -62,7 +68,7 @@ noncomputable def oneCall {A : QReg} [Unique A] :
 noncomputable def counterPuzzle : Quantum.TimeLockPuzzle counterSpec Unit Unit where
   Secret := Bool
   gen := QuantumComp₂.queryBind ((), 1) (QReg.of Unit) (Equiv.ofUnique _ _) fun _ ↦
-    (QComp.act (A := callReg) (B := QReg.of Unit)
+    (QComp.act (A := QReg.of ((Fin 1 → Unit) × Unit)) (B := QReg.of Unit)
       (SubInstrument.relabel (Equiv.ofUnique _ _))).bind fun _ ↦
       QuantumComp₂.pure ((), (), true)
   solve _ := QuantumComp₂.pure (some ())
@@ -75,10 +81,10 @@ noncomputable def counterAdversary : TwoPhaseAdversary counterSpec Unit Unit whe
   initialState := SubState.basis ()
   State M := PLift (M = callReg)
   preprocess := QuantumComp.queryBind ((), 1) (QReg.of Unit) (Equiv.ofUnique _ _) fun _ ↦
-    QuantumComp.pure ⟨rfl⟩
+    QuantumComp.pure ⟨(callReg_eq).symm⟩
   online M state _ := by
     rcases state with ⟨h⟩
-    subst M
+    letI : Unique M := by subst M; infer_instance
     exact oneCall
 
 /-- The syntactic phase clocks count preprocessing and online execution independently. -/
@@ -105,7 +111,8 @@ example : ¬ counterAdversary.IsQueryBound ⟨1, 0, 1, 2, 2⟩ := by
 /-- The unique successful classical transcript includes the hidden generator marker. -/
 @[expose, reducible]
 noncomputable def counterTranscript : DelayTranscript counterPuzzle counterAdversary :=
-  ⟨callReg, ⟨rfl⟩, (), (), true, callReg, ()⟩
+  ⟨QReg.of ((Fin 1 → Unit) × Unit), ⟨(callReg_eq).symm⟩, (), (), true,
+    QReg.of ((Fin 1 → Unit) × Unit), ()⟩
 
 /-- One physical call increments the private register and leaves the unique public basis fixed. -/
 private theorem counter_queryStep {A : QReg} [Unique A]
@@ -161,12 +168,13 @@ theorem counter_three_phases :
       (Matrix.single ((), (0 : ZMod 5)) ((), (0 : ZMod 5)) 1)) =
         Matrix.single ((default : callReg), (3 : ZMod 5))
           ((default : callReg), (3 : ZMod 5)) 1 := by
-  have hfalse : (generationInstrument counterRuntime counterPuzzle callReg).branch
-      ((), (), false) = 0 := by
+  have hfalse :
+      (generationInstrument counterRuntime counterPuzzle
+        (QReg.of ((Fin 1 → Unit) × Unit))).branch ((), (), false) = 0 := by
     apply LinearMap.ext
     intro ρ
     ext a b
-    exact counter_generation callReg ρ false a b
+    exact counter_generation (QReg.of ((Fin 1 → Unit) × Unit)) ρ false a b
   unfold delayInstrument counterAdversary
   simp only [QuantumRuntime.run_queryBind, QuantumRuntime.run_pure,
     DSubInstrument.bind_assoc, DSubInstrument.ret_bind]
@@ -177,7 +185,7 @@ theorem counter_three_phases :
     counterTranscript, DSubInstrument.branch_ret_self, LinearMap.id_comp]
   ext a b
   simp only [LinearMap.comp_apply]
-  rw [counter_queryStep (A := callReg), counter_generation,
+  rw [counter_queryStep (A := QReg.of ((Fin 1 → Unit) × Unit)), counter_generation,
     counter_queryStep (A := QReg.of Unit)]
   rcases a with ⟨a, da⟩
   rcases b with ⟨b, db⟩
