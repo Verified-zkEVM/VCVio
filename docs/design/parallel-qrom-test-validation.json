@@ -1,0 +1,373 @@
+{
+  "schema_version": 1,
+  "status": "passed",
+  "scope": "Integration validation of two reviewed test fixture corrections; production unchanged",
+  "original_port_reference": "ed4e0a4fc73738de9e03cf50abde672fdd413a40",
+  "validated_code_tip": "878497e510036a582b88ad26d18084ca40552480",
+  "validated_code_tree": "93b07d8709d2f045d31f7e7901412399fbfda45f",
+  "historical_production_record": {
+    "path": "docs/design/parallel-qrom-port-validation.json",
+    "sha256": "f3979f54dc70f8ac647dae04b0b7b42ecd1ee9e99bdf717a0624a97e30932972",
+    "preserved_unchanged": true
+  },
+  "production_bytes_unchanged": true,
+  "dependency_pins_and_baselines_unchanged": true,
+  "test_corrections": [
+    {
+      "commit": "d162cc84a08bbed89e1abbd368135f71ec0e85a0",
+      "path": "VCVioTest/Quantum/Sequentialize.lean",
+      "sha256": "135203959c9fe9acd80fba08db1e78ecd483f63840fecb7b35fc7893ebfea5de",
+      "change": "Reuse the existing input register in the local gate signature; no constructed register enumeration.",
+      "contract": "All 28 shared captured raw declaration types unchanged; only gates body changes and unused generated matcher disappears.",
+      "semantic_review_reference": {
+        "status": "passed",
+        "path": "/tmp/qrom-sequentialize-semantic-review.json",
+        "sha256": "752a2bf8d17d2b9fbb2972b790ae40bf2a6fce324d1f3b3dfa14540816fb94e0"
+      }
+    },
+    {
+      "commit": "878497e510036a582b88ad26d18084ca40552480",
+      "path": "VCVioTest/Quantum/TimeLockPuzzle.lean",
+      "sha256": "b37caed376e0884407db6c91ec3e24a13b9bee444997d18c1ba36c54a9e014a7",
+      "change": "Choose register metadata from propositional finiteness and classical equality; prove full register equality, retain the exact State M witness and execute online at actual M.",
+      "contract": "All 19 existing captured raw declaration types unchanged; four disclosed fixture bodies change and callReg_eq is added.",
+      "independent_review": {
+        "path": "/tmp/qrom-callreg-independent/REVIEW.json",
+        "sha256": "09811026ed4afa45cde12daf61cf119fbb19d4a302bc4c9047357f43b1595e41",
+        "actual_c_ir_olean_identical_to_independent_reproduction": true,
+        "identity_scope": "The corrected integration artifacts exactly reproduce the independently compiled corrected proposal; this is not an old-versus-new artifact equality claim."
+      }
+    }
+  ],
+  "targeted_build": {
+    "status": "passed",
+    "jobs": 6908,
+    "exit_code": 0,
+    "modules": [
+      "VCVioTest.Quantum.Sequentialize",
+      "VCVioTest.Quantum.TimeLockPuzzle"
+    ]
+  },
+  "owned25_initializers": {
+    "status": "passed",
+    "roots": 25,
+    "constants": 431,
+    "evaluated": 28,
+    "blind_spots": 0,
+    "compiler_generated_literals": 0,
+    "enumerations": 0,
+    "exit_code": 0
+  },
+  "owned25_axioms": {
+    "status": "passed",
+    "roots": 25,
+    "declarations": 230,
+    "sorry_taint": 0,
+    "nonstandard_taint": 0,
+    "exit_code": 0
+  },
+  "complete_lean_test_libraries": {
+    "status": "passed",
+    "command": [
+      "lake",
+      "build",
+      "VCVioTest",
+      "LatticeCryptoTest",
+      "HashSigTest"
+    ],
+    "jobs": 11707,
+    "native_c_object_jobs": 0,
+    "default_native_lake_test_invoked": false,
+    "exit_code": 0
+  },
+  "test_library_warning_budget": {
+    "status": "passed",
+    "warnings": 0,
+    "exit_code": 0,
+    "prefixes": [
+      "VCVioTest/",
+      "VCVioTest.lean",
+      "LatticeCryptoTest/",
+      "LatticeCryptoTest.lean",
+      "HashSigTest/"
+    ]
+  },
+  "full_test_root_initializers": {
+    "status": "passed",
+    "roots": [
+      "VCVioTest",
+      "LatticeCryptoTest"
+    ],
+    "constants": 6121,
+    "modules": 310,
+    "evaluated": 799,
+    "blind_spots": 0,
+    "compiler_generated_literals": 21,
+    "flagged": 2,
+    "all_flags_preexisting_baseline_accepted": true,
+    "flags": [
+      {
+        "via": "value",
+        "source": "SMDTOpenPREFinalValidityTest.instFintypeInput",
+        "name": "SMDTOpenPREFinalValidityTest.instFintypeInput",
+        "module": "VCVioTest.SMDTOpenPREFinalValidity",
+        "library": "VCVioTest",
+        "entryPoints": [
+          "Fintype.mk"
+        ]
+      },
+      {
+        "via": "value",
+        "source": "VCVioTest.Computability.toyForkProb",
+        "name": "VCVioTest.Computability.toyForkProb",
+        "module": "VCVioTest.Computability",
+        "library": "VCVioTest",
+        "entryPoints": [
+          "FinRatPMF.Demo.instFinEnumRangeUnitCoinSpec"
+        ]
+      }
+    ],
+    "exit_code": 0
+  },
+  "full_test_root_axioms": {
+    "status": "passed",
+    "roots": [
+      "VCVioTest",
+      "LatticeCryptoTest"
+    ],
+    "declarations": 4097,
+    "modules": 310,
+    "sorry_taint": 0,
+    "nonstandard_taint": 0,
+    "exit_code": 0
+  },
+  "full_default_test_suite": {
+    "status": "passed",
+    "command": [
+      "lake",
+      "test"
+    ],
+    "log": "/tmp/qrom-integration-test-fixes-lake-test-env-fixed.log",
+    "dependency_native_cache": "Warm after completed PR1 full suite; no concurrent duplicate cold build.",
+    "ci_test_warning_filter": {
+      "status": "passed",
+      "exit_code": 0,
+      "warnings": 0,
+      "command": [
+        "uv",
+        "run",
+        "--no-project",
+        "--python",
+        "3.12",
+        "python",
+        "scripts/check-warning-log.py",
+        "/tmp/qrom-integration-test-fixes-lake-test-env-fixed.log",
+        "--path-prefix",
+        "VCVioTest/",
+        "--path-prefix",
+        "VCVioTest.lean",
+        "--path-prefix",
+        "LatticeCryptoTest/",
+        "--path-prefix",
+        "LatticeCryptoTest.lean",
+        "--path-prefix",
+        "HashSigTest/",
+        "--label",
+        "test-library warnings"
+      ],
+      "log": "/tmp/qrom-integration-test-fixes-lake-test-env-fixed-warnings.log",
+      "log_sha256": "6359f8732b4db353c8fd8e8316e034f3f48c28b909533f79c94acae9a4dc214a"
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "command": [
+          "lake",
+          "test"
+        ],
+        "exit_code": 2,
+        "status": "failed-final-check-launcher",
+        "native_build_and_executable_tests": "passed",
+        "failure": "Final uv checker inherited read-only /home/alh/.cache/uv; temporary cache variables were not propagated by the launcher.",
+        "log": "/tmp/qrom-integration-test-fixes-lake-test.log",
+        "log_sha256": "b15c6791eae3557b39faadc60b2de22424374716ccf36c31d975658c2a455871"
+      },
+      {
+        "attempt": 2,
+        "command": [
+          "lake",
+          "test"
+        ],
+        "environment": {
+          "UV_CACHE_DIR": "/tmp/parallel-qrom-uv-cache",
+          "UV_OFFLINE": "true",
+          "UV_PYTHON_DOWNLOADS": "never"
+        },
+        "status": "passed",
+        "log": "/tmp/qrom-integration-test-fixes-lake-test-env-fixed.log",
+        "exit_code": 0,
+        "build_jobs": 16973,
+        "executable_count": 34,
+        "final_csv_check": "passed",
+        "log_sha256": "3513189ae6d763a499f88987439b2c2d83b77ad03a90b43e0d33d12ee59a7763"
+      }
+    ],
+    "corrected_environment": {
+      "UV_CACHE_DIR": "/tmp/parallel-qrom-uv-cache",
+      "UV_OFFLINE": "true",
+      "UV_PYTHON_DOWNLOADS": "never"
+    },
+    "immediate_exact_csv_check": {
+      "status": "passed",
+      "exit_code": 0,
+      "command": [
+        "uv",
+        "run",
+        "--no-project",
+        "--python",
+        "3.12",
+        "python",
+        "scripts/check-slh-dsa-bound-table.py",
+        "docs/design/slh-dsa-security-bounds.csv",
+        "--generator",
+        "/home/alh/VCV-io/.worktrees/parallel-qrom-main-port/.lake/build/bin/slhdsa_bound_table"
+      ],
+      "log": "/tmp/qrom-integration-test-fixes-csv-check-env-fixed.log",
+      "log_sha256": "9360af3c96a7d3acccc705b5e09264b271fc4fb86e5ffdd8a25b419e1f4c516b"
+    },
+    "exit_code": 0,
+    "successful_attempt": 2,
+    "build_jobs": 16973,
+    "executables_run": [
+      "smoke_test",
+      "oracle_cost_tests",
+      "algorithm_tests",
+      "slhdsa_kat",
+      "slhdsa_c13_kat",
+      "slhdsa_data_codec_tests",
+      "slhdsa_primitive_tests",
+      "slhdsa_wots_tests",
+      "slhdsa_xmss_tests",
+      "slhdsa_fors_tests",
+      "slhdsa_fors_secret_order_tests",
+      "slhdsa_hypertree_tests",
+      "slhdsa_external_tests",
+      "slhdsa_target_ledger_tests",
+      "slhdsa_encoded_ledger_tests",
+      "slhdsa_trace_target_tests",
+      "slhdsa_component_trace_tests",
+      "slhdsa_canonical_game_tests",
+      "slhdsa_wots_witness_tests",
+      "slhdsa_fors_witness_tests",
+      "slhdsa_xmss_witness_tests",
+      "slhdsa_hypertree_witness_tests",
+      "slhdsa_scheme_witness_tests",
+      "slhdsa_hmsg_witness_tests",
+      "slhdsa_suf_residual_tests",
+      "slhdsa_scheme_game_tests",
+      "slhdsa_composition_tests",
+      "slhdsa_suf_bound_tests",
+      "slhdsa_limited_profile_tests",
+      "slhdsa_byte_model_tests",
+      "slhdsa_wire_tests",
+      "slhdsa_shake128s_compiler_tests",
+      "slhdsa_shake128s_game_tests",
+      "slhdsa_shake128s_wire_bridge_tests"
+    ],
+    "executable_count": 34,
+    "independent_final_csv_check": "passed: regenerated Lean CSV plus exhaustive surjection and 18 rational-coefficient checks",
+    "log_sha256": "3513189ae6d763a499f88987439b2c2d83b77ad03a90b43e0d33d12ee59a7763"
+  },
+  "lean_only_validation_record": {
+    "path": "/tmp/qrom-integration-test-fixes-validation.json",
+    "sha256": "af5b1eae32fe036cc6ee07c2f00e4eaf61199b562d1af24fb5d2975265413518"
+  },
+  "coverage_note": "All three Lean test libraries were built. Init/AX roots VCVioTest and LatticeCryptoTest match CI; HashSigTest has multiple main roots and no umbrella. The default suite ran all 34 executables and the independent CSV checker. The optional --ffi suite was not requested.",
+  "artifact_sha256": {
+    "/tmp/qrom-integration-test-fixes-inputs.json": "5924e407e0a7796ff776c9ead74f74692f6fbc02b2f9ae66a1107022760be31d",
+    "/tmp/qrom-integration-test-fixes-source-check.json": "fa1c2ab86042b010304bab7d0e1563b706ff2c7fa95b0f7e240c116cd8d81a21",
+    "/tmp/qrom-integration-test-fixes-targeted-build.log": "804623137a11044120748a675dc597f2e9f304f270f93c437788ea9c735f94be",
+    "/tmp/qrom-integration-test-fixes-owned-init.json": "34931c339541983911ddd62b05c9ac329335c0e165ca369b76c2d6bdb09173df",
+    "/tmp/qrom-integration-test-fixes-owned-init.log": "0bb25aa570d1c19d11c09b9df65447bec5d5cb6249e37f4e7ddfe87bce70e6b5",
+    "/tmp/qrom-integration-test-fixes-owned-axioms.json": "b745372ca5abb8cb373456771ba3fc652fafb2624abd78f782687925e1d7b52b",
+    "/tmp/qrom-integration-test-fixes-owned-axioms.log": "51963d9b5b4b3be85b0658aaa53224127245fd108fdbe3bd510f44b26bbd3033",
+    "/tmp/qrom-integration-test-fixes-test-libraries-build.log": "4fb590a8fc27f4d8c18cf41d42fd72e12ff4467e8e0a59811022e21478bd6f1f",
+    "/tmp/qrom-integration-test-fixes-test-warnings.log": "a636f47141eabeb4192fdcff0a8754bd1ace60d6f5724c453bcda8613916f2a8",
+    "/tmp/qrom-integration-test-fixes-test-inits.json": "d08531e16c99de69e30761469b4dba047a83a54e94c307c964ea0e86eee27bdd",
+    "/tmp/qrom-integration-test-fixes-test-inits.log": "aa689beab7769bdbd566ceba3adc6d30a53bd278f42552183bce1118530affc0",
+    "/tmp/qrom-integration-test-fixes-test-axioms.json": "fc6e7fb9d62c8be37dd106dd38d3c799e2fb70ba8cffc7058579bf49f9a2649b",
+    "/tmp/qrom-integration-test-fixes-test-axioms.log": "b78cfbd003fb66618f9260f217ee88099685b046d119db81bdb694020da47e18",
+    "/tmp/qrom-integration-test-fixes-lake-test-env-fixed.log": "3513189ae6d763a499f88987439b2c2d83b77ad03a90b43e0d33d12ee59a7763",
+    "/tmp/qrom-integration-test-fixes-lake-test-env-fixed-warnings.log": "6359f8732b4db353c8fd8e8316e034f3f48c28b909533f79c94acae9a4dc214a",
+    "/tmp/qrom-integration-test-fixes-lake-test.log": "b15c6791eae3557b39faadc60b2de22424374716ccf36c31d975658c2a455871",
+    "/tmp/qrom-integration-test-fixes-csv-check-env-fixed.log": "9360af3c96a7d3acccc705b5e09264b271fc4fb86e5ffdd8a25b419e1f4c516b"
+  },
+  "reproduction_commands": {
+    "lean_test_libraries": [
+      "lake",
+      "build",
+      "VCVioTest",
+      "LatticeCryptoTest",
+      "HashSigTest"
+    ],
+    "full_default_test_suite": [
+      "lake",
+      "test"
+    ],
+    "test_root_initializers": [
+      "lake",
+      "exe",
+      "initsweep",
+      "--check",
+      "--root",
+      "VCVioTest",
+      "--root",
+      "LatticeCryptoTest"
+    ],
+    "test_root_axioms": [
+      "lake",
+      "exe",
+      "axiomsweep",
+      "--check",
+      "--root",
+      "VCVioTest",
+      "--root",
+      "LatticeCryptoTest"
+    ],
+    "test_warning_filter": [
+      "uv",
+      "run",
+      "--no-project",
+      "--python",
+      "3.12",
+      "python",
+      "scripts/check-warning-log.py",
+      "/tmp/qrom-integration-test-fixes-lake-test-env-fixed.log",
+      "--path-prefix",
+      "VCVioTest/",
+      "--path-prefix",
+      "VCVioTest.lean",
+      "--path-prefix",
+      "LatticeCryptoTest/",
+      "--path-prefix",
+      "LatticeCryptoTest.lean",
+      "--path-prefix",
+      "HashSigTest/",
+      "--label",
+      "test-library warnings"
+    ]
+  },
+  "reproduction_environment": {
+    "UV_CACHE_DIR": "/tmp/parallel-qrom-uv-cache",
+    "UV_OFFLINE": "true",
+    "UV_PYTHON_DOWNLOADS": "never"
+  },
+  "final_source_integrity": {
+    "code_tip": "878497e510036a582b88ad26d18084ca40552480",
+    "code_tree": "93b07d8709d2f045d31f7e7901412399fbfda45f",
+    "only_two_reviewed_test_files_changed_vs_ed4": true,
+    "all_production_and_configuration_bytes_unchanged": true,
+    "historical_production_record_unchanged": true,
+    "new_validation_record_commit_separate_from_validated_code_tip": true
+  }
+}
