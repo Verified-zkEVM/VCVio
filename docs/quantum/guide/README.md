@@ -32,7 +32,8 @@ The layer is the subject of issue #706. Open questions and planned work are in
   query budgets, sequentialization and combs.
 * [5-qrom](5-qrom.md) — Classical queries, Deutsch's algorithm and the QROM; parallel rounds,
   private uniform coins, classical and compressed execution bridges, parallel reprogramming,
-  marked search, fixed-target preimage search, complete raw-table encodings.
+  marked search, fixed-target preimage search, complete raw-table encodings, exact finite-window
+  rank security.
 * [6-instability](6-instability.md) — The classical instability calculus and its role in quantum
   proofs.
 * [7-time-lock-puzzles](7-time-lock-puzzles.md) — Quantum preprocessing, honest generation,
@@ -74,12 +75,12 @@ variable-width parallel rounds and exact sequentialization at the point budget; 
 compressed-runtime output-law equivalence; parallel reprogramming and marked/fixed-target
 preimage bounds with adaptive round/point budgets; scheduled hybrids, retained-state finishers
 and two-phase time-lock experiments; complete raw-table encodings and exact honest algorithms in
-finite byte windows; rank frontiers and the exact pointer-chain programmed-oracle coupling.
+finite byte windows; rank frontiers and the exact pointer-chain programmed-oracle coupling;
+exact finite-window pointer-chain quantum delay security with query-bounded preprocessing.
 
 Not covered: infinite-dimensional systems, continuous measurement outcomes, nonterminating loops,
 coherent choice of oracle port, or a general converse putting programs into comb form.
 Exact square-root-sum bounds for deterministic width profiles and the CFHL compressed-oracle track remain separate.
-Quantum delay security for the exact pointer-chain encoding is not established by this layer.
 Auxiliary-input preprocessing with unbounded queries and bounded advice remains separate.
 Serialized public puzzles, unrestricted-length hash queries and early-success quantum truncation
 need additional interface or execution results. See

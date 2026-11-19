@@ -18,7 +18,8 @@ malformed and off-image strings. All six honest hash-input families fit in this 
 the bound is at least `max (54 + b) 83`, and in 86 bytes for every accepted link width.
 The response register retains the full 32-byte hash answer, including mask tails. Public puzzles
 use the structured `Puzzle` type; honest algorithms agree with `gen` and `solve` at every fixed
-oracle. Decoding arbitrary serialized puzzles remains a separate interface obligation.
+oracle. Resource-bounded recovery is analyzed in `QuantumCoupling.Preprocessing`;
+decoding arbitrary serialized puzzles remains a separate interface obligation.
 All adversary oracle inputs in this interface satisfy the explicit byte-length bound.
 -/
 

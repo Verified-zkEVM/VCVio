@@ -1,7 +1,7 @@
 # 7. Quantum time-lock puzzle experiments
 
-Covers: honest generation, quantum preprocessing, retained memory, exact finite-window encoding
-and its programmed-oracle coupling.
+Covers: honest generation, quantum preprocessing, retained memory and rank-cutoff key recovery
+security for the exact finite-window pointer-chain encoding.
 Read first: [programs and runtimes](4-programs-and-runtimes.md) and [the QROM](5-qrom.md).
 
 ## A challenge generated between two adversary phases
@@ -76,7 +76,8 @@ preprocessing budgets.
 
 The exact pointer-chain construction has ordinary hash chains, an accumulator and a public
 commitment, in addition to masked links. `PointerChainPuzzle.LeanSeal.quantumWindowScheme`
-gives its honest algorithms a concrete quantum-oracle interface. A resource-bounded quantum recovery theorem requires additional rank-cutoff analysis.
+gives its honest algorithms a concrete quantum-oracle interface. Its recovery bound uses
+rank-cutoff hybrids over the complete raw oracle, with no reduction to an idealized chain.
 
 The raw input register is `ByteArray.Bounded`: every byte string up to the stated maximum
 length. It includes malformed encodings and inputs outside the six typed hash domains.
@@ -101,7 +102,10 @@ encoding alone does not establish that wire interface.
 The rank-frontier lemmas provide another prerequisite. A path input for the next honest
 query round depends only on labels received in preceding honest rounds; inputs further
 ahead have an unreached predecessor and a bounded per-point incidence. The commitment's
-output is already public, while its input contains the secret key.
+output is already public, while its input contains the secret key. The reference prefix oracle
+leaves its prescribed response unprogrammed until its honest receipt rank; queries to that cell
+receive the base-table response. Resampling future words preserves the reached full responses,
+their raw tails and the public commitment value.
 
 The rank-ordered programming coupling is proved separately.
 `PointerChainPuzzle.LeanSeal.qromDelayAdvantage_quantumWindowScheme_le_programmed` bounds
@@ -111,9 +115,70 @@ completed oracle for both adversary phases. Its preprocessing memory is retained
 hidden key remains joint with the endpoint event. The path-input collision allowance is
 charged once; the path responses are not conditioned on collision-freedom.
 
-This comparison needs no adversary query budget. A resource-bounded quantum analysis of the programmed game remains separate. See the
+This comparison needs no adversary query budget. The resource-bounded rank analysis below
+controls the programmed game. See the
 [coupling specification](../../design/quantum-layer.md#18-rank-ordered-programming-coupling)
 for the causal order, collision event and preprocessing conventions.
+
+## Finite-window quantum recovery bound
+
+Write `S = |Bytes 32|`, `L = |Bytes b|`, `A = |Bytes 16|` and `P = solvePoints(n,m)`. The
+online and preprocessing incidence coefficients are
+
+```
+δ_on  = [n ≥ 2] / L + P / S
+δ_pre = A⁻¹ * (L⁻¹ + P / S).
+```
+
+`rankRecoveryBound b n m r k` is the online bound
+`B_on = (S^(-1/2) + r * sqrt(4*k*δ_on))²`. It holds before the honest key round, for input
+states independent of the fresh challenge words conditional on the base oracle. The proof
+averages square-root probabilities through the rounds and squares only at the end.
+
+`qromDelayAdvantage_quantumWindowScheme_le_of_preprocessing` bounds the actual experiment by
+
+```
+min 1 (P²/S + (sqrt(B_on) + 2*sqrt(rpre*Qpre*δ_pre))²).
+```
+
+Preprocessing has at most $r_{\mathrm{pre}}$ rounds and $Q_{\mathrm{pre}}$ points; every online
+continuation has at most `r` rounds and width at most `k`, with `r < keyRound n m`.
+The parameter assumptions are
+`n ≠ 0`, `n < 2^32`, `b ≤ 32` and a window containing all honest inputs. One function answers
+all three phases. Classical and quantum preprocessing memory are unrestricted, and failed
+branches count as failure. `qromDelaySecure_quantumWindowScheme` establishes `QROMDelaySecure`
+for every admissible `DelayBudget`. The online point budget is an additional restriction;
+the bound uses online rounds and width.
+
+The preprocessing hybrid compares the completed programmed oracle with the base oracle
+while retaining the complete online continuation as the common finishing operation. A
+reference preprocessing state can depend on that base oracle, but not on the fresh challenge
+coins. The online bound scales with each branch's successful mass, so summing retained
+branches charges it once. The path-input collision allowance `P²/S` stays outside the square;
+no hidden word is conditioned on collision-freedom.
+
+Salt-free later accumulator inputs constrain two independent fresh 32-byte state labels,
+which suffice for their incidence bound. See the [rank-security specification](../../design/quantum-layer.md#19-finite-window-rank-security-with-preprocessing)
+for the separate oracle-family cases.
+
+The honest solver derives the key after `keyRound n m = n*(m+2)+1` rounds. Its checked version
+makes one extra commitment-validation call. The security threshold uses the key's own round.
+The following examples use $r_{\mathrm{pre}}Q_{\mathrm{pre}}\le 2^{100}$ and
+`r = keyRound n m - 1`. Maximum work means `n = 2^20`, `m = 2^40`; moderate depth means
+`n = 2`, `m = 2^29 - 2`.
+
+| Chain work | Link bytes | Online rounds | Width | Full capped bound |
+|---|---:|---|---|---|
+| maximum | `32` | `2^60 + 2^21` | `2^40` | about `2^-34` |
+| moderate | `16` | `2^30` | `2^20` | about `2^-46` |
+| maximum | `16` | `2^60 + 2^21` | `2^40` | `1` (vacuous) |
+
+The [detailed parameter table](../../design/quantum-layer.md#20-concrete-finite-window-query-estimates)
+also gives the honest path-point counts and separates collision and preprocessing cross terms.
+The bound is independent of the chosen finite window length. It concerns structured public
+puzzles and programs bounded on every online branch; arbitrary serialized puzzle parsing,
+quantum truncation for early success, and unrestricted-length oracle queries need separate
+transport or execution results. Unbounded preprocessing with bounded advice remains separate.
 
 ## Checks
 

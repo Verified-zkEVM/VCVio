@@ -18,6 +18,7 @@ or losslessness assumptions are needed for this representation.
 
 The rank-programmed comparison charges path-input collisions once, with allowance
 `solvePoints n m ^ 2 / |Bytes 32|`. Its path responses remain unconditionally uniform.
+The module `QuantumCoupling.Preprocessing` bounds recovery under phase-local query budgets.
 -/
 
 public section

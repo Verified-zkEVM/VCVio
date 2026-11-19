@@ -360,7 +360,7 @@ ordinary iterated hash chains, an accumulator,
 and a published key commitment. Even with one chain and no public masked links, obtaining the
 key requires the internal chain, accumulator and key hash. leanSeal §4.4 states that its
 exact-encoding theorem is classical, and §8.3 item 4 leaves the quantum extension open in
-that paper. A round-bounded quantum recovery theorem requires additional analysis.
+that paper. The finite-window, round-bounded quantum recovery theorem is stated in §19 below.
 
 The first encoding step retains the entire raw oracle table. An injective encoding of typed
 inputs and a per-cell response split give a bijection between raw tables and typed-answer,
@@ -383,7 +383,29 @@ puzzle interface and a theorem for arbitrary serialized solver inputs remain sep
 `PointerChainPuzzle.PathValue.rankPrefix` supplies a separate prerequisite for the quantum delay
 argument. Values beyond rank `r+1` have a predecessor beyond rank `r`; their inputs have
 incidence at most `hitBound = [n≥2]/|L| + solvePoints(n,m)/|S|` when unreached labels are
-resampled. Next-round inputs depend only on the preceding rank prefix.
+resampled. Next-round inputs depend only on the preceding rank prefix. Resampling preserves
+the public commitment label, but its oracle cell must stay unprogrammed until its rank:
+that input contains the secret key.
+
+The programmed-table coupling, rank-cutoff quantum hybrid and query-bounded preprocessing
+comparison are proved below. The recovery theorem assumes a syntactic bound on every online
+branch's total number of rounds. A theorem for success before a deadline in an otherwise
+longer-running quantum program needs a separate truncation argument.
+
+For planning, the coarse event-distance hybrid would contribute
+`4 * q * sqrt (k * hitBound)`. Both parts of `hitBound` matter. With `n ≥ 2`, `q ≈ solvePoints ≈ 2^60`,
+`k = 2^40`, `|S| = 2^256` and `b = 32`, the state term `solvePoints/|S| ≈ 2^-196`
+dominates the link term `1/|L| = 2^-256`; the coarse contribution is about `2^-16`.
+At `b = 16`, the link term makes that coarse estimate vacuous. The proved bound instead
+accumulates square-root probabilities and squares once, giving an online contribution about
+`2^-34` at `b = 32`, before the separate collision and preprocessing terms. These estimates
+illustrate the bound's dependence on the resources; they are not a parameter recommendation.
+
+The proved recovery bound is uniform in the input-length limit: its error terms depend on
+query resources and state/link widths, while the window appears in the oracle and adversary
+types and the premise that honest inputs fit. This covers each fixed byte window. It does not
+simulate arbitrary-length extra oracle queries. A coherent embedding between different windows
+remains a separate transport lemma.
 
 ### 18. Rank-ordered programming coupling
 
@@ -415,8 +437,109 @@ argument needed by the later quantum hybrid.
 quantum scheme experiment, with a separate `min 1` corollary. In its programmed game, both
 preprocessing and online execution use the same completed programmed oracle; the actual
 retained preprocessing register and classical state persist. No query budget or losslessness
-assumption is needed for this comparison. Replacing preprocessing by a run against the base oracle requires a separate
-query-dependent comparison; no such cost is hidden in the collision term.
+assumption is needed for this comparison. Replacing preprocessing by a run against the base
+oracle has a separate query-dependent cost in the preprocessing theorem below; that cost is
+not hidden in the collision term.
 
 The collision allowance is independent of the finite byte-window length. The adversary still
-has the explicit window scope and structured public puzzles. Resource-bounded quantum analysis of the programmed game remains a separate obligation.
+has the explicit window scope and structured public puzzles. The resource-bounded quantum
+analysis of that programmed game gives the recovery theorem below.
+
+### 19. Finite-window rank security with preprocessing
+
+`PointerChainPuzzle.LeanSeal.qromDelayAdvantage_quantumWindowScheme_le_of_preprocessing`
+bounds recovery in the actual three-phase experiment. Write `S = |Bytes 32|`, `L = |Bytes b|`,
+`A = |Bytes 16|`, `P = solvePoints(n,m)` and
+
+```
+δ_on  = [n ≥ 2] / L + P / S
+δ_pre = A⁻¹ * (L⁻¹ + P / S)
+β     = P² / S
+B_on  = (S^(-1/2) + r * sqrt(4 * k * δ_on))².
+```
+
+If preprocessing has at most $r_{\mathrm{pre}}$ rounds and $Q_{\mathrm{pre}}$ points, every online
+continuation has at most `r` rounds of width at most `k`, and `r < keyRound n m`, then recovery
+is at most
+
+```
+min 1 (β + (sqrt(B_on) + 2 * sqrt(rpre * Qpre * δ_pre))²).
+```
+
+`rankRecoveryBound` is the online bound, `preprocessingIncidence` is the preprocessing incidence,
+and `rankDelayBound` is the uncapped combined bound. The theorem assumes `n ≠ 0`, `n < 2^32`,
+`b ≤ 32`, and a window containing all honest hash inputs.
+`qromDelaySecure_quantumWindowScheme` establishes the
+`QROMDelaySecure` predicate for every adversary admitted by the corresponding `DelayBudget`.
+The online point bound remains an additional admissibility condition; the online error uses
+rounds and width. Retained classical and quantum memory are unrestricted.
+
+The online proof keeps reached full raw words, including their tails, fixed while resampling
+future words. The public commitment value remains fixed too; its input stays behind the
+rank cutoff because it contains the secret key. `ParallelSchedule` provides the reusable
+numbered-call hybrid. `RankHybrid` proves reference-state independence and the fresh-key
+last hybrid. `RankBounds` accumulates the root comparisons before squaring and scales the
+result by the input state's successful mass.
+
+For preprocessing, condition on the base table and compare runs under the complete programmed
+table and the base table. Their common finishing operation is the entire online run under
+the programmed table, with the same challenge and hidden key. The base-table preprocessing
+post-state is independent of the fresh challenge coins, though it may depend on that base
+table. `ParallelFinisher` bounds the root error by `2 * sqrt(rpre * Qpre * δ_pre)`. Applying
+the mass-scaled online bound to each retained branch and summing its mass charges the online
+bound once. Failed branches are not renormalized. The outer classical coupling charges `β`
+once, outside the square, and never conditions the path-word sample on collision-freedom.
+
+Later accumulator inputs are `acc(a,y)` and carry no salt. Their incidence uses two independent
+fresh 32-byte predecessor labels, giving `S⁻² ≤ (A*S)⁻¹`; the first accumulator input contains
+the salt-dependent injective context and one fresh state. The other families carry the salt
+directly or through that context. `PreprocessingIncidence` proves these cases separately.
+
+The honest key is available after `keyRound n m = n*(m+2)+1` rounds. The checked solver uses
+one further commitment-validation call; its full budget is `keyRound n m + 1` rounds and
+`solvePoints n m` points. The security theorem bounds key recovery before the key's own
+receipt round, rather than using that extra validation round as a delay gap.
+
+This result concerns structured public puzzles and each fixed finite byte window. Arbitrary
+serialized puzzle parsing, a quantum truncation theorem for early success, coherent transport
+between windows and a compiler for unrestricted-length queries remain separate. Unbounded
+preprocessing with bounded classical or quantum advice is also separate. The CFHL bounds for
+compressed oracles and their changing-property prerequisites are independent of this direct
+hybrid proof.
+
+### 20. Concrete finite-window query estimates
+
+These examples evaluate the exact construction's proved bound in §19, with `S = 2^256`,
+`A = 2^128`, `L = 2^(8b)`, `P = n*(m+3)+1`, and
+`r = keyRound n m - 1 = n*(m+2)`. Each has `n ≥ 2`, so both online incidence terms apply.
+They use the preprocessing premise `rpre * Qpre ≤ 2^100`, evaluated at its upper endpoint.
+The chosen `b,n,m` satisfy the source's valid ranges, including `n ≤ 2^20`, `m ≤ 2^48`
+and `n*m ≤ 2^60`.
+
+| Link bytes `b` | Chains `n` | Steps `m` | Online rounds `r` | Path points `P` | Width `k` | Full capped bound |
+|---|---|---|---|---|---|---|
+| `32` | `2^20` | `2^40` | `2^60 + 2^21` | `2^60 + 3*2^20 + 1` | `2^40` | about `2^-34` |
+| `16` | `2` | `2^29 - 2` | `2^30` | `2^30 + 3` | `2^20` | about `2^-46` |
+| `16` | `2^20` | `2^40` | `2^60 + 2^21` | `2^60 + 3*2^20 + 1` | `2^40` | `1` (vacuous) |
+
+`P` counts the full honest path, not an online adversary point budget. The examples assume
+every online continuation respects the displayed round and width limits. They concern each
+fixed raw byte window containing the honest inputs and structured public puzzles.
+The second row specifies a moderate-depth parameter set; 16-byte links do not give the
+same bound at the maximum total chain work. For `n = 1`, the online link term is absent,
+so that case needs its own evaluation.
+
+The preprocessing contribution includes its cross term with the online root bound. If
+`v = 2*sqrt(rpre*Qpre*δ_pre)`, its additive increase before the cap is
+`2*sqrt(B_on)*v + v²`. Evaluating only `v²` understates that increase:
+
+| Example | Collision allowance `β` | Standalone preprocessing square `v²` | Full preprocessing increase |
+|---|---|---|---|
+| `b=32`, maximum work | about `2^-136` | about `2^-222` | about `2^-127` |
+| `b=16`, moderate depth | about `2^-196` | about `2^-154` | about `2^-99` |
+
+The preprocessing increase is small relative to the online term in both useful rows, but
+it is not uniformly below `2^-200`. These are approximate upper bounds in the ideal QROM
+query model, not claims about SHA-256 implementations, circuit gate costs or recommended
+security parameters. The values are slightly above the displayed powers of two; the table
+rounds their logarithms for readability.
