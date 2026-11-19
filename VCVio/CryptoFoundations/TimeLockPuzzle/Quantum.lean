@@ -21,10 +21,10 @@ discarded, while adversary memory and the runtime's private oracle register pers
 
 `delayInstrument` composes the three phases as dependent subinstruments. `delayLawWith` initializes
 the joint adversary/oracle state once. Generation operates on the oracle register with adversary
-memory framed around it. No private state is discarded or initialized between phases, so
-preprocessing may correlate retained adversary memory with a compressed or
-purified oracle database. The joint transcript retains the preprocessing branch, published puzzle,
-key, auxiliary secret and output. Lost mass remains failure, without postselection normalization.
+memory framed around it. The retained adversary memory and the runtime's private oracle register
+are passed between phases without a reset, so preprocessing may correlate them through a compressed
+or purified database. The joint transcript retains the preprocessing branch, published puzzle, key,
+auxiliary secret and output. Lost mass remains failure, without postselection normalization.
 
 `DelayBudget` charges preprocessing rounds and points, and online rounds, points and maximum
 width. The adversary's clock starts after generation publishes the puzzle. Honest generation
