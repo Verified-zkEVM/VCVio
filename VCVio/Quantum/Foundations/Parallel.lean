@@ -194,8 +194,8 @@ theorem lift_relabel_piWithMemory {ι : Type} [Fintype ι] [DecidableEq ι]
   · funext j
     simp [j.property]
 
-/-- Applying a permutation once to each index of a duplicate-free list changes exactly
-the coordinates in that list. -/
+/-- Applying a permutation once at each index of a duplicate-free list gives its pointwise
+action on the listed coordinates and leaves every other coordinate unchanged. -/
 theorem sequenceEquiv_piSlot_apply {ι A : Type} [DecidableEq ι]
     (e : A ≃ A) (is : List ι) (hi : is.Nodup) (x : ι → A) (j : ι) :
     sequenceEquiv (fun i ↦ piSlotEquiv i e) is x j =
