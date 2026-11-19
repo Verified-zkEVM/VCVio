@@ -47,3 +47,23 @@ classical and quantum advice. Guo, Li, Liu and Zhang, *Unifying Presampling via 
 Bounds*, [ePrint 2020/1589](https://eprint.iacr.org/2020/1589), Definition 1, specifies bounded
 classical advice after unbounded preprocessing. Neither advice model is implemented by the
 query-bounded preprocessing theorem.
+
+## Local security-normalization note
+
+*Bits of security in the parallel QROM*, `parallel-qrom-security.pdf` in `~/QROM-lit`, is a
+three-page local note with no printed author or version. Page 1 defines at least λ bits of
+security by the bound `(1 + 2D√P)² / 2^λ`, where `D` is the number of adaptive rounds and `P`
+the maximum width. This is an ideal-query-model metric, not a gate-cost estimate.
+
+Appendix A distinguishes independent-target inversion from inversion of the image of a
+uniform secret input. The independent-target bound follows from
+`preimageSearchAdvantage_le_of_isPointBound` with at most `DP` total points. For a domain of
+size `M` and range of size `N`, the secret-input variant uses the marginal preimage density
+`ρ = 1/M + (1 - 1/M)/N`. Its sampling coupling remains unformalized; the existing generic
+finding bound already permits correlated hidden sets.
+
+Appendix B sketches a compressed-oracle collision bound of order `P²D⁴/N`, sufficient for
+the note's normalization when `N = 2^(2λ)`. This argument remains unformalized and is weaker
+than CFHL's depth-sensitive bound of order `P²D³/N`. It does not complete the separate CFHL
+track. The reviewed PDF has SHA-256
+`1e8207e233f080f147b7ebd8a88d0ebd7e86a843fa20aad8cc2247e7aa937506`.

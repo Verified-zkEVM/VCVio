@@ -39,22 +39,43 @@ belong in PR 2 and execution helpers in PR 3.
 
 ## Recommended stack
 
-Each PR targets the preceding PR branch until that predecessor merges; PR 1 targets the
-then-current main. The counts below exclude shared documentation and umbrella changes.
+The shared stack is main → PR 1 → PR 2 → PR 3. The masked-chain application branches from
+PR 3 as PR 4; the exact-puzzle application follows PR 3 → PR 5 → PR 6 → PR 7. Each PR targets
+the branch in the table until that parent merges. The counts below exclude shared
+documentation and umbrella changes.
 
-| PR | Review unit | Production Lean +tests, added / deleted lines | Immediate proof dependency |
-|---|---|---:|---|
-| 1 | Variable-width parallel model, sequentialization and classical/compressed bridges | 3,150 / 2 | Existing sequential quantum layer |
-| 2 | Parallel reprogramming, marked search and fixed-target preimage search | 2,523 / 0 | PR 1 |
-| 3 | Numbered schedules, retained-state finishers and quantum time-lock game | 2,870 / 0 | PRs 1–2 |
-| 4 | Idealized masked-chain coupling and endpoint security with preprocessing | 3,047 / 0 | PRs 1–3 |
-| 5 | Complete raw-table encodings and finite byte windows | 946 / 1 | PRs 1 and 3 |
-| 6 | Adaptive programming and exact pointer-chain coupling | 1,709 / 0 | PR 5 |
-| 7 | Rank-cutoff quantum recovery and exact-puzzle preprocessing security | 1,911 / 0 | PRs 2–3 and 6 |
+```mermaid
+graph LR
+  main["main"] --> p1["PR 1: model and bridges"]
+  p1 --> p2["PR 2: search and preimage"]
+  p2 --> p3["PR 3: schedules and experiment"]
+  p3 --> p4["PR 4: masked chain"]
+  p3 --> p5["PR 5: raw encoding"]
+  p5 --> p6["PR 6: adaptive coupling"]
+  p6 --> p7["PR 7: exact-puzzle security"]
+```
 
-A file-level import audit of the committed production/test files finds no dependency from an
-earlier row to a later row. It does not establish that reconstructed intermediate trees build:
-their selected existing-file hunks, documentation and regenerated exports still need validation.
+| PR | Review unit | Production Lean +tests, added / deleted lines | Target branch | Mathematical prerequisites |
+|---|---|---:|---|---|
+| 1 | Variable-width parallel model, sequentialization and classical/compressed bridges | 3,150 / 2 | main | Existing sequential quantum layer |
+| 2 | Parallel reprogramming, marked search and fixed-target preimage search | 2,523 / 0 | PR 1 | PR 1 |
+| 3 | Numbered schedules, retained-state finishers and quantum time-lock game | 2,870 / 0 | PR 2 | PR 2, including PR 1 |
+| 4 | Idealized masked-chain coupling and endpoint security with preprocessing | 3,047 / 0 | PR 3 | Shared stack through PR 3 |
+| 5 | Complete raw-table encodings and finite byte windows | 946 / 1 | PR 3 | PRs 1 and 3; PR 2 is inherited |
+| 6 | Adaptive programming and exact pointer-chain coupling | 1,709 / 0 | PR 5 | PR 5 |
+| 7 | Rank-cutoff quantum recovery and exact-puzzle preprocessing security | 1,911 / 0 | PR 6 | PR 6 and inherited PRs 2–3 |
+
+PR 5 targets PR 3 directly and has no masked-chain dependency. PR 7 uses search and schedule
+helpers from PRs 2–3, already inherited through PR 6's ancestors; those uses do not add target
+branches or a dependency on PR 4. The exact-puzzle review path has six PR reviews and five
+PR-to-PR edges, compared with seven reviews in the linear stack. PR 4 can be reviewed in
+parallel with PRs 5–7. The total remains seven PRs; the shorter path does not by itself
+guarantee a particular review time.
+
+A file-level import audit of the committed production/test files is consistent with this
+tree and finds no dependency between its two application branches. It does not establish
+that reconstructed intermediate trees build: their selected existing-file hunks,
+documentation and regenerated exports still need validation.
 The four thematic PRs alone would leave roughly 4–6k-line application reviews and mix the raw
 encoding, adaptive coupling and quantum rank argument in one pointer-chain review.
 
@@ -245,13 +266,18 @@ Provenance: `a29a5aa2c`, `c825f7e72`, and the consolidation's numerical document
 ## Assembly and validation procedure
 
 1. Preserve the audited feature tip and record its tree/dependency pins before constructing
-   an integration stack. Use an isolated worktree; leave the reviewed development history
-   and the user's other checkout intact.
-2. Choose and record a current main commit, then port the feature's used APIs to that main's
-   Lean/Mathlib/PolyFun/QuantumFoundations versions. Main's statistical-distance naming and
-   measure refactors also touch this feature's area. Assess actual source/API overlap, resolve
-   it in the isolated integration worktree, and build before treating any PR as ready.
-3. Assemble the files above in order. Provenance is not a blind cherry-pick recipe:
+   an integration stack. Leave the reviewed development history and the user's other
+   checkout intact.
+2. Choose and record a current main commit, then create one isolated integration worktree
+   for the complete feature. Port the whole feature once to that main's
+   Lean/Mathlib/PolyFun/QuantumFoundations versions, including its statistical-distance naming
+   and measure API changes. Run the full build, regressions, kernel sweep, lint, initializer
+   and source-boundary checks before freezing the validated ported tree and its dependency
+   pins as the reference for all seven cuts. Do not port seven independent copies.
+3. Incorporate integration and review feedback into that ported reference, then rerun the
+   affected checks before extracting further cuts. Assemble PRs 1–3 from this single
+   reference, then construct PR 4 and the PR 5–7 branch on their explicit bases above.
+   Provenance is not a blind cherry-pick recipe:
    `023b141b0` also edits a masked-chain file that does not yet exist at PR 2;
    `f762edb5d` spans PRs 2, 3, 4 and 6; shared game files evolve in several later commits.
    Use final module ownership and selected existing-file hunks, preserving public names and
@@ -260,12 +286,20 @@ Provenance: `a29a5aa2c`, `c825f7e72`, and the consolidation's numerical document
    split tutorial/status/citation edits alongside their proofs. Defer the final
    QuantumEncoding/Scheme docstrings that cite the preprocessing security module until PR 7.
    Earlier PRs must not describe absent later theorems as established results.
-5. Build each intermediate tree and its named tests; require independent mathematical and
-   adversarial review of that PR's actual head. Record commits, commands and results at that
-   head. A passing test on the unsplit feature branch is not evidence that every split builds.
-6. Before enqueuing, inspect every check on the current PR head and follow the repository's
-   merge-queue procedure. Retarget/rebase descendants when predecessors merge and revalidate
-   affected downstream modules. Prepare PR text around each final diff and its exact scope.
+5. Build each intermediate tree and its named tests on its actual target base; require
+   independent mathematical and adversarial review of that PR's actual head. Validate both
+   application branches separately, including the PR 5 branch without PR 4. Record commits,
+   commands and results at each head. Passing checks on the complete ported reference do not
+   certify each extracted tree.
+6. PRs 1 and 2 are ready to submit for review once their ported heads independently build and
+   pass local adversarial review. They can be reviewed before the application PRs are ready.
+   Keep later fixes in the ported reference and propagate them to affected extracted heads,
+   preserving the correspondence between that reference and the reviewed cuts.
+7. Before enqueuing, inspect every check on the current PR head and follow the repository's
+   merge-queue procedure. When PR 3 merges, retarget both PR 4 and PR 5 to main and revalidate
+   both branches; PRs 6 and 7 continue to target their own immediate parents until those merge.
+   Refresh and validate affected descendants after each parent merge or main-version change.
+   Prepare PR text around each final diff and its exact scope.
 
 For each layer, run the ordinary proof-library build, the named regression targets, and Smoke.
 Run the axiom sweep at zero debt, environment/style lint against unchanged baselines,
