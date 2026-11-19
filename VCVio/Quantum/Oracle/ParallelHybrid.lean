@@ -38,8 +38,8 @@ noncomputable def parallelInputWeight {D : QReg} (S : Set X) (ik : Unit × ℕ)
   ENNReal.ofReal (MatrixMap.conj (parallelInputProjector (Y := Y) ik.2 S ⊗ₖ
     (1 : Matrix D D ℂ)) σ).trace.re
 
-/-- Averaged over all possible single marked inputs, the union-query weight is bounded
-by one input trace per slot. Repeated inputs and width zero satisfy the same estimate. -/
+/-- Summed over all possible marked inputs, the union-query weight is bounded by one input
+trace per slot. Repeated inputs and width zero satisfy the same estimate. -/
 theorem sum_parallelInputWeight_singleton_le {D : QReg} (ik : Unit × ℕ)
     {σ : Matrix ((qromBatchSpec X Y).In ik × D) ((qromBatchSpec X Y).In ik × D) ℂ}
     (hσ : σ.PosSemidef) :
