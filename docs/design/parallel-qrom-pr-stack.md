@@ -323,6 +323,13 @@ The application bounds use online rounds and maximum width. A total-online-point
 is an optional follow-up and does not gate this stack; search already has its rounds/points
 bound.
 
+The security-bit predicate and secret-input preimage game form a follow-up to PR 2. They
+reuse the sampled-set finding theorem, with a classical planted-target coupling for the
+secret-input game. They add no compressed-oracle dependency and do not change the seven-cut
+inventory pinned above. Carry their reviewed changes through the same single ported reference
+before assembling that follow-up. The local note `parallel-qrom-security.pdf` motivates the
+calibration; its separate collision argument does not complete the CFHL track.
+
 Early-success quantum truncation, serialized public puzzles, coherent transport between
 windows, unrestricted-length oracle interfaces, auxiliary-input preprocessing and the CFHL
 track are outside this stack. In particular, the changing-property prerequisite for CFHL

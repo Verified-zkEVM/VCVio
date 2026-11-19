@@ -172,8 +172,10 @@ public import VCVioTest.Quantum.Oracle
 public import VCVioTest.Quantum.OracleEncoding
 public import VCVioTest.Quantum.Parallel
 public import VCVioTest.Quantum.ParallelBridges
+public import VCVioTest.Quantum.ParallelPlantedPreimage
 public import VCVioTest.Quantum.ParallelPreimage
 public import VCVioTest.Quantum.ParallelSearch
+public import VCVioTest.Quantum.ParallelSecurity
 public import VCVioTest.Quantum.PointerChainCoupling
 public import VCVioTest.Quantum.PointerChainEncoding
 public import VCVioTest.Quantum.PointerChainFrontier

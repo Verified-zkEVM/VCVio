@@ -72,6 +72,7 @@ public import ToMathlib.MeasureTheory.Measure.UniformTable
 public import ToMathlib.MeasureTheory.Measure.UniformTable.Adaptive
 public import ToMathlib.MeasureTheory.Measure.UniformTable.Bounds
 public import ToMathlib.MeasureTheory.Measure.UniformTable.Encoding
+public import ToMathlib.MeasureTheory.Measure.UniformTable.PlantedTarget
 public import ToMathlib.MeasureTheory.Measure.UniformTable.Target
 public import ToMathlib.Order.RelClasses
 public import ToMathlib.OrderEnrichedCategory

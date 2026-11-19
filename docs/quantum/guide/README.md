@@ -32,8 +32,9 @@ The layer is the subject of issue #706. Open questions and planned work are in
   query budgets, sequentialization and combs.
 * [5-qrom](5-qrom.md) — Classical queries, Deutsch's algorithm, the QROM runtime and classical
   algorithms in the QROM; parallel rounds, private uniform coins, compressed execution,
-  reprogramming, unique-mark and fixed-target preimage search, and idealized masked-chain
-  endpoint recovery; complete raw-table encodings retaining response tails and outside-image cells.
+  reprogramming, unique-mark search, fixed-target and secret-input preimage search, security bits,
+  and idealized masked-chain endpoint recovery; complete raw-table encodings retaining response
+  tails and outside-image cells.
 * [6-instability](6-instability.md) — The classical instability calculus and its role in quantum
   proofs.
 * [7-time-lock-puzzles](7-time-lock-puzzles.md) — Quantum preprocessing, honest generation,
@@ -76,15 +77,17 @@ QROM; variable-width parallel oracle rounds and their sequentialization with poi
 transfer; classical algorithms with private uniform coins through `OracleComp.toQuantumRandomized`
 and `OracleComp.toQuantumBatch`, preserving function-query or round and point budgets;
 the compressed-oracle runtime and its parallel QROM equivalence; common-finisher parallel
-reprogramming, adaptive hybrids, unique-mark and fixed-target preimage search under round and
-total-point budgets, with width-cap corollaries; the representation theorems for CP maps;
+reprogramming, adaptive hybrids, unique-mark search, fixed-target and secret-input preimage search
+under round and total-point budgets, with width-cap and security-bit corollaries;
+the representation theorems for CP maps;
 the classical instability calculus; two-phase quantum time-lock puzzle experiments with separate
 preprocessing and online budgets, exact classical-generator laws preserving arbitrary quantum
 preprocessing states, and endpoint-only sequentiality for idealized masked chains with
 query-bounded preprocessing and unrestricted retained memory.
 Full-table encoding equivalences preserve arbitrary raw quantum queries. The exact pointer-chain
-byte encoding has a finite input-length envelope and a table-completion law; a delay theorem
-for that construction remains separate.
+byte encoding has a finite input-length envelope, a table-completion law and a rank-cutoff
+delay theorem with query-bounded preprocessing. Serialized and unrestricted-length interfaces
+remain separate.
 
 Not covered: infinite-dimensional systems; measurements with continuous outcomes; loops that may not
 terminate; coherent choice of oracle port; putting general programs in comb form; exact
