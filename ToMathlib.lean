@@ -18,6 +18,7 @@ public import ToMathlib.Control.StateT
 public import ToMathlib.Control.WriterT
 public import ToMathlib.Data.BitVec
 public import ToMathlib.Data.ByteArray
+public import ToMathlib.Data.ByteArray.Bounded
 public import ToMathlib.Data.ENNReal.AbsDiff
 public import ToMathlib.Data.ENNReal.Finiteness
 public import ToMathlib.Data.ENNReal.Gauss
@@ -60,6 +61,11 @@ public import ToMathlib.MeasureTheory.Measure.TotalVariation.Bind
 public import ToMathlib.MeasureTheory.Measure.TotalVariation.Fintype
 public import ToMathlib.MeasureTheory.Measure.TotalVariation.Variation
 public import ToMathlib.MeasureTheory.Measure.UniformTable
+public import ToMathlib.MeasureTheory.Measure.UniformTable.Adaptive
+public import ToMathlib.MeasureTheory.Measure.UniformTable.Bounds
+public import ToMathlib.MeasureTheory.Measure.UniformTable.Encoding
+public import ToMathlib.MeasureTheory.Measure.UniformTable.PlantedTarget
+public import ToMathlib.MeasureTheory.Measure.UniformTable.Target
 public import ToMathlib.Order.RelClasses
 public import ToMathlib.OrderEnrichedCategory
 public import ToMathlib.Probability.Divergence.Renyi

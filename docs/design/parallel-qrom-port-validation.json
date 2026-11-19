@@ -1,0 +1,406 @@
+{
+  "schema_version": 1,
+  "reviewed_feature_commit": "54b6ae83ab4819727e71be7188e0ef4658197bd9",
+  "integration_base": "f1e63c780de398fb62206dd5890f27e1ad64e0e6",
+  "integration_branch": "integration/parallel-qrom-main",
+  "toolchain": "leanprover/lean4:v4.36.0",
+  "lean_commit": "611c117bfaf7b7ae1cfcf246ce6fba31e8f509e9",
+  "dependency_pins": {
+    "mathlib": "fc4f59e577feb1a4956671bc04ac18aaaf8cd842",
+    "QuantumFoundations": "5ecbeec205ce3e9e4a5b7cb900c181884856ba19",
+    "PolyFun": "528b3b1fda285487e55704409bd1b058dc18fcad"
+  },
+  "dependency_manifest_sha256": "8ee0cfa9477800f3b2fd98825644f808bbbda3e5383cdda8e5038d28821a06bc",
+  "baseline_and_configuration_changes": [],
+  "contract_preservation": {
+    "priority_headlines": [
+      "Quantum.markedSearchAdvantage_le",
+      "Quantum.markedSearchAdvantage_le_of_isPointBound",
+      "Quantum.preimageSearchAdvantage_le",
+      "Quantum.preimageSearchAdvantage_le_of_isPointBound",
+      "Quantum.plantedPreimageAdvantage_le",
+      "Quantum.plantedPreimageAdvantage_le_of_isPointBound",
+      "Quantum.ParallelQROMBits",
+      "Quantum.parallelQROMBits_markedSearch",
+      "Quantum.parallelQROMBits_preimageSearch",
+      "Quantum.parallelQROMBits_plantedPreimage",
+      "MaskedChainPuzzle.qromDelayAdvantage_le",
+      "MaskedChainPuzzle.qromDelayAdvantage_le_root",
+      "MaskedChainPuzzle.qromDelayAdvantage_le_of_preprocessing",
+      "MaskedChainPuzzle.qromDelayAdvantage_le_of_preprocessing_min",
+      "MaskedChainPuzzle.qromDelayAdvantage_le_of_preprocessing_points",
+      "MaskedChainPuzzle.qromDelayAdvantage_le_of_preprocessing_root",
+      "MaskedChainPuzzle.qromDelaySecure",
+      "MaskedChainPuzzle.qromDelaySecure_points",
+      "MaskedChainPuzzle.qromDelaySecure_root",
+      "PointerChainPuzzle.LeanSeal.sqrt_sum_rankHybridSuccess_resample_le",
+      "PointerChainPuzzle.LeanSeal.sqrt_averageRankHybridSuccess_le_succ",
+      "PointerChainPuzzle.LeanSeal.sqrt_averageRankHybridSuccess_zero_le",
+      "PointerChainPuzzle.LeanSeal.averageRankHybridSuccess_zero_le",
+      "PointerChainPuzzle.LeanSeal.averageRankHybridSuccess_zero_le_mul_mass",
+      "PointerChainPuzzle.LeanSeal.rankHybridSuccess_zero",
+      "PointerChainPuzzle.LeanSeal.sum_programmedRecovery_le_mul_mass",
+      "PointerChainPuzzle.LeanSeal.qromDelayAdvantage_quantumWindowScheme_le_of_preprocessing",
+      "PointerChainPuzzle.LeanSeal.qromDelaySecure_quantumWindowScheme"
+    ],
+    "priority_raw_types_identical": 28,
+    "old_imported_records": 293,
+    "new_imported_records": 292,
+    "definition_body_changes": 0,
+    "reducibility_changes": 0,
+    "kernel_accepted_original_headline_and_auxiliary_types": 37,
+    "chosen_space_adaptations": [
+      {
+        "name": "PointerChainPuzzle.LeanSeal.evalDist_quantumWindowScheme_solve",
+        "path": "VCVio/Schemes/PointerChainPuzzle/QuantumEncoding.lean",
+        "visibility": "public",
+        "chosen_measurable_spaces": [
+          "Option (Bytes 32)"
+        ],
+        "old_binder_kind": "instImplicit",
+        "new_binder_kind": "explicit"
+      },
+      {
+        "name": "PointerChainPuzzle.LeanSeal.uniformOn_pathInputCollision_le",
+        "path": "VCVio/Schemes/PointerChainPuzzle/QuantumCoupling.lean",
+        "visibility": "public",
+        "chosen_measurable_spaces": [
+          "Bytes 32"
+        ],
+        "old_binder_kind": "instImplicit",
+        "new_binder_kind": "explicit"
+      },
+      {
+        "name": "PointerChainPuzzle.LeanSeal.lintegral_uniform_programPath",
+        "path": "VCVio/Schemes/PointerChainPuzzle/QuantumCoupling.lean",
+        "visibility": "public",
+        "chosen_measurable_spaces": [
+          "Bytes 32"
+        ],
+        "old_binder_kind": "instImplicit",
+        "new_binder_kind": "explicit"
+      },
+      {
+        "name": "PointerChainPuzzle.LeanSeal.masked_le_programmed_add_collision",
+        "path": "VCVio/Schemes/PointerChainPuzzle/QuantumCoupling.lean",
+        "visibility": "public",
+        "chosen_measurable_spaces": [
+          "Bytes 32"
+        ],
+        "old_binder_kind": "instImplicit",
+        "new_binder_kind": "explicit"
+      },
+      {
+        "name": "PointerChainPuzzle.LeanSeal.real_le_programmed_add_collision",
+        "path": "VCVio/Schemes/PointerChainPuzzle/QuantumCoupling.lean",
+        "visibility": "public",
+        "chosen_measurable_spaces": [
+          "Bytes 32",
+          "Bytes 16"
+        ],
+        "old_binder_kind": "instImplicit",
+        "new_binder_kind": "explicit"
+      },
+      {
+        "name": "PointerChainPuzzle.LeanSeal.delayAdvantage_quantumWindowScheme_eq_lintegral",
+        "path": "VCVio/Schemes/PointerChainPuzzle/QuantumCoupling/Scheme.lean",
+        "visibility": "public",
+        "chosen_measurable_spaces": [
+          "Bytes 16"
+        ],
+        "old_binder_kind": "instImplicit",
+        "new_binder_kind": "explicit"
+      },
+      {
+        "name": "PointerChainPuzzle.LeanSeal.qromDelayAdvantage_quantumWindowScheme_eq_lintegral",
+        "path": "VCVio/Schemes/PointerChainPuzzle/QuantumCoupling/Scheme.lean",
+        "visibility": "public",
+        "chosen_measurable_spaces": [
+          "Bytes 16",
+          "Bytes 32"
+        ],
+        "old_binder_kind": "instImplicit",
+        "new_binder_kind": "explicit"
+      },
+      {
+        "name": "PointerChainPuzzle.LeanSeal.uniformOn_mem_futureRawPathInputs_resample_le",
+        "path": "VCVio/Schemes/PointerChainPuzzle/QuantumCoupling/RankHybrid.lean",
+        "visibility": "public",
+        "chosen_measurable_spaces": [
+          "Bytes 32"
+        ],
+        "old_binder_kind": "instImplicit",
+        "new_binder_kind": "explicit"
+      },
+      {
+        "name": "PointerChainPuzzle.LeanSeal.programmedSample_eq_lintegral",
+        "path": "VCVio/Schemes/PointerChainPuzzle/QuantumCoupling/Preprocessing.lean",
+        "visibility": "private",
+        "chosen_measurable_spaces": [
+          "Bytes 16",
+          "Bytes 32"
+        ],
+        "old_binder_kind": "instImplicit",
+        "new_binder_kind": "explicit"
+      }
+    ],
+    "adaptation_reason": "Lean 4.36 concreteInstances rejects closed-carrier instance binders. Chosen measurable spaces are explicit data and are reinstated exactly; dependent singleton hypotheses and universal quantification are preserved.",
+    "lazy_equation": {
+      "name": "MaskedChainPuzzle.solveFrom.eq_def",
+      "status": "Available through ordinary frontend lookup; absent only from the initial imported environment snapshot. No production compatibility lemma added.",
+      "separate_original_type_frontend_kernel_check": "passed",
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ]
+    },
+    "raw_comparison_exit_code": 1,
+    "raw_comparison_interpretation": "Intentional, retained differences: nine reviewed chosen-space helper types and one lazy generated equation record. No exceptions are silently waived by the comparator.",
+    "baseline_declarations_sha256": "996bf6527913b7f7300dcb9a039375187f0f9bbd4019dfd7769350d169bc968a",
+    "ported_declarations_sha256": "4a301dc6c68eb79927a344eaf7e84956310251696f08689dd0a8d84dfcb09c59",
+    "captured_semantic_source_sha256": {
+      "ToMathlib.MeasureTheory.Measure.UniformTable.PlantedTarget": "ff95cff9a87c47ac3fd1f3f4fafc352134dbcba00f12c70b45dbb61ace325a96",
+      "VCVio.CryptoFoundations.TimeLockPuzzle.Quantum": "c902d091ab8597fe5a97b4e77988b232be08104b51791262c135e2563985ca1e",
+      "VCVio.Quantum.Comp.Basic": "e95028d0d273086365d4b83b0e5ba3c8473989321e0a2608326ea45e4fd6f0ef",
+      "VCVio.Quantum.Comp.LocalSig": "8ab0f5e317f8bf2057bef88322de140940a01b985dd34e7d85edc0edb0fd118b",
+      "VCVio.Quantum.Comp.RoundBound": "ef15f27f3c7f2a3a6942ceea7673282dd4667744c9829e7a4d4319b7251ccead",
+      "VCVio.Quantum.Comp.Runtime": "9bfc91c3a8488dca5f402a9a572b9be3443d66d43d1263a5fd67005bab059f03",
+      "VCVio.Quantum.Comp.TotalQueryBound": "e89adbe93b1215bf97dbacd746c64e554161f2cf9b18a64887f466b17d05e377",
+      "VCVio.Quantum.Oracle.MaskedChain.Bounds": "3ddaa8a0ad4c59ecee275edeb8c0f1c4e0fc45815fc0cebeb489941fa60079bf",
+      "VCVio.Quantum.Oracle.MaskedChain.Model": "6c273d0d6aa546ad29cb59ebf53ec88c3ff63163a0fe632f986c8cbd8ffe1fdd",
+      "VCVio.Quantum.Oracle.MaskedChain.Preprocessing": "dda654829c9957d380e876dd446bfafd33720999bb110c42ee521768de34ad6c",
+      "VCVio.Quantum.Oracle.MaskedChain.Preprocessing.Model": "28c471976b2d47bc777d0ca36eba095f939e0507dffc0a13335ccda9d9a9d356",
+      "VCVio.Quantum.Oracle.MaskedChain.RootBounds": "0e933ee7e820c333d8268ef27b9d011f31734d72bb35a85bf005bb39db2c2f9f",
+      "VCVio.Quantum.Oracle.Model": "86a76c06b95b69d4a89908cd114c831111b3dc40d103dea84836790fc2e4258c",
+      "VCVio.Quantum.Oracle.Parallel": "13e047582ebfe2ece89c78b4dadd69741d2c80bff9035b918efb105779dbd932",
+      "VCVio.Quantum.Oracle.ParallelPlantedPreimage": "bbc3c7ca46fbcaeba2a356bd38c264c890bf355d49904982149f2f0b9b9116ba",
+      "VCVio.Quantum.Oracle.ParallelPreimage": "7b0db1756493981b404364f69ba2bc948702ec1be84606d9c2a19cdbd533126e",
+      "VCVio.Quantum.Oracle.ParallelSearch": "ce4769bde0e08896c343982a65cbab9ce0d432cec0cea045704223db7df5a4f1",
+      "VCVio.Quantum.Oracle.ParallelSecurity": "0624f915ff0ba4b86b59db4844848c55fa6b8a2ac8e87eea0e4183c15b23caed",
+      "VCVio.Schemes.MaskedChainPuzzle": "93c9a2ee461b50f94bca27cd12c9e8fe4c6f7b7e784e2976e21789bbc68d585e",
+      "VCVio.Schemes.MaskedChainPuzzle.Preprocessing": "3c49bc3110d5b1898dd742641d8c3db2b901c988519a9d8287510ea4fba25d91",
+      "VCVio.Schemes.PointerChainPuzzle.Bad": "1f2fcbd33111131ef3e95d0d18534f90f75fa7ced09104c41a06855d668f7892",
+      "VCVio.Schemes.PointerChainPuzzle.Basic": "7379fe580a34e69accc76a61c88f49000433f6ccf8f9bba81ae4fac275753834",
+      "VCVio.Schemes.PointerChainPuzzle.QuantumCoupling": "6e5ab41f0516d0c4bf84482b8c0c5c60a2604cac7414c3c61714bb4faeb3fd11",
+      "VCVio.Schemes.PointerChainPuzzle.QuantumCoupling.Incidence": "747f847ba946438f12aa64e6d52172b8281b4cd1e1d5da8fb790e55a2359ab41",
+      "VCVio.Schemes.PointerChainPuzzle.QuantumCoupling.Preprocessing": "c3d9bd93ba9ffa45742f5a05b3e6ae76d2708e9fb2477b337430760222d84c76",
+      "VCVio.Schemes.PointerChainPuzzle.QuantumCoupling.PreprocessingIncidence": "1e098bff5ddb4c38c45faae930c44c66ff055d1795b3e03ddbe9a33d9c633fec",
+      "VCVio.Schemes.PointerChainPuzzle.QuantumCoupling.Programming": "3d77440b360d676a7e7a1e0fea386b779fac44921cab8204514700ff5ba4a0b6",
+      "VCVio.Schemes.PointerChainPuzzle.QuantumCoupling.RankBounds": "5eecb96bff89026bad6d80bbf960c0e3978900cd800c6431e970e2b03efec4cd",
+      "VCVio.Schemes.PointerChainPuzzle.QuantumCoupling.RankHybrid": "c18ad690a3888a035fc16019bcc47d9033552b557a8e4ec55bc67c21dcb61fd5",
+      "VCVio.Schemes.PointerChainPuzzle.QuantumCoupling.RankSchedule": "a0d44463b94258fa32b14958cb02ab5e2ede9f19e6bd26d78288b8421c98b080",
+      "VCVio.Schemes.PointerChainPuzzle.QuantumCoupling.Scheme": "dd5ec343a892722c6e92f111c68643f25c255cfa40aaa3374dbf7af48d070f15",
+      "VCVio.Schemes.PointerChainPuzzle.QuantumEncoding": "393e7416d10c8b7c3f0b4fbd85517fea2b72de9acf91a7b9e33c09420567b1ea"
+    },
+    "upstream_budget_sources_byte_identical": [
+      "PolyFun/IPFunctor/Free/Bound.lean",
+      "PolyFun/PFunctor/Bound.lean",
+      "PolyFun/IPFunctor/Free/Indexed.lean",
+      "PolyFun/IPFunctor/Free/Basic.lean"
+    ]
+  },
+  "validation": {
+    "production_build": {
+      "libraries": [
+        "ToMathlib",
+        "VCVio",
+        "LatticeCrypto",
+        "Extern",
+        "HashSig",
+        "Examples"
+      ],
+      "changed_regression_modules": 25,
+      "smoke": true,
+      "jobs": 11248,
+      "result": "passed"
+    },
+    "headline_axiom_prints": {
+      "declarations": 28,
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ],
+      "result": "passed"
+    },
+    "whole_library_axioms": {
+      "declarations": 33291,
+      "modules": 1396,
+      "sorry_tainted": 0,
+      "nonstandard_axiom_tainted": 0,
+      "result": "passed"
+    },
+    "lint": {
+      "style_source_files": 1826,
+      "baseline_entries": 127,
+      "defsWithUnderscore": 108,
+      "unusedArguments": 19,
+      "naming_policy_accepted": 280,
+      "baseline_changes": 0,
+      "result": "passed"
+    },
+    "initializers": {
+      "constants": 49893,
+      "modules": 1396,
+      "load_time": 645,
+      "blind_spots": 0,
+      "compiler_generated": 1470,
+      "existing_accepted_flags": 7,
+      "baseline_changes": 0,
+      "result": "passed"
+    },
+    "source_boundaries": {
+      "expose": "passed",
+      "extern": "passed",
+      "interop": "passed",
+      "polyfun": "passed"
+    },
+    "generated_imports": "passed",
+    "documentation_links": {
+      "files": 1928,
+      "result": "passed"
+    },
+    "retired_documentation_names": {
+      "tokens": 1566,
+      "documents": 18,
+      "result": "passed"
+    },
+    "focused_documentation_resolution": {
+      "tokens": 213,
+      "documents": 7,
+      "unresolved": 0,
+      "result": "passed"
+    },
+    "auditor_controls": {
+      "tests": 15,
+      "real_kernel_positive_and_negative": true,
+      "direct_lean_rejection_exit_code": 1,
+      "result": "passed"
+    },
+    "independent_adversarial_review": "passed"
+  },
+  "tool_sha256": {
+    "scripts/QuantumPortContracts.lean": "c9d83acf9c077d3f8cd79475a9b4c9b71a0eeee2f830a01c79d3cd3ae9e0d9b1",
+    "scripts/check-quantum-port-contracts.py": "c3849b5bd9f833c113a70c7d99141c5489e70795c0fe1729be4a7e9b796739ec",
+    "scripts/test-quantum-port-contracts.py": "2616e70fc691c0e71447eb0088374a52b29c2bab75146519ad205d8b574f5776"
+  },
+  "evidence_artifact_sha256": {
+    "baseline-54b6ae83a.json": "fedf6e588d519fcfbf8f2ad362d36293e8369d7a8711f9957c784836d7eb3d36",
+    "ported-f1e63c780.json": "a9534decc94e13be232e4f5e5ba4410a29493e7b555e5cf74488ede2d3b1ed53",
+    "port-comparison.json": "c12fd09164a6191a1fab2d6d1b912f84fb7ab0682757944bd227228b5daa6a35",
+    "old-proposition-kernel-adapters.json": "c6b16939b271ee51fc515fb4966c2c996e0180d60a5b0dfb04f41fc979c76d28",
+    "GeneratedEquationFrontendAdapter.lean": "05f7cf4859b9bdb3fcb07bd9db6640c43a10d68343a0ad34a92482a0ef1f5cbd",
+    "lazy-equation-frontend-adapter.log": "db3ea63a53c7c7ccd46d9958755f020dc2b70b4289d7b4e101cba8272d6c091d"
+  },
+  "ported_feature_lean_source_sha256": {
+    "ToMathlib.lean": "1f8246e7e95e3864d99860b7924dd9f9c92b201ce290f78f10fdfe3b5b02d3df",
+    "ToMathlib/Data/ByteArray/Bounded.lean": "8ceaa63191f59a92e3074098aaaade56e2233c3f112c8b13646bf7a67dfa5b87",
+    "ToMathlib/MeasureTheory/Measure/UniformTable/Adaptive.lean": "a9be86fbcc96fbcc657d09bc4d837b90e3bfc9c5d7d487420265dcb4e0d4d495",
+    "ToMathlib/MeasureTheory/Measure/UniformTable/Bounds.lean": "cef5ec93cba3956cb6b9116882c5fedf8ab45cd95aa6b40dc3c1076633ecce8a",
+    "ToMathlib/MeasureTheory/Measure/UniformTable/Encoding.lean": "347ae8b56ac9e2cf23f6b8d63f6d83ccd8de4a0db9a5bd6f22844e365c8e7fd6",
+    "ToMathlib/MeasureTheory/Measure/UniformTable/PlantedTarget.lean": "ff95cff9a87c47ac3fd1f3f4fafc352134dbcba00f12c70b45dbb61ace325a96",
+    "ToMathlib/MeasureTheory/Measure/UniformTable/Target.lean": "5f86731e373cc0cfc79d80ab9120728d59327e410bdf5767769a849fb7d4e678",
+    "VCVio.lean": "9cff3335e30f2258ee2cc093265d9437a10ba53f1899cdd02f94db1596cc1f29",
+    "VCVio/CryptoFoundations/TimeLockPuzzle/Quantum.lean": "c902d091ab8597fe5a97b4e77988b232be08104b51791262c135e2563985ca1e",
+    "VCVio/CryptoFoundations/TimeLockPuzzle/QuantumClassical.lean": "5b90426c37b0f8f7ded8ea99cb413650563440f4e145818dd5508cb695a1208c",
+    "VCVio/Quantum/Comp/ChargeWeight.lean": "97a753d6bef54857579b74e0fb8bf78675d72f81b308e42cbfd397aec717c428",
+    "VCVio/Quantum/Comp/DropEmptyBatches.lean": "1cd7b7e816da0dafd1505c21e3f4cb907ffb9f76d28e18bbf12723cb6fc34410",
+    "VCVio/Quantum/Comp/Finisher.lean": "d70e9f63e9da9767f31dd3f0f82b10500c26d7ec0380032cfd4afc45e947fcc7",
+    "VCVio/Quantum/Comp/Homogeneous.lean": "bbe2b8374712d7168bd356b3e3e7790fde090ccf196935bbabae6bc4158464d1",
+    "VCVio/Quantum/Comp/HybridBudget.lean": "47cd1335993d8e670a0ff890181a79b64bda8079ee62c3a40e51d6e3abfcf07e",
+    "VCVio/Quantum/Comp/NumberedHybrid.lean": "e7f7969ac9a332b6246e9ee948f264c83216f441d524b5a66b9b1bcf594060ac",
+    "VCVio/Quantum/Comp/NumberedQueries.lean": "abb385d8b1fddf0f6028db82a7ef1637c1b370fde86018d71d27de4a0748641c",
+    "VCVio/Quantum/Comp/Parallel.lean": "476c394016b94057e4160a44707cfe4cd59e5f90c57e2400a02c19e1d7c164fe",
+    "VCVio/Quantum/Comp/RoundBound.lean": "ef15f27f3c7f2a3a6942ceea7673282dd4667744c9829e7a4d4319b7251ccead",
+    "VCVio/Quantum/Comp/Runtime.lean": "9bfc91c3a8488dca5f402a9a572b9be3443d66d43d1263a5fd67005bab059f03",
+    "VCVio/Quantum/Comp/Sequentialize.lean": "2e3bbaaf38fa31fdf170b3af110a23a267d38e6be699762e43ab7f9850b9de29",
+    "VCVio/Quantum/Foundations/Hybrid.lean": "b19d63bff0ed9543ccccccf4a0248588bd782a451bff66020908d60188900028",
+    "VCVio/Quantum/Foundations/Observation.lean": "f647544e0d2bebba72a62c7488aa068a973688ae8bc9e60908c774b882ee8b13",
+    "VCVio/Quantum/Foundations/Parallel.lean": "ec8b4d5de02c94082de3c9a22c0499e267a3239e06862203f83740e1c09274f2",
+    "VCVio/Quantum/Foundations/PrivateUnit.lean": "006fbadffb197aa9e36a402188e1d7b160d5e9dbe7b12665ec57026b5321ac2a",
+    "VCVio/Quantum/Foundations/SubState.lean": "f7eccc2921fb0df785f4c06907ae65812ac87b7a8d0790b330fdb3fc00cd9ffe",
+    "VCVio/Quantum/Oracle/Classical.lean": "cd7d9a41513ee40589c0d682754e45e8b920507d62e9a1cff0cd493b807bcb40",
+    "VCVio/Quantum/Oracle/ClassicalParallel.lean": "5c695f2878b5b435ed2af9d9e61d46b9c23b03a57110128d5e65deb0996e4ac4",
+    "VCVio/Quantum/Oracle/ClassicalRandomized.lean": "a05d83454e58d916723a7bd6bd0083b1ff11e0d70cfc78a34a07757146ac26fa",
+    "VCVio/Quantum/Oracle/Compressed/Parallel.lean": "73728861c946dc27b90177b23d62fad479f600cc30e835f8635b0f4d3aebb22c",
+    "VCVio/Quantum/Oracle/Encoding.lean": "a4704fe24b41a709c40d2e8f3a7c245057b42a6e5954461e9a6dd58cc1e42adb",
+    "VCVio/Quantum/Oracle/LocalExecution.lean": "d31e3eed68c4e6452b3fa0722f5e735d4d80705932fe39debda12f3e391eec38",
+    "VCVio/Quantum/Oracle/MaskedChain/Bounds.lean": "3ddaa8a0ad4c59ecee275edeb8c0f1c4e0fc45815fc0cebeb489941fa60079bf",
+    "VCVio/Quantum/Oracle/MaskedChain/Coupling.lean": "54ea3db3dcaa0361f142af365cc134e6ace378519195e05976a848d2551edeca",
+    "VCVio/Quantum/Oracle/MaskedChain/Homogeneous.lean": "bf6022235ca3f8123f67e32d1aa01497f6175533d0f1cbaa1439f4cec4764dd4",
+    "VCVio/Quantum/Oracle/MaskedChain/Hybrid.lean": "b84e16c54eb0373b0f7a18dd3c67972a4ba6699cdfbad2f5fb8db5d546a05a21",
+    "VCVio/Quantum/Oracle/MaskedChain/Model.lean": "6c273d0d6aa546ad29cb59ebf53ec88c3ff63163a0fe632f986c8cbd8ffe1fdd",
+    "VCVio/Quantum/Oracle/MaskedChain/Preprocessing.lean": "dda654829c9957d380e876dd446bfafd33720999bb110c42ee521768de34ad6c",
+    "VCVio/Quantum/Oracle/MaskedChain/Preprocessing/DropEmpty.lean": "d8a9f79bfbfb9e8c13677ac83d992514043ab7de55966fdb26c1117b21650709",
+    "VCVio/Quantum/Oracle/MaskedChain/Preprocessing/Model.lean": "28c471976b2d47bc777d0ca36eba095f939e0507dffc0a13335ccda9d9a9d356",
+    "VCVio/Quantum/Oracle/MaskedChain/RootBounds.lean": "0e933ee7e820c333d8268ef27b9d011f31734d72bb35a85bf005bb39db2c2f9f",
+    "VCVio/Quantum/Oracle/Parallel.lean": "13e047582ebfe2ece89c78b4dadd69741d2c80bff9035b918efb105779dbd932",
+    "VCVio/Quantum/Oracle/ParallelFinding.lean": "f5a030280756a4b109999c6b51defdcb9de74d04f134ebb947dfda43a66e68cc",
+    "VCVio/Quantum/Oracle/ParallelFinisher.lean": "a56e47a13777d4903bfeeb6b036e8cae51efc98585bfd441cbdee87b3cb232fa",
+    "VCVio/Quantum/Oracle/ParallelHybrid.lean": "38827c04ed0e636a202d0e598f4e82dcd7d686f4dfddb4bc0bad04d0d8df1b49",
+    "VCVio/Quantum/Oracle/ParallelPlantedPreimage.lean": "bbc3c7ca46fbcaeba2a356bd38c264c890bf355d49904982149f2f0b9b9116ba",
+    "VCVio/Quantum/Oracle/ParallelPreimage.lean": "7b0db1756493981b404364f69ba2bc948702ec1be84606d9c2a19cdbd533126e",
+    "VCVio/Quantum/Oracle/ParallelReprogramming.lean": "a7a972eefb30d686207b1df7584874dfe6cb1b4bdaff6cbb9dddd0ef8c448c6c",
+    "VCVio/Quantum/Oracle/ParallelSchedule.lean": "52cd9a6083b7dd1fb4b80a17edc4c24411e3a76adcc2c4e83ac68371f0937541",
+    "VCVio/Quantum/Oracle/ParallelSearch.lean": "ce4769bde0e08896c343982a65cbab9ce0d432cec0cea045704223db7df5a4f1",
+    "VCVio/Quantum/Oracle/ParallelSecurity.lean": "0624f915ff0ba4b86b59db4844848c55fa6b8a2ac8e87eea0e4183c15b23caed",
+    "VCVio/Quantum/Oracle/Sequentialize.lean": "9614a9de423fab54097292142a2f9862617987923a31dcb6b8bdf2cfd17f9fb7",
+    "VCVio/Schemes/MaskedChainPuzzle.lean": "93c9a2ee461b50f94bca27cd12c9e8fe4c6f7b7e784e2976e21789bbc68d585e",
+    "VCVio/Schemes/MaskedChainPuzzle/Preprocessing.lean": "3c49bc3110d5b1898dd742641d8c3db2b901c988519a9d8287510ea4fba25d91",
+    "VCVio/Schemes/PointerChainPuzzle/Basic.lean": "7379fe580a34e69accc76a61c88f49000433f6ccf8f9bba81ae4fac275753834",
+    "VCVio/Schemes/PointerChainPuzzle/QuantumCoupling.lean": "6e5ab41f0516d0c4bf84482b8c0c5c60a2604cac7414c3c61714bb4faeb3fd11",
+    "VCVio/Schemes/PointerChainPuzzle/QuantumCoupling/Incidence.lean": "747f847ba946438f12aa64e6d52172b8281b4cd1e1d5da8fb790e55a2359ab41",
+    "VCVio/Schemes/PointerChainPuzzle/QuantumCoupling/Preprocessing.lean": "c3d9bd93ba9ffa45742f5a05b3e6ae76d2708e9fb2477b337430760222d84c76",
+    "VCVio/Schemes/PointerChainPuzzle/QuantumCoupling/PreprocessingIncidence.lean": "1e098bff5ddb4c38c45faae930c44c66ff055d1795b3e03ddbe9a33d9c633fec",
+    "VCVio/Schemes/PointerChainPuzzle/QuantumCoupling/Programming.lean": "3d77440b360d676a7e7a1e0fea386b779fac44921cab8204514700ff5ba4a0b6",
+    "VCVio/Schemes/PointerChainPuzzle/QuantumCoupling/RankBounds.lean": "5eecb96bff89026bad6d80bbf960c0e3978900cd800c6431e970e2b03efec4cd",
+    "VCVio/Schemes/PointerChainPuzzle/QuantumCoupling/RankHybrid.lean": "c18ad690a3888a035fc16019bcc47d9033552b557a8e4ec55bc67c21dcb61fd5",
+    "VCVio/Schemes/PointerChainPuzzle/QuantumCoupling/RankSchedule.lean": "a0d44463b94258fa32b14958cb02ab5e2ede9f19e6bd26d78288b8421c98b080",
+    "VCVio/Schemes/PointerChainPuzzle/QuantumCoupling/Scheme.lean": "dd5ec343a892722c6e92f111c68643f25c255cfa40aaa3374dbf7af48d070f15",
+    "VCVio/Schemes/PointerChainPuzzle/QuantumEncoding.lean": "393e7416d10c8b7c3f0b4fbd85517fea2b72de9acf91a7b9e33c09420567b1ea",
+    "VCVio/Schemes/PointerChainPuzzle/RankFrontier.lean": "241c787475edf93af65c1d86c9279f57cb7d866b2b01a74aded5832ca7188279",
+    "VCVioTest.lean": "5b40a486ab1aded4c7e4a0b4ee82323d990534692a8af8b1ece5012edcec11db",
+    "VCVioTest/Quantum/AdaptiveProgramming.lean": "d72da5e779fce571d820450ebad626f169a8be8f5dee88573a22fe075deca8ed",
+    "VCVioTest/Quantum/ChargeWeight.lean": "fc27fdd29c7e79af0ccadca01fc02af04d6cfe57029cb83056d2bab686666a75",
+    "VCVioTest/Quantum/ClassicalRandomized.lean": "90998373590054da13ffc930e16fa70dec5ac437cfd86ee56b2480730ba0d352",
+    "VCVioTest/Quantum/DropEmptyBatches.lean": "c755386432d29c2973d0f64786e24a079446a77b482ae74c23913614852910f4",
+    "VCVioTest/Quantum/MaskedChain.lean": "07515c1053ce90b3cc31438c5c30da9685a4dec32947d31c8593d6b123513559",
+    "VCVioTest/Quantum/MaskedChainRootBounds.lean": "818b9ffa49c75224336caa370c41defc15662d0bf219493da0e1870fa565fcd4",
+    "VCVioTest/Quantum/NumberedQueries.lean": "86136845d03905971990d8cdfcfa206e1bc0bb93b3292087b7daf47423ca5ede",
+    "VCVioTest/Quantum/OracleEncoding.lean": "5929f1cc1dd296ea7c3e09f74fd0af16d6080676659540aa127b3bc2a26fcab5",
+    "VCVioTest/Quantum/Parallel.lean": "cebf3e2c0b422176acb24bd5d14c49ff92db81314e0fd24f3e3031fcf91eb098",
+    "VCVioTest/Quantum/ParallelBridges.lean": "2e79972f482969eeb240f0599390398c6b70b0b97eaecff30841048e05e6685b",
+    "VCVioTest/Quantum/ParallelPlantedPreimage.lean": "4518c9c6eb81016b40ab23d0f512a894cb6a905813de4d35ad8795acd842ca7d",
+    "VCVioTest/Quantum/ParallelPreimage.lean": "6a4e57e0d73198251e06ca9d6a84fc23004fadd8cc73cc195349aec443258799",
+    "VCVioTest/Quantum/ParallelSearch.lean": "b3f5eb1d8be2ae9eb394f24fb381f3777a0e328d36f9ec68b6d5705fc6baaee0",
+    "VCVioTest/Quantum/ParallelSecurity.lean": "09ac3c9b0158dda575a72e88efeaad6eb846d5f755f5264f1e6fa4225f86f95e",
+    "VCVioTest/Quantum/PointerChainCoupling.lean": "286f4d7c79726c319cea108dc527579da5166cae10e597563954ddf347f1b56c",
+    "VCVioTest/Quantum/PointerChainEncoding.lean": "32e28cb2b0cc1f7a709336b78eb37bad4b0dd352d16c63e0608e1dfa654826d8",
+    "VCVioTest/Quantum/PointerChainFrontier.lean": "ebc89a6bac4218955de740a408ec51fa157e71f81b99390cf2c9a443efccde77",
+    "VCVioTest/Quantum/PointerChainPreprocessing.lean": "802666593a292443eb2888a84f1e8cbf11605bad290d5cd5d26974c02d2d5815",
+    "VCVioTest/Quantum/PointerChainProgramming.lean": "03892d0a6becbc01b9b4652954c380a622e4a17c2b63293d7ede6b134065d963",
+    "VCVioTest/Quantum/PointerChainRankBounds.lean": "6ee876ec42dcfb6a29f957869ae729246b5e920ec7d2b1584077894811e76f86",
+    "VCVioTest/Quantum/PointerChainRankSchedule.lean": "a38843232aa2fb6ca9abcfbe1e7f8885909a783404f1966214bc1e71a0e42f55",
+    "VCVioTest/Quantum/QueryBoundedPreprocessing.lean": "a242a87a9b0c2b5180957c56c18b1a60c54ac5e3a1f3ea251188b06ab20d0f1a",
+    "VCVioTest/Quantum/Sequentialize.lean": "7ee7b6985816b0417f0f26abc4e5b01186aa6ae38d1b2102e829694c34b89706",
+    "VCVioTest/Quantum/SubState.lean": "53c70da6382346ae62641aa1330f5ef05096542a129a4f8f78188b7009f5a441",
+    "VCVioTest/Quantum/TimeLockPuzzle.lean": "15c6f38abf7220851977f44157e22d0472127b5cb862c130c96b2f6687f3aa27"
+  },
+  "reproduction": {
+    "import_roots": [
+      "VCVio.Quantum.Oracle.ParallelSecurity",
+      "VCVio.Schemes.MaskedChainPuzzle.Preprocessing",
+      "VCVio.Schemes.PointerChainPuzzle.QuantumCoupling.Preprocessing"
+    ],
+    "capture": "uv run --no-project --python 3.12 python scripts/check-quantum-port-contracts.py capture WORKTREE OUTPUT.json --root ROOT1 --root ROOT2 --root ROOT3",
+    "strict_compare": "uv run --no-project --python 3.12 python scripts/check-quantum-port-contracts.py compare OLD.json NEW.json --out REPORT.json",
+    "kernel_compatibility": "Capture the port with --declarations-file selecting the 28 priority headlines and nine chosen-space helpers, and --check-against OLD.json.",
+    "split_cut": "Capture the complete frozen port and the cut with identical explicit import roots and --modules-file selecting only modules present in that cut. Compare those two Lean 4.36 snapshots strictly; do not apply the old-toolchain exceptions to a split.",
+    "axioms": "lake exe axiomsweep --check",
+    "initializers": "lake exe initsweep --check",
+    "lint": "lake env uv run --no-project --python 3.12 python scripts/lint.py --libraries ToMathlib,VCVio,LatticeCrypto,Extern,HashSig,Examples --no-build"
+  },
+  "scope": "This records the complete port, not validation of any extracted PR tree. Every cut requires its own build, tests, docs and independent review on its actual parent. Audit scripts and this record remain on the integration reference.",
+  "capture_provenance": "The audits ran on the integration merge before committing. Snapshot provenance therefore records the main-base HEAD and the working-tree changes; captured source hashes and the complete feature Lean-source hashes bind that evidence to the committed sources. Original snapshots and their hashes are retained without rewriting their provenance."
+}

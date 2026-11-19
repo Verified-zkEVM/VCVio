@@ -70,7 +70,7 @@ type is equivalent to some `Fin n`, so nothing is lost, and register-indexed fam
 the runtime's private register, through basis equivalences supplied by the program. The program
 cannot read the private register except through calls.
 
-## Open obligations
+## Coverage and remaining obligations
 
 ### 1. Putting programs in comb form
 
@@ -134,9 +134,16 @@ identifies the full outcome measure with `𝒟[oa]` scaled by the trace of the j
 including correlated inputs. Its `…_apply_singleton` corollary gives each `a` its classical
 probability times that trace.
 
-`OracleComp.toQuantum` embeds algorithms whose only oracle is the random function. Extending
-classical/QROM distributional agreement to algorithms that both sample private coins and query
-the random function (`OracleComp (unifSpec + (X →ₒ Y)) α`) remains open.
+`OracleComp.toQuantumBatch` embeds algorithms over `unifSpec + (X →ₒ Y).batch`: private uniform
+samples become local coins, and each list round becomes one parallel basis call. Its fixed-function
+run and its law averaged over one random function agree with the corresponding classical
+execution, including the lazy cached random oracle. The source and result types lie in `Type`.
+`OracleComp.toQuantumRandomized` embeds the single-port source
+`OracleComp (unifSpec + (X →ₒ Y)) α` with ordinary basis calls and local coins.
+`qromEvalDist₂_toQuantumRandomized_eq_randomOracle` proves agreement with the lazy random oracle.
+Its query-bound transfer counts only function queries, leaving private samples uncharged.
+Both the single-port and batch APIs therefore cover classical algorithms with private uniform
+randomness. Their result-universe restriction is the separate obligation below.
 
 ### 5. Result universes of the classical embedding
 
@@ -177,5 +184,464 @@ polynomial-time certificate. A gate-level account needs item 8 and a charge for 
 
 Zhandry's compressed oracle is a runtime with the same law as the QROM for every program (#855),
 and the Chiesa–Manohar–Spooner bound and its successors are proved on top of it (#856, #859, #862,
-#864, #873–#875, #877). The general final-measurement lemma and collision and zero-preimage
-bounds on the adversary's output are open (#966).
+#864, #873–#875, #877). The general final-measurement lemma and compressed-oracle collision and zero-preimage
+output bounds are open (#966). The direct hybrid preimage bound is described below.
+
+### 11. Parallel oracle rounds
+
+`Foundations/Parallel.lean` holds coordinate subsystems and ordered subinstrument batching facts.
+It imports only QuantumFoundations and Mathlib and is staged for upstreaming to QuantumFoundations.
+`Comp/Parallel.lean` constructs runtime batches with a shared private register. Its current API
+requires equal `In` and `Out` and `Result = Unit`; classical-result checked/read ports of vector
+commitments are outside this scope. General stateful batches carry no implicit commutation assumption.
+
+`Oracle/Parallel.lean` specializes `uBatchSpec` to base port `Unit`, so a classical port is
+`((), k)` with width in its second component. It proves that ordered additive calls agree with a
+simultaneous query on all slots and defines the parallel QROM law by sampling one function for
+the entire program. Repeated inputs and entangled query registers are allowed.
+`parallelOracleRuntime H` is `(additiveOracleRuntime H).batch`, so the generic private-memory
+simulation transport applies directly with the same signature. A trace-preserving simulation
+that maps the initial private states gives output-law agreement for adaptive programs.
+
+`Comp/RoundBound.lean` separates the number of rounds (`IsTotalQueryBound`), the per-batch width
+cap (`IsWidthBound`) and the sum of widths on each path (`IsPointBound`). These bounds constrain
+all branches, including zero-weight outcomes. A width-zero batch spends one round and zero points;
+a round bound `r` and width cap `k` imply a point bound `k * r`.
+
+`Comp/Sequentialize.lean` defines the named command substitution `sequentializeHandler I` and
+the program translation `x.sequentialize I`. An arbitrary source local signature is interpreted
+into `LocalSig.instruments`, which also supplies public register relabellings. For every stateful
+base runtime `R`, `run_sequentialize` identifies its full run with `R.batch.run I x`, including
+private memory and outcome-dependent final registers. The calls retain their order and one shared
+private register. `IsPointBound.sequentialize` transfers the same point budget to a total query
+budget; `IsTotalQueryBound.sequentialize` gives the `k * r` form. A zero-width translation makes
+no oracle calls but can retain a public relabelling. These are oracle-query certificates;
+local-operation and gate costs are not preserved by the statement.
+
+The separate adapter `Oracle/Sequentialize.lean` proves `qromEvalDist_sequentialize` and
+`qromEvalDistMap_sequentialize`. The latter preserves observations depending jointly on the sampled
+function `H` and the returned leaf, retaining their correlation. `Oracle/Parallel.lean` remains
+independent of the translation.
+
+`Oracle/ClassicalParallel.lean` supplies the classical bridge. `OracleComp.toQuantumBatch` prepares
+one slot per list position, makes one call, and measures the responses. Private uniform coins use
+`QComp.coinImpl` without oracle calls. `run_toQuantumBatch` identifies the complete fixed-function
+run, and `sampledEvalDist₂_toQuantumBatch_eq_randomOracle` identifies its averaged law with the
+classical lazy oracle using one cache. Input order and duplicates are retained; an empty list
+spends one round and zero points. `IsOnlineQueryBound.isTotalQueryBound_toQuantumBatch` and
+`IsOnlineQueryBound.isPointBound_toQuantumBatch` transfer the classical round and point budgets;
+`IsPointQueryBound.isPointBound_toQuantumBatch` transfers a point-only bound.
+`qromEvalDistMap_sequentialize_toQuantumBatch_eq_unbatch` connects quantum sequentialization to
+classical list-order unbatching through their observed laws. The program trees need not coincide:
+their measurements occur at different stages.
+
+`Oracle/Compressed/Parallel.lean` supplies the concrete compressed bridge. The compression
+isometry intertwines purified and compressed batch steps and maps their complete joint
+post-states, including private memory (`matrix_jointPost_compressedRuntime_batch`). Discarding
+private memory gives equal reduced post-states and leaf weights. The purified-to-sampled-function
+comparison uses the sequential row decomposition through exact sequentialization. The `evalRow H`
+maps need not preserve trace, so that leg uses the sum over functions rather than trace-preserving
+simulation transport. `outcomeLaw_compressedRuntime_batch` gives the parallel QROM output law,
+and `outcomeLawWith_compressedRuntime_batch` gives every classical observation of the leaf.
+These results allow arbitrary adaptive local signatures and interpretations, mixed or
+subnormalized input states, finite domains and finite abelian response groups. A plain compressed
+leaf observation does not read `H`; observations `f H leaf` require an explicit joint-oracle read.
+
+The M2a model and transport obligations are complete.
+
+### 12. Parallel reprogramming, hybrids and search
+
+`Oracle/ParallelReprogramming.lean` defines `parallelInputProjector`, the union of slots whose
+inputs lie in a disagreement set. The difference of two parallel oracle unitaries is supported
+on this union; its squared Kraus weight is at most four times the union's input weight.
+`rpow_inv_two_parallel_reprogramming_le` compares acceptance weights after a common completely
+positive trace-nonincreasing finishing map, with arbitrary spectator memory. Both sides use
+the same input operator and fixed classical challenge data; the finishing map may depend on
+those data, preserving their correlation with the acceptance event.
+
+The expected-mass lemmas assume a finite challenge family with explicit nonnegative weights and
+a pointwise weighted incidence bound `δ` for the disagreement sets. They use the same positive
+semidefinite input operator for every challenge. Under these hypotheses a width-`k` union has
+expected weight at most `k * δ` times the input trace; the weights need not be normalized.
+Merely bounding the number of reprogrammed points does not supply these independence and
+incidence hypotheses.
+
+`Oracle/ParallelHybrid.lean` lifts the comparison to adaptive programs, charging union-query
+weights to a designated reference execution. The interpretation, program, initial state and
+final observation are shared. `Comp/HybridBudget.lean` uses a total call cutoff across all ports
+and a width cap, avoiding a sum of separate per-port maxima. The analytic cutoff and
+square-root aggregation lemmas in `Foundations/Hybrid.lean` import only QuantumFoundations and
+are staged for that dependency.
+
+`Comp/ChargeWeight.lean` gives the pathwise natural-number port budget `IsQueryChargeBound`.
+`totalWeight_le_of_isQueryChargeBound` bounds total query weight by the budget times the input
+trace when each call's weight is bounded by its port charge times its input trace. Local steps
+are free; zero-charge calls remain present, and a call with no possible answer still spends its
+prefix charge. Unit charges recover total calls, and width charges recover `IsPointBound`.
+`totalWeight_le_of_isPointBound` retains the actual adaptive sum of widths without per-port maxima.
+
+`Oracle/ParallelSearch.lean` applies this hybrid to one uniformly hidden marked input in a finite
+nonempty domain, using the additive `ZMod 2` oracle `markedFunction`.
+`markedSearchAdvantage_le_of_isPointBound` bounds success by
+`min 1 ((1 + 2 * sqrt (q * Q))^2 / N)`, where `N` is the domain cardinality, `q` bounds rounds
+and `Q` bounds the sum of widths along every branch. It requires no maximum width.
+`markedSearchAdvantage_le` is the width-cap corollary with `Q = k * q`, giving
+`min 1 ((1 + 2 * q * sqrt k)^2 / N)`. The interpretation,
+program, initial substate and guessing rule are fixed independently of the mark. Adaptive widths,
+measurements, mixed or subnormalized states, duplicate inputs and width zero are allowed.
+The bound includes zero-query guessing; loss and postselection remain missing mass without
+renormalization.
+
+These results implement the direct reprogramming, adaptive hybrid and round/point unique-mark
+search part of M3a. Exact sums of square roots for deterministic width profiles remain open. The changing-property directional recurrence and its adaptive
+mixed-state and total-budget transports (M−1), the general final-measurement lemma (M0), and CFHL
+compressed-oracle bounds are separate obligations. The state-conditioned hybrid also supports
+the idealized endpoint result and its query-bounded preprocessing extension below. The exact
+`PointerChainPuzzle` construction has a finite-window quantum recovery bound in §19.
+
+`Oracle/ParallelFinding.lean` packages the shared search argument. A fixed reference execution
+and pointwise weighted incidence `δ` bound a weighted family of hidden-set finding experiments
+by `δ * (1 + 2 * sqrt (q * Q))^2`. The weights need not normalize. The final event keeps the
+same hidden set as its answering oracle; the reference state, program and guess are independent
+of the sampled set. Both marked search and random-function preimage search instantiate this theorem.
+
+`Oracle/ParallelPreimage.lean` completes M3b for a fixed target chosen independently of the uniform
+function. `preimageSearchAdvantage_le_of_isPointBound` gives
+`min 1 ((1 + 2 * sqrt (q * Q))^2 / |Y|)`; its width-cap corollary uses `Q = k * q`.
+One function answers every round and the endpoint verifier. The target is neither obtained by
+evaluating that function at a hidden input nor conditioned to lie in its image.
+`ToMathlib/MeasureTheory/Measure/UniformTable/Target.lean` supplies the exact joint decomposition
+into independent target labels and a reference table avoiding the target. Their incidence is
+`1 / |Y|`; singleton responses are handled separately by the probability cap. Exact zero-point
+laws retain successful mass divided by `|Y|`, permitting empty rounds and subnormalized inputs.
+No compressed-oracle result is used by this argument.
+
+### 13. Quantum delay experiments
+
+`CryptoFoundations/TimeLockPuzzle/Quantum.lean` defines the two-phase quantum adversary and
+honest puzzle interface. The generator returns the public puzzle, key and auxiliary secret;
+the online adversary receives only the public puzzle and its own retained preprocessing state.
+`delayInstrument` composes preprocessing, framed honest generation and online execution with
+one persistent runtime-private register. `delayLawWith` initializes the joint state once and
+observes the full transcript, retaining correlations with hidden challenger data. Lost mass
+counts as failure. `DelayBudget` separates preprocessing rounds and points from online rounds,
+points and maximum width; honest generation is outside the online clock. Retained memory is
+unrestricted. These are query-bounded preprocessing resources, not auxiliary-input advice bounds.
+
+`CryptoFoundations/TimeLockPuzzle/QuantumClassical.lean` embeds classical generators retaining
+arbitrary hidden data. Its observed-law equality is an exact classical generator average of
+quantum preprocessing followed by online execution for the same fixed function. Each online
+branch receives its actual preprocessing post-state. The observer may inspect the preprocessing
+branch, key and secret jointly with the leaf. The scalar-generation specialization uses the
+trivial private register of a fixed-function runtime; the underlying instrument factorization
+preserves private memory for general runtimes.
+
+### 14. Idealized endpoint-only sequentiality
+
+`Oracle/MaskedChain/Model.lean` defines the no-preprocessing recovery experiment. One uniform
+function `H : G → G` supplies both the public masks and all online quantum answers. A challenge
+samples `q + 2` independent uniform vertices in a finite abelian group `G` and publishes the
+initial vertex and `q + 1` masks `H(xᵢ) + xᵢ₊₁`. The adversary outputs only a candidate endpoint.
+Its local interpretation, initial substate and public-puzzle-indexed program family are fixed
+before the function and challenge are sampled.
+
+`Quantum.MaskedChain.recoveryAdvantage_le_root` bounds success for `q` adaptive online
+rounds of width at most `k` by `min 1 (rootRecoveryBound G q k)`. Writing `N = |G|`, its
+uncapped bound is
+`choose(q+2,2)/N + (N^(-1/2) + 2 * ∑ h < q, sqrt(k*(q-h)/N))²`.
+The vertex-collision term stays outside the square. For `k,q ≥ 1`, the result has order
+`kq³/N`; the explicit guessing term is retained at zero queries. Repeated inputs, zero-width
+rounds and mixed or subnormalized initial states are allowed. The earlier event-error bound
+`recoveryAdvantage_le` remains available.
+
+The classical coupling retains the full hidden tuple while replacing oracle-derived masks
+with independent public masks. Programmed inputs use their earliest occurrence on a collision;
+agreement is required only outside the explicitly charged collision event. Numbered-call
+hybrids then change one answering step at a time. Resampling future vertices keeps the earlier
+execution unchanged, supplying the independence needed by the averaged reprogramming estimate.
+Weighted Minkowski for square-root sums averages each root comparison, first over fresh suffixes
+and then over reached prefixes. This bounds the root of average success before accumulating
+the round errors; it does not reverse the Jensen inequality for the concave square root.
+Every comparison keeps the endpoint-dependent event joint with the challenger data. The final
+reference execution is independent of the endpoint.
+
+The generic table resampling, coordinate and collision facts live in
+`ToMathlib/MeasureTheory/Measure/UniformTable/Bounds.lean`; the masked-chain coupling and quantum
+hybrids remain in `Oracle/MaskedChain/`. `RootBounds.lean` derives the root-accumulated
+endpoint theorem using the Afshar et al. §5 hybrid structure. Their detailed Definition 5.1
+and Theorem 5.3, printed p. 24, concern full-tuple recovery and give order `sqrt(kq³/N)`;
+the calculation on pp. 27–28 sums event-probability errors. The informal Theorem 1.3, p. 4,
+also mentions the endpoint. A full-tuple output can be projected to its endpoint without an
+extra query. The derived endpoint estimate makes no best-known or novelty claim.
+The exact `PointerChainPuzzle` construction is analyzed separately in §§17–20; the CFHL
+compressed-oracle framework remains a separate proof track.
+
+`Schemes/MaskedChainPuzzle.lean` gives the named honest idealized puzzle. Its generator samples
+the full hidden tuple and makes one round of `q + 1` point queries; its solver traverses the
+`q + 1` links with one point per sequential round. Correctness holds for every fixed function
+and tuple. `MaskedChainPuzzle.qromDelayAdvantage_eq_recoveryAdvantage` connects the actual
+two-phase experiment, using the no-preprocessing adversary adapter, to the endpoint game with
+one function and jointly retained hidden tuple. `MaskedChainPuzzle.qromDelayAdvantage_le_root`
+therefore gives the root-accumulated bound for that named scheme. This establishes the idealized
+no-preprocessing application. The extension below handles query-bounded preprocessing;
+§19 gives the exact pointer-chain construction's finite-window recovery bound.
+
+### 15. Query-bounded preprocessing
+
+`Oracle/MaskedChain/Preprocessing.lean` combines online and preprocessing root errors before
+squaring. Let `A_on = N^(-1/2) + 2 * ∑ h < q, sqrt(k*(q-h)/N)` and
+`β = choose(q+2,2)/N`, where `N = |G|`. Then `preprocessedRecoveryAdvantage_le_root` proves
+
+```
+min 1 (β + (A_on + 2 * sqrt(rpre * Qpre * (q+1) / N))²).
+```
+
+$r_{\mathrm{pre}}$ bounds preprocessing rounds and $Q_{\mathrm{pre}}$ bounds preprocessing points.
+The model leaves retained classical and quantum memory unrestricted. The joint mask-first coupling includes
+the complete two-phase experiment. Comparing preprocessing under the patched oracle with a
+base oracle whose preprocessing prefix is independent of the vertex and mask coins gives
+incidence `(q+1)/N` for the programmed input cells. The challenge-dependent online execution
+becomes a common oracle-free local observation. Conditioning on the base oracle permits an
+oracle-dependent preprocessing state in the conditional online argument. This query-bounded
+theorem requires no salting or presampling.
+
+`preprocessedRecoveryAdvantage_le_root_min` uses `min rpre Qpre` instead of `rpre`. Its proof
+removes empty preprocessing rounds: a width-zero call consumes a round but no points, so an
+arbitrary round bound need not be at most the point bound. Removing these calls preserves the
+entire run and yields at most $Q_{\mathrm{pre}}$ remaining rounds without a separate round
+assumption.
+The event-error APIs remain valid, including the point-only corollary with error
+`4 * Qpre * sqrt((q+1)/N)` added to `recoveryBound`.
+
+The reusable prerequisites are a full two-phase classical-generator law, a multi-round
+common-finisher comparison with prefix query weights independent of its oracle-free suffix,
+and trace-homogeneous online bounds that sum over all preprocessing branches. The latter count
+each branch's raw probability mass, so the online error is charged once. The birthday term is
+also charged once, by the outer classical coupling.
+
+`Schemes/MaskedChainPuzzle/Preprocessing.lean` transfers these bounds to the named scheme's
+actual three-phase experiment. `MaskedChainPuzzle.qromDelaySecure_root` establishes the
+root-accumulated security predicate for every budget-admitted two-phase adversary when the
+online round bound is at most `q`, using `min rpre Qpre`. The preprocessing state can depend
+on the sampled oracle, and no adversary adapter restricts that theorem's scope. The online
+point budget remains an admissibility condition; the online error uses rounds and width.
+The earlier `qromDelaySecure` and `qromDelaySecure_points` wrappers retain their statements.
+
+The exact `PointerChainPuzzle` construction's finite-window recovery theorem in §19 uses
+ranked-path quantum analysis, accumulator and commitment handling, and the full raw encoding.
+Quantum truncation for early success, serialized puzzle parsing and unrestricted-length query
+transport remain separate obligations.
+
+### 16. Auxiliary-input security remains separate
+
+Auxiliary-input security allows an unbounded preprocessing computation on the oracle and
+limits the advice retained for the online attack. It is a different model from query-bounded
+preprocessing with unrestricted retained memory. See Chung–Guo–Liu–Qian,
+[*Tight Quantum Time-Space Tradeoffs for Function Inversion*](https://arxiv.org/abs/2006.05650v2),
+§3.1, Definition 3.1: the first algorithm is an arbitrary function of the oracle and outputs
+an `S`-qubit advice state; the second algorithm has a query bound. Classical advice and quantum
+advice require distinct statements.
+
+Fresh vertices motivate studying auxiliary-input security for the masked-chain puzzle, but
+the query-bounded hybrid does not establish it. An advice budget must count all retained
+information, including the classical branch state, rather than only the quantum register's
+dimension. Bit-fixing, presampling and their quantum variants are a separate proof track.
+Guo–Li–Liu–Zhang,
+[*Unifying Presampling via Concentration Bounds*](https://eprint.iacr.org/2020/1589), Definition 1,
+specifies unbounded preprocessing with bounded classical advice; its discussion of barriers
+to classical presampling against quantum queries is relevant when choosing that track's
+intermediate model. Neither this model nor bounded quantum advice is currently implemented.
+
+### 17. Exact pointer-chain encoding prerequisites
+
+The exact pointer-chain puzzle is not an instance of the masked-chain game. Its six oracle
+families have different state and link widths, ordinary iterated hash chains, an accumulator,
+and a published key commitment. Even with one chain and no public masked links, obtaining the
+key requires the internal chain, accumulator and key hash. leanSeal §4.4 states that its
+exact-encoding theorem is classical, and §8.3 item 4 leaves the quantum extension open in
+that paper. The finite-window, round-bounded quantum recovery theorem is stated in §19 below.
+
+The first encoding step retains the entire raw oracle table. An injective encoding of typed
+inputs and a per-cell response split give a bijection between raw tables and typed-answer,
+tail and outside-image tables (`Equiv.tableSplit`). Uniform table reparameterization preserves
+the joint law of any raw quantum program, including observations of the hidden oracle.
+The query signature stays unchanged, so coherent superpositions across labels and arbitrary
+outside-image inputs remain available. This does not use the classical lazy-cache adapter
+as a quantum simulation or discard the unused mask bytes.
+
+The current homogeneous QROM model requires a finite input type. `ByteArray.Bounded`
+contains every byte string up to a stated maximum length, including malformed and unlabelled
+inputs. Honest leanSeal hash inputs have lengths `52` (steps), `54+b` (starts), `81` (masks),
+`80` (accumulator and key), and `83` (commitments). A window of at least `max(54+b,83)` includes
+them all; `86` suffices for valid link widths. An exact theorem in that window must retain
+its explicit input-length scope. It is not a theorem for arbitrary-length byte queries.
+The honest algorithms use structured public puzzles and agree with the source `gen` and
+`solve` for every fixed byte-answer function restricted to the window. A serialized public
+puzzle interface and a theorem for arbitrary serialized solver inputs remain separate.
+
+`PointerChainPuzzle.PathValue.rankPrefix` supplies a separate prerequisite for the quantum delay
+argument. Values beyond rank `r+1` have a predecessor beyond rank `r`; their inputs have
+incidence at most `hitBound = [n≥2]/|L| + solvePoints(n,m)/|S|` when unreached labels are
+resampled. Next-round inputs depend only on the preceding rank prefix. Resampling preserves
+the public commitment label, but its oracle cell must stay unprogrammed until its rank:
+that input contains the secret key.
+
+The programmed-table coupling, rank-cutoff quantum hybrid and query-bounded preprocessing
+comparison are proved below. The recovery theorem assumes a syntactic bound on every online
+branch's total number of rounds. A theorem for success before a deadline in an otherwise
+longer-running quantum program needs a separate truncation argument.
+
+For planning, the coarse event-distance hybrid would contribute
+`4 * q * sqrt (k * hitBound)`. Both parts of `hitBound` matter. With `n ≥ 2`, `q ≈ solvePoints ≈ 2^60`,
+`k = 2^40`, `|S| = 2^256` and `b = 32`, the state term `solvePoints/|S| ≈ 2^-196`
+dominates the link term `1/|L| = 2^-256`; the coarse contribution is about `2^-16`.
+At `b = 16`, the link term makes that coarse estimate vacuous. The proved bound instead
+accumulates square-root probabilities and squares once, giving an online contribution about
+`2^-34` at `b = 32`, before the separate collision and preprocessing terms. These estimates
+illustrate the bound's dependence on the resources; they are not a parameter recommendation.
+
+The proved recovery bound is uniform in the input-length limit: its error terms depend on
+query resources and state/link widths, while the window appears in the oracle and adversary
+types and the premise that honest inputs fit. This covers each fixed byte window. It does not
+simulate arbitrary-length extra oracle queries. A coherent embedding between different windows
+remains a separate transport lemma.
+
+### 18. Rank-ordered programming coupling
+
+`PointerChainPuzzle.LeanSeal.programPath` programs a complete raw oracle using one independent
+32-byte response for each path node. The typed path labels take the mask prefix and retain
+the full state response at every other node. Their distribution is the uniform typed-label
+distribution; all complementary raw bytes remain in the sampled path words.
+
+`Equiv.tableLabelExchangeList` exchanges table cells with auxiliary labels. Its addresses
+depend on predecessor labels, independently of the label being exchanged and of the table.
+Reverse execution writes the supplied labels in reverse rank order. The generic inverse-table
+identity requires a causal order and distinct nodes, but permits repeated oracle inputs.
+It preserves the complete joint uniform law, including displaced values and current response
+tails. The resulting programmed raw oracle has the uniform oracle marginal even on collisions.
+
+Distinct path inputs let the honest generator recover the prescribed labels. The event being
+charged is two different path nodes sharing an oracle input, rather than equal output labels.
+For one chain with one step, equal labels are harmless because its query families are distinct;
+with two steps, repeating an intermediate state can cause two queries to the same step cell.
+
+`PointerChainPuzzle.LeanSeal.real_le_programmed_add_collision` proves the resulting game hop
+for every observer `F(H, puzzle, key) ≤ 1`, retaining the completed oracle and hidden key jointly.
+The collision allowance is `solvePoints(n,m)^2 / |Bytes 32|`, charged once after averaging the
+salt, first link and masked links. The programmed experiment samples its path words
+unconditionally. Conditioning those words on collision-freedom would invalidate the freshness
+argument needed by the later quantum hybrid.
+
+`qromDelayAdvantage_quantumWindowScheme_le_programmed` transfers this bound to the actual
+quantum scheme experiment, with a separate `min 1` corollary. In its programmed game, both
+preprocessing and online execution use the same completed programmed oracle; the actual
+retained preprocessing register and classical state persist. No query budget or losslessness
+assumption is needed for this comparison. Replacing preprocessing by a run against the base
+oracle has a separate query-dependent cost in the preprocessing theorem below; that cost is
+not hidden in the collision term.
+
+The collision allowance is independent of the finite byte-window length. The adversary still
+has the explicit window scope and structured public puzzles. The resource-bounded quantum
+analysis of that programmed game gives the recovery theorem below.
+
+### 19. Finite-window rank security with preprocessing
+
+`PointerChainPuzzle.LeanSeal.qromDelayAdvantage_quantumWindowScheme_le_of_preprocessing`
+bounds recovery in the actual three-phase experiment. Write `S = |Bytes 32|`, `L = |Bytes b|`,
+`A = |Bytes 16|`, `P = solvePoints(n,m)` and
+
+```
+δ_on  = [n ≥ 2] / L + P / S
+δ_pre = A⁻¹ * (L⁻¹ + P / S)
+β     = P² / S
+B_on  = (S^(-1/2) + r * sqrt(4 * k * δ_on))².
+```
+
+If preprocessing has at most $r_{\mathrm{pre}}$ rounds and $Q_{\mathrm{pre}}$ points, every online
+continuation has at most `r` rounds of width at most `k`, and `r < keyRound n m`, then recovery
+is at most
+
+```
+min 1 (β + (sqrt(B_on) + 2 * sqrt(rpre * Qpre * δ_pre))²).
+```
+
+`rankRecoveryBound` is the online bound, `preprocessingIncidence` is the preprocessing incidence,
+and `rankDelayBound` is the uncapped combined bound. The theorem assumes `n ≠ 0`, `n < 2^32`,
+`b ≤ 32`, and a window containing all honest hash inputs.
+`qromDelaySecure_quantumWindowScheme` establishes the
+`QROMDelaySecure` predicate for every adversary admitted by the corresponding `DelayBudget`.
+The online point bound remains an additional admissibility condition; the online error uses
+rounds and width. Retained classical and quantum memory are unrestricted.
+
+The online proof keeps reached full raw words, including their tails, fixed while resampling
+future words. The public commitment value remains fixed too; its input stays behind the
+rank cutoff because it contains the secret key. `ParallelSchedule` provides the reusable
+numbered-call hybrid. `RankHybrid` proves reference-state independence and the fresh-key
+last hybrid. `RankBounds` accumulates the root comparisons before squaring and scales the
+result by the input state's successful mass.
+
+For preprocessing, condition on the base table and compare runs under the complete programmed
+table and the base table. Their common finishing operation is the entire online run under
+the programmed table, with the same challenge and hidden key. The base-table preprocessing
+post-state is independent of the fresh challenge coins, though it may depend on that base
+table. `ParallelFinisher` bounds the root error by `2 * sqrt(rpre * Qpre * δ_pre)`. Applying
+the mass-scaled online bound to each retained branch and summing its mass charges the online
+bound once. Failed branches are not renormalized. The outer classical coupling charges `β`
+once, outside the square, and never conditions the path-word sample on collision-freedom.
+
+Later accumulator inputs are `acc(a,y)` and carry no salt. Their incidence uses two independent
+fresh 32-byte predecessor labels, giving `S⁻² ≤ (A*S)⁻¹`; the first accumulator input contains
+the salt-dependent injective context and one fresh state. The other families carry the salt
+directly or through that context. `PreprocessingIncidence` proves these cases separately.
+
+The honest key is available after `keyRound n m = n*(m+2)+1` rounds. The checked solver uses
+one further commitment-validation call; its full budget is `keyRound n m + 1` rounds and
+`solvePoints n m` points. The security theorem bounds key recovery before the key's own
+receipt round, rather than using that extra validation round as a delay gap.
+
+This result concerns structured public puzzles and each fixed finite byte window. Arbitrary
+serialized puzzle parsing, a quantum truncation theorem for early success, coherent transport
+between windows and a compiler for unrestricted-length queries remain separate. Unbounded
+preprocessing with bounded classical or quantum advice is also separate. The CFHL bounds for
+compressed oracles and their changing-property prerequisites are independent of this direct
+hybrid proof.
+
+### 20. Concrete finite-window query estimates
+
+These examples evaluate the exact construction's proved bound in §19, with `S = 2^256`,
+`A = 2^128`, `L = 2^(8b)`, `P = n*(m+3)+1`, and
+`r = keyRound n m - 1 = n*(m+2)`. Each has `n ≥ 2`, so both online incidence terms apply.
+They use the preprocessing premise `rpre * Qpre ≤ 2^100`, evaluated at its upper endpoint.
+The chosen `b,n,m` satisfy the source's valid ranges, including `n ≤ 2^20`, `m ≤ 2^48`
+and `n*m ≤ 2^60`.
+
+| Link bytes `b` | Chains `n` | Steps `m` | Online rounds `r` | Path points `P` | Width `k` | Full capped bound |
+|---|---|---|---|---|---|---|
+| `32` | `2^20` | `2^40` | `2^60 + 2^21` | `2^60 + 3*2^20 + 1` | `2^40` | about `2^-34` |
+| `16` | `2` | `2^29 - 2` | `2^30` | `2^30 + 3` | `2^20` | about `2^-46` |
+| `16` | `2^20` | `2^40` | `2^60 + 2^21` | `2^60 + 3*2^20 + 1` | `2^40` | `1` (vacuous) |
+
+`P` counts the full honest path, not an online adversary point budget. The examples assume
+every online continuation respects the displayed round and width limits. They concern each
+fixed raw byte window containing the honest inputs and structured public puzzles.
+The second row specifies a moderate-depth parameter set; 16-byte links do not give the
+same bound at the maximum total chain work. For `n = 1`, the online link term is absent,
+so that case needs its own evaluation.
+
+The preprocessing contribution includes its cross term with the online root bound. If
+`v = 2*sqrt(rpre*Qpre*δ_pre)`, its additive increase before the cap is
+`2*sqrt(B_on)*v + v²`. Evaluating only `v²` understates that increase:
+
+| Example | Collision allowance `β` | Standalone preprocessing square `v²` | Full preprocessing increase |
+|---|---|---|---|
+| `b=32`, maximum work | about `2^-136` | about `2^-222` | about `2^-127` |
+| `b=16`, moderate depth | about `2^-196` | about `2^-154` | about `2^-99` |
+
+The preprocessing increase is small relative to the online term in both useful rows, but
+it is not uniformly below `2^-200`. These are approximate upper bounds in the ideal QROM
+query model, not claims about SHA-256 implementations, circuit gate costs or recommended
+security parameters. The values are slightly above the displayed powers of two; the table
+rounds their logarithms for readability.
+
+The [review and integration stack](parallel-qrom-pr-stack.md) allocates these results to
+reviewable PRs and records the current-main toolchain integration gate.

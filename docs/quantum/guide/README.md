@@ -17,7 +17,9 @@ The Mathlib-only base of the layer (matrix maps, instruments, registers, observa
 and oracle unitaries) is the
 [QuantumFoundations](https://github.com/lean-crypto-foundations/QuantumFoundations) dependency,
 shared with CatCrypt-core; paths below that start with `QuantumFoundations/` are in that
-repository. The layer is the subject of issue #706. Open questions and planned work are in
+repository. `VCVio/Quantum/Foundations/Parallel.lean` stages generic coordinate and subinstrument
+batching facts for that dependency and imports only QuantumFoundations and Mathlib.
+The layer is the subject of issue #706. Open questions and planned work are in
 [`docs/design/quantum-layer.md`](../../design/quantum-layer.md).
 
 * [1-states-and-instruments](1-states-and-instruments.md) — States, measurements, failure,
@@ -26,11 +28,17 @@ repository. The layer is the subject of issue #706. Open questions and planned w
   density-matrix bridge and the hybrid bound.
 * [3-choi-kraus-stinespring](3-choi-kraus-stinespring.md) — Choi matrices, Kraus operators and
   Stinespring form.
-* [4-programs-and-runtimes](4-programs-and-runtimes.md) — Adaptive programs, runtimes and combs.
+* [4-programs-and-runtimes](4-programs-and-runtimes.md) — Adaptive programs, runtimes, parallel
+  query budgets, sequentialization and combs.
 * [5-qrom](5-qrom.md) — Classical queries, Deutsch's algorithm, the QROM runtime and classical
-  algorithms in the QROM.
+  algorithms in the QROM; parallel rounds, private uniform coins, compressed execution,
+  reprogramming, unique-mark search, fixed-target and secret-input preimage search, security bits,
+  and idealized masked-chain endpoint recovery; complete raw-table encodings retaining response
+  tails and outside-image cells.
 * [6-instability](6-instability.md) — The classical instability calculus and its role in quantum
   proofs.
+* [7-time-lock-puzzles](7-time-lock-puzzles.md) — Quantum preprocessing, honest generation,
+  shared oracle memory and key-only recovery experiments.
 
 ## The layers
 
@@ -41,9 +49,10 @@ repository. The layer is the subject of issue #706. Open questions and planned w
 | [Three descriptions of one map](3-choi-kraus-stinespring.md) | `QuantumFoundations/MatrixMap/Kraus.lean`, `MatrixMap/Stinespring.lean`, `MatrixMap/Dual.lean` | Choi matrices, Kraus operators, Stinespring form and its unitary version, the trace dual. |
 | [Oracles and programs](4-programs-and-runtimes.md), [QROM](5-qrom.md) | `VCVio/Quantum/Comp/*`, `VCVio/Quantum/Oracle/*` | Quantum programs, oracle implementations, the quantum random-oracle model, classical algorithms inside it. |
 | [Instability](6-instability.md) | `VCVio/OracleComp/QueryTracking/Instability/*` | The classical quantity that compressed-oracle proofs bound quantum queries by. |
+| [Time-lock puzzles](7-time-lock-puzzles.md) | `VCVio/CryptoFoundations/TimeLockPuzzle/Quantum.lean`, `QuantumClassical.lean` | Quantum preprocessing, shared oracle state across phases, and joint laws for classical honest generators. |
 
-Nothing in the layer is axiomatized: every statement below is a Lean theorem, and the examples are
-in `VCVioTest/Quantum/`.
+The layer introduces no additional quantum axioms. Its formal results are Lean theorems, and
+the examples are in `VCVioTest/Quantum/`.
 
 ## Seeing that it is right
 
@@ -53,8 +62,9 @@ The agreement rows and exact-example checks now appear under **Checks** in
 [states and instruments](1-states-and-instruments.md#checks),
 [vectors](2-vectors-and-hybrid-bound.md#checks),
 [representations](3-choi-kraus-stinespring.md#checks),
-[programs and runtimes](4-programs-and-runtimes.md#checks), [QROM](5-qrom.md#checks) and
-[instability](6-instability.md#checks). The textbook comparison is in
+[programs and runtimes](4-programs-and-runtimes.md#checks), [QROM](5-qrom.md#checks),
+[instability](6-instability.md#checks) and [time-lock puzzles](7-time-lock-puzzles.md#checks).
+The textbook comparison is in
 [states and instruments](1-states-and-instruments.md#checks), with page references in the
 [literature table](../reference/literature.md).
 
@@ -63,9 +73,26 @@ The agreement rows and exact-example checks now appear under **Checks** in
 Covered: finite-dimensional systems; quantum operations that may fail; measurements with any number
 of outcomes, countably many of nonzero weight; outputs that depend on the outcome; adaptive programs
 with several oracles and stateful oracle implementations; the QROM; classical algorithms in the
-QROM; the representation theorems for CP maps; the classical instability calculus.
+QROM; variable-width parallel oracle rounds and their sequentialization with point-budget
+transfer; classical algorithms with private uniform coins through `OracleComp.toQuantumRandomized`
+and `OracleComp.toQuantumBatch`, preserving function-query or round and point budgets;
+the compressed-oracle runtime and its parallel QROM equivalence; common-finisher parallel
+reprogramming, adaptive hybrids, unique-mark search, fixed-target and secret-input preimage search
+under round and total-point budgets, with width-cap and security-bit corollaries;
+the representation theorems for CP maps;
+the classical instability calculus; two-phase quantum time-lock puzzle experiments with separate
+preprocessing and online budgets, exact classical-generator laws preserving arbitrary quantum
+preprocessing states, and endpoint-only sequentiality for idealized masked chains with
+query-bounded preprocessing and unrestricted retained memory.
+Full-table encoding equivalences preserve arbitrary raw quantum queries. The exact pointer-chain
+byte encoding has a finite input-length envelope, a table-completion law and a rank-cutoff
+delay theorem with query-bounded preprocessing. Serialized and unrestricted-length interfaces
+remain separate.
 
 Not covered: infinite-dimensional systems; measurements with continuous outcomes; loops that may not
-terminate; coherent choice of oracle port; classical algorithms with private randomness; putting
-general programs in comb form; the compressed oracle itself. The plans for these are in
+terminate; coherent choice of oracle port; putting general programs in comb form; exact
+square-root-sum bounds for deterministic width profiles; auxiliary-input security with
+unbounded preprocessing and bounded advice; early-success truncation, serialized public puzzles
+and unrestricted-length interfaces for `PointerChainPuzzle`; changing-property compressed-oracle
+bounds. The plans for these are in
 [`docs/design/quantum-layer.md`](../../design/quantum-layer.md).
