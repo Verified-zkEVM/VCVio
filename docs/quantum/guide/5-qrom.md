@@ -275,6 +275,33 @@ a round bound. For lossless local execution,
 `preimageSearchAdvantage_eq_of_isPointBound_zero_of_lossless` gives initial trace divided by
 `|Y|`. In particular, a lossless normalized no-query guess succeeds with probability `1 / |Y|`.
 
+## Raw encodings and full-table completion
+
+An encoded oracle can expose less data than the underlying raw hash. For example, leanSeal
+uses only the first bytes of a mask hash, but an adversary querying the raw hash receives
+all 32 bytes. Raw inputs outside the six typed domains are also valid oracle queries.
+Both kinds of data must persist across repeated quantum queries.
+
+`Equiv.tableSplit` gives a complete table decomposition for an injective input encoding
+and a response equivalence at each encoded cell. A raw table corresponds to three tables:
+the visible typed answers, their complementary tails, and all outside-image answers.
+The inverse reconstructs the raw function exactly. Uniform sampling transports through
+this bijection, so these tables can be sampled independently without losing a correlation
+with the raw function.
+
+`sampledEvalDistMap_tableSplit` applies that decomposition to every program over the
+original raw parallel-oracle signature. The program still has coherent access to every
+raw input and the full response register. Only the sampled parameter changes; the runtime
+uses the same reconstructed function throughout. The observer may inspect that function
+jointly with the final leaf. Rounds, points, adaptive branches and missing mass are preserved.
+`uniformOn_univ_bind_equiv` gives the corresponding measure-valued reparameterization for
+complete experiments, including the three-phase puzzle law.
+
+A prefix-only marginal would be insufficient. Consider two inputs whose raw answers have
+the same prefix and different tails. Computing these answers into a zero tail and then
+discarding that tail distinguishes the inputs and destroys their coherence. The complete
+table decomposition retains the tail and does not perform that discard.
+
 ## Checks
 
 **They agree with each other.** Wherever the library offers two descriptions of the same thing, a

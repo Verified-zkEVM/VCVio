@@ -1,6 +1,6 @@
 # 7. Quantum time-lock puzzle experiments
 
-Covers: honest generation, quantum preprocessing and retained memory.
+Covers: honest generation, quantum preprocessing and retained memory. Includes the exact finite-window raw encoding.
 Read first: [programs and runtimes](4-programs-and-runtimes.md) and [the QROM](5-qrom.md).
 
 ## A challenge generated between two adversary phases
@@ -71,6 +71,32 @@ The corresponding laws without preprocessing remain available. A theorem proved 
 that restricted adversary class does not establish `QROMDelaySecure` for arbitrary
 preprocessing budgets.
 
+## Finite windows for the exact pointer-chain encoding
+
+The exact pointer-chain construction has ordinary hash chains, an accumulator and a public
+commitment, in addition to masked links. `PointerChainPuzzle.LeanSeal.quantumWindowScheme`
+gives its honest algorithms a concrete quantum-oracle interface. A resource-bounded quantum recovery theorem requires additional rank-cutoff analysis.
+
+The raw input register is `ByteArray.Bounded`: every byte string up to the stated maximum
+length. It includes malformed encodings and inputs outside the six typed hash domains.
+The response register contains all 32 bytes, including the bytes discarded by honest mask
+truncation. `hashInputBound` is `max (54+b) 83`; every honest input fits, and 86 bytes suffices
+when the link width is at most 32. An adversary may query any superposition within the window.
+The interface does not model unrestricted-length byte queries.
+
+`windowTableEquiv` splits the complete raw table into typed answers, fixed mask tails and
+all outside-image answers. `sampledDelayLawWith_quantumWindowScheme` transports the entire
+preprocessing/generation/online experiment through that bijection. Its observer retains the
+answering table jointly with the transcript. `qromDelayAdvantage_quantumWindowScheme` is the
+key-recovery specialization. Neither equality assumes query budgets or bounds the success
+probability.
+
+The honest generator and checked solver agree with the source leanSeal algorithms for
+every fixed byte-answer function, restricted to the window. The public puzzle is the
+existing structured `PointerChainPuzzle.LeanSeal.Puzzle` type. Transport to serialized public
+puzzles and a statement for arbitrary serialized solver inputs remain separate; the honest oracle-input
+encoding alone does not establish that wire interface.
+
 ## Checks
 
 The library relates the phase composition to its observed laws without introducing separate
@@ -84,3 +110,4 @@ oracle initializations:
 | key recovery with arbitrary preprocessing and the classical generator average | `delayAdvantage_ofClassicalGenerator` |
 | the joint delay observation and the classical average of online observations | `delayLawWith_withoutPreprocessing_ofClassicalGenerator` |
 | key recovery and the classical average of online key guesses | `delayAdvantage_withoutPreprocessing_ofClassicalGenerator` |
+| the finite-window pointer puzzle experiment and full raw-table completion | `PointerChainPuzzle.LeanSeal.sampledDelayLawWith_quantumWindowScheme` |

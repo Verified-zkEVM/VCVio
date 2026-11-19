@@ -651,6 +651,7 @@ public import VCVio.Quantum.Oracle.Compressed.Size
 public import VCVio.Quantum.Oracle.Compressed.Truncation
 public import VCVio.Quantum.Oracle.Emulated
 public import VCVio.Quantum.Oracle.EmulatedTensor
+public import VCVio.Quantum.Oracle.Encoding
 public import VCVio.Quantum.Oracle.LocalExecution
 public import VCVio.Quantum.Oracle.Model
 public import VCVio.Quantum.Oracle.Parallel
@@ -711,6 +712,7 @@ public import VCVio.Schemes.PointerChainPuzzle.LeanSealHiding
 public import VCVio.Schemes.PointerChainPuzzle.LeanSealHidingBridge
 public import VCVio.Schemes.PointerChainPuzzle.LeanSealHidingEncoding
 public import VCVio.Schemes.PointerChainPuzzle.Path
+public import VCVio.Schemes.PointerChainPuzzle.QuantumEncoding
 public import VCVio.Schemes.PointerChainPuzzle.Sequential
 public import VCVio.Schemes.Schnorr.BoundedChallenges
 public import VCVio.Schemes.Schnorr.ChallengeRestriction
