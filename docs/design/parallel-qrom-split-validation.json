@@ -1,0 +1,494 @@
+{
+  "schema_version": 1,
+  "status": "PASS: all8 standalone local validations and hosted checks complete; PRs unmerged",
+  "scope": "Standalone validation of seven PR cuts plus the planted-preimage sibling, each on its recorded actual base. All8 cuts are committed and published; no PRs merged.",
+  "repository": "https://github.com/Verified-zkEVM/VCVio",
+  "provenance": {
+    "main_base": "f1e63c780de398fb62206dd5890f27e1ad64e0e6",
+    "reviewed_feature": "54b6ae83ab4819727e71be7188e0ef4658197bd9",
+    "feature_fork": "4482d49ab0c9da80905cf77d5d9b9ac163576481",
+    "original_port_reference": "ed4e0a4fc73738de9e03cf50abde672fdd413a40",
+    "corrected_code_reference": "878497e510036a582b88ad26d18084ca40552480",
+    "corrected_extraction_reference": "d8ab06f62daac8d5dbcff3624f64fdcd6eed6146",
+    "production_lean_files_unchanged_between_original_and_corrected_port": 1396,
+    "original_port_record": {
+      "path": "docs/design/parallel-qrom-port-validation.json",
+      "sha256": "f3979f54dc70f8ac647dae04b0b7b42ecd1ee9e99bdf717a0624a97e30932972"
+    },
+    "corrected_test_record": {
+      "path": "docs/design/parallel-qrom-test-validation.json",
+      "sha256": "ec0ed86225287c18eadfe6fcc0f52ee104f800c37607adc4683b2721be2e9049"
+    },
+    "test_only_corrections": [
+      {
+        "commit": "d162cc84a08bbed89e1abbd368135f71ec0e85a0",
+        "path": "VCVioTest/Quantum/Sequentialize.lean",
+        "sha256": "135203959c9fe9acd80fba08db1e78ecd483f63840fecb7b35fc7893ebfea5de"
+      },
+      {
+        "commit": "878497e510036a582b88ad26d18084ca40552480",
+        "path": "VCVioTest/Quantum/TimeLockPuzzle.lean",
+        "sha256": "b37caed376e0884407db6c91ec3e24a13b9bee444997d18c1ba36c54a9e014a7"
+      }
+    ]
+  },
+  "original_contract_reference": {
+    "path": "/tmp/qrom-port-audit/reference-all.json",
+    "sha256": "2e45c22a3bf8f48789e7bf8b6812b0331de6fe74ab2bcfea4e429b13327aeac4",
+    "declarations": 1290,
+    "production_modules": 64,
+    "bytes": 174231100,
+    "captured_from": "ed4e0a4fc73738de9e03cf50abde672fdd413a40",
+    "preserved_byte_exact": true,
+    "note": "Scope counts include inherited declarations, not only new theorems. Preserve original capture/provenance. Regenerated files may have different machine metadata: compare raw declaration records strictly."
+  },
+  "toolchain": {
+    "lean": "leanprover/lean4:v4.36.0",
+    "lean_commit": "611c117bfaf7b7ae1cfcf246ce6fba31e8f509e9",
+    "dependency_pins": {
+      "mathlib": "fc4f59e577feb1a4956671bc04ac18aaaf8cd842",
+      "QuantumFoundations": "5ecbeec205ce3e9e4a5b7cb900c181884856ba19",
+      "PolyFun": "528b3b1fda285487e55704409bd1b058dc18fcad"
+    },
+    "auditor": {
+      "source_ref": "d8ab06f62daac8d5dbcff3624f64fdcd6eed6146",
+      "files": {
+        "scripts/QuantumPortContracts.lean": "c9d83acf9c077d3f8cd79475a9b4c9b71a0eeee2f830a01c79d3cd3ae9e0d9b1",
+        "scripts/check-quantum-port-contracts.py": "c3849b5bd9f833c113a70c7d99141c5489e70795c0fe1729be4a7e9b796739ec",
+        "scripts/test-quantum-port-contracts.py": "2616e70fc691c0e71447eb0088374a52b29c2bab75146519ad205d8b574f5776"
+      },
+      "static_imports": ["Lean"],
+      "scope": "Integration-only auditor dynamically imports the actual cut roots; no future project code is imported by the auditor."
+    }
+  },
+  "unchanged_pins_and_baselines": {
+    "lean-toolchain": "582a63f8f9c5128067b688778c1051cf1464c3ca9d57b9325025c051c29b774a",
+    "lake-manifest.json": "8ee0cfa9477800f3b2fd98825644f808bbbda3e5383cdda8e5038d28821a06bc",
+    "lakefile.lean": "3f50f789fef9a8b2897ba4a24b6b45f8baef7e9f86343117577713f3f51e1d1b",
+    "scripts/axiom_baseline.json": "91063fc3c8e65ba4cd848246f40eaec9b9a54b16a842692444130826db98f777",
+    "scripts/nolints.json": "c3385fdc3675d297da4001c56c584a494b5f84e11f3e69a7a1bbb15fa9383ce0",
+    "scripts/nolints-style.txt": "c1d5896692a7da4adbdf17e2bdd79241a63d316453fa2303b3c2002874a183be",
+    "scripts/init_sweep_baseline.json": "b27ce393a145a7b4db924e30260b94e4c2569e98920cdbc798fa3e6f70d25ced",
+    "scripts/expose_boundary_baseline.tsv": "a19d1ae3e12aa5ed9d7ffd16329f198e90d9056e94dfaf28effa93f22ad56be1"
+  },
+  "graph": {
+    "pr1": "main",
+    "pr2": "pr1",
+    "pr3": "pr2",
+    "pr4": "pr3",
+    "pr5": "pr3",
+    "pr6": "pr5",
+    "pr7": "pr6",
+    "pr2-followup": "pr2"
+  },
+  "common_gate_requirements": ["Exact actual parent/source/docs/index and unchanged pins","Standalone production and all three test-library builds; named formal tests","Strict raw contracts; retained PR6 paired-root resolution below","Targeted and whole-production/test-root axioms","Production/test-root initializer checks","Full default lake test and regenerated CSV/exhaustive18-coefficient checks","Exact production/test warning budgets","Lint baseline; generated imports; expose/PolyFun/extern/interop boundaries","Static links; retired names; live quantum-doc names with empty allowlist","Unchanged final inputs; independent adversarial and root approval"],
+  "test_scope": {
+    "initializer_and_axiom_roots": ["VCVioTest","LatticeCryptoTest"],
+    "all_built_test_libraries": ["VCVioTest","LatticeCryptoTest","HashSigTest"],
+    "note": "HashSigTest has multiple executable roots and no umbrella. Default suite excludes optional --ffi tests; no claim is made for that optional suite. Expected disabled-native-backend archive diagnostics are separate from the Lean-source warning budget."
+  },
+  "cache_policy": "PR1 started with empty project outputs. Descendants used independently copied module artifacts only from their exact reviewed parent, with exact census and post-copy approval. No full-tip/future/sibling/native/global/script/setup/hash-sidecar cache reuse. Fresh outputs suffice for reproduction.",
+  "cuts": [
+    {
+      "layer": "pr1",
+      "base_commit": "f1e63c780de398fb62206dd5890f27e1ad64e0e6",
+      "branch": "feat/parallel-qrom-01-model",
+      "commit": "2795210189394a1df3a31b19053389827f4d1741",
+      "tree": "a8d54c695815eb1cf489b3bd617104f2267cc0a7",
+      "pr": 1188,
+      "url": "https://github.com/Verified-zkEVM/VCVio/pull/1188",
+      "local_validation": "PASS",
+      "hosted": "SUCCESS_9",
+      "contract_modules": ["VCVio.Quantum.Comp.Parallel","VCVio.Quantum.Comp.RoundBound","VCVio.Quantum.Comp.Sequentialize","VCVio.Quantum.Foundations.Parallel","VCVio.Quantum.Oracle.Classical","VCVio.Quantum.Oracle.ClassicalParallel","VCVio.Quantum.Oracle.ClassicalRandomized","VCVio.Quantum.Oracle.Compressed.Parallel","VCVio.Quantum.Oracle.Parallel","VCVio.Quantum.Oracle.Sequentialize"],
+      "named_formal_tests": ["VCVioTest.Quantum.Parallel","VCVioTest.Quantum.Sequentialize","VCVioTest.Quantum.ParallelBridges","VCVioTest.Quantum.ClassicalRandomized"],
+      "contracts": {
+        "status": "PASS",
+        "original_filtered_records": 243,
+        "actual_records": 243,
+        "accepted_strict_records": 243,
+        "raw_exceptions": [],
+        "comparison_sha256": "07a8ac79edc1f118f69137899fe0d3085df69b58f5b720d9111b19c375ca4993"
+      },
+      "gates": {
+        "status": "PASS",
+        "metrics": [11098,16769,32594,1344,3913,289,48906,645,5777,778,110,5]
+      },
+      "history": {
+        "initial_commit": "002b5bc2de5fd9034f76d7fd7c7e6ba98eff3005",
+        "initial_tree": "b16fbc3e8db7b30f1bce3415ff63df4d8791e304",
+        "reviewed_test_only_followup": "2795210189394a1df3a31b19053389827f4d1741",
+        "note": "The initial production/243-contract evidence remains unchanged. Corrected head adds only the reviewed input-register identity fixture fix, with complete local and hosted default-suite/test-root validation."
+      },
+      "focused_doc_set": "base",
+      "evidence_sha256": {
+        "/tmp/qrom-pr1-validation.json": "e6834519a185234bd401bb92b1d80db635d8bbefe7201270f96b413cfd85adf7",
+        "/tmp/qrom-pr1-init-fix-validation.json": "8f488fe3c8acf5a0775f0767f79f65b4bacc9ac201eff8b0e645b53684e1317a",
+        "/tmp/qrom-pr1-root-final-review.json": "fe50de8e70b8bff57ffb5204d47aac24543f4665df19b5de74aac696b0427b84",
+        "/tmp/qrom-pr1-initfix-committed-attestation.json": "50fc8b5f30de5deaa5aaf601dbcd6facb6e8efbb9a4b0e1aa5b7438cad4c295b"
+      }
+    },
+    {
+      "layer": "pr2",
+      "base_commit": "2795210189394a1df3a31b19053389827f4d1741",
+      "branch": "feat/parallel-qrom-02-search",
+      "commit": "4361af41a1998809b6b042076ea9fa91b4b5e254",
+      "tree": "9c7e70377f6ea010675052a77afc7dc6159097c2",
+      "pr": 1190,
+      "url": "https://github.com/Verified-zkEVM/VCVio/pull/1190",
+      "local_validation": "PASS",
+      "hosted": "SUCCESS_9",
+      "contract_modules": ["ToMathlib.MeasureTheory.Measure.UniformTable.Bounds","ToMathlib.MeasureTheory.Measure.UniformTable.Target","VCVio.Quantum.Comp.ChargeWeight","VCVio.Quantum.Comp.HybridBudget","VCVio.Quantum.Comp.Runtime","VCVio.Quantum.Foundations.Hybrid","VCVio.Quantum.Oracle.ParallelFinding","VCVio.Quantum.Oracle.ParallelHybrid","VCVio.Quantum.Oracle.ParallelPreimage","VCVio.Quantum.Oracle.ParallelReprogramming","VCVio.Quantum.Oracle.ParallelSearch"],
+      "named_formal_tests": ["VCVioTest.Quantum.ChargeWeight","VCVioTest.Quantum.ParallelSearch","VCVioTest.Quantum.ParallelPreimage"],
+      "contracts": {
+        "status": "PASS",
+        "original_filtered_records": 171,
+        "actual_records": 171,
+        "accepted_strict_records": 171,
+        "raw_exceptions": [],
+        "comparison_sha256": "0ac5c948edc5e03602d3c4d8de1388436836d57feadf6d3a54a32735f576d06d"
+      },
+      "gates": {
+        "status": "PASS",
+        "metrics": [11867,16805,32684,1354,3950,292,49031,645,5844,781,127,7]
+      },
+      "focused_doc_set": "base",
+      "evidence_sha256": {
+        "/tmp/qrom-pr2-fixed-parent-validation.json": "172d7ac257dd0928eddfde2c97fec8ea7244caa830a8c8490e46610c47545ea7",
+        "/tmp/qrom-pr2-root-final-review.json": "6ef9a6c1fc4690f5673109dc4dbc4819ea6a5ed41e8231df82ddc60011a5ee2d",
+        "/tmp/qrom-pr2-fixed-parent-independent-source-review.json": "c36a88594fe18e09b17afe03f0bb2404932391c5ffbff6408a7c4c0a2f162ca0"
+      }
+    },
+    {
+      "layer": "pr3",
+      "base_commit": "4361af41a1998809b6b042076ea9fa91b4b5e254",
+      "branch": "feat/parallel-qrom-03-experiments",
+      "commit": "e8d6759599424db4e204bfb5181345edae3dcbfe",
+      "tree": "ffc61b486adacf3328273e9effab441affcf610f",
+      "pr": 1191,
+      "url": "https://github.com/Verified-zkEVM/VCVio/pull/1191",
+      "local_validation": "PASS",
+      "hosted": "SUCCESS_9",
+      "contract_modules": ["VCVio.CryptoFoundations.TimeLockPuzzle.Quantum","VCVio.CryptoFoundations.TimeLockPuzzle.QuantumClassical","VCVio.Quantum.Comp.DropEmptyBatches","VCVio.Quantum.Comp.Finisher","VCVio.Quantum.Comp.Homogeneous","VCVio.Quantum.Comp.NumberedHybrid","VCVio.Quantum.Comp.NumberedQueries","VCVio.Quantum.Foundations.Observation","VCVio.Quantum.Foundations.PrivateUnit","VCVio.Quantum.Foundations.SubState","VCVio.Quantum.Oracle.LocalExecution","VCVio.Quantum.Oracle.ParallelFinisher","VCVio.Quantum.Oracle.ParallelSchedule"],
+      "named_formal_tests": ["VCVioTest.Quantum.NumberedQueries","VCVioTest.Quantum.DropEmptyBatches","VCVioTest.Quantum.SubState","VCVioTest.Quantum.TimeLockPuzzle"],
+      "contracts": {
+        "status": "PASS",
+        "original_filtered_records": 212,
+        "actual_records": 212,
+        "accepted_strict_records": 212,
+        "raw_exceptions": [],
+        "comparison_sha256": "9ef0b0bc9ab8d244a39bcc40f5d64be92851e3f8562cd9079a62c1b064d94b06"
+      },
+      "gates": {
+        "status": "PASS",
+        "metrics": [11901,16852,32869,1367,3983,296,49268,645,5903,786,156,8]
+      },
+      "focused_doc_set": "time_lock",
+      "evidence_sha256": {
+        "/tmp/qrom-pr3-actual-validation.json": "26e49fc41948b08d7b58e2a65ca2c7b4ab82a6a6d0241641a0f46aa5f3f2e696",
+        "/tmp/qrom-pr3-root-final-review.json": "4d48be7716a301fd82f8c9d11fbf383a9341df36e7ab809cb77b8d918c5c9920",
+        "/tmp/qrom-pr3-followup-final-independent-readiness.json": "a6821da1c6cb7545a218b10ed85e85808742355b66c147ec90ec3ed81d218075"
+      }
+    },
+    {
+      "layer": "pr2-followup",
+      "base_commit": "4361af41a1998809b6b042076ea9fa91b4b5e254",
+      "branch": "feat/parallel-qrom-02-planted",
+      "commit": "77fc534f4b7bb59daa177973b9b75be38e09c122",
+      "tree": "07ed9823e793d5b5b2a48c0efe3da2d3def13aac",
+      "pr": 1192,
+      "url": "https://github.com/Verified-zkEVM/VCVio/pull/1192",
+      "local_validation": "PASS",
+      "hosted": "SUCCESS_9",
+      "contract_modules": ["ToMathlib.MeasureTheory.Measure.UniformTable.PlantedTarget","VCVio.Quantum.Oracle.ParallelPlantedPreimage","VCVio.Quantum.Oracle.ParallelSecurity"],
+      "named_formal_tests": ["VCVioTest.Quantum.ParallelPlantedPreimage","VCVioTest.Quantum.ParallelSecurity"],
+      "contracts": {
+        "status": "PASS",
+        "original_filtered_records": 46,
+        "actual_records": 46,
+        "accepted_strict_records": 46,
+        "raw_exceptions": [],
+        "comparison_sha256": "bc7cf42a5b03551bfc614f700cd974a73410dbcb9db29f8ca6d3feb7b3de169f"
+      },
+      "gates": {
+        "status": "PASS",
+        "metrics": [11881,16824,32727,1357,3963,294,49097,645,5865,781,136,6]
+      },
+      "focused_doc_set": "base",
+      "evidence_sha256": {
+        "/tmp/qrom-pr2-followup-actual-validation.json": "41d8db1607bd9639210ff900e682bf98a2b98f098e2a8805fa23df95d2142a42",
+        "/tmp/qrom-pr2-followup-root-final-review.json": "03306b3fe482b8d53a15f09b2fc0389f26d5af5540301172f876a51c64233b85",
+        "/tmp/qrom-pr3-followup-final-independent-readiness.json": "a6821da1c6cb7545a218b10ed85e85808742355b66c147ec90ec3ed81d218075"
+      }
+    },
+    {
+      "layer": "pr4",
+      "base_commit": "e8d6759599424db4e204bfb5181345edae3dcbfe",
+      "branch": "feat/parallel-qrom-04-masked-chain",
+      "commit": "65f19af5adfded0ba97f1ec2c36e1c4c152d2eeb",
+      "tree": "a7c954377fa4aa85e638efb9c70100c68af3b503",
+      "pr": 1193,
+      "url": "https://github.com/Verified-zkEVM/VCVio/pull/1193",
+      "local_validation": "PASS",
+      "hosted": "SUCCESS_9",
+      "contract_modules": ["VCVio.Quantum.Oracle.MaskedChain.Bounds","VCVio.Quantum.Oracle.MaskedChain.Coupling","VCVio.Quantum.Oracle.MaskedChain.Homogeneous","VCVio.Quantum.Oracle.MaskedChain.Hybrid","VCVio.Quantum.Oracle.MaskedChain.Model","VCVio.Quantum.Oracle.MaskedChain.Preprocessing","VCVio.Quantum.Oracle.MaskedChain.Preprocessing.DropEmpty","VCVio.Quantum.Oracle.MaskedChain.Preprocessing.Model","VCVio.Quantum.Oracle.MaskedChain.RootBounds","VCVio.Schemes.MaskedChainPuzzle","VCVio.Schemes.MaskedChainPuzzle.Preprocessing"],
+      "named_formal_tests": ["VCVioTest.Quantum.MaskedChain","VCVioTest.Quantum.QueryBoundedPreprocessing","VCVioTest.Quantum.MaskedChainRootBounds"],
+      "contracts": {
+        "status": "PASS",
+        "original_filtered_records": 175,
+        "actual_records": 175,
+        "accepted_strict_records": 175,
+        "raw_exceptions": [],
+        "comparison_sha256": "2adc6aadb0d19c1156edc1fff7a6eb4665c8f86462a0cd14e38214ae3d87feec"
+      },
+      "gates": {
+        "status": "PASS",
+        "metrics": [11929,16891,33025,1378,4003,299,49506,645,5942,787,185,6]
+      },
+      "focused_doc_set": "time_lock",
+      "evidence_sha256": {
+        "/tmp/qrom-pr4-actual-validation.json": "cb47b95ef91a25f9eae61eded5ed2e90ec529065ca0515f7dc029723ec8a1341",
+        "/tmp/qrom-pr4-root-final-review.json": "c5b7f10de2e872eafe8415d5eb1ba6350bc9cd162eea0ed2ccb35d069d257aae",
+        "/tmp/qrom-pr4-final-independent-readiness.json": "c1ee2a1eda004bb529f91aec95581068a13933c18e2e6733891ac5379116357c"
+      }
+    },
+    {
+      "layer": "pr5",
+      "base_commit": "e8d6759599424db4e204bfb5181345edae3dcbfe",
+      "branch": "feat/parallel-qrom-05-encoding",
+      "commit": "a60384323745395d41c9bd5b87c568438a43d201",
+      "tree": "3ab7863c03255be0a7f5cd17d29713ccba93efa7",
+      "pr": 1194,
+      "url": "https://github.com/Verified-zkEVM/VCVio/pull/1194",
+      "local_validation": "PASS",
+      "hosted": "SUCCESS_9",
+      "contract_modules": ["ToMathlib.Data.ByteArray.Bounded","ToMathlib.MeasureTheory.Measure.UniformTable.Encoding","VCVio.Quantum.Oracle.Encoding","VCVio.Schemes.PointerChainPuzzle.Basic","VCVio.Schemes.PointerChainPuzzle.QuantumEncoding"],
+      "named_formal_tests": ["VCVioTest.Quantum.OracleEncoding","VCVioTest.Quantum.PointerChainEncoding"],
+      "contracts": {
+        "status": "PASS",
+        "original_filtered_records": 278,
+        "actual_records": 278,
+        "accepted_strict_records": 278,
+        "raw_exceptions": [],
+        "comparison_sha256": "70af518667e2e0c1cccc7a1d4f2eadd4ef2c7655f4d28e9b2786a30677f9e28e"
+      },
+      "gates": {
+        "status": "PASS",
+        "metrics": [11913,16868,32934,1371,4003,298,49364,645,5936,791,167,6]
+      },
+      "focused_doc_set": "time_lock",
+      "evidence_sha256": {
+        "/tmp/qrom-pr5-actual-validation.json": "f1fe79518dc03dbad601c0f937aa6ad5fb3b0ede34ab87969421ce1a265bdd26",
+        "/tmp/qrom-pr5-root-final-review.json": "8aa5ad5b37d8087fedce8722b536bd1e5564c0a52a104a25aa21ec20299c3305",
+        "/tmp/qrom-pr5-final-independent-readiness.json": "277db767776c20acba0b15270f261dbc5e22a70fbdbb495ac3301fce2f26c6cc"
+      }
+    },
+    {
+      "layer": "pr6",
+      "base_commit": "a60384323745395d41c9bd5b87c568438a43d201",
+      "branch": "feat/parallel-qrom-06-coupling",
+      "commit": "5264f276c9694e4fcf899158bce4edc917cb17d7",
+      "tree": "85147c64f8740865c7c89289717bcae291a57cb6",
+      "pr": 1195,
+      "url": "https://github.com/Verified-zkEVM/VCVio/pull/1195",
+      "local_validation": "PASS",
+      "hosted": "SUCCESS_9",
+      "contract_modules": ["ToMathlib.MeasureTheory.Measure.UniformTable.Adaptive","VCVio.Schemes.PointerChainPuzzle.QuantumCoupling","VCVio.Schemes.PointerChainPuzzle.QuantumCoupling.Programming","VCVio.Schemes.PointerChainPuzzle.QuantumCoupling.Scheme","VCVio.Schemes.PointerChainPuzzle.RankFrontier"],
+      "named_formal_tests": ["VCVioTest.Quantum.AdaptiveProgramming","VCVioTest.Quantum.PointerChainFrontier","VCVioTest.Quantum.PointerChainProgramming","VCVioTest.Quantum.PointerChainCoupling"],
+      "contracts": {
+        "status": "PASS",
+        "original_filtered_records": 99,
+        "actual_records": 100,
+        "accepted_strict_records": 100,
+        "raw_exceptions": [],
+        "comparison_sha256": "0d2f54646580d4742f9da5196cb0d780d275a9cbd74f48dfdde5ca1ebac802ad"
+      },
+      "gates": {
+        "status": "PASS",
+        "metrics": [11931,16891,33015,1376,4041,302,49482,645,6014,796,169,7]
+      },
+      "focused_doc_set": "time_lock",
+      "evidence_sha256": {
+        "/tmp/qrom-pr6-actual-validation.json": "356eb6bf13a5aa33814e98d84f60f9b0fad5c5c611f843d5928ef4f8ee48067d",
+        "/tmp/qrom-pr6-root-final-review.json": "afde11d6d3da656e9269d58d1b2b91ecefba86955c5bc0ed7664d6dc18c15420",
+        "/tmp/qrom-pr6-final-independent-readiness.json": "a54be8d6c4fe904c344fcc67df2b7515b12b4f26bb476e307afc837b60da139b"
+      }
+    },
+    {
+      "layer": "pr7",
+      "base_commit": "5264f276c9694e4fcf899158bce4edc917cb17d7",
+      "branch": "feat/parallel-qrom-07-pointer-security",
+      "commit": "c1008a1c50fd9cf0329dbb3da301840a1dac5c2b",
+      "tree": "e4f6d77e3b09e1f05f2e02086410f94203a12c24",
+      "pr": 1196,
+      "url": "https://github.com/Verified-zkEVM/VCVio/pull/1196",
+      "local_validation": "PASS",
+      "hosted": "SUCCESS_9",
+      "contract_modules": ["VCVio.Schemes.PointerChainPuzzle.QuantumCoupling.Incidence","VCVio.Schemes.PointerChainPuzzle.QuantumCoupling.Preprocessing","VCVio.Schemes.PointerChainPuzzle.QuantumCoupling.PreprocessingIncidence","VCVio.Schemes.PointerChainPuzzle.QuantumCoupling.RankBounds","VCVio.Schemes.PointerChainPuzzle.QuantumCoupling.RankHybrid","VCVio.Schemes.PointerChainPuzzle.QuantumCoupling.RankSchedule"],
+      "named_formal_tests": ["VCVioTest.Quantum.PointerChainRankSchedule","VCVioTest.Quantum.PointerChainRankBounds","VCVioTest.Quantum.PointerChainPreprocessing"],
+      "contracts": {
+        "status": "PASS",
+        "original_filtered_records": 66,
+        "actual_records": 66,
+        "accepted_strict_records": 66,
+        "raw_exceptions": [],
+        "comparison_sha256": "705c715488be2ec3f972b8e64167351c5171548d8e0ff7563fd5082a8915df02"
+      },
+      "gates": {
+        "status": "PASS",
+        "metrics": [11949,16915,33092,1382,4064,305,49590,645,6061,798,175,8]
+      },
+      "focused_doc_set": "time_lock",
+      "evidence_sha256": {
+        "/tmp/qrom-pr7-actual-validation.json": "e27ed9f7b2065a8f3e4966df63cf24b44338e51965e176c9529bd4f7775830cf",
+        "/tmp/qrom-pr7-root-final-review.json": "b4cefb990d68ef69a70ed1ed78b9ec80cd29d339054f366321ff5a715b4e8211",
+        "/tmp/qrom-pr7-final-independent-readiness.json": "4e0ab650c96cece37dd2a9fcabbe516d03b560fc29fed696847567460dd85cdd"
+      }
+    }
+  ],
+  "pr6_contract_resolution": {
+    "declaration": "Quantum.TimeLockPuzzle.qromDelayAdvantage.eq_1",
+    "initial_comparison": {
+      "status": "RETAINED FAILURE",
+      "records_before": 99,
+      "records_after": 100,
+      "exit_code": 1,
+      "all_shared_records_exact": true,
+      "capture_sha256": "b604f3f8c7e4c0c9c0d1a861f8ef55cacb10c90793d7d45e046d7edd9ef45676",
+      "comparison_sha256": "d05ff6e71cb12472689b779f28507b60e360055ab170049bf5c9a37b97ef6055"
+    },
+    "cause": "Existing generated equation is attributed to its realizing consumer: original full VCVio root attributes it to MaskedChainPuzzle; isolated cut attributes it to QuantumCoupling.Scheme. Raw type, universes, binders, body, kind and reducibility are identical; only the module-attribution metadata differs.",
+    "resolution": "Capture both corrected reference d8 and PR6 with exactly the same five owned import roots and five-module filter. Both produce 100 records with exactly identical declaration arrays; unchanged strict comparator passes 100/100. No record is dropped, no source/tool/scope/baseline is modified, and no exception or normalization is added.",
+    "paired_import_roots": ["ToMathlib.MeasureTheory.Measure.UniformTable.Adaptive","VCVio.Schemes.PointerChainPuzzle.QuantumCoupling","VCVio.Schemes.PointerChainPuzzle.QuantumCoupling.Programming","VCVio.Schemes.PointerChainPuzzle.QuantumCoupling.Scheme","VCVio.Schemes.PointerChainPuzzle.RankFrontier"],
+    "paired_reference_sha256": "6cacb07bbe77620d41ea8087058e7fcb21b0b37ef6aa72342ad41f79896f3d38",
+    "paired_actual_sha256": "bd23c43ebfe339ababfb7717b54ea2f2d7606ddae8d94b7b113c221bce848eaf",
+    "paired_strict_comparison_sha256": "0d2f54646580d4742f9da5196cb0d780d275a9cbd74f48dfdde5ca1ebac802ad",
+    "independent_review": {
+      "path": "/tmp/qrom-pr6-independent-contract-resolution.json",
+      "sha256": "3de53001107a063b908fe0f5aa483fd5943f88b66545ca8b463ef16dfefc6f10"
+    },
+    "exact_original_commands": {
+      "path": "/tmp/qrom-pr6-contract-resolution-commands.json",
+      "sha256": "6b729129b2c0263535e591192e8758ca53fca2ec41fbd830813da762cd95c7d0"
+    }
+  },
+  "reproduction": {
+    "checkout_policy": "Create separate clean worktrees at recorded commits, with empty project outputs and pinned dependencies (lake exe cache get). Never substitute current main or a sibling. Auditor files live only on integration reference d8; optional cache reuse is unnecessary for reproduction.",
+    "substitutions": {
+      "original_ref": "clean worktree at ed4e0a4fc73738de9e03cf50abde672fdd413a40",
+      "audit_ref": "clean worktree at d8ab06f62daac8d5dbcff3624f64fdcd6eed6146 with frozen integration-only auditor",
+      "cut": "clean worktree at cuts[LAYER].commit",
+      "out": "new writable artifact directory",
+      "LAYER": "one of the eight cut keys",
+      "pr": "recorded PR number",
+      "focused_docs...": "expand the array named by this cut focused_doc_set",
+      "python_prefix...": "expand the python_prefix argv array",
+      "paired_pr6_roots...": "for every pr6_contract_resolution.paired_import_roots module, append --root MODULE"
+    },
+    "environment": {
+      "UV_CACHE_DIR": "{out}/uv-cache",
+      "UV_OFFLINE": "true",
+      "UV_PYTHON_DOWNLOADS": "never"
+    },
+    "preconditions": "Pinned Lean4.36/Python3.12 and cached dependencies are required for offline commands. Run in the cut worktree; capture runs inside its explicit worktree argument.",
+    "module_lists": "Write each cut contract_modules array one module per line to out/modules-LAYER.txt; sorted union is out/modules-all.txt (64 unique modules). Build original_ref and audit_ref before captures.",
+    "logs": "Capture build output to out/build.log and full lake test output to out/lake-test.log; require exit0 and both warning commands. Build each named_formal_tests array. Use an empty focused-doc allowlist. Full AX sweeps below cover all declarations and subsume the recorded targeted headline checks; original probe scripts/logs are bound by the immutable validator reports.",
+    "source_and_pin_checks": "Verify exact HEAD/tree/base and eight pin/baseline hashes; run git diff --check. Recheck clean unchanged source/docs/index after validation. Independent source review covers ownership and the two exact deferred/restored comments.",
+    "commands": {
+      "all_Lean_libraries": ["lake","build","ToMathlib","VCVio","LatticeCrypto","Extern","HashSig","Examples","VCVioTest","LatticeCryptoTest","HashSigTest","VCVioTest.Smoke"],
+      "audit_tools": ["lake","build","axiomsweep","initsweep","docnames","VCVioTest.Quantum.Oracle"],
+      "lint": ["lake","env","uv","run","--no-project","--python","/usr/bin/python3","python","scripts/lint.py","--libraries","ToMathlib,VCVio,LatticeCrypto,Extern,HashSig,Examples","--no-build"],
+      "imports": ["bash","scripts/check-imports.sh"],
+      "boundaries": [
+        ["bash","scripts/check-expose-boundary.sh"],
+        ["bash","scripts/check-polyfun-boundary.sh"],
+        ["bash","scripts/check-extern-isolation.sh"],
+        ["bash","scripts/check-interop-isolation.sh"]
+      ],
+      "static_docs": ["uv","run","--no-project","--python","/usr/bin/python3","python","scripts/check-agent-docs.py"],
+      "retired_names": ["uv","run","--no-project","--python","/usr/bin/python3","python","scripts/check-doc-names.py"],
+      "full_default_suite": ["lake","test"],
+      "production_AXIOMS": ["lake","exe","axiomsweep","--check","--out","{out}/production-axioms.json"],
+      "production_INIT": ["lake","exe","initsweep","--check","--out","{out}/production-inits.json"],
+      "test_AXIOMS": ["lake","exe","axiomsweep","--check","--root","VCVioTest","--root","LatticeCryptoTest","--out","{out}/test-axioms.json"],
+      "test_INIT": ["lake","exe","initsweep","--check","--root","VCVioTest","--root","LatticeCryptoTest","--out","{out}/test-inits.json"],
+      "test_warnings": ["{python_prefix...}","scripts/check-warning-log.py","{out}/lake-test.log","--path-prefix","VCVioTest/","--path-prefix","VCVioTest.lean","--path-prefix","LatticeCryptoTest/","--path-prefix","LatticeCryptoTest.lean","--path-prefix","HashSigTest/","--label","test-library warnings"],
+      "original_contract_capture": ["{python_prefix...}","{audit_ref}/scripts/check-quantum-port-contracts.py","capture","{original_ref}","{out}/original-contracts.json","--root","VCVio","--modules-file","{out}/modules-all.txt"],
+      "cut_contract_capture": ["{python_prefix...}","{audit_ref}/scripts/check-quantum-port-contracts.py","capture","{cut}","{out}/cut-contracts.json","--root","VCVio","--modules-file","{out}/modules-LAYER.txt"],
+      "strict_contract_compare": ["{python_prefix...}","{audit_ref}/scripts/check-quantum-port-contracts.py","compare","{out}/original-contracts.json","{out}/cut-contracts.json","--modules","{out}/modules-LAYER.txt","--out","{out}/comparison.json"],
+      "paired_pr6_capture": {
+        "reference": ["{python_prefix...}","{audit_ref}/scripts/check-quantum-port-contracts.py","capture","{audit_ref}","{out}/pr6-paired-reference.json","{paired_pr6_roots...}","--modules-file","{out}/modules-pr6.txt"],
+        "actual": ["{python_prefix...}","{audit_ref}/scripts/check-quantum-port-contracts.py","capture","{cut}","{out}/pr6-paired-actual.json","{paired_pr6_roots...}","--modules-file","{out}/modules-pr6.txt"],
+        "compare": ["{python_prefix...}","{audit_ref}/scripts/check-quantum-port-contracts.py","compare","{out}/pr6-paired-reference.json","{out}/pr6-paired-actual.json","--modules","{out}/modules-pr6.txt","--out","{out}/pr6-paired-comparison.json"]
+      },
+      "focused_docs": ["{python_prefix...}","scripts/check-doc-names.py","--resolve","--allowlist","{out}/empty-allowlist.txt","--root","VCVio","--root","ToMathlib","--root","LatticeCrypto","--root","HashSig","--root","Examples","--root","Extern","--root","VCVioTest.Quantum.Oracle","{focused_docs...}"],
+      "production_warnings": ["{python_prefix...}","scripts/check-warning-log.py","{out}/build.log","--path-prefix","ToMathlib/","--path-prefix","ToMathlib.lean","--path-prefix","VCVio/","--path-prefix","VCVio.lean","--path-prefix","LatticeCrypto/","--path-prefix","LatticeCrypto.lean","--path-prefix","Extern/","--path-prefix","Extern.lean","--path-prefix","HashSig/","--path-prefix","HashSig.lean","--path-prefix","Examples/","--path-prefix","Examples.lean","--label","production Lean warnings"],
+      "hosted_check_query": ["gh","pr","checks","{pr}","--repo","Verified-zkEVM/VCVio","--json","name,state,link"]
+    },
+    "focused_doc_sets": {
+      "base": ["docs/quantum/README.md","docs/quantum/guide/4-programs-and-runtimes.md","docs/quantum/guide/5-qrom.md","docs/quantum/guide/README.md","docs/quantum/reference/classical-quantum.md","docs/quantum/reference/literature.md"],
+      "time_lock": ["docs/quantum/README.md","docs/quantum/guide/4-programs-and-runtimes.md","docs/quantum/guide/5-qrom.md","docs/quantum/guide/README.md","docs/quantum/reference/classical-quantum.md","docs/quantum/reference/literature.md","docs/quantum/guide/7-time-lock-puzzles.md"]
+    },
+    "python_prefix": ["uv","run","--no-project","--python","3.12","python"],
+    "focused_roots_check": {
+      "implementation": "Explicit --root arguments replace default roots; both proof roots and TestOracle must be supplied.",
+      "command_record": {
+        "path": "/tmp/qrom-split-v3-focused-doc-command.json",
+        "sha256": "abc9f343b9b780711720903d0d8da7beb27e56bc376b356b1a87911f923bc6c3"
+      },
+      "recheck_log": {
+        "path": "/tmp/qrom-split-v3-focused-doc-reproduction.log",
+        "sha256": "7dff094b88e342d70ff7da9e351afed00d2c1ff99e3a640d4acaa1fb247f9bef"
+      },
+      "original_success_log_sha256": "7dff094b88e342d70ff7da9e351afed00d2c1ff99e3a640d4acaa1fb247f9bef",
+      "exit_code": 0,
+      "resolved": 175,
+      "unresolved": 0,
+      "documents": 7,
+      "new_compilation_jobs": 0,
+      "full_suite_repeated": false
+    }
+  },
+  "common_gate_metrics": {
+    "pair_order": ["production","test"],
+    "axiom_taint": 0,
+    "initializer_blind_spots": 0,
+    "initializer_flags": [7,2],
+    "all_flags_preexisting_baseline_accepted": true,
+    "compiler_literals": [1470,21],
+    "lint_baseline_entries": 127,
+    "Lean_warnings": 0,
+    "unresolved_focused_names": 0,
+    "focused_allowlist_empty": true,
+    "default_executables": 34,
+    "CSV_check": "Lean regeneration, exhaustive surjections and18 exact rational coefficients PASS",
+    "hosted_all_eight": "All9 distinct checks COMPLETED SUCCESS at expected heads/base branches, MERGEABLE/CLEAN at the recorded snapshot time."
+  },
+  "metric_columns": ["build_jobs","suite_jobs","production_axiom_declarations","production_modules","test_axiom_declarations","test_modules","production_initializer_constants","production_values_evaluated","test_initializer_constants","test_values_evaluated","focused_doc_tokens","targeted_headline_checks"],
+  "hosted_snapshot": {
+    "path": "/tmp/qrom-all-pr-hosted-final.json",
+    "sha256": "e62cdd2ac29550e8d71dba18f4bd3c3f69c466205e5016620b0fd82e03878001",
+    "checked_at": "2026-11-19T18:45:01.599Z",
+    "repository": "Verified-zkEVM/VCVio",
+    "PRs": [1188,1190,1191,1192,1193,1194,1195,1196],
+    "all_expected_head_commits_and_branches_match": true,
+    "all_base_branches_match_recorded_graph": true,
+    "checks_per_PR": 9,
+    "all_checks_status": "COMPLETED",
+    "all_checks_conclusion": "SUCCESS",
+    "all_mergeable": "MERGEABLE",
+    "all_merge_state": "CLEAN",
+    "check_names": ["Build Project","Check Agent Documentation","Check Interop TCB Isolation","Check Library File Imports","Downstream Consumer Build (no submodules)","Interop Bridges","Lint","Lint Style","summarize"],
+    "final_PR1196_main_run": 44588261342,
+    "final_PR1196_build_job_url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44588261342/job/135786992345",
+    "capture_command_template": ["gh","pr","view","{pr}","--repo","Verified-zkEVM/VCVio","--json","number,url,headRefOid,headRefName,baseRefName,mergeable,mergeStateStatus,statusCheckRollup"]
+  },
+  "historical_report_snapshot": {
+    "path": "/tmp/parallel-qrom-split-validation.v3.draft.json",
+    "sha256": "832c2588d3f276197c75d5a80db1a90473eb643839b82d2d47ef7a707255b46c",
+    "independent_review": {
+      "path": "/tmp/parallel-qrom-split-validation-v3-independent-fix-review.json",
+      "sha256": "9c1033538ad4ee3e71ecd6a9feb993fbda5a2b5cfe2606ba86bf2c7626d4138b"
+    },
+    "preserved_unchanged": true
+  }
+}
