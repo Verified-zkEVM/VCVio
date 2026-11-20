@@ -274,4 +274,5 @@ public import VCVioTest.UniversePolymorphism
 public import VCVioTest.Unpredictability
 public import VCVioTest.UntilBadBind
 public import VCVioTest.VCGenAmbiguity
+public import VCVioTest.WeightedCap
 public import VCVioTest.WriterCostStateT

@@ -502,6 +502,7 @@ public import VCVio.OracleComp.QueryTracking.Structures
 public import VCVio.OracleComp.QueryTracking.SubSpec
 public import VCVio.OracleComp.QueryTracking.Tracing.Core
 public import VCVio.OracleComp.QueryTracking.Unpredictability
+public import VCVio.OracleComp.QueryTracking.WeightedCap
 public import VCVio.OracleComp.QueryTracking.WriterCost
 public import VCVio.OracleComp.QueryTracking.WriterCost.StateT
 public import VCVio.OracleComp.ReachableWhen
