@@ -54,23 +54,41 @@ public section
 
 open SignatureAlg
 
+/-- The SHAKE-128s public seed and hypertree root. -/
 abbrev PK := PublicKeyCore FIPS205.core
+/-- The SHAKE byte oracle with 30-byte answers. -/
 abbrev Raw := shakeSpec FIPS205.params
+/-- The structured public-hash and message-PRF oracle interface. -/
 abbrev H := hashSpec FIPS205.core
+/-- The external game interface for uniform sampling and SHAKE byte queries. -/
 abbrev R := Game.World FIPS205.Answer
+/-- A phase-tagged external query or a signing attempt with its original request. -/
 abbrev Ev := SigningView.Event R Message
+/-- The observation port for external queries and signing attempts. -/
 abbrev O := ObsSpec Ev
+/-- Uniform sampling, structured hashing and raw SHAKE queries. -/
 abbrev Native := unifSpec + (H + Raw)
+/-- The native interface together with its external observations. -/
 abbrev Common := Native + O
+/-- The honest derivation interface together with raw SHAKE queries. -/
 abbrev DNative := deriveSpec FIPS205.core + Raw
+/-- The derivation and raw-query interface together with its external observations. -/
 abbrev DCommon := DNative + O
+/-- A signing service returning an encoded signature on acceptance and none on rejection. -/
 abbrev Sign := Message →ₒ Option (List Byte)
+/-- The byte forgery, chronological signing replies and verifier decision. -/
 abbrev RawOutcome := SigningView.Outcome Message (List Byte) (Option (List Byte))
+/-- The two public-key values from secret-free key generation together with the raw outcome. -/
 abbrev Full := (PK × PK) × RawOutcome
+/-- Accumulated work and admitted signing attempts, paired with the guard's abort flag. -/
 abbrev Paid := (Nat × Nat) × Bool
+/-- The recorded marker cost and current signing-experiment phase. -/
 abbrev Meta := Nat × SigningView.Phase
+/-- The labelled SHAKE-128s interface for derivations and node cells. -/
 abbrev Lab := labSpec FIPS205.core
+/-- The labelled interface extended with the client's raw SHAKE queries. -/
 abbrev A := Lab + Raw
+/-- The labelled and raw-query interface together with its external observations. -/
 abbrev LabCommon := A + O
 
 /-- The actual structured-to-byte FIPS oracle encoding at a fixed public seed. -/

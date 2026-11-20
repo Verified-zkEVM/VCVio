@@ -181,7 +181,7 @@ theorem guardQueryBudget_counts_le_caps
   exact simulateQ_run_preservesInv _ P hinv program _ (by simp [P]) result hresult
 
 private def sourceCounted {ι Cache C : Type} {spec : OracleSpec.{0, 0} ι}
-    [AddMonoid C] [Preorder C] [CanonicallyOrderedAdd C] [DecidableLE C]
+    [Add C] [LE C] [DecidableLE C]
     (caps : C) (cost : spec.Domain → C)
     (handler : QueryImpl spec (StateT Cache ProbComp)) :
     QueryImpl spec (StateT (Cache × (C × Bool)) ProbComp) :=
@@ -190,7 +190,7 @@ private def sourceCounted {ι Cache C : Type} {spec : OracleSpec.{0, 0} ι}
     (proposed, observed.2 || decide (¬(proposed ≤ caps)))
 
 private theorem source_agrees {ι Cache C : Type} {spec : OracleSpec.{0, 0} ι}
-    [AddMonoid C] [Preorder C] [CanonicallyOrderedAdd C] [DecidableLE C]
+    [Add C] [LE C] [DecidableLE C]
     (caps : C) (cost : spec.Domain → C)
     (handler : QueryImpl spec (StateT Cache ProbComp))
     (fallback : (input : spec.Domain) → spec.Range input) :
@@ -217,7 +217,7 @@ private theorem source_agrees {ι Cache C : Type} {spec : OracleSpec.{0, 0} ι}
       simpa only [hf, hb, Bool.false_or] using heq
 
 private theorem source_bad_persists {ι Cache C : Type} {spec : OracleSpec.{0, 0} ι}
-    [AddMonoid C] [Preorder C] [CanonicallyOrderedAdd C] [DecidableLE C]
+    [Add C] [LE C] [DecidableLE C]
     (caps : C) (cost : spec.Domain → C)
     (handler : QueryImpl spec (StateT Cache ProbComp))
     (fallback : (input : spec.Domain) → spec.Range input) :
@@ -254,7 +254,7 @@ private theorem source_bad_counts {ι Cache C : Type} {spec : OracleSpec.{0, 0} 
   · exact hnew hcap
 
 private theorem source_run_cost {ι α Cache C : Type} {spec : OracleSpec.{0, 0} ι}
-    [AddMonoid C] [Preorder C] [CanonicallyOrderedAdd C] [DecidableLE C]
+    [AddMonoid C] [LE C] [DecidableLE C]
     (caps : C) (cost : spec.Domain → C)
     (handler : QueryImpl spec (StateT Cache ProbComp))
     (program : OracleComp spec α) (cache : Cache) (counts : C) (flag : Bool) :
