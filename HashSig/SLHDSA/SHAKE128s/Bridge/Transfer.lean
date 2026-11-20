@@ -360,6 +360,17 @@ unlabelling its hash queries and forwarding its signing requests. -/
     Game.Adversary A PKA where
   main pk := simulateQ (unlabelAdversary e) (adversary.main (b.pk pk))
 
+/-- A recovery map for the source public key lets the adapter represent every source adversary. -/
+theorem adapt_surjective_of_leftInverse (b : SchemeBridge e SA SB) (recover : PKB → PKA)
+    (hpk : Function.LeftInverse recover b.pk) : Function.Surjective (adapt b) := by
+  rintro ⟨main⟩
+  refine ⟨⟨fun pk => simulateQ (unlabelAdversary e.symm) (main (recover pk))⟩, ?_⟩
+  apply congrArg Game.Adversary.mk
+  funext pk
+  change simulateQ _ (simulateQ _ (main (recover (b.pk pk)))) = main pk
+  rw [hpk, QueryImpl.simulateQ_simulateQ_eq_of_apply (impl := QueryImpl.id' _), simulateQ_id']
+  rintro ((n | input) | request) <;> simp [unlabelAdversary, QueryImpl.id', Functor.map_map]
+
 /-- The relabelled adversary's phase of the adapted adversary against the `A` scheme is the
 adversary's phase against the `B` scheme, with the corresponding keys. -/
 theorem simulateQ_relabel_adversaryPhase (b : SchemeBridge e SA SB)
@@ -458,5 +469,18 @@ theorem hasSecurityBits_of_bridge (b : SchemeBridge e SA SB)
   refine h q hq (adapt b adversary) ?_ ?_
   · exact (hE.prEvent_eq _).symm.trans hlimit
   · exact (hE.prEvent_eq _).symm.trans hbound
+
+/-- The two representations have the same security bits in every counting mode when source public
+keys can be recovered and the answer equivalence preserves sampling. -/
+theorem hasSecurityBits_iff_of_leftInverse (b : SchemeBridge e SA SB) (recover : PKB → PKA)
+    (hpk : Function.LeftInverse recover b.pk)
+    (he : (e <$> ($ᵗ A : ProbComp A)) =ᵈ ($ᵗ B : ProbComp B))
+    {Z : Finset Unforgeability.QueryKind} {bits : ℕ} :
+    Game.HasSecurityBits SB Z bits ↔ Game.HasSecurityBits SA Z bits := by
+  refine ⟨fun bound q positive adv lifetime budget => ?_, hasSecurityBits_of_bridge b he⟩
+  obtain ⟨wire, rfl⟩ := adapt_surjective_of_leftInverse b recover hpk adv
+  have same := experiment_evalDistEq b he wire
+  exact (same.prEvent_eq _).symm.trans_le
+    (bound q positive wire ((same.prEvent_eq _).trans lifetime) ((same.prEvent_eq _).trans budget))
 
 end SLHDSA.SHAKE128s.Bridge

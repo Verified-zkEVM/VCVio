@@ -211,10 +211,9 @@ theorem structuralEquiv_address (node : Graph.StructuralNode p128) :
         CanonicalGraph.ForsKey.address, Wots.secretAddress, Wots.publicKeyAddress,
         Merkle.wotsAddress, Fors.secretAddress, Hypertree.address, Address.setTypeAndClear,
         BitVec.toNat_ofNat]
-      all_goals
-        simp only [layers, totalHeight, subtreeHeight, forsHeight, forsTrees, chains,
-          messageDigits, checksumDigits, n, winternitzBits, w] at *
-      all_goals apply Adrs.ext <;>
+      simp only [layers, totalHeight, subtreeHeight, forsHeight, forsTrees, chains,
+        messageDigits, checksumDigits, n, winternitzBits, w] at *
+      apply Adrs.ext <;>
         norm_num [AddressType.toAddrType, AddrType.toCode] at * <;> omega
 
 end SLHDSA.SHAKE128s.Bridge.GraphStructure
