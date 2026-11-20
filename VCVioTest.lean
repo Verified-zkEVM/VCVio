@@ -216,6 +216,7 @@ public import VCVioTest.RandomOraclePairedGraphReadback
 public import VCVioTest.RandomOraclePairedValue
 public import VCVioTest.RandomOracleReadSet
 public import VCVioTest.RandomOracleRedirect
+public import VCVioTest.RandomOracleRegisteredCost
 public import VCVioTest.RandomOracleRegisteredTarget
 public import VCVioTest.RandomOracleRelabel
 public import VCVioTest.RandomOracleRouting

@@ -485,6 +485,7 @@ public import VCVio.OracleComp.QueryTracking.RandomOracle.JointPotential.EagerSu
 public import VCVio.OracleComp.QueryTracking.RandomOracle.JointPotential.Subgraph
 public import VCVio.OracleComp.QueryTracking.RandomOracle.LoggedRun
 public import VCVio.OracleComp.QueryTracking.RandomOracle.MarkedReplies
+public import VCVio.OracleComp.QueryTracking.RandomOracle.MarkedReplies.Cost
 public import VCVio.OracleComp.QueryTracking.RandomOracle.MarkedReplies.Registration
 public import VCVio.OracleComp.QueryTracking.RandomOracle.PairedValue
 public import VCVio.OracleComp.QueryTracking.RandomOracle.PairedValue.GraphCost
