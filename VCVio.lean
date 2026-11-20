@@ -483,6 +483,7 @@ public import VCVio.OracleComp.QueryTracking.RandomOracle.JointPotential.Subgrap
 public import VCVio.OracleComp.QueryTracking.RandomOracle.LoggedRun
 public import VCVio.OracleComp.QueryTracking.RandomOracle.PairedValue
 public import VCVio.OracleComp.QueryTracking.RandomOracle.PairedValue.GraphCost
+public import VCVio.OracleComp.QueryTracking.RandomOracle.PairedValue.GraphReadback
 public import VCVio.OracleComp.QueryTracking.RandomOracle.PairedValue.Presence
 public import VCVio.OracleComp.QueryTracking.RandomOracle.PairedValue.ProjectedHits
 public import VCVio.OracleComp.QueryTracking.RandomOracle.ProbeEps
