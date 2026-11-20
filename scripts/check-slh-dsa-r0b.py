@@ -31,7 +31,8 @@ ALLOWED_AXIOMS = {"propext", "Classical.choice", "Quot.sound"}
 HISTORICAL_SCHEME_SOURCE = "HashSig/SLHDSA/SHAKE128s/Statement/Scheme.lean"
 # Explicit compiler owner/client retain the original executable canary.
 COMPILER_SOURCE = "HashSigTest/SLHDSA/SHAKE128s/Compiler.lean"
-COMPILER_OWNER = "ToMathlib/Compiler/FinCases.lean"
+COMPILER_EXPORT = "ToMathlib/Compiler/FinCases.lean"
+COMPILER_OWNER = ".lake/packages/PolyFun/ToCslib/Data/Fin/Cases.lean"
 COMPILER_OWNER_MODULE = "ToMathlib.Compiler.FinCases"
 COMPILER_RULE = "Fin.cases_eq_casesDirect"
 COMPILER_MAIN = "def main : IO Unit := SLHDSA.SHAKE128s.CompilerTest.check"
@@ -339,16 +340,19 @@ def test_driver(source: str) -> str:
     return source.split(marker, 1)[1].split("/-- ML-KEM test executable", 1)[0]
 
 
-def driver_scaffold(driver: str) -> str:
-    """Allow additive standalone unprotected exe entries; retain every other source byte."""
-    result = []
-    pattern = re.compile(r'\s*#\["exe", "([A-Za-z0-9_]+)"\],?\s*')
-    for line in driver.splitlines(keepends=True):
-        match = pattern.fullmatch(line)
-        if match and match[1] not in RUNTIMES:
-            continue
-        result.append(line)
-    return "".join(result)
+def driver_bindings(driver: str) -> tuple[list[str], str]:
+    """Read the ordinary (non-FFI) executables and isolate their build/run control flow."""
+    header = "  let mut exes : Array String := #["
+    if driver.count(header) != 1:
+        raise ValueError("Expected one ordinary executable list")
+    before, tail = driver.split(header)
+    entries, separator, after = tail.partition("]")
+    if not separator or not re.fullmatch(r'\s*"[a-z0-9_]+"(?:\s*,\s*"[a-z0-9_]+")*\s*', entries):
+        raise ValueError("The ordinary executable list must contain literal target names")
+    names = re.findall(r'"([a-z0-9_]+)"', entries)
+    if len(names) != len(set(names)):
+        raise ValueError("The ordinary executable list contains a duplicate")
+    return names, before + header + "]" + after
 
 
 def target_binding(source: str, name: str) -> dict:
@@ -391,11 +395,10 @@ def check_current_compiler() -> dict:
                           source, re.MULTILINE)]
     if imports != [COMPILER_OWNER_MODULE, "HashSig.SLHDSA.SHAKE128s.Statement.Scheme"]:
         raise ValueError("Compiler client must import the explicit owner and actual Scheme client")
-    owner_imports = [line.split("--", 1)[0].strip() for line in
-                     re.findall(r"^(?:(?:public|meta)[ \t]+)*import[ \t]+([^\n]+)$",
-                                owner.decode(), re.MULTILINE)]
-    if owner_imports != ["Mathlib.Data.Fin.Basic"]:
-        raise ValueError("Compiler owner must retain its explicit finite-index dependency")
+    export = (ROOT / COMPILER_EXPORT).read_text()
+    export_imports = re.findall(r"^(?:(?:public|meta)[ \t]+)*import[ \t]+[^\n]+$", export, re.MULTILINE)
+    if export_imports != ["public import ToCslib.Data.Fin.Cases"]:
+        raise ValueError("The compatibility module must publicly import the pinned PolyFun rules")
     start = "namespace SLHDSA.SHAKE128s.CompilerTest\n"
     end = "end SLHDSA.SHAKE128s.CompilerTest\n"
     if source.count(start) != 1 or source.count(end) != 1:
@@ -476,17 +479,14 @@ def check_bindings(bindings: dict) -> list[str]:
     for name, expected in targets.items():
         if target_binding(lakefile, name) != expected:
             raise ValueError(f"Protected target root/srcDir changed: {name}")
-    if r0a.sha256(driver_scaffold(driver).encode()) != bindings["driverScaffoldSha256"]:
-        raise ValueError("The protected test-driver control-flow scaffold changed")
-    for name in sorted(RUNTIMES):
-        pattern = r'#\[\s*"exe"\s*,\s*"' + re.escape(name) + r'"\s*\]'
-        if len(re.findall(pattern, driver)) != 1:
-            raise ValueError(f"Ordinary lake test must register {name} exactly once")
+    names, scaffold = driver_bindings(driver)
+    if r0a.sha256(scaffold.encode()) != bindings["driverScaffoldSha256"]:
+        raise ValueError("The protected test-driver control flow changed")
+    missing = (RUNTIMES | {WOTS_RUNTIME}) - set(names)
+    if missing:
+        raise ValueError(f"Missing ordinary runtime executables: {sorted(missing)}")
     if target_binding(lakefile, WOTS_RUNTIME) != WOTS_TARGET:
         raise ValueError("The WOTS integration runtime root/srcDir changed")
-    wots_registration = r'#\[\s*"exe"\s*,\s*"' + WOTS_RUNTIME + r'"\s*\]'
-    if len(re.findall(wots_registration, driver)) != 1:
-        raise ValueError("Ordinary lake test must register the WOTS integration runtime exactly once")
     if len(re.findall(r'"scripts/check-slh-dsa-r0b\.py"', driver)) != 1:
         raise ValueError("Ordinary lake test must register its R0b tail gate exactly once")
     csv = ROOT / "docs/design/slh-dsa-security-bounds.csv"
@@ -513,8 +513,8 @@ def check_axioms(names: list[str], report: Path, steps: list[dict]) -> None:
             raise ValueError(f"Nonstandard axioms in {name}: {sorted(axioms - ALLOWED_AXIOMS)}")
 
 
-def check_current_pins(current: dict, historical: dict) -> None:
-    """Check the current lock while retaining the historical evaluator requirement."""
+def check_current_pins(current: dict, toolchain: str) -> None:
+    """Check each dependency checkout against the manifest and the reviewed toolchain."""
     manifest_bytes = (ROOT / "lake-manifest.json").read_bytes()
     packages = json.loads(manifest_bytes)["packages"]
     revisions = {}
@@ -529,7 +529,7 @@ def check_current_pins(current: dict, historical: dict) -> None:
         raise ValueError("The dependency frame does not cover exactly the current lock")
     r0a.check_pins(current, {
         "manifestSha256": r0a.sha256(manifest_bytes),
-        "toolchain": historical["toolchain"],
+        "toolchain": toolchain,
         "dependencyRevisions": revisions,
     })
 
@@ -549,10 +549,10 @@ def verify(report: Path, steps: list[dict]) -> dict:
     witness_names = [entry["witness"] for entry in contracts]
     if len(set(source_names)) != len(contracts) or len(set(witness_names)) != len(contracts):
         raise ValueError("A current strength source or witness occurs more than once")
-    check_current_pins(before, baseline)
+    check_current_pins(before, bindings["toolchain"])
     version_log = report / "lean-version.log"
-    execute(["lake", "env", "lean", "--version"], version_log, steps)
-    if version_log.read_text().strip() != baseline["leanVersionOutput"]:
+    execute(["lake", "env", "lean", "--githash"], version_log, steps)
+    if version_log.read_text().strip() != bindings["leanCommit"]:
         raise ValueError("The actual commit-bearing Lean evaluator changed")
     execute(["lake", "build", MODULE, r0a.CAPTURE_MODULE, r0a.STRENGTH_MODULE,
              WOTS_JOINT_MODULE, COMPILER_OWNER_MODULE], report / "build.log", steps)

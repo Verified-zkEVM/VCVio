@@ -268,7 +268,7 @@ section verifyCostAccounting
 variable (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
 variable [FinEnum Chal] [Inhabited Chal] [Inhabited Resp]
   (hr : GenerableRelation Stmt Wit rel) (S : ℕ)
-  [DecidableEq M] [MonadAttach m] [ExactMonadAttach m]
+  [MonadAttach m] [ExactMonadAttach m]
 
 /-- Fischlin verification makes at most `ρ` random-oracle queries under unit-cost
 instrumentation. -/
@@ -379,7 +379,7 @@ section signCostAccounting
 variable (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
 variable [FinEnum Chal] [Inhabited Chal] [Inhabited Resp]
   (hr : GenerableRelation Stmt Wit rel) (S : ℕ)
-  [DecidableEq M] [MonadAttach m] [ExactMonadAttach m]
+  [MonadAttach m] [ExactMonadAttach m]
 
 /-- Fischlin signing makes at most `ρ * |Ω|` random-oracle queries under unit-cost
 instrumentation. -/
@@ -614,7 +614,7 @@ section expectedQueryCost
 variable (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
 variable [FinEnum Chal] [Inhabited Chal] [Inhabited Resp]
   (hr : GenerableRelation Stmt Wit rel) (S : ℕ)
-  [DecidableEq M] [EvalDistSemantics m] [LawfulEvalDistSemantics m] [MonadAttach m]
+  [EvalDistSemantics m] [LawfulEvalDistSemantics m] [MonadAttach m]
   [ExactMonadAttach m]
 
 /-- Fischlin signing has expected weighted query cost at most `ρ • (|Ω| • w)` whenever every
@@ -658,7 +658,7 @@ section losslessExpectedQueries
 variable (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
 variable [FinEnum Chal] [Inhabited Chal] [Inhabited Resp]
   (hr : GenerableRelation Stmt Wit rel) (S : ℕ)
-  [DecidableEq M] [EvalDistSemantics m] [LawfulEvalDistSemantics m] [MonadAttach m]
+  [EvalDistSemantics m] [LawfulEvalDistSemantics m] [MonadAttach m]
   [ExactMonadAttach m]
 
 /-- Fischlin verification has expected query count exactly `ρ` in the unit-cost runtime model. -/

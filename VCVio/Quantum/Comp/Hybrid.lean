@@ -5,9 +5,12 @@ Authors: Quang Dao
 -/
 
 module
+public import QuantumFoundations.MatrixMap.Conjugation
+public import QuantumFoundations.SubInstrument
 public import VCVio.Quantum.Comp.QueryMass
 public import VCVio.Quantum.Comp.Simulation
-public import VCVio.Quantum.Comp.Subsystem
+public import QuantumFoundations.SubInstrument.Subsystem
+public import QuantumFoundations.DSubInstrument.Relabel
 public import QuantumFoundations.MatrixMap.Kraus
 public import QuantumFoundations.MatrixMap.Norm
 
@@ -189,17 +192,6 @@ theorem posSemidef_one_sub_sum_ctrl {α : Type*} (s : Finset α)
   rw [h]
   exact (h₀.conjTranspose_mul_mul_same _).add (h₁.conjTranspose_mul_mul_same _)
 
-/-- The Kraus operators of a subinstrument whose branches are Kraus maps have
-`1 - ∑ r ∈ s, (K r)ᴴ * K r` positive semidefinite on every finite set of outcomes. -/
-theorem _root_.Quantum.SubInstrument.posSemidef_one_sub_sum_of_branch_eq_conj {A B α : Type*}
-    [Fintype A] [Fintype B] [DecidableEq A] (p : SubInstrument A B α) {K : α → Matrix B A ℂ}
-    (hK : ∀ r, p.branch r = MatrixMap.conj (K r)) (s : Finset α) :
-    (1 - ∑ r ∈ s, (K r)ᴴ * K r).PosSemidef := by
-  have h := p.isTNI_sum s
-  simp_rw [hK] at h
-  rw [← Finset.sum_coe_sort s] at h ⊢
-  exact MatrixMap.isTNI_sum_conj_iff.mp h
-
 /-- The controlled step: the subinstrument with branches `conj (ctrl (K₀ r) (K₁ r))`. -/
 @[expose]
 noncomputable def ctrlStep {α : Type*} (K₀ K₁ : α → Matrix (O × D) (J × D) ℂ)
@@ -227,39 +219,10 @@ theorem branchDist_tsum {ι : Type*} {f : ι → Matrix (Y × (D × Bool)) (Y ×
     (hf : Summable f) (hpos : ∀ b, (f b).PosSemidef) :
     branchDist (∑' b, f b) = ∑' b, branchDist (f b) := by
   rw [branchDist, MatrixMap.map_tsum _ hf]
-  exact ofReal_trace_re_tsum (MatrixMap.summable_comp _ hf)
+  exact Matrix.ofReal_trace_re_tsum (MatrixMap.summable_comp _ hf)
     fun b ↦ (hpos b).mul_mul_conjTranspose_same _
 
 end Hybrid
-
-namespace MatrixMap
-
-variable {A B R S : Type*} [Fintype A] [Fintype B] [Fintype R]
-
-/-- Kraus maps of `1 ⊗ K` commute with amplification on the left factor. -/
-theorem conj_one_kronecker_amplify_apply [DecidableEq A] [DecidableEq B] (K : Matrix S R ℂ)
-    (Φ : MatrixMap A B)
-    (Z : Matrix (A × R) (A × R) ℂ) :
-    conj ((1 : Matrix B B ℂ) ⊗ₖ K) (Φ.amplify R Z) =
-      Φ.amplify S (conj ((1 : Matrix A A ℂ) ⊗ₖ K) Z) := by
-  rw [← amplifyLeft_conj, ← amplifyLeft_conj, ← LinearMap.comp_apply,
-    ← amplify_comp_amplifyLeft, LinearMap.comp_apply]
-
-/-- The trace of a Kraus map of `X ⊗ 1` is the trace of the Kraus map of `X` on the partial
-trace. -/
-theorem trace_conj_kronecker_one_apply [DecidableEq R] (X : Matrix B A ℂ)
-    (Z : Matrix (A × R) (A × R) ℂ) :
-    (conj (X ⊗ₖ (1 : Matrix R R ℂ)) Z).trace = (conj X (traceRight A R Z)).trace := by
-  rw [← amplify_conj, ← trace_traceRight, ← LinearMap.comp_apply, traceRight_comp_amplify,
-    LinearMap.comp_apply]
-
-omit [Fintype A] [Fintype B] in
-theorem mul_kronecker_one {C : Type*} [Fintype C] [DecidableEq R] (X : Matrix B C ℂ)
-    (Y : Matrix C A ℂ) :
-    (X * Y) ⊗ₖ (1 : Matrix R R ℂ) = (X ⊗ₖ (1 : Matrix R R ℂ)) * (Y ⊗ₖ (1 : Matrix R R ℂ)) := by
-  rw [← mul_kronecker_mul, Matrix.one_mul]
-
-end MatrixMap
 
 namespace Hybrid
 
@@ -366,7 +329,7 @@ theorem krausWeight_le {D : QReg}
     {σ : Matrix (spec.In i × D) (spec.In i × D) ℂ} (hσ : σ.PosSemidef) :
     krausWeight F i σ ≤ (∑' r, ENNReal.ofReal (‖F i r‖ ^ 2)) * ENNReal.ofReal σ.trace.re := by
   rw [krausWeight, ← ENNReal.tsum_mul_right]
-  refine ENNReal.tsum_le_tsum fun r ↦ ?_
+  refine tsum_le_tsum fun r ↦ ?_
   rw [← ENNReal.ofReal_mul (sq_nonneg _)]
   exact ENNReal.ofReal_le_ofReal (MatrixMap.re_trace_conj_le _ hσ)
 
@@ -398,7 +361,7 @@ theorem tsum_rpow_inv_two_queryWeight_le_of_isQueryBound (R : QuantumRuntime spe
         norm_num
     _ ≤ _ := by
         gcongr
-        exact ENNReal.sum_le_tsum _
+        exact sum_le_tsum _
 
 /-! ## The controlled runtime -/
 
@@ -483,14 +446,16 @@ theorem tsum_dist_queryStep_le (i : spec.Port) (E : QReg) (ℓ : A ≃ spec.In i
         (MatrixMap.conj (U i r - W i r)
           (callInput ℓ D (MatrixMap.conj (sel A false) Γ))).trace := by
     intro r
-    rw [MatrixMap.mul_kronecker_one, MatrixMap.conj_mul, LinearMap.comp_apply,
+    rw [← Matrix.mul_one (1 : Matrix E E ℂ), mul_kronecker_mul, MatrixMap.conj_mul,
+      LinearMap.comp_apply,
       MatrixMap.trace_conj_kronecker_one_apply, ← MatrixMap.amplify_conj (sel (spec.In i) false)]
     simp only [conj_sel, h₀in]
     rfl
   have hb : ∀ r, (MatrixMap.conj ((W i r * seld (spec.In i)) ⊗ₖ (1 : Matrix E E ℂ)) Γ').trace =
       (((s₁ i).frame E).branch r Γm).trace := by
     intro r
-    rw [MatrixMap.mul_kronecker_one, MatrixMap.conj_mul, LinearMap.comp_apply,
+    rw [← Matrix.mul_one (1 : Matrix E E ℂ), mul_kronecker_mul, MatrixMap.conj_mul,
+      LinearMap.comp_apply,
       ← MatrixMap.amplify_conj (seld (spec.In i)), ← MatrixMap.amplify_conj (W i r),
       DSubInstrument.branch_frame_apply, hW, hΓm]
     simp only [conj_seld, hdin]
@@ -532,7 +497,7 @@ theorem rpow_inv_two_tsum_dist_run_le (x : QuantumComp L spec X A)
         (fun b ↦ ((ctrlRuntime σ hU hW).run I (k b)).isCPTNIFamily) p).summable_apply Γ)
         fun b ↦ ((ctrlRuntime σ hU hW).run I (k b)).posSemidef_branch_apply p (hΓb b)
     simp only [hL, queryWeight_primBind]
-    rw [ENNReal.tsum_comm]
+    rw [tsum_comm]
     refine (rpow_inv_two_tsum_le_of_le_add_tsum fun b ↦ ih b (hΓb b)).trans
       (add_le_add (ENNReal.rpow_le_rpow ?_ (by norm_num)) (le_of_eq ?_))
     · calc ∑' b, branchDist (((I o).frame (ctrlRuntime σ hU hW).D).branch b Γ)
@@ -567,9 +532,10 @@ theorem rpow_inv_two_tsum_dist_run_le (x : QuantumComp L spec X A)
       rw [conj_sel, conj_sel]
       exact h.symm
     simp only [hL]
-    rw [ENNReal.tsum_comm]
+    rw [tsum_comm]
     refine (rpow_inv_two_tsum_le_of_le_add_tsum fun r ↦ ih r (hΓr r)).trans ?_
-    conv_rhs => rw [tsum_eq_zero_add' ENNReal.summable, queryWeight_queryBind_zero, ← add_assoc]
+    conv_rhs =>
+      rw [tsum_eq_zero_add' CompleteLattice.summable, queryWeight_queryBind_zero, ← add_assoc]
     simp only [queryWeight_queryBind_succ, hsel]
     exact add_le_add (tsum_dist_queryStep_le σ hU hW i E ℓ hΓ) le_rfl
 
@@ -586,6 +552,22 @@ variable {D : QReg} {s₀ s₁ : ∀ i, SubInstrument (spec.In i × D) (spec.Out
   (σ₀ σ₁ : SubState D)
   (hU : ∀ i r, (s₀ i).branch r = MatrixMap.conj (U i r))
   (hW : ∀ i r, (s₁ i).branch r = MatrixMap.conj (W i r))
+
+/-- The observable of a set of leaves: the identity on the leaves observed in `s`, zero on the
+others. -/
+private theorem ofReal_trace_mul_indicator {γ : Type*} (f : (Σ u, X u) → γ) (s : Set γ)
+    [DecidablePred (· ∈ s)] (p : Σ u, X u) (M : Matrix (p.1 × D) (p.1 × D) ℂ) :
+    ENNReal.ofReal M.trace.re * s.indicator 1 (f p) =
+      ENNReal.ofReal (MatrixMap.conj
+        (if f p ∈ s then (1 : Matrix (p.1 × D) (p.1 × D) ℂ) else 0) M).trace.re := by
+  by_cases h : f p ∈ s <;> simp [h]
+
+private theorem posSemidef_one_sub_indicator {γ : Type*} (f : (Σ u, X u) → γ) (s : Set γ)
+    [DecidablePred (· ∈ s)] (p : Σ u, X u) :
+    (1 - (if f p ∈ s then (1 : Matrix (p.1 × D) (p.1 × D) ℂ) else 0)ᴴ *
+      (if f p ∈ s then (1 : Matrix (p.1 × D) (p.1 × D) ℂ) else 0)).PosSemidef := by
+  by_cases h : f p ∈ s <;> simp [h, Matrix.PosSemidef.one, Matrix.PosSemidef.zero]
+
 include hU hW
 
 /-- The zero substate, the initial state of the controlled runtime in the proofs: it is never
@@ -685,26 +667,9 @@ theorem rpow_inv_two_tsum_trace_conj_run_le_mass (x : QuantumComp L spec X A)
         ∑' j, (∑' i, (∑' r, ENNReal.ofReal (‖U i r - W i r‖ ^ 2)) *
           (QuantumRuntime.mk D σ₀ s₀).queryMassAt I x ρ i j) ^ (2⁻¹ : ℝ) :=
   (rpow_inv_two_tsum_trace_conj_run_le I σ₀ σ₁ hU hW x O hO hρ).trans <| add_le_add le_rfl <|
-    ENNReal.tsum_le_tsum fun j ↦ ENNReal.rpow_le_rpow
+    tsum_le_tsum fun j ↦ ENNReal.rpow_le_rpow
       ((QuantumRuntime.mk D σ₀ s₀).queryWeight_le_tsum_mul_queryMassAt I _
         (fun i _ hσ ↦ krausWeight_le _ i hσ) x hρ j) (by norm_num)
-
-omit hU hW in
-/-- The observable of a set of leaves: the identity on the leaves observed in `s`, zero on the
-others. -/
-private theorem ofReal_trace_mul_indicator {γ : Type*} (f : (Σ u, X u) → γ) (s : Set γ)
-    [DecidablePred (· ∈ s)] (p : Σ u, X u) (M : Matrix (p.1 × D) (p.1 × D) ℂ) :
-    ENNReal.ofReal M.trace.re * s.indicator 1 (f p) =
-      ENNReal.ofReal (MatrixMap.conj
-        (if f p ∈ s then (1 : Matrix (p.1 × D) (p.1 × D) ℂ) else 0) M).trace.re := by
-  by_cases h : f p ∈ s <;> simp [h]
-
-omit hU hW in
-private theorem posSemidef_one_sub_indicator {γ : Type*} (f : (Σ u, X u) → γ) (s : Set γ)
-    [DecidablePred (· ∈ s)] (p : Σ u, X u) :
-    (1 - (if f p ∈ s then (1 : Matrix (p.1 × D) (p.1 × D) ℂ) else 0)ᴴ *
-      (if f p ∈ s then (1 : Matrix (p.1 × D) (p.1 × D) ℂ) else 0)).PosSemidef := by
-  by_cases h : f p ∈ s <;> simp [h, Matrix.PosSemidef.one, Matrix.PosSemidef.zero]
 
 /-- **The square-root hybrid bound for events** (ePrint 2025/2166, Lemma 5.7, for general
 programs). Two runtimes with the same register and initial state `σ` and steps the Kraus maps

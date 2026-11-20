@@ -9,7 +9,7 @@ module
 public import VCVio.EvalDist.ResumptionMeasure
 import Mathlib.Analysis.SpecificLimits.Basic
 import Mathlib.MeasureTheory.Integral.Lebesgue.Countable
-import ToMathlib.MeasureTheory.DiscreteInstances
+import ToCslib.MeasureTheory.MeasurableSpace.Instances
 
 /-! A continuing rejection sampler and its finite and limiting output laws. -/
 

@@ -132,8 +132,10 @@ theorem queriesUnder_keygenInternal_of_fresh (secretSeed prfSeed publicSeed : Di
     QueriesUnder laterCache
       (Scheme.keygenInternal (m := OracleComp HashSpec) secretSeed prfSeed publicSeed) probe := by
   rw [WarmedSplit.keygenInternal_liftM] at hmem
-  exact queriesUnder_of_fresh_liftM _ initialCache finalCache laterCache keys hmem hlater probe
-    hfresh hpresent
+  -- Support hypotheses are passed through `assumption`, not as terms: elaborating `h` as a term
+  -- puts its type in weak head normal form, which evaluates the whole run it is about.
+  exact queriesUnder_of_fresh_liftM _ initialCache finalCache laterCache keys
+    (by clear * - hmem; assumption) hlater probe hfresh hpresent
 
 /-- **An entry a signing request installed is one the signer consulted.** -/
 theorem queriesUnder_sign_of_fresh (sk : SecretKey) (request : Message)

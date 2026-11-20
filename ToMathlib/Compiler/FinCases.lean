@@ -5,28 +5,11 @@ Authors: Tom Wambsgans
 -/
 
 module
-public import Mathlib.Data.Fin.Basic
+public import ToCslib.Data.Fin.Cases
 
 /-!
-# Direct finite-index elimination for compilation
+# Compiler rules for finite-index elimination
 
-Importing this module installs the proved compiler simplification from `Fin.cases` to
-`Fin.casesDirect`, whose implementation matches the index directly.
+This module exports PolyFun's proved direct implementations of `Fin.cases`, `Fin.cons`
+and `Matrix.vecCons` for compiled finite families.
 -/
-
-public section
-
-namespace Fin
-
-/-- Dependent finite-index elimination by matching its zero and successor constructors. -/
-@[expose] def casesDirect {n : Nat} {motive : Fin (n + 1) → Sort _} (zero : motive 0)
-    (succ : ∀ i : Fin n, motive i.succ) : ∀ i, motive i
-  | ⟨0, hi⟩ => by rwa [Fin.mk_zero]
-  | ⟨i + 1, hi⟩ => succ ⟨i, Nat.lt_of_succ_lt_succ hi⟩
-
-/-- The ordinary eliminator and its direct implementation agree for every dependent motive. -/
-@[csimp] theorem cases_eq_casesDirect : @Fin.cases = @casesDirect := by
-  funext n motive zero succ i
-  rcases i with ⟨_ | i, hi⟩ <;> rfl
-
-end Fin

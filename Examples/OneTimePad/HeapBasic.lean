@@ -12,7 +12,7 @@ public import VCVio.OracleComp.ProbComp.Basic
 public import VCVio.OracleComp.SimSemantics.SimulateQ
 public import VCVio.OracleComp.Constructions.UniformFinMeasure
 public import VCVio.EvalDist.Monad.UniformTable
-public import ToMathlib.Probability.UniformOn
+public import ToCslib.Probability.UniformOn
 public import ToMathlib.Data.FinEnum
 public import Init.Data.UInt.Lemmas
 public import Mathlib.Data.FinEnum

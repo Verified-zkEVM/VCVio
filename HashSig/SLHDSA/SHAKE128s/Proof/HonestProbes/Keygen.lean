@@ -379,7 +379,7 @@ completed walk's cache. -/
 /-- The honest cells, as a finished cache computes them. -/
 @[expose]
 def replayCells (cache : QueryCache HashSpec) (secretSeed publicSeed : Digest) : Cells :=
-  @value (replayQuery cache) secretSeed publicSeed
+  value (replayQuery cache) secretSeed publicSeed
 
 /-- An input is canonical when it is some structural node's own byte input. -/
 @[expose]

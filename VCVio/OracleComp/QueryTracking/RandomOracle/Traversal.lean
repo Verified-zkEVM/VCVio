@@ -133,7 +133,7 @@ theorem evaluate_eq_sample (input : Index → State → Input)
         (hseparated other node (by intro h; subst other; exact hnot hother) otherState state)]
       exact hfresh other (by simp [hother]) otherState
 
-variable [DecidableEq Index] [Fintype Index]
+variable [Fintype Index]
 
 /-- Sampling the traversed coordinates individually is exactly sampling one
 independent complete full-output table and programming the same traversal. -/
@@ -143,6 +143,7 @@ theorem evalDist_sample_eq_uniform_program (input : Index → State → Input)
     sample input step nodes state cache =ᵈ
       ((fun outputs => program input step outputs nodes state cache) <$>
         ($ᵗ (Index → Output) : ProbComp (Index → Output))) := by
+  classical
   induction nodes generalizing state cache with
   | nil =>
       exact (OracleComp.EvalDistEq.map_const _ _).symm

@@ -150,19 +150,19 @@ lemma tsum_prEvent_run_ghostSignDrawBody_mul_length_le_tight (pk : Stmt) (sk : W
                         (M × Commit →ₒ Chal).QueryCache,
                       Pr{let x ← (ghostSignDrawBody ids M pk sk msg n).run re}[x = z] *
                         (z.1.2.length : ℝ≥0∞) := by
-                      rw [← ENNReal.tsum_add]
+                      rw [← tsum_add]
                       exact tsum_congr fun z => by rw [mul_add, mul_one]
                   _ ≤ 1 + S := add_le_add (OracleComp.tsum_prEvent_le_one _) (ih re)
-          refine le_trans (ENNReal.tsum_le_tsum fun oz =>
+          refine le_trans (tsum_le_tsum fun oz =>
             mul_le_mul_right (h_oz oz) _) ?_
           rw [tsum_eq_single (none : Option Resp) fun oz hoz => by
             rw [ite_eq_right hoz, mul_zero]]
           rw [ite_eq_left rfl, mul_comm]
-        refine le_trans (ENNReal.tsum_le_tsum fun ch =>
+        refine le_trans (tsum_le_tsum fun ch =>
           mul_le_mul_right (h_ch ch) _) ?_
         rw [OracleComp.prEvent_bind_eq_tsum, ← ENNReal.tsum_mul_right]
         exact le_of_eq (tsum_congr fun ch => (mul_assoc _ _ _).symm)
-      refine le_trans (ENNReal.tsum_le_tsum fun ws => mul_le_mul_right (h_ws ws) _) ?_
+      refine le_trans (tsum_le_tsum fun ws => mul_le_mul_right (h_ws ws) _) ?_
       calc ∑' ws : Commit × PrvState, Pr{let x ← ids.commit pk sk}[x = ws] *
             (Pr{let x ← (uniformSample Chal >>= fun ch =>
               ids.respond pk sk ws.2 ch)}[x = none] * (1 + S))

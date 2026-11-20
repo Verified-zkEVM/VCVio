@@ -139,11 +139,11 @@ theorem simulateQ_relabel_derive (publicSeed secretSeed : Digest) (a : Address) 
 
 /-- `chainWith` unfolded from its first step: one hash at index `i`, then `s` steps from
 `i + 1`. -/
-theorem chainWith_succ' {Y : Type} {m : Type → Type*} [Monad m]
+theorem chainWith_succ' {Y : Type} {m : Type → Type*} [Monad m] [LawfulMonad m]
     (hash : Adrs → Y → m Y) (adrs : Adrs) (x : Y) (i s : ℕ) :
     chainWith hash adrs x i (s + 1) =
       hash (adrs.setHashAddress i) x >>= fun y => chainWith hash adrs y (i + 1) s := by
-  exact chainWith_head hash adrs x i s
+  exact VCVio.Algorithms.IndexedChain.chainM_succ_left _ i s x
 
 /-- **WOTS+ chains.** The paper's chain of `steps` steps from index `start` is FIPS 205's
 `chainM`, provided every hash index fits its 32-bit field. -/

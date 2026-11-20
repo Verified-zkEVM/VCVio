@@ -325,7 +325,7 @@ theorem ex_map {β γ : Type} (mx : ProbComp β) (g : β → γ) (f : γ → ℝ
 /-- The expectation is monotone in the integrand. -/
 theorem ex_mono {β : Type} (mx : ProbComp β) {f g : β → ℝ≥0∞} (h : ∀ x, f x ≤ g x) :
     ex mx f ≤ ex mx g :=
-  ENNReal.tsum_le_tsum fun x => mul_le_mul' le_rfl (h x)
+  tsum_le_tsum fun x => mul_le_mul' le_rfl (h x)
 
 /-- The expectation depends only on the integrand's values. -/
 theorem ex_congr {β : Type} (mx : ProbComp β) {f g : β → ℝ≥0∞} (h : ∀ x, f x = g x) :
@@ -686,7 +686,7 @@ theorem prob_sensitive_le (auxiliary : ProbComp Aux)
   refine mul_le_mul' ?_ le_rfl
   unfold ex
   rw [ChargedProbe.sum_tsum_comm]
-  refine ENNReal.tsum_le_tsum fun w => ?_
+  refine tsum_le_tsum fun w => ?_
   rw [← Finset.mul_sum]
   refine mul_le_mul' le_rfl ?_
   rw [← Nat.cast_sum]

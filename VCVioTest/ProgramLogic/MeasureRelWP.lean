@@ -5,8 +5,14 @@ Authors: Devon Tuma
 -/
 
 module
-public import VCVio.ProgramLogic.Relational.Measure.Bind
-public import VCVio.ProgramLogic.Relational.Measure.Deterministic
+public import PolyFun.Control.Monad.Measure.Relational.Bind
+public import VCVio.EvalDist.Defs.Measure.Core
+public import ToMathlib.MeasureTheory.Measure.GiryMonad
+public import ToMathlib.MeasureTheory.Measure.Monotone
+public import PolyFun.Control.Monad.Measure.Relational.Deterministic
+public import VCVio.EvalDist.ProbabilityNotation
+public import ToMathlib.Control.Except
+public import ToMathlib.Control.Option
 public import Mathlib.Tactic.GRewrite
 
 /-!

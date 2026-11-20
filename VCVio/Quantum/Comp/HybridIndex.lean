@@ -5,6 +5,7 @@ Authors: Quang Dao
 -/
 
 module
+public import QuantumFoundations.ForMathlib.Analysis.Matrix.Contraction
 public import VCVio.Quantum.Comp.HybridProjected
 
 /-!
@@ -86,41 +87,6 @@ namespace Quantum
 
 namespace Hybrid
 
-/-! ## Blocks and commutation -/
-
-/-- `A ⊗ 1` and `1 ⊗ X` commute: both products are `A ⊗ X`. -/
-theorem kronecker_one_mul_one_kronecker {m n p q : Type*} [Fintype n] [DecidableEq n]
-    [Fintype p] [DecidableEq p] [Fintype m] [DecidableEq m] [Fintype q] [DecidableEq q]
-    (A : Matrix m n ℂ) (X : Matrix p q ℂ) :
-    (A ⊗ₖ (1 : Matrix p p ℂ)) * ((1 : Matrix n n ℂ) ⊗ₖ X) =
-      ((1 : Matrix m m ℂ) ⊗ₖ X) * (A ⊗ₖ (1 : Matrix q q ℂ)) := by
-  rw [← mul_kronecker_mul, ← mul_kronecker_mul, Matrix.mul_one, Matrix.one_mul, Matrix.one_mul,
-    Matrix.mul_one]
-
-section Blocks
-
-variable {l m n n' : Type*} [Fintype l] [Fintype m] [Fintype n] [Fintype n']
-
-/-- Sending a block into a block is preserved by a left factor that intertwines the blocks of
-the output. -/
-theorem mul_mul_eq_of_comm_left {Bo : Matrix l l ℂ} {L : Matrix l m ℂ} {Bm : Matrix m m ℂ}
-    {F : Matrix m n ℂ} {Bi : Matrix n n ℂ} (hL : Bo * L = L * Bm) (h : Bm * F * Bi = F * Bi) :
-    Bo * (L * F) * Bi = L * F * Bi := by
-  calc Bo * (L * F) * Bi = L * (Bm * F * Bi) := by
-        rw [← Matrix.mul_assoc, hL]
-        simp only [Matrix.mul_assoc]
-    _ = L * F * Bi := by rw [h, Matrix.mul_assoc]
-
-/-- Sending a block into a block is preserved by a right factor that intertwines the blocks of
-the input. -/
-theorem mul_mul_eq_of_comm_right {Bo : Matrix m m ℂ} {F : Matrix m n ℂ} {Bi : Matrix n n ℂ}
-    {R : Matrix n n' ℂ} {Bi' : Matrix n' n' ℂ} (hR : R * Bi' = Bi * R)
-    (h : Bo * F * Bi = F * Bi) : Bo * (F * R) * Bi' = F * R * Bi' := by
-  calc Bo * (F * R) * Bi' = Bo * F * Bi * R := by simp only [Matrix.mul_assoc, hR]
-    _ = F * R * Bi' := by rw [h]; simp only [Matrix.mul_assoc, hR]
-
-end Blocks
-
 variable {spec : QuantumOracleSpec.{u₁, v₁}} {κ : spec.Port → Type*}
 
 /-- **A coherent index** on the ports of a signature (ePrint 2025/2166, §4.1). For every port
@@ -173,8 +139,8 @@ theorem RespectsIndex.one_kronecker_mul_mul (hF : RespectsIndex B B' F) (X Y : M
     RespectsIndex B B' fun i r ↦
       ((1 : Matrix (spec.Out i) (spec.Out i) ℂ) ⊗ₖ X) * F i r *
         ((1 : Matrix (spec.In i) (spec.In i) ℂ) ⊗ₖ Y) := fun i r k ↦
-  mul_mul_eq_of_comm_right (kronecker_one_mul_one_kronecker (B i k) Y).symm
-    (mul_mul_eq_of_comm_left (kronecker_one_mul_one_kronecker (B' i k) X) (hF i r k))
+  Matrix.mul_mul_eq_of_comm_right (Matrix.kronecker_one_mul_one_kronecker (B i k) Y).symm
+    (Matrix.mul_mul_eq_of_comm_left (Matrix.kronecker_one_mul_one_kronecker (B' i k) X) (hF i r k))
 
 /-- The operators `V̂ P̂ U P̂ - P̂ W P̂ V̂` of the general hybrid bound respect a coherent index
 when `U` and `W` do: operators `1 ⊗ X` on the runtime register commute with the blocks. -/
@@ -186,8 +152,8 @@ theorem RespectsIndex.lemmaKraus {D : QReg}
   have h₂ := (hW.one_kronecker_mul_mul P P) i r k
   simp only at h₁ h₂
   rw [Hybrid.lemmaKraus, Matrix.mul_sub, Matrix.sub_mul, Matrix.sub_mul,
-    mul_mul_eq_of_comm_left (kronecker_one_mul_one_kronecker (B' i k) V) h₁,
-    mul_mul_eq_of_comm_right (kronecker_one_mul_one_kronecker (B i k) V).symm h₂]
+    Matrix.mul_mul_eq_of_comm_left (Matrix.kronecker_one_mul_one_kronecker (B' i k) V) h₁,
+    Matrix.mul_mul_eq_of_comm_right (Matrix.kronecker_one_mul_one_kronecker (B i k) V).symm h₂]
 
 end Respects
 
@@ -238,12 +204,11 @@ section L2Operator
 
 open scoped Matrix.Norms.L2Operator
 
-omit [∀ i, Fintype (κ i)] in
 /-- The constants of the blockwise bound, summed over the blocks of a port and against the
 weights of the blocks. -/
 private theorem tsum_tsum_mul_comm {ι K : Type*} (a : ι → K → ℝ≥0∞) (b : K → ℝ≥0∞) :
     ∑' r, ∑' k, a r k * b k = ∑' k, (∑' r, a r k) * b k := by
-  rw [ENNReal.tsum_comm]
+  rw [tsum_comm]
   simp only [ENNReal.tsum_mul_right]
 
 /-- **Kraus weights block by block.** For an operator family `F` respecting a coherent index,
@@ -256,7 +221,7 @@ theorem krausWeight_le_tsum_index {D : QReg} (hB : IsCoherentIndex B B')
     krausWeight F i σ ≤ ∑' k, (∑' r, ENNReal.ofReal (‖F i r * (B i k ⊗ₖ (1 : Matrix D D ℂ))‖ ^ 2)) *
       ENNReal.ofReal (MatrixMap.conj (B i k ⊗ₖ (1 : Matrix D D ℂ)) σ).trace.re := by
   rw [krausWeight, ← tsum_tsum_mul_comm]
-  refine ENNReal.tsum_le_tsum fun r ↦ ?_
+  refine tsum_le_tsum fun r ↦ ?_
   rw [tsum_fintype]
   exact MatrixMap.ofReal_trace_conj_le_sum_of_blocks (F i r) (hB.sum_kronecker_one i)
     (hB.kronecker_one_mul_self i) (fun a b hab ↦ hB.conjTranspose_kronecker_one_mul_of_ne i hab)
@@ -325,7 +290,7 @@ theorem rpow_inv_two_tsum_trace_conj_run_le_indexMass
           (‖(U c.1 r - W c.1 r) * (B c.1 c.2 ⊗ₖ (1 : Matrix D D ℂ))‖ ^ 2)) *
             (QuantumRuntime.mk D σ₀ s₀).indexMassAt I B x ρ c j) ^ (2⁻¹ : ℝ) :=
   (rpow_inv_two_tsum_trace_conj_run_le I σ₀ σ₁ hU hW x O hO hρ).trans <| add_le_add le_rfl <|
-    ENNReal.tsum_le_tsum fun j ↦ ENNReal.rpow_le_rpow
+    tsum_le_tsum fun j ↦ ENNReal.rpow_le_rpow
       ((QuantumRuntime.mk D σ₀ s₀).queryWeight_krausWeight_le_tsum_mul_indexMassAt I hB hUW x hρ
         j) (by norm_num)
 
@@ -344,7 +309,7 @@ theorem rpow_inv_two_outcomeLawWith_le_indexMass
             (QuantumRuntime.mk D σ₀ s₀).indexMassAt I B x (ρ.matrix ⊗ₖ σ₀.matrix) c j) ^
           (2⁻¹ : ℝ) :=
   (rpow_inv_two_outcomeLawWith_le I σ₀ hU hW x ρ f hs).trans <| add_le_add le_rfl <|
-    ENNReal.tsum_le_tsum fun j ↦ ENNReal.rpow_le_rpow
+    tsum_le_tsum fun j ↦ ENNReal.rpow_le_rpow
       ((QuantumRuntime.mk D σ₀ s₀).queryWeight_krausWeight_le_tsum_mul_indexMassAt I hB hUW x
         (ρ.prod σ₀).posSemidef j) (by norm_num)
 
@@ -392,9 +357,9 @@ private theorem l2_opNorm_lemmaKraus_mul_kronecker_one (hV : Vᴴ * V = 1) (hPV 
     ‖lemmaKraus P V U W i r * (B i k ⊗ₖ (1 : Matrix D D ℂ))‖ =
       ‖projDiff P V U W i r * (B i k ⊗ₖ (1 : Matrix D D ℂ))‖ := by
   rw [lemmaKraus_eq_projDiff_mul hV hPV, Matrix.mul_assoc,
-    ← kronecker_one_mul_one_kronecker (B i k) V, ← Matrix.mul_assoc,
+    ← Matrix.kronecker_one_mul_one_kronecker (B i k) V, ← Matrix.mul_assoc,
     MatrixMap.l2_opNorm_mul_coisometry
-      (one_kronecker_mul_conjTranspose (_root_.mul_eq_one_comm.mp hV))]
+      (Matrix.one_kronecker_mul_conjTranspose (_root_.mul_eq_one_comm.mp hV))]
 
 include hV hB in
 /-- The Kraus weights of `lemmaKraus P V U W` on the calls of a run, under condition 3 and when
@@ -408,7 +373,7 @@ private theorem tsum_rpow_queryWeight_lemmaKraus_le_indexMass (hPV : P * V = V *
           (‖projDiff P V U W c.1 r * (B c.1 c.2 ⊗ₖ (1 : Matrix D D ℂ))‖ ^ 2)) *
             (QuantumRuntime.mk D σ₀ s₀).indexMassAt I B x (ρ.matrix ⊗ₖ σ₀.matrix) c j) ^
           (2⁻¹ : ℝ) :=
-  ENNReal.tsum_le_tsum fun j ↦ ENNReal.rpow_le_rpow
+  tsum_le_tsum fun j ↦ ENNReal.rpow_le_rpow
     (((QuantumRuntime.mk D σ₀ s₀).queryWeight_krausWeight_le_tsum_mul_indexMassAt I hB hK x
       (ρ := ρ.matrix ⊗ₖ σ₀.matrix) (ρ.prod σ₀).posSemidef j).trans_eq
         (by simp only [l2_opNorm_lemmaKraus_mul_kronecker_one hV hPV])) (by norm_num)

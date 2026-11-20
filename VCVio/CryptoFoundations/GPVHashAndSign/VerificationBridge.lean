@@ -366,7 +366,7 @@ theorem gpv_advantage_le_progGameVerifyFreshAvg_add_collisionBound
       ≤ ∑' x : PK × SK, (Pr{let y ← hr.gen}[y = x]
             * Pr{let y ← progGameVerifyFresh psf hr M Salt adv domainSample x.1}[y = true]
           + Pr{let y ← hr.gen}[y = x] * collisionBound Salt qSign qHash) :=
-        ENNReal.tsum_le_tsum fun x => by
+        tsum_le_tsum fun x => by
           by_cases hx : x ∈ support hr.gen
           · rw [← mul_add]; gcongr; exact hper x hx
           · have hzero : Pr{let y ← hr.gen}[y = x] = 0 :=
@@ -375,7 +375,7 @@ theorem gpv_advantage_le_progGameVerifyFreshAvg_add_collisionBound
     _ = ∑' x : PK × SK, (Pr{let y ← hr.gen}[y = x]
             * Pr{let y ← progGameVerifyFresh psf hr M Salt adv domainSample x.1}[y = true])
           + (∑' x : PK × SK, Pr{let y ← hr.gen}[y = x]) * collisionBound Salt qSign qHash := by
-        rw [ENNReal.tsum_add, ENNReal.tsum_mul_right]
+        rw [tsum_add, ENNReal.tsum_mul_right]
     _ ≤ ∑' x : PK × SK, (Pr{let y ← hr.gen}[y = x]
             * Pr{let y ← progGameVerifyFresh psf hr M Salt adv domainSample x.1}[y = true])
           + 1 * collisionBound Salt qSign qHash := by
@@ -1047,7 +1047,7 @@ lemma prEvent_reservoirWinnerIndex_none_eq_zero (N : ℕ) (hN : N ≠ 0) :
   have hsplit : ∑' w : Option ℕ, Pr{let x ← reservoirWinnerIndex N}[x = w]
       = Pr{let x ← reservoirWinnerIndex N}[x = (none : Option ℕ)]
         + ∑' j : ℕ, Pr{let x ← reservoirWinnerIndex N}[x = some j] := by
-    rw [tsum_option _ ENNReal.summable]
+    rw [tsum_option _ CompleteLattice.summable]
   rw [tsum_prEvent_reservoirWinnerIndex] at hsplit
   have hsome : ∑' j : ℕ, Pr{let x ← reservoirWinnerIndex N}[x = some j] = 1 := by
     have hpt : ∀ j : ℕ,
@@ -1179,8 +1179,8 @@ theorem gpv_progGameVerifyFreshAvg_le_of_perKey [DecidableEq Domain]
     bind_map_left]
   rw [OracleComp.prEvent_bind_eq_tsum hr.gen, OracleComp.prEvent_bind_eq_tsum hr.gen,
     OracleComp.prEvent_bind_eq_tsum hr.gen]
-  rw [← ENNReal.tsum_mul_left, ← ENNReal.tsum_add]
-  refine ENNReal.tsum_le_tsum fun x => ?_
+  rw [← ENNReal.tsum_mul_left, ← tsum_add]
+  refine tsum_le_tsum fun x => ?_
   by_cases hx : x ∈ support hr.gen
   · rw [mul_left_comm (↑(qSign + qHash) : ENNReal), ← mul_add]
     exact mul_le_mul' le_rfl (h x hx)

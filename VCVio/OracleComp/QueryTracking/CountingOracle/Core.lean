@@ -54,7 +54,11 @@ observation model:
 
 This is the preferred approach when the observation model is "every oracle
 query is visible." For observations at non-query points (e.g. pure-computation
-timing), use the explicit `observe` / `runObs` API from `ObservationOracle`. -/
+timing), use the explicit `observe` / `runObs` API from `ObservationOracle`.
+
+The trace lives in an arbitrary monoid. For additive charges over a lawful monad,
+`QueryImpl.withAddCost` records them in `Multiplicative ω`, where the instrumentation is
+PolyFun's charge writer `PFunctor.Handler.withChargeW` (`QueryImpl.withAddCost_eq_withChargeW`). -/
 @[expose] def withCost (so : QueryImpl spec m) (costFn : spec.Domain → ω) :
     QueryImpl spec (WriterT ω m) :=
   so.withTraceBefore costFn
@@ -130,7 +134,7 @@ end QueryImpl
 variable {ι : Type u} {spec : OracleSpec ι} {α β γ : Type u}
 
 /-- Oracle with arbitrary cost tracking. The cost is accumulated in a `WriterT ω` layer
-while preserving the original oracle behavior. -/
+while preserving the original oracle behavior. Its additive form is `addCostOracle`. -/
 @[expose] def costOracle {ω : Type u} [Monoid ω] (costFn : spec.Domain → ω) :
     QueryImpl spec (WriterT ω (OracleComp spec)) :=
   (QueryImpl.ofLift spec (OracleComp spec)).withCost costFn

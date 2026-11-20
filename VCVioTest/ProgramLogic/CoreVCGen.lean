@@ -44,6 +44,13 @@ example : ⦃ True ⦄ ($ᵗ Bool).replicate 3 ⦃ fun xs => xs.length = 3 ⦄ :
 
 end Necessary
 
+-- A quantitative triple carries its WP instance even with the necessary reading in scope.
+open scoped OracleComp.Necessary in
+example (post : Bool → ℝ≥0∞) :
+    OracleComp.ProgramLogic.Triple ((∑' b, post b) / Nat.card Bool)
+      (do let b ← $ᵗ Bool; pure b : ProbComp Bool) post := by
+  vcgen
+
 section Lower
 open scoped OracleComp.Lower
 
@@ -86,6 +93,14 @@ example (post : Bool → ℕ → ℝ≥0∞) (h : ∀ b n, 1 ≤ post b n) :
     ⦃ post ⦄ := by
   vcgen
   exact h _ _
+
+open scoped OracleComp.Lower.Pointwise in
+example (oa : OracleComp spec Bool) (n : Nat) (post : List Bool → ℝ≥0∞) (p : ℝ≥0∞)
+    (h : ∀ xs : List Bool, xs.length = n → (∀ x ∈ xs, x ∈ support oa) → p ≤ post xs) :
+    ⦃ p ⦄ oa.replicate n ⦃ post ⦄ := by
+  vcgen
+  rename_i xs hxs
+  exact h xs hxs.1 hxs.2
 
 end Lower
 

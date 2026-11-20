@@ -15,7 +15,7 @@ public import VCVio.EvalDist.Monad.Map
 
 This file gives the support and finite support of `OptionT` computations in terms of the
 underlying `m (Option α)`. Their support comes from PolyFun's `MonadAttach` instance; their output
-measures are in `VCVio.EvalDist.Defs.Measure.OptionT`.
+measures are in `PolyFun.Control.Monad.Measure.OptionT`.
 -/
 
 @[expose] public section

@@ -27,7 +27,7 @@ open OracleComp OracleSpec
 
 namespace SLHDSA.SHAKE128s.Extraction.WotsPreimage
 
-variable [HasQuery HashSpec Id]
+variable {hash : HasQuery HashSpec Id}
 
 /-- The chain-step address of chain `i` for this WOTS key. -/
 @[expose] def chainAddress (address : Address) (i : Fin chains) : Address :=

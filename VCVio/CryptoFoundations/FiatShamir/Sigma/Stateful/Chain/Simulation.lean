@@ -88,7 +88,7 @@ theorem cmaToNma_shiftLeft_signedFreshAdv_eq_bind [DecidableEq M]
             (verifyFreshComp (σ := σ) (hr := hr) (M := M)
               (Commit := Commit) (Chal := Chal) (Resp := Resp) p)).run log' := by
   simp [QueryImpl.Stateful.shiftLeft, QueryImpl.Stateful.run, signedFreshAdv,
-    StateT.run'_eq, simulateQ_bind, StateT.run_bind, monad_norm]
+    StateT.run'_eq, StateT.run_bind, monad_norm]
 
 private lemma cmaToNma_lift_ro_query_run
     (simT : Stmt → ProbComp (Commit × Chal × Resp))
@@ -366,6 +366,7 @@ private lemma nma_lift_unif_run
       simp [impl₁, nma, nmaPublic])
     (oa := oa) ▸ himpl₁
 
+omit [DecidableEq M] [DecidableEq Commit] in
 private lemma simulatedNmaUnifSim_fsUniform_run
     {α : Type} (oa : ProbComp α)
     (cache : (fsRoSpec M Commit Chal).QueryCache) :
@@ -458,7 +459,7 @@ private lemma cmaSimLoggedLeft_preserves_inv
           all_goals
             simp only [htarget, support_pure, Set.mem_singleton_iff, Prod.mk.injEq,
               Bool.false_eq_true, Bool.true_eq_false, and_false, and_true, true_and] at hu
-          all_goals exact hu.2.trans hxkey
+          exact hu.2.trans hxkey
       · have hxinner := state_eq true hxmem
         have hxkey : xKeypair = some (pk, sk) :=
           congrArg (fun state => state.2.1) hxinner

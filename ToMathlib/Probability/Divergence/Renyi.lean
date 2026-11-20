@@ -376,7 +376,7 @@ theorem rnDeriv_le_of_le_smul {μ ν : Measure α} [SigmaFinite μ] [SigmaFinite
     (hc : c ≠ 0) (h : μ ≤ c • ν) : ∀ᵐ x ∂ν, μ.rnDeriv ν x ≤ c := by
   have h1 : μ.rnDeriv (c • ν) ≤ᵐ[c • ν] 1 := Measure.rnDeriv_le_one_of_le h
   have hν : ν ≪ c • ν := fun s hs => by
-    rw [Measure.smul_apply, ENNReal.smul_def, smul_eq_mul, mul_eq_zero] at hs
+    rw [smul_apply, ENNReal.smul_def, smul_eq_mul, mul_eq_zero] at hs
     exact hs.resolve_left (by exact_mod_cast hc)
   filter_upwards [hν.ae_le h1, Measure.rnDeriv_smul_right' μ ν hc] with x hx hx'
   rw [hx'] at hx
@@ -496,7 +496,7 @@ theorem renyiDiv_le_maxDiv {a : ℝ} (ha : 1 < a) (μ ν : Measure α) [IsProbab
   · rw [htop]; exact le_top
   have hle : μ ≤ (maxDiv μ ν).toNNReal • ν := by
     refine Measure.le_iff.2 fun s _ => ?_
-    rw [Measure.smul_apply, ENNReal.smul_def, smul_eq_mul, ENNReal.coe_toNNReal htop]
+    rw [smul_apply, ENNReal.smul_def, smul_eq_mul, ENNReal.coe_toNNReal htop]
     exact measure_le_maxDiv_mul hac s
   simpa [ENNReal.coe_toNNReal htop] using renyiDiv_le_of_le_smul ha hle
 

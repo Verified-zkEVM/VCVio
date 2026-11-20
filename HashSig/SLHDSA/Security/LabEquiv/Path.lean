@@ -181,7 +181,7 @@ theorem chainWith_labTriple (hd : core.KeyDiscipline vp) (pkSeed : core.PkSeed)
     simp only [chainWith_zero, Nat.add_zero]
     exact QueryImpl.EqDistTriple.pure x fun _ h ↦ h
   | s + 1, hs => by
-    simp only [chainWith_prefix]
+    simp only [chainWith_succ]
     refine (chainWith_labTriple hd pkSeed pos i x j s (by omega)).bind fun y ↦ ?_
     exact f_labTriple core hd pkSeed
       (wotsChainAdrs_setHashAddress_mem_constructionAddresses pos i (t := j + s) (by omega))
@@ -203,7 +203,7 @@ theorem simulateQ_eagerImpl_labChain (adrs : Adrs) (i : ℕ) :
   | s + 1 => by
     rw [labChain, G.simulateQ_eagerImpl_touchRead_succ, ← labChain,
       simulateQ_eagerImpl_labChain adrs i s]
-    simp only [chainWith_prefix, simulateQ_bind, bind_assoc, Nat.zero_add]
+    simp only [chainWith_succ, simulateQ_bind, bind_assoc, Nat.zero_add]
     rfl
 
 /-- **A chain from its secret.** For a chain of a reachable instance and `s ≤ w - 1`, the honest

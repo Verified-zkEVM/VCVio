@@ -47,9 +47,11 @@ open scoped ENNReal
 
 namespace AnswerTape
 
+variable {D R : Type}
+
 section TapeDraw
 
-variable {D R : Type} [DecidableEq D] [SampleableType R]
+variable [SampleableType R]
 
 /-! ## The tape draw, as a list -/
 
@@ -201,7 +203,7 @@ private theorem sum_tsum_comm {Index Result : Type} (indices : Finset Index)
   refine Finset.induction_on indices ?_ ?_
   · simp
   · intro head rest hhead ih
-    rw [Finset.sum_insert hhead, ih, ← ENNReal.tsum_add]
+    rw [Finset.sum_insert hhead, ih, ← tsum_add]
     refine tsum_congr fun result => ?_
     rw [Finset.sum_insert hhead]
 
@@ -262,9 +264,9 @@ theorem prob_selected_hit_le_of_causal {A B ρ : Type}
     refine tsum_congr fun value => congrArg _ ?_
     rw [prEvent_map]
   rw [hleft, hright, ← ENNReal.tsum_mul_right]
-  refine ENNReal.tsum_le_tsum fun leftTape => ?_
+  refine tsum_le_tsum fun leftTape => ?_
   rw [mul_assoc, ← ENNReal.tsum_mul_right]
-  refine mul_le_mul' le_rfl (ENNReal.tsum_le_tsum fun rightTape => ?_)
+  refine mul_le_mul' le_rfl (tsum_le_tsum fun rightTape => ?_)
   rw [mul_assoc]
   refine mul_le_mul' le_rfl ?_
   -- The cell's own draw is all that is left to charge.
@@ -274,7 +276,7 @@ theorem prob_selected_hit_le_of_causal {A B ρ : Type}
               ∃ other, (rightTape.set index value)[index]? = some other ∧ hit leftTape other]
       ≤ ∑' value, Pr{let x ← rightDraw}[x = value] *
           (if goodBlock leftTape ∧ hit leftTape value then target leftTape rightTape else 0) := by
-        refine ENNReal.tsum_le_tsum fun value => mul_le_mul' le_rfl ?_
+        refine tsum_le_tsum fun value => mul_le_mul' le_rfl ?_
         refine le_trans (prEvent_mono _ _ (fun result : ρ =>
           (goodBlock leftTape ∧ hit leftTape value) ∧
             index < len result) ?_) ?_
@@ -332,7 +334,7 @@ theorem sum_prob_selected_le_expected_of {A B ρ : Type}
           else 0) := sum_tsum_comm Finset.univ _
     _ ≤ ∑' outcome, Pr{let x ← blockRunOf leftBlock rightDraw run rightLength}[x = outcome] *
           ((len outcome.2 : Nat) : ℝ≥0∞) := by
-        refine ENNReal.tsum_le_tsum fun outcome => ?_
+        refine tsum_le_tsum fun outcome => ?_
         rw [Finset.sum_ite, Finset.sum_const, Finset.sum_const_zero, add_zero, nsmul_eq_mul,
           mul_comm]
         refine mul_le_mul' le_rfl (Nat.cast_le.mpr ?_)
@@ -382,7 +384,9 @@ theorem prob_exists_hit_le_expected_of_causal {A B ρ : Type}
   exact mul_le_mul' (sum_prob_selected_le_expected_of leftBlock rightDraw run len
     rightLength) le_rfl
 
-variable {D R : Type} [DecidableEq D] [SampleableType R]
+section TapeOracle
+
+variable [DecidableEq D] [SampleableType R]
 
 /-! ## The tape-consuming lazy oracle -/
 
@@ -467,6 +471,8 @@ theorem evalDist_run_randomOracle_eq_tapeList {α : Type}
       simp only [tapeCachingImpl_run_some hc, pure_bind]
       exact ih u c m
 
+end TapeOracle
+
 /-! ## The position instrumentation -/
 
 /-- The position bookkeeping of one `tapeCachingImpl` step, as an auxiliary state
@@ -503,7 +509,6 @@ structure PositionInv (L : List R) (c : (D →ₒ R).QueryCache) (l : List R)
 
 namespace PositionInv
 
-omit [DecidableEq D] [SampleableType R] in
 /-- The empty cache with the full tape unconsumed satisfies the invariant. -/
 theorem empty (L : List R) :
     PositionInv L (∅ : (D →ₒ R).QueryCache) L (fun _ => none) 0 where
@@ -517,21 +522,22 @@ theorem empty (L : List R) :
 
 end PositionInv
 
-omit [SampleableType R] in
+variable [DecidableEq D]
+
 private theorem positionAux_of_some {t : D} {c : (D →ₒ R).QueryCache} {l : List R} {u : R}
     (h : c t = some u) (x : R) (s' : (D →ₒ R).QueryCache × List R) (p : (D → Option ℕ) × ℕ) :
     positionAux D R t (c, l) x s' p = p := by simp [positionAux, h]
 
-omit [SampleableType R] in
 private theorem positionAux_of_nil {t : D} {c : (D →ₒ R).QueryCache} (h : c t = none)
     (x : R) (s' : (D →ₒ R).QueryCache × List R) (p : (D → Option ℕ) × ℕ) :
     positionAux D R t (c, []) x s' p = p := by simp [positionAux, h]
 
-omit [SampleableType R] in
 private theorem positionAux_of_cons {t : D} {c : (D →ₒ R).QueryCache} {u : R} {l : List R}
     (h : c t = none) (x : R) (s' : (D →ₒ R).QueryCache × List R) (p : (D → Option ℕ) × ℕ) :
     positionAux D R t (c, u :: l) x s' p =
       (Function.update p.1 t (some p.2), p.2 + 1) := by simp [positionAux, h]
+
+variable [SampleableType R]
 
 /-- Every step of the instrumented tape oracle preserves `PositionInv`. -/
 private theorem positionInv_step (L : List R) (t : D)

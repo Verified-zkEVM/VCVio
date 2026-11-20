@@ -94,14 +94,14 @@ theorem readRecord_expected_pairs_general {γ : Type}
         id_map, StateT.run_bind]
       rw [OracleComp.tsum_prEvent_bind_mul, OracleComp.tsum_prEvent_bind_mul,
           OracleComp.tsum_prEvent_bind_mul,
-        ← ENNReal.tsum_mul_left, ← ENNReal.tsum_add]
+        ← ENNReal.tsum_mul_left, ← tsum_add]
       rcases t with (n | mc) | msg
       · -- UNIFORM: the step is deterministic in the state (`x.2 = s`); factor per step output and
         -- apply the inductive hypothesis directly (drawn / signed / read lists unchanged, budget
         -- unchanged: uniform queries are not read queries).
         have hQ2' : ∀ u, (ob u).IsQueryBoundP (· matches Sum.inl (Sum.inr _)) qH := by
           intro u; exact hQ2 u
-        refine ENNReal.tsum_le_tsum fun x => ?_
+        refine tsum_le_tsum fun x => ?_
         by_cases hx : x ∈ support ((deferredDrawReadImpl ids M maxAttempts pk sk
             (Sum.inl (Sum.inl n))).run s)
         · have hxs : x ∈ support ((fun u => (u, s)) <$>
@@ -122,7 +122,7 @@ theorem readRecord_expected_pairs_general {γ : Type}
         have hQ2' : ∀ cu : Chal × (M × Commit →ₒ Chal).QueryCache,
             (ob cu.1).IsQueryBoundP (· matches Sum.inl (Sum.inr _)) (qH - 1) := by
           intro cu; exact hQ2 cu.1
-        refine ENNReal.tsum_le_tsum fun x => ?_
+        refine tsum_le_tsum fun x => ?_
         by_cases hx : x ∈ support ((deferredDrawReadImpl ids M maxAttempts pk sk
             (Sum.inl (Sum.inr mc))).run s)
         · have hxs : x ∈ support ((fun cu : Chal × (M × Commit →ₒ Chal).QueryCache =>
@@ -235,7 +235,7 @@ invariant `deferredDrawRead_run_count_dl_invariant`, carried through
 The start drawn list is empty: the adversary's read points do not depend on the run's fresh
 draws but could target a fixed pre-existing commitment deterministically. -/
 theorem readRecord_expected_coincidences_le {γ : Type}
-    (qH : ℕ) (ε p_abort : ℝ) (hp₀ : 0 ≤ p_abort) (hp : p_abort < 1) (hε : 0 ≤ ε)
+    (qH : ℕ) (ε p_abort : ℝ) (hp₀ : 0 ≤ p_abort) (hp : p_abort < 1)
     (pk : Stmt) (sk : Wit)
     (hGuess : ∀ cm : Commit, Pr{let x ← Prod.fst <$> ids.commit pk sk}[x = cm] ≤ ENNReal.ofReal ε)
     (hAbort : Pr{let x ← ids.honestExecution pk sk}[x = none] ≤ ENNReal.ofReal p_abort)
@@ -249,6 +249,10 @@ theorem readRecord_expected_coincidences_le {γ : Type}
           (z.2.2.countP (fun rc => decide (rc ∈ z.2.1.1.2)) : ℝ≥0∞))
       ≤ ENNReal.ofReal ((qSrem : ℝ) * ((qH : ℝ) + 1) * ε / (1 - p_abort)) := by
   classical
+  wlog hε : 0 ≤ ε generalizing ε
+  · have hε0 : ENNReal.ofReal ε = 0 := ENNReal.ofReal_eq_zero.mpr (le_of_not_ge hε)
+    have hzero := this 0 (by simpa only [hε0, ENNReal.ofReal_zero] using hGuess) (le_refl 0)
+    exact le_trans (by simpa using hzero) bot_le
   obtain ⟨hQS, hQH⟩ := hQ
   set run : ProbComp (γ × DeferredReadState M Commit Chal) :=
     (simulateQ (deferredDrawReadImpl ids M maxAttempts pk sk) oa).run ((((re, l), []), false), [])
@@ -259,7 +263,7 @@ theorem readRecord_expected_coincidences_le {γ : Type}
           (z.2.2.countP (fun rc => decide (rc ∈ z.2.1.1.2)) : ℝ≥0∞))
         ≤ ∑' z : γ × DeferredReadState M Commit Chal, Pr{let x ← run}[x = z] *
             ((z.2.2.map (fun rc => z.2.1.1.2.count rc)).sum : ℝ≥0∞) := by
-    refine ENNReal.tsum_le_tsum fun z => ?_
+    refine tsum_le_tsum fun z => ?_
     gcongr
     exact_mod_cast countP_mem_le_sum_count z.2.2 z.2.1.1.2
   -- Step 3 (the atom): the expected pair count is `≤ ε · qH · E[#attempts]`, where the read-list
@@ -328,7 +332,7 @@ which is finally charged by the numeric value-free bound `readRecord_expected_co
 Chaining with `prEvent_ghostHybridImpl_bad_le_ghostBlind` discharges the eager form
 (`prEvent_ghostRead_bad_le`). -/
 theorem prEvent_ghostBlindImpl_bad_le
-    (qS qH : ℕ) (ε p_abort : ℝ) (hp₀ : 0 ≤ p_abort) (hp : p_abort < 1) (hε : 0 ≤ ε)
+    (qS qH : ℕ) (ε p_abort : ℝ) (hp₀ : 0 ≤ p_abort) (hp : p_abort < 1) (_hε : 0 ≤ ε)
     (hQ : ∀ pk, FiatShamir.signHashQueryBound M
       (S' := Option (Commit × Resp)) (oa := adv.main pk) qS qH)
     (pk : Stmt) (sk : Wit)
@@ -353,7 +357,7 @@ theorem prEvent_ghostBlindImpl_bad_le
     ⟨rfl, fun h => absurd h (by simp)⟩) ?_
   refine le_trans (readRecord_pred_le_expected_coincidences ids M maxAttempts pk sk (adv.main pk)
     (((((∅, []), []), false), []) : DeferredReadState M Commit Chal)) ?_
-  exact readRecord_expected_coincidences_le ids M maxAttempts qH ε p_abort hp₀ hp hε pk sk
+  exact readRecord_expected_coincidences_le ids M maxAttempts qH ε p_abort hp₀ hp pk sk
     hGuess hAbort (adv.main pk) qS (hQ pk) ∅ []
 
 /-- **Ghost-read collision bound** for the Prog → Trans hop: the probability that the

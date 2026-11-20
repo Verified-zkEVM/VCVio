@@ -74,20 +74,9 @@ include hpure hbind in
 at each address the chain visits, `adrs.setHashAddress (i + j)` for `j < s`. -/
 theorem chainWith_pred {Y : Type} {hash : Adrs → Y → m Y} {adrs : Adrs} (x : Y) (i : ℕ) :
     ∀ s, (∀ j < s, ∀ y, Q (hash (adrs.setHashAddress (i + j)) y)) →
-      Q (chainWith hash adrs x i s) := by
-  intro s
-  induction s generalizing x i with
-  | zero =>
-      intro _
-      rw [chainWith_zero]
-      exact hpure _
-  | succ s ih =>
-      intro h
-      rw [chainWith_head]
-      refine hbind _ _ (h 0 (by omega) x) fun y => ?_
-      refine ih y (i + 1) ?_
-      intro j hj value
-      simpa only [Nat.add_assoc, Nat.add_comm 1 j] using h (j + 1) (by omega) value
+      Q (chainWith hash adrs x i s) :=
+  VCVio.Algorithms.IndexedChain.chainM_pred Q hpure hbind
+    (fun j => hash (adrs.setHashAddress j)) i x
 
 variable {vp : ValidatedParams} (core : CorePrimitives vp.params)
   {hash : Adrs → core.Y → m core.Y} {compress : Adrs → List core.Y → m core.Y}

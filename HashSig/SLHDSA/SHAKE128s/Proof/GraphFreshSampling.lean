@@ -84,6 +84,7 @@ theorem program_update_outside (input : Index → State → Bytes)
 
 variable [Fintype Index]
 
+omit [DecidableEq Index] in
 /-- Sampling the traversed coordinates individually is exactly sampling one
 independent complete full-output table and programming the same traversal. -/
 theorem evalDist_sample_eq_uniform_program (input : Index → State → Bytes)
@@ -94,6 +95,7 @@ theorem evalDist_sample_eq_uniform_program (input : Index → State → Bytes)
         ($ᵗ (Index → HashOutput) : ProbComp (Index → HashOutput))) :=
   RandomOracleTraversal.evalDist_sample_eq_uniform_program input step nodes hnodup state cache
 
+omit [DecidableEq Index] in
 /-- Full state-and-cache law for a traversal in the actual shared random oracle. -/
 theorem evalDist_evaluate_eq_uniform_program (input : Index → State → Bytes)
     (step : Index → State → HashOutput → State) (hseparated : Separated input)

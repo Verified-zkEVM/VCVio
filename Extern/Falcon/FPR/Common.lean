@@ -47,11 +47,6 @@ private theorem and_allOnes_uint64 (v : UInt64) : v &&& 0xFFFFFFFFFFFFFFFF = v :
     Nat.and_two_pow_sub_one_eq_mod]
   exact Nat.mod_eq_of_lt v.toNat_lt_size
 
-/-- Masking with the zero word annihilates. -/
-private theorem and_zero_uint64 (v : UInt64) : v &&& 0 = 0 := by
-  rw [← UInt64.toNat_inj, UInt64.toNat_and]
-  exact Nat.and_zero _
-
 /-- A `UInt32` right shift by `31` extracts the top bit as a quotient. -/
 private theorem toNat_shiftRight_31_uint32 (w : UInt32) : (w >>> 31).toNat = w.toNat / 2 ^ 31 := by
   rw [UInt32.toNat_shiftRight, show (31 : UInt32).toNat % 32 = 31 from by decide,
@@ -173,12 +168,6 @@ private theorem stickyShift_lt_two_pow {v k m : ℕ} (hm : 1 ≤ m) (h : v / 2 ^
 private theorem stickyShift_zero (v : ℕ) : stickyShift v 0 = v := by
   rw [stickyShift]
   norm_num [Nat.mod_one]
-
-private theorem uint32_zero_and (w : UInt32) : (0 : UInt32) &&& w = 0 := by
-  rw [← UInt32.toNat_inj, UInt32.toNat_and]; simp
-
-private theorem uint32_xor_zero (w : UInt32) : w ^^^ (0 : UInt32) = w := by
-  rw [← UInt32.toNat_inj, UInt32.toNat_xor]; simp
 
 private theorem toReal_eq_sign_mul_abs (w : FPR) (h0 : (FPR.decode w).exponent ≠ 0)
     (h2047 : (FPR.decode w).exponent ≠ 2047) :

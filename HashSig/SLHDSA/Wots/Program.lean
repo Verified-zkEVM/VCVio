@@ -10,9 +10,9 @@ public import Init.Control.Basic
 /-!
 # Callback-parametric WOTS construction
 
-One ordered chain and one collection mechanism serve public-key generation,
-signing, and public-key recovery. Address construction and result representation
-are supplied by the caller; secret reads remain monadic actions.
+Public-key generation, signing and public-key recovery share their choice of chain intervals
+and compression. Callers supply the interval evaluator and the representation of each initial
+value, including any secret-derivation effect.
 -/
 
 public section
@@ -24,18 +24,16 @@ universe u v w
 variable {I : Type w} {Y Family : Type u} {m : Type u → Type v} [Monad m]
 
 /-- Apply consecutive indexed hash steps, with the remaining work behind the bind. -/
-def chain (step : Nat → Y → m Y) : Nat → Nat → Y → m Y
+@[expose] def chain (step : Nat → Y → m Y) : Nat → Nat → Y → m Y
   | _, 0, value => pure value
   | start, steps + 1, value => do
     let next ← step start value
     chain step (start + 1) steps next
 
 /-- Collect the chains with explicit initial values and per-chain intervals. -/
-def runChains (collect : (I → m Y) → m Family) (secret : I → m Y)
-    (step : I → Nat → Y → m Y) (starts lengths : I → Nat) : m Family :=
-  collect fun i => do
-    let initial ← secret i
-    chain (step i) (starts i) (lengths i) initial
+@[expose] def runChains (collect : (I → m Y) → m Family) (withInitial : I → (Y → m Y) → m Y)
+    (advance : I → Nat → Nat → Y → m Y) (starts lengths : I → Nat) : m Family :=
+  collect fun i => withInitial i (advance i (starts i) (lengths i))
 
 /-- The three choices of chain interval and initial value. -/
 inductive TopsJob (I : Type w) (Y : Type u) where
@@ -44,12 +42,12 @@ inductive TopsJob (I : Type w) (Y : Type u) where
   | recover (signature : I → Y) (digits : I → Nat)
 
 /-- Run the selected chain construction in the caller's native result family. -/
-def runTops (collect : (I → m Y) → m Family) (secret : I → m Y)
-    (step : I → Nat → Y → m Y) (maxSteps : Nat) : TopsJob I Y → m Family
-  | .publicKey => runChains collect secret step (fun _ => 0) (fun _ => maxSteps)
-  | .sign digits => runChains collect secret step (fun _ => 0) digits
+@[expose] def runTops (collect : (I → m Y) → m Family) (withInitial : I → (Y → m Y) → m Y)
+    (advance : I → Nat → Nat → Y → m Y) (maxSteps : Nat) : TopsJob I Y → m Family
+  | .publicKey => runChains collect withInitial advance (fun _ => 0) (fun _ => maxSteps)
+  | .sign digits => runChains collect withInitial advance (fun _ => 0) digits
   | .recover signature digits =>
-    runChains collect (fun i => pure (signature i)) step digits
+    runChains collect (fun i k => k (signature i)) advance digits
       (fun i => maxSteps - digits i)
 
 /-- Public entry points with their native signature or node result type. -/
@@ -61,18 +59,18 @@ inductive Job (I : Type w) (Y Family : Type u) : Type u → Type (max u w) where
   | recover (signature : I → Y) (digits : I → Nat) : Job I Y Family Y
 
 /-- Execute a WOTS mode, compressing only public-key results. -/
-def run {α : Type u} (collect : (I → m Y) → m Family) (secret : I → m Y)
-    (step : I → Nat → Y → m Y) (compress : Family → m Y) (maxSteps : Nat) :
+@[expose] def run {α : Type u} (collect : (I → m Y) → m Family) (withInitial : I → (Y → m Y) → m Y)
+    (advance : I → Nat → Nat → Y → m Y) (compress : Family → m Y) (maxSteps : Nat) :
     Job I Y Family α → m α
-  | .publicKeyTops => runTops collect secret step maxSteps .publicKey
+  | .publicKeyTops => runTops collect withInitial advance maxSteps .publicKey
   | .publicKey => do
-    let tops ← runTops collect secret step maxSteps .publicKey
+    let tops ← runTops collect withInitial advance maxSteps .publicKey
     compress tops
-  | .sign digits => runTops collect secret step maxSteps (.sign digits)
+  | .sign digits => runTops collect withInitial advance maxSteps (.sign digits)
   | .recoverTops signature digits =>
-    runTops collect secret step maxSteps (.recover signature digits)
+    runTops collect withInitial advance maxSteps (.recover signature digits)
   | .recover signature digits => do
-    let tops ← runTops collect secret step maxSteps (.recover signature digits)
+    let tops ← runTops collect withInitial advance maxSteps (.recover signature digits)
     compress tops
 
 end SLHDSA.Wots.Program

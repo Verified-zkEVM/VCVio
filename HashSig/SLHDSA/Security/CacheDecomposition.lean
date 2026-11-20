@@ -84,8 +84,7 @@ theorem simulateQ_toPartialImpl_chainM_succ_eq_some_iff (pk : core.PkSeed) (adrs
     simulateQ c.toPartialImpl (chainM core pk adrs x i (s + 1)) = some y ↔
       ∃ z, simulateQ c.toPartialImpl (chainM core pk adrs x i s) = some z ∧
         c (.thash pk (core.adrsToKey (adrs.setHashAddress (i + s))) [z]) = some y := by
-  simp only [chainM, chainWith_prefix, simulateQ_bind_eq_some_iff,
-    simulateQ_toPartialImpl_f]
+  simp only [chainM, chainWith_succ, simulateQ_bind_eq_some_iff, simulateQ_toPartialImpl_f]
 
 /-- An `a + b`-step chain is settled exactly when its first `a` steps are settled and the
 `b`-step chain from their value at hash address `i + a` is settled. -/

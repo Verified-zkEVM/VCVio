@@ -281,8 +281,7 @@ theorem encaps_usesExactlyTwoQueries
 
 /-- Expected weighted query cost of U-transform encapsulation under constant per-family weights. -/
 theorem encaps_expectedQueryCost_eq_of_constantOracleWeights {ω : Type} [MeasurableSpace ω]
-    [AddMonoid ω] [EvalDistSemantics m] [LawfulEvalDistSemantics m] [MonadLiftT m SetM]
-    [LawfulMonadLiftT m SetM]
+    [AddMonoid ω] [EvalDistSemantics m] [LawfulEvalDistSemantics m]
     (runtime : QueryImpl (UTransform.hashOracleSpec M R KD K) m)
     (pke : AsymmEncAlg.ExplicitCoins ProbComp M PK SK R C)
     (kdInput : M → C → KD)
@@ -308,7 +307,6 @@ per-family bounds. -/
 theorem encaps_expectedQueryCost_le {ω : Type} [MeasurableSpace ω]
     [AddCommMonoid ω] [PartialOrder ω] [IsOrderedAddMonoid ω]
     [EvalDistSemantics m] [LawfulEvalDistSemantics m]
-    [MonadLiftT m SetM] [LawfulMonadLiftT m SetM]
     [MonadAttach m] [ExactMonadAttach m]
     (runtime : QueryImpl (UTransform.hashOracleSpec M R KD K) m)
     (pke : AsymmEncAlg.ExplicitCoins ProbComp M PK SK R C)
@@ -329,7 +327,7 @@ theorem encaps_expectedQueryCost_le {ω : Type} [MeasurableSpace ω]
 
 /-- Expected query count of U-transform encapsulation is exactly `2`. -/
 theorem encaps_expectedQueries_eq_two [EvalDistSemantics m] [LawfulEvalDistSemantics m]
-    [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [MonadAttach m]
+    [MonadAttach m]
     [ExactMonadAttach m]
     (runtime : QueryImpl (UTransform.hashOracleSpec M R KD K) m)
     (pke : AsymmEncAlg.ExplicitCoins ProbComp M PK SK R C)
@@ -425,8 +423,8 @@ theorem decaps_expectedQueryCost_eq_zero_of_decrypt_eq_none {ω : Type} [Measura
 per-family bounds. -/
 theorem decaps_expectedQueryCost_le {ω : Type} [MeasurableSpace ω]
     [AddCommMonoid ω] [PartialOrder ω] [IsOrderedAddMonoid ω] [CanonicallyOrderedAdd ω]
-    [EvalDistSemantics m] [LawfulEvalDistSemantics m] [MonadLiftT m SetM]
-    [LawfulMonadLiftT m SetM] [MonadAttach m] [ExactMonadAttach m]
+    [EvalDistSemantics m] [LawfulEvalDistSemantics m]
+    [MonadAttach m] [ExactMonadAttach m]
     (runtime : QueryImpl (UTransform.hashOracleSpec M R KD K) m)
     (pke : AsymmEncAlg.ExplicitCoins ProbComp M PK SK R C)
     (kdInput : M → C → KD)
@@ -462,7 +460,7 @@ theorem decaps_usesAtMostTwoQueries [MonadAttach m] [ExactMonadAttach m]
 
 /-- Expected query count of U-transform decapsulation is at most `2`. -/
 theorem decaps_expectedQueries_le_two [EvalDistSemantics m] [LawfulEvalDistSemantics m]
-    [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [MonadAttach m]
+    [MonadAttach m]
     [ExactMonadAttach m]
     (runtime : QueryImpl (UTransform.hashOracleSpec M R KD K) m)
     (pke : AsymmEncAlg.ExplicitCoins ProbComp M PK SK R C)

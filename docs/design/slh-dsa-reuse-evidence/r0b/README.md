@@ -19,11 +19,11 @@ After that chain succeeds, a single Python tail gate validates immutable binding
 elaborates the four readable-equation leaves, checks their standard axiom sets, and invokes the
 original R0a verifier once. It never recursively calls `lake test` and does not rerun the existing
 executables or table generator. Additive independent test registrations are allowed; the whole
-Lake file is not hash-frozen. The selected five executable/table targets retain their exact
-module roots and source directories. A separate driver-scaffold digest erases only standalone
-nonprotected exe-list entries; loop/error propagation, table-generator/checker and tail code
-remain fixed. It freezes these selected bindings and control flow, not every future unprotected
-executable.
+Lake file is not hash-frozen. The protected executable and table targets retain their exact module roots and source
+directories. The checker reads the literal list of ordinary executables and verifies that each
+protected runtime occurs once. It checks the surrounding batched build, execution loop, error
+handling and Python checks against their reviewed digest. The compiler commit and toolchain for
+this run are recorded in `bindings.json`. The archived R0a data retains its original pins.
 
 The tail gate can be inspected separately:
 

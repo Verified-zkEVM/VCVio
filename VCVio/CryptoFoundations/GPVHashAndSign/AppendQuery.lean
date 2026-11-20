@@ -326,7 +326,7 @@ forger-queries-its-forgery-point convention at the cost of one extra hash query
 the advantage exactly (`advantage_appendForgeQuery`).  This is the all-adversaries form of
 `euf_cma_split_bound`, stated for the reductions built from the compiled adversary. -/
 theorem euf_cma_split_bound_of_queryBound [DecidableEq Domain]
-    [Inhabited Range] [Nonempty Salt]
+    [Nonempty Salt]
     (hcorrect : ∀ pk sk, (pk, sk) ∈ support hr.gen → psf.CorrectAt pk sk)
     (domainSample : PK → ProbComp Domain)
     (hreg : ∀ (pk : PK) (sk : SK), (pk, sk) ∈ support hr.gen →
@@ -369,7 +369,7 @@ prices the programmed-preimage branch at the largest pointwise output mass `psf.
 assigns at an honest key.  What remains for a concrete PSF is to bound `trapdoorGuessingProbability`
 — for a discrete-Gaussian trapdoor sampler above the smoothing parameter this is negligible. -/
 theorem euf_cma_collision_bound_of_queryBound [DecidableEq Domain]
-    [Inhabited Range] [Nonempty Salt]
+    [Nonempty Salt]
     (hcorrect : ∀ pk sk, (pk, sk) ∈ support hr.gen → psf.CorrectAt pk sk)
     (domainSample : PK → ProbComp Domain)
     (hreg : ∀ (pk : PK) (sk : SK), (pk, sk) ∈ support hr.gen →

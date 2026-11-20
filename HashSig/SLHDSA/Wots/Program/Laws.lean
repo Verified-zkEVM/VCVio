@@ -7,7 +7,7 @@ Authors: Alexander Hicks
 module
 public import HashSig.SLHDSA.Wots.Program
 import all HashSig.SLHDSA.Wots.Program
-public import Init.Control.Lawful
+public import VCVio.Algorithms.IndexedChain.Basic
 
 /-! # Algebra of ordered callback chains -/
 
@@ -28,24 +28,20 @@ theorem chain_head (step : Nat → Y → m Y) (i s : Nat) (x : Y) :
     chain step i (s + 1) x = step i x >>= fun y => chain step (i + 1) s y := by
   simp only [chain]
 
-/-- In a lawful monad the final step can equivalently follow the shorter prefix. -/
-theorem chain_prefix [LawfulMonad m] (step : Nat → Y → m Y) (s : Nat) :
-    ∀ (i : Nat) (x : Y),
-      chain step i (s + 1) x = chain step i s x >>= fun y => step (i + s) y := by
-  induction s with
-  | zero => intro i x; simp [chain]
-  | succ s ih =>
-    intro i x
-    calc
-      chain step i (s + 1 + 1) x =
-          step i x >>= fun y => chain step (i + 1) (s + 1) y := rfl
-      _ = step i x >>= fun y =>
-          (chain step (i + 1) s y >>= fun z => step (i + 1 + s) z) :=
-        congrArg (fun k => step i x >>= k) (funext fun y => ih (i + 1) y)
-      _ = (step i x >>= fun y => chain step (i + 1) s y) >>=
-          fun z => step (i + (s + 1)) z := by
-        simp only [bind_assoc, Nat.add_assoc, Nat.add_comm 1 s]
-      _ = chain step i (s + 1) x >>= fun z => step (i + (s + 1)) z := rfl
+/-- First-step evaluation agrees with the indexed chain in every lawful callback monad. -/
+theorem chain_eq_indexedChain [LawfulMonad m] (step : Nat → Y → m Y) (start steps : Nat)
+    (value : Y) : chain step start steps value =
+      VCVio.Algorithms.IndexedChain.chainM step start steps value := by
+  induction steps generalizing start value with
+  | zero => rfl
+  | succ steps ih =>
+    rw [chain_head, VCVio.Algorithms.IndexedChain.chainM_succ_left]
+    exact bind_congr fun value => ih (start + 1) value
+
+/-- The last callback follows the shorter prefix in a lawful monad. -/
+theorem chain_prefix [LawfulMonad m] (step : Nat → Y → m Y) (s i : Nat) (x : Y) :
+    chain step i (s + 1) x = chain step i s x >>= fun y => step (i + s) y := by
+  simp only [chain_eq_indexedChain, VCVio.Algorithms.IndexedChain.chainM_succ]
 
 /-- Primitive pure/bind and step preservation transports an entire ordered chain. -/
 theorem chain_natural {n : Type u → Type z} [Monad n]
@@ -69,52 +65,53 @@ end SLHDSA.Wots.Program
 namespace SLHDSA.Wots.Program
 
 universe u v w
-variable {I : Type w} {Y Family : Type u} {m : Type u → Type v} [Monad m]
+variable {I : Type w} {Y Family : Type u} {m : Type u → Type v}
 
 /-- Chain collection retains the caller's monadic initialization at every index. -/
-theorem runChains_eq (collect : (I → m Y) → m Family) (secret : I → m Y)
-    (step : I → Nat → Y → m Y) (starts lengths : I → Nat) :
-    runChains collect secret step starts lengths = collect (fun i => do
-      let initial ← secret i
-      chain (step i) (starts i) (lengths i) initial) := by
+theorem runChains_eq (collect : (I → m Y) → m Family) (withInitial : I → (Y → m Y) → m Y)
+    (advance : I → Nat → Nat → Y → m Y) (starts lengths : I → Nat) :
+    runChains collect withInitial advance starts lengths = collect (fun i =>
+      withInitial i (advance i (starts i) (lengths i))) := by
   simp only [runChains]
 
 /-- Public-key tops use every chain's full interval. -/
-theorem runTops_publicKey (collect : (I → m Y) → m Family) (secret : I → m Y)
-    (step : I → Nat → Y → m Y) (maxSteps : Nat) :
-    runTops collect secret step maxSteps .publicKey =
-      runChains collect secret step (fun _ => 0) (fun _ => maxSteps) := by
+theorem runTops_publicKey (collect : (I → m Y) → m Family) (withInitial : I → (Y → m Y) → m Y)
+    (advance : I → Nat → Nat → Y → m Y) (maxSteps : Nat) :
+    runTops collect withInitial advance maxSteps .publicKey =
+      runChains collect withInitial advance (fun _ => 0) (fun _ => maxSteps) := by
   simp only [runTops]
 
 /-- Signing tops use the message-selected interval lengths. -/
-theorem runTops_sign (collect : (I → m Y) → m Family) (secret : I → m Y)
-    (step : I → Nat → Y → m Y) (maxSteps : Nat) (digits : I → Nat) :
-    runTops collect secret step maxSteps (.sign digits) =
-      runChains collect secret step (fun _ => 0) digits := by
+theorem runTops_sign (collect : (I → m Y) → m Family) (withInitial : I → (Y → m Y) → m Y)
+    (advance : I → Nat → Nat → Y → m Y) (maxSteps : Nat) (digits : I → Nat) :
+    runTops collect withInitial advance maxSteps (.sign digits) =
+      runChains collect withInitial advance (fun _ => 0) digits := by
   simp only [runTops]
 
 /-- Recovery starts at the signature and executes only the complementary suffix. -/
-theorem runTops_recover [LawfulMonad m] (collect : (I → m Y) → m Family)
-    (secret : I → m Y) (step : I → Nat → Y → m Y) (maxSteps : Nat)
+theorem runTops_recover (collect : (I → m Y) → m Family)
+    (withInitial : I → (Y → m Y) → m Y) (advance : I → Nat → Nat → Y → m Y) (maxSteps : Nat)
     (signature : I → Y) (digits : I → Nat) :
-    runTops collect secret step maxSteps (.recover signature digits) =
-      collect (fun i => chain (step i) (digits i) (maxSteps - digits i) (signature i)) := by
-  simp only [runTops, runChains, pure_bind]
+    runTops collect withInitial advance maxSteps (.recover signature digits) =
+      collect (fun i => advance i (digits i) (maxSteps - digits i) (signature i)) := by
+  simp only [runTops, runChains]
+
+variable [Monad m]
 
 /-- The public-key result compresses the collected public-key tops once. -/
-theorem run_publicKey (collect : (I → m Y) → m Family) (secret : I → m Y)
-    (step : I → Nat → Y → m Y) (compress : Family → m Y) (maxSteps : Nat) :
-    run collect secret step compress maxSteps .publicKey = (do
-      let tops ← runTops collect secret step maxSteps .publicKey
+theorem run_publicKey (collect : (I → m Y) → m Family) (withInitial : I → (Y → m Y) → m Y)
+    (advance : I → Nat → Nat → Y → m Y) (compress : Family → m Y) (maxSteps : Nat) :
+    run collect withInitial advance compress maxSteps .publicKey = (do
+      let tops ← runTops collect withInitial advance maxSteps .publicKey
       compress tops) := by
   simp only [run]
 
 /-- The recovery result compresses the collected suffix tops once. -/
-theorem run_recover (collect : (I → m Y) → m Family) (secret : I → m Y)
-    (step : I → Nat → Y → m Y) (compress : Family → m Y) (maxSteps : Nat)
+theorem run_recover (collect : (I → m Y) → m Family) (withInitial : I → (Y → m Y) → m Y)
+    (advance : I → Nat → Nat → Y → m Y) (compress : Family → m Y) (maxSteps : Nat)
     (signature : I → Y) (digits : I → Nat) :
-    run collect secret step compress maxSteps (.recover signature digits) = (do
-      let tops ← runTops collect secret step maxSteps (.recover signature digits)
+    run collect withInitial advance compress maxSteps (.recover signature digits) = (do
+      let tops ← runTops collect withInitial advance maxSteps (.recover signature digits)
       compress tops) := by
   simp only [run]
 

@@ -5,6 +5,7 @@ Authors: Nicolas Consigny, Alexander Hicks
 -/
 
 module
+public import VCVio.Algorithms.IndexedChain.Basic
 public import HashSig.SLHDSA.Oracle
 public import HashSig.SLHDSA.WotsEncoding
 public import HashSig.SLHDSA.Wots.Program.Laws
@@ -50,29 +51,24 @@ variable {p : Params}
 /-- Low-level callback-parametric implementation of the WOTS+ chain. -/
 def chainWith {Y : Type} {m : Type → Type*} [Monad m]
     (hash : Adrs → Y → m Y) (adrs : Adrs) (x : Y) (i s : ℕ) : m Y :=
-  Wots.Program.chain (fun j y => hash (adrs.setHashAddress j) y) i s x
+  VCVio.Algorithms.IndexedChain.chainM (fun j => hash (adrs.setHashAddress j)) i s x
 
-/-- An empty callback-parametric chain returns its input. -/
 @[simp] theorem chainWith_zero {Y : Type} {m : Type → Type*} [Monad m]
     (hash : Adrs → Y → m Y) (adrs : Adrs) (x : Y) (i : ℕ) :
-    chainWith hash adrs x i 0 = pure x := by
-  simp only [chainWith, Wots.Program.chain_zero]
+    chainWith hash adrs x i 0 = pure x := rfl
 
-/-- The first addressed hash precedes the remaining chain. -/
-theorem chainWith_head {Y : Type} {m : Type → Type*} [Monad m]
+/-- The final WOTS callback uses the zero-based FIPS hash address `i + s`. -/
+theorem chainWith_succ {Y : Type} {m : Type → Type*} [Monad m]
     (hash : Adrs → Y → m Y) (adrs : Adrs) (x : Y) (i s : ℕ) :
-    chainWith hash adrs x i (s + 1) = (do
-      let y ← hash (adrs.setHashAddress i) x
-      chainWith hash adrs y (i + 1) s) := by
-  simp only [chainWith, Wots.Program.chain_head]
+    chainWith hash adrs x i (s + 1) =
+      chainWith hash adrs x i s >>= hash (adrs.setHashAddress (i + s)) := rfl
 
-/-- In a lawful monad the final hash follows the shorter prefix. -/
-theorem chainWith_prefix {Y : Type} {m : Type → Type*} [Monad m] [LawfulMonad m]
-    (hash : Adrs → Y → m Y) (adrs : Adrs) (x : Y) (i s : ℕ) :
-    chainWith hash adrs x i (s + 1) = (do
-      let y ← chainWith hash adrs x i s
-      hash (adrs.setHashAddress (i + s)) y) := by
-  exact Wots.Program.chain_prefix _ s i x
+/-- Splitting the callback chain preserves all calls in their original order. -/
+theorem chainWith_add {Y : Type} {m : Type → Type*} [Monad m] [LawfulMonad m]
+    (hash : Adrs → Y → m Y) (adrs : Adrs) (x : Y) (i a b : ℕ) :
+    chainWith hash adrs x i (a + b) =
+      chainWith hash adrs x i a >>= fun y => chainWith hash adrs y (i + a) b :=
+  VCVio.Algorithms.IndexedChain.chainM_add _ i a b x
 
 /-- Canonical explicit-public-hash WOTS+ chain program. -/
 def chainM (core : CorePrimitives p) {m : Type → Type*} [Monad m]
@@ -98,7 +94,7 @@ def chain (prims : Primitives p) (pkSeed : prims.PkSeed) (adrs : Adrs) (x : prim
     (adrs : Adrs) (x : prims.Y) (i s : ℕ) :
     chain prims pkSeed adrs x i (s + 1) =
       prims.F pkSeed (adrs.setHashAddress (i + s)) (chain prims pkSeed adrs x i s) := by
-  simp only [chain, chainM, chainWith_prefix, simulateQ_bind, PublicHash.f,
+  simp only [chain, chainM, chainWith_succ, simulateQ_bind, PublicHash.f,
     simulateQ_HasQuery_query, PublicHash.impl]
   rfl
 
@@ -108,9 +104,8 @@ theorem chainWith_natural {Y : Type} {m n : Type → Type*} [Monad m] [Monad n]
     (F : m →ᵐ n) (hashm : Adrs → Y → m Y) (hashn : Adrs → Y → n Y)
     (hhash : ∀ a y, F (hashm a y) = hashn a y) (adrs : Adrs) (x : Y) (i s : ℕ) :
     F (chainWith hashm adrs x i s) = chainWith hashn adrs x i s := by
-  induction s generalizing i x with
-  | zero => simp only [chainWith_zero, F.mmap_pure]
-  | succ s ih => simp only [chainWith_head, F.mmap_bind, hhash, ih]
+  exact VCVio.Algorithms.IndexedChain.chainM_natural F _ _
+    (fun j y => hhash (adrs.setHashAddress j) y) i s x
 
 /-- Query-preserving monad morphisms commute with the explicit-public-hash WOTS+ chain. -/
 theorem chainM_natural (core : CorePrimitives p) {m n : Type → Type*} [Monad m] [Monad n]
@@ -128,16 +123,28 @@ theorem chainM_natural (core : CorePrimitives p) {m n : Type → Type*} [Monad m
       (PublicHashQuery.thash pkSeed (core.adrsToKey a) [y])
   exact HasQuery.map_query F _
 
+/-- The deterministic WOTS interpretation is the shared pure indexed chain. -/
+theorem chain_eq_indexedChain (prims : Primitives p) (pkSeed : prims.PkSeed) (adrs : Adrs)
+    (x : prims.Y) (i s : ℕ) :
+    chain prims pkSeed adrs x i s =
+      VCVio.Algorithms.IndexedChain.chain
+        (fun j => prims.F pkSeed (adrs.setHashAddress j)) i s x := by
+  change (simulateQ' (PublicHash.impl prims))
+      (chainWith (PublicHash.f prims.core pkSeed) adrs x i s) =
+    chainWith (m := Id) (prims.F pkSeed) adrs x i s
+  apply chainWith_natural
+  intro a y
+  simp only [PublicHash.f, simulateQ_HasQuery_query, PublicHash.impl]
+
 /-- Hash-chain composition: chaining `a` steps then `b` more (from index `i + a`) equals
 chaining `a + b` steps from `i`. The deterministic backbone of WOTS+ correctness. -/
 theorem chain_compose (prims : Primitives p) (pkSeed : prims.PkSeed) (adrs : Adrs)
     (x : prims.Y) (i a b : ℕ) :
     chain prims pkSeed adrs (chain prims pkSeed adrs x i a) (i + a) b
       = chain prims pkSeed adrs x i (a + b) := by
-  induction b with
-  | zero => simp only [chain_zero, Nat.add_zero]
-  | succ b ih =>
-      rw [← Nat.add_assoc, chain_succ, chain_succ, ih, Nat.add_assoc]
+  unfold chain chainM
+  rw [chainWith_add _ adrs x i a b, simulateQ_bind]
+  rfl
 
 /-! ### WOTS+ addresses -/
 
@@ -282,19 +289,19 @@ def wotsPkGenTopsWith (core : CorePrimitives p) {m : Type → Type*} [Monad m]
     (hash : Adrs → core.Y → m core.Y) (sk : core.SkSeed) (pk : core.PkSeed)
     (adrs : Adrs) : m (Vector core.Y p.len) :=
   Wots.Program.runTops (I := Fin p.len) Vector.ofFnM
-    (fun i => pure (core.PRF pk sk (wotsSkAdrs adrs i.val)))
-    (fun i j y => hash ((wotsChainAdrs adrs i.val).setHashAddress j) y)
+    (fun i k => k (core.PRF pk sk (wotsSkAdrs adrs i.val)))
+    (fun i start steps value => chainWith hash (wotsChainAdrs adrs i.val) value start steps)
     (p.w - 1) .publicKey
 
 /-- Public-key tops collect the full native chain intervals. -/
-theorem wotsPkGenTopsWith_eq {m : Type → Type*} [Monad m] [LawfulMonad m]
+theorem wotsPkGenTopsWith_eq {m : Type → Type*} [Monad m]
     (core : CorePrimitives p) (hash : Adrs → core.Y → m core.Y)
     (sk : core.SkSeed) (pk : core.PkSeed) (adrs : Adrs) :
     wotsPkGenTopsWith core hash sk pk adrs = Vector.ofFnM (fun i =>
       chainWith hash (wotsChainAdrs adrs i.val)
         (core.PRF pk sk (wotsSkAdrs adrs i.val)) 0 (p.w - 1)) := by
   simp only [wotsPkGenTopsWith, Wots.Program.runTops_publicKey,
-    Wots.Program.runChains_eq, pure_bind, chainWith]
+    Wots.Program.runChains_eq]
 
 /-- Low-level callback-parametric implementation of WOTS+ public-key generation. -/
 def wotsPkGenWith (core : CorePrimitives p) {m : Type → Type*} [Monad m]
@@ -302,8 +309,8 @@ def wotsPkGenWith (core : CorePrimitives p) {m : Type → Type*} [Monad m]
     (compress : Adrs → List core.Y → m core.Y)
     (sk : core.SkSeed) (pk : core.PkSeed) (adrs : Adrs) : m core.Y :=
   Wots.Program.run (I := Fin p.len) Vector.ofFnM
-    (fun i => pure (core.PRF pk sk (wotsSkAdrs adrs i.val)))
-    (fun i j y => hash ((wotsChainAdrs adrs i.val).setHashAddress j) y)
+    (fun i k => k (core.PRF pk sk (wotsSkAdrs adrs i.val)))
+    (fun i start steps value => chainWith hash (wotsChainAdrs adrs i.val) value start steps)
     (fun tops => compress (wotsPkAdrs adrs) tops.toList) (p.w - 1) .publicKey
 
 /-- Public-key compression follows the collected native chain tops. -/
@@ -348,19 +355,19 @@ def wotsSignWith (core : CorePrimitives p) {m : Type → Type*} [Monad m]
     (msg : core.Y) (sk : core.SkSeed) (pk : core.PkSeed)
     (adrs : Adrs) : m (WotsSig p core) :=
   Wots.Program.runTops (I := Fin p.len) Vector.ofFnM
-    (fun i => pure (core.PRF pk sk (wotsSkAdrs adrs i.val)))
-    (fun i j y => hash ((wotsChainAdrs adrs i.val).setHashAddress j) y)
+    (fun i k => k (core.PRF pk sk (wotsSkAdrs adrs i.val)))
+    (fun i start steps value => chainWith hash (wotsChainAdrs adrs i.val) value start steps)
     (p.w - 1) (.sign (fun i => chainStepsCore core msg i.val))
 
 /-- Signing collects the native message-selected chain intervals. -/
-theorem wotsSignWith_eq {m : Type → Type*} [Monad m] [LawfulMonad m]
+theorem wotsSignWith_eq {m : Type → Type*} [Monad m]
     (core : CorePrimitives p) (hash : Adrs → core.Y → m core.Y)
     (msg : core.Y) (sk : core.SkSeed) (pk : core.PkSeed) (adrs : Adrs) :
     wotsSignWith core hash msg sk pk adrs = Vector.ofFnM (fun i =>
       chainWith hash (wotsChainAdrs adrs i.val)
         (core.PRF pk sk (wotsSkAdrs adrs i.val)) 0 (chainStepsCore core msg i.val)) := by
   simp only [wotsSignWith, Wots.Program.runTops_sign,
-    Wots.Program.runChains_eq, pure_bind, chainWith]
+    Wots.Program.runChains_eq]
 
 /-- Canonical explicit-public-hash WOTS+ signing program (FIPS 205 Algorithm 7). -/
 def wotsSignM (core : CorePrimitives p) {m : Type → Type*} [Monad m]
@@ -381,18 +388,18 @@ def wotsPkFromSigTopsWith (core : CorePrimitives p) {m : Type → Type*} [Monad 
     (hash : Adrs → core.Y → m core.Y)
     (sig : WotsSig p core) (msg : core.Y) (adrs : Adrs) : m (Vector core.Y p.len) :=
   Wots.Program.runTops (I := Fin p.len) Vector.ofFnM
-    (fun i => pure sig[i.val])
-    (fun i j y => hash ((wotsChainAdrs adrs i.val).setHashAddress j) y)
+    (fun i k => k sig[i.val])
+    (fun i start steps value => chainWith hash (wotsChainAdrs adrs i.val) value start steps)
     (p.w - 1) (.recover (fun i => sig[i.val]) (fun i => chainStepsCore core msg i.val))
 
 /-- Recovery collects the native complementary chain intervals. -/
-theorem wotsPkFromSigTopsWith_eq {m : Type → Type*} [Monad m] [LawfulMonad m]
+theorem wotsPkFromSigTopsWith_eq {m : Type → Type*} [Monad m]
     (core : CorePrimitives p) (hash : Adrs → core.Y → m core.Y)
     (sig : WotsSig p core) (msg : core.Y) (adrs : Adrs) :
     wotsPkFromSigTopsWith core hash sig msg adrs = Vector.ofFnM (fun i =>
       chainWith hash (wotsChainAdrs adrs i.val) sig[i.val] (chainStepsCore core msg i.val)
         (p.w - 1 - chainStepsCore core msg i.val)) := by
-  simp only [wotsPkFromSigTopsWith, Wots.Program.runTops_recover, chainWith]
+  simp only [wotsPkFromSigTopsWith, Wots.Program.runTops_recover]
 
 /-- Low-level callback-parametric implementation of WOTS+ public-key recovery. -/
 def wotsPkFromSigWith (core : CorePrimitives p) {m : Type → Type*} [Monad m]
@@ -400,8 +407,8 @@ def wotsPkFromSigWith (core : CorePrimitives p) {m : Type → Type*} [Monad m]
     (compress : Adrs → List core.Y → m core.Y)
     (sig : WotsSig p core) (msg : core.Y) (adrs : Adrs) : m core.Y :=
   Wots.Program.run (I := Fin p.len) Vector.ofFnM
-    (fun i => pure sig[i.val])
-    (fun i j y => hash ((wotsChainAdrs adrs i.val).setHashAddress j) y)
+    (fun i k => k sig[i.val])
+    (fun i start steps value => chainWith hash (wotsChainAdrs adrs i.val) value start steps)
     (fun tops => compress (wotsPkAdrs adrs) tops.toList) (p.w - 1)
     (.recover (fun i => sig[i.val]) (fun i => chainStepsCore core msg i.val))
 
@@ -604,7 +611,7 @@ theorem chainM_isTotalQueryBound (core : CorePrimitives p) (pk : core.PkSeed)
       rw [chainM, chainWith_zero]
       trivial
   | succ s ih =>
-      rw [chainM, chainWith_prefix]
+      rw [chainM, chainWith_succ]
       change IsTotalQueryBound
         ((chainM core pk adrs x i s : OracleComp (publicHashSpec core) core.Y) >>= fun y =>
           PublicHash.f core pk (adrs.setHashAddress (i + s)) y) (s + 1)

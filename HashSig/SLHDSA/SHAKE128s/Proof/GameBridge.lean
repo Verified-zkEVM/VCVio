@@ -16,8 +16,8 @@ public import HashSig.SLHDSA.SHAKE128s.Proof.HypertreeDispatch
 /-!
 # From the game's run to the extraction's `Id` statements
 
-The extraction chain states everything with `(m := Id)` under the development's
-`[HasQuery HashSpec Id]` variable; the game runs in `OracleComp`. Two facts bridge them.
+The extraction chain uses `(m := Id)` with a handler `hash : HasQuery HashSpec Id`. The game
+runs in `OracleComp`. Two facts bridge them.
 
 * `VerifierNaturality` and `Correctness.Naturality` give the naturality of every scheme
   operation: simulating it through any `impl` agreeing with the ambient `query` yields the same
@@ -64,7 +64,7 @@ theorem keygen_publicKey (secretSeed prfSeed publicSeed : Digest)
         secretSeed prfSeed publicSeed).2.seed = publicSeed ∧
       (@Scheme.keygenInternal Id Id.instMonad (CacheReplay.replayQuery cache)
         secretSeed prfSeed publicSeed).2.root =
-        @SLHDSA.SHAKE128s.Extraction.HypertreeChain.honestNode (CacheReplay.replayQuery cache)
+        SLHDSA.SHAKE128s.Extraction.HypertreeChain.honestNode (CacheReplay.replayQuery cache)
           secretSeed publicSeed (layers - 1) 0 :=
   ⟨rfl, rfl⟩
 
@@ -87,7 +87,7 @@ theorem value_eq_cellsOfOutputs (publicSeed secretSeed : Digest)
           (CanonicalGraph.Programming.cellsOfOutputs secretSeed outputs) outputs
           CanonicalGraph.Programming.order ∅ input = some output →
         cache input = some output) :
-    @CanonicalGraph.value (CacheReplay.replayQuery cache) secretSeed publicSeed =
+    CanonicalGraph.value (CacheReplay.replayQuery cache) secretSeed publicSeed =
       CanonicalGraph.Programming.cellsOfOutputs secretSeed outputs := by
   refine @CanonicalGraph.Programming.value_eq_of_cache_agreement
     (CacheReplay.replayQuery cache) publicSeed secretSeed outputs ?_
@@ -108,7 +108,7 @@ Both steps are case analysis on the `Option`s in `Scheme.verify`, with no hashin
 an invalid context or a malformed signature is rejected before any oracle call, so there is
 nothing to charge and nothing to extract. -/
 
-variable [HasQuery HashSpec Id]
+variable {hash : HasQuery HashSpec Id}
 
 /-- An acceptance frames, parses, and passes the internal verifier. -/
 theorem verifyInternal_of_verify (pk : PublicKey) (request : Message) (signature : Bytes)

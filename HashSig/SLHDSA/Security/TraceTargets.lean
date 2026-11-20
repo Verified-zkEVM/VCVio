@@ -273,7 +273,7 @@ theorem chainM_queriesWithinConstructionTargets {vp : ValidatedParams}
   | zero =>
       simpa only [chainM, chainWith_zero] using QueriesWithinConstructionTargets.pure core x
   | succ s ih =>
-      rw [chainM, chainWith_prefix]
+      rw [chainM, chainWith_succ]
       apply QueriesWithinConstructionTargets.bind (ih (by omega))
       intro y
       have hstep : i + s < vp.params.w - 1 := by omega

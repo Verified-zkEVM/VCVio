@@ -171,8 +171,8 @@ theorem chain_succ (publicSeed : Digest) (address : Address)
 /-- Algorithm 6 (`wots_pkGen`): the WOTS+ public key, the compression of all chain ends. -/
 @[expose] def publicKey (secretSeed publicSeed : Digest) (address : Address) : m Digest :=
   SLHDSA.Wots.Program.run (I := Fin chains) (sequenceFin chains)
-    (fun i => Hashing.derive publicSeed secretSeed (secretAddress address i))
-    (fun i => chainStep publicSeed { address with chainOrHeight := BitVec.ofNat 32 i.val })
+    (fun i k => Hashing.derive publicSeed secretSeed (secretAddress address i) >>= k)
+    (fun i => chain publicSeed { address with chainOrHeight := BitVec.ofNat 32 i.val })
     (fun endpoints => Hashing.tweakable publicSeed (publicKeyAddress address)
       (digestArrayBytes endpoints)) (w - 1) .publicKey
 
@@ -186,14 +186,14 @@ theorem publicKey_eq (secretSeed publicSeed : Digest) (address : Address) :
       Hashing.tweakable publicSeed (publicKeyAddress address) (digestArrayBytes endpoints) :
         m Digest) := by
   simp only [publicKey, SLHDSA.Wots.Program.run_publicKey,
-    SLHDSA.Wots.Program.runTops_publicKey, SLHDSA.Wots.Program.runChains_eq, chain]
+    SLHDSA.Wots.Program.runTops_publicKey, SLHDSA.Wots.Program.runChains_eq]
 
 /-- Algorithm 7 (`wots_sign`): each chain's secret value advanced by its digit of the encoded
 message. -/
 @[expose] def sign (message secretSeed publicSeed : Digest) (address : Address) : m WotsSignature :=
   SLHDSA.Wots.Program.runTops (I := Fin chains) (sequenceFin chains)
-    (fun i => Hashing.derive publicSeed secretSeed (secretAddress address i))
-    (fun i => chainStep publicSeed { address with chainOrHeight := BitVec.ofNat 32 i.val })
+    (fun i k => Hashing.derive publicSeed secretSeed (secretAddress address i) >>= k)
+    (fun i => chain publicSeed { address with chainOrHeight := BitVec.ofNat 32 i.val })
     (w - 1) (.sign (fun i => (Checksum.encode message i).val))
 
 /-- Signing retains the secret-derivation action before each native digest chain. -/
@@ -203,21 +203,21 @@ theorem sign_eq (message secretSeed publicSeed : Digest) (address : Address) :
       chain publicSeed { address with chainOrHeight := BitVec.ofNat 32 i.val }
         0 (Checksum.encode message i).val secret : m WotsSignature) := by
   simp only [sign, SLHDSA.Wots.Program.runTops_sign,
-    SLHDSA.Wots.Program.runChains_eq, chain]
+    SLHDSA.Wots.Program.runChains_eq]
 
 /-- Algorithm 8 (`wots_pkFromSig`): each chain completed from the signature, then the ends
 compressed. -/
 @[expose] def publicKeyFromSignature (signature : WotsSignature) (message publicSeed : Digest)
     (address : Address) : m Digest :=
   SLHDSA.Wots.Program.run (I := Fin chains) (sequenceFin chains)
-    (fun i => pure (signature i))
-    (fun i => chainStep publicSeed { address with chainOrHeight := BitVec.ofNat 32 i.val })
+    (fun i k => k (signature i))
+    (fun i => chain publicSeed { address with chainOrHeight := BitVec.ofNat 32 i.val })
     (fun endpoints => Hashing.tweakable publicSeed (publicKeyAddress address)
       (digestArrayBytes endpoints)) (w - 1)
     (.recover signature (fun i => (Checksum.encode message i).val))
 
 /-- Recovery collects native signature suffixes and compresses their endpoints. -/
-theorem publicKeyFromSignature_eq [LawfulMonad m]
+theorem publicKeyFromSignature_eq
     (signature : WotsSignature) (message publicSeed : Digest) (address : Address) :
     publicKeyFromSignature signature message publicSeed address = (do
       let endpoints ← sequenceFin chains fun i =>
@@ -227,7 +227,7 @@ theorem publicKeyFromSignature_eq [LawfulMonad m]
       Hashing.tweakable publicSeed (publicKeyAddress address) (digestArrayBytes endpoints) :
         m Digest) := by
   simp only [publicKeyFromSignature, SLHDSA.Wots.Program.run_recover,
-    SLHDSA.Wots.Program.runTops_recover, chain]
+    SLHDSA.Wots.Program.runTops_recover]
 
 end Wots
 

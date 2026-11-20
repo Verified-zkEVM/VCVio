@@ -37,7 +37,7 @@ open Extraction.HypertreeChain
 
 section Accepted
 
-variable [HasQuery HashSpec Id]
+variable {hash : HasQuery HashSpec Id}
 
 /-! ## The top of the structural chain
 
@@ -58,12 +58,12 @@ theorem cases_of_accepted_signed (secretSeed publicSeed : Digest) (pk : PublicKe
     (tree : SLHDSA.SHAKE128s.Hypertree.TreeIndex) (leaf : SLHDSA.SHAKE128s.Hypertree.LeafIndex)
     (forsKey honestForsKey : Digest) (signature : HypertreeSignature)
     (hseed : pk.seed = publicSeed)
-    (hroot : pk.root = honestNode secretSeed publicSeed (layers - 1) 0)
+    (hroot : pk.root = honestNode hash secretSeed publicSeed (layers - 1) 0)
     (haccept : SLHDSA.SHAKE128s.Hypertree.verify (m := Id) forsKey signature pk tree leaf = true) :
     (forsKey = honestForsKey ∧
         signature = SLHDSA.SHAKE128s.Hypertree.signLayers (m := Id) secretSeed publicSeed layers 0
           tree.toNat leaf honestForsKey) ∨
-      HypertreeFault secretSeed publicSeed layers signature 0 tree.toNat leaf forsKey
+      HypertreeFault hash secretSeed publicSeed layers signature 0 tree.toNat leaf forsKey
         honestForsKey :=
   verify_fault_or_fors_signed secretSeed publicSeed pk tree leaf forsKey honestForsKey
     signature hseed hroot haccept
@@ -73,10 +73,10 @@ theorem cases_of_accepted (secretSeed publicSeed : Digest) (pk : PublicKey)
     (tree : SLHDSA.SHAKE128s.Hypertree.TreeIndex) (leaf : SLHDSA.SHAKE128s.Hypertree.LeafIndex)
     (forsKey honestForsKey : Digest) (signature : HypertreeSignature)
     (hseed : pk.seed = publicSeed)
-    (hroot : pk.root = honestNode secretSeed publicSeed (layers - 1) 0)
+    (hroot : pk.root = honestNode hash secretSeed publicSeed (layers - 1) 0)
     (haccept : SLHDSA.SHAKE128s.Hypertree.verify (m := Id) forsKey signature pk tree leaf = true) :
     forsKey = honestForsKey ∨
-      HypertreeFault secretSeed publicSeed layers signature 0 tree.toNat leaf forsKey
+      HypertreeFault hash secretSeed publicSeed layers signature 0 tree.toNat leaf forsKey
         honestForsKey :=
   verify_fault_or_fors_canonical secretSeed publicSeed pk tree leaf forsKey honestForsKey
     signature hseed hroot haccept

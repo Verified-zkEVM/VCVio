@@ -27,7 +27,7 @@ open OracleComp OracleSpec
 
 namespace SLHDSA.SHAKE128s.Extraction.Hypertree
 
-variable [HasQuery HashSpec Id]
+variable {hash : HasQuery HashSpec Id}
 
 /-- The WOTS key-pair address of leaf `l` in the subtree at `(layer, tree)`. -/
 @[expose] def wotsAddress (layer tree : Nat) (l : SLHDSA.SHAKE128s.Hypertree.LeafIndex) : Address :=
@@ -36,7 +36,8 @@ variable [HasQuery HashSpec Id]
 /-- A concrete collision inside one layer's verification: a Merkle authentication-path
 collision, the WOTS compression collision, or a WOTS chain collision. Each witness
 names a specific queried oracle input. -/
-@[expose] def LayerCollision (secretSeed publicSeed message : Digest) (layer tree : Nat)
+@[expose] def LayerCollision (hash : HasQuery HashSpec Id)
+    (secretSeed publicSeed message : Digest) (layer tree : Nat)
     (l : SLHDSA.SHAKE128s.Hypertree.LeafIndex) (xsig : XmssSignature) : Prop :=
   let address := SLHDSA.SHAKE128s.Hypertree.address layer tree
   let wa := wotsAddress layer tree l
@@ -52,9 +53,9 @@ names a specific queried oracle input. -/
     SLHDSA.SHAKE128s.Wots.sign (m := Id) message secretSeed publicSeed wa
   (∃ j < subtreeHeight,
       BinaryPath.Collision nodes combine l.val leaf (Merkle.siblings xsig) j) ∨
-    Wots.CompressionCollision xsig.wots canonicalWots message publicSeed wa ∨
+    Wots.CompressionCollision hash xsig.wots canonicalWots message publicSeed wa ∨
     ∃ i : Fin chains, ∃ offset < w - 1 - (Checksum.encode message i).val,
-      Wots.ChainCollision publicSeed { wa with chainOrHeight := BitVec.ofNat 32 i.val }
+      Wots.ChainCollision hash publicSeed { wa with chainOrHeight := BitVec.ofNat 32 i.val }
         (Checksum.encode message i).val (xsig.wots i) (canonicalWots i) offset
 
 /-- A forged layer signature recovering the canonical subtree root either equals, for
@@ -71,7 +72,7 @@ theorem layer_canonical_or_collision (secretSeed publicSeed message : Digest) (l
       ∀ j, xsig.authentication j = SLHDSA.SHAKE128s.Merkle.node (m := Id) secretSeed publicSeed
         (SLHDSA.SHAKE128s.Hypertree.address layer tree) j.val
           (Nat.xor (l.val / 2 ^ j.val) 1)) ∨
-    LayerCollision secretSeed publicSeed message layer tree l xsig := by
+    LayerCollision hash secretSeed publicSeed message layer tree l xsig := by
   have hmerkle := Extraction.Merkle.root_eq_canonical_or_collision secretSeed publicSeed message
     (SLHDSA.SHAKE128s.Hypertree.address layer tree) l xsig hcanon
   dsimp only at hmerkle

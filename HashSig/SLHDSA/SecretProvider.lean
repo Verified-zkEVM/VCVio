@@ -133,8 +133,8 @@ theorem Adrs.isSecretKey_forsSkAdrs (adrs : Adrs) (t : ℕ) : (forsSkAdrs adrs t
     (hash : Adrs → core.Y → m core.Y) (secret : Adrs → m core.Y)
     (adrs : Adrs) : m (Vector core.Y p.len) :=
   Wots.Program.runTops (I := Fin p.len) Vector.ofFnM
-    (fun i => secret (wotsSkAdrs adrs i.val))
-    (fun i j y => hash ((wotsChainAdrs adrs i.val).setHashAddress j) y)
+    (fun i k => secret (wotsSkAdrs adrs i.val) >>= k)
+    (fun i start steps value => chainWith hash (wotsChainAdrs adrs i.val) value start steps)
     (p.w - 1) .publicKey
 
 /-- Provider public-key tops preserve each native secret action before its chain. -/
@@ -144,7 +144,7 @@ theorem wotsPkGenTopsWithSecret_eq {m : Type → Type*} [Monad m]
       let x ← secret (wotsSkAdrs adrs i.val)
       chainWith hash (wotsChainAdrs adrs i.val) x 0 (p.w - 1)) := by
   simp only [wotsPkGenTopsWithSecret, Wots.Program.runTops_publicKey,
-    Wots.Program.runChains_eq, chainWith]
+    Wots.Program.runChains_eq]
 
 /-- At the honest provider the provider-parametric WOTS+ chain ends are `wotsPkGenTopsWith`. -/
 theorem wotsPkGenTopsWithSecret_eq_wotsPkGenTopsWith {m : Type → Type*} [Monad m] [LawfulMonad m]
@@ -159,8 +159,8 @@ the value the provider `secret` returns at its `WOTS_PRF` address. -/
     (hash : Adrs → core.Y → m core.Y) (secret : Adrs → m core.Y)
     (msg : core.Y) (adrs : Adrs) : m (WotsSig p core) :=
   Wots.Program.runTops (I := Fin p.len) Vector.ofFnM
-    (fun i => secret (wotsSkAdrs adrs i.val))
-    (fun i j y => hash ((wotsChainAdrs adrs i.val).setHashAddress j) y)
+    (fun i k => secret (wotsSkAdrs adrs i.val) >>= k)
+    (fun i start steps value => chainWith hash (wotsChainAdrs adrs i.val) value start steps)
     (p.w - 1) (.sign (fun i => chainStepsCore core msg i.val))
 
 /-- Provider signing preserves each native secret action before its message-selected chain. -/
@@ -171,7 +171,7 @@ theorem wotsSignWithSecret_eq {m : Type → Type*} [Monad m]
       let x ← secret (wotsSkAdrs adrs i.val)
       chainWith hash (wotsChainAdrs adrs i.val) x 0 (chainStepsCore core msg i.val)) := by
   simp only [wotsSignWithSecret, Wots.Program.runTops_sign,
-    Wots.Program.runChains_eq, chainWith]
+    Wots.Program.runChains_eq]
 
 /-- At the honest provider provider-parametric WOTS+ signing is `wotsSignWith`. -/
 theorem wotsSignWithSecret_eq_wotsSignWith {m : Type → Type*} [Monad m] [LawfulMonad m]
@@ -187,8 +187,8 @@ compressed by `T_len` at `wotsPkAdrs adrs`. -/
     (hash : Adrs → core.Y → m core.Y) (compress : Adrs → List core.Y → m core.Y)
     (secret : Adrs → m core.Y) (adrs : Adrs) : m core.Y :=
   Wots.Program.run (I := Fin p.len) Vector.ofFnM
-    (fun i => secret (wotsSkAdrs adrs i.val))
-    (fun i j y => hash ((wotsChainAdrs adrs i.val).setHashAddress j) y)
+    (fun i k => secret (wotsSkAdrs adrs i.val) >>= k)
+    (fun i start steps value => chainWith hash (wotsChainAdrs adrs i.val) value start steps)
     (fun tops => compress (wotsPkAdrs adrs) tops.toList) (p.w - 1) .publicKey
 
 /-- Provider public-key compression follows the provider-generated native chain tops. -/
@@ -533,8 +533,8 @@ theorem forsLeafWithSecret_natural {m n : Type → Type*} [Monad m] [Monad n] (F
 
 /-- A monad morphism commutes with a provider-parametric FORS tree root when it commutes with the
 leaf and node callbacks and with the provider at secret-key addresses. -/
-theorem forsRootWithSecret_natural {m n : Type → Type*} [Monad m] [LawfulMonad m]
-    [Monad n] [LawfulMonad n] (F : m →ᵐ n)
+theorem forsRootWithSecret_natural {m n : Type → Type*} [Monad m]
+    [Monad n] (F : m →ᵐ n)
     (hashm : Adrs → core.Y → m core.Y) (hashn : Adrs → core.Y → n core.Y)
     (nodeHashm : Adrs → core.Y → core.Y → m core.Y)
     (nodeHashn : Adrs → core.Y → core.Y → n core.Y)

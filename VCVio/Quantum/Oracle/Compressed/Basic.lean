@@ -5,7 +5,6 @@ Authors: Quang Dao
 -/
 
 module
-public import VCVio.OracleComp.QueryTracking.Structures
 public import QuantumFoundations.Oracle.Unitary
 
 /-!
@@ -29,8 +28,7 @@ Operators on the whole database register that act cell by cell are pi-tensor pro
 ## Main definitions
 
 * `Quantum.Database X Y`, with `Quantum.Database.empty`, `Quantum.Database.ofFun`,
-  `Quantum.Database.lookup`, `Quantum.Database.size`, and the equivalence
-  `Quantum.Database.equivQueryCache` with VCVio's `OracleSpec.QueryCache (X →ₒ Y)`.
+  `Quantum.Database.lookup` and `Quantum.Database.size`.
 * `Quantum.cellCompress Y`: the one-cell compression, Hermitian, and for nonempty `Y` a unitary
   involution (`Quantum.cellCompress_mul_self`, `Quantum.conjTranspose_cellCompress`).
 * `Quantum.piKron A`: the pi-tensor product of a family of operators on one cell.
@@ -60,7 +58,7 @@ index the computational basis of the database register of the compressed oracle.
 
 A database is the same data as VCVio's query cache `OracleSpec.QueryCache (X →ₒ Y)` for the single
 oracle `X →ₒ Y`, the partial answer table of the classical lazy random oracle; the identification
-is `Quantum.Database.equivQueryCache`. -/
+is `Quantum.Database.equivQueryCache` (`VCVio.Quantum.Oracle.Compressed.QueryCache`). -/
 abbrev Database (X Y : Type*) := X → Option Y
 
 namespace Database
@@ -131,23 +129,6 @@ theorem ncard_support_eq_size [Fintype X] (D : Database X Y) :
   congr 1
   ext x
   simp [Option.isSome_iff_ne_none]
-
-/-- Databases are VCVio's query caches for the oracle `X →ₒ Y`, the partial answer tables of the
-classical lazy random oracle. -/
-@[expose]
-def equivQueryCache {X Y : Type} : Database X Y ≃ OracleSpec.QueryCache (X →ₒ Y) :=
-  OracleSpec.QueryCache.equivFn.symm
-
-@[simp]
-theorem equivQueryCache_apply {X Y : Type} (D : Database X Y) (x : X) :
-    equivQueryCache D x = D x :=
-  rfl
-
-/-- The empty database is the empty cache. -/
-@[simp]
-theorem equivQueryCache_empty {X Y : Type} :
-    equivQueryCache (empty : Database X Y) = ∅ :=
-  rfl
 
 end Database
 

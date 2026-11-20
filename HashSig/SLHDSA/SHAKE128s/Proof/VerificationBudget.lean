@@ -82,7 +82,7 @@ theorem counted_query_bind (input : HashSpec.Domain)
       let output ← liftM (HashSpec.query input)
       let result ← counted (next output)
       return (result.1, Multiplicative.ofAdd (1 + Multiplicative.toAdd result.2))) := by
-  simp [counted, simulateQ_bind, QueryImpl.withUnitCost,
+  simp [counted, QueryImpl.withUnitCost,
     QueryImpl.withAddCost, QueryImpl.withCost, WriterT.run_bind,
     bind_assoc, map_eq_bind_pure_comp]
 
@@ -154,12 +154,13 @@ theorem verification_accepted_count_bounds (pk : PublicKey) (request : Message) 
       exact verification_count_bounds pk request wire message signature hframe hparse cache result
         hresult
 
-/-- The concrete experiment cannot accept a final forgery with fewer than 569 charged hashes. -/
-theorem accepted_outcome_work (adversary : Adversary) (outcome : Outcome)
-    (houtcome : outcome ∈ support (Security.run adversary)) (haccept : outcome.verified = true) :
+private theorem accepted_work_after_keygen (adversary : Adversary)
+    (keygen : OracleComp OracleWorld (SecretKey × PublicKey)) (program : ProbComp Outcome)
+    (hprogram : program = RandomOracleModel.run (keygen >>= afterKeygen adversary))
+    (outcome : Outcome) (houtcome : outcome ∈ support program) (haccept : outcome.verified = true) :
     569 ≤ outcome.counts.work := by
-  unfold Security.run RandomOracleModel.run at houtcome
-  rw [Security.experiment_eq_keygen_bind] at houtcome
+  subst program
+  unfold RandomOracleModel.run at houtcome
   rw [simulateQ_bind, StateT.run'_bind', mem_support_bind_iff] at houtcome
   obtain ⟨⟨⟨sk, pk⟩, keygenCache⟩, _hkeygen, hafterKeygen⟩ := houtcome
   dsimp only at hafterKeygen
@@ -186,5 +187,13 @@ theorem accepted_outcome_work (adversary : Adversary) (outcome : Outcome)
   change 569 ≤ (adversaryCounts + verifierCounts).work
   simp only [Counts.work, Pi.add_apply]
   omega
+
+/-- The concrete experiment cannot accept a final forgery with fewer than 569 charged hashes. -/
+theorem accepted_outcome_work (adversary : Adversary) (outcome : Outcome)
+    (houtcome : outcome ∈ support (Security.run adversary)) (haccept : outcome.verified = true) :
+    569 ≤ outcome.counts.work := by
+  exact accepted_work_after_keygen adversary Scheme.keygen (Security.run adversary)
+    (congrArg RandomOracleModel.run (Security.experiment_eq_keygen_bind adversary))
+    outcome houtcome haccept
 
 end SLHDSA.SHAKE128s.VerificationBudget

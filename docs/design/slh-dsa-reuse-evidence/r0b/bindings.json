@@ -99,7 +99,7 @@
     "HashSigTest/SLHDSA/BoundEval.lean": "14510782aabb8c53a2c957068ab2bc89602a95c0db533dec37f890c6fab7ea06",
     "HashSig/SLHDSA/Security/BoundEval.lean": "4dc98a7f9a73a00ccbda9277821e8915a9f93ebf140bf99e8f6eee5a97d2192a",
     "HashSig/SLHDSA/SHAKE128s/Statement/Scheme.lean": "01c7f41b6586a54aa7e86f210152d137855af8a42deae7d4fc9233e9f413e542",
-    "scripts/check-slh-dsa-bound-table.py": "24434c1a7d59e73d7abf1e87620c8eeb6d62f29f4efadb4f1c917d5b4843d0f5"
+    "scripts/check-slh-dsa-bound-table.py": "3a64a14c28dfbb747a5a0bd4f446b722cf891d673030fec8dce0ca4d598da1c5"
   },
   "csvSha256": "211f43f33c0e65ed17e26197c677e31809b3af804791aacb5985c57ae29c941a",
   "registeredRuntimes": {
@@ -143,6 +143,8 @@
       "root": "SLHDSAWireBridgeTests"
     }
   },
-  "driverScaffoldSha256": "66911ef4dd932f156ebb3b2dd4de091ad47ec8a0f3730f30800b94f4a2b045de",
-  "driverScaffoldPolicy": "Erase only standalone nonprotected exe-list entries; keep all other driver bytes, including loop/error propagation, table generator/checker, and the R0 tail"
+  "driverScaffoldSha256": "fed2376123062f012d352f93f57cce30dfd4943b5b128e3ba94f42bf19bdfef1",
+  "driverScaffoldPolicy": "Check unique literal ordinary executables, protected targets and the complete batched build, invocation, error propagation and Python tail.",
+  "toolchain": "leanprover/lean4:v4.36.0",
+  "leanCommit": "611c117bfaf7b7ae1cfcf246ce6fba31e8f509e9"
 }
