@@ -303,6 +303,21 @@ the same prefix and different tails. Computing these answers into a zero tail an
 discarding that tail distinguishes the inputs and destroys their coherence. The complete
 table decomposition retains the tail and does not perform that discard.
 
+For the exact pointer-chain construction, rank-ordered programming keeps the complete raw
+path responses. `prefixProgram` exposes only responses received through a stated honest rank;
+its value depends on that full raw prefix. The reference pre-query state is unchanged when
+future raw words are resampled while retaining the public commitment. The commitment's input
+contains the hidden key and stays behind the cutoff even though its output is public.
+`ParallelSchedule` supplies the generic numbered-call hybrid, used by this exact construction.
+
+The exact construction's analysis accumulates root probabilities before squaring. It also
+compares preprocessing under the complete programmed oracle with the base-table reference,
+using `ParallelFinisher` to keep the whole online run as a common finishing operation.
+The resulting [recovery theorem](7-time-lock-puzzles.md#finite-window-quantum-recovery-bound)
+is uniform in the chosen finite byte window. Its theorem concerns structured public puzzles
+and syntactically bounded online programs; serialized puzzle parsing and success before a
+deadline in longer-running programs require separate results.
+
 ## Checks
 
 **They agree with each other.** Wherever the library offers two descriptions of the same thing, a
