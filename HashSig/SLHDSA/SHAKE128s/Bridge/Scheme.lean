@@ -323,4 +323,14 @@ theorem hasSecurityBits_fips205 {Z : Finset Unforgeability.QueryKind} {bits : �
     (h : Game.HasSecurityBits model Z bits) : Game.HasSecurityBits FIPS205.scheme Z bits :=
   hasSecurityBits_of_bridge schemeBridge map_answerEquiv_uniformSample h
 
+/-- The deterministic SHAKE-128s model and FIPS 205 have the same security bits for every set of
+charged query kinds. -/
+theorem hasSecurityBits_fips205_iff (Z : Finset Unforgeability.QueryKind) (bits : ℕ) :
+    Game.HasSecurityBits FIPS205.scheme Z bits ↔ Game.HasSecurityBits model Z bits := by
+  apply hasSecurityBits_iff_of_leftInverse schemeBridge
+    (fun pk => (⟨digestEquiv.symm pk.pkSeed, digestEquiv.symm pk.pkRoot⟩ : PublicKey))
+    _ map_answerEquiv_uniformSample
+  rintro ⟨seed, root⟩
+  simp [schemeBridge, pkMap]
+
 end SLHDSA.SHAKE128s.Bridge
