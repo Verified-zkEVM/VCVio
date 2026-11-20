@@ -296,6 +296,11 @@ independently review each self-contained implementation unit.
 
 ## Historical comparison archives and guard evolution
 
+The exploratory byte-activation, coverage, charge, guard and native-thinning
+prototypes and their replay manifests are available in the archived design
+tree. Use `git ls-tree --name-only 2a61a09b:docs/design` to list the snapshots
+and `git show 2a61a09b:docs/design/<directory>/README.md` for their replay notes.
+
 R0a's original snapshot stores 1242 semantic records rooted at 112 constants,
 77 theorem contracts and 11 groups. Its AST/dependency/owner/axiom comparison
 can reject an extensionally equal refactor. That is honest evidence of a change,
