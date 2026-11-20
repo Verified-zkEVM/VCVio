@@ -295,7 +295,7 @@ noncomputable def rootPreprocessedRecoveryBound (G : Type) [Fintype G]
     (q k r Q : ℕ) : ℝ≥0∞ :=
   (rootPatchedRecoveryBound G q k ^ (2⁻¹ : ℝ) +
     2 * ((r : ℝ≥0∞) * Q * (((q + 1 : ℕ) : ℝ≥0∞) / Fintype.card G)) ^ (2⁻¹ : ℝ)) ^ 2 +
-      (((q + 2).choose 2 : ℕ) : ℝ≥0∞) / Fintype.card G
+      (((q + 1).choose 2 : ℕ) : ℝ≥0∞) / Fintype.card G
 
 private theorem referenceSuccess_le_root {q k : ℕ} (H : G → G)
     (adv : PreprocessingAdversary G q) (masks : Fin (q + 1) → G)

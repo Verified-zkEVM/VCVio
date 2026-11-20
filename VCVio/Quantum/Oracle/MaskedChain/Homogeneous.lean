@@ -35,7 +35,7 @@ noncomputable def patchedRecoveryBound (G : Type) [Fintype G] (q k : ℕ) : ℝ�
 theorem recoveryBound_eq_patchedRecoveryBound_add_collision (G : Type) [Fintype G]
     (q k : ℕ) :
     recoveryBound G q k = patchedRecoveryBound G q k +
-      (((q + 2).choose 2 : ℕ) : ℝ≥0∞) / Fintype.card G := by
+      (((q + 1).choose 2 : ℕ) : ℝ≥0∞) / Fintype.card G := by
   unfold recoveryBound patchedRecoveryBound
   ac_rfl
 

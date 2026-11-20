@@ -42,6 +42,11 @@ The adversary, its initial state and the puzzle algorithms are fixed before this
 * V. Buterin, Q. Dao and J. Drake, *leanSeal: A Committee-Free Encrypted Mempool from Hashes
   Alone*, October 2026, §4.2. The classical two-phase delay experiment supplies the phase and
   clock conventions; the adversary interface here permits quantum preprocessing and memory.
+* A. Afshar, K.-M. Chung, Y.-C. Hsieh, Y.-T. Lin and M. Mahmoody,
+  *On the (Im)possibility of Time-Lock Puzzles in the Quantum Random Oracle Model*,
+  [ePrint 2023/932](https://eprint.iacr.org/2023/932), Definitions 2.6 and 5.2, Theorem 5.3.
+  These give the quantum-solver experiment and parallel-query model. The explicit
+  query-bounded preprocessing phase here is an additional experiment feature.
 -/
 
 public section

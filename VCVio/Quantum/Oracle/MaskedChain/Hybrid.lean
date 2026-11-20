@@ -18,11 +18,16 @@ slots hitting a disagreement set. Observations can include the challenger's hidd
 -/
 
 public section
+
 open Matrix MeasureTheory
 open scoped ENNReal Kronecker ComplexOrder
+
 namespace Quantum
+
 universe u v w
+
 variable {L : LocalSig.{u, v}} {W : QReg → Type w} {A : QReg}
+
 namespace MaskedChain
 
 variable {G : Type} [DecidableEq G] [AddCommGroup G]
@@ -147,6 +152,7 @@ theorem rpow_inv_two_evalDistMap_hybridSchedule_le {q : ℕ} (I : L.Interp)
     simpa [hybridSchedule] using
       (fullOracle_eq_prefixOracle_of_not_mem_tailInputs H vertices masks (h + 1) z hz).symm
   · exact hs
+
 /-- The single-round event comparison for adjacent masked-chain hybrids.
 The endpoint observer is common to both runs for each fixed full challenge. -/
 theorem evalDistMap_hybridSchedule_le {q : ℕ} (I : L.Interp)

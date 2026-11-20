@@ -69,7 +69,11 @@ stateful runtimes too and keeps their private state throughout.
 
 The corresponding laws without preprocessing remain available. A theorem proved only for
 that restricted adversary class does not establish `QROMDelaySecure` for arbitrary
-preprocessing budgets.
+preprocessing budgets. The interface embeds classical honest generators; an adapter from
+arbitrary classical two-phase adversaries, preserving both advantages and resource budgets,
+is a separate bridge. Generic correctness and solver-budget predicates for quantum puzzles
+are also separate interface work. The application below proves its honest execution
+laws and budgets directly.
 
 ## The idealized masked-chain puzzle
 
@@ -119,7 +123,7 @@ With `N = |G|`, write
 \[
  A_{\rm on}=N^{-1/2}
  +2\sum_{h=0}^{q-1}\sqrt{k(q-h)/N},\qquad
- \beta=\binom{q+2}{2}/N.
+ \beta=\binom{q+1}{2}/N.
 \]
 
 Preprocessing with at most $r_{\mathrm{pre}}$ rounds and $Q_{\mathrm{pre}}$ points, followed by at

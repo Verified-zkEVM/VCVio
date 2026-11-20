@@ -13,9 +13,9 @@ public import Mathlib.Data.ZMod.Basic
 # Root-accumulated masked-chain regressions
 
 Guessing the published first vertex has exact success equal to the input mass divided by the
-vertex-space size. The patched zero-round bound keeps this baseline; its real-game coupling
-also charges a conservative birthday term. With sixteen vertices and one round of width one,
-the capped root-accumulated bound is three quarters, while the event-error bound is capped at one.
+vertex-space size. The patched zero-round bound keeps this baseline; the real-game coupling
+has no collision allowance for its sole programmed input. With sixteen vertices and one round
+of width one, the capped root bound is five eighths, while the event-error bound is capped at one.
 -/
 
 public section
@@ -112,10 +112,9 @@ example (q : ℕ) : recoveryAdvantage .instruments (guessFirst halfInput q) = 1 
   apply (ENNReal.toReal_eq_toReal_iff' (by finiteness) (by finiteness)).mp
   norm_num
 
-/-- At zero rounds the patched baseline is sharp, while the full bound retains its separate
-collision allowance even though this particular zero-query strategy needs none. -/
+/-- At zero rounds the real and patched bounds both equal the exact guessing baseline. -/
 example : rootPatchedRecoveryBound (ZMod 16) 0 7 = 1 / 16 ∧
-    rootRecoveryBound (ZMod 16) 0 7 = 1 / 8 := by
+    rootRecoveryBound (ZMod 16) 0 7 = 1 / 16 := by
   simp only [rootRecoveryBound, rootPatchedRecoveryBound, Finset.range_zero,
     Finset.sum_empty, mul_zero, add_zero]
   rw [← ENNReal.rpow_two, rpow_inv_two_rpow_two]
@@ -135,17 +134,17 @@ private theorem root_inv_16 :
   norm_num
 
 /-- With sixteen vertices and one round of width one, the capped root-accumulated bound is
-three quarters, while the event-error bound is capped at one. -/
-example : min 1 (rootRecoveryBound (ZMod 16) 1 1) = 3 / 4 ∧
+five eighths, while the event-error bound is capped at one. -/
+example : min 1 (rootRecoveryBound (ZMod 16) 1 1) = 5 / 8 ∧
     min 1 (recoveryBound (ZMod 16) 1 1) = 1 := by
-  have hn : rootRecoveryBound (ZMod 16) 1 1 = 3 / 4 := by
+  have hn : rootRecoveryBound (ZMod 16) 1 1 = 5 / 8 := by
     norm_num [rootRecoveryBound, rootPatchedRecoveryBound]
     rw [show (1 / 2 : ℝ) = 2⁻¹ by norm_num, root_inv_16]
     apply (ENNReal.toReal_eq_toReal_iff' (by finiteness) (by finiteness)).mp
     rw [ENNReal.toReal_add (by finiteness) (by finiteness), ENNReal.toReal_pow,
       ENNReal.toReal_add (by finiteness) (by finiteness)]
     norm_num
-  have ho : recoveryBound (ZMod 16) 1 1 = 5 / 4 := by
+  have ho : recoveryBound (ZMod 16) 1 1 = 9 / 8 := by
     norm_num [recoveryBound]
     rw [show (1 / 2 : ℝ) = 2⁻¹ by norm_num, root_inv_16]
     apply (ENNReal.toReal_eq_toReal_iff' (by finiteness) (by finiteness)).mp

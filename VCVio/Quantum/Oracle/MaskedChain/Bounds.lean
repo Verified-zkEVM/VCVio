@@ -35,12 +35,17 @@ vertices to the explicit collision term, without assuming that all inputs are di
 -/
 
 public section
+
 open Matrix MeasureTheory ProbabilityTheory
 open scoped ENNReal Kronecker ComplexOrder
+
 namespace Quantum.MaskedChain
+
 universe u v w
+
 variable {G : Type} [Fintype G] [DecidableEq G] [AddCommGroup G]
- {L : LocalSig.{u, v}} {W : QReg → Type w} {A : QReg}
+  {L : LocalSig.{u, v}} {W : QReg → Type w} {A : QReg}
+
 /-- Retain the known prefix through index `h`, independently resampling all later vertices. -/
 @[expose]
 def resampleFutureVertices {q : ℕ} (h : ℕ) (a b : Fin (q + 2) → G) : Fin (q + 2) → G :=
@@ -108,6 +113,7 @@ theorem sum_queryWeight_resampleFutureVertices_le {q : ℕ} (I : L.Interp) (H : 
     (by intro b; positivity)
     (fun b ↦ tailInputs (fun i : Fin (q + 1) ↦ b i.castSucc) (h + 1))
     δ hδ hS k hx (ρ.prod (SubState.basis ())) 0 h
+
 private theorem four_rpow_inv_two : (4 : ℝ≥0∞) ^ (2⁻¹ : ℝ) = 2 := by
   apply ENNReal.rpow_left_injective (show (2 : ℝ) ≠ 0 by norm_num)
   change ((4 : ℝ≥0∞) ^ (2⁻¹ : ℝ)) ^ (2 : ℝ) = (2 : ℝ≥0∞) ^ (2 : ℝ)
@@ -367,7 +373,7 @@ theorem recoveryAdvantage_le_of_patched_bound {q : ℕ} (I : L.Interp)
           (parallelScheduledRuntime (hybridSchedule H vertices masks 0)).evalDistMap I
             ((adv.run (vertices 0, masks)).numberQueries 0) adv.initialState
             (fun leaf ↦ leaf.2 = vertices (Fin.last (q + 1))) {True}) ≤ B) :
-    recoveryAdvantage I adv ≤ B + (((q + 2).choose 2 : ℕ) : ℝ≥0∞) / Fintype.card G := by
+    recoveryAdvantage I adv ≤ B + (((q + 1).choose 2 : ℕ) : ℝ≥0∞) / Fintype.card G := by
   classical
   let : MeasurableSpace G := ⊤
   let F (H : G → G) (xs : Fin (q + 2) → G) (masks : Fin (q + 1) → G) :=
@@ -415,7 +421,7 @@ The hybrid term is at most `4q * sqrt(kq / |G|)`, so its order is `sqrt(kq³ / |
 The collision term permits repeated hidden vertices without a distinctness assumption. -/
 @[expose]
 noncomputable def recoveryBound (G : Type) [Fintype G] (q k : ℕ) : ℝ≥0∞ :=
-  (Fintype.card G : ℝ≥0∞)⁻¹ + (((q + 2).choose 2 : ℕ) : ℝ≥0∞) / Fintype.card G +
+  (Fintype.card G : ℝ≥0∞)⁻¹ + (((q + 1).choose 2 : ℕ) : ℝ≥0∞) / Fintype.card G +
     4 * ∑ h ∈ Finset.range q,
       ((k : ℝ≥0∞) * ((q - h : ℕ) : ℝ≥0∞) / Fintype.card G) ^ (2⁻¹ : ℝ)
 
@@ -431,7 +437,7 @@ theorem recoveryAdvantage_le {q k : ℕ} (I : L.Interp) (adv : OnlineAdversary L
     _ ≤ ((Fintype.card G : ℝ≥0∞)⁻¹ +
           4 * ∑ h ∈ Finset.range q,
             ((k : ℝ≥0∞) * ((q - h : ℕ) : ℝ≥0∞) / Fintype.card G) ^ (2⁻¹ : ℝ)) +
-        (((q + 2).choose 2 : ℕ) : ℝ≥0∞) / Fintype.card G := by
+        (((q + 1).choose 2 : ℕ) : ℝ≥0∞) / Fintype.card G := by
       apply recoveryAdvantage_le_of_patched_bound I adv
       intro H masks
       change averageHybridSuccess I adv H masks 0 ≤ _

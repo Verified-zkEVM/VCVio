@@ -8,6 +8,7 @@ module
 public import VCVio.Quantum.Oracle.ParallelSearch
 public import VCVio.Quantum.Oracle.ClassicalParallel
 public import VCVio.Quantum.Comp.ChargeWeight
+import ToMathlib.MeasureTheory.Measure.UniformTable.Bounds
 
 /-!
 # Parallel reprogramming and marked-search regressions
@@ -23,6 +24,20 @@ open Quantum Matrix MeasureTheory OracleSpec OracleComp
 open scoped ENNReal ComplexOrder Kronecker
 
 namespace VCVioTest.QuantumParallelSearch
+
+/-- Coordinate incidence uses the caller's decision procedure for the hit event. -/
+example {D R : Type} [Fintype D] [Fintype R] [Nonempty R] [DecidableEq D] [DecidableEq R]
+    [MeasurableSpace R] [MeasurableSingletonClass R] (s : Finset D) (z : R) :
+    (∑ a : D → R, if ∃ i ∈ s, a i = z then (Fintype.card (D → R) : ℝ)⁻¹ else 0) ≤
+      (s.card : ℝ) / Fintype.card R := by
+  exact ProbabilityTheory.uniform_hit_sum_le s z
+
+/-- Concrete finite domains retain their optimized existential decision procedure. -/
+example {R : Type} [Fintype R] [Nonempty R] [DecidableEq R]
+    [MeasurableSpace R] [MeasurableSingletonClass R] (s : Finset (Fin 3)) (z : R) :
+    (∑ a : Fin 3 → R, if ∃ i ∈ s, a i = z then (Fintype.card (Fin 3 → R) : ℝ)⁻¹ else 0) ≤
+      (s.card : ℝ) / Fintype.card R := by
+  exact ProbabilityTheory.uniform_hit_sum_le s z
 
 /-! ## Query unions -/
 
@@ -227,6 +242,34 @@ theorem findMark_round : findMark.toQuantumBatch.IsTotalQueryBound 1 :=
 theorem findMark_width : findMark.toQuantumBatch.IsWidthBound 2 :=
   findMark_online.isPointQueryBound.isPointBound_toQuantumBatch.isWidthBound
 
+/-- An arbitrary returned-value event has a root comparison even when it does not test
+membership in the sampled disagreement set. The same two-point program supplies the query
+weights for every marked function. -/
+example :
+    (∑ mark : Bool, (1 / 2 : ENNReal) *
+      (parallelOracleRuntime (markedFunction mark)).evalDistMap .instruments
+        findMark.toQuantumBatch (SubState.basis ())
+        (fun leaf ↦ (QuantumComp₂.leafEquiv (QReg.of Unit) Bool).symm leaf) {true})
+          ^ (2⁻¹ : ℝ) ≤
+      (∑ _mark : Bool, (1 / 2 : ENNReal) *
+        (parallelOracleRuntime (0 : Bool → ZMod 2)).evalDistMap .instruments
+          findMark.toQuantumBatch (SubState.basis ())
+          (fun leaf ↦ (QuantumComp₂.leafEquiv (QReg.of Unit) Bool).symm leaf) {true})
+            ^ (2⁻¹ : ℝ) + 2 := by
+  have h := rpow_inv_two_sum_mul_evalDistMap_parallel_le_of_isPointBound
+    .instruments (0 : Bool → ZMod 2) markedFunction (fun _ : Bool ↦ (1 / 2 : ℝ))
+    (by intro _; norm_num) (fun mark ↦ ({mark} : Set Bool))
+    (by intro mark z hz; simpa [markedFunction] using hz)
+    (1 / 2) (by norm_num)
+    (by intro z; cases z <;> norm_num [Set.indicator, Fintype.sum_bool])
+    findMark_round findMark_online.isPointQueryBound.isPointBound_toQuantumBatch
+    (SubState.basis ())
+    (fun _ leaf ↦ (QuantumComp₂.leafEquiv (QReg.of Unit) Bool).symm leaf)
+    (MeasurableSet.singleton true)
+  norm_num [ENNReal.ofReal_div_of_pos] at h ⊢
+  simpa only [ENNReal.mul_inv_cancel (by norm_num : (2 : ENNReal) ≠ 0)
+    (by norm_num : (2 : ENNReal) ≠ ⊤), ENNReal.one_rpow, mul_one] using h
+
 /-- The actual two-slot marked-oracle algorithm succeeds with probability one. -/
 example : markedSearchAdvantage .instruments findMark.toQuantumBatch (SubState.basis ())
     (QuantumComp₂.leafEquiv (QReg.of Unit) Bool).symm = 1 := by
@@ -343,7 +386,7 @@ noncomputable def adaptivePoints
         fun _ ↦ QuantumComp.queryBind ((), if b then 2 else 1) (QReg.of Bool) (Equiv.refl _)
           fun _ ↦ QuantumComp.pure (if b then 0 else 1)
 
-/-- Two total points suffice, even though the width cap times the round count is four. -/
+/-- The program uses exactly two rounds on every branch. -/
 theorem adaptivePoints_budgets
     (p : DSubInstrument Bool Bool
       (fun b ↦ (Fin (if b then 0 else 1) → Fin 64 × ZMod 2) × Bool))

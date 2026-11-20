@@ -293,17 +293,21 @@ variable {G : Type*} [AddGroup G]
 def oracleMasks {n : ℕ} (H : G → G) (xs : Fin (n + 1) → G) : Fin n → G :=
   fun i ↦ H (xs i.castSucc) + xs i.succ
 
+/-- With distinct programmed inputs, the published masks are the independent programming
+values translated by the following vertices. The final endpoint may repeat an input. -/
+theorem oracleMasks_patch_of_input_injective [DecidableEq G] (n : ℕ) (H : G → G)
+    (xs : Fin (n + 1) → G) (ys : Fin n → G)
+    (hx : Function.Injective (fun i : Fin n ↦ xs i.castSucc)) :
+    oracleMasks (patch n (fun i ↦ xs i.castSucc) H ys) xs = maskEquiv xs ys := by
+  funext i
+  exact congrArg (fun v ↦ v + xs i.succ) (patch_eq_at_injective n _ H ys hx i)
+
 /-- On distinct hidden vertices, the published masks are the independent programming values
 translated by the following vertices. -/
 theorem oracleMasks_patch_of_injective [DecidableEq G] (n : ℕ) (H : G → G)
     (xs : Fin (n + 1) → G) (ys : Fin n → G) (hx : Function.Injective xs) :
-    oracleMasks (patch n (fun i ↦ xs i.castSucc) H ys) xs = maskEquiv xs ys := by
-  funext i
-  change patch n (fun j ↦ xs j.castSucc) H ys (xs i.castSucc) + xs i.succ =
-    ys i + xs i.succ
-  exact congrArg (fun v ↦ v + xs i.succ)
-    (patch_eq_at_injective n (fun j ↦ xs j.castSucc) H ys
-      (fun a b hab ↦ Fin.castSucc_injective n (hx hab)) i)
+    oracleMasks (patch n (fun i ↦ xs i.castSucc) H ys) xs = maskEquiv xs ys :=
+  oracleMasks_patch_of_input_injective n H xs ys (hx.comp (Fin.castSucc_injective n))
 
 variable [DecidableEq G] [MeasurableSpace G] [MeasurableSingletonClass G]
 
@@ -320,6 +324,19 @@ theorem lintegral_maskEquiv [Finite G] {n : ℕ} (xs : Fin (n + 1) → G)
     (uniformOn_univ_map_equiv (maskEquiv xs))
   rw [lintegral_map Measurable.of_discrete Measurable.of_discrete] at h
   simpa using h
+
+omit [DecidableEq G] in
+/-- Collision probability among the programmed input vertices of a uniform hidden chain.
+The final endpoint is retained in the sampled tuple but is not an input to programming. -/
+theorem uniform_input_collision_le [Fintype G] (n : ℕ) :
+    (uniformOn Set.univ : Measure (Fin (n + 1) → G))
+      {xs | ¬ Function.Injective (fun i : Fin n ↦ xs i.castSucc)} ≤
+        (n.choose 2 : ENNReal) / Fintype.card G := by
+  have he := uniformOn_univ_map_comp_injective (R := G)
+    (e := @Fin.castSucc n) (Fin.castSucc_injective n)
+  have h := uniform_collision_le (R := G) n
+  rw [← he, Measure.map_apply Measurable.of_discrete MeasurableSet.of_discrete] at h
+  exact h
 
 private theorem lintegral_le_add_of_eq_off {A : Type*} [Finite A]
     [MeasurableSpace A] [MeasurableSingletonClass A] (μ : Measure A)
@@ -338,9 +355,10 @@ private theorem lintegral_le_add_of_eq_off {A : Type*} [Finite A]
         lintegral_indicator_one MeasurableSet.of_discrete]
 
 open scoped Classical in
-/-- Compare oracle-derived masks with independent programmed masks, charging vertex collisions.
+/-- Compare oracle-derived masks with independent programmed masks, charging collisions
+among programmed inputs.
 The observer retains the oracle and complete hidden vertices. After programming, the mask
-choices agree outside collisions, preserving events that check the hidden endpoint. -/
+choices agree when the inputs are distinct, preserving events that check the hidden endpoint. -/
 theorem real_le_patched_add_collision [Fintype G] (n : ℕ)
     (F : (G → G) → (Fin (n + 1) → G) → (Fin n → G) → ENNReal)
     (hF : ∀ H xs masks, F H xs masks ≤ 1) :
@@ -352,29 +370,29 @@ theorem real_le_patched_add_collision [Fintype G] (n : ℕ)
           ∂(uniformOn Set.univ : Measure (Fin n → G))
           ∂(uniformOn Set.univ : Measure (G → G))
           ∂(uniformOn Set.univ : Measure (Fin (n + 1) → G))) +
-        (((n + 1).choose 2 : ℕ) : ENNReal) / Fintype.card G := by
+        ((n.choose 2 : ℕ) : ENNReal) / Fintype.card G := by
   refine (lintegral_le_add_of_eq_off (uniformOn Set.univ) _ _
-    {xs | ¬ Function.Injective xs} ?_ ?_).trans
-      (add_le_add le_rfl (uniform_collision_le (R := G) (n + 1)))
+    {xs | ¬ Function.Injective (fun i : Fin n ↦ xs i.castSucc)} ?_ ?_).trans
+      (add_le_add le_rfl (uniform_input_collision_le (G := G) n))
   · intro xs
     calc
       _ ≤ ∫⁻ _H, (1 : ENNReal) ∂(uniformOn Set.univ : Measure (G → G)) :=
         lintegral_mono fun H ↦ hF H xs (oracleMasks H xs)
       _ = 1 := by simp
   · intro xs hx
-    have hinj : Function.Injective xs := not_not.mp hx
+    have hinj : Function.Injective (fun i : Fin n ↦ xs i.castSucc) := not_not.mp hx
     rw [← lintegral_uniform_patch n (fun i ↦ xs i.castSucc)
       (fun H ↦ F H xs (oracleMasks H xs))]
     congr 1
     funext H
     congr 1
     funext ys
-    rw [oracleMasks_patch_of_injective n H xs ys hinj]
+    rw [oracleMasks_patch_of_input_injective n H xs ys hinj]
 
 open scoped Classical in
 /-- Sample public masks independently before deriving the programming values.
 The real oracle-derived-mask experiment is bounded by the independently masked experiment
-plus the vertex-collision probability.
+plus the input-collision probability.
 The bounded observer retains the oracle, all hidden vertices, and the published masks. -/
 theorem real_le_maskFirst_add_collision [Fintype G] (n : ℕ)
     (F : (G → G) → (Fin (n + 1) → G) → (Fin n → G) → ENNReal)
@@ -387,7 +405,7 @@ theorem real_le_maskFirst_add_collision [Fintype G] (n : ℕ)
           ∂(uniformOn Set.univ : Measure (Fin n → G))
           ∂(uniformOn Set.univ : Measure (G → G))
           ∂(uniformOn Set.univ : Measure (Fin (n + 1) → G))) +
-        (((n + 1).choose 2 : ℕ) : ENNReal) / Fintype.card G := by
+        ((n.choose 2 : ℕ) : ENNReal) / Fintype.card G := by
   refine (real_le_patched_add_collision n F hF).trans_eq ?_
   congr 1
   congr 1

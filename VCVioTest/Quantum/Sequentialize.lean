@@ -343,4 +343,41 @@ example : (qromObserve.sequentialize .instruments).IsQueryBound (fun _ ↦ 2) :=
   apply QuantumComp.IsPointBound.qrom_sequentialize
   simp [qromObserve]
 
+/-- A bound covering all two-query sequential programs transfers to the concrete two-slot
+program, with an event comparing the returned responses to the sampled function. -/
+example (ρ : SubState ((Fin 2 → Unit × ZMod 3) × Bool)) (ε : ENNReal)
+    (h : ∀ z : QuantumComp LocalSig.instruments.{0} (qromSpec Unit (ZMod 3))
+      (fun _ ↦ ZMod 3 × ZMod 3) (QReg.of ((Fin 2 → Unit × ZMod 3) × Bool)),
+      z.IsQueryBound (fun _ ↦ 2) → qromEvalDistMap .instruments z ρ
+        (fun H out ↦ out.2 = (H (), H ())) {True} ≤ ε) :
+    qromBatchEvalDistMap .instruments qromObserve ρ
+      (fun H out ↦ out.2 = (H (), H ())) {True} ≤ ε := by
+  apply qromBatchEvalDistMap_le_of_sequential_bound .instruments qromObserve ρ _ _ _ ε h
+  simp [qromObserve]
+
+/-- Generic local-step budget lemmas support large classical outcomes and large port types. -/
+example (p : SubInstrument Unit Unit (ULift.{1} Unit))
+    (k : ULift.{1} Unit → QComp
+      (uBatchSpec (ULift.{1} Unit) fun _ ↦ QReg.of Unit)
+      (QReg.of Unit) (QReg.of Unit) (ULift.{1} Unit)) (n : ℕ) :
+    let x := (QComp.act (A := QReg.of Unit) p).bind k
+    x.IsTotalQueryBound n ∧ x.IsPointBound n ↔
+      (∀ b, (k b).IsTotalQueryBound n) ∧ ∀ b, (k b).IsPointBound n := by
+  dsimp only
+  rw [QComp.isTotalQueryBound_act_bind_iff, QComp.isPointBound_act_bind_iff]
+
+/-- Fixed-register query budgets also support outcome and base-port universes above `Type`. -/
+example (k : Unit → QuantumComp₂ LocalSig.instruments.{1}
+    (uBatchSpec (ULift.{1} Unit) fun _ ↦ QReg.of Unit)
+    (QReg.of ((Fin 1 → Unit) × Unit)) (QReg.of Unit) (ULift.{1} Unit)) (n : ℕ) :
+    let x := (QuantumComp₂.query (L := LocalSig.instruments.{1})
+      (spec := uBatchSpec (ULift.{1} Unit) fun _ ↦ QReg.of Unit)
+      (A := QReg.of ((Fin 1 → Unit) × Unit)) (ULift.up (), 1)
+      (QReg.of Unit) (Equiv.refl _)).bind k
+    x.IsTotalQueryBound n ∧ x.IsPointBound n ↔
+      (0 < n ∧ ∀ r, (k r).IsTotalQueryBound (n - 1)) ∧
+        1 ≤ n ∧ ∀ r, (k r).IsPointBound (n - 1) := by
+  dsimp only
+  rw [QuantumComp₂.isTotalQueryBound_query_bind_iff, QuantumComp₂.isPointBound_query_bind_iff]
+
 end VCVioTest.QuantumSequentialize

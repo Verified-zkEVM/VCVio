@@ -28,7 +28,7 @@ open scoped ENNReal Kronecker
 
 namespace Quantum
 
-universe u v w
+universe u v w w₁
 
 variable {X Y : Type} {Ω : Type*} [Fintype Ω]
 
@@ -133,48 +133,60 @@ theorem tsum_sum_mul_queryWeight_parallelInputWeight_le_of_isPointBound
 
 variable [AddCommGroup Y]
 
+private theorem four_rpow_inv_two : (4 : ℝ≥0∞) ^ (2⁻¹ : ℝ) = 2 := by
+  rw [show (4 : ℝ≥0∞) = (2 : ℝ≥0∞) ^ (2 : ℕ) by norm_num,
+    ← ENNReal.rpow_natCast, ← ENNReal.rpow_mul]
+  norm_num
+
 private theorem one_add_query_root_eq (q Q : ℕ) :
     (1 : ℝ≥0∞) + ((q : ℝ≥0∞) * (4 * Q)) ^ (2⁻¹ : ℝ) =
       ENNReal.ofReal (1 + 2 * Real.sqrt ((q : ℝ) * Q)) := by
   rw [show (q : ℝ≥0∞) * (4 * Q) = 4 * ((q : ℝ≥0∞) * Q) by ring,
     ENNReal.mul_rpow_of_nonneg _ _ (by norm_num)]
-  have hfour : (4 : ℝ≥0∞) ^ (2⁻¹ : ℝ) = 2 := by
-    rw [show (4 : ℝ≥0∞) = (2 : ℝ≥0∞) ^ (2 : ℕ) by norm_num,
-      ← ENNReal.rpow_natCast, ← ENNReal.rpow_mul]
-    norm_num
-  rw [hfour, ENNReal.ofReal_add (by norm_num) (by positivity),
+  rw [four_rpow_inv_two, ENNReal.ofReal_add (by norm_num) (by positivity),
     ENNReal.ofReal_mul (by norm_num), ← ENNReal.ofReal_rpow_inv_two,
     ENNReal.ofReal_mul (Nat.cast_nonneg _)]
   simp
 
-/-- Finding a sampled hidden set after adaptive parallel calls. A single reference oracle,
-program, initial state and guess are held fixed across the sampled sets. The incidence
-hypothesis supplies the guessing rate and the expected query-union weight. The weights need
-not be normalized; the conclusion is an unconditional weighted sum of success probabilities. -/
-theorem sum_mul_evalDistMap_mem_parallel_le_of_isPointBound
+/-- Weighted root hybrid for arbitrary challenge-dependent events and programs whose
+reference query weights agree on every input operator with one fixed query-bounded program.
+The reference program and its input state are independent of the sampled disagreement set.
+The challenge weights need not be normalized. -/
+theorem rpow_inv_two_sum_mul_evalDistMap_parallel_le_of_queryWeight_eq
+    {V : QReg → Type w₁}
     (I : L.Interp) (reference : X → Y) (oracles : Ω → X → Y)
     (weights : Ω → ℝ) (hw : ∀ ω, 0 ≤ weights ω) (S : Ω → Set X)
     (hsupport : ∀ ω z, z ∉ S ω → oracles ω z = reference z)
     (δ : ℝ) (hδ : 0 ≤ δ)
     (hS : ∀ z, ∑ ω, (S ω).indicator (fun _ ↦ weights ω) z ≤ δ)
     {x : QuantumComp L (qromBatchSpec X Y) W A} {q Q : ℕ}
-    (hq : x.IsTotalQueryBound q) (hQ : x.IsPointBound Q)
-    (ρ : SubState A) (guess : (Σ B, W B) → X) :
-    ∑ ω, ENNReal.ofReal (weights ω) *
-      (parallelOracleRuntime (oracles ω)).evalDistMap I x ρ
-        (fun leaf ↦ guess leaf ∈ S ω) {True} ≤
-      ENNReal.ofReal δ * ENNReal.ofReal ((1 + 2 * Real.sqrt ((q : ℝ) * Q)) ^ 2) := by
+    (hq : x.IsTotalQueryBound q) (hQ : x.IsPointBound Q) (ρ : SubState A)
+    (experiments : Ω → QuantumComp L (qromBatchSpec X Y) V A)
+    (hweight : ∀ ω (σ : Matrix (A × (parallelOracleRuntime reference).D)
+      (A × (parallelOracleRuntime reference).D) ℂ) j,
+      (parallelOracleRuntime reference).queryWeight I
+        (parallelInputWeight (D := (parallelOracleRuntime reference).D) (S ω))
+        (experiments ω) σ j =
+      (parallelOracleRuntime reference).queryWeight I
+        (parallelInputWeight (D := (parallelOracleRuntime reference).D) (S ω)) x σ j)
+    {γ : Type*} [MeasurableSpace γ] (f : Ω → (Σ B, V B) → γ)
+    {s : Set γ} (hs : MeasurableSet s) :
+    (∑ ω, ENNReal.ofReal (weights ω) *
+      (parallelOracleRuntime (oracles ω)).evalDistMap I (experiments ω) ρ (f ω) s)
+        ^ (2⁻¹ : ℝ) ≤
+      (∑ ω, ENNReal.ofReal (weights ω) *
+        (parallelOracleRuntime reference).evalDistMap I (experiments ω) ρ (f ω) s)
+          ^ (2⁻¹ : ℝ) +
+      2 * ((q : ℝ≥0∞) * Q * ENNReal.ofReal δ) ^ (2⁻¹ : ℝ) := by
   classical
   let R := parallelOracleRuntime reference
   let τ : SubState (A × R.D) := ρ.prod (SubState.basis ())
   let c (ω : Ω) := ENNReal.ofReal (weights ω)
-  let p (ω : Ω) := c ω * (parallelOracleRuntime (oracles ω)).evalDistMap I x ρ
-    (fun leaf ↦ guess leaf ∈ S ω) {True}
-  let a (ω : Ω) := c ω * R.evalDistMap I x ρ (fun leaf ↦ guess leaf ∈ S ω) {True}
+  let p (ω : Ω) := c ω * (parallelOracleRuntime (oracles ω)).evalDistMap I
+    (experiments ω) ρ (f ω) s
+  let a (ω : Ω) := c ω * R.evalDistMap I (experiments ω) ρ (f ω) s
   let m (j : ℕ) (ω : Ω) := c ω *
     (4 * R.queryWeight I (parallelInputWeight (D := R.D) (S ω)) x τ.matrix j)
-  have ha : ∑' ω, a ω ≤ ENNReal.ofReal δ := by
-    simpa only [tsum_fintype] using sum_mul_evalDistMap_mem_le R I weights hw S δ hS x ρ guess
   have hcut : ∀ j, q ≤ j → ∀ ω, m j ω = 0 := by
     intro j hj ω
     dsimp only [m]
@@ -195,34 +207,95 @@ theorem sum_mul_evalDistMap_mem_parallel_le_of_isPointBound
   have hh (ω : Ω) : p ω ^ (2⁻¹ : ℝ) ≤ a ω ^ (2⁻¹ : ℝ) +
       ∑' j, m j ω ^ (2⁻¹ : ℝ) := by
     have h := rpow_inv_two_evalDistMap_parallel_le_support I (oracles ω) reference (S ω)
-      (hsupport ω) x ρ (fun leaf ↦ guess leaf ∈ S ω) (MeasurableSet.singleton True)
+      (hsupport ω) (experiments ω) ρ (f ω) hs
+    simp_rw [hweight ω] at h
     calc
       _ = c ω ^ (2⁻¹ : ℝ) *
-          (parallelOracleRuntime (oracles ω)).evalDistMap I x ρ
-            (fun leaf ↦ guess leaf ∈ S ω) {True} ^ (2⁻¹ : ℝ) :=
+          (parallelOracleRuntime (oracles ω)).evalDistMap I
+            (experiments ω) ρ (f ω) s ^ (2⁻¹ : ℝ) :=
         ENNReal.mul_rpow_of_nonneg _ _ (by norm_num)
-      _ ≤ c ω ^ (2⁻¹ : ℝ) * (R.evalDistMap I x ρ
-          (fun leaf ↦ guess leaf ∈ S ω) {True} ^ (2⁻¹ : ℝ) +
+      _ ≤ c ω ^ (2⁻¹ : ℝ) * (R.evalDistMap I
+          (experiments ω) ρ (f ω) s ^ (2⁻¹ : ℝ) +
             ∑' j, (4 * R.queryWeight I (parallelInputWeight (D := R.D) (S ω))
               x τ.matrix j) ^ (2⁻¹ : ℝ)) := mul_le_mul le_rfl h bot_le bot_le
       _ = _ := by
         simp only [a, m, mul_add, ENNReal.tsum_mul_left,
           ENNReal.mul_rpow_of_nonneg _ _ (by norm_num : (0 : ℝ) ≤ 2⁻¹)]
   have hroot := rpow_inv_two_tsum_le_of_le_add_tsum_of_cutoff p a m q hcut hh
-  have hamp : (∑' ω, p ω) ^ (2⁻¹ : ℝ) ≤
-      ENNReal.ofReal δ ^ (2⁻¹ : ℝ) *
-        (1 + ((q : ℝ≥0∞) * (4 * Q)) ^ (2⁻¹ : ℝ)) := by
-    refine hroot.trans ((add_le_add
-      (ENNReal.rpow_le_rpow ha (by norm_num : (0 : ℝ) ≤ 2⁻¹))
-      (ENNReal.rpow_le_rpow (mul_le_mul le_rfl hm bot_le bot_le) (by norm_num))).trans_eq ?_)
+  have herr : ((q : ℝ≥0∞) * (4 * (ENNReal.ofReal δ * Q))) ^ (2⁻¹ : ℝ) =
+      2 * ((q : ℝ≥0∞) * Q * ENNReal.ofReal δ) ^ (2⁻¹ : ℝ) := by
     rw [show (q : ℝ≥0∞) * (4 * (ENNReal.ofReal δ * Q)) =
-        ENNReal.ofReal δ * ((q : ℝ≥0∞) * (4 * Q)) by ring,
+        4 * ((q : ℝ≥0∞) * Q * ENNReal.ofReal δ) by ring,
       ENNReal.mul_rpow_of_nonneg _ _ (by norm_num)]
+    rw [four_rpow_inv_two]
+  simpa only [p, a, tsum_fintype, herr] using
+    hroot.trans (add_le_add le_rfl
+      (ENNReal.rpow_le_rpow (mul_le_mul le_rfl hm bot_le bot_le) (by norm_num)))
+
+/-- Arbitrary final events admit an averaged root comparison at a round-and-point budget.
+The program and its input are fixed independently of the sampled disagreement set; the
+observation may retain that set and all other sampled challenge data. -/
+theorem rpow_inv_two_sum_mul_evalDistMap_parallel_le_of_isPointBound
+    (I : L.Interp) (reference : X → Y) (oracles : Ω → X → Y)
+    (weights : Ω → ℝ) (hw : ∀ ω, 0 ≤ weights ω) (S : Ω → Set X)
+    (hsupport : ∀ ω z, z ∉ S ω → oracles ω z = reference z)
+    (δ : ℝ) (hδ : 0 ≤ δ)
+    (hS : ∀ z, ∑ ω, (S ω).indicator (fun _ ↦ weights ω) z ≤ δ)
+    {x : QuantumComp L (qromBatchSpec X Y) W A} {q Q : ℕ}
+    (hq : x.IsTotalQueryBound q) (hQ : x.IsPointBound Q)
+    (ρ : SubState A) {γ : Type*} [MeasurableSpace γ]
+    (f : Ω → (Σ B, W B) → γ) {s : Set γ} (hs : MeasurableSet s) :
+    (∑ ω, ENNReal.ofReal (weights ω) *
+      (parallelOracleRuntime (oracles ω)).evalDistMap I x ρ (f ω) s) ^ (2⁻¹ : ℝ) ≤
+      (∑ ω, ENNReal.ofReal (weights ω) *
+        (parallelOracleRuntime reference).evalDistMap I x ρ (f ω) s) ^ (2⁻¹ : ℝ) +
+      2 * ((q : ℝ≥0∞) * Q * ENNReal.ofReal δ) ^ (2⁻¹ : ℝ) :=
+  rpow_inv_two_sum_mul_evalDistMap_parallel_le_of_queryWeight_eq I reference oracles
+    weights hw S hsupport δ hδ hS hq hQ ρ (fun _ ↦ x) (fun _ _ _ ↦ rfl) f hs
+
+/-- Finding a sampled hidden set after adaptive parallel calls. A single reference oracle,
+program, initial state and guess are held fixed across the sampled sets. The incidence
+hypothesis supplies the guessing rate and the expected query-union weight. The weights need
+not be normalized; the conclusion is an unconditional weighted sum of success probabilities. -/
+theorem sum_mul_evalDistMap_mem_parallel_le_of_isPointBound
+    (I : L.Interp) (reference : X → Y) (oracles : Ω → X → Y)
+    (weights : Ω → ℝ) (hw : ∀ ω, 0 ≤ weights ω) (S : Ω → Set X)
+    (hsupport : ∀ ω z, z ∉ S ω → oracles ω z = reference z)
+    (δ : ℝ) (hδ : 0 ≤ δ)
+    (hS : ∀ z, ∑ ω, (S ω).indicator (fun _ ↦ weights ω) z ≤ δ)
+    {x : QuantumComp L (qromBatchSpec X Y) W A} {q Q : ℕ}
+    (hq : x.IsTotalQueryBound q) (hQ : x.IsPointBound Q)
+    (ρ : SubState A) (guess : (Σ B, W B) → X) :
+    ∑ ω, ENNReal.ofReal (weights ω) *
+      (parallelOracleRuntime (oracles ω)).evalDistMap I x ρ
+        (fun leaf ↦ guess leaf ∈ S ω) {True} ≤
+      ENNReal.ofReal δ * ENNReal.ofReal ((1 + 2 * Real.sqrt ((q : ℝ) * Q)) ^ 2) := by
+  have hroot := rpow_inv_two_sum_mul_evalDistMap_parallel_le_of_isPointBound
+    I reference oracles weights hw S hsupport δ hδ hS hq hQ ρ
+    (fun ω leaf ↦ guess leaf ∈ S ω) (MeasurableSet.singleton True)
+  have ha := sum_mul_evalDistMap_mem_le (parallelOracleRuntime reference)
+    I weights hw S δ hS x ρ guess
+  have hamp :
+      (∑ ω, ENNReal.ofReal (weights ω) *
+        (parallelOracleRuntime (oracles ω)).evalDistMap I x ρ
+          (fun leaf ↦ guess leaf ∈ S ω) {True}) ^ (2⁻¹ : ℝ) ≤
+        ENNReal.ofReal δ ^ (2⁻¹ : ℝ) *
+          (1 + ((q : ℝ≥0∞) * (4 * Q)) ^ (2⁻¹ : ℝ)) := by
+    refine hroot.trans ((add_le_add
+      (ENNReal.rpow_le_rpow ha (by norm_num : (0 : ℝ) ≤ 2⁻¹)) le_rfl).trans_eq ?_)
+    rw [show (q : ℝ≥0∞) * Q * ENNReal.ofReal δ =
+        ENNReal.ofReal δ * ((q : ℝ≥0∞) * Q) by ring,
+      show (q : ℝ≥0∞) * (4 * Q) = 4 * ((q : ℝ≥0∞) * Q) by ring,
+      ENNReal.mul_rpow_of_nonneg _ _ (by norm_num)]
+    simp only [ENNReal.mul_rpow_of_nonneg _ _ (by norm_num : (0 : ℝ) ≤ 2⁻¹),
+      four_rpow_inv_two]
     ring
   have hsquare := ENNReal.rpow_le_rpow hamp (by norm_num : (0 : ℝ) ≤ 2)
   calc
-    _ = ((∑' ω, p ω) ^ (2⁻¹ : ℝ)) ^ (2 : ℝ) := by
-      rw [rpow_inv_two_rpow_two, tsum_fintype]
+    _ = ((∑ ω, ENNReal.ofReal (weights ω) *
+        (parallelOracleRuntime (oracles ω)).evalDistMap I x ρ
+          (fun leaf ↦ guess leaf ∈ S ω) {True}) ^ (2⁻¹ : ℝ)) ^ (2 : ℝ) := by
+      rw [rpow_inv_two_rpow_two]
     _ ≤ (ENNReal.ofReal δ ^ (2⁻¹ : ℝ) *
         (1 + ((q : ℝ≥0∞) * (4 * Q)) ^ (2⁻¹ : ℝ))) ^ (2 : ℝ) := hsquare
     _ = _ := by

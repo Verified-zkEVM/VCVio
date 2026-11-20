@@ -50,6 +50,15 @@ example : oracleMasks (patch 2 (![0, 0] : Fin 2 → ZMod 3) (fun _ ↦ 0) ![1, 2
     maskEquiv (![0, 0, 1] : Fin 3 → ZMod 3) (![1, 2] : Fin 2 → ZMod 3) 1 := by
   decide
 
+/-- Repeating a programmed input only at the endpoint does not spoil agreement with the
+published masks; only repetitions among the programmed inputs require a collision allowance. -/
+example :
+    oracleMasks (patch 2 (![0, 1] : Fin 2 → ZMod 3) (fun _ ↦ 0) ![1, 2])
+        (![0, 1, 0] : Fin 3 → ZMod 3) =
+      maskEquiv (![0, 1, 0] : Fin 3 → ZMod 3) (![1, 2] : Fin 2 → ZMod 3) := by
+  apply oracleMasks_patch_of_input_injective
+  decide
+
 /-- Fresh programming values keep a repeated-input oracle cell uniform: eight of the sixteen
 complete oracle/value samples program it to one. -/
 example : (Finset.univ.filter fun p : (ZMod 2 → ZMod 2) × (Fin 2 → ZMod 2) ↦
@@ -60,14 +69,12 @@ example : (Finset.univ.filter fun p : (ZMod 2 → ZMod 2) × (Fin 2 → ZMod 2) 
 universe u v
 variable {L : LocalSig.{u, v}}
 
-/-- At zero rounds, the explicit bound retains its guessing and collision terms. -/
+/-- At zero rounds, the explicit bound is the exact guessing probability. -/
 example (I : L.Interp) (adv : OnlineAdversary L (ZMod 256) 0)
-    (hb : adv.IsQueryBound 0 7) : recoveryAdvantage I adv ≤ 1 / 128 := by
+    (hb : adv.IsQueryBound 0 7) : recoveryAdvantage I adv ≤ 1 / 256 := by
   have h := recoveryAdvantage_le I adv hb
   refine h.trans ((min_le_right _ _).trans_eq ?_)
   norm_num [recoveryBound]
-  apply (ENNReal.toReal_eq_toReal_iff' (by finiteness) (by finiteness)).mp
-  norm_num [ENNReal.toReal_add, ENNReal.toReal_mul, ENNReal.toReal_div]
 
 private theorem root_inv_256 : ((256 : ℝ≥0∞)⁻¹ ^ (2⁻¹ : ℝ)) = (16 : ℝ≥0∞)⁻¹ := by
   apply ENNReal.rpow_left_injective (show (2 : ℝ) ≠ 0 by norm_num)
@@ -76,10 +83,10 @@ private theorem root_inv_256 : ((256 : ℝ≥0∞)⁻¹ ^ (2⁻¹ : ℝ)) = (16 
   apply (ENNReal.toReal_eq_toReal_iff' (by finiteness) (by finiteness)).mp
   norm_num
 
-/-- One round against two masked links has a nontrivial 17/64 endpoint bound; all three
+/-- One round against two masked links has a nontrivial 33/128 endpoint bound; all three
 error terms contribute, so a missing hybrid or collision term changes this value. -/
 theorem oneRound_recoveryAdvantage_le (I : L.Interp) (adv : OnlineAdversary L (ZMod 256) 1)
-    (hb : adv.IsQueryBound 1 1) : recoveryAdvantage I adv ≤ 17 / 64 := by
+    (hb : adv.IsQueryBound 1 1) : recoveryAdvantage I adv ≤ 33 / 128 := by
   have h := recoveryAdvantage_le I adv hb
   refine h.trans ((min_le_right _ _).trans_eq ?_)
   norm_num [recoveryBound]
@@ -113,13 +120,24 @@ example [MeasurableSpace (Option (ZMod 3))] :
   rw [hp] at h
   exact h
 
+/-- The honest quantum solver uses two rounds to recover a two-link chain with certainty.
+The one-round root bound for the same sixteen-element vertex space is strictly below one. -/
+example [MeasurableSpace (Option (ZMod 16))] (H : ZMod 16 → ZMod 16)
+    (vertices : Fin 3 → ZMod 16) :
+    (((MaskedChainPuzzle.scheme 1).solve (publicPuzzle H vertices)).IsTotalQueryBound 2) ∧
+      (parallelOracleRuntime H).evalDist₂ .instruments
+        ((MaskedChainPuzzle.scheme 1).solve (publicPuzzle H vertices)) (SubState.basis ()) =
+          Measure.dirac (some (vertices (Fin.last 2))) :=
+  ⟨(MaskedChainPuzzle.scheme_solve_queryBound _).1,
+    MaskedChainPuzzle.evalDist_scheme_solve_publicPuzzle H vertices⟩
+
 /-- The actual two-phase experiment inherits the unsaturated endpoint bound, even though its
 honest generator uses more points than the online adversary's one-point allowance. -/
 example (adv : OnlineAdversary LocalSig.instruments (ZMod 256) 1)
     (hb : adv.IsQueryBound 1 1) :
     (MaskedChainPuzzle.adversary adv).IsQueryBound ⟨0, 0, 1, 1, 1⟩ ∧
       Quantum.TimeLockPuzzle.qromDelayAdvantage (MaskedChainPuzzle.scheme 1)
-        (MaskedChainPuzzle.adversary adv) ≤ 17 / 64 := by
+        (MaskedChainPuzzle.adversary adv) ≤ 33 / 128 := by
   refine ⟨MaskedChainPuzzle.adversary_isQueryBound adv hb, ?_⟩
   rw [MaskedChainPuzzle.qromDelayAdvantage_eq_recoveryAdvantage]
   exact oneRound_recoveryAdvantage_le .instruments adv hb
