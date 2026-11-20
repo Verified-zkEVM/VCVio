@@ -28,7 +28,9 @@ variable {S : CanonicalGraph pub X K R} {G : CanonicalGraph pub X' K' R}
 
 /-- A subgraph preserves the ordered children and public points of its selected nodes. -/
 structure Subgraph (S : CanonicalGraph pub X K R) (G : CanonicalGraph pub X' K' R) where
+  /-- Embed a selected private input or node label into the containing graph. -/
   cell : (X ⊕ K) ↪ (X' ⊕ K')
+  /-- The node of the containing graph that supplies each selected public point. -/
   node : K → K'
   node_cell : ∀ k, cell (.inr k) = .inr (node k)
   children : ∀ k, G.ch (node k) = (S.ch k).map cell
