@@ -105,6 +105,24 @@ theorem erase_run (register : Register pub Notice K V) (role : ι → Option K)
     rw [idMap, id_map]
   · rfl
 
+/-- Erase notices before interpreting or counting any original operation. -/
+@[expose] def forget : QueryImpl (Queries pub Notice) (OracleComp (unifSpec + pub))
+  | .inl t => QueryImpl.id' _ t
+  | .inr _ => pure ()
+
+/-- An ordinary lazy-oracle execution gives the result and cache of the instrumented caller. -/
+theorem forget_run (register : Register pub Notice K V) (role : ι → Option K)
+    (project : ∀ t, pub.Range t → V) {α : Type} (caller : OracleComp (Queries pub Notice) α)
+    (s : State pub K V) :
+    (fun z => (z.1, z.2.cache)) <$> (simulateQ (impl register role project) caller).run s =
+      (simulateQ (unifFwdImpl pub + pub.randomOracle) (simulateQ forget caller)).run s.cache := by
+  rw [erase_run, ← QueryImpl.simulateQ_compose]
+  have coincide : QueryImpl.compose (unifFwdImpl pub + pub.randomOracle)
+      (forget (pub := pub) (Notice := Notice)) = erase := by
+    funext input
+    cases input <;> simp [QueryImpl.compose, forget, erase]
+  rw [coincide]
+
 /-- One cold query pays at most its singleton match probability, even across target changes. -/
 theorem charged (register : Register pub Notice K V)
     (role : ι → Option K) (project : ∀ t, pub.Range t → V)
