@@ -1,6 +1,6 @@
 # 7. Quantum time-lock puzzle experiments
 
-Covers: honest generation, quantum preprocessing and retained memory.
+Covers: honest generation, quantum preprocessing and retained memory. Includes the exact finite-window raw encoding.
 Read first: [programs and runtimes](4-programs-and-runtimes.md) and [the QROM](5-qrom.md).
 
 ## A challenge generated between two adversary phases
@@ -72,7 +72,45 @@ that restricted adversary class does not establish `QROMDelaySecure` for arbitra
 preprocessing budgets. The interface embeds classical honest generators; an adapter from
 arbitrary classical two-phase adversaries, preserving both advantages and resource budgets,
 is a separate bridge. Generic correctness and solver-budget predicates for quantum puzzles
-are also separate interface work.
+are also separate interface work. The application below proves its honest execution
+laws and budgets directly.
+
+## Finite windows for the exact pointer-chain encoding
+
+The exact pointer-chain construction has ordinary hash chains, an accumulator and a public
+commitment, in addition to masked links. `PointerChainPuzzle.LeanSeal.quantumWindowScheme`
+gives its honest algorithms a concrete quantum-oracle interface. A resource-bounded quantum recovery theorem requires additional rank-cutoff analysis.
+
+The raw input register is `ByteArray.Bounded`: every byte string up to the stated maximum
+length. It includes malformed encodings and inputs outside the six typed hash domains.
+The response register contains all 32 bytes, including the bytes discarded by honest mask
+truncation. `hashInputBound` is `max (54+b) 83`; every honest input fits, and 86 bytes suffices
+when the link width is at most 32. An adversary may query any superposition within the window.
+The interface does not model unrestricted-length byte queries.
+
+The raw interface supplies `quantumWindowScheme`, the injective honest-input encoding
+`hashInputWindow_injective`, and the fixed-oracle honest execution equalities
+`simulateQ_windowScheme_gen` and `simulateQ_windowScheme_solve`. The raw
+query signature retains all adversary registers throughout.
+
+Separately, `windowTableEquiv` splits that table into typed answers, fixed mask tails and
+all outside-image answers. `sampledDelayLawWith_quantumWindowScheme` transports the complete
+experiment through this bijection, and `qromDelayAdvantage_quantumWindowScheme` specializes
+it to key recovery. These standalone encoding laws retain the answering table jointly with
+the transcript and require no query budget. These table-splitting laws are separate from the raw
+encoding interface.
+
+The honest generator and checked solver agree with the source leanSeal algorithms for
+every fixed byte-answer function, restricted to the window. The public puzzle is the
+existing structured `PointerChainPuzzle.LeanSeal.Puzzle` type. Transport to serialized public
+puzzles and a statement for arbitrary serialized solver inputs remain separate; the honest oracle-input
+encoding alone does not establish that wire interface.
+
+`quantumWindowDerive` exposes honest key derivation without the commitment check.
+`isTotalQueryBound_quantumWindowDerive` gives its `keyRound n m = n*(m+2)+1` round bound,
+and `evalDist_quantumWindowDerive_genWith` gives the point-mass law at the actual generated
+key for every fixed raw oracle and honest generation coins. The checked solver makes one
+extra commitment-validation call.
 
 ## Checks
 
@@ -87,3 +125,4 @@ oracle initializations:
 | key recovery with arbitrary preprocessing and the classical generator average | `delayAdvantage_ofClassicalGenerator` |
 | the joint delay observation and the classical average of online observations | `delayLawWith_withoutPreprocessing_ofClassicalGenerator` |
 | key recovery and the classical average of online key guesses | `delayAdvantage_withoutPreprocessing_ofClassicalGenerator` |
+| the finite-window pointer puzzle experiment and full raw-table completion | `PointerChainPuzzle.LeanSeal.sampledDelayLawWith_quantumWindowScheme` |
