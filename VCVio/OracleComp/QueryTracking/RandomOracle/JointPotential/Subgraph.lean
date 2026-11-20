@@ -58,7 +58,8 @@ theorem childVals (st : RelabelState pub X' K' R) (k : K) :
 
 variable [DecidableEq X] [DecidableEq K] [DecidableEq X'] [DecidableEq K']
 
-private theorem project_update (st : RelabelState pub X' K' R) (c : X ⊕ K) (v : R) :
+/-- A write to a selected cell updates exactly that cell in the projection. -/
+theorem project_update (st : RelabelState pub X' K' R) (c : X ⊕ K) (v : R) :
     f.project (st.1, st.2.cacheQuery (f.cell c) v) =
       ((f.project st).1, (f.project st).2.cacheQuery c v) := by
   refine Prod.ext (by rfl) ?_
