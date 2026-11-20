@@ -39,7 +39,9 @@ and loops that may not terminate are planned ([design page](../../design/quantum
 
 ## Rounds, widths and points
 
-A batch port `(p, k)` of `uBatchSpec P In` makes `k` ordered calls to the base port `p`.
+A batch port `(p, k)` of `uBatchSpec P In` makes `k` ordered calls to the single base port `p`.
+A round cannot mix base ports. To model several additive oracles queried in one round, encode
+those oracles as one port on a sum input domain. The QROM uses one base port already.
 For example, two rounds of widths two and three use five points. These are three separate
 syntactic bounds:
 
@@ -82,7 +84,10 @@ and their order across slots and rounds. `jointPost_sequentialize`, `evalDist_se
 
 `IsPointBound.sequentialize` turns a point bound `n` into the same total query bound `n`.
 `IsTotalQueryBound.sequentialize` combines a round bound `r` and width cap `k` directly into
-a sequential query bound `k * r`. These certificates count oracle queries; they do not account
+a sequential query bound `k * r`. Together with the law equality, these certificates let a
+sequential theorem over `LocalSig.instruments` apply at the flattened point budget. A theorem
+restricted to a particular gate signature or local-operation cost bound needs a separate
+transport for those restrictions. The certificates count oracle queries; they do not account
 for the local operations or relabellings introduced by the translation. A width-zero batch
 emits no oracle queries, but may still relabel the public register into the caller's remainder
 (`sequentialize_queryBind_zero`).

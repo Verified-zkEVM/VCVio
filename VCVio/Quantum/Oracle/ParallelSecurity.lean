@@ -26,8 +26,8 @@ rather than an oracle assumption for a downstream reduction.
 
 ## References
 
-* *Bits of security in the parallel QROM*, unattributed local note,
-  `parallel-qrom-security.pdf`, three pages, definition on p. 1 and Appendix A.
+* `docs/quantum/reference/literature.md`, “Search-calibrated security bits”, states the
+  normalization and its relation to the search and inversion theorems.
 * C. Zalka, *Grover's quantum searching algorithm is optimal*, arXiv:quant-ph/9711070v2, §4.
 -/
 
@@ -51,6 +51,22 @@ semantics. The advantage must count failed runs without renormalizing them. -/
 def ParallelQROMBits {Adv : Type*} (advantage : Adv → ℝ≥0∞)
     (IsBound : Adv → ℕ → ℕ → Prop) (bits : ℝ) : Prop :=
   ∀ D P adv, IsBound adv D P → advantage adv ≤ parallelQROMBound bits D P
+
+/-- Increasing the claimed security bits decreases the calibrated success bound. -/
+theorem parallelQROMBound_antitone (D P : ℕ) :
+    Antitone (fun bits ↦ parallelQROMBound bits D P) := by
+  intro bits bits' hbits
+  exact ENNReal.div_le_div_left (ENNReal.ofReal_le_ofReal
+    (Real.rpow_le_rpow_of_exponent_le (by norm_num : (1 : ℝ) ≤ 2) hbits)) _
+
+/-- A security certificate also certifies any smaller number of bits under the same
+admissibility predicate. -/
+theorem ParallelQROMBits.mono {Adv : Type*} {advantage : Adv → ℝ≥0∞}
+    {IsBound : Adv → ℕ → ℕ → Prop} {bits bits' : ℝ}
+    (h : ParallelQROMBits advantage IsBound bits) (hbits : bits' ≤ bits) :
+    ParallelQROMBits advantage IsBound bits' := by
+  intro D P adv hadv
+  exact (h D P adv hadv).trans (parallelQROMBound_antitone D P hbits)
 
 /-- A positive denominator gives its exact base-two logarithm as the number of security bits. -/
 theorem parallelQROMBound_logb (N : ℝ) (hN : 0 < N) (D P : ℕ) :
@@ -116,5 +132,44 @@ theorem parallelQROMBits_plantedPreimage [Nonempty X] :
   intro D P adv hadv
   simpa only [ENNReal.ofReal_inv_of_pos hρ, div_eq_mul_inv, inv_inv, mul_comm] using
     (plantedPreimageAdvantage_le adv hadv.1 hadv.2).trans (min_le_right _ _)
+
+/-- An upper bound on the planted preimage density certifies whole or fractional bits for
+inverting a uniform secret input's image, under the actual syntactic round and width bounds. -/
+theorem parallelQROMBits_plantedPreimage_of_density_le [Nonempty X] (bits : ℝ)
+    (hρ : ProbabilityTheory.plantedTargetDensity (X := X) (Y := Y) ≤
+      ((2 : ℝ) ^ bits)⁻¹) :
+    ParallelQROMBits
+      (plantedPreimageAdvantage (X := X) (Y := Y) (L := L) (W := W) (A := A))
+      (fun adv D P ↦ (∀ target, (adv.program target).IsTotalQueryBound D) ∧
+        ∀ target, (adv.program target).IsWidthBound P) bits := by
+  intro D P adv hadv
+  refine ((plantedPreimageAdvantage_le adv hadv.1 hadv.2).trans
+    (min_le_right _ _)).trans ?_
+  rw [parallelQROMBound, div_eq_mul_inv, mul_comm]
+  apply mul_le_mul le_rfl _ bot_le bot_le
+  rw [← ENNReal.ofReal_inv_of_pos (Real.rpow_pos_of_pos (by norm_num) bits)]
+  exact ENNReal.ofReal_le_ofReal hρ
+
+/-- Equal input and response spaces of size `2^128` certify 127 security bits for inversion
+of a uniform secret input's image. The adversary may depend on the public image. -/
+theorem parallelQROMBits_plantedPreimage_127 [Nonempty X]
+    (hX : Fintype.card X = 2 ^ 128) (hY : Fintype.card Y = 2 ^ 128) :
+    ParallelQROMBits
+      (plantedPreimageAdvantage (X := X) (Y := Y) (L := L) (W := W) (A := A))
+      (fun adv D P ↦ (∀ target, (adv.program target).IsTotalQueryBound D) ∧
+        ∀ target, (adv.program target).IsWidthBound P) 127 := by
+  apply parallelQROMBits_plantedPreimage_of_density_le
+  norm_num [ProbabilityTheory.plantedTargetDensity, hX, hY]
+
+/-- Equal input and response spaces of size `2^129` certify 128 security bits for inversion
+of a uniform secret input's image. The adversary may depend on the public image. -/
+theorem parallelQROMBits_plantedPreimage_128 [Nonempty X]
+    (hX : Fintype.card X = 2 ^ 129) (hY : Fintype.card Y = 2 ^ 129) :
+    ParallelQROMBits
+      (plantedPreimageAdvantage (X := X) (Y := Y) (L := L) (W := W) (A := A))
+      (fun adv D P ↦ (∀ target, (adv.program target).IsTotalQueryBound D) ∧
+        ∀ target, (adv.program target).IsWidthBound P) 128 := by
+  apply parallelQROMBits_plantedPreimage_of_density_le
+  norm_num [ProbabilityTheory.plantedTargetDensity, hX, hY]
 
 end Quantum

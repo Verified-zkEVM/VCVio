@@ -193,10 +193,11 @@ establish the required incidence or independence.
 square-root hybrid argument. Its query-union weights come from the reference execution under
 `H'`. The local interpretation, adaptive program, initial substate and final observation are
 the same on both sides. Arbitrary measurements and trace loss are allowed.
-`Comp/HybridBudget.lean` aggregates weights under a total call budget and a width cap. The
-cutoff counts all ports together, so adaptive choices of widths incur no sum of separate
-per-port maxima. `Foundations/Hybrid.lean` stages the analytic cutoff and square-root
-aggregation helpers for QuantumFoundations; it imports only that dependency.
+The search proofs use `Comp/ChargeWeight.lean` for total point weights and the analytic
+cutoff and square-root aggregation helpers in `Foundations/Hybrid.lean`. The latter imports
+only QuantumFoundations and is staged for that dependency. `Comp/HybridBudget.lean` supplies
+additional total-call and width-cap estimates; the search proofs do not depend on that API.
+Its cutoff counts all ports together, avoiding a sum of separate per-port maxima.
 
 `Comp/ChargeWeight.lean` exposes `IsQueryChargeBound` for natural-number port charges.
 If a query weight is at most its port charge times its input trace,
@@ -321,9 +322,11 @@ It supplies neither a gate-cost estimate nor security against oracle-dependent a
 `parallelQROMBits_markedSearch` certifies `log₂ |X|` bits, and
 `parallelQROMBits_preimageSearch` certifies `log₂ |Y|` bits for a fixed target.
 `parallelQROMBits_plantedPreimage` certifies `log₂(1/ρ)` for secret-input inversion.
-Thus the formula certifies 127 whole bits for
-equal input and output spaces of size `2^128`, and 128 whole bits at size `2^129`.
-The extra planted preimage explains the difference from fixed-target inversion.
+The whole-bit specializations `parallelQROMBits_plantedPreimage_127` and
+`parallelQROMBits_plantedPreimage_128` certify 127 bits for equal input and response spaces
+of size `2^128`, and 128 bits at size `2^129`. The extra planted preimage explains the
+difference from fixed-target inversion. The [self-contained normalization and coupling](../reference/literature.md#search-calibrated-security-bits)
+state the mathematical convention without requiring a private reference file.
 
 ## Checks
 
