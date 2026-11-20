@@ -69,7 +69,10 @@ stateful runtimes too and keeps their private state throughout.
 
 The corresponding laws without preprocessing remain available. A theorem proved only for
 that restricted adversary class does not establish `QROMDelaySecure` for arbitrary
-preprocessing budgets.
+preprocessing budgets. The interface embeds classical honest generators; an adapter from
+arbitrary classical two-phase adversaries, preserving both advantages and resource budgets,
+is a separate bridge. Generic correctness and solver-budget predicates for quantum puzzles
+are also separate interface work.
 
 ## Checks
 

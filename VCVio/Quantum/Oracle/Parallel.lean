@@ -30,7 +30,7 @@ public section
 open Matrix MeasureTheory
 open scoped ENNReal Kronecker
 
-universe u v w
+universe u v w w₁
 
 namespace Quantum
 
@@ -234,6 +234,58 @@ noncomputable def qromBatchEvalDist [MeasurableSpace (Σ u, W u)] (I : L.Interp)
     (x : QuantumComp L (qromBatchSpec X Y) W A) (ρ : SubState A) :
     Measure (Σ u, W u) :=
   sampledEvalDist parallelOracleRuntime I x ρ
+
+/-- Observe a parallel QROM execution jointly with the one function sampled for the run.
+The final observation may depend on both the hidden function and the classical leaf. -/
+@[expose]
+noncomputable def qromBatchEvalDistMap {β : Type w₁} [MeasurableSpace β] (I : L.Interp)
+    (x : QuantumComp L (qromBatchSpec X Y) W A) (ρ : SubState A)
+    (f : (X → Y) → (Σ B, W B) → β) : Measure β :=
+  sampledEvalDistMap parallelOracleRuntime I x ρ f
+
+/-- The classical output law of a parallel QROM program with one fixed final register. -/
+@[expose]
+noncomputable def qromBatchEvalDist₂ {B : QReg} {α : Type w} [MeasurableSpace α]
+    (I : L.Interp) (x : QuantumComp₂ L (qromBatchSpec X Y) A B α) (ρ : SubState A) :
+    Measure α :=
+  sampledEvalDist₂ parallelOracleRuntime I x ρ
+
+/-- Observe the returned value of a fixed-register parallel QROM program jointly with the
+hidden function sampled once for every call in the run. -/
+@[expose]
+noncomputable def qromBatchEvalDistMap₂ {B : QReg} {α : Type w} {β : Type w₁}
+    [MeasurableSpace β] (I : L.Interp)
+    (x : QuantumComp₂ L (qromBatchSpec X Y) A B α) (ρ : SubState A)
+    (f : (X → Y) → α → β) : Measure β :=
+  sampledEvalDistMap₂ parallelOracleRuntime I x ρ f
+
+/-- Joint function-and-leaf observations average over the original function space `X → Y`. -/
+theorem qromBatchEvalDistMap_eq_sum {β : Type w₁} [MeasurableSpace β] (I : L.Interp)
+    (x : QuantumComp L (qromBatchSpec X Y) W A) (ρ : SubState A)
+    (f : (X → Y) → (Σ B, W B) → β) :
+    qromBatchEvalDistMap I x ρ f =
+      ((Fintype.card Y : ℝ≥0∞) ^ Fintype.card X)⁻¹ •
+        ∑ H : X → Y, (parallelOracleRuntime H).evalDistMap I x ρ (f H) := by
+  rw [qromBatchEvalDistMap, sampledEvalDistMap_eq_sum, Fintype.card_fun, Nat.cast_pow]
+
+/-- The fixed-register output law averages the runs using the same function in every slot. -/
+theorem qromBatchEvalDist₂_eq_sum {B : QReg} {α : Type w} [MeasurableSpace α]
+    (I : L.Interp) (x : QuantumComp₂ L (qromBatchSpec X Y) A B α) (ρ : SubState A) :
+    qromBatchEvalDist₂ I x ρ =
+      ((Fintype.card Y : ℝ≥0∞) ^ Fintype.card X)⁻¹ •
+        ∑ H : X → Y, (parallelOracleRuntime H).evalDist₂ I x ρ := by
+  rw [qromBatchEvalDist₂, sampledEvalDist₂_eq_sum, Fintype.card_fun, Nat.cast_pow]
+
+/-- A function-dependent observation of a returned value averages the correspondingly mapped
+fixed-function executions. -/
+theorem qromBatchEvalDistMap₂_eq_sum {B : QReg} {α : Type w} {β : Type w₁}
+    [MeasurableSpace β] (I : L.Interp)
+    (x : QuantumComp₂ L (qromBatchSpec X Y) A B α) (ρ : SubState A)
+    (f : (X → Y) → α → β) :
+    qromBatchEvalDistMap₂ I x ρ f =
+      ((Fintype.card Y : ℝ≥0∞) ^ Fintype.card X)⁻¹ •
+        ∑ H : X → Y, (parallelOracleRuntime H).evalDist₂ I (x.map (f H)) ρ := by
+  rw [qromBatchEvalDistMap₂, sampledEvalDistMap₂_eq_sum, Fintype.card_fun, Nat.cast_pow]
 
 /-- The parallel QROM law averages runs over the original random-function space X → Y. -/
 theorem qromBatchEvalDist_eq_sum [MeasurableSpace (Σ u, W u)] (I : L.Interp)

@@ -11,6 +11,11 @@ The Mathlib-only base (completely positive maps, subinstruments, Choi–Kraus an
 observation, pure states and oracle unitaries) lives in
 [QuantumFoundations](https://github.com/lean-crypto-foundations/QuantumFoundations), shared with
 CatCrypt, and VCVio imports it since #921. The rest of the layer is in `VCVio/Quantum/`.
+VCVio's imports select the completely positive subinstrument modules. The pinned dependency
+also has a different `Quantum.QComp` in `QuantumFoundations.Instrument`; importing that module
+or its umbrella together with VCVio's `Quantum.Comp.Basic` causes a declaration-name collision.
+The stack does not import it. Resolving that upstream naming and instrument API is separate
+from the parallel-query results.
 
 Merged:
 
@@ -195,6 +200,9 @@ It imports only QuantumFoundations and Mathlib and is staged for upstreaming to 
 requires equal `In` and `Out` and `Result = Unit`; classical-result checked/read ports of vector
 commitments are outside this scope. General stateful batches carry no implicit commutation assumption.
 
+Each batch uses one base port. A mixed-oracle round requires a single port encoding all of
+its oracle inputs, for example on a sum domain; the generic batch API does not mix base ports.
+
 `Oracle/Parallel.lean` specializes `uBatchSpec` to base port `Unit`, so a classical port is
 `((), k)` with width in its second component. It proves that ordered additive calls agree with a
 simultaneous query on all slots and defines the parallel QROM law by sampling one function for
@@ -247,7 +255,9 @@ These results allow arbitrary adaptive local signatures and interpretations, mix
 subnormalized input states, finite domains and finite abelian response groups. A plain compressed
 leaf observation does not read `H`; observations `f H leaf` require an explicit joint-oracle read.
 
-The M2a model and transport obligations are complete.
+The run equalities and point-budget certificates supply transport for sequential theorems
+whose local signature includes arbitrary instruments. Local gate-cost restrictions require
+an additional compilation argument.
 
 ### 12. Parallel reprogramming, hybrids and search
 
@@ -268,10 +278,10 @@ incidence hypotheses.
 
 `Oracle/ParallelHybrid.lean` lifts the comparison to adaptive programs, charging union-query
 weights to a designated reference execution. The interpretation, program, initial state and
-final observation are shared. `Comp/HybridBudget.lean` uses a total call cutoff across all ports
-and a width cap, avoiding a sum of separate per-port maxima. The analytic cutoff and
-square-root aggregation lemmas in `Foundations/Hybrid.lean` import only QuantumFoundations and
-are staged for that dependency.
+final observation are shared. The analytic cutoff and square-root aggregation lemmas in
+`Foundations/Hybrid.lean` import only QuantumFoundations and are staged for that dependency.
+`Comp/HybridBudget.lean` supplies additional total-call and width-cap estimates across all
+ports; the search proofs use `Comp/ChargeWeight.lean` directly.
 
 `Comp/ChargeWeight.lean` gives the pathwise natural-number port budget `IsQueryChargeBound`.
 `totalWeight_le_of_isQueryChargeBound` bounds total query weight by the budget times the input
@@ -292,10 +302,10 @@ measurements, mixed or subnormalized states, duplicate inputs and width zero are
 The bound includes zero-query guessing; loss and postselection remain missing mass without
 renormalization.
 
-These results implement the direct reprogramming, adaptive hybrid and round/point unique-mark
-search part of M3a. Exact sums of square roots for deterministic width profiles remain open. The changing-property directional recurrence and its adaptive
-mixed-state and total-budget transports (M−1), the general final-measurement lemma (M0), and CFHL
-compressed-oracle bounds are separate obligations.
+These results prove direct reprogramming, adaptive hybrid and round/point unique-mark search
+bounds. Exact sums of square roots for deterministic width profiles remain open. The
+changing-property directional recurrence, its adaptive mixed-state and total-budget transports,
+the general final-measurement lemma, and CFHL compressed-oracle bounds are separate obligations.
 
 `Oracle/ParallelFinding.lean` packages the shared search argument. A fixed reference execution
 and pointwise weighted incidence `δ` bound a weighted family of hidden-set finding experiments
@@ -303,7 +313,7 @@ by `δ * (1 + 2 * sqrt (q * Q))^2`. The weights need not normalize. The final ev
 same hidden set as its answering oracle; the reference state, program and guess are independent
 of the sampled set. Both marked search and random-function preimage search instantiate this theorem.
 
-`Oracle/ParallelPreimage.lean` completes M3b for a fixed target chosen independently of the uniform
+`Oracle/ParallelPreimage.lean` handles a fixed target chosen independently of the uniform
 function. `preimageSearchAdvantage_le_of_isPointBound` gives
 `min 1 ((1 + 2 * sqrt (q * Q))^2 / |Y|)`; its width-cap corollary uses `Q = k * q`.
 One function answers every round and the endpoint verifier. The target is neither obtained by

@@ -269,3 +269,34 @@ theorem tsum_queryMass_le_of_isTotalQueryBound
 
 end QuantumRuntime
 end Quantum
+
+namespace Quantum.QComp
+
+variable {spec : QuantumOracleSpec.{u₁, v₁}} {A B C : QReg} {α β : Type w}
+
+/-- Local subinstruments preserve the total oracle-call budget of each continuation. -/
+@[simp]
+theorem isTotalQueryBound_act_bind_iff (p : SubInstrument A B β)
+    (k : β → QComp spec B C α) (n : ℕ) :
+    ((act p).bind k).IsTotalQueryBound n ↔ ∀ b, (k b).IsTotalQueryBound n := by
+  rw [act_bind, QuantumComp₂.primBind]
+  exact QuantumComp.isTotalQueryBound_primBind_iff _ _ _
+
+end Quantum.QComp
+
+namespace Quantum.QuantumComp₂
+
+variable {spec : QuantumOracleSpec.{u₁, v₁}} {L : LocalSig.{u, v}}
+  {A B : QReg} {α : Type w}
+
+/-- A fixed-register query consumes one call before its outcome-selected continuation. -/
+@[simp]
+theorem isTotalQueryBound_query_bind_iff (p : spec.Port) (E : QReg)
+    (e : A ≃ spec.In p × E)
+    (k : spec.Result p → QuantumComp₂ L spec (QReg.of (spec.Out p × E)) B α) (n : ℕ) :
+    ((query p E e).bind k).IsTotalQueryBound n ↔
+      0 < n ∧ ∀ r, (k r).IsTotalQueryBound (n - 1) := by
+  rw [query_bind, queryBind]
+  exact QuantumComp.isTotalQueryBound_queryBind_iff _ _ _ _ _
+
+end Quantum.QuantumComp₂
