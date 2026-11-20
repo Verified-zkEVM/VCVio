@@ -200,6 +200,7 @@ public import VCVioTest.RandomOracleClassIndexedTape
 public import VCVioTest.RandomOracleControls
 public import VCVioTest.RandomOracleDefer
 public import VCVioTest.RandomOracleDerivationKeys
+public import VCVioTest.RandomOracleHiddenSeedUnit
 public import VCVioTest.RandomOracleResidualTables
 public import VCVioTest.RandomOracleEncoded
 public import VCVioTest.RandomOracleEncodedFullCache
