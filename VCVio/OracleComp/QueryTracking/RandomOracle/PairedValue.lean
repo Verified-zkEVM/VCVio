@@ -45,6 +45,39 @@ theorem joinCache_splitCache (cache : (L →ₒ Full).QueryCache) :
   ext key
   cases h : cache key <;> simp [joinCache, splitCache, h]
 
+/-- Joining a full word requires both projections at the same key. -/
+theorem joinCache_eq_some_iff (cache : ((L ⊕ L) →ₒ Half).QueryCache) (key : L) (word : Full) :
+    joinCache e cache key = some word ↔
+      cache (.inl key) = some (e word).1 ∧ cache (.inr key) = some (e word).2 := by
+  constructor
+  · intro h
+    change ((cache (.inl key)).bind fun l =>
+      (cache (.inr key)).bind fun r => some (e.symm (l, r))) = some word at h
+    obtain ⟨l, left, rest⟩ := Option.bind_eq_some_iff.mp h
+    obtain ⟨r, right, pair⟩ := Option.bind_eq_some_iff.mp rest
+    cases Option.some.inj pair
+    simpa only [Equiv.apply_symm_apply] using And.intro left right
+  · rintro ⟨left, right⟩
+    simp [joinCache, left, right]
+
+/-- Splitting is left adjoint to joining for the partial order of cache extension.
+The half cache may contain rows whose other half has not been drawn. -/
+theorem gc_splitCache_joinCache :
+    GaloisConnection (splitCache (L := L) e) (joinCache e) := by
+  intro words rows
+  constructor
+  · intro both key word stored
+    apply (joinCache_eq_some_iff e rows key word).2
+    exact ⟨both (by simp [splitCache, stored]), both (by simp [splitCache, stored])⟩
+  · intro represented q value stored
+    cases q with
+    | inl key =>
+      obtain ⟨word, present, rfl⟩ := Option.map_eq_some_iff.mp stored
+      exact ((joinCache_eq_some_iff e rows key word).1 (represented present)).1
+    | inr key =>
+      obtain ⟨word, present, rfl⟩ := Option.map_eq_some_iff.mp stored
+      exact ((joinCache_eq_some_iff e rows key word).1 (represented present)).2
+
 /-- Private draws are forwarded and public replies are reconstructed after both reads. -/
 @[expose] def readHalves :
     QueryImpl (unifSpec + (L →ₒ Full)) (OracleComp (unifSpec + ((L ⊕ L) →ₒ Half))) :=

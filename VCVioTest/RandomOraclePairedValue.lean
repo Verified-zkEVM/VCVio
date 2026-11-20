@@ -58,4 +58,26 @@ theorem warm_repeat :
   intro e initial program
   simp [program, readHalves, romImpl, simulateQ_bind, StateT.run_bind, splitCache, initial, e]
 
+/-- A cache containing only the low half cannot represent a full word at its key. -/
+theorem missing_high (words : Words.QueryCache) (k : Nat) (bit : Bool)
+    (extendsRows : splitCache (Equiv.prodComm Bool Bool) words ≤
+      (∅ : Halves.QueryCache).cacheQuery (.inl k) bit) : words k = none := by
+  cases h : words k with
+  | none => rfl
+  | some word =>
+    have stored := (gc_splitCache_joinCache (Equiv.prodComm Bool Bool) words _).1 extendsRows h
+    have missing := ((joinCache_eq_some_iff _ _ k word).1 stored).2
+    simp at missing
+
+/-- A cache containing only the high half cannot represent a full word at its key. -/
+theorem missing_low (words : Words.QueryCache) (k : Nat) (bit : Bool)
+    (extendsRows : splitCache (Equiv.prodComm Bool Bool) words ≤
+      (∅ : Halves.QueryCache).cacheQuery (.inr k) bit) : words k = none := by
+  cases h : words k with
+  | none => rfl
+  | some word =>
+    have stored := (gc_splitCache_joinCache (Equiv.prodComm Bool Bool) words _).1 extendsRows h
+    have missing := ((joinCache_eq_some_iff _ _ k word).1 stored).1
+    simp at missing
+
 end VCVioTest.RandomOraclePairedValue
