@@ -6,7 +6,7 @@ Authors: VCVio Contributors
 
 module
 
-public import VCVio.OracleComp.QueryTracking.RandomOracle.TouchRead
+public import VCVio.OracleComp.QueryTracking.RandomOracle.TouchRead.Children
 
 /-!
 # Unary edges in the eager relabelled game
@@ -45,20 +45,7 @@ theorem simulateQ_eagerImpl_unary_edge
       simulateQ G.eagerImpl (do
         touchCell (some c)
         readCell (some (.inr k))) := by
-  apply StateT.ext
-  intro st
-  simp only [simulateQ_bind, simulateQ_pure, StateT.run_bind, StateT.run_pure,
-    G.eagerImpl_readCell_run, G.eagerImpl_touchCell_run, bind_map_left]
-  apply OracleComp.bind_congr_of_forall_mem_support
-  intro z hz
-  -- The first draw records the returned child value in this same post-state.
-  have hcell := (RelabelState.le_and_cell_eq_of_mem_support_drawCell hz).2
-  have hvalues := G.childVals_singleton hch hcell
-  -- The ready public point draws the node in the same state, including warm entries.
-  simp only [simulateQ_HasQuery_query, G.eagerImpl_apply_inl,
-    G.relabelImpl_run_pt hvalues, bind_map_left]
-  -- The answer casts cancel; the state component is mapped by the identity.
-  simp
+  simpa [bind_assoc] using G.simulateQ_eagerImpl_edge k [c] hch
 
 /-- Reading two unary points at the same child value gives the ordered pair of their labels.
 Both reads preserve the same final public and cell caches as the original queries. -/
@@ -74,22 +61,7 @@ theorem simulateQ_eagerImpl_unary_siblings (first second : K) (c : X ⊕ K)
         let a ← readCell (some (.inr first))
         let b ← readCell (some (.inr second))
         pure (a, b)) := by
-  ext st : 1
-  simp only [simulateQ_bind, simulateQ_pure, StateT.run_bind, StateT.run_pure,
-    G.eagerImpl_readCell_run, G.eagerImpl_touchCell_run, bind_map_left]
-  apply OracleComp.bind_congr_of_forall_mem_support
-  intro z hz
-  have child := (RelabelState.le_and_cell_eq_of_mem_support_drawCell hz).2
-  have readyFirst := G.childVals_singleton hfirst child
-  have readySecond := G.childVals_singleton hsecond child
-  simp only [simulateQ_HasQuery_query, G.eagerImpl_apply_inl,
-    G.relabelImpl_run_pt readyFirst, bind_map_left]
-  apply OracleComp.bind_congr_of_forall_mem_support
-  intro w hw
-  -- The first node draw preserves the original child's value at the second point.
-  have ready := G.childVals_mono (RelabelState.le_and_cell_eq_of_mem_support_drawCell hw).1
-    readySecond
-  simp [G.relabelImpl_run_pt ready]
+  simpa [bind_assoc] using G.simulateQ_eagerImpl_siblings first second [c] hfirst hsecond
 
 /-- When the preceding step supplies a cached child value, both node queries consume that value
 directly. The original execution makes no additional child read. -/
@@ -103,11 +75,9 @@ theorem eagerImpl_unary_siblings_run_of_cached (low high : K) (c : X ⊕ K)
       (simulateQ G.eagerImpl (do
         let a ← readCell (some (.inr low))
         let b ← readCell (some (.inr high))
-        pure (a, b))).run st := by
-  have eqn := congrArg (fun run => run.run st) (G.simulateQ_eagerImpl_unary_siblings low high c
-    hlow hhigh)
-  simpa only [simulateQ_bind, StateT.run_bind, G.eagerImpl_readCell_run, G.eagerImpl_touchCell_run,
-    RelabelState.drawCell_run_of_cell_eq_some cached, pure_bind, map_pure] using eqn
+        pure (a, b))).run st :=
+  G.eagerImpl_siblings_run_of_childVals low high [x] st
+    (G.childVals_singleton hlow cached) (G.childVals_singleton hhigh cached)
 
 /-- Every returned low value remains cached after touching its sibling. -/
 theorem cell_eq_of_mem_support_read_touch (low high : K) (st : RelabelState pub X K R)
