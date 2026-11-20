@@ -351,7 +351,9 @@ public import HashSig.SLHDSA.Security.CanonicalGames
 public import HashSig.SLHDSA.Security.ComponentTraces
 public import HashSig.SLHDSA.Security.Composition
 public import HashSig.SLHDSA.Security.CoverageBound
+public import HashSig.SLHDSA.Security.CoverageCountCausality
 public import HashSig.SLHDSA.Security.CoverageHits
+public import HashSig.SLHDSA.Security.CoveragePotential
 public import HashSig.SLHDSA.Security.CoverageRoles
 public import HashSig.SLHDSA.Security.CoverageRun
 public import HashSig.SLHDSA.Security.DigestTransport
@@ -369,6 +371,7 @@ public import HashSig.SLHDSA.Security.HonestTransfer
 public import HashSig.SLHDSA.Security.HypertreeWitnesses
 public import HashSig.SLHDSA.Security.JointBound
 public import HashSig.SLHDSA.Security.KeyDiscipline
+public import HashSig.SLHDSA.Security.KeyReconstruction
 public import HashSig.SLHDSA.Security.KeySeparation
 public import HashSig.SLHDSA.Security.LabBudget
 public import HashSig.SLHDSA.Security.LabEquiv.Experiment

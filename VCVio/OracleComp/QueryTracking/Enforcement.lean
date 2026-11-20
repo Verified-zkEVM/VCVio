@@ -9,6 +9,7 @@ public import VCVio.OracleComp.QueryTracking.QueryBound
 public import VCVio.OracleComp.EvalDist.Measure
 public import VCVio.EvalDist.ProbabilityNotation
 public import PolyFun.PFunctor.Handler.Charge
+public import VCVio.OracleComp.QueryTracking.ObservationOracle
 public import VCVio.OracleComp.QueryTracking.WriterCost
 public import Mathlib.Algebra.Order.Monoid.Prod
 import VCVio.OracleComp.SimSemantics.StateT.UntilBad
@@ -661,5 +662,75 @@ theorem map_run_simulateQ_guardQueryBudget_free_eq
     rfl
   rw [hproject] at hfold
   simpa only [Functor.map_map, Function.comp_def] using hfold
+
+/-- Equal weighted steps and coherent fallback commute with the complete guard. -/
+theorem guarded_query_transport :
+  ∀ {ιa ιb Cache : Type} {specA : OracleSpec.{0, 0} ιa}
+    {specB : OracleSpec.{0, 0} ιb} {m : Type → Type} [Monad m] [LawfulMonad m]
+    (C : Type) [Add C] [LE C] [DecidableLE C]
+    (inputA : specA.Domain) (inputB : specB.Domain)
+    (decode : specB.Range inputB → specA.Range inputA)
+    (handlerA : QueryImpl specA (StateT Cache m))
+    (handlerB : QueryImpl specB (StateT Cache m))
+    (fallbackA : (input : specA.Domain) → specA.Range input)
+    (fallbackB : (input : specB.Domain) → specB.Range input)
+    (costA : specA.Domain → C) (costB : specB.Domain → C)
+    (_cost : costA inputA = costB inputB)
+    (_step : ∀ state : Cache,
+      (handlerA inputA).run state =
+        Prod.map decode id <$> (handlerB inputB).run state)
+    (_fallback : fallbackA inputA = decode (fallbackB inputB))
+    (caps initialCounts : C) (initialAborted : Bool) (initialCache : Cache),
+    ((QueryImpl.guardQueryBudget caps costA handlerA fallbackA) inputA).run
+        (initialCache, (initialCounts, initialAborted)) =
+      Prod.map decode id <$>
+        ((QueryImpl.guardQueryBudget caps costB handlerB fallbackB) inputB).run
+          (initialCache, (initialCounts, initialAborted)) := by
+  intro ιa ιb Cache specA specB m _ _ C _ _ _ inputA inputB decode handlerA handlerB
+    fallbackA fallbackB costA costB hcost hstep hfallback caps initialCounts
+    initialAborted initialCache
+  dsimp only [QueryImpl.guardQueryBudget, StateT.run_mk]
+  rw [hcost]
+  split_ifs
+  · simp only [map_pure, hfallback, Prod.map_apply, id_eq]
+  · rw [hstep initialCache]
+    simp only [Functor.map_map, Prod.map_apply, Prod.map_fst, Prod.map_snd, id_eq]
+  · simp only [map_pure, hfallback, Prod.map_apply, id_eq]
+
+/-- A zero-cost inert observation can be omitted before a zero-cost native query. -/
+theorem guarded_inert_observation :
+  ∀ {ι Event Cache : Type} {spec : OracleSpec.{0, 0} ι}
+    {m : Type → Type} [Monad m] [LawfulMonad m]
+    (C : Type) [AddZeroClass C] [LE C] [DecidableLE C]
+    (handler : QueryImpl (spec + ObsSpec Event) (StateT Cache m))
+    (fallback : (input : (spec + ObsSpec Event).Domain) →
+      (spec + ObsSpec Event).Range input)
+    (cost : (spec + ObsSpec Event).Domain → C)
+    (event : Event) (native : spec.Domain)
+    (_markerZero : cost (.inr event) = 0)
+    (_nativeZero : cost (.inl native) = 0)
+    (caps initialCounts : C) (initialAborted : Bool) (initialCache : Cache)
+    (_inert : initialAborted = false → initialCounts ≤ caps →
+      (handler (.inr event)).run initialCache = pure (PUnit.unit, initialCache)),
+    let guarded := QueryImpl.guardQueryBudget caps cost handler fallback
+    (simulateQ guarded (do
+      let _ ← (liftM ((spec + ObsSpec Event).query (.inr event)) :
+        OracleComp (spec + ObsSpec Event) PUnit)
+      (liftM ((spec + ObsSpec Event).query (.inl native)) :
+        OracleComp (spec + ObsSpec Event) (spec.Range native)))).run
+          (initialCache, (initialCounts, initialAborted)) =
+      (guarded (.inl native)).run (initialCache, (initialCounts, initialAborted)) := by
+  intro ι Event Cache spec m _ _ C _ _ _ handler fallback cost event native
+    hmarkerZero hnativeZero caps initialCounts initialAborted initialCache hinert guarded
+  rw [simulateQ_bind, simulateQ_spec_query]
+  simp only [StateT.run_bind, simulateQ_spec_query]
+  dsimp only [guarded]
+  cases initialAborted with
+  | true => simp [QueryImpl.guardQueryBudget]
+  | false =>
+      by_cases fits : initialCounts ≤ caps
+      · have marker := hinert rfl fits
+        simp [QueryImpl.guardQueryBudget, hmarkerZero, hnativeZero, fits, marker]
+      · simp [QueryImpl.guardQueryBudget, hmarkerZero, hnativeZero, fits]
 
 end QueryImpl

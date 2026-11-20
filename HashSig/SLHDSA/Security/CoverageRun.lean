@@ -10,6 +10,8 @@ public import HashSig.SLHDSA.Security.CoverageHits
 public import HashSig.SLHDSA.Security.DigestTransport
 public import HashSig.SLHDSA.Security.RomSchemeUnion
 import VCVio.OracleComp.QueryTracking.SubSpec
+import all VCVio.OracleComp.QueryTracking.RandomOracle.ClassIndexedTape
+import VCVio.OracleComp.SimSemantics.StateT.StateSeparating
 
 /-!
 # The instrumented role run of the secret-free SLH-DSA experiment
@@ -327,6 +329,27 @@ with the position bookkeeping and a hit set written at fresh randomizer draws. -
 noncomputable abbrev roleRunImpl : QueryImpl (roleSpec core) (StateT (RoleState core) ProbComp) :=
   AnswerTape.classPosImplFwd (tapeClassRange core) (tapeClass core)
     (range_eq_tapeClassRange core) (AnswerTape.freshHitAux (IsRandPoint core) (randRel core))
+
+/-- Private uniform sampling preserves the entire role state, including the cache, unread tapes,
+positions and recorded randomizer hits. -/
+theorem roleRunImpl_liftComp_run {α : Type} (program : ProbComp α)
+    (role : RoleState core) :
+    (simulateQ (roleRunImpl core)
+      (liftComp program (roleSpec core))).run role =
+        (fun answer => (answer, role)) <$> program := by
+  apply QueryImpl.Stateful.simulateQ_liftComp_run_of_query
+    (roleRunImpl core)
+  intro input state
+  rw [liftComp_liftM_query]
+  change (simulateQ (roleRunImpl core)
+    (liftM ((roleSpec core).query (.inl input)))).run state = _
+  rw [simulateQ_spec_query, roleRunImpl, AnswerTape.classPosImplFwd,
+    QueryImpl.extendState_apply]
+  simp only [AnswerTape.tapeImplFwd, QueryImpl.add_apply_inl,
+    QueryImpl.liftTarget_apply, StateT.run_liftM, QueryImpl.ofLift,
+    AnswerTape.classPosAuxFwd, AnswerTape.freshHitAux, bind_pure_comp,
+    Functor.map_map, Prod.eta]
+  rfl
 
 /-- The instrumented role run of the forger `adv` at public seed `pkSeed` on the tape family
 `L`, from the empty cache, the empty bookkeeping and the empty hit set. -/

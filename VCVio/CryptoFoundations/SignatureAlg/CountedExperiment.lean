@@ -425,6 +425,46 @@ abbrev Spec {ι : Type} (spec : OracleSpec.{0, 0} ι) (Request : Type) :
   let verified ← marked.verify keys.1 forgery.1 forgery.2
   return (keys, ⟨forgery, rawLog, verified⟩)
 
+/-- A secret-key reconstruction after a sampled prefix preserves the complete marked experiment. -/
+theorem fullExperiment_keyPrefix
+    {ι Request PK SKLeft SKRight Sig Reply Seed : Type}
+    {spec : OracleSpec.{0, 0} ι}
+    (left : SigningView (OracleComp spec) Request PK SKLeft Sig Reply)
+    (right : Seed → SigningView (OracleComp spec) Request PK SKRight Sig Reply)
+    (seedPrefix : OracleComp spec Seed)
+    (rebuild : Seed → PK → SKRight → SKLeft)
+    (hkeygen : left.keygen = (do
+      let seed ← seedPrefix
+      let keys ← (right seed).keygen
+      return (keys.1, rebuild seed keys.1 keys.2)))
+    (hsign : ∀ seed, ∀ keys ∈ support (right seed).keygen, ∀ request,
+      left.sign keys.1 (rebuild seed keys.1 keys.2) request =
+        (right seed).sign keys.1 keys.2 request)
+    (hverify : ∀ seed pk request signature,
+      left.verify pk request signature = (right seed).verify pk request signature)
+    (main : PK → OracleComp (spec + (Request →ₒ Reply)) (Request × Sig)) :
+    fullExperiment left main = (do
+      let seed ← simulateQ (phaseImpl spec Request .keygen) seedPrefix
+      (fun result =>
+        ((result.1.1, rebuild seed result.1.1 result.1.2), result.2)) <$>
+          fullExperiment (right seed) main) := by
+  unfold fullExperiment
+  change (simulateQ (phaseImpl spec Request .keygen) left.keygen >>= _) = _
+  rw [hkeygen]
+  simp only [simulateQ_bind, simulateQ_pure, bind_assoc, pure_bind, map_bind, map_pure]
+  apply OracleComp.bind_congr_of_forall_mem_support
+  intro seed _member
+  apply OracleComp.bind_congr_of_forall_mem_support
+  intro keys member
+  have originalMember : keys ∈ support (right seed).keygen :=
+    support_simulateQ_subset (phaseImpl spec Request .keygen) (right seed).keygen member
+  have signEq : (viewWithEvents left).sign keys.1 (rebuild seed keys.1 keys.2) =
+      (viewWithEvents (right seed)).sign keys.1 keys.2 := by
+    funext request
+    simp only [viewWithEvents, hsign seed keys originalMember request]
+  simp only [SigningView.runWithSigningOracle, SigningView.signingOracle, signEq]
+  simp only [viewWithEvents, hverify seed]
+
 /-- Generated-key algorithm agreement preserves the full chronological marked program. -/
 theorem fullExperiment_congr_generated
     {ι Request PK SK Sig Reply : Type} {spec : OracleSpec.{0, 0} ι}
