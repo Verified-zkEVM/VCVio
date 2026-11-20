@@ -1,5 +1,10 @@
 module  -- shake: keep-all --deprecated_module: ignore
 
+public import HashSig.GXMSS.Chain
+public import HashSig.GXMSS.Completeness
+public import HashSig.GXMSS.HashInstance
+public import HashSig.GXMSS.Merkle
+public import HashSig.GXMSS.Scheme
 public import HashSig.SLHDSA.Address
 public import HashSig.SLHDSA.AddressDiscipline
 public import HashSig.SLHDSA.C13.Concrete
