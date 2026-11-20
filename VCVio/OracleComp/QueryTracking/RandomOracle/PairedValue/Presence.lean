@@ -83,17 +83,12 @@ private theorem read_preserves (paired : ∀ st b, Ready G st (.inl b) → Ready
       exact QueryCache.isSome_mono
         ((G.le_of_mem_support_deferredImpl hl).1.trans preserved) (old _ orig)
 
-/-- Forwarded private sampling and paired public queries preserve the occupied low rows. -/
-theorem meteredCaller_present {α : Type} (p : OracleComp (FullWorld L F) α)
-    (paired : ∀ st b, Ready G st (.inl b) → Ready G st (.inr b))
-    (st : DeferredState L H X K) (old : PresentTogether st)
-    (z) (hz : z ∈ support ((simulateQ G.deferredImpl (meteredCaller e p)).run st)) :
-    PresentTogether z.2 := by
-  unfold meteredCaller at hz
-  rw [← QueryImpl.simulateQ_compose liftPublic (RandomOraclePairedValue.readHalves e),
-    ← QueryImpl.simulateQ_compose] at hz
-  refine simulateQ_run_preservesInv _ _ ?_ _ st old _ hz
+/-- A single full call, or a private draw, preserves joint occupancy. -/
+theorem caller_preserves_presence (paired : ∀ st b, Ready G st (.inl b) → Ready G st (.inr b)) :
+    (callerImpl G e).PreservesInv PresentTogether := by
   intro t s inv w hw
+  change w ∈ support (((QueryImpl.compose G.deferredImpl
+    (QueryImpl.compose liftPublic (RandomOraclePairedValue.readHalves e))) t).run s) at hw
   cases t with
   | inr b =>
     simp only [QueryImpl.compose, RandomOraclePairedValue.readHalves, simulateQ_bind,
@@ -109,5 +104,16 @@ theorem meteredCaller_present {α : Type} (p : OracleComp (FullWorld L F) α)
       Functor.map_map, support_map] at hw
     obtain ⟨_, _, rfl⟩ := hw
     exact inv
+
+/-- Forwarded private sampling and paired public queries preserve the occupied low rows. -/
+theorem meteredCaller_present {α : Type} (p : OracleComp (FullWorld L F) α)
+    (paired : ∀ st b, Ready G st (.inl b) → Ready G st (.inr b))
+    (st : DeferredState L H X K) (old : PresentTogether st)
+    (z) (hz : z ∈ support ((simulateQ G.deferredImpl (meteredCaller e p)).run st)) :
+    PresentTogether z.2 := by
+  unfold meteredCaller at hz
+  rw [← QueryImpl.simulateQ_compose liftPublic (RandomOraclePairedValue.readHalves e),
+    ← QueryImpl.simulateQ_compose] at hz
+  exact simulateQ_run_preservesInv _ _ (caller_preserves_presence G e paired) _ st old _ hz
 
 end CanonicalGraph.PairedQueries
