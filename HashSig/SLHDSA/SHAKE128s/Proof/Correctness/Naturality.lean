@@ -166,8 +166,8 @@ theorem hypertree_sign_simulate (message secretSeed publicSeed : Digest)
 theorem keygenInternal_simulate (secretSeed prfSeed publicSeed : Digest) :
     simulateQ impl (Scheme.keygenInternal secretSeed prfSeed publicSeed) =
       (Scheme.keygenInternal secretSeed prfSeed publicSeed : m (SecretKey × PublicKey)) := by
-  simp only [Scheme.keygenInternal, SLHDSA.Scheme.Program.keygen, simulateQ_bind, simulateQ_pure,
-    merkle_node_simulate impl himpl]
+  simp only [Scheme.keygenInternal, SLHDSA.Scheme.Program.keygen, bind_pure_comp, simulateQ_map]
+  exact congrArg _ (merkle_node_simulate impl himpl _ _ _ _ _)
 
 /-- Simulating internal signing is internal signing in the target monad. -/
 theorem signInternal_simulate (sk : SecretKey) (message : Bytes) :
