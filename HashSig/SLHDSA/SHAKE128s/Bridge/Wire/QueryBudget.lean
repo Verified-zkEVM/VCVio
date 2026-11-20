@@ -7,13 +7,15 @@ Authors: Alexander Hicks
 module
 public import HashSig.SLHDSA.SHAKE128s.Bridge.Wire.Defs
 public import HashSig.SLHDSA.SHAKE128s.Statement.Game.CompleteBudget
+import HashSig.SLHDSA.SHAKE128s.Bridge.Scheme
+import HashSig.SLHDSA.SHAKE128s.Proof.VerificationBudget
 
 /-!
 # Actual SHAKE-128s wire-game query budgets
 
-The canonical intrinsic verifier certificate gives the actual external verifier its universal
-3929-call cap. The fixed-context handler preserves the wire adversary's syntactic budgets, so
-the real source-counted game has almost-sure work at most `qh + qs + verifierCap`. Only signing
+The checksum-sensitive WOTS+ count gives the actual external verifier a 3824-call cap.
+The fixed-context handler preserves the wire adversary's syntactic budgets, so the real game
+has almost-sure work at most `qh + qs + 3824`. Only signing
 requests, direct adversary hashes and final verification hashes are selected; private sampling,
 key generation and signer-internal hashing remain excluded.
 -/
@@ -56,17 +58,34 @@ theorem isTotalQueryBound_FIPS205_internal_verify (pk : PublicKeyCore FIPS205.co
         simp only [QueryImpl.apply_compose]
         exact ⟨Nat.one_pos, fun _ => trivial⟩)
 
+/-- The actual verifier uses at most 3824 calls, including failed verifications. -/
+theorem isTotalQueryBound_FIPS205_verify_3824 (pk : PublicKeyCore FIPS205.core) (request : Message)
+    (wire : Bytes) : IsTotalQueryBound (FIPS205.scheme.verify pk request wire) 3824 := by
+  let key : PublicKey := ⟨digestEquiv.symm pk.pkSeed, digestEquiv.symm pk.pkRoot⟩
+  have key_map : pkMap key = pk :=
+    congrArg₂ (PublicKeyCore.mk (core := FIPS205.core))
+      (digestEquiv.apply_symm_apply pk.pkSeed) (digestEquiv.apply_symm_apply pk.pkRoot)
+  rw [← key_map, ← simulateQ_relabel_verify, VerificationBudget.verify_lift, liftComp_def,
+    ← QueryImpl.simulateQ_compose]
+  have paper : IsTotalQueryBound
+      (Scheme.verify key request wire : OracleComp HashSpec Bool) 3824 := by
+    cases hf : request.frame with
+    | none => simp only [Scheme.verify, SignatureAlg.SigningView.Encoding.verify, hf]; trivial
+    | some msg =>
+      cases hp : Signature.fromBytes? wire with
+      | none => simp only [Scheme.verify, SignatureAlg.SigningView.Encoding.verify, hf, hp]; trivial
+      | some sig =>
+        exact (VerificationQueries.verify_bounds key request wire msg sig hf hp).toIsTotalQueryBound
+  simpa only [Nat.mul_one] using paper.simulateQ_of_step_le (step := 1) (impl := _) (by
+    intro t
+    exact ⟨Nat.one_pos, fun _ => trivial⟩)
+
 /-- The actual external SHAKE-128s verifier has the universal cap 3929 (`verifierCap_eq`).
 Invalid contexts and malformed encodings return before hashing. Acceptance is not assumed. -/
 theorem isTotalQueryBound_FIPS205_verify (pk : PublicKeyCore FIPS205.core) (request : Message)
     (signature : Bytes) :
-    IsTotalQueryBound (FIPS205.scheme.verify pk request signature) verifierCap := by
-  simp only [FIPS205.scheme, FIPS205.signingView_verify]
-  split
-  · trivial
-  · split
-    · trivial
-    · exact isTotalQueryBound_FIPS205_internal_verify _ _ _
+    IsTotalQueryBound (FIPS205.scheme.verify pk request signature) verifierCap :=
+  (isTotalQueryBound_FIPS205_verify_3824 pk request signature).mono (by decide)
 
 /-- The actual fixed-context transformation preserves syntactic hash and signing budgets.
 One source signing query becomes one target signing request; ambient sampling remains free. -/
@@ -95,14 +114,30 @@ theorem fixedContextAdversary_romQueryBound (ctx : SLHDSA.Security.PureContext)
     · rintro ((sample | hash) | msg) ht <;>
         simp_all [fixedContextHandler, IsSignQuery, isQueryBoundP_query_iff]
 
+private theorem fixedContext_bounds (ctx : SLHDSA.Security.PureContext)
+    (adv : StrongUnforgeableAdversary (wireAlgorithm ctx)) {qh qs cap : Nat}
+    (hadv : adv.RomQueryBound qh qs) (hcap : 3824 ≤ cap) :
+    (qs ≤ signingLimit → Game.WithinSigningLimit FIPS205.scheme (fixedContextAdversary ctx adv)) ∧
+      (Game.securityGame FIPS205.scheme).HasQueryBound () Game.adversaryWork
+        (fixedContextAdversary ctx adv) (qh + qs + cap) :=
+  Game.almostSure_bounds FIPS205.scheme (fixedContextAdversary ctx adv)
+    (fixedContextAdversary_romQueryBound ctx adv hadv) (fun pk forgery =>
+      (isTotalQueryBound_FIPS205_verify_3824 pk forgery.message forgery.signature).mono hcap)
+
 /-- A wire adversary within the syntactic lifetime signing budget obeys the actual game limit. -/
 theorem withinSigningLimit_fixedContext (ctx : SLHDSA.Security.PureContext)
     (adv : StrongUnforgeableAdversary (wireAlgorithm ctx)) {qh qs : Nat}
     (hadv : adv.RomQueryBound qh qs) (hqs : qs ≤ signingLimit) :
     Game.WithinSigningLimit FIPS205.scheme (fixedContextAdversary ctx adv) :=
-  (Game.almostSure_bounds FIPS205.scheme (fixedContextAdversary ctx adv)
-    (fixedContextAdversary_romQueryBound ctx adv hadv)
-    (fun pk forgery => isTotalQueryBound_FIPS205_verify pk forgery.message forgery.signature)).1 hqs
+  (fixedContext_bounds ctx adv hadv le_rfl).1 hqs
+
+/-- A wire adversary and the final verifier share the selected work budget. -/
+theorem hasQueryBound_fixedContext_3824 (ctx : SLHDSA.Security.PureContext)
+    (adv : StrongUnforgeableAdversary (wireAlgorithm ctx)) {qh qs : Nat}
+    (hadv : adv.RomQueryBound qh qs) :
+    (Game.securityGame FIPS205.scheme).HasQueryBound () Game.adversaryWork
+      (fixedContextAdversary ctx adv) (qh + qs + 3824) :=
+  (fixedContext_bounds ctx adv hadv le_rfl).2
 
 /-- A wire adversary with syntactic hash and signing budgets has almost-sure selected work
 at most `qh + qs + verifierCap`, including final verification and every losing outcome. -/
@@ -111,8 +146,6 @@ theorem hasQueryBound_fixedContext (ctx : SLHDSA.Security.PureContext)
     (hadv : adv.RomQueryBound qh qs) :
     (Game.securityGame FIPS205.scheme).HasQueryBound () Game.adversaryWork
       (fixedContextAdversary ctx adv) (qh + qs + verifierCap) :=
-  (Game.almostSure_bounds FIPS205.scheme (fixedContextAdversary ctx adv)
-    (fixedContextAdversary_romQueryBound ctx adv hadv)
-    (fun pk forgery => isTotalQueryBound_FIPS205_verify pk forgery.message forgery.signature)).2
+  (fixedContext_bounds ctx adv hadv (by decide)).2
 
 end SLHDSA.SHAKE128s.Bridge

@@ -108,9 +108,9 @@ build boundaries and the staged consolidation.
   The fixed-context byte-wire interface has the same advantage as this counted game
   (`Bridge.strongUnforgeableAdvantage_eq_fixedContext`). A wire adversary with syntactic budgets
   `RomQueryBound q_h q_s` and `q_s ≤ 2^64` has advantage at most
-  `(q_h + q_s + 3929) / 2^127` (`wireStrongAdvantage_le_workBound`); the 3929 calls are a proved
-  universal cap for the actual external verifier, including losing and malformed forgeries.
-  `wireStrongAdvantage_le_min_bound` retains the smaller of this bound and the existing general
+  `(q_h + q_s + 3824) / 2^127` (`wireStrongAdvantage_le_workBound_3824`). This cap counts
+  verification on every outcome, including a well-formed forgery that fails verification.
+  `wireStrongAdvantage_le_min_bound_3824` retains the smaller of this bound and the existing general
   SHAKE bound on their common deterministic, fixed-valid-context, uniform-seed scope. The
   original variable-context headline and the broader six-set deterministic and hedged results
   remain available. See the

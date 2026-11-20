@@ -12,6 +12,7 @@ public import HashSig.SLHDSA.SHAKE128s.Generic.ExactQueryCount
 public import VCVio.OracleComp.QueryTracking.QueryBound.Exact.Sequence
 public import VCVio.OracleComp.QueryTracking.QueryBound.Exact.Cost
 public import VCVio.OracleComp.SimSemantics.StateT.Basic
+import VCVio.OracleComp.QueryTracking.CostModel
 import HashSig.SLHDSA.SHAKE128s.Proof.ForsProgram
 import HashSig.SLHDSA.SHAKE128s.Proof.XmssRecovery
 
@@ -194,6 +195,15 @@ def Bounds (computation : OracleComp HashSpec α) (lower upper : Nat) : Prop :=
     [MonadAttach m] [LawfulMonadAttach m] (impl : QueryImpl HashSpec m),
     AddWriterT.QueryBoundedBelowBy (simulateQ impl.withUnitCost computation) lower ∧
       AddWriterT.QueryBoundedAboveBy (simulateQ impl.withUnitCost computation) upper
+
+/-- Instantiation at the free hash interpreter bounds every branch of the syntax tree. -/
+theorem Bounds.toIsTotalQueryBound {α : Type}
+    {program : OracleComp HashSpec α} {lower upper : Nat}
+    (h : Bounds program lower upper) :
+    IsTotalQueryBound program upper := by
+  unfold Bounds at h
+  apply WorstCaseCostBound.toIsTotalQueryBound_unit
+  exact (h (OracleComp HashSpec) (QueryImpl.ofLift HashSpec (OracleComp HashSpec))).2
 
 /-- An exact query count lies within any enclosing bounds. -/
 theorem Bounds.of_exact {computation : OracleComp HashSpec α} {count lower upper : Nat}

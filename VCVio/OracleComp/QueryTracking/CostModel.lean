@@ -267,17 +267,6 @@ private lemma addCostOracle_unit_run_apply (t : spec.Domain) :
 
 section UnitCostBridge
 
-private lemma exists_mem_support_costDist_of_mem_support
-    [AddCommMonoid ω]
-    (oa : OracleComp spec α) (cm : CostModel spec ω) {x : α}
-    (hx : x ∈ support oa) :
-    ∃ c, (x, c) ∈ support (costDist oa cm) := by
-  have hx' : x ∈ support (Prod.fst <$> costDist oa cm) := by
-    simpa [fst_map_costDist] using hx
-  rw [support_map] at hx'
-  obtain ⟨⟨x', c⟩, hz, rfl⟩ := hx'
-  exact ⟨c, hz⟩
-
 private lemma mem_support_costDist_unit_query_bind_of_mem_support
     (t : spec.Domain) (mx : spec.Range t → OracleComp spec α) (u : spec.Range t)
     {z : α × Multiplicative ℕ} (hz : z ∈ support (costDist (mx u) CostModel.unit)) :
@@ -290,36 +279,29 @@ private lemma mem_support_costDist_unit_query_bind_of_mem_support
   · rw [support_map]
     exact ⟨z, hz, by simp [Nat.add_comm]⟩
 
-private theorem isPerIndexQueryBound_of_unit_support_bound
-    [DecidableEq ι] [∀ t, Nonempty (spec.Range t)]
+/-- A bound on the free unit-cost interpreter bounds the number of calls on every branch. -/
+theorem WorstCaseCostBound.toIsTotalQueryBound_unit
+    [∀ t, Nonempty (spec.Range t)]
     {oa : OracleComp spec α} {bound : ℕ}
-    (hSupport : ∀ z ∈ support (costDist oa CostModel.unit),
-      Multiplicative.toAdd z.2 ≤ bound) :
-    IsPerIndexQueryBound oa (fun _ => bound) := by
+    (h : WorstCaseCostBound oa CostModel.unit bound) : IsTotalQueryBound oa bound := by
   induction oa using OracleComp.inductionOn generalizing bound with
-  | pure x =>
-      exact isPerIndexQueryBound_pure x _
-  | query_bind t mx ih =>
-      rw [isPerIndexQueryBound_query_bind_iff]
-      refine ⟨?_, fun u => ?_⟩
-      · obtain ⟨u₀⟩ : Nonempty (spec.Range t) := inferInstance
-        rcases OracleComp.support_nonempty (mx u₀) with ⟨x, hx⟩
-        rcases exists_mem_support_costDist_of_mem_support (mx u₀) CostModel.unit hx with
-          ⟨c, hc⟩
-        have hle : Multiplicative.toAdd c + 1 ≤ bound := by
-          simpa using
-            hSupport _ (mem_support_costDist_unit_query_bind_of_mem_support t mx u₀ hc)
-        omega
-      · have hcontSupport :
-            ∀ z ∈ support (costDist (mx u) CostModel.unit), z.2 ≤ bound - 1 := by
-          intro z hz
-          have hle : Multiplicative.toAdd z.2 + 1 ≤ bound := by
-            simpa using hSupport _ (mem_support_costDist_unit_query_bind_of_mem_support t mx u hz)
-          change Multiplicative.toAdd z.2 ≤ bound - 1
-          omega
-        refine (ih u hcontSupport).mono fun i => ?_
-        simp only [Function.update_apply]
-        split <;> omega
+  | pure _ => trivial
+  | query_bind t next ih =>
+    rw [isTotalQueryBound_query_bind_iff]
+    have tailBound (u : spec.Range t) (z : α × Multiplicative ℕ)
+        (hz : z ∈ support (costDist (next u) CostModel.unit)) :
+        Multiplicative.toAdd z.2 + 1 ≤ bound :=
+      h _ (mem_support_costDist_unit_query_bind_of_mem_support t next u hz)
+    constructor
+    · obtain ⟨u⟩ : Nonempty (spec.Range t) := inferInstance
+      obtain ⟨z, hz⟩ := OracleComp.support_nonempty (costDist (next u) CostModel.unit)
+      have := tailBound u z hz
+      omega
+    · intro u
+      apply ih u
+      intro z hz
+      have := tailBound u z hz
+      omega
 
 /-- A strict bound under the unit cost model yields a uniform per-index query bound:
 if every execution uses at most `bound` total unit-cost steps, then each oracle index
@@ -328,9 +310,16 @@ theorem WorstCaseCostBound.toIsPerIndexQueryBound_unit
     [DecidableEq ι] [∀ t, Nonempty (spec.Range t)]
     {oa : OracleComp spec α} {bound : ℕ}
     (h : WorstCaseCostBound oa CostModel.unit bound) :
-    IsPerIndexQueryBound oa (fun _ => bound) :=
-  isPerIndexQueryBound_of_unit_support_bound fun z hz => by
-    exact h z hz
+    IsPerIndexQueryBound oa (fun _ => bound) := by
+  have total := h.toIsTotalQueryBound_unit
+  clear h
+  induction oa using OracleComp.inductionOn generalizing bound with
+  | pure _ => trivial
+  | query_bind t next ih =>
+    rw [isTotalQueryBound_query_bind_iff] at total
+    refine ⟨total.1, fun u => (ih u (total.2 u)).mono fun i => ?_⟩
+    simp only [Function.update_apply]
+    split <;> omega
 
 private lemma sum_update_pred_eq
     [DecidableEq ι] [Fintype ι]

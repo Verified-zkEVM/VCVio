@@ -137,10 +137,11 @@ internally for all three concrete certificates, adding no caller premise.
 Profile's original `(qh, qs)` metric and mode-specific evaluator remain separate from joint
 selected-work `q`. For the existing deterministic SHAKE-128s wire game at a valid fixed context,
 with independent uniform seeds and the shared 30-byte ROM, use
-[`SLHDSA.SHAKE128s.wireStrongAdvantage_le_min_bound`](../../HashSig/SLHDSA/SHAKE128s/Statement/Theorems/WireStrongUnforgeability.lean).
+[`SLHDSA.SHAKE128s.wireStrongAdvantage_le_min_bound_3824`](../../HashSig/SLHDSA/SHAKE128s/Statement/Theorems/WireStrongUnforgeability.lean).
 It takes `adv.RomQueryBound qh qs` and `qs ≤ signingLimit` (`2^64`). The established bridge gives
 the minimum of the general SHAKE bound, including its complete weak-seed term, and
-`(qh + qs + 3929) / 2^127`. The `3929` is the universal verifier cap in that work transport.
+`(qh + qs + 3824) / 2^127`. The WOTS+ checksum reduces the universal allowance for chain calls
+from 525 to 510 per layer across seven hypertree layers.
 For a changed policy or model, supply a transport matching the success event, model and budget
 meaning before combining numerical bounds; an arbitrary new policy has no automatic minimum.
 Per-seed/distributed-seed, randomizer, hedged and refined weak-seed results retain their own
@@ -423,12 +424,13 @@ records key-generation and signer hashes separately and excludes them from this 
 The original public-key interface is structured. The additive candidate's
 `Bridge.strongUnforgeableAdvantage_eq_fixedContext` identifies its fixed-context adaptation with
 that actual byte-public-key wire game. `Bridge.withinSigningLimit_fixedContext` and
-`Bridge.hasQueryBound_fixedContext` derive the actual probability-one caps from a wire
+`Bridge.hasQueryBound_fixedContext_3824` derive the actual probability-one caps from a wire
 adversary's `RomQueryBound q_h q_s`. The work transport needs no lifetime premise; the signing
 limit and both security corollaries additionally use `q_s ≤ 2^64`. The external verifier has a
-proved universal cap of 3929 calls, without an acceptance premise.
-`wireStrongAdvantage_le_workBound` gives `(q_h + q_s + 3929) / 2^127`;
-`wireStrongAdvantage_le_min_bound` combines it with the existing general SHAKE bound. These
+proved universal cap of 3824 calls, including rejected signatures and invalid contexts.
+`wireStrongAdvantage_le_workBound_3824` gives `(q_h + q_s + 3824) / 2^127`.
+`wireStrongAdvantage_le_min_bound_3824` combines it with the existing general SHAKE bound.
+The original 3929-cap endpoints follow by weakening these bounds. These
 wire corollaries share deterministic signing, one fixed valid context, independent uniform seeds,
 and the fixed 30-byte oracle. The original variable-context theorem remains unchanged.
 
