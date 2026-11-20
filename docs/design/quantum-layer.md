@@ -11,6 +11,11 @@ The Mathlib-only base (completely positive maps, subinstruments, Choi–Kraus an
 observation, pure states and oracle unitaries) lives in
 [QuantumFoundations](https://github.com/lean-crypto-foundations/QuantumFoundations), shared with
 CatCrypt, and VCVio imports it since #921. The rest of the layer is in `VCVio/Quantum/`.
+VCVio's imports select the completely positive subinstrument modules. The pinned dependency
+also has a different `Quantum.QComp` in `QuantumFoundations.Instrument`; importing that module
+or its umbrella together with VCVio's `Quantum.Comp.Basic` causes a declaration-name collision.
+The stack does not import it. Resolving that upstream naming and instrument API is separate
+from the parallel-query results.
 
 Merged:
 
@@ -195,6 +200,9 @@ It imports only QuantumFoundations and Mathlib and is staged for upstreaming to 
 requires equal `In` and `Out` and `Result = Unit`; classical-result checked/read ports of vector
 commitments are outside this scope. General stateful batches carry no implicit commutation assumption.
 
+Each batch uses one base port. A mixed-oracle round requires a single port encoding all of
+its oracle inputs, for example on a sum domain; the generic batch API does not mix base ports.
+
 `Oracle/Parallel.lean` specializes `uBatchSpec` to base port `Unit`, so a classical port is
 `((), k)` with width in its second component. It proves that ordered additive calls agree with a
 simultaneous query on all slots and defines the parallel QROM law by sampling one function for
@@ -247,4 +255,6 @@ These results allow arbitrary adaptive local signatures and interpretations, mix
 subnormalized input states, finite domains and finite abelian response groups. A plain compressed
 leaf observation does not read `H`; observations `f H leaf` require an explicit joint-oracle read.
 
-The M2a model and transport obligations are complete.
+The run equalities and point-budget certificates supply transport for sequential theorems
+whose local signature includes arbitrary instruments. Local gate-cost restrictions require
+an additional compilation argument.
