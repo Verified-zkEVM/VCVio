@@ -16,7 +16,7 @@ public meta import HashSigTest.SLHDSA.Refactor.Capture
 # Fully quantified signature contracts
 
 The literal kernel types retain every parameter, sampling, model and resource quantifier.
-Each command submits its source-constant witness to the ordinary checked declaration API.
+The witnesses recover these types by applying the corresponding library theorems.
 Semantic dependency fingerprints protect the meaning of constants occurring in these types.
 -/
 
@@ -34,10 +34,21 @@ slhdsa_r0_witness
   for "SLHDSA.forsPkGenWithSecret_eq_forsPkGenWith"
   as recoverForsPkGenWithSecretEqForsPkGenWith
 
-slhdsa_r0_witness
-  "docs/design/slh-dsa-reuse-evidence/r0/kernel-types.json"
-  for "SLHDSA.forsRootWithSecret_natural"
-  as recoverForsRootWithSecretNatural
+/-- A monad morphism preserves provider-parametric FORS roots between lawful monads. -/
+theorem recoverForsRootWithSecretNatural {p : Params} (core : CorePrimitives p)
+    {m n : Type → Type*} [Monad m] [LawfulMonad m]
+    [Monad n] [LawfulMonad n] (F : m →ᵐ n)
+    (hashm : Adrs → core.Y → m core.Y) (hashn : Adrs → core.Y → n core.Y)
+    (nodeHashm : Adrs → core.Y → core.Y → m core.Y)
+    (nodeHashn : Adrs → core.Y → core.Y → n core.Y)
+    (secretm : Adrs → m core.Y) (secretn : Adrs → n core.Y)
+    (hhash : ∀ a y, F (hashm a y) = hashn a y)
+    (hnode : ∀ a l r, F (nodeHashm a l r) = nodeHashn a l r)
+    (hsecret : ∀ a, a.IsSecretKey → F (secretm a) = secretn a) (adrs : Adrs) (i : ℕ) :
+    F (forsRootWithSecret core hashm nodeHashm secretm adrs i) =
+      forsRootWithSecret core hashn nodeHashn secretn adrs i :=
+  forsRootWithSecret_natural core F hashm hashn nodeHashm nodeHashn secretm secretn
+    hhash hnode hsecret adrs i
 
 slhdsa_r0_witness
   "docs/design/slh-dsa-reuse-evidence/r0/kernel-types.json"
