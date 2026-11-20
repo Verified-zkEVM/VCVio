@@ -43,6 +43,12 @@ example : (paddedQuery.dropEmptyBatches .instruments).IsTotalQueryBound 1 ∧
   have h : paddedQuery.IsPointBound 1 := by simp [paddedQuery, QuantumComp.relabelThen]
   exact ⟨h.isTotalQueryBound_dropEmptyBatches .instruments, h.dropEmptyBatches .instruments⟩
 
+/-- Removing empty calls keeps the one-slot width cap of the retained call. -/
+example : paddedQuery.IsWidthBound 1 ∧
+    (paddedQuery.dropEmptyBatches .instruments).IsWidthBound 1 := by
+  have h : paddedQuery.IsWidthBound 1 := by simp [paddedQuery, QuantumComp.relabelThen]
+  exact ⟨h, h.dropEmptyBatches .instruments⟩
+
 /-- Swapping each public slot with private memory makes retaining that memory observable. -/
 @[expose, reducible]
 noncomputable def swapRuntime : QuantumRuntime (uSpec Unit fun _ ↦ QReg.of Bool) where

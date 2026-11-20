@@ -198,3 +198,35 @@ theorem IsTotalQueryBound.isPointBound {x : QuantumComp L (uBatchSpec P In) X A}
 
 end QuantumComp
 end Quantum
+
+namespace Quantum.QComp
+
+variable {P : Type u₁} {In : P → QReg} {A B C : QReg} {α β : Type w}
+
+/-- Local subinstruments preserve the point budget of each continuation. -/
+@[simp]
+theorem isPointBound_act_bind_iff (p : SubInstrument A B β)
+    (k : β → QComp (uBatchSpec P In) B C α) (n : ℕ) :
+    ((act p).bind k).IsPointBound n ↔ ∀ b, (k b).IsPointBound n := by
+  rw [act_bind, QuantumComp₂.primBind]
+  exact QuantumComp.isPointBound_primBind_iff _ _ _
+
+end Quantum.QComp
+
+namespace Quantum.QuantumComp₂
+
+variable {P : Type u₁} {In : P → QReg} {L : LocalSig.{u, v}}
+  {A B : QReg} {α : Type w}
+
+/-- A fixed-register batch consumes its width before its outcome-selected continuation. -/
+@[simp]
+theorem isPointBound_query_bind_iff (ik : P × ℕ) (E : QReg)
+    (e : A ≃ (uBatchSpec P In).In ik × E)
+    (k : (uBatchSpec P In).Result ik →
+      QuantumComp₂ L (uBatchSpec P In) (QReg.of ((uBatchSpec P In).Out ik × E)) B α) (n : ℕ) :
+    ((query ik E e).bind k).IsPointBound n ↔
+      ik.2 ≤ n ∧ ∀ r, (k r).IsPointBound (n - ik.2) := by
+  rw [query_bind, queryBind]
+  exact QuantumComp.isPointBound_queryBind_iff _ _ _ _ _
+
+end Quantum.QuantumComp₂

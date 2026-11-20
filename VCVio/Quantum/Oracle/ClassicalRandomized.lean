@@ -53,11 +53,13 @@ noncomputable def toQuantumRandomized (oa : OracleComp (unifSpec + (X →ₒ Y))
     QComp (qromSpec X Y) (QReg.of Unit) (QReg.of Unit) α :=
   oa.toQuantumAt classicalRandomizedImpl
 
+/-- A classical return embeds as a quantum return without an oracle call. -/
 @[simp]
 theorem toQuantumRandomized_pure (a : α) :
     (pure a : OracleComp (unifSpec + (X →ₒ Y)) α).toQuantumRandomized =
       QuantumComp₂.pure a := rfl
 
+/-- A classical call and its adaptive continuation embed through the randomized interpreter. -/
 @[simp]
 theorem toQuantumRandomized_query_bind (t : ℕ ⊕ X)
     (k : (unifSpec + (X →ₒ Y)).Range t → OracleComp (unifSpec + (X →ₒ Y)) α) :

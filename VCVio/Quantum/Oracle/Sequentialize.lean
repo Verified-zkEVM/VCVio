@@ -20,6 +20,7 @@ between `H` and the returned data.
 public section
 
 open MeasureTheory
+open scoped ENNReal
 
 universe u v w w₁
 
@@ -58,5 +59,21 @@ theorem QuantumComp.IsPointBound.qrom_sequentialize (I : L.Interp)
     (x.sequentialize I).IsQueryBound (fun _ ↦ n) :=
   (QuantumComp.isTotalQueryBound_iff_isQueryBound
     (s := qromSpec X Y) (x.sequentialize I) n).mp (hx.sequentialize I)
+
+/-- A sequential QROM probability bound at `Q` queries applies to a parallel program with
+`Q` total queried points. The sequential theorem must cover all local subinstruments; the
+observation retains the sampled function and final leaf on both sides. This transfer concerns
+query counts and does not assign a cost to local computation. -/
+theorem qromBatchEvalDistMap_le_of_sequential_bound [AddCommGroup Y] {β : Type w₁}
+    [MeasurableSpace β] (I : L.Interp)
+    (x : QuantumComp L (qromBatchSpec X Y) W A) (ρ : SubState A)
+    (f : (X → Y) → (Σ B, W B) → β) (s : Set β) {Q : ℕ} (hQ : x.IsPointBound Q)
+    (ε : ℝ≥0∞)
+    (h : ∀ z : QuantumComp LocalSig.instruments.{v} (qromSpec X Y) W A,
+      z.IsQueryBound (fun _ ↦ Q) → qromEvalDistMap .instruments z ρ f s ≤ ε) :
+    qromBatchEvalDistMap I x ρ f s ≤ ε := by
+  change sampledEvalDistMap parallelOracleRuntime I x ρ f s ≤ ε
+  rw [← qromEvalDistMap_sequentialize I x ρ f]
+  exact h (x.sequentialize I) (hQ.qrom_sequentialize I)
 
 end Quantum
