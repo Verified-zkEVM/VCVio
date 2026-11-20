@@ -196,4 +196,40 @@ theorem accepted_outcome_work (adversary : Adversary) (outcome : Outcome)
     (congrArg RandomOracleModel.run (Security.experiment_eq_keygen_bind adversary))
     outcome houtcome haccept
 
+/-- The complete count observation on an accepting forgery covers the verification floor. -/
+theorem accepted_observation_work (adv : Adversary)
+    (observed : SignatureAlg.SigningView.Observation Message Bytes (Option Bytes)
+      Game.Counted.SourceCounts)
+    (mem : observed ∈ support (RandomOracleModel.run
+      (Game.Counted.canonicalExperiment externalScheme adv))) (accept : observed.verified = true) :
+    569 ≤ observed.cost .hash + observed.cost .verifier := by
+  apply accepted_outcome_work adv (Game.Counted.legacyOutcome observed) _ accept
+  simpa only [Security.run, Security.experiment, RandomOracleModel.run, simulateQ_map,
+    StateT.run'_map', support_map] using
+    (Set.mem_image_of_mem Game.Counted.legacyOutcome mem)
+
+/-- Fewer than 569 actual signing, adversarial hash and verification calls exclude a forgery. -/
+theorem advantage_eq_zero (adv : Adversary) (q : Nat) (hq : q < 569)
+    (cap : (Game.securityGame externalScheme).HasQueryBound () Game.adversaryWork adv q) :
+    (Game.securityGame externalScheme).advantage () adv = 0 := by
+  let observe := fun x : SignatureAlg.SigningView.Observation Message Bytes (Option Bytes)
+      Game.Counted.SourceCounts => (decide (Game.Wins (Game.Counted.legacyOutcome x)), x.cost)
+  have experiment : (Game.securityGame externalScheme).experiment () adv = observe <$>
+      RandomOracleModel.run (Game.Counted.canonicalExperiment externalScheme adv) := by
+    simp only [Game.securityGame, Game.runBySource, Game.experimentBySource, RandomOracleModel.run,
+      simulateQ_map, StateT.run'_map', Functor.map_map]
+    congr 1
+    funext x
+    exact Prod.ext rfl (Game.Counted.legacyObservation_counts x)
+  apply prEvent_eq_zero_of_forall_mem_support
+  intro result mem win
+  have bound := (OracleComp.prEvent_eq_one_iff _ _).mp cap result mem
+  rw [experiment, support_map] at mem
+  obtain ⟨observed, hs, rfl⟩ := mem
+  have wins : Game.Wins (Game.Counted.legacyOutcome observed) := by simpa [observe] using win
+  have min := accepted_observation_work adv observed hs wins.1
+  have max : observed.cost .sign + (observed.cost .hash + observed.cost .verifier) ≤ q := by
+    simpa [observe, Game.adversaryWork] using bound
+  omega
+
 end SLHDSA.SHAKE128s.VerificationBudget
