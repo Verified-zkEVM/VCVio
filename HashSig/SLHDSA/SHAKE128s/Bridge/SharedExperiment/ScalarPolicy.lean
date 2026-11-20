@@ -73,7 +73,7 @@ theorem word_domination {Output : Type} (policy : Event Output → Nat)
     (hdom : ∀ event, selectedWork (sourcePolicy event) ≤ policy event)
     (word : FreeAddMonoid (Event Output)) :
     selectedWork (jointFold policy word).1 ≤ (jointFold policy word).2 := by
-  refine FreeAddMonoid.recOn word ?_ (fun event rest ih => ?_)
+  refine FreeAddMonoid.inductionOn' word ?_ (fun event rest ih => ?_)
   · simp [jointFold, selectedWork]
   · rw [map_add]
     change selectedWork
