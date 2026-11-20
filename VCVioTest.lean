@@ -211,6 +211,7 @@ public import VCVioTest.RandomOracleHitPotential
 public import VCVioTest.RandomOracleJointPotential
 public import VCVioTest.RandomOracleReadSet
 public import VCVioTest.RandomOracleRedirect
+public import VCVioTest.RandomOracleRegisteredTarget
 public import VCVioTest.RandomOracleRelabel
 public import VCVioTest.RandomOracleRouting
 public import VCVioTest.RandomOracleSettled
