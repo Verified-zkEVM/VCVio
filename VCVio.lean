@@ -476,9 +476,9 @@ public import VCVio.OracleComp.QueryTracking.RandomOracle.FiniteSupport
 public import VCVio.OracleComp.QueryTracking.RandomOracle.FreshAnswer
 public import VCVio.OracleComp.QueryTracking.RandomOracle.FreshQuery
 public import VCVio.OracleComp.QueryTracking.RandomOracle.HiddenSeed
+public import VCVio.OracleComp.QueryTracking.RandomOracle.HiddenSeed.CacheExtension
 public import VCVio.OracleComp.QueryTracking.RandomOracle.HiddenSeed.Reindex
 public import VCVio.OracleComp.QueryTracking.RandomOracle.HiddenSeed.Residual
-public import VCVio.OracleComp.QueryTracking.RandomOracle.HiddenSeed.CacheExtension
 public import VCVio.OracleComp.QueryTracking.RandomOracle.HiddenSeed.Unit
 public import VCVio.OracleComp.QueryTracking.RandomOracle.HiddenSeedCollapse
 public import VCVio.OracleComp.QueryTracking.RandomOracle.InitialCacheExpectedQuery
