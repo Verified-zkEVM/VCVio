@@ -50,7 +50,7 @@ abbrev rawCost : ℕ ⊕ L → Nat := Sum.elim (fun _ => 0) (fun _ => 1)
     (fun row => query (spec := (PairedSpec L H).withLabels X K H) (.inl (.inl (.inr row))))
 
 /-- Answer a full query by reading its paired rows in the deferred graph. -/
-noncomputable def callerImpl :
+@[expose] noncomputable def callerImpl :
     QueryImpl (FullWorld L F) (StateT (DeferredState L H X K) ProbComp) :=
   QueryImpl.compose G.deferredImpl
     (QueryImpl.compose liftPublic (RandomOraclePairedValue.readHalves e))
@@ -115,7 +115,8 @@ theorem fullWord_repeat (b : L) (st : DeferredState L H X K)
   · exact Or.inl (QueryCache.isSome_mono extension left)
   · exact Or.inr (QueryCache.isSome_mono extension right)
 
-private theorem step_cost (t : (FullWorld L F).Domain) (st : DeferredState L H X K) {z}
+/-- The growth of the physical footprint is bounded by the charge of the raw query. -/
+theorem caller_step_cost (t : (FullWorld L F).Domain) (st : DeferredState L H X K) {z}
     (hz : z ∈ support (((callerImpl G e) t).run st)) :
     (physicalInputs z.2.1.1).encard ≤ (physicalInputs st.1.1).encard + rawCost t := by
   cases t with
@@ -137,7 +138,7 @@ theorem metered_footprint {α : Type} (caller : OracleComp (FullWorld L F) α)
       (((simulateQ ((callerImpl G e).withAddCost rawCost) caller).runAdd).run st)) :
     (physicalInputs z.2.1.1).encard ≤ (physicalInputs st.1.1).encard + z.1.2 :=
   QueryImpl.resource_le_runAdd (callerImpl G e) (fun s => (physicalInputs s.1.1).encard) rawCost
-    (fun t s _ h => step_cost G e t s h) caller st z hz
+    (fun t s _ h => caller_step_cost G e t s h) caller st z hz
 
 /-- Mark queries on the original free caller, then expand each public read into its two rows. -/
 @[expose] def meteredCaller {α : Type} (caller : OracleComp (FullWorld L F) α) :
