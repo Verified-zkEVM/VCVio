@@ -65,7 +65,8 @@ theorem join_split (s : Cache aux L X F) : joinState aux e (splitState aux e s) 
   rw [joinCache_splitCache, joinCache_splitCache]
   exact Prod.ext ((QueryCache.addEquiv _ aux).apply_symm_apply c) rfl
 
-private theorem split_frame (c : (L →ₒ F).QueryCache) (a : aux.QueryCache) (p : (X →ₒ F).QueryCache) :
+private theorem split_frame (c : (L →ₒ F).QueryCache) (a : aux.QueryCache)
+    (p : (X →ₒ F).QueryCache) :
     splitState aux e (QueryCache.addEquiv _ aux (c, a), p) =
       (QueryCache.addEquiv _ aux (splitCache e c, a), splitCache e p) := rfl
 
@@ -107,7 +108,8 @@ private theorem run_public {V α : Type} [SampleableType V]
   rw [← QueryImpl.simulateQ_compose]
   simpa only [map_state] using (map_run_simulateQ_eq_of_query_map_eq _ _
     (fun t => (QueryCache.addEquiv _ aux (t, a), p))
-    (fun k c => by simpa [QueryImpl.compose, publicWord, map_state] using (public_step aux k c a p).symm)
+    (fun k c => by
+      simpa [QueryImpl.compose, publicWord, map_state] using (public_step aux k c a p).symm)
     prog c).symm
 
 private theorem run_private {V α : Type} [SampleableType V]
@@ -155,7 +157,8 @@ private theorem step (t : (World aux L X F).Domain) (s : Cache aux L X F) :
 
 /-- Pairing both word tables preserves every adaptive observation and both complete terminal
 states, including the cache of the auxiliary ports. -/
-theorem run_joint {α : Type} (program : OracleComp (World aux L X F) α) (initial : Cache aux L X F) :
+theorem run_joint {α : Type} (program : OracleComp (World aux L X F) α)
+    (initial : Cache aux L X F) :
     (fun z => (z.1, z.2, splitState aux e z.2)) <$>
       (simulateQ (SecretEncoding.idealImpl ((L →ₒ F) + aux) X F) program).run initial =ᵈ
     (fun z => (z.1, joinState aux e z.2, z.2)) <$>
@@ -163,9 +166,11 @@ theorem run_joint {α : Type} (program : OracleComp (World aux L X F) α) (initi
         (simulateQ (expand aux e) program)).run (splitState aux e initial) := by
   have coupled := evalDistEq_map_run_simulateQ_eq_of_query_evalDistEq_map_eq
     (SecretEncoding.idealImpl ((L →ₒ F) + aux) X F)
-    (QueryImpl.compose (SecretEncoding.idealImpl (((L ⊕ L) →ₒ H) + aux) (X ⊕ X) H) (expand aux e))
+    (QueryImpl.compose (SecretEncoding.idealImpl (((L ⊕ L) →ₒ H) + aux) (X ⊕ X) H)
+      (expand aux e))
     (splitState aux e) (step aux e) program initial
-  simpa only [QueryImpl.simulateQ_compose, Functor.map_map, Function.comp_def, map_state, join_split]
+  simpa only [QueryImpl.simulateQ_compose, Functor.map_map, Function.comp_def, map_state,
+    join_split]
     using coupled.map (fun z => (z.1, joinState aux e z.2, z.2))
 
 end Derivations

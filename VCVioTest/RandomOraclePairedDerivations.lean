@@ -30,10 +30,12 @@ abbrev Source := World Auxiliary Nat Nat (Bool × Bool)
 example (initial : Cache Auxiliary Nat Nat (Bool × Bool)) :
     let e := Equiv.prodComm Bool Bool
     (fun z => (z.1, z.2, splitState Auxiliary e z.2)) <$>
-      (simulateQ (SecretEncoding.idealImpl ((Nat →ₒ Bool × Bool) + Auxiliary) Nat (Bool × Bool))
+      (simulateQ (SecretEncoding.idealImpl ((Nat →ₒ Bool × Bool) + Auxiliary)
+        Nat (Bool × Bool))
         adaptive).run initial =ᵈ
     (fun z => (z.1, joinState Auxiliary e z.2, z.2)) <$>
-      (simulateQ (SecretEncoding.idealImpl (((Nat ⊕ Nat) →ₒ Bool) + Auxiliary) (Nat ⊕ Nat) Bool)
+      (simulateQ (SecretEncoding.idealImpl (((Nat ⊕ Nat) →ₒ Bool) + Auxiliary)
+        (Nat ⊕ Nat) Bool)
         (simulateQ (expand Auxiliary e) adaptive)).run (splitState Auxiliary e initial) :=
   run_joint Auxiliary (Equiv.prodComm Bool Bool) adaptive initial
 
