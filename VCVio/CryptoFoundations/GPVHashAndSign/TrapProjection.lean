@@ -43,35 +43,6 @@ recovers the fresh-sig run's `(((cache × counter) × idx) × signedSet)` state 
 run's per-programming-event trapdoor draw `x ← trapdoorSample pk sk v` is never read by either run,
 so as a lossless prefix whose result is unused it contributes only its unit mass. -/
 
-/-- **State-projection transport in distribution (differing state types).** If every oracle step of
-`impl₁ : QueryImpl spec (StateT σ₁ ProbComp)` becomes the corresponding `impl₂` step after mapping
-the state with `proj : σ₁ → σ₂` *in distribution*, then the full simulated runs agree under the same
-projection in distribution.  This is the distributional relaxation of
-`OracleComp.map_run_simulateQ_eq_of_query_map_eq`: the per-query hypothesis may discard a lossless
-answer-irrelevant draw (e.g. a write-only trapdoor sample) that breaks the *monadic* equality but
-preserves the distribution. -/
-theorem evalDistEq_map_run_simulateQ_eq_of_query_evalDistEq_map_eq
-    {ι : Type} {spec : OracleSpec ι}
-    {σ₁ σ₂ : Type} {α : Type}
-    (impl₁ : QueryImpl spec (StateT σ₁ ProbComp))
-    (impl₂ : QueryImpl spec (StateT σ₂ ProbComp))
-    (proj : σ₁ → σ₂)
-    (hproj : ∀ t s,
-      (Prod.map id proj <$> (impl₁ t).run s) =ᵈ ((impl₂ t).run (proj s)))
-    (oa : OracleComp spec α) (s : σ₁) :
-    (Prod.map id proj <$> (simulateQ impl₁ oa).run s) =ᵈ ((simulateQ impl₂ oa).run (proj s)) := by
-  induction oa using OracleComp.inductionOn generalizing s with
-  | pure x => simp
-  | query_bind t oa ih =>
-      simp only [simulateQ_bind, simulateQ_query, OracleQuery.input_query,
-        OracleQuery.cont_query, id_map, StateT.run_bind, map_bind]
-      refine (EvalDistEq.bind_right ((impl₁ t).run s) (fun x => ih x.1 x.2)).trans ?_
-      rw [show ((impl₁ t).run s >>= fun x => (simulateQ impl₂ (oa x.1)).run (proj x.2))
-            = ((Prod.map id proj <$> (impl₁ t).run s) >>= fun x =>
-                (simulateQ impl₂ (oa x.1)).run x.2) from by
-        rw [bind_map_left]; rfl]
-      exact (hproj t s).bind_left _
-
 omit [DecidableEq Range] [Fintype Salt] in
 /-- **Per-query trap-count → fresh-sig distribution projection.** Dropping the freshness Bool flag
 and the write-only trapdoor table from one `progGameRunImplCombinedTrapCount` query step — and
@@ -119,9 +90,9 @@ lemma progGameRunImplCombinedTrapCount_freshSig_proj (pk : PK) (sk : SK)
 omit [DecidableEq Range] [Fintype Salt] in
 /-- **Run-level trap-count → fresh-sig distribution projection.** Transports the per-query step
 `progGameRunImplCombinedTrapCount_freshSig_proj` through the whole adaptive fold via
-`evalDistEq_map_run_simulateQ_eq_of_query_evalDistEq_map_eq`: dropping the freshness Bool flag and
-the write-only trapdoor table from the full simulated trap-count run, and reshaping to the fresh-sig
-state layout, recovers the `embedTrapFreshIdxSigImpl` run distribution. -/
+`OracleComp.evalDistEq_map_run_simulateQ_eq_of_query_evalDistEq_map_eq`: dropping the freshness
+Bool flag and the write-only trapdoor table from the full simulated trap-count run, and reshaping
+to the fresh-sig state layout, recovers the `embedTrapFreshIdxSigImpl` run distribution. -/
 lemma map_run_progGameRunImplCombinedTrapCount_freshSig_proj (pk : PK) (sk : SK)
     {β : Type} (oa : OracleComp ((unifSpec + (Salt × M →ₒ Range)) + (M →ₒ (Salt × Domain))) β)
     (s : ((((Salt × M →ₒ Range).QueryCache × Finset M) × Bool) × ((Salt × M) → Option Domain)) ×
@@ -134,7 +105,7 @@ lemma map_run_progGameRunImplCombinedTrapCount_freshSig_proj (pk : PK) (sk : SK)
         (simulateQ (progGameRunImplCombinedTrapCount psf M Salt pk sk) oa).run s) =ᵈ
           ((simulateQ (embedTrapFreshIdxSigImpl psf M Salt pk sk) oa).run
         ((((s.1.1.1.1, s.2.2), s.2.1), s.1.1.1.2))) := by
-  exact evalDistEq_map_run_simulateQ_eq_of_query_evalDistEq_map_eq
+  exact OracleComp.evalDistEq_map_run_simulateQ_eq_of_query_evalDistEq_map_eq
     (progGameRunImplCombinedTrapCount psf M Salt pk sk)
     (embedTrapFreshIdxSigImpl psf M Salt pk sk)
     (fun s => ((((s.1.1.1.1, s.2.2), s.2.1), s.1.1.1.2)))
