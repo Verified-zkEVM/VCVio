@@ -6,6 +6,7 @@ Authors: VCVio Contributors
 module
 
 public import VCVio.OracleComp.QueryTracking.RandomOracle.PairedValue.GraphCost
+import VCVio.OracleComp.QueryTracking.RandomOracle.PublicReplay
 public import VCVio.OracleComp.QueryTracking.LoggingOracle.Core
 public import VCVio.OracleComp.QueryTracking.QueryLog
 
@@ -30,25 +31,8 @@ variable {L H F X K : Type} (G : CanonicalGraph (PairedSpec L H) X K H) (e : F �
 theorem deferred_public_readback (row : L ⊕ L) (s : DeferredState L H X K) {z}
     (read : z ∈ support ((G.deferredImpl (.inl (.inl (.inr row)))).run s))
     (later : RelabelState (PairedSpec L H) X K H) (extendsState : z.2.1 ≤ later)
-    (clean : ¬G.Conflict later) : G.merge later row = some z.1 := by
-  rw [G.deferredImpl_run_inl, support_map] at read
-  obtain ⟨w, step, rfl⟩ := read
-  by_cases ready : ∃ k vs, G.childVals s.1 k = some vs ∧ G.pt k vs = row
-  · obtain ⟨k, vs, shape, rfl⟩ := ready
-    rw [G.relabelImpl_run_pt shape, support_map] at step
-    obtain ⟨u, hu, rfl⟩ := step
-    have stored := RelabelState.le_and_cell_eq_of_mem_support_drawCell hu
-    rw [G.merge_apply_pt (G.childVals_mono (stored.1.trans extendsState) shape),
-      extendsState.2 stored.2]
-    rfl
-  · rw [G.relabelImpl_run_pub_of_not_exists ready, support_map] at step
-    obtain ⟨u, hu, rfl⟩ := step
-    have stored := extendsState.1 (QueryImpl.withCaching_run_caches uniformSampleImpl _ _ _ hu)
-    have off : ¬∃ k vs, G.childVals later k = some vs ∧ G.pt k vs = row := by
-      rintro ⟨k, vs, shape, rfl⟩
-      exact clean ⟨k, vs, shape, by rw [stored]; rfl⟩
-    rw [G.merge_apply_of_not_exists off]
-    exact stored
+    (clean : ¬G.Conflict later) : G.merge later row = some z.1 :=
+  G.merged_public_reply row s read extendsState clean
 
 /-- Both tagged requests survive at the original key, with their order and full reply intact. -/
 theorem deferred_full_readback (b : L) (s : DeferredState L H X K) {z}
