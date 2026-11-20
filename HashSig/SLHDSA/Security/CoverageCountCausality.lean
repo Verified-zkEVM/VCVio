@@ -19,7 +19,7 @@ preserves its reach probability. This lets a caller price the entries consumed b
 against an independently sampled tape.
 -/
 
-@[expose] public section
+public section
 open OracleComp OracleSpec SignatureAlg MeasureTheory
 open scoped ENNReal
 open SLHDSA.Security
@@ -29,14 +29,14 @@ namespace SLHDSA.Security.Coverage.ClassCountCausality
 variable {vp : ValidatedParams} (core : CorePrimitives vp.params) (which : TapeClass)
 
 /-- Overwrite one cell of the selected class tape in a tape family. -/
-def overwriteTapes (L : (j : TapeClass) → List (tapeClassRange core j))
+@[expose] def overwriteTapes (L : (j : TapeClass) → List (tapeClassRange core j))
     (cell : Nat) (value : tapeClassRange core which) :
     (j : TapeClass) → List (tapeClassRange core j) :=
   Function.update L which ((L which).set cell value)
 
 /-- Overwrite one cell of the currently unread selected class tape,
 leaving every other state field. -/
-def overwrite (s : RoleState core) (cell : Nat) (value : tapeClassRange core which) :
+@[expose] def overwrite (s : RoleState core) (cell : Nat) (value : tapeClassRange core which) :
     RoleState core :=
   ((s.1.1, overwriteTapes core which s.1.2 cell value), s.2)
 

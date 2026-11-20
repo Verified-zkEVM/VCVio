@@ -17,7 +17,7 @@ a product bound under the same randomizer discipline. The finite initial credit 
 cache invariant that holds at the start of the experiment.
 -/
 
-@[expose] public section
+public section
 open OracleComp OracleSpec SignatureAlg MeasureTheory
 open scoped ENNReal
 open SLHDSA.Security
@@ -27,30 +27,30 @@ namespace SLHDSA.Security.Coverage.ActualKeyPotential
 variable {vp : ValidatedParams} (core : CorePrimitives vp.params)
 
 /-- The current actual-key point occupying the designated forger-tape slot, if any. -/
-def ActualSlot (pk : PublicKeyCore core) (s : RoleState core) (index : Nat) : Prop :=
+@[expose] def ActualSlot (pk : PublicKeyCore core) (s : RoleState core) (index : Nat) : Prop :=
   ∃ R M, s.2.1.cls (hmsgPoint core pk R M) = some TapeClass.forger ∧
     s.2.1.pos (hmsgPoint core pk R M) = some index
 
 /-- A designated actual-key point has already fired. -/
-def Fired (pk : PublicKeyCore core) (s : RoleState core) (index : Nat) : Prop :=
+@[expose] def Fired (pk : PublicKeyCore core) (s : RoleState core) (index : Nat) : Prop :=
   ∃ R M, s.2.1.cls (hmsgPoint core pk R M) = some TapeClass.forger ∧
     s.2.1.pos (hmsgPoint core pk R M) = some index ∧ hmsgPoint core pk R M ∈ s.2.2
 
 /-- An assigned actual-key point has its unique deterministic nonce cell still uncached. -/
-def Live (pk : PublicKeyCore core) (kappa : PublicKeyCore core → core.Y)
+@[expose] def Live (pk : PublicKeyCore core) (kappa : PublicKeyCore core → core.Y)
     (s : RoleState core) (index : Nat) : Prop :=
   ∃ R M, s.2.1.cls (hmsgPoint core pk R M) = some TapeClass.forger ∧
     s.2.1.pos (hmsgPoint core pk R M) = some index ∧
       s.1.1 (.inr (.inr (kappa pk, M))) = none
 
 /-- A randomizer point uses the one deterministic salt at this public key. -/
-def GoodPoint (pk : PublicKeyCore core) (kappa : PublicKeyCore core → core.Y) :
+@[expose] def GoodPoint (pk : PublicKeyCore core) (kappa : PublicKeyCore core → core.Y) :
     (jointSpec core).Domain → Prop
   | .inr (.inr (salt, _)) => salt = kappa pk
   | _ => True
 
 /-- Ambient uniform queries and correctly salted randomizer queries are allowed. -/
-def GoodQuery (pk : PublicKeyCore core) (kappa : PublicKeyCore core → core.Y) :
+@[expose] def GoodQuery (pk : PublicKeyCore core) (kappa : PublicKeyCore core → core.Y) :
     (roleSpec core).Domain → Prop
   | .inl _ => True
   | .inr (.inl point) | .inr (.inr point) => GoodPoint core pk kappa point
@@ -116,7 +116,7 @@ theorem freshHit_new_key (pk : PublicKeyCore core)
     exact (notHit hit).elim
 
 /-- The banked single-nonce credit, with the existing hit invariant as its domain guard. -/
-noncomputable def potential (pk : PublicKeyCore core) (kappa : PublicKeyCore core →
+@[expose] noncomputable def potential (pk : PublicKeyCore core) (kappa : PublicKeyCore core →
   core.Y)
     (L : (j : TapeClass) → List (tapeClassRange core j)) (index : Nat)
     (s : RoleState core) : ℝ≥0∞ := by
@@ -144,7 +144,7 @@ theorem fired_reached (pk : PublicKeyCore core)
   exact actualSlot_reached core pk L hs ⟨R, M, hc, hp⟩
 
 /-- Terminal credit covers a hit and the unused credit on every not-reached branch. -/
-noncomputable def terminalValue (pk : PublicKeyCore core) (index : Nat)
+@[expose] noncomputable def terminalValue (pk : PublicKeyCore core) (index : Nat)
     (s : RoleState core) : ℝ≥0∞ := by
   classical
   exact (if Fired core pk s index then (1 : ℝ≥0∞) else 0) +
@@ -606,7 +606,7 @@ private def ActiveCandidate (pk : PublicKeyCore core) (kappa : PublicKeyCore cor
     (t = .inr (.inl (.inr (.inr (kappa pk, M)))) ∨ t = nonceQuery core pk kappa M)
 
 /-- The two native slot watches share their actual-key product potential. -/
-noncomputable def productPotential (pk : PublicKeyCore core)
+@[expose] noncomputable def productPotential (pk : PublicKeyCore core)
     (kappa : PublicKeyCore core → core.Y)
     (L : (j : TapeClass) → List (tapeClassRange core j)) (first second : Nat)
     (s : RoleState core) : ℝ≥0∞ :=
@@ -772,7 +772,7 @@ open ActualKeyPotential
 variable {vp : ValidatedParams} (core : CorePrimitives vp.params)
 
 /-- Terminal credit for both hits and for an unreached first position. -/
-noncomputable def pairTerminalValue (pk : PublicKeyCore core) (first second : Nat)
+@[expose] noncomputable def pairTerminalValue (pk : PublicKeyCore core) (first second : Nat)
     (s : RoleState core) : ℝ≥0∞ := by
   classical
   exact (if Fired core pk s first ∧ Fired core pk s second then (1 : ℝ≥0∞) else 0) +
