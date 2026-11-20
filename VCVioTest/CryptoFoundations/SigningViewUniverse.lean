@@ -141,7 +141,7 @@ private theorem public_lift_query (n : Nat) :
 private theorem uniform_third :
     OracleSpec.AnswerMeasure.toMeasure (spec := World) (.inl 2) {(0 : Fin 3)} =
       (3 : ENNReal)⁻¹ := by
-  simpa using (UniformAnswerMeasure.toMeasure_singleton (spec := World) (.inl 2) (0 : Fin 3))
+  simp
 
 /-- The faithful lifted ternary draw is interpreted by the same canonical runtime. -/
 private theorem runtime_uniform_third :

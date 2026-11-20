@@ -77,10 +77,8 @@ theorem program_congr (input : Index → State → Bytes)
   simpa only [program_eq_byteTraversal] using
     RandomOracleTraversal.program_congr input step left right nodes hagrees state cache
 
-variable [DecidableEq Index]
-
 /-- The generic outside-coordinate law has the exact concrete byte-oracle type. -/
-theorem program_update_outside (input : Index → State → Bytes)
+theorem program_update_outside [DecidableEq Index] (input : Index → State → Bytes)
     (step : Index → State → HashOutput → State) (outputs : Index → HashOutput)
     (nodes : List Index) (node : Index) (hnot : node ∉ nodes) (output : HashOutput)
     (state : State) (cache : QueryCache HashSpec) :
