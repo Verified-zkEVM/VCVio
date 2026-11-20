@@ -241,6 +241,57 @@ that differs syntactically from `Monad.toBind`. This means `pure_bind`, `bind_as
 expose that instance with `show`/`change`, so that the `LawfulMonad` laws `pure_bind`,
 `bind_assoc` and `bind_pure` match the desugared binds.
 
+### 13b. The kernel can run a computation to compare memberships in its `support`
+
+Mathlib's `Set` is a structure (mathlib4#41506), so `x ∈ s` unfolds to the applied projection
+`s.Mem x`. Suppose that Lean's kernel compares `x ∈ support mx` with `x ∈ support my`, and `mx`
+and `my` differ syntactically. The kernel can then reduce both supports to `Set.ofPred`
+constructors before it compares `mx` with `my` (leanprover/lean4#16613). `support` is
+structural (entry 3), so this reduction runs the computation. A uniform sample from a large type
+makes the kernel evaluate the cardinality of that type. For `$ᵗ BitVec (2 ^ 32)`, the kernel
+refuses to evaluate `FinEnum.card` at `2 ^ (2 ^ 32)`.
+
+These steps make the kernel compare different terms under `∈`:
+
+- `unfold` or `simp` with a definition inside `support`. These tactics change the goal or a
+  hypothesis by definitional equality.
+- `rw` or `simp` with `mem_support_bind_iff` or `support_pure` on a `do` block. The block uses
+  `PFunctor.FreeM.instBind` and `PFunctor.FreeM.instPure`, and the lemmas use the `Monad`
+  instance (entry 13).
+- A hypothesis about `ProbComp` that is used where the statement says `OracleComp unifSpec`.
+
+**Symptom**: the elaborator accepts a proof about `support`, and the kernel rejects it with
+`(kernel) the kernel refused to evaluate Nat.pow`, a numeral size error, or a timeout.
+
+**Fix**: keep the expensive computation abstract while the proof works under `∈`. Prove the
+statement for an abstract parameter. Then rewrite with the equation lemma of the definition
+(`rw [f]`, not `unfold f`), and generalize the expensive argument before you apply the statement:
+
+```lean
+def sampleOf (w : Nat) : ProbComp Nat := do
+  let _salt ← $ᵗ BitVec w
+  return 5
+
+def sampleThenFive : ProbComp Nat := sampleOf (2 ^ 32)
+
+theorem sampleOf_support (w r : Nat) (h : r ∈ support (sampleOf w)) : r = 5 := by
+  simp only [sampleOf, mem_support_bind_iff, support_pure, Set.mem_singleton_iff] at h
+  obtain ⟨_, _, rfl⟩ := h
+  rfl
+
+theorem sampleThenFive_support (r : Nat) : r ∈ support sampleThenFive → r = 5 := by
+  rw [sampleThenFive]
+  generalize 2 ^ 32 = w
+  exact sampleOf_support w r
+```
+
+The elaborator can also run a concrete computation. A proof that passes a hypothesis
+`h : x ∈ support mx` to a lemma, as in `exact sampleThenFive_support r h`, can stop with
+`maximum recursion depth has been reached`, even when the types match exactly. An `abbrev` for
+`mx` has the same effect. State such lemmas as implications and apply them to the goal, as in
+`exact sampleThenFive_support r`. For `abbrev a := mx`, first rewrite with
+`rw [show a = mx from rfl]`.
+
 ### 14. Hypothesis satisfiability is a proof obligation
 
 A conditional theorem whose hypotheses are jointly uninhabitable is vacuously true, and
