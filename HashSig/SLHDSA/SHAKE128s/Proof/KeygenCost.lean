@@ -6,22 +6,59 @@ Authors: Tom Wambsgans
 
 module
 
-public import HashSig.SLHDSA.SHAKE128s.Proof.HonestGrowth
+public import HashSig.SLHDSA.SHAKE128s.Proof.GrowthBudget
 
 /-!
-# Key generation spends at least `36 · 512` hash calls
+# A lower bound on the hash calls made by SHAKE-128s key generation
 
-Key generation makes one call per leaf of the top subtree at least, and each leaf is a WOTS
-public key, which derives thirty-five secrets and compresses its endpoints, so a leaf costs at
-least thirty-six (`count_wotsPublicKey_ge`). Hence a subtree of height `h` costs at least
-`36 · 2 ^ h` (`count_merkleNode_ge`) and key generation at least `36 · 2 ^ subtreeHeight`
-(`count_keygen_ge`). This is the room that pays for the verifier's calls out of key generation's
-spend.
+Every supported run of internal key generation makes at least 18,432 hash calls from any
+initial random-oracle cache. Each of the 512 leaves of the top Merkle tree derives 35 WOTS+
+secret values and compresses the endpoints. This gives a lower bound of 36 calls per leaf.
+
+`count_keygen_ge` counts key generation's own calls. The security game's
+`Game.adversaryWork` counts signing attempts, direct adversary hashes and final verification.
+Key-generation hashes are excluded from that budget.
 -/
 
 public section
 
 open OracleComp OracleSpec
+
+namespace SLHDSA.SHAKE128s.HonestGrowth
+
+open Security
+
+/-- A single query is charged its own cost. -/
+theorem count_query (queried : OracleWorld.Domain) (cache : QueryCache HashSpec)
+    (result : (OracleWorld.Range queried × Nat) × QueryCache HashSpec)
+    (hmem : result ∈ support ((simulateQ KeygenUniform.rom (countAllHashes
+      (liftM (OracleWorld.query queried) :
+        OracleComp OracleWorld (OracleWorld.Range queried)))).run cache)) :
+    result.1.2 = hashCost queried := by
+  rw [GrowthBudget.countAllHashes_query, simulateQ_bind, simulateQ_spec_query, StateT.run_bind,
+    mem_support_bind_iff] at hmem
+  obtain ⟨step, -, hpure⟩ := hmem
+  rw [simulateQ_pure, StateT.run_pure, support_pure, Set.mem_singleton_iff] at hpure
+  rw [hpure]
+
+/-- A tweakable call is charged one unit. -/
+theorem one_le_count_tweakable (publicSeed : Digest) (address : Address) (payload : Bytes)
+    (cache : QueryCache HashSpec) (result : (Digest × Nat) × QueryCache HashSpec)
+    (hmem : result ∈ support ((simulateQ KeygenUniform.rom (countAllHashes
+      (Hashing.tweakable (m := OracleComp OracleWorld) publicSeed address payload))).run cache)) :
+    1 ≤ result.1.2 := by
+  rw [show (Hashing.tweakable (m := OracleComp OracleWorld) publicSeed address payload) =
+      Hashing.truncate <$> (Hashing.hash (m := OracleComp OracleWorld)
+        (Hashing.tweakableInput publicSeed address payload)) from by
+      simp [Hashing.tweakable, Hashing.shortHash, map_eq_bind_pure_comp],
+    AdversaryQueries.countAllHashes_map, simulateQ_map, StateT.run_map, support_map] at hmem
+  obtain ⟨inner, hinner, heq⟩ := hmem
+  have hcount := count_query (Sum.inr (Hashing.tweakableInput publicSeed address payload)) cache
+    inner hinner
+  rw [show result.1.2 = inner.1.2 from by rw [← heq], hcount]
+  exact Nat.le_refl 1
+
+end SLHDSA.SHAKE128s.HonestGrowth
 
 namespace SLHDSA.SHAKE128s.KeygenCost
 

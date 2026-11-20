@@ -75,3 +75,40 @@ theorem countAllHashes_bind {α β : Type} (computation : OracleComp OracleWorld
     simp [map_bind, bind_map_left, bind_assoc, Nat.add_assoc]
 
 end SLHDSA.SHAKE128s.GrowthBudget
+
+namespace SLHDSA.SHAKE128s.AdversaryQueries
+
+open Security
+
+/-- Counting the hashes of a mapped computation maps the value and keeps the count. -/
+theorem countAllHashes_map {α β : Type} (computation : OracleComp OracleWorld α) (f : α → β) :
+    countAllHashes (f <$> computation) =
+      (fun result => (f result.1, result.2)) <$> countAllHashes computation := by
+  rw [map_eq_bind_pure_comp, GrowthBudget.countAllHashes_bind]
+  simp only [Function.comp_def, GrowthBudget.countAllHashes_pure, pure_bind,
+    map_eq_bind_pure_comp, Nat.add_zero]
+
+/-- **A counted run factors at every sequencing point, with both counts kept.** -/
+theorem mem_support_counted_bind_count {α β : Type} (computation : OracleComp OracleWorld α)
+    (next : α → OracleComp OracleWorld β) (cache : QueryCache HashSpec)
+    (result : (β × Nat) × QueryCache HashSpec)
+    (hmem : result ∈ support ((simulateQ KeygenUniform.rom
+      (countAllHashes (computation >>= next))).run cache)) :
+    ∃ (value : α) (middleCache : QueryCache HashSpec) (first second : Nat),
+      ((value, first), middleCache) ∈ support ((simulateQ KeygenUniform.rom
+        (countAllHashes computation)).run cache) ∧
+      ((result.1.1, second), result.2) ∈ support ((simulateQ KeygenUniform.rom
+        (countAllHashes (next value))).run middleCache) ∧
+      result.1.2 = first + second := by
+  rw [GrowthBudget.countAllHashes_bind, simulateQ_bind, StateT.run_bind,
+    mem_support_bind_iff] at hmem
+  obtain ⟨first, hfirst, hrest⟩ := hmem
+  rw [simulateQ_bind, StateT.run_bind, mem_support_bind_iff] at hrest
+  obtain ⟨second, hsecond, hpure⟩ := hrest
+  rw [simulateQ_pure, StateT.run_pure, support_pure, Set.mem_singleton_iff] at hpure
+  refine ⟨first.1.1, first.2, first.1.2, second.1.2, hfirst, ?_, by rw [hpure]⟩
+  rw [show result.1.1 = second.1.1 from by rw [hpure],
+    show result.2 = second.2 from by rw [hpure]]
+  exact hsecond
+
+end SLHDSA.SHAKE128s.AdversaryQueries
