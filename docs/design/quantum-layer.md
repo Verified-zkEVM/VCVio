@@ -11,6 +11,11 @@ The Mathlib-only base (completely positive maps, subinstruments, Choi–Kraus an
 observation, pure states and oracle unitaries) lives in
 [QuantumFoundations](https://github.com/lean-crypto-foundations/QuantumFoundations), shared with
 CatCrypt, and VCVio imports it since #921. The rest of the layer is in `VCVio/Quantum/`.
+VCVio's imports select the completely positive subinstrument modules. The pinned dependency
+also has a different `Quantum.QComp` in `QuantumFoundations.Instrument`; importing that module
+or its umbrella together with VCVio's `Quantum.Comp.Basic` causes a declaration-name collision.
+The stack does not import it. Resolving that upstream naming and instrument API is separate
+from the parallel-query results.
 
 Merged:
 
@@ -70,7 +75,7 @@ type is equivalent to some `Fin n`, so nothing is lost, and register-indexed fam
 the runtime's private register, through basis equivalences supplied by the program. The program
 cannot read the private register except through calls.
 
-## Open obligations
+## Coverage and remaining obligations
 
 ### 1. Putting programs in comb form
 
@@ -134,9 +139,16 @@ identifies the full outcome measure with `𝒟[oa]` scaled by the trace of the j
 including correlated inputs. Its `…_apply_singleton` corollary gives each `a` its classical
 probability times that trace.
 
-`OracleComp.toQuantum` embeds algorithms whose only oracle is the random function. Extending
-classical/QROM distributional agreement to algorithms that both sample private coins and query
-the random function (`OracleComp (unifSpec + (X →ₒ Y)) α`) remains open.
+`OracleComp.toQuantumBatch` embeds algorithms over `unifSpec + (X →ₒ Y).batch`: private uniform
+samples become local coins, and each list round becomes one parallel basis call. Its fixed-function
+run and its law averaged over one random function agree with the corresponding classical
+execution, including the lazy cached random oracle. The source and result types lie in `Type`.
+`OracleComp.toQuantumRandomized` embeds the single-port source
+`OracleComp (unifSpec + (X →ₒ Y)) α` with ordinary basis calls and local coins.
+`qromEvalDist₂_toQuantumRandomized_eq_randomOracle` proves agreement with the lazy random oracle.
+Its query-bound transfer counts only function queries, leaving private samples uncharged.
+Both the single-port and batch APIs therefore cover classical algorithms with private uniform
+randomness. Their result-universe restriction is the separate obligation below.
 
 ### 5. Result universes of the classical embedding
 
@@ -177,5 +189,72 @@ polynomial-time certificate. A gate-level account needs item 8 and a charge for 
 
 Zhandry's compressed oracle is a runtime with the same law as the QROM for every program (#855),
 and the Chiesa–Manohar–Spooner bound and its successors are proved on top of it (#856, #859, #862,
-#864, #873–#875, #877). The general final-measurement lemma and collision and zero-preimage
-bounds on the adversary's output are open (#966).
+#864, #873–#875, #877). The general final-measurement lemma and compressed-oracle output bounds for collision
+and zero-preimage events remain open (#966).
+
+### 11. Parallel oracle rounds
+
+`Foundations/Parallel.lean` holds coordinate subsystems and ordered subinstrument batching facts.
+It imports only QuantumFoundations and Mathlib and is staged for upstreaming to QuantumFoundations.
+`Comp/Parallel.lean` constructs runtime batches with a shared private register. Its current API
+requires equal `In` and `Out` and `Result = Unit`; classical-result checked/read ports of vector
+commitments are outside this scope. General stateful batches carry no implicit commutation assumption.
+
+Each batch uses one base port. A mixed-oracle round requires a single port encoding all of
+its oracle inputs, for example on a sum domain; the generic batch API does not mix base ports.
+
+`Oracle/Parallel.lean` specializes `uBatchSpec` to base port `Unit`, so a classical port is
+`((), k)` with width in its second component. It proves that ordered additive calls agree with a
+simultaneous query on all slots and defines the parallel QROM law by sampling one function for
+the entire program. Repeated inputs and entangled query registers are allowed.
+`parallelOracleRuntime H` is `(additiveOracleRuntime H).batch`, so the generic private-memory
+simulation transport applies directly with the same signature. A trace-preserving simulation
+that maps the initial private states gives output-law agreement for adaptive programs.
+
+`Comp/RoundBound.lean` separates the number of rounds (`IsTotalQueryBound`), the per-batch width
+cap (`IsWidthBound`) and the sum of widths on each path (`IsPointBound`). These bounds constrain
+all branches, including zero-weight outcomes. A width-zero batch spends one round and zero points;
+a round bound `r` and width cap `k` imply a point bound `k * r`.
+
+`Comp/Sequentialize.lean` defines the named command substitution `sequentializeHandler I` and
+the program translation `x.sequentialize I`. An arbitrary source local signature is interpreted
+into `LocalSig.instruments`, which also supplies public register relabellings. For every stateful
+base runtime `R`, `run_sequentialize` identifies its full run with `R.batch.run I x`, including
+private memory and outcome-dependent final registers. The calls retain their order and one shared
+private register. `IsPointBound.sequentialize` transfers the same point budget to a total query
+budget; `IsTotalQueryBound.sequentialize` gives the `k * r` form. A zero-width translation makes
+no oracle calls but can retain a public relabelling. These are oracle-query certificates;
+local-operation and gate costs are not preserved by the statement.
+
+The separate adapter `Oracle/Sequentialize.lean` proves `qromEvalDist_sequentialize` and
+`qromEvalDistMap_sequentialize`. The latter preserves observations depending jointly on the sampled
+function `H` and the returned leaf, retaining their correlation. `Oracle/Parallel.lean` remains
+independent of the translation.
+
+`Oracle/ClassicalParallel.lean` supplies the classical bridge. `OracleComp.toQuantumBatch` prepares
+one slot per list position, makes one call, and measures the responses. Private uniform coins use
+`QComp.coinImpl` without oracle calls. `run_toQuantumBatch` identifies the complete fixed-function
+run, and `sampledEvalDist₂_toQuantumBatch_eq_randomOracle` identifies its averaged law with the
+classical lazy oracle using one cache. Input order and duplicates are retained; an empty list
+spends one round and zero points. `IsOnlineQueryBound.isTotalQueryBound_toQuantumBatch` and
+`IsOnlineQueryBound.isPointBound_toQuantumBatch` transfer the classical round and point budgets;
+`IsPointQueryBound.isPointBound_toQuantumBatch` transfers a point-only bound.
+`qromEvalDistMap_sequentialize_toQuantumBatch_eq_unbatch` connects quantum sequentialization to
+classical list-order unbatching through their observed laws. The program trees need not coincide:
+their measurements occur at different stages.
+
+`Oracle/Compressed/Parallel.lean` supplies the concrete compressed bridge. The compression
+isometry intertwines purified and compressed batch steps and maps their complete joint
+post-states, including private memory (`matrix_jointPost_compressedRuntime_batch`). Discarding
+private memory gives equal reduced post-states and leaf weights. The purified-to-sampled-function
+comparison uses the sequential row decomposition through exact sequentialization. The `evalRow H`
+maps need not preserve trace, so that leg uses the sum over functions rather than trace-preserving
+simulation transport. `outcomeLaw_compressedRuntime_batch` gives the parallel QROM output law,
+and `outcomeLawWith_compressedRuntime_batch` gives every classical observation of the leaf.
+These results allow arbitrary adaptive local signatures and interpretations, mixed or
+subnormalized input states, finite domains and finite abelian response groups. A plain compressed
+leaf observation does not read `H`; observations `f H leaf` require an explicit joint-oracle read.
+
+The run equalities and point-budget certificates supply transport for sequential theorems
+whose local signature includes arbitrary instruments. Local gate-cost restrictions require
+an additional compilation argument.
