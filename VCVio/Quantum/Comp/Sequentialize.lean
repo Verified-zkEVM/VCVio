@@ -12,7 +12,7 @@ public import VCVio.Quantum.Comp.RoundBound
 
 The translation replaces each batch command by its ordered single-slot calls. Local basis
 relabellings restore the public register after each slot. The oracle's private register remains
-shared throughout the translation, including between adaptive branches and successive rounds.
+shared throughout the translation along each adaptive branch and across successive rounds.
 -/
 
 public section

@@ -23,7 +23,8 @@ by independent labels. The sampled-set finding theorem applies to their union at
 
 ## References
 
-* *Bits of security in the parallel QROM*, local note `parallel-qrom-security.pdf`, Appendix A.
+* `docs/quantum/reference/literature.md`, “Search-calibrated security bits”, states the
+  normalization and the planted-preimage density.
 * C. Zalka, *Grover's quantum searching algorithm is optimal*, arXiv:quant-ph/9711070v2, §4.
 -/
 
@@ -64,7 +65,6 @@ noncomputable def plantedPreimageAdvantage
       (parallelOracleRuntime H).evalDistMap (adv.interp (H secret))
         (adv.program (H secret)) (adv.initial (H secret))
         (fun leaf ↦ H (adv.guess (H secret) leaf) = H secret) {True}
-
 
 /-- Missing mass counts as failure, so hidden-input inversion succeeds with probability at most
 one. This does not assume lossless local operations or normalized initial states. -/

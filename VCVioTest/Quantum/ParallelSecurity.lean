@@ -6,6 +6,7 @@ Authors: Alexander Hicks
 
 module
 public import VCVio.Quantum.Oracle.ParallelSecurity
+import VCVioTest.Quantum.ParallelPlantedPreimage
 
 /-!
 # Parallel security calibration regressions
@@ -83,5 +84,49 @@ example :
   simpa [ProbabilityTheory.plantedTargetDensity] using
     (parallelQROMBits_plantedPreimage (X := Unit) (Y := ZMod 3)
       (L := LocalSig.instruments.{0}) (W := fun _ ↦ Unit) (A := QReg.of Unit))
+
+/-- The concrete 128-bit input and response spaces certify 127 bits for the actual
+secret-input inversion game under syntactic round and width bounds. -/
+example :
+    ParallelQROMBits
+      (plantedPreimageAdvantage (X := Fin (2 ^ 128)) (Y := ZMod (2 ^ 128))
+        (L := LocalSig.instruments.{0}) (W := fun _ ↦ Fin (2 ^ 128)) (A := QReg.of Unit))
+      (fun adv D P ↦ (∀ target, (adv.program target).IsTotalQueryBound D) ∧
+        ∀ target, (adv.program target).IsWidthBound P) 127 :=
+  parallelQROMBits_plantedPreimage_127 (by simp) (by simp)
+
+/-- One additional bit in each space certifies 128 whole security bits. -/
+example :
+    ParallelQROMBits
+      (plantedPreimageAdvantage (X := Fin (2 ^ 129)) (Y := ZMod (2 ^ 129))
+        (L := LocalSig.instruments.{0}) (W := fun _ ↦ Fin (2 ^ 129)) (A := QReg.of Unit))
+      (fun adv D P ↦ (∀ target, (adv.program target).IsTotalQueryBound D) ∧
+        ∀ target, (adv.program target).IsWidthBound P) 128 :=
+  parallelQROMBits_plantedPreimage_128 (by simp) (by simp)
+
+/-- Lowering the advertised bit count preserves the same concrete game's certificate. -/
+example :
+    ParallelQROMBits
+      (plantedPreimageAdvantage (X := Fin (2 ^ 128)) (Y := ZMod (2 ^ 128))
+        (L := LocalSig.instruments.{0}) (W := fun _ ↦ Fin (2 ^ 128)) (A := QReg.of Unit))
+      (fun adv D P ↦ (∀ target, (adv.program target).IsTotalQueryBound D) ∧
+        ∀ target, (adv.program target).IsWidthBound P) 126 :=
+  (parallelQROMBits_plantedPreimage_127 (by simp) (by simp)).mono (by norm_num)
+
+/-- Actual zero-query inversion succeeds with probability two thirds on two inputs and three
+responses, ruling out a one-bit certificate for that game's syntactic resource model. -/
+theorem planted_not_one_bit :
+    ¬ ParallelQROMBits
+      (plantedPreimageAdvantage (X := Fin 2) (Y := ZMod 3)
+        (L := LocalSig.instruments.{0}) (W := fun _ ↦ Fin 2) (A := QReg.of Unit))
+      (fun adv D P ↦ (∀ target, (adv.program target).IsTotalQueryBound D) ∧
+        ∀ target, (adv.program target).IsWidthBound P) 1 := by
+  intro h
+  have hb := h 0 0
+    (QuantumParallelPlantedPreimage.noQuery (fun _ : ZMod 3 ↦ (0 : Fin 2))
+      (SubState.basis ())) ⟨fun _ ↦ by simp, fun _ ↦ by simp⟩
+  rw [QuantumParallelPlantedPreimage.no_query_density] at hb
+  have hreal := ENNReal.toReal_mono (by norm_num [parallelQROMBound]) hb
+  norm_num [parallelQROMBound] at hreal
 
 end VCVioTest.QuantumParallelSecurity

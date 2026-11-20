@@ -20,10 +20,14 @@ control the change of the complete experiment. The challenge is retained in the 
 -/
 
 public section
+
 open Matrix MeasureTheory
 open scoped ENNReal Kronecker
+
 namespace Quantum
+
 universe u v w w₁
+
 variable {X Y : Type} {Ω : Type*} [Fintype X] [DecidableEq X] [Fintype Y] [DecidableEq Y]
   [Fintype Ω] [AddCommGroup Y]
   {L : LocalSig.{u, v}} {W : QReg → Type w} {V : QReg → Type w₁} {A : QReg}
@@ -50,66 +54,12 @@ theorem rpow_inv_two_sum_mul_evalDistMap_bind_parallel_le
         (parallelOracleRuntime reference).evalDistMap I (pre.bind (finish ω)) ρ (f ω) s)
           ^ (2⁻¹ : ℝ) +
       2 * ((r : ℝ≥0∞) * Q * ENNReal.ofReal δ) ^ (2⁻¹ : ℝ) := by
-  classical
-  let R := parallelOracleRuntime reference
-  let τ : SubState (A × R.D) := ρ.prod (SubState.basis ())
-  let c (ω : Ω) := ENNReal.ofReal (weights ω)
-  let p (ω : Ω) := c ω * (parallelOracleRuntime (oracles ω)).evalDistMap I
-    (pre.bind (finish ω)) ρ (f ω) s
-  let a (ω : Ω) := c ω * R.evalDistMap I (pre.bind (finish ω)) ρ (f ω) s
-  let m (j : ℕ) (ω : Ω) := c ω *
-    (4 * R.queryWeight I (parallelInputWeight (D := R.D) (S ω)) pre τ.matrix j)
-  have hcut : ∀ j, r ≤ j → ∀ ω, m j ω = 0 := by
-    intro j hj ω
-    dsimp only [m]
-    rw [R.queryWeight_eq_zero_of_isTotalQueryBound I hr hj τ.matrix, mul_zero, mul_zero]
-  have hm : ∑' j, ∑' ω, m j ω ≤ 4 * (ENNReal.ofReal δ * Q) := by
-    calc
-      _ = 4 * ∑' j, ∑ ω, c ω *
-          R.queryWeight I (parallelInputWeight (D := R.D) (S ω)) pre τ.matrix j := by
-        simp only [m, tsum_fintype, ← ENNReal.tsum_mul_left, Finset.mul_sum]
-        apply tsum_congr
-        intro j
-        apply Finset.sum_congr rfl
-        intro ω _
-        ring
-      _ ≤ _ := mul_le_mul le_rfl
-        (tsum_sum_mul_queryWeight_parallelInputWeight_le_of_isPointBound
-          R I weights hw S δ hδ hS hQ τ) bot_le bot_le
-  have hh (ω : Ω) : p ω ^ (2⁻¹ : ℝ) ≤ a ω ^ (2⁻¹ : ℝ) +
-      ∑' j, m j ω ^ (2⁻¹ : ℝ) := by
-    have h := rpow_inv_two_evalDistMap_parallel_le_support I (oracles ω) reference (S ω)
-      (hsupport ω) (pre.bind (finish ω)) ρ (f ω) hs
-    simp_rw [QuantumRuntime.queryWeight_bind_of_isTotalQueryBound_zero
-      (parallelOracleRuntime reference) I
-      (parallelInputWeight (D := (parallelOracleRuntime reference).D) (S ω))
-      pre (finish ω) (hfinish ω)] at h
-    calc
-      _ = c ω ^ (2⁻¹ : ℝ) *
-          (parallelOracleRuntime (oracles ω)).evalDistMap I
-            (pre.bind (finish ω)) ρ (f ω) s ^ (2⁻¹ : ℝ) :=
-        ENNReal.mul_rpow_of_nonneg _ _ (by norm_num)
-      _ ≤ c ω ^ (2⁻¹ : ℝ) * (R.evalDistMap I
-          (pre.bind (finish ω)) ρ (f ω) s ^ (2⁻¹ : ℝ) +
-            ∑' j, (4 * R.queryWeight I (parallelInputWeight (D := R.D) (S ω))
-              pre τ.matrix j) ^ (2⁻¹ : ℝ)) := mul_le_mul le_rfl h bot_le bot_le
-      _ = _ := by
-        simp only [a, m, mul_add, ENNReal.tsum_mul_left,
-          ENNReal.mul_rpow_of_nonneg _ _ (by norm_num : (0 : ℝ) ≤ 2⁻¹)]
-  have hroot := rpow_inv_two_tsum_le_of_le_add_tsum_of_cutoff p a m r hcut hh
-  have herr : ((r : ℝ≥0∞) * (4 * (ENNReal.ofReal δ * Q))) ^ (2⁻¹ : ℝ) =
-      2 * ((r : ℝ≥0∞) * Q * ENNReal.ofReal δ) ^ (2⁻¹ : ℝ) := by
-    rw [show (r : ℝ≥0∞) * (4 * (ENNReal.ofReal δ * Q)) =
-        4 * ((r : ℝ≥0∞) * Q * ENNReal.ofReal δ) by ring,
-      ENNReal.mul_rpow_of_nonneg _ _ (by norm_num)]
-    have hfour : (4 : ℝ≥0∞) ^ (2⁻¹ : ℝ) = 2 := by
-      rw [show (4 : ℝ≥0∞) = (2 : ℝ≥0∞) ^ (2 : ℕ) by norm_num,
-        ← ENNReal.rpow_natCast, ← ENNReal.rpow_mul]
-      norm_num
-    rw [hfour]
-  simpa only [p, a, tsum_fintype, herr] using
-    hroot.trans (add_le_add le_rfl
-      (ENNReal.rpow_le_rpow (mul_le_mul le_rfl hm bot_le bot_le) (by norm_num)))
+  apply rpow_inv_two_sum_mul_evalDistMap_parallel_le_of_queryWeight_eq
+    I reference oracles weights hw S hsupport δ hδ hS hr hQ ρ
+    (fun ω ↦ pre.bind (finish ω)) _ f hs
+  intro ω σ j
+  exact (parallelOracleRuntime reference).queryWeight_bind_of_isTotalQueryBound_zero
+    I (parallelInputWeight (D := QReg.of Unit) (S ω)) pre (finish ω) (hfinish ω) σ j
 
 /-- Event hybrid for a query-bounded prefix and challenge-dependent common finisher.
 The weight sum is at most one, so both compared weighted events have subprobability mass. -/

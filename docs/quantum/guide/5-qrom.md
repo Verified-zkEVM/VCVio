@@ -189,10 +189,11 @@ establish the required incidence or independence.
 square-root hybrid argument. Its query-union weights come from the reference execution under
 `H'`. The local interpretation, adaptive program, initial substate and final observation are
 the same on both sides. Arbitrary measurements and trace loss are allowed.
-`Comp/HybridBudget.lean` aggregates weights under a total call budget and a width cap. The
-cutoff counts all ports together, so adaptive choices of widths incur no sum of separate
-per-port maxima. `Foundations/Hybrid.lean` stages the analytic cutoff and square-root
-aggregation helpers for QuantumFoundations; it imports only that dependency.
+The search proofs use `Comp/ChargeWeight.lean` for total point weights and the analytic
+cutoff and square-root aggregation helpers in `Foundations/Hybrid.lean`. The latter imports
+only QuantumFoundations and is staged for that dependency. `Comp/HybridBudget.lean` supplies
+additional total-call and width-cap estimates; the search proofs do not depend on that API.
+Its cutoff counts all ports together, avoiding a sum of separate per-port maxima.
 
 `Comp/ChargeWeight.lean` exposes `IsQueryChargeBound` for natural-number port charges.
 If a query weight is at most its port charge times its input trace,
@@ -317,9 +318,11 @@ It supplies neither a gate-cost estimate nor security against oracle-dependent a
 `parallelQROMBits_markedSearch` certifies `log₂ |X|` bits, and
 `parallelQROMBits_preimageSearch` certifies `log₂ |Y|` bits for a fixed target.
 `parallelQROMBits_plantedPreimage` certifies `log₂(1/ρ)` for secret-input inversion.
-Thus the formula certifies 127 whole bits for
-equal input and output spaces of size `2^128`, and 128 whole bits at size `2^129`.
-The extra planted preimage explains the difference from fixed-target inversion.
+The whole-bit specializations `parallelQROMBits_plantedPreimage_127` and
+`parallelQROMBits_plantedPreimage_128` certify 127 bits for equal input and response spaces
+of size `2^128`, and 128 bits at size `2^129`. The extra planted preimage explains the
+difference from fixed-target inversion. The [self-contained normalization and coupling](../reference/literature.md#search-calibrated-security-bits)
+state the mathematical convention without requiring a private reference file.
 
 ## Endpoint recovery for an idealized masked chain
 
@@ -335,7 +338,7 @@ this experiment has no oracle preprocessing.
 
 \[
  p \le \min\left\{1,\;
-   \frac{\binom{q+2}{2}}{N}
+   \frac{\binom{q+1}{2}}{N}
    + \left(\frac{1}{\sqrt N}
      + 2\sum_{h=0}^{q-1}\sqrt{\frac{k(q-h)}{N}}\right)^2
    \right\}.
@@ -343,7 +346,9 @@ this experiment has no oracle preprocessing.
 
 The expression inside the minimum is `Quantum.MaskedChain.rootRecoveryBound`.
 The guessing and online hybrid terms are combined as root probabilities and squared once;
-the vertex-collision allowance is added outside that square. The sum is at most
+the collision allowance for the `q + 1` programmed input vertices is added outside that
+square. The endpoint is not a programmed input. At zero rounds the allowance is zero, so
+the bound reduces to the exact `1/N` guessing probability. The sum is at most
 `q * sqrt(kq / N)`, giving order `kq³ / N` for `k,q ≥ 1`. The explicit guessing term remains
 when no queries are made. Adaptive widths, repeated query inputs, zero-width rounds and
 mixed or subnormalized initial states are allowed. Missing mass counts as failure.
@@ -360,10 +365,11 @@ argument rather than a compressed-oracle bound.
 The experiment and root theorem are in `Oracle/MaskedChain/Model.lean` and
 `Oracle/MaskedChain/RootBounds.lean`. Afshar et al., §5, supplies the hybrid structure; its
 detailed full-tuple Theorem 5.3 states order `sqrt(kq³/N)` by accumulating event-probability
-errors. The root-accumulated endpoint bound is derived here. The informal Theorem 1.3 also
-mentions endpoint recovery. These comparisons do not assert a best-known bound.
+errors. Its Lemma 5.5 already bounds the endpoint event. The root-accumulated calculation
+gives order `kq³/N`, a smaller asymptotic expression when `kq³ < N`; this is a change in
+probability bookkeeping, without a best-known or novelty claim.
 The event-error API `Quantum.MaskedChain.recoveryAdvantage_le` remains available with
-`1/N + choose(q+2,2)/N + 4 * ∑ h < q, sqrt(k(q-h)/N)`.
+`1/N + choose(q+1,2)/N + 4 * ∑ h < q, sqrt(k(q-h)/N)`.
 
 The [named puzzle](7-time-lock-puzzles.md#the-idealized-masked-chain-puzzle) has honest
 generation and solving algorithms, whose recovery probability equals that of this game by

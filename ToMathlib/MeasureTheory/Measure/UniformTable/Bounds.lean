@@ -141,12 +141,12 @@ theorem uniform_collision_le [Fintype R] (n : ℕ) :
       exact uniform_pair_eq p.1 p.2 (ne_of_lt (Finset.mem_filter.mp hp).2)
     _ = _ := by simp [s, Fintype.card_product_filter_lt, div_eq_mul_inv]
 
-open scoped Classical in
-/-- The real weighted incidence bound for a selected set of uniform coordinates. -/
-theorem uniform_hit_sum_le [Fintype D] [Fintype R] [DecidableEq D] (s : Finset D) (z : R) :
+/-- The real weighted incidence bound for a selected set of uniform coordinates, using the
+caller's decision procedure for the complete hit event. -/
+theorem uniform_hit_sum_le [Fintype D] [Fintype R] [DecidableEq D]
+    (s : Finset D) (z : R) [DecidablePred (fun a : D → R ↦ ∃ i ∈ s, a i = z)] :
     (∑ a : D → R, if ∃ i ∈ s, a i = z then (Fintype.card (D → R) : ℝ)⁻¹ else 0) ≤
       (s.card : ℝ) / Fintype.card R := by
-  let : DecidableEq R := Classical.decEq R
   have h := uniform_hit_le s z
   rw [uniformOn_univ_apply_setOf] at h
   have hr := ENNReal.toReal_mono

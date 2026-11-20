@@ -121,6 +121,27 @@ theorem IsPointBound.isTotalQueryBound_dropEmptyBatches (I : L.Interp)
   IFreeM.IsChargeBound.substitute (dropEmptyBatchHandler I)
     (isTotalQueryBound_dropEmptyBatchHandler_of_pointCharge I) hx
 
+/-- Removing empty calls preserves the width cap of every retained batch on every branch. -/
+theorem IsWidthBound.dropEmptyBatches (I : L.Interp)
+    {x : QuantumComp L (uBatchSpec P In) W A} {n : ℕ} (hx : x.IsWidthBound n) :
+    (x.dropEmptyBatches I).IsWidthBound n := by
+  induction x using QuantumComp.inductionOn with
+  | pure _ a => simp
+  | primBind _ o next ih =>
+    rw [isWidthBound_primBind_iff] at hx
+    rw [dropEmptyBatches_primBind, isWidthBound_primBind_iff]
+    exact fun b ↦ ih b (hx b)
+  | queryBind _ ik E e next ih =>
+    rcases ik with ⟨p, k⟩
+    rw [isWidthBound_queryBind_iff] at hx
+    cases k with
+    | zero =>
+      rw [dropEmptyBatches_queryBind_zero]
+      simpa only [relabelThen, isWidthBound_primBind_iff] using fun _ ↦ ih () (hx.2 ())
+    | succ k =>
+      rw [dropEmptyBatches_queryBind_succ, isWidthBound_queryBind_iff]
+      exact ⟨hx.1, fun r ↦ ih r (hx.2 r)⟩
+
 /-- Removing calls preserves an existing round bound. -/
 theorem IsTotalQueryBound.dropEmptyBatches (I : L.Interp)
     {x : QuantumComp L (uBatchSpec P In) W A} {n : ℕ} (hx : x.IsTotalQueryBound n) :

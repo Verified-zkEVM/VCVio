@@ -38,7 +38,7 @@ noncomputable def rootPatchedRecoveryBound (G : Type) [Fintype G] (q k : ℕ) : 
 @[expose]
 noncomputable def rootRecoveryBound (G : Type) [Fintype G] (q k : ℕ) : ℝ≥0∞ :=
   rootPatchedRecoveryBound G q k +
-    (((q + 2).choose 2 : ℕ) : ℝ≥0∞) / Fintype.card G
+    (((q + 1).choose 2 : ℕ) : ℝ≥0∞) / Fintype.card G
 
 private theorem uniform_average_const {Ω : Type*} [Fintype Ω] [Nonempty Ω] (a : ℝ≥0∞) :
     ∑ _ω : Ω, (Fintype.card Ω : ℝ≥0∞)⁻¹ * a = a := by

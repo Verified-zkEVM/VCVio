@@ -109,11 +109,13 @@ noncomputable def toQuantumBatch (oa : OracleComp (unifSpec + (X →ₒ Y).batch
     QComp (qromBatchSpec X Y) (QReg.of Unit) (QReg.of Unit) α :=
   oa.toQuantumAt classicalBatchImpl
 
+/-- A classical return embeds as a quantum return without an oracle call. -/
 @[simp]
 theorem toQuantumBatch_pure (a : α) :
     (pure a : OracleComp (unifSpec + (X →ₒ Y).batch) α).toQuantumBatch =
       QuantumComp₂.pure a := rfl
 
+/-- A classical call and its adaptive continuation embed through the batch interpreter. -/
 @[simp]
 theorem toQuantumBatch_query_bind (t : ℕ ⊕ List X)
     (k : (unifSpec + (X →ₒ Y).batch).Range t →
@@ -282,53 +284,6 @@ theorem qromEvalDistMap_sequentialize_toQuantumBatch_eq_unbatch
 end Quantum
 
 /-! ## Resource bounds -/
-
-namespace Quantum.QComp
-
-variable {spec : QuantumOracleSpec} {P : Type} {In : P → QReg}
-  {A B C : QReg} {α β : Type}
-
-@[simp]
-private theorem isTotalQueryBound_act_bind_iff (p : SubInstrument A B β)
-    (k : β → QComp spec B C α) (n : ℕ) :
-    ((act p).bind k).IsTotalQueryBound n ↔ ∀ b, (k b).IsTotalQueryBound n := by
-  rw [act_bind, QuantumComp₂.primBind]
-  exact QuantumComp.isTotalQueryBound_primBind_iff _ _ _
-
-@[simp]
-private theorem isPointBound_act_bind_iff (p : SubInstrument A B β)
-    (k : β → QComp (uBatchSpec P In) B C α) (n : ℕ) :
-    ((act p).bind k).IsPointBound n ↔ ∀ b, (k b).IsPointBound n := by
-  rw [act_bind, QuantumComp₂.primBind]
-  exact QuantumComp.isPointBound_primBind_iff _ _ _
-
-end Quantum.QComp
-
-namespace Quantum.QuantumComp₂
-
-variable {spec : QuantumOracleSpec} {P : Type} {In : P → QReg}
-  {L : LocalSig} {A B : QReg} {α : Type}
-
-@[simp]
-private theorem isTotalQueryBound_query_bind_iff (p : spec.Port) (E : QReg)
-    (e : A ≃ spec.In p × E)
-    (k : spec.Result p → QuantumComp₂ L spec (QReg.of (spec.Out p × E)) B α) (n : ℕ) :
-    ((query p E e).bind k).IsTotalQueryBound n ↔
-      0 < n ∧ ∀ r, (k r).IsTotalQueryBound (n - 1) := by
-  rw [query_bind, queryBind]
-  exact QuantumComp.isTotalQueryBound_queryBind_iff _ _ _ _ _
-
-@[simp]
-private theorem isPointBound_query_bind_iff (ik : P × ℕ) (E : QReg)
-    (e : A ≃ (uBatchSpec P In).In ik × E)
-    (k : (uBatchSpec P In).Result ik →
-      QuantumComp₂ L (uBatchSpec P In) (QReg.of ((uBatchSpec P In).Out ik × E)) B α) (n : ℕ) :
-    ((query ik E e).bind k).IsPointBound n ↔
-      ik.2 ≤ n ∧ ∀ r, (k r).IsPointBound (n - ik.2) := by
-  rw [query_bind, queryBind]
-  exact QuantumComp.isPointBound_queryBind_iff _ _ _ _ _
-
-end Quantum.QuantumComp₂
 
 namespace Quantum
 

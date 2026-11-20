@@ -21,26 +21,27 @@ the PDF page of the version linked.
 | `oracleUnitary`, `qromEvalDist` | Boneh et al., *Random Oracles in a Quantum World*, [arXiv:1008.0931v2](https://arxiv.org/abs/1008.0931v2), §2.1, p. 7 | additive groups in place of XOR |
 | `parallelOracleUnitary`, `batch_oracleQuery`, `qromBatchEvalDist` | Chung, Fehr, Huang, Liao, [arXiv:2010.11658v4](https://arxiv.org/abs/2010.11658v4), §4.4, pp. 12–13 | simultaneous additive queries; variable classical widths and one shared random function |
 | `preimageSearchAdvantage_le_of_isPointBound` | Chung, Fehr, Huang, Liao, [arXiv:2010.11658v4](https://arxiv.org/abs/2010.11658v4), Example 5.18; Zalka, [arXiv:quant-ph/9711070v2](https://arxiv.org/abs/quant-ph/9711070v2), §4 | fixed-target preimage game; direct hybrid and joint-table coupling, with total-point budgets, rather than compressed-oracle transition capacities |
-| `plantedPreimageAdvantage_le_of_isPointBound` | *Bits of security in the parallel QROM*, local note below, Appendix A | secret-input image target; exact joint table/target/secret coupling and sampled-set finding at density `1/M + (1 - 1/M)/N`, with target-dependent adversary families and adaptive round/point budgets |
-| `ParallelQROMBits`, `parallelQROMBits_markedSearch`, `parallelQROMBits_preimageSearch`, `parallelQROMBits_plantedPreimage` | same local note, p. 1 and Appendix A | search-calibrated security predicate and corollaries for named games with actual syntactic round and width restrictions |
-| `Quantum.MaskedChain.recoveryAdvantage_le` | Afshar, Chung, Hsieh, Lin, Mahmoody, [ePrint 2023/932](https://eprint.iacr.org/2023/932), §5, Definition 5.1, Theorem 5.3 and Lemmas 5.4–5.5, pp. 24–28 | endpoint-only adaptation of the full-tuple bound, retaining the hidden tuple jointly; finite abelian groups and explicit error terms |
+| `plantedPreimageAdvantage_le_of_isPointBound` | Search-calibrated normalization and planted coupling below; Zalka, §4 | secret-input image target; exact joint table/target/secret coupling and sampled-set finding at density `1/M + (1 - 1/M)/N`, with target-dependent adversary families and adaptive round/point budgets |
+| `ParallelQROMBits`, `parallelQROMBits_markedSearch`, `parallelQROMBits_preimageSearch`, `parallelQROMBits_plantedPreimage` | Search-calibrated normalization below | search-calibrated security predicate and corollaries for named games with actual syntactic round and width restrictions |
+| `Quantum.MaskedChain.recoveryAdvantage_le` | Afshar, Chung, Hsieh, Lin, Mahmoody, [ePrint 2023/932](https://eprint.iacr.org/2023/932), §5, Definition 5.1, Theorem 5.3 and Lemmas 5.4–5.5, pp. 24–28 | the paper’s hybrid lemmas already bound the endpoint event; finite abelian groups and explicit error terms, retaining the full hidden tuple jointly |
 | `Quantum.MaskedChain.recoveryAdvantage_le_root` | Afshar et al., §5, Definition 5.1 and Theorem 5.3, p. 24; Lemmas 5.4–5.5 and event-error summation, pp. 27–28; root Minkowski and the Bennett–Bernstein–Brassard–Vazirani hybrid above | derived endpoint bound of order `kq³/N` for `k,q ≥ 1`, with explicit guessing and collision terms; the detailed paper theorem states full-tuple recovery of order `sqrt(kq³/N)` |
 | `Quantum.MaskedChain.preprocessedRecoveryAdvantage_le` | Afshar et al., §5, together with the Bennett–Bernstein–Brassard–Vazirani hybrid above | query-bounded preprocessing extension derived here; round/point common-finisher hybrid and trace-homogeneous conditional online bound, rather than an auxiliary-input theorem from that paper |
 | `Quantum.MaskedChain.preprocessedRecoveryAdvantage_le_root`, `preprocessedRecoveryAdvantage_le_root_min` | same masked-chain hybrid and query-bounded preprocessing argument above | derived here by combining online and preprocessing root errors before squaring, with one external collision allowance and the effective preprocessing round budget `min rpre Qpre` |
 | `PointerChainPuzzle.LeanSeal.real_le_programmed_add_collision` | leanSeal, §4.4 and §8.3 item 4, and its classical ranked-path programming argument | derived here for the full finite-window raw oracle and arbitrary bounded joint observers; a coupling step toward the quantum theorem left open by the paper, retaining raw mask tails and unconditioned path words |
-| `PointerChainPuzzle.LeanSeal.qromDelayAdvantage_quantumWindowScheme_le_of_preprocessing` | leanSeal, §4.4 and §8.3 item 4; Bennett–Bernstein–Brassard–Vazirani hybrid above | derived here for the exact finite-window raw encoding and structured public puzzles; rank-cutoff quantum recovery with query-bounded preprocessing, unrestricted retained memory and one external collision allowance; the paper leaves its quantum extension open |
+| `PointerChainPuzzle.LeanSeal.qromDelayAdvantage_quantumWindowScheme_le_of_preprocessing` | leanSeal, §4.4 and §8.3 item 4; Afshar et al., [ePrint 2023/932](https://eprint.iacr.org/2023/932), §5, Lemmas 5.4–5.5; Bennett–Bernstein–Brassard–Vazirani hybrid above | derived here for the exact finite-window raw encoding and structured public puzzles; rank-cutoff quantum recovery with query-bounded preprocessing, unrestricted retained memory and one external collision allowance; the paper leaves its quantum extension open |
 | `QueryCache.flip`, `instability`, `condFlip` | Chiesa, Manohar, Spooner, [ePrint 2019/834](https://eprint.iacr.org/2019/834), Definitions 5.4, 5.6, 5.11, pp. 23–26 | any answer measure |
 | `partitionInstability` | Chiesa, Di, Hu, Zheng, [ePrint 2025/2166](https://eprint.iacr.org/2025/2166), Definition 5.3, p. 31 | any indexed family |
 | `instability_cacheHasCollision_le` | CMS19 Lemma 6.11, p. 35; CDHZ Lemma 8.7, p. 56 | the sharper $(t-1)/n$ |
 | (motivation only) | CMS19 Lemma 5.10, p. 24; CDHZ Theorem 5.4, p. 31 | not formalized here |
 
-Afshar et al.'s detailed Definition 5.1 uses the full vertex tuple as its secret. The informal
-Theorem 1.3, printed p. 4, also mentions recovering the endpoint. The endpoint-only theorems
-here retain that hidden endpoint jointly with the final output; recovering the full tuple
-would imply recovering its last component without an additional query. The root-accumulated
-comparison concerns the same hybrid structure with different probability bookkeeping, and
-makes no claim to novelty or a best-known bound. The explicit zero-query guessing terms
-are retained; the stated asymptotic comparison assumes positive `k` and `q`.
+Afshar et al.'s detailed Definition 5.1 and Theorem 5.3 use the full vertex tuple as the
+secret. Their Lemma 5.5 already bounds the endpoint event, as does their informal Theorem 1.3.
+The Lean proofs retain that endpoint jointly with the final output throughout the same
+hybrid structure. The root-accumulated calculation adds square-root errors and squares once,
+giving order `kq³/N` for positive `k,q`; the published theorem gives order `sqrt(kq³/N)`.
+When `kq³ < N`, this bookkeeping gives the smaller asymptotic expression. The endpoint event
+itself is not a new extension, and no novelty or best-known-bound claim is made. Explicit
+zero-query guessing and collision terms remain in both formal bounds.
 
 The separate auxiliary-input model allows unbounded preprocessing and limits retained advice.
 Chung, Guo, Liu and Qian, *Tight Quantum Time-Space Tradeoffs for Function Inversion*,
@@ -50,35 +51,43 @@ Bounds*, [ePrint 2020/1589](https://eprint.iacr.org/2020/1589), Definition 1, sp
 classical advice after unbounded preprocessing. Neither advice model is implemented by the
 query-bounded preprocessing theorem.
 
-## Local security-normalization note
+## Search-calibrated security bits
 
-*Bits of security in the parallel QROM*, `parallel-qrom-security.pdf` in `~/QROM-lit`, is a
-three-page local note with no printed author or version. Page 1 defines at least λ bits of
-security by the bound `(1 + 2D√P)² / 2^λ`, where `D` is the number of adaptive rounds and `P`
-the maximum width. This is an ideal-query-model metric, not a gate-cost estimate.
+For a named game and its syntactic resource predicate, `ParallelQROMBits advantage IsBound λ`
+means that every adversary using at most `D` adaptive rounds of width at most `P` satisfies
 
-Appendix A distinguishes independent-target inversion from inversion of the image of a
-uniform secret input. The independent-target bound follows from
-`preimageSearchAdvantage_le_of_isPointBound` with at most `DP` total points. For a domain of
-size `M` and range of size `N`, the secret-input variant uses the marginal preimage density
-`ρ = 1/M + (1 - 1/M)/N`. `average_image_eq_plantedTargetPatch` preserves the complete joint
-sampling law, and `plantedPreimageAdvantage_le_of_isPointBound` applies the generic finding
-bound to this correlated hidden set. Both games allow the adversary to depend on the public
-target, with no oracle-dependent advice.
+$$
+\operatorname{advantage}(\mathcal A) \leq \frac{(1+2D\sqrt P)^2}{2^\lambda}.
+$$
 
-Appendix B sketches a compressed-oracle collision bound of order `P²D⁴/N`, sufficient for
-the note's normalization when `N = 2^(2λ)`. This argument remains unformalized and is weaker
-than CFHL's depth-sensitive bound of order `P²D³/N`. It does not complete the separate CFHL
-track. The reviewed PDF has SHA-256
-`1e8207e233f080f147b7ebd8a88d0ebd7e86a843fa20aad8cc2247e7aa937506`.
+This is an ideal-query-model normalization, calibrated to parallel search by the hybrid
+argument in [Zalka, §4](https://arxiv.org/abs/quant-ph/9711070v2). It supplies no gate-cost
+estimate. The resource predicate must be the named game's actual admissibility condition;
+an empty adversary class would make any security-bit claim vacuous.
 
-The squared pair sum in Appendix B does not require orthogonal collision subspaces. If
-$E_{ab}$ projects onto equal nonblank contents at cells $a,b$, these diagonal projectors satisfy
-$E_{\mathrm{any}} \le \sum_{a<b} E_{ab}$. Thus
-$\|E_{\mathrm{any}}v\|^2 \le \sum_{a<b}\|E_{ab}v\|^2$, even when three or more cells agree.
-For a basis change on a set $A$ of addressed cells, its factors outside a given pair commute
-with $E_{ab}$. Together with $1-E_{\mathrm{any}} \le 1-E_{ab}$, this reduces each pair's transition
-to the one- or two-cell bound. Fixing the query addresses and outside database contents restricts
-the possible pairs to at most $rP$ active cells at round $r$; these sectors are orthogonal.
-This justifies the note's coarse transition estimate. A formal collision theorem still needs
-the projector inequalities, support bookkeeping and final controlled-decompression bridge.
+For independent-target inversion into a range of size `N`, the target label at each input
+has probability `1/N`. `preimageSearchAdvantage_le_of_isPointBound` therefore gives the
+normalization with at most `DP` total points. For secret-input inversion, sample a uniform
+function `H` and an independent uniform input `x`, and publish `y = H(x)`. The adversary may
+depend on `y` and succeeds by returning any preimage of `y`.
+
+Conditioned on `y`, an equivalent sampling first chooses uniform `x`, fixes `H(x) = y`,
+and independently chooses every other table entry uniformly. Thus, for domain size `M`,
+the marginal probability that a fixed input is a preimage is exactly
+
+$$
+\rho = \frac1M + \frac{1-1/M}{N}.
+$$
+
+`average_image_eq_plantedTargetPatch` proves this joint table/target/secret sampling equality.
+The reference table avoids `y`; each independently labelled non-secret cell is replaced by
+`y` with probability `1/N`, and the secret cell is always replaced. The resulting sampled-set
+hybrid proves `plantedPreimageAdvantage_le_of_isPointBound`. It retains the answering table
+jointly with verification and yields `log₂(1/ρ)` bits. The concrete whole-bit specializations
+are `parallelQROMBits_plantedPreimage_127` and `parallelQROMBits_plantedPreimage_128`.
+These statements and their coupling are self-contained; no private note is required to use
+or review them.
+
+Collision security is a separate, unformalized track. CFHL v4's parallel compressed-oracle
+analysis gives the target order `P²D³/N`. None of the inversion certificates relies on an
+informal collision argument or on a claim about its proof.

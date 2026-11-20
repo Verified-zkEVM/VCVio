@@ -111,4 +111,35 @@ example {b n B : ℕ} (hB : hashInputBound b ≤ B)
       MeasureTheory.Measure.dirac (solve (extendWindowOracle H) m puzzle) := by
   exact evalDist_quantumWindowScheme_solve hB H m outputSpace puzzle
 
+/-- At the 24-byte-link, sixteen-chain parameters, the raw quantum key-deriving program obtains
+the actual generated key within the stated honest key round, before a commitment check. -/
+example (m : ℕ) (H : ByteArray.Bounded 86 → Bytes 32)
+    (salt : Bytes 16) (xs : Fin 16 → Bytes 24)
+    (outputSpace : MeasurableSpace (Bytes 32)) :
+    letI := outputSpace
+    let puzzle := (genWith (extendWindowOracle H) m salt xs).1
+    (quantumWindowDerive (by decide : hashInputBound 24 ≤ 86) m puzzle).IsTotalQueryBound
+        (16 * (m + 2) + 1) ∧
+      (quantumWindowDerive (by decide : hashInputBound 24 ≤ 86) m puzzle).IsPointBound
+        (16 * (m + 3)) ∧
+      (Quantum.parallelOracleRuntime H).evalDist₂ .instruments
+          (quantumWindowDerive (by decide : hashInputBound 24 ≤ 86) m puzzle)
+          (Quantum.SubState.basis ()) =
+        MeasureTheory.Measure.dirac (genWith (extendWindowOracle H) m salt xs).2 := by
+  let : MeasurableSpace (Bytes 32) := outputSpace
+  exact ⟨isTotalQueryBound_quantumWindowDerive _ _ _,
+    isPointBound_quantumWindowDerive _ _ _,
+    evalDist_quantumWindowDerive_genWith _ _ _ outputSpace _ _⟩
+
+/-- The checked quantum solver's extra round and point are accounted for explicitly, including
+on puzzles that were not produced by honest generation. -/
+example (m : ℕ) (puzzle : Puzzle 24 16) :
+    ((quantumWindowScheme (B := 86) (by decide) m).solve puzzle).IsTotalQueryBound
+        (16 * (m + 2) + 2) ∧
+      ((quantumWindowScheme (B := 86) (by decide) m).solve puzzle).IsPointBound
+        (16 * (m + 3) + 1) := by
+  simpa only [keyRound, solvePoints, Nat.add_assoc] using
+    And.intro (isTotalQueryBound_quantumWindowScheme_solve _ _ _)
+      (isPointBound_quantumWindowScheme_solve _ _ _)
+
 end VCVioTest.PointerChainEncoding
