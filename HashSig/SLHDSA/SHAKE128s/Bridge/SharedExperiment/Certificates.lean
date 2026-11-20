@@ -11,9 +11,8 @@ public import HashSig.SLHDSA.SHAKE128s.Statement.FIPS205
 public import HashSig.SLHDSA.SHAKE128s.Bridge.PaperGame
 import HashSig.SLHDSA.SHAKE128s.Statement.Theorems.StrongUnforgeability
 import HashSig.SLHDSA.SHAKE128s.Statement.Game.CompleteBudget
-import HashSig.SLHDSA.SHAKE128s.Proof.WorkFinal
+import HashSig.SLHDSA.SHAKE128s.Statement.Theorems.SmallBudget
 import HashSig.SLHDSA.SHAKE128s.Proof.VerificationBudget
-import HashSig.SLHDSA.SHAKE128s.Bridge.Scheme
 
 /-!
 # Security and verifier-cost certificates of the shared observation
@@ -55,10 +54,8 @@ theorem advantage_eq_zero_model (adversary : Game.Adversary HashOutput PublicKey
     (hbound : (observedGame Bridge.model).HasQueryBound () Game.adversaryWork adversary q) :
     (observedGame Bridge.model).advantage () adversary = 0 := by
   rw [advantage_eq]
-  have hb : (Game.securityGame Bridge.model).HasQueryBound () Game.adversaryWork adversary q := by
-    simpa only [SecurityGame.HasQueryBound, jointExperiment] using hbound
-  change Security.securityGame.HasQueryBound () Security.adversaryWork adversary q at hb
-  exact WorkFinal.advantage_eq_zero adversary q hq hb
+  apply VerificationBudget.advantage_eq_zero adversary q hq
+  simpa only [SecurityGame.HasQueryBound, jointExperiment, Bridge.model] using hbound
 
 /-- The scheme bridge gives zero FIPS forgery advantage below 569 joint calls. -/
 theorem advantage_eq_zero_fips
@@ -67,17 +64,8 @@ theorem advantage_eq_zero_fips
     (hbound : (observedGame FIPS205.scheme).HasQueryBound () Game.adversaryWork adversary q) :
     (observedGame FIPS205.scheme).advantage () adversary = 0 := by
   rw [advantage_eq]
-  have hb : (Game.securityGame FIPS205.scheme).HasQueryBound () Game.adversaryWork adversary q := by
-    simpa only [SecurityGame.HasQueryBound, jointExperiment] using hbound
-  have hE := Bridge.experiment_evalDistEq Bridge.schemeBridge
-    Bridge.map_answerEquiv_uniformSample adversary
-  have hmodel : (Game.securityGame Bridge.model).HasQueryBound () Game.adversaryWork
-      (Bridge.adapt Bridge.schemeBridge adversary) q :=
-    (hE.prEvent_eq _).symm.trans hb
-  calc
-    _ = (Game.securityGame Bridge.model).advantage ()
-        (Bridge.adapt Bridge.schemeBridge adversary) := hE.prEvent_eq _
-    _ = 0 := WorkFinal.advantage_eq_zero _ q hq hmodel
+  apply slhDsa_sufCma_eq_zero_of_lt_569 adversary q hq
+  simpa only [SecurityGame.HasQueryBound, jointExperiment] using hbound
 
 private theorem verification_projection (body : OracleComp (Game.World HashOutput) Bool) :
     Security.countQueries VerificationBudget.verificationCost body =
@@ -141,16 +129,6 @@ theorem accepted_outcome_work (adversary : Game.Adversary HashOutput PublicKey)
     (hsupport : observed ∈ support (RandomOracleModel.run
       (canonicalExperiment Bridge.model adversary))) (haccept : observed.verified = true) :
     569 ≤ observed.cost .hash + observed.cost .verifier := by
-  have hlegacy : legacyObservation observed ∈ support
-      (Game.runBySource Bridge.model adversary) := by
-    change _ ∈ support (RandomOracleModel.run (Game.experimentBySource Bridge.model adversary))
-    rw [fullProgram, BySourceBridge.run_map, support_map]
-    exact ⟨observed, hsupport, rfl⟩
-  have houtcome : legacyOutcome observed ∈ support
-      (Security.run adversary) := by
-    rw [← WorkFinal.map_fst_runAll, ← BySourceBridge.map_fst_runBySource, support_map]
-    exact ⟨legacyObservation observed, hlegacy, rfl⟩
-  have hwork := VerificationBudget.accepted_outcome_work adversary _ houtcome haccept
-  exact hwork
+  exact VerificationBudget.accepted_observation_work adversary observed hsupport haccept
 
 end SLHDSA.SHAKE128s.Bridge.SharedExperiment

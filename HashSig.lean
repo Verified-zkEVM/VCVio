@@ -320,6 +320,7 @@ public import HashSig.SLHDSA.SHAKE128s.Statement.RandomOracleModel
 public import HashSig.SLHDSA.SHAKE128s.Statement.Requests
 public import HashSig.SLHDSA.SHAKE128s.Statement.Scheme
 public import HashSig.SLHDSA.SHAKE128s.Statement.Security
+public import HashSig.SLHDSA.SHAKE128s.Statement.Theorems.SmallBudget
 public import HashSig.SLHDSA.SHAKE128s.Statement.Theorems.StrongUnforgeability
 public import HashSig.SLHDSA.SHAKE128s.Statement.Theorems.WireStrongUnforgeability
 public import HashSig.SLHDSA.SHAKE128s.Statement.Types

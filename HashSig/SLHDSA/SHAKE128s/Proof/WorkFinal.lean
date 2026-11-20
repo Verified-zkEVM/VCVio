@@ -102,29 +102,7 @@ costs that many. -/
 theorem advantage_eq_zero (adversary : Adversary) (q : Nat) (hq : q < 569)
     (hbound : securityGame.HasQueryBound () adversaryWork adversary q) :
     securityGame.advantage () adversary = 0 := by
-  unfold SecurityGame.advantage
-  refine prEvent_eq_zero_of_forall_mem_support _ _ fun result hresult hwin => ?_
-  change result ∈ support ((fun result => (decide (Wins result.1), result.2)) <$>
-    runBySource adversary) at hresult
-  rw [support_map] at hresult
-  obtain ⟨bySource, hbySource, rfl⟩ := hresult
-  have hwins : Wins bySource.1 := by simpa using hwin
-  have hsum := (OracleComp.prEvent_eq_one_iff _ _).mp hbound _ (by
-    change _ ∈ support ((fun result => (decide (Wins result.1), result.2)) <$>
-      runBySource adversary)
-    rw [support_map]
-    exact ⟨bySource, hbySource, rfl⟩)
-  obtain ⟨keygenHashes, laterHashes, hcounts, -⟩ :=
-    exists_sourceCounts adversary bySource hbySource
-  simp only at hsum
-  rw [sum_adversaryWork, hcounts] at hsum
-  simp only [sourceCounts] at hsum
-  have hrun : bySource.1 ∈ support (run adversary) := by
-    rw [← map_fst_runAll, ← map_fst_runBySource, support_map]
-    exact ⟨bySource, hbySource, rfl⟩
-  have hwork := VerificationBudget.accepted_outcome_work adversary bySource.1 hrun hwins.1
-  unfold Counts.work at hwork
-  omega
+  exact VerificationBudget.advantage_eq_zero adversary q hq hbound
 
 /-! ## The target -/
 
