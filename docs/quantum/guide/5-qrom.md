@@ -276,6 +276,61 @@ a round bound. For lossless local execution,
 `preimageSearchAdvantage_eq_of_isPointBound_zero_of_lossless` gives initial trace divided by
 `|Y|`. In particular, a lossless normalized no-query guess succeeds with probability `1 / |Y|`.
 
+## Endpoint recovery for an idealized masked chain
+
+`Quantum.MaskedChain.recoveryLaw` samples one uniform function `H : G → G` and `q + 2`
+independent uniform vertices `x₀, …, x_{q+1}` in a finite abelian group. It publishes `x₀`
+and the `q + 1` masks `H(xᵢ) + xᵢ₊₁`. An online adversary receives this public puzzle,
+queries the same `H`, and outputs one candidate for `x_{q+1}`. It need not output the chain.
+Its program family, local operations and initial quantum substate are fixed before sampling;
+this experiment has no oracle preprocessing.
+
+`Quantum.MaskedChain.recoveryAdvantage_le_root` bounds that endpoint-only event. For at most
+`q` online rounds of width at most `k`, with `N = |G|`, it proves
+
+\[
+ p \le \min\left\{1,\;
+   \frac{\binom{q+1}{2}}{N}
+   + \left(\frac{1}{\sqrt N}
+     + 2\sum_{h=0}^{q-1}\sqrt{\frac{k(q-h)}{N}}\right)^2
+   \right\}.
+\]
+
+The expression inside the minimum is `Quantum.MaskedChain.rootRecoveryBound`.
+The guessing and online hybrid terms are combined as root probabilities and squared once;
+the collision allowance for the `q + 1` programmed input vertices is added outside that
+square. The endpoint is not a programmed input. At zero rounds the allowance is zero, so
+the bound reduces to the exact `1/N` guessing probability. The sum is at most
+`q * sqrt(kq / N)`, giving order `kq³ / N` for `k,q ≥ 1`. The explicit guessing term remains
+when no queries are made. Adaptive widths, repeated query inputs, zero-width rounds and
+mixed or subnormalized initial states are allowed. Missing mass counts as failure.
+
+The proof keeps the oracle, full hidden vertex tuple, public masks and endpoint comparison
+joint. A classical coupling moves randomness from oracle values to the public masks,
+charging vertex collisions. Each hybrid changes one numbered oracle call. Earlier calls
+depend only on the known prefix, so future input vertices can be resampled independently of
+that call's input state. Minkowski's inequality for weighted square-root sums bounds the
+root of average success before the per-round errors are accumulated. In the last hybrid,
+the hidden endpoint is fresh, leaving the `1 / N` guessing probability. This uses the parallel reprogramming
+argument rather than a compressed-oracle bound.
+
+The experiment and root theorem are in `Oracle/MaskedChain/Model.lean` and
+`Oracle/MaskedChain/RootBounds.lean`. Afshar et al., §5, supplies the hybrid structure; its
+detailed full-tuple Theorem 5.3 states order `sqrt(kq³/N)` by accumulating event-probability
+errors. Its Lemma 5.5 already bounds the endpoint event. The root-accumulated calculation
+gives order `kq³/N`, a smaller asymptotic expression when `kq³ < N`; this is a change in
+probability bookkeeping, without a best-known or novelty claim.
+The event-error API `Quantum.MaskedChain.recoveryAdvantage_le` remains available with
+`1/N + choose(q+1,2)/N + 4 * ∑ h < q, sqrt(k(q-h)/N)`.
+
+The [named puzzle](7-time-lock-puzzles.md#the-idealized-masked-chain-puzzle) has honest
+generation and solving algorithms, whose recovery probability equals that of this game by
+`MaskedChainPuzzle.qromDelayAdvantage_eq_recoveryAdvantage`. Its root-accumulated
+no-preprocessing delay bound is `MaskedChainPuzzle.qromDelayAdvantage_le_root`. The
+[query-bounded preprocessing extension](7-time-lock-puzzles.md#query-bounded-preprocessing-security)
+combines its round-aware preprocessing root error inside the final square while retaining
+the adversary's complete memory.
+
 ## Checks
 
 **They agree with each other.** Wherever the library offers two descriptions of the same thing, a
