@@ -63,8 +63,9 @@ theorem preserves_bind {α β : Type} {p : OracleComp (pub.withLabels X K R) α}
   obtain ⟨w, hw, hz⟩ := run
   obtain ⟨head, outside⟩ := first s w hw
   obtain ⟨tail, outside'⟩ := rest w.1 w.2 z hz
-  exact ⟨⟨(w.1, f.project w.2), head, tail⟩, ⟨fun c hc => (outside'.cells c hc).trans (outside.cells c hc),
-    fun i hi => (outside'.publicRows i hi).trans (outside.publicRows i hi)⟩⟩
+  refine ⟨⟨(w.1, f.project w.2), head, tail⟩, ?_⟩
+  exact ⟨fun c hc => (outside'.cells c hc).trans (outside.cells c hc),
+    fun i hi => (outside'.publicRows i hi).trans (outside.publicRows i hi)⟩
 
 theorem preserves_map {α β : Type} (g : α → β) {p : OracleComp (pub.withLabels X K R) α}
     (ready : f.Preserves p) : f.Preserves (g <$> p) := by
@@ -74,7 +75,8 @@ theorem preserves_map {α β : Type} (g : α → β) {p : OracleComp (pub.withLa
 omit [DecidableEq ι] [∀ t, SampleableType (pub.Range t)] in
 private theorem draw_selected (c : X ⊕ K) (s : RelabelState pub X' K' R) {z}
     (run : z ∈ support ((RelabelState.drawCell (f.cell c)).run s)) :
-    (z.1, f.project z.2) ∈ support ((RelabelState.drawCell c).run (f.project s)) ∧ f.Framed s z.2 := by
+    (z.1, f.project z.2) ∈ support ((RelabelState.drawCell c).run (f.project s)) ∧
+      f.Framed s z.2 := by
   cases old : s.2 (f.cell c) with
   | some a =>
     have here : (f.project s).2 c = some a := old
@@ -116,7 +118,8 @@ theorem preserves_public {I : Type} {A : CanonicalGraph (I →ₒ R) X K R}
     v.Preserves (query (spec := (I →ₒ R).withLabels X K R) (.inl (.inl (.inr (A.pt k vs))))) := by
   intro s z run
   simp only [simulateQ_HasQuery_query, liftQuery, eagerImpl_apply_inl] at run ⊢
-  have width' : vs.length = (B.ch (v.node k)).length := by simpa only [v.children, List.length_map] using width
+  have width' : vs.length = (B.ch (v.node k)).length := by
+    simpa only [v.children, List.length_map] using width
   by_cases ready : A.childVals (v.project s) k = some vs
   · have global := (v.childVals s k).trans ready
     rw [v.point, B.relabelImpl_run_pt global, support_map] at run
@@ -130,7 +133,8 @@ theorem preserves_public {I : Type} {A : CanonicalGraph (I →ₒ R) X K R}
       exact ready h
     have large : ¬∃ r xs, B.childVals s r = some xs ∧ B.pt r xs = A.pt k vs := by
       rintro ⟨r,xs,h,eq⟩
-      obtain ⟨same,rfl⟩ := B.pt_inj (B.length_eq_of_childVals_eq_some h) width' (eq.trans (v.point k vs))
+      obtain ⟨same, rfl⟩ := B.pt_inj (B.length_eq_of_childVals_eq_some h) width'
+        (eq.trans (v.point k vs))
       subst r
       exact ready ((v.childVals s k).symm.trans h)
     rw [B.relabelImpl_run_pub_of_not_exists large, support_map] at run

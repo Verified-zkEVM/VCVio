@@ -46,7 +46,7 @@ theorem repeat_selected : selected.Preserves (do
   selected.preserves_bind (selected.preserves_public () [] rfl) fun _ =>
     selected.preserves_bind (selected.preserves_public () [] rfl) fun _ => selected.preserves_pure _
 
-/-- The unselected public point can fill an unselected canonical row starting from the empty cache. -/
+/-- An unselected public point can fill an unselected canonical row in the empty cache. -/
 theorem outside_changes {z : Bool × RelabelState (Bool →ₒ Bool) Unit Bool Bool}
     (run : z ∈ support ((big.eagerImpl (.inl (.inl (.inr true)))).run (∅, ∅))) :
     ¬selected.Framed (∅, ∅) z.2 := by
