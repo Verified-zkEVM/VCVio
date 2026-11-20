@@ -70,7 +70,11 @@ stateful runtimes too and keeps their private state throughout.
 
 The corresponding laws without preprocessing remain available. A theorem proved only for
 that restricted adversary class does not establish `QROMDelaySecure` for arbitrary
-preprocessing budgets.
+preprocessing budgets. The interface embeds classical honest generators; an adapter from
+arbitrary classical two-phase adversaries, preserving both advantages and resource budgets,
+is a separate bridge. Generic correctness and solver-budget predicates for quantum puzzles
+are also separate interface work. The application below proves its honest execution
+laws and budgets directly.
 
 ## Finite windows for the exact pointer-chain encoding
 
@@ -86,12 +90,17 @@ truncation. `hashInputBound` is `max (54+b) 83`; every honest input fits, and 86
 when the link width is at most 32. An adversary may query any superposition within the window.
 The interface does not model unrestricted-length byte queries.
 
-`windowTableEquiv` splits the complete raw table into typed answers, fixed mask tails and
-all outside-image answers. `sampledDelayLawWith_quantumWindowScheme` transports the entire
-preprocessing/generation/online experiment through that bijection. Its observer retains the
-answering table jointly with the transcript. `qromDelayAdvantage_quantumWindowScheme` is the
-key-recovery specialization. Neither equality assumes query budgets or bounds the success
-probability.
+The delay proof uses `quantumWindowScheme`, the injective honest-input encoding
+`hashInputWindow_injective`, and the fixed-oracle honest execution equalities
+`simulateQ_windowScheme_gen` and `simulateQ_windowScheme_solve`. The coupling and rank hybrids
+program the raw table directly, so the adversary retains all raw query registers throughout.
+
+Separately, `windowTableEquiv` splits that table into typed answers, fixed mask tails and
+all outside-image answers. `sampledDelayLawWith_quantumWindowScheme` transports the complete
+experiment through this bijection, and `qromDelayAdvantage_quantumWindowScheme` specializes
+it to key recovery. These standalone encoding laws retain the answering table jointly with
+the transcript and require no query budget. The coupling and delay theorem do not use the
+table-splitting laws.
 
 The honest generator and checked solver agree with the source leanSeal algorithms for
 every fixed byte-answer function, restricted to the window. The public puzzle is the
@@ -143,12 +152,19 @@ min 1 (P²/S + (sqrt(B_on) + 2*sqrt(rpre*Qpre*δ_pre))²).
 
 Preprocessing has at most $r_{\mathrm{pre}}$ rounds and $Q_{\mathrm{pre}}$ points; every online
 continuation has at most `r` rounds and width at most `k`, with `r < keyRound n m`.
+This is a syntactic deadline on every online branch. It bounds programs that finish within
+the deadline. To count early successes of an opener that can continue past that deadline
+on other branches, a separate quantum truncation theorem is needed.
 The parameter assumptions are
 `n ≠ 0`, `n < 2^32`, `b ≤ 32` and a window containing all honest inputs. One function answers
 all three phases. Classical and quantum preprocessing memory are unrestricted, and failed
 branches count as failure. `qromDelaySecure_quantumWindowScheme` establishes `QROMDelaySecure`
-for every admissible `DelayBudget`. The online point budget is an additional restriction;
-the bound uses online rounds and width.
+for every admissible `DelayBudget`. The corollary
+`qromDelaySecure_quantumWindowScheme_min_width_points` uses the effective width
+`min onlineWidth onlinePoints` for the same adversary class: a total point budget also
+bounds each call's width. In particular, zero online points remove the online hybrid term
+even when the declared width cap is loose. This refinement does not replace the round
+sum by a total-online-point Cauchy–Schwarz bound.
 
 The preprocessing hybrid compares the completed programmed oracle with the base oracle
 while retaining the complete online continuation as the common finishing operation. A
@@ -161,8 +177,13 @@ Salt-free later accumulator inputs constrain two independent fresh 32-byte state
 which suffice for their incidence bound. See the [rank-security specification](../../design/quantum-layer.md#19-finite-window-rank-security-with-preprocessing)
 for the separate oracle-family cases.
 
-The honest solver derives the key after `keyRound n m = n*(m+2)+1` rounds. Its checked version
-makes one extra commitment-validation call. The security threshold uses the key's own round.
+`quantumWindowDerive` exposes honest key derivation without the commitment check.
+`isTotalQueryBound_quantumWindowDerive` gives its `keyRound n m = n*(m+2)+1` round bound,
+and `evalDist_quantumWindowDerive_genWith` gives the point-mass law at the actual generated
+key for every fixed raw oracle and honest generation coins. The checked solver makes one
+extra commitment-validation call. The security threshold uses the key's own round. These
+laws connect the honest quantum program to that clock; they do not yet package it as a
+full two-phase adversary witnessing a universal sharpness statement.
 The following examples use $r_{\mathrm{pre}}Q_{\mathrm{pre}}\le 2^{100}$ and
 `r = keyRound n m - 1`. Maximum work means `n = 2^20`, `m = 2^40`; moderate depth means
 `n = 2`, `m = 2^29 - 2`.
@@ -173,8 +194,17 @@ The following examples use $r_{\mathrm{pre}}Q_{\mathrm{pre}}\le 2^{100}$ and
 | moderate | `16` | `2^30` | `2^20` | about `2^-46` |
 | maximum | `16` | `2^60 + 2^21` | `2^40` | `1` (vacuous) |
 
+At the paper's 24-byte link width, an explicit cap of `3.5*10^12` queries per round gives
+about `2^-82.33` for `n = 16, m = 2^29` (the 30-second reference schedule) and `2^-42.33`
+for `n = 33, m = 273038961038961` (a 365-day schedule at the paper's illustrative latency).
+These rows retain `rpre*Qpre ≤ 2^100`. leanSeal's corresponding classical estimates are
+about `2^-117` and `2^-97`. The width cap is an explicit premise, not a consequence of a
+total-query budget or of the Lean theorem. The larger quantum error has an extra depth
+factor; no matching attack on the truncated-link term is established here.
+
 The [detailed parameter table](../../design/quantum-layer.md#20-concrete-finite-window-query-estimates)
-also gives the honest path-point counts and separates collision and preprocessing cross terms.
+gives the exact schedules and assumptions, honest path-point counts, and separate collision
+and preprocessing cross terms.
 The bound is independent of the chosen finite window length. It concerns structured public
 puzzles and programs bounded on every online branch; arbitrary serialized puzzle parsing,
 quantum truncation for early success, and unrestricted-length oracle queries need separate

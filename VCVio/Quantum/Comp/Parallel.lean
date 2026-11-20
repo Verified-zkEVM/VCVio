@@ -14,7 +14,8 @@ public import VCVio.Quantum.Foundations.Parallel
 A batch exposes one copy of a port's register for each slot and applies the port to the
 slots in increasing order. All slots share the runtime's private memory. This construction
 is defined for ports with identical input and output registers and a trivial classical
-result; the steps may be arbitrary subinstruments.
+result; the steps may be arbitrary subinstruments. Every batch selects one base port;
+slots within a batch cannot mix ports.
 
 Ordered batching does not assert that the steps commute. A simultaneous oracle law requires
 an additional theorem about the particular runtime, as in VCVio.Quantum.Oracle.Parallel.

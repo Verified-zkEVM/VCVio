@@ -253,8 +253,8 @@ private theorem programmedWindowRecoveryAdvantage_eq_lintegral (hb : b ≤ 32)
   exact lintegral_lintegral_swap Measurable.of_discrete.aemeasurable
 
 /-- Quantum delay of the exact finite-window construction against query-bounded preprocessing
-and an online adversary that stops before the key's honest receipt round. Retained classical
-and quantum memory are unrestricted, and unsuccessful branches are not normalized. -/
+when every online branch stops before the key's honest receipt round. Retained classical and
+quantum memory are unrestricted, and unsuccessful branches are not normalized. -/
 theorem qromDelayAdvantage_quantumWindowScheme_le_of_preprocessing
     (hb : b ≤ 32) (hn : n < 2 ^ 32) (hB : hashInputBound b ≤ B)
     (adv : WindowAdversary b n B) {r k rpre Qpre : ℕ}
@@ -295,5 +295,26 @@ theorem qromDelaySecure_quantumWindowScheme (hb : b ≤ 32) (hn : n < 2 ^ 32)
   exact qromDelayAdvantage_quantumWindowScheme_le_of_preprocessing hb hn hB adv hbound.1
     hbound.2.1 (fun M state puzzle ↦
       ⟨(hbound.2.2 M state puzzle).1, (hbound.2.2 M state puzzle).2.2⟩) hkey
+
+/-- Security with the effective online width bounded by both the width cap and the total point
+budget. The adversary class is unchanged: both constraints already hold on every online branch.
+In particular, a zero point budget removes the online hybrid error even with a loose width cap. -/
+theorem qromDelaySecure_quantumWindowScheme_min_width_points
+    (hb : b ≤ 32) (hn : n < 2 ^ 32) (hB : hashInputBound b ≤ B)
+    (budget : Quantum.TimeLockPuzzle.DelayBudget)
+    (hkey : budget.onlineRounds < keyRound n m) :
+    Quantum.TimeLockPuzzle.QROMDelaySecure (quantumWindowScheme (n := n) hB m) budget
+      (min 1 (rankDelayBound b n m budget.onlineRounds
+        (min budget.onlineWidth budget.onlinePoints)
+        budget.preprocessingRounds budget.preprocessingPoints)) := by
+  intro adv hbound
+  apply qromDelayAdvantage_quantumWindowScheme_le_of_preprocessing hb hn hB adv
+    hbound.1 hbound.2.1 _ hkey
+  intro M state puzzle
+  obtain ⟨hr, hp, hw⟩ := hbound.2.2 M state puzzle
+  refine ⟨hr, ?_⟩
+  rcases le_total budget.onlineWidth budget.onlinePoints with h | h
+  · simpa [min_eq_left h] using hw
+  · simpa [min_eq_right h] using hp.isWidthBound
 
 end PointerChainPuzzle.LeanSeal

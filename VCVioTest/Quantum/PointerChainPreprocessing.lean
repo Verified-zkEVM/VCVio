@@ -50,6 +50,26 @@ example (ρ : SubState Unit) :
     (by decide : 1 < 2 ^ 32) (by decide : hashInputBound 1 ≤ 83)
     retainedBudget (by decide) (PointerChainCoupling.adversary ρ) (retained_budget ρ)
 
+/-- The concrete 24-byte-link, sixteen-chain encoding fits an 86-byte raw window for every
+step count. Both online budget constraints contribute to the public security certificate. -/
+example (m : ℕ) (budget : DelayBudget) (hkey : budget.onlineRounds < keyRound 16 m) :
+    QROMDelaySecure
+      (quantumWindowScheme (b := 24) (n := 16) (B := 86) (by decide) m) budget
+      (min 1 (rankDelayBound 24 16 m budget.onlineRounds
+        (min budget.onlineWidth budget.onlinePoints)
+        budget.preprocessingRounds budget.preprocessingPoints)) := by
+  exact qromDelaySecure_quantumWindowScheme_min_width_points (by decide) (by norm_num)
+    (by decide) budget hkey
+
+/-- Zero online points force effective width zero even when both the round and hardware-width
+ceilings are positive. The certificate keeps the same syntactic adversary budget. -/
+example (m r k : ℕ) (hkey : r < keyRound 16 m) :
+    QROMDelaySecure
+      (quantumWindowScheme (b := 24) (n := 16) (B := 86) (by decide) m)
+      ⟨0, 0, r, 0, k⟩ (min 1 (rankDelayBound 24 16 m r 0 0 0)) := by
+  simpa using qromDelaySecure_quantumWindowScheme_min_width_points (b := 24) (n := 16)
+    (m := m) (B := 86) (by decide) (by norm_num) (by decide) ⟨0, 0, r, 0, k⟩ hkey
+
 /-- A raw input in the byte window that has no honest typed interpretation. -/
 @[expose]
 def emptyInput : ByteArray.Bounded 83 := ⟨ByteArray.empty, by decide⟩
