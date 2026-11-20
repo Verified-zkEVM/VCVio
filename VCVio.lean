@@ -454,6 +454,7 @@ public import VCVio.OracleComp.QueryTracking.QueryBound.Truncate
 public import VCVio.OracleComp.QueryTracking.QueryCost
 public import VCVio.OracleComp.QueryTracking.QueryLog
 public import VCVio.OracleComp.QueryTracking.QueryLogCheck
+public import VCVio.OracleComp.QueryTracking.RandomOracle.AcceptedScan
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
 public import VCVio.OracleComp.QueryTracking.RandomOracle.CachePartial
 public import VCVio.OracleComp.QueryTracking.RandomOracle.CachePartial.Cost
