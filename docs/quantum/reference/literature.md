@@ -21,7 +21,50 @@ the PDF page of the version linked.
 | `oracleUnitary`, `qromEvalDist` | Boneh et al., *Random Oracles in a Quantum World*, [arXiv:1008.0931v2](https://arxiv.org/abs/1008.0931v2), §2.1, p. 7 | additive groups in place of XOR |
 | `parallelOracleUnitary`, `batch_oracleQuery`, `qromBatchEvalDist` | Chung, Fehr, Huang, Liao, [arXiv:2010.11658v4](https://arxiv.org/abs/2010.11658v4), §4.4, pp. 12–13 | simultaneous additive queries; variable classical widths and one shared random function |
 | `preimageSearchAdvantage_le_of_isPointBound` | Chung, Fehr, Huang, Liao, [arXiv:2010.11658v4](https://arxiv.org/abs/2010.11658v4), Example 5.18; Zalka, [arXiv:quant-ph/9711070v2](https://arxiv.org/abs/quant-ph/9711070v2), §4 | fixed-target preimage game; direct hybrid and joint-table coupling, with total-point budgets, rather than compressed-oracle transition capacities |
+| `plantedPreimageAdvantage_le_of_isPointBound` | Search-calibrated normalization and planted coupling below; Zalka, §4 | secret-input image target; exact joint table/target/secret coupling and sampled-set finding at density `1/M + (1 - 1/M)/N`, with target-dependent adversary families and adaptive round/point budgets |
+| `ParallelQROMBits`, `parallelQROMBits_markedSearch`, `parallelQROMBits_preimageSearch`, `parallelQROMBits_plantedPreimage` | Search-calibrated normalization below | search-calibrated security predicate and corollaries for named games with actual syntactic round and width restrictions |
 | `QueryCache.flip`, `instability`, `condFlip` | Chiesa, Manohar, Spooner, [ePrint 2019/834](https://eprint.iacr.org/2019/834), Definitions 5.4, 5.6, 5.11, pp. 23–26 | any answer measure |
 | `partitionInstability` | Chiesa, Di, Hu, Zheng, [ePrint 2025/2166](https://eprint.iacr.org/2025/2166), Definition 5.3, p. 31 | any indexed family |
 | `instability_cacheHasCollision_le` | CMS19 Lemma 6.11, p. 35; CDHZ Lemma 8.7, p. 56 | the sharper $(t-1)/n$ |
 | (motivation only) | CMS19 Lemma 5.10, p. 24; CDHZ Theorem 5.4, p. 31 | not formalized here |
+
+## Search-calibrated security bits
+
+For a named game and its syntactic resource predicate, `ParallelQROMBits advantage IsBound λ`
+means that every adversary using at most `D` adaptive rounds of width at most `P` satisfies
+
+$$
+\operatorname{advantage}(\mathcal A) \leq \frac{(1+2D\sqrt P)^2}{2^\lambda}.
+$$
+
+This is an ideal-query-model normalization, calibrated to parallel search by the hybrid
+argument in [Zalka, §4](https://arxiv.org/abs/quant-ph/9711070v2). It supplies no gate-cost
+estimate. The resource predicate must be the named game's actual admissibility condition;
+an empty adversary class would make any security-bit claim vacuous.
+
+For independent-target inversion into a range of size `N`, the target label at each input
+has probability `1/N`. `preimageSearchAdvantage_le_of_isPointBound` therefore gives the
+normalization with at most `DP` total points. For secret-input inversion, sample a uniform
+function `H` and an independent uniform input `x`, and publish `y = H(x)`. The adversary may
+depend on `y` and succeeds by returning any preimage of `y`.
+
+Conditioned on `y`, an equivalent sampling first chooses uniform `x`, fixes `H(x) = y`,
+and independently chooses every other table entry uniformly. Thus, for domain size `M`,
+the marginal probability that a fixed input is a preimage is exactly
+
+$$
+\rho = \frac1M + \frac{1-1/M}{N}.
+$$
+
+`average_image_eq_plantedTargetPatch` proves this joint table/target/secret sampling equality.
+The reference table avoids `y`; each independently labelled non-secret cell is replaced by
+`y` with probability `1/N`, and the secret cell is always replaced. The resulting sampled-set
+hybrid proves `plantedPreimageAdvantage_le_of_isPointBound`. It retains the answering table
+jointly with verification and yields `log₂(1/ρ)` bits. The concrete whole-bit specializations
+are `parallelQROMBits_plantedPreimage_127` and `parallelQROMBits_plantedPreimage_128`.
+These statements and their coupling are self-contained; no private note is required to use
+or review them.
+
+Collision security is a separate, unformalized track. CFHL v4's parallel compressed-oracle
+analysis gives the target order `P²D³/N`. None of the inversion certificates relies on an
+informal collision argument or on a claim about its proof.

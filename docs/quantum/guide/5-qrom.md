@@ -1,7 +1,8 @@
 # 5. The quantum random-oracle model
 
-Covers: Classical queries, Deutsch's algorithm, one shared random oracle, parallel rounds,
-private uniform coins and classical/compressed execution bridges. Also covers parallel reprogramming, marked search and fixed-target inversion. See
+Covers: classical queries, Deutsch's algorithm, one shared random oracle, parallel rounds,
+private uniform coins, classical/compressed execution bridges, parallel reprogramming,
+marked search, fixed-target and secret-input inversion, and security-bit certificates. See
 [conventions](../reference/conventions.md). Read first: tutorial
 [chapter 6](../tutorial/6-quantum-queries.md); builds on [guide 4](4-programs-and-runtimes.md).
 
@@ -276,6 +277,57 @@ a round bound. For lossless local execution,
 `preimageSearchAdvantage_eq_of_isPointBound_zero_of_lossless` gives initial trace divided by
 `|Y|`. In particular, a lossless normalized no-query guess succeeds with probability `1 / |Y|`.
 
+## Inverting the image of a secret input
+
+`plantedPreimageAdvantage` samples a uniform secret input `s` and a uniform function `H`,
+then publishes `H(s)`. A `PlantedPreimageAdversary` selects its local operations, program,
+initial substate and guessing rule from that public target. The whole family is fixed before
+sampling. It succeeds when its returned input is any preimage under the same `H`; recovering
+`s` itself is unnecessary. Honest target generation is outside the adversary's query budget.
+
+Writing `M = |X|` and `N = |Y|`, the marginal preimage density is
+
+\[
+ \rho = \frac1M + \left(1-\frac1M\right)\frac1N.
+\]
+
+`plantedPreimageAdvantage_le_of_isPointBound` proves
+`min 1 (ρ * (1 + 2 * sqrt (q * Q))^2)` when every target-selected program has at most `q`
+rounds and `Q` points. The width form, `plantedPreimageAdvantage_le`, replaces the multiplier
+by `(1 + 2q * sqrt k)^2`. Input and output spaces are nonempty; singleton spaces and lost
+execution mass are included.
+
+The classical coupling first exchanges `H(s)` with an independent uniform target. It then
+uses an independent avoiding base, independent labels, and a forced target at `s`. The
+disagreement set is the union of `{s}` and the target-labelled cells. The reference execution
+is independent of this union after fixing the public target and avoiding base. The coupling
+retains the joint table, target and secret, so the verifier checks the same oracle throughout.
+This is a component-level inversion theorem, not a quantum signature-security reduction.
+
+## Security bits with depth and width
+
+`ParallelQROMBits advantage IsBound λ` requires, for every `D` and `P`, every adversary
+admitted by the named game's resource model to satisfy
+
+\[
+ \operatorname{advantage}(\mathcal A)
+ \le \frac{(1+2D\sqrt P)^2}{2^\lambda}.
+\]
+
+Here `D` is adaptive oracle depth and `P` is maximum width. The predicate is relative to the
+declared adversary model. The concrete marked-search and preimage corollaries use the actual
+syntactic round and width bounds; they prove this security target from the game semantics.
+It supplies neither a gate-cost estimate nor security against oracle-dependent advice.
+
+`parallelQROMBits_markedSearch` certifies `log₂ |X|` bits, and
+`parallelQROMBits_preimageSearch` certifies `log₂ |Y|` bits for a fixed target.
+`parallelQROMBits_plantedPreimage` certifies `log₂(1/ρ)` for secret-input inversion.
+The whole-bit specializations `parallelQROMBits_plantedPreimage_127` and
+`parallelQROMBits_plantedPreimage_128` certify 127 bits for equal input and response spaces
+of size `2^128`, and 128 bits at size `2^129`. The extra planted preimage explains the
+difference from fixed-target inversion. The [self-contained normalization and coupling](../reference/literature.md#search-calibrated-security-bits)
+state the mathematical convention without requiring a private reference file.
+
 ## Checks
 
 **They agree with each other.** Wherever the library offers two descriptions of the same thing, a
@@ -311,3 +363,10 @@ for a call with no possible answer, including zero-charge calls at budget zero.
 `VCVioTest/Quantum/ParallelPreimage.lean` checks fixed-target guessing, singleton responses,
 empty domains, unnormalized input mass, adaptive total-point budgets and the avoiding-table
 coupling.
+
+`VCVioTest/Quantum/ParallelPlantedPreimage.lean` counts the real secret-input game on a
+two-element domain and a cyclic range of order three, obtaining `2 / 3` without queries.
+It distinguishes any-preimage recovery from secret recovery and checks target-dependent
+programs, singleton spaces and missing mass. `VCVioTest/Quantum/ParallelSecurity.lean` checks
+fractional-bit calibration and refutes a one-bit claim for a singleton-range game whose
+zero-query success is one.

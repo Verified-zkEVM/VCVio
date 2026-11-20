@@ -22,6 +22,7 @@ This dictionary pairs classical VCVio interfaces with their quantum counterparts
 | pathwise natural-number charges on oracle ports | `IsQueryChargeBound`: under per-call charge bounds, total weight is at most budget times input trace |
 | weighted incidence of hidden disagreement sets | `sum_mul_re_trace_conj_parallelInputProjector_frame_le`: expected union mass for a challenge-independent input state |
 | finding one uniformly hidden marked input | `markedSearchAdvantage_le_of_isPointBound`: success at most `min 1 ((1 + 2 * sqrt (q * Q))^2 / N)` with round cap `q` and total-point cap `Q` |
+| a uniform secret input and its public image under the oracle | `plantedPreimageAdvantage_le_of_isPointBound`: any-preimage recovery at density `1/M + (1 - 1/M)/N`, with target-dependent adversaries |
 
 The marked-search experiment uses one additive `ZMod 2` oracle marking a single hidden input.
 Its interpretation, program, initial state and guessing rule are independent of that input;
