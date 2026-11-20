@@ -481,6 +481,8 @@ public import VCVio.OracleComp.QueryTracking.RandomOracle.InitialCacheExpectedQu
 public import VCVio.OracleComp.QueryTracking.RandomOracle.JointPotential
 public import VCVio.OracleComp.QueryTracking.RandomOracle.LoggedRun
 public import VCVio.OracleComp.QueryTracking.RandomOracle.PairedValue
+public import VCVio.OracleComp.QueryTracking.RandomOracle.PairedValue.GraphCost
+public import VCVio.OracleComp.QueryTracking.RandomOracle.PairedValue.ProjectedHits
 public import VCVio.OracleComp.QueryTracking.RandomOracle.ProbeEps
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Programming
 public import VCVio.OracleComp.QueryTracking.RandomOracle.ProjectedHazards
