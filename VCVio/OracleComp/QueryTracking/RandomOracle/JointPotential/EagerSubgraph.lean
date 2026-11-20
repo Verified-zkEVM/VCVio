@@ -23,9 +23,12 @@ namespace CanonicalGraph.Subgraph
 variable {ι X K X' K' R : Type} {pub : OracleSpec ι}
   {S : CanonicalGraph pub X K R} {G : CanonicalGraph pub X' K' R} (f : S.Subgraph G)
 
-/-- All graph cells outside the selection retain their exact initial contents. -/
-@[expose] def Framed (s t : RelabelState pub X' K' R) : Prop :=
-  ∀ c, c ∉ Set.range f.cell → t.2 c = s.2 c
+/-- A selected execution leaves both unselected cell values and unrelated public entries intact. -/
+structure Framed (s t : RelabelState pub X' K' R) : Prop where
+  /-- Unselected canonical cells retain even their absence. -/
+  cells : ∀ c, c ∉ Set.range f.cell → t.2 c = s.2 c
+  /-- Public entries outside every well-formed selected point retain even their absence. -/
+  publicRows : ∀ i, (¬∃ k vs, vs.length = (S.ch k).length ∧ S.pt k vs = i) → t.1 i = s.1 i
 
 variable [DecidableEq X] [DecidableEq K] [DecidableEq X'] [DecidableEq K']
   [DecidableEq ι] [SampleableType R] [∀ t, SampleableType (pub.Range t)]
@@ -50,7 +53,7 @@ theorem preserves_pure {α : Type} (a : α) : f.Preserves (pure a) := by
   intro s z run
   simp only [simulateQ_pure, StateT.run_pure, mem_support_pure_iff] at run ⊢
   subst z
-  exact ⟨rfl, fun _ _ => rfl⟩
+  exact ⟨rfl, ⟨fun _ _ => rfl, fun _ _ => rfl⟩⟩
 
 theorem preserves_bind {α β : Type} {p : OracleComp (pub.withLabels X K R) α}
     {k : α → OracleComp (pub.withLabels X K R) β}
@@ -60,7 +63,8 @@ theorem preserves_bind {α β : Type} {p : OracleComp (pub.withLabels X K R) α}
   obtain ⟨w, hw, hz⟩ := run
   obtain ⟨head, outside⟩ := first s w hw
   obtain ⟨tail, outside'⟩ := rest w.1 w.2 z hz
-  exact ⟨⟨(w.1, f.project w.2), head, tail⟩, fun c hc => (outside' c hc).trans (outside c hc)⟩
+  exact ⟨⟨(w.1, f.project w.2), head, tail⟩, ⟨fun c hc => (outside'.cells c hc).trans (outside.cells c hc),
+    fun i hi => (outside'.publicRows i hi).trans (outside.publicRows i hi)⟩⟩
 
 theorem preserves_map {α β : Type} (g : α → β) {p : OracleComp (pub.withLabels X K R) α}
     (ready : f.Preserves p) : f.Preserves (g <$> p) := by
@@ -77,7 +81,7 @@ private theorem draw_selected (c : X ⊕ K) (s : RelabelState pub X' K' R) {z}
     rw [RelabelState.drawCell_run_of_cell_eq_some old, mem_support_pure_iff] at run
     subst z
     rw [RelabelState.drawCell_run_of_cell_eq_some here, mem_support_pure_iff]
-    exact ⟨rfl, fun _ _ => rfl⟩
+    exact ⟨rfl, ⟨fun _ _ => rfl, fun _ _ => rfl⟩⟩
   | none =>
     have here : (f.project s).2 c = none := old
     rw [RelabelState.drawCell_run_of_cell_eq_none old, support_map] at run
@@ -85,8 +89,8 @@ private theorem draw_selected (c : X ⊕ K) (s : RelabelState pub X' K' R) {z}
     rw [RelabelState.drawCell_run_of_cell_eq_none here, support_map]
     refine ⟨⟨u, hu, ?_⟩, ?_⟩
     · exact congrArg (fun t => (u, t)) (f.project_update s c u).symm
-    · intro x outside
-      exact QueryCache.cacheQuery_of_ne _ _ (fun eq => outside ⟨c, eq.symm⟩)
+    · exact ⟨fun x outside => QueryCache.cacheQuery_of_ne _ _ (fun eq => outside ⟨c, eq.symm⟩),
+        fun _ _ => rfl⟩
 
 theorem preserves_readCell (c : X ⊕ K) : f.Preserves (readCell (some c)) := by
   intro s z run
@@ -132,6 +136,17 @@ theorem preserves_public {I : Type} {A : CanonicalGraph (I →ₒ R) X K R}
     rw [B.relabelImpl_run_pub_of_not_exists large, support_map] at run
     obtain ⟨w, hw, rfl⟩ := run
     rw [A.relabelImpl_run_pub_of_not_exists small, support_map]
-    exact ⟨⟨w, hw, rfl⟩, fun _ _ => rfl⟩
+    refine ⟨⟨w, hw, rfl⟩, ⟨fun _ _ => rfl, ?_⟩⟩
+    intro i other
+    have different : i ≠ A.pt k vs := fun eq => other ⟨k, vs, width, eq.symm⟩
+    cases old : s.1 (A.pt k vs) with
+    | some a =>
+      rw [QueryImpl.withCaching_run_some _ old, mem_support_pure_iff] at hw
+      subst w
+      rfl
+    | none =>
+      rw [QueryImpl.withCaching_run_none _ old, support_map] at hw
+      obtain ⟨u, _, rfl⟩ := hw
+      exact QueryCache.cacheQuery_of_ne _ _ different
 
 end CanonicalGraph.Subgraph
