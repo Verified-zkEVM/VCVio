@@ -754,13 +754,8 @@ theorem mem_support_blockRunOf {ρ : Type} (run : List HashOutput → List HashO
     (leftLength rightLength : Nat) {outcome : (List HashOutput × List HashOutput) × ρ}
     (hmem : outcome ∈ support (blockRunOf run leftLength rightLength)) :
     outcome.1.1 ∈ support (padding leftLength) ∧ outcome.1.2 ∈ support (padding rightLength) := by
-  rw [blockRunOf, mem_support_bind_iff] at hmem
-  obtain ⟨leftTape, hleft, hrest⟩ := hmem
-  rw [mem_support_bind_iff] at hrest
-  obtain ⟨rightTape, hright, hinner⟩ := hrest
-  rw [support_map] at hinner
-  obtain ⟨z, -, rfl⟩ := hinner
-  exact ⟨hleft, hright⟩
+  have block := NoticingTape.mem_support_blockRunOf run leftLength rightLength outcome hmem
+  exact ⟨block.1, block.2.1⟩
 
 open scoped Classical in
 /-- **A bad disclosing block is a fact about the block alone**, at the sharper cap. -/

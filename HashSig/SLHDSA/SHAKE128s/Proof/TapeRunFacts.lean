@@ -153,14 +153,8 @@ theorem run_right_suffix (leftKeep rightKeep : Bytes → σ → Prop) (property 
 
 /-- **Every list of the right length is a possible block.** -/
 theorem mem_support_padding_of_length (tape : List HashOutput) :
-    tape ∈ support (padding tape.length) := by
-  induction tape with
-  | nil => simp [padding]
-  | cons head rest ih =>
-    rw [List.length_cons, padding, mem_support_bind_iff]
-    refine ⟨head, mem_support_uniformSample (α := HashOutput), ?_⟩
-    rw [mem_support_bind_iff]
-    exact ⟨rest, ih, by simp⟩
+    tape ∈ support (padding tape.length) :=
+  (DigestTape.mem_support_padding_iff tape.length tape).2 rfl
 
 variable {ω : Type} [Monoid ω]
 
