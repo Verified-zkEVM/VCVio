@@ -323,3 +323,42 @@ into independent target labels and a reference table avoiding the target. Their 
 `1 / |Y|`; singleton responses are handled separately by the probability cap. Exact zero-point
 laws retain successful mass divided by `|Y|`, permitting empty rounds and subnormalized inputs.
 No compressed-oracle result is used by this argument.
+
+### 13. Quantum delay experiments
+
+`CryptoFoundations/TimeLockPuzzle/Quantum.lean` defines the two-phase quantum adversary and
+honest puzzle interface. The generator returns the public puzzle, key and auxiliary secret;
+the online adversary receives only the public puzzle and its own retained preprocessing state.
+`delayInstrument` composes preprocessing, framed honest generation and online execution with
+one persistent runtime-private register. `delayLawWith` initializes the joint state once and
+observes the full transcript, retaining correlations with hidden challenger data. Lost mass
+counts as failure. `DelayBudget` separates preprocessing rounds and points from online rounds,
+points and maximum width; honest generation is outside the online clock. Retained memory is
+unrestricted. These are query-bounded preprocessing resources, not auxiliary-input advice bounds.
+
+`CryptoFoundations/TimeLockPuzzle/QuantumClassical.lean` embeds classical generators retaining
+arbitrary hidden data. Its observed-law equality is an exact classical generator average of
+quantum preprocessing followed by online execution for the same fixed function. Each online
+branch receives its actual preprocessing post-state. The observer may inspect the preprocessing
+branch, key and secret jointly with the leaf. The scalar-generation specialization uses the
+trivial private register of a fixed-function runtime; the underlying instrument factorization
+preserves private memory for general runtimes.
+
+### 16. Auxiliary-input security remains separate
+
+Auxiliary-input security allows an unbounded preprocessing computation on the oracle and
+limits the advice retained for the online attack. It is a different model from query-bounded
+preprocessing with unrestricted retained memory. See Chung–Guo–Liu–Qian,
+[*Tight Quantum Time-Space Tradeoffs for Function Inversion*](https://arxiv.org/abs/2006.05650v2),
+§3.1, Definition 3.1: the first algorithm is an arbitrary function of the oracle and outputs
+an `S`-qubit advice state; the second algorithm has a query bound. Classical advice and quantum
+advice require distinct statements.
+
+An advice budget must count all retained
+information, including the classical branch state, rather than only the quantum register's
+dimension. Bit-fixing, presampling and their quantum variants are a separate proof track.
+Guo–Li–Liu–Zhang,
+[*Unifying Presampling via Concentration Bounds*](https://eprint.iacr.org/2020/1589), Definition 1,
+specifies unbounded preprocessing with bounded classical advice; its discussion of barriers
+to classical presampling against quantum queries is relevant when choosing that track's
+intermediate model. Neither this model nor bounded quantum advice is currently implemented.
