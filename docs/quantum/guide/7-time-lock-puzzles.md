@@ -70,7 +70,11 @@ stateful runtimes too and keeps their private state throughout.
 
 The corresponding laws without preprocessing remain available. A theorem proved only for
 that restricted adversary class does not establish `QROMDelaySecure` for arbitrary
-preprocessing budgets.
+preprocessing budgets. The interface embeds classical honest generators; an adapter from
+arbitrary classical two-phase adversaries, preserving both advantages and resource budgets,
+is a separate bridge. Generic correctness and solver-budget predicates for quantum puzzles
+are also separate interface work. The application below proves its honest execution
+laws and budgets directly.
 
 ## Finite windows for the exact pointer-chain encoding
 
@@ -85,18 +89,29 @@ truncation. `hashInputBound` is `max (54+b) 83`; every honest input fits, and 86
 when the link width is at most 32. An adversary may query any superposition within the window.
 The interface does not model unrestricted-length byte queries.
 
-`windowTableEquiv` splits the complete raw table into typed answers, fixed mask tails and
-all outside-image answers. `sampledDelayLawWith_quantumWindowScheme` transports the entire
-preprocessing/generation/online experiment through that bijection. Its observer retains the
-answering table jointly with the transcript. `qromDelayAdvantage_quantumWindowScheme` is the
-key-recovery specialization. Neither equality assumes query budgets or bounds the success
-probability.
+The raw interface supplies `quantumWindowScheme`, the injective honest-input encoding
+`hashInputWindow_injective`, and the fixed-oracle honest execution equalities
+`simulateQ_windowScheme_gen` and `simulateQ_windowScheme_solve`. The coupling
+programs the raw table directly, so the adversary retains all raw query registers throughout.
+
+Separately, `windowTableEquiv` splits that table into typed answers, fixed mask tails and
+all outside-image answers. `sampledDelayLawWith_quantumWindowScheme` transports the complete
+experiment through this bijection, and `qromDelayAdvantage_quantumWindowScheme` specializes
+it to key recovery. These standalone encoding laws retain the answering table jointly with
+the transcript and require no query budget. These table-splitting laws are separate from the raw
+encoding and programming interfaces.
 
 The honest generator and checked solver agree with the source leanSeal algorithms for
 every fixed byte-answer function, restricted to the window. The public puzzle is the
 existing structured `PointerChainPuzzle.LeanSeal.Puzzle` type. Transport to serialized public
 puzzles and a statement for arbitrary serialized solver inputs remain separate; the honest oracle-input
 encoding alone does not establish that wire interface.
+
+`quantumWindowDerive` exposes honest key derivation without the commitment check.
+`isTotalQueryBound_quantumWindowDerive` gives its `keyRound n m = n*(m+2)+1` round bound,
+and `evalDist_quantumWindowDerive_genWith` gives the point-mass law at the actual generated
+key for every fixed raw oracle and honest generation coins. The checked solver makes one
+extra commitment-validation call.
 
 The rank-frontier lemmas provide another prerequisite. A path input for the next honest
 query round depends only on labels received in preceding honest rounds; inputs further

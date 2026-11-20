@@ -11,6 +11,11 @@ The Mathlib-only base (completely positive maps, subinstruments, Choi–Kraus an
 observation, pure states and oracle unitaries) lives in
 [QuantumFoundations](https://github.com/lean-crypto-foundations/QuantumFoundations), shared with
 CatCrypt, and VCVio imports it since #921. The rest of the layer is in `VCVio/Quantum/`.
+VCVio's imports select the completely positive subinstrument modules. The pinned dependency
+also has a different `Quantum.QComp` in `QuantumFoundations.Instrument`; importing that module
+or its umbrella together with VCVio's `Quantum.Comp.Basic` causes a declaration-name collision.
+The stack does not import it. Resolving that upstream naming and instrument API is separate
+from the parallel-query results.
 
 Merged:
 
@@ -195,6 +200,9 @@ It imports only QuantumFoundations and Mathlib and is staged for upstreaming to 
 requires equal `In` and `Out` and `Result = Unit`; classical-result checked/read ports of vector
 commitments are outside this scope. General stateful batches carry no implicit commutation assumption.
 
+Each batch uses one base port. A mixed-oracle round requires a single port encoding all of
+its oracle inputs, for example on a sum domain; the generic batch API does not mix base ports.
+
 `Oracle/Parallel.lean` specializes `uBatchSpec` to base port `Unit`, so a classical port is
 `((), k)` with width in its second component. It proves that ordered additive calls agree with a
 simultaneous query on all slots and defines the parallel QROM law by sampling one function for
@@ -247,7 +255,9 @@ These results allow arbitrary adaptive local signatures and interpretations, mix
 subnormalized input states, finite domains and finite abelian response groups. A plain compressed
 leaf observation does not read `H`; observations `f H leaf` require an explicit joint-oracle read.
 
-The M2a model and transport obligations are complete.
+The run equalities and point-budget certificates supply transport for sequential theorems
+whose local signature includes arbitrary instruments. Local gate-cost restrictions require
+an additional compilation argument.
 
 ### 12. Parallel reprogramming, hybrids and search
 
@@ -268,10 +278,10 @@ incidence hypotheses.
 
 `Oracle/ParallelHybrid.lean` lifts the comparison to adaptive programs, charging union-query
 weights to a designated reference execution. The interpretation, program, initial state and
-final observation are shared. `Comp/HybridBudget.lean` uses a total call cutoff across all ports
-and a width cap, avoiding a sum of separate per-port maxima. The analytic cutoff and
-square-root aggregation lemmas in `Foundations/Hybrid.lean` import only QuantumFoundations and
-are staged for that dependency.
+final observation are shared. The analytic cutoff and square-root aggregation lemmas in
+`Foundations/Hybrid.lean` import only QuantumFoundations and are staged for that dependency.
+`Comp/HybridBudget.lean` supplies additional total-call and width-cap estimates across all
+ports; the search proofs use `Comp/ChargeWeight.lean` directly.
 
 `Comp/ChargeWeight.lean` gives the pathwise natural-number port budget `IsQueryChargeBound`.
 `totalWeight_le_of_isQueryChargeBound` bounds total query weight by the budget times the input
@@ -292,10 +302,10 @@ measurements, mixed or subnormalized states, duplicate inputs and width zero are
 The bound includes zero-query guessing; loss and postselection remain missing mass without
 renormalization.
 
-These results implement the direct reprogramming, adaptive hybrid and round/point unique-mark
-search part of M3a. Exact sums of square roots for deterministic width profiles remain open. The changing-property directional recurrence and its adaptive
-mixed-state and total-budget transports (M−1), the general final-measurement lemma (M0), and CFHL
-compressed-oracle bounds are separate obligations.
+These results prove direct reprogramming, adaptive hybrid and round/point unique-mark search
+bounds. Exact sums of square roots for deterministic width profiles remain open. The
+changing-property directional recurrence, its adaptive mixed-state and total-budget transports,
+the general final-measurement lemma, and CFHL compressed-oracle bounds are separate obligations.
 
 `Oracle/ParallelFinding.lean` packages the shared search argument. A fixed reference execution
 and pointwise weighted incidence `δ` bound a weighted family of hidden-set finding experiments
@@ -303,7 +313,7 @@ by `δ * (1 + 2 * sqrt (q * Q))^2`. The weights need not normalize. The final ev
 same hidden set as its answering oracle; the reference state, program and guess are independent
 of the sampled set. Both marked search and random-function preimage search instantiate this theorem.
 
-`Oracle/ParallelPreimage.lean` completes M3b for a fixed target chosen independently of the uniform
+`Oracle/ParallelPreimage.lean` handles a fixed target chosen independently of the uniform
 function. `preimageSearchAdvantage_le_of_isPointBound` gives
 `min 1 ((1 + 2 * sqrt (q * Q))^2 / |Y|)`; its width-cap corollary uses `Q = k * q`.
 One function answers every round and the endpoint verifier. The target is neither obtained by
@@ -359,16 +369,20 @@ The exact pointer-chain puzzle has six oracle families with different state and 
 ordinary iterated hash chains, an accumulator,
 and a published key commitment. Even with one chain and no public masked links, obtaining the
 key requires the internal chain, accumulator and key hash. leanSeal §4.4 states that its
-exact-encoding theorem is classical, and §8.3 item 4 leaves the quantum extension open in
-that paper. A round-bounded quantum recovery theorem requires additional analysis.
+exact-encoding theorem is classical. Its §4.4 cites the idealized quantum puzzle of
+[Afshar et al.](https://eprint.iacr.org/2023/932), and §8.3 item 4 asks to extend that analysis
+to truncated links, the accumulator and the commitment.
+A round-bounded quantum recovery theorem requires additional analysis.
 
-The first encoding step retains the entire raw oracle table. An injective encoding of typed
-inputs and a per-cell response split give a bijection between raw tables and typed-answer,
-tail and outside-image tables (`Equiv.tableSplit`). Uniform table reparameterization preserves
-the joint law of any raw quantum program, including observations of the hidden oracle.
-The query signature stays unchanged, so coherent superpositions across labels and arbitrary
-outside-image inputs remain available. This does not use the classical lazy-cache adapter
-as a quantum simulation or discard the unused mask bytes.
+The raw interface supplies the raw finite-window oracle, its injective honest-input encoding
+`hashInputWindow_injective`, and fixed-oracle agreement of the honest generator and solver
+with the byte algorithms. Coherent
+superpositions across labels, unused response bytes and outside-image inputs remain available.
+
+A separate encoding result, `Equiv.tableSplit`, decomposes a raw table into typed-answer,
+tail and outside-image tables. Its uniform reparameterization laws preserve observations
+jointly with the hidden table while leaving the quantum query signature unchanged. These are
+standalone table-encoding results; they are separate from the raw encoding and programming interfaces.
 
 The current homogeneous QROM model requires a finite input type. `ByteArray.Bounded`
 contains every byte string up to a stated maximum length, including malformed and unlabelled
@@ -379,6 +393,12 @@ its explicit input-length scope. It is not a theorem for arbitrary-length byte q
 The honest algorithms use structured public puzzles and agree with the source `gen` and
 `solve` for every fixed byte-answer function restricted to the window. A serialized public
 puzzle interface and a theorem for arbitrary serialized solver inputs remain separate.
+
+The honest quantum program `quantumWindowDerive` has round bound
+`keyRound n m = n*(m+2)+1` and point bound `n*(m+3)`.
+`evalDist_quantumWindowDerive_genWith` proves that its fixed-oracle honest-generation law is
+a point mass at the generated key. The checked solver uses one further commitment-validation
+call; its full budget is `keyRound n m + 1` rounds and `solvePoints n m` points.
 
 `PointerChainPuzzle.PathValue.rankPrefix` supplies a separate prerequisite for the quantum delay
 argument. Values beyond rank `r+1` have a predecessor beyond rank `r`; their inputs have

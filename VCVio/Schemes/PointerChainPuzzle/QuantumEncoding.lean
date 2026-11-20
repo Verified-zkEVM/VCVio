@@ -196,6 +196,19 @@ def windowRoundImpl {b n B : ℕ} (hB : hashInputBound b ≤ B) :
         liftM ((unifSpec + (windowSpec B).batch).query
           (.inr (ts.map (hashInputWindow hB))))
 
+/-- Encoding a typed round preserves its number of points and submits exactly one raw round.
+Local uniform sampling remains free, so every online round-and-point budget is preserved. -/
+theorem isOnlineQueryBound_simulateQ_windowRoundImpl {b n B : ℕ}
+    (hB : hashInputBound b ≤ B) {α : Type}
+    {oa : OracleComp (unifSpec + (typedSpec b n).batch) α} {r Q : ℕ}
+    (h : IsOnlineQueryBound oa (r, Q)) :
+    IsOnlineQueryBound (simulateQ (windowRoundImpl hB) oa) (r, Q) := by
+  refine h.simulateQ_of_step fun t ↦ ?_
+  rcases t with k | ts
+  · simp [windowRoundImpl, IsOnlineQueryBound, isQueryBound_query_iff]
+  · rw [windowRoundImpl]
+    simp [IsOnlineQueryBound, isQueryBound_query_iff]
+
 /-- The exact pointer-chain generator and checked solver over the full finite byte window.
 Only their own queries are encoded typed points; an adversary's raw access remains unrestricted
 within the window. -/
@@ -286,6 +299,75 @@ noncomputable def quantumWindowScheme {b n B : ℕ} (hB : hashInputBound b ≤ B
 theorem quantumWindowScheme_eq_toQuantum {b n B : ℕ} (hB : hashInputBound b ≤ B)
     (m : ℕ) [NeZero n] :
     quantumWindowScheme (n := n) hB m = (windowScheme (n := n) hB m).toQuantum := rfl
+
+/-- The honest quantum algorithm that obtains the key before checking its public commitment.
+Its raw hash calls are the byte encoding of the typed key-deriving algorithm. -/
+@[expose]
+noncomputable def quantumWindowDerive {b n B : ℕ} (hB : hashInputBound b ≤ B)
+    (m : ℕ) [NeZero n] (puzzle : Puzzle b n) :
+    QComp (qromBatchSpec (ByteArray.Bounded B) (Bytes 32))
+      (QReg.of Unit) (QReg.of Unit) (Bytes 32) :=
+  (simulateQ (windowRoundImpl hB)
+    (PointerChainPuzzle.derive m (ctx b n m) id puzzle)).toQuantumBatch
+
+/-- The quantum key-deriving algorithm uses at most the honest key-receipt round. -/
+theorem isTotalQueryBound_quantumWindowDerive {b n B : ℕ} (hB : hashInputBound b ≤ B)
+    (m : ℕ) [NeZero n] (puzzle : Puzzle b n) :
+    (quantumWindowDerive hB m puzzle).IsTotalQueryBound (keyRound n m) :=
+  (isOnlineQueryBound_simulateQ_windowRoundImpl hB
+    (isOnlineQueryBound_derive m (ctx b n m) id puzzle)).isTotalQueryBound_toQuantumBatch
+
+/-- The quantum key-deriving algorithm uses at most `n * (m + 3)` raw hash points. -/
+theorem isPointBound_quantumWindowDerive {b n B : ℕ} (hB : hashInputBound b ≤ B)
+    (m : ℕ) [NeZero n] (puzzle : Puzzle b n) :
+    (quantumWindowDerive hB m puzzle).IsPointBound (n * (m + 3)) :=
+  (isOnlineQueryBound_simulateQ_windowRoundImpl hB
+    (isOnlineQueryBound_derive m (ctx b n m) id puzzle)).isPointBound_toQuantumBatch
+
+/-- Checking the commitment after deriving the key costs one additional quantum oracle round. -/
+theorem isTotalQueryBound_quantumWindowScheme_solve {b n B : ℕ}
+    (hB : hashInputBound b ≤ B) (m : ℕ) [NeZero n] (puzzle : Puzzle b n) :
+    ((quantumWindowScheme hB m).solve puzzle).IsTotalQueryBound (keyRound n m + 1) :=
+  (isOnlineQueryBound_simulateQ_windowRoundImpl hB
+    (isOnlineQueryBound_solve m (ctx b n m) id puzzle)).isTotalQueryBound_toQuantumBatch
+
+/-- The checked quantum solver's total raw hash points include its final commitment query. -/
+theorem isPointBound_quantumWindowScheme_solve {b n B : ℕ}
+    (hB : hashInputBound b ≤ B) (m : ℕ) [NeZero n] (puzzle : Puzzle b n) :
+    ((quantumWindowScheme hB m).solve puzzle).IsPointBound (solvePoints n m) :=
+  (isOnlineQueryBound_simulateQ_windowRoundImpl hB
+    (isOnlineQueryBound_solve m (ctx b n m) id puzzle)).isPointBound_toQuantumBatch
+
+/-- At every fixed raw table, the quantum key-deriving algorithm returns the byte-level
+key-deriving algorithm's output with probability one. -/
+theorem evalDist_quantumWindowDerive {b n B : ℕ} (hB : hashInputBound b ≤ B)
+    (H : ByteArray.Bounded B → Bytes 32) (m : ℕ) [NeZero n]
+    (outputSpace : MeasurableSpace (Bytes 32)) (puzzle : Puzzle b n) :
+    letI := outputSpace
+    (parallelOracleRuntime H).evalDist₂ .instruments (quantumWindowDerive hB m puzzle)
+      (SubState.basis ()) = Measure.dirac (derive (extendWindowOracle H) m puzzle) := by
+  let : MeasurableSpace (Bytes 32) := outputSpace
+  rw [quantumWindowDerive, evalDist_parallelOracleRuntime_toQuantumBatch,
+    ← QueryImpl.simulateQ_compose, windowImpl_compose_windowRoundImpl,
+    simulateQ_derive_eq, evalDist_pure]
+
+/-- An honestly generated puzzle's key is available in the quantum model by `keyRound n m`,
+before the checked solver's final commitment query. This holds at every raw table and honest
+salt/link choice, without averaging or a collision allowance. -/
+theorem evalDist_quantumWindowDerive_genWith {b n B : ℕ} (hB : hashInputBound b ≤ B)
+    (H : ByteArray.Bounded B → Bytes 32) (m : ℕ) [NeZero n]
+    (outputSpace : MeasurableSpace (Bytes 32)) (salt : Bytes 16) (xs : Fin n → Bytes b) :
+    letI := outputSpace
+    (parallelOracleRuntime H).evalDist₂ .instruments
+        (quantumWindowDerive hB m (genWith (extendWindowOracle H) m salt xs).1)
+        (SubState.basis ()) =
+      Measure.dirac (genWith (extendWindowOracle H) m salt xs).2 := by
+  let : MeasurableSpace (Bytes 32) := outputSpace
+  rw [evalDist_quantumWindowDerive]
+  have hd := PointerChainPuzzle.simulateQ_derive (m := m) (mkCtx := ctx b n m)
+    (initAcc := id) (O := oracles (extendWindowOracle H)) salt xs
+  rw [honestPuzzle_oracles, honestKey_oracles, simulateQ_derive_eq] at hd
+  exact congrArg Measure.dirac ((OracleComp.pure_inj _ _).1 hd)
 
 /-- Honest quantum generation has exactly the source byte-generator law, with its auxiliary
 unit secret retained. Only the finite input window restricts the oracle model. -/

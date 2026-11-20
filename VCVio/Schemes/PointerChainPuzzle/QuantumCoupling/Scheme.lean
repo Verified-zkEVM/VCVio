@@ -17,7 +17,9 @@ with one oracle throughout and the recovery key retained in the final event. No 
 or losslessness assumptions are needed for this representation.
 
 The rank-programmed comparison charges path-input collisions once, with allowance
-`solvePoints n m ^ 2 / |Bytes 32|`. Its path responses remain unconditionally uniform.
+`solvePoints n m ^ 2 / |Bytes 32|`, where `|Bytes 32| = 2^256`. In the programmed experiment,
+preprocessing already queries the fully programmed oracle, and the same oracle answers the
+online phase. The path responses are sampled without conditioning on collision-freedom.
 -/
 
 public section
@@ -188,8 +190,9 @@ theorem qromDelayAdvantage_quantumWindowScheme_le_programmed {m : ℕ} [NeZero n
     (saltSpace := inferInstance) (keySpace := inferInstance) hB adv] at h
   exact h
 
-/-- The actual key-recovery probability is additionally capped by one. This coupling comparison
-precedes the resource-bounded recovery analysis in `QuantumCoupling.Preprocessing`. -/
+/-- Compare actual key recovery with programmed recovery and its collision allowance, capped
+by the subprobability bound of one. In the programmed experiment, both adversary phases query
+the same programmed oracle. -/
 theorem qromDelayAdvantage_quantumWindowScheme_le_min_programmed {m : ℕ} [NeZero n]
     (hb : b ≤ 32) (hn : n < 2 ^ 32) (hB : hashInputBound b ≤ B)
     (adv : WindowAdversary b n B) :
