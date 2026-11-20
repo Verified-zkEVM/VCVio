@@ -196,6 +196,7 @@ public import VCVioTest.Quantum.VectorCommitmentQuantum
 public import VCVioTest.QueryBounds
 public import VCVioTest.QueryCacheInstability
 public import VCVioTest.QueryHom
+public import VCVioTest.RandomOracleChildren
 public import VCVioTest.RandomOracleClassIndexedTape
 public import VCVioTest.RandomOracleControls
 public import VCVioTest.RandomOracleDefer
@@ -214,6 +215,7 @@ public import VCVioTest.RandomOracleRelabel
 public import VCVioTest.RandomOracleRouting
 public import VCVioTest.RandomOracleSettled
 public import VCVioTest.RandomOracleTouchRead
+public import VCVioTest.RandomOracleUnaryEdge
 public import VCVioTest.RandomPermutationConditioning
 public import VCVioTest.ReactiveBudget
 public import VCVioTest.ReactiveKernel
