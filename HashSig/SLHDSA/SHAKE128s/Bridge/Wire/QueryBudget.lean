@@ -7,8 +7,6 @@ Authors: Alexander Hicks
 module
 public import HashSig.SLHDSA.SHAKE128s.Bridge.Wire.Defs
 public import HashSig.SLHDSA.SHAKE128s.Statement.Game.CompleteBudget
-import HashSig.SLHDSA.SHAKE128s.Bridge.Scheme
-import HashSig.SLHDSA.SHAKE128s.Proof.VerificationBudget
 
 /-!
 # Actual SHAKE-128s wire-game query budgets
@@ -28,11 +26,11 @@ namespace SLHDSA.SHAKE128s.Bridge
 
 open SLHDSA.Security
 
-/-- The actual SHAKE-128s internal verifier makes at most `verifierCap` total oracle calls.
+/-- The actual SHAKE-128s internal verifier makes at most 3824 total oracle calls.
 Canonical public-hash naturality and the one-query SHAKE encoding transport the intrinsic bound. -/
-theorem isTotalQueryBound_FIPS205_internal_verify (pk : PublicKeyCore FIPS205.core) (msg : Bytes)
+theorem isTotalQueryBound_FIPS205_internal_verify_3824 (pk : PublicKeyCore FIPS205.core) (msg : Bytes)
     (signature : GeneralScheme.SignatureCore FIPS205.params FIPS205.core) :
-    IsTotalQueryBound (FIPS205.internal.verify pk msg signature) verifierCap := by
+    IsTotalQueryBound (FIPS205.internal.verify pk msg signature) 3824 := by
   let ambient : QueryImpl (publicHashSpec FIPS205.core)
       (OracleComp (unifSpec + hashSpec FIPS205.core)) :=
     QueryImpl.ofLift (publicHashSpec FIPS205.core) _
@@ -49,7 +47,8 @@ theorem isTotalQueryBound_FIPS205_internal_verify (pk : PublicKeyCore FIPS205.co
     (simulateQ (encImpl FIPS205.params) (simulateQ ambient
       (GeneralScheme.verifyInternalM FIPS205.params FIPS205.core msg signature pk))) _
   rw [← QueryImpl.simulateQ_compose]
-  simpa only [Nat.mul_one, verifierCap] using IsTotalQueryBound.simulateQ_of_step_le
+  have hcap : GeneralScheme.verifyInternalQueryBound FIPS205.params.params = 3824 := by decide
+  simpa only [Nat.mul_one, hcap] using IsTotalQueryBound.simulateQ_of_step_le
     (GeneralScheme.verifyInternalM_isTotalQueryBound FIPS205.params FIPS205.core msg signature pk)
     (step := 1) (impl := encImpl FIPS205.params ∘ₛ ambient) (by
       intro t
@@ -58,27 +57,22 @@ theorem isTotalQueryBound_FIPS205_internal_verify (pk : PublicKeyCore FIPS205.co
         simp only [QueryImpl.apply_compose]
         exact ⟨Nat.one_pos, fun _ => trivial⟩)
 
+/-- The actual SHAKE-128s internal verifier makes at most `verifierCap` total oracle calls.
+Canonical public-hash naturality and the one-query SHAKE encoding transport the intrinsic bound. -/
+theorem isTotalQueryBound_FIPS205_internal_verify (pk : PublicKeyCore FIPS205.core) (msg : Bytes)
+    (signature : GeneralScheme.SignatureCore FIPS205.params FIPS205.core) :
+    IsTotalQueryBound (FIPS205.internal.verify pk msg signature) verifierCap :=
+  (isTotalQueryBound_FIPS205_internal_verify_3824 pk msg signature).mono (by decide)
+
 /-- The actual verifier uses at most 3824 calls, including failed verifications. -/
 theorem isTotalQueryBound_FIPS205_verify_3824 (pk : PublicKeyCore FIPS205.core) (request : Message)
     (wire : Bytes) : IsTotalQueryBound (FIPS205.scheme.verify pk request wire) 3824 := by
-  let key : PublicKey := ⟨digestEquiv.symm pk.pkSeed, digestEquiv.symm pk.pkRoot⟩
-  have key_map : pkMap key = pk :=
-    congrArg₂ (PublicKeyCore.mk (core := FIPS205.core))
-      (digestEquiv.apply_symm_apply pk.pkSeed) (digestEquiv.apply_symm_apply pk.pkRoot)
-  rw [← key_map, ← simulateQ_relabel_verify, VerificationBudget.verify_lift, liftComp_def,
-    ← QueryImpl.simulateQ_compose]
-  have paper : IsTotalQueryBound
-      (Scheme.verify key request wire : OracleComp HashSpec Bool) 3824 := by
-    cases hf : request.frame with
-    | none => simp only [Scheme.verify, SignatureAlg.SigningView.Encoding.verify, hf]; trivial
-    | some msg =>
-      cases hp : Signature.fromBytes? wire with
-      | none => simp only [Scheme.verify, SignatureAlg.SigningView.Encoding.verify, hf, hp]; trivial
-      | some sig =>
-        exact (VerificationQueries.verify_bounds key request wire msg sig hf hp).toIsTotalQueryBound
-  simpa only [Nat.mul_one] using paper.simulateQ_of_step_le (step := 1) (impl := _) (by
-    intro t
-    exact ⟨Nat.one_pos, fun _ => trivial⟩)
+  simp only [FIPS205.scheme, FIPS205.signingView_verify]
+  split
+  · trivial
+  · split
+    · trivial
+    · exact isTotalQueryBound_FIPS205_internal_verify_3824 _ _ _
 
 /-- The actual external SHAKE-128s verifier has the universal cap 3929 (`verifierCap_eq`).
 Invalid contexts and malformed encodings return before hashing. Acceptance is not assumed. -/

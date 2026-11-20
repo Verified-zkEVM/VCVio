@@ -279,6 +279,40 @@ theorem sum_chainStepsCore_add_sum_complement (core : CorePrimitives p) (msg : c
   simp_rw [Nat.add_sub_of_le (chainStepsCore_le core msg _)]
   simp
 
+private theorem sum_getD (xs : List Nat) (n : Nat) (h : xs.length = n) :
+    (∑ i : Fin n, xs.getD i.val 0) = xs.sum := by
+  subst n
+  rw [← List.sum_ofFn]
+  congr 1
+  exact List.ext_getElem (by simp) (by simp +contextual [List.getD_eq_getElem?_getD])
+
+open VCVio.Algorithms VCVio.Algorithms.RadixEncoding in
+/-- A valid WOTS+ checksum saves at least one full chain across the recovery digits. -/
+theorem sum_complement_chainStepsCore_le_valid (hp : p.Valid)
+    (core : CorePrimitives p) (msg : core.Y) :
+    (∑ i : Fin p.len, (p.w - 1 - chainStepsCore core msg i.val)) ≤
+      p.len * (p.w - 1) - (p.w - 1) := by
+  have h := sum_chainStepsCore_add_sum_complement core msg
+  have hsteps : (∑ i : Fin p.len, chainStepsCore core msg i.val) =
+      (chainLengthsCore core msg).sum :=
+    sum_getD _ _ (chainLengthsCore_length core msg)
+  rw [hsteps, chainLengthsCore_eq_wotsFullDigits hp] at h
+  let ds := wotsMsgDigitsCore core msg
+  have hlen : ds.length = p.len1 := wotsMsgDigitsCore_length _ _
+  have hsum := pred_le_sum_append_of_fromBaseW_add_sum
+    (Nat.one_lt_two_pow (Nat.ne_of_gt hp.lgw_pos))
+    ds (digitsOfBaseW (wotsChecksumValue p.w ds) p.w p.len2)
+    (by rw [hlen]; by_contra! hz; have := hp.len1_mul_lgw; simp_all [hp.n_pos.ne'])
+    (by
+      change fromBaseW p.w _ + ds.sum = ds.length * (p.w - 1)
+      rw [fromBaseW_digitsOfBaseW_of_lt _ _ _
+        (lt_of_le_of_lt (wotsChecksumValue_le hlen (wotsMsgDigitsCore_mem_lt _ _))
+          hp.len1_mul_pred_w_lt_pow_len2)]
+      exact ComplementaryChecksum.value_add_sum_eq p.w ds (wotsMsgDigitsCore_mem_lt _ _))
+  change p.w - 1 ≤ (wotsFullDigits ds p.w p.len1 p.len2).sum at hsum
+  change (wotsFullDigits ds p.w p.len1 p.len2).sum + _ = _ at h
+  omega
+
 /-! ### Public-key generation, signing, and recovery -/
 
 /-- A WOTS+ signature: the `len` chain values, length-indexed. -/

@@ -50,7 +50,7 @@ def check(path: Path) -> None:
     q = 2 ** 64
     for name, n, h, d, hp, a, k, addresses in parameters:
         card = 2 ** (8 * n)
-        verifier = 2 + k * (a + 1) + d * ((2 * n + 3) * 15 + 1 + hp)
+        verifier = 2 + k * (a + 1) + d * ((2 * n + 3) * 15 - 15 + 1 + hp)
 
         def structured(qh: int) -> Fraction:
             return (qh + 1) * coverage(h, a, k, q, qh, Fraction(q, card)) + Fraction(

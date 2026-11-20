@@ -491,7 +491,7 @@ def check_bindings(bindings: dict) -> list[str]:
         raise ValueError("Ordinary lake test must register its R0b tail gate exactly once")
     csv = ROOT / "docs/design/slh-dsa-security-bounds.csv"
     if r0a.sha256(csv.read_bytes()) != bindings["csvSha256"]:
-        raise ValueError("The original exact eighteen-row CSV changed")
+        raise ValueError("The checksum-aware eighteen-row CSV changed")
     return ["SLHDSA.Refactor.Semantics." + name for name in sorted(declared)]
 
 

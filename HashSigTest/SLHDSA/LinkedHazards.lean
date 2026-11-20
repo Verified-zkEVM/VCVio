@@ -22,7 +22,7 @@ it at SLH-DSA-SHAKE-256s and SLH-DSA-SHAKE-256f for an adversary making `2 ^ 64`
 
 * **The bound at both parameter sets**, in the deterministic and the hedged form, at every
   public seed, with no condition on the seed.
-* **The bound is below one.** With `V = 8444` at 256s and `V = 17522` at 256f, the right-hand side
+* **The bound is below one.** With `V = 8324` at 256s and `V = 17267` at 256f, the right-hand side
   is below one (`rhs_256s_lt_one`, `rhs_256f_lt_one`), so the advantage is below one at every public
   seed (`shakeStrongAdvantage_lt_one_256s`, `shakeStrongAdvantage_lt_one_256f`); the coverage term
   is bounded crudely here, by about `2 ^ -140` at 256s and `2 ^ -65` at 256f.
@@ -52,12 +52,12 @@ open Concrete Security WeakKeyBoundTest KeyedHash.Covering
 
 /-- The verifier's query bound at SLH-DSA-SHAKE-256s. -/
 theorem verifyInternalQueryBound_256s :
-    GeneralScheme.verifyInternalQueryBound vp256s.params = 8444 := by
+    GeneralScheme.verifyInternalQueryBound vp256s.params = 8324 := by
   decide
 
 /-- The verifier's query bound at SLH-DSA-SHAKE-256f. -/
 theorem verifyInternalQueryBound_256f :
-    GeneralScheme.verifyInternalQueryBound vp256f.params = 17522 := by
+    GeneralScheme.verifyInternalQueryBound vp256f.params = 17267 := by
   decide
 
 /-- **The bound at SLH-DSA-SHAKE-256s**, at every public seed. -/
@@ -66,7 +66,7 @@ example {optRand : PublicKeyCore (shakeCore vp256s) → ProbComp (shakeCore vp25
     (adv : StrongUnforgeableAdversary (shakeRomScheme vp256s optRand (pure pkSeed)))
     (hadv : adv.RomQueryBound (2 ^ 64) (2 ^ 64)) :
     shakeStrongAdvantage vp256s adv ≤
-      securityBound vp256s.params (Nat.card (shakeCore vp256s).Y) 2 1 (2 ^ 64 + 8444) (2 ^ 64) +
+      securityBound vp256s.params (Nat.card (shakeCore vp256s).Y) 2 1 (2 ^ 64 + 8324) (2 ^ 64) +
         (((2 ^ 64 : ℕ) : ℝ≥0∞) + 1) / Nat.card (shakeCore vp256s).Y +
         (((2 ^ 64 : ℕ) : ℝ≥0∞) + 1) / Nat.card (shakeCore vp256s).Y := by
   simpa only [verifyInternalQueryBound_256s] using
@@ -80,7 +80,7 @@ example {optRand : PublicKeyCore (shakeCore vp256f) → ProbComp (shakeCore vp25
     (adv : StrongUnforgeableAdversary (shakeRomScheme vp256f optRand (pure pkSeed)))
     (hadv : adv.RomQueryBound (2 ^ 64) (2 ^ 64)) :
     shakeStrongAdvantage vp256f adv ≤
-      securityBound vp256f.params (Nat.card (shakeCore vp256f).Y) 2 1 (2 ^ 64 + 17522) (2 ^ 64) +
+      securityBound vp256f.params (Nat.card (shakeCore vp256f).Y) 2 1 (2 ^ 64 + 17267) (2 ^ 64) +
         (((2 ^ 64 : ℕ) : ℝ≥0∞) + 1) / Nat.card (shakeCore vp256f).Y +
         (((2 ^ 64 : ℕ) : ℝ≥0∞) + 1) / Nat.card (shakeCore vp256f).Y := by
   simpa only [verifyInternalQueryBound_256f] using
@@ -95,9 +95,9 @@ example {optRand : PublicKeyCore (shakeCore vp256s) → ProbComp (shakeCore vp25
     (hadv : adv.RomQueryBound (2 ^ 64) (2 ^ 64)) {ε : ℝ≥0∞}
     (hε : ∀ pk, Pr{let r ← optRand pk}[r = pkSeed] ≤ ε) :
     shakeStrongAdvantage vp256s adv ≤
-      securityBound vp256s.params (Nat.card (shakeCore vp256s).Y) 2 1 (2 ^ 64 + 8444) (2 ^ 64) +
+      securityBound vp256s.params (Nat.card (shakeCore vp256s).Y) 2 1 (2 ^ 64 + 8324) (2 ^ 64) +
         1 / Nat.card (shakeCore vp256s).Y +
-        ((2 ^ 64 : ℕ) : ℝ≥0∞) * ε * (((2 ^ 64 + 8444 : ℕ) : ℝ≥0∞) + ((2 ^ 64 : ℕ) : ℝ≥0∞) + 1) /
+        ((2 ^ 64 : ℕ) : ℝ≥0∞) * ε * (((2 ^ 64 + 8324 : ℕ) : ℝ≥0∞) + ((2 ^ 64 : ℕ) : ℝ≥0∞) + 1) /
           Nat.card (shakeCore vp256s).Y +
         (((2 ^ 64 : ℕ) : ℝ≥0∞) + 1) / Nat.card (shakeCore vp256s).Y := by
   simpa only [verifyInternalQueryBound_256s] using
@@ -112,9 +112,9 @@ example {optRand : PublicKeyCore (shakeCore vp256f) → ProbComp (shakeCore vp25
     (hadv : adv.RomQueryBound (2 ^ 64) (2 ^ 64)) {ε : ℝ≥0∞}
     (hε : ∀ pk, Pr{let r ← optRand pk}[r = pkSeed] ≤ ε) :
     shakeStrongAdvantage vp256f adv ≤
-      securityBound vp256f.params (Nat.card (shakeCore vp256f).Y) 2 1 (2 ^ 64 + 17522) (2 ^ 64) +
+      securityBound vp256f.params (Nat.card (shakeCore vp256f).Y) 2 1 (2 ^ 64 + 17267) (2 ^ 64) +
         1 / Nat.card (shakeCore vp256f).Y +
-        ((2 ^ 64 : ℕ) : ℝ≥0∞) * ε * (((2 ^ 64 + 17522 : ℕ) : ℝ≥0∞) + ((2 ^ 64 : ℕ) : ℝ≥0∞) + 1) /
+        ((2 ^ 64 : ℕ) : ℝ≥0∞) * ε * (((2 ^ 64 + 17267 : ℕ) : ℝ≥0∞) + ((2 ^ 64 : ℕ) : ℝ≥0∞) + 1) /
           Nat.card (shakeCore vp256f).Y +
         (((2 ^ 64 : ℕ) : ℝ≥0∞) + 1) / Nat.card (shakeCore vp256f).Y := by
   simpa only [verifyInternalQueryBound_256f] using
@@ -158,17 +158,17 @@ theorem two_pow_64_add_mul_div_two_pow_256_le_one (V : ℕ) (hV : V ≤ 2 ^ 64) 
 
 /-- **The bound at SLH-DSA-SHAKE-256s is below one.** -/
 theorem rhs_256s_lt_one :
-    securityBound vp256s.params (2 ^ 256) 2 1 (2 ^ 64 + 8444) (2 ^ 64) +
+    securityBound vp256s.params (2 ^ 256) 2 1 (2 ^ 64 + 8324) (2 ^ 64) +
         (((2 ^ 64 : ℕ) : ℝ≥0∞) + 1) / ((2 ^ 256 : ℕ) : ℝ≥0∞) +
         (((2 ^ 64 : ℕ) : ℝ≥0∞) + 1) / ((2 ^ 256 : ℕ) : ℝ≥0∞) < 1 := by
   have hp : vp256s.params.h = 64 ∧ vp256s.params.a = 14 ∧ vp256s.params.k = 22 := by decide
   rw [securityBound, hp.1, hp.2.1, hp.2.2, verifyInternalQueryBound_256s]
   have hN : (∑ r ∈ Finset.range 23, (r + 1) * r ^ 22 : ℕ) < 2 ^ 104 := by decide
   have hI := weightedTargetCoverBound_le_of_le_h (h := 64) (a := 14) (k := 22) le_rfl
-    (two_pow_64_add_mul_div_two_pow_256_le_one 8444 (by norm_num))
-  have key : ((2 ^ 64 + 8444 : ℕ) + 1 : ℝ≥0∞) * (((2 ^ 104 : ℕ) : ℝ≥0∞) *
+    (two_pow_64_add_mul_div_two_pow_256_le_one 8324 (by norm_num))
+  have key : ((2 ^ 64 + 8324 : ℕ) + 1 : ℝ≥0∞) * (((2 ^ 104 : ℕ) : ℝ≥0∞) *
         (((2 : ℝ≥0∞) ^ 14)⁻¹) ^ 22) +
-      ((2 : ℕ) * ((2 ^ 64 + 8444 : ℕ) : ℝ≥0∞) + (((1 + 1) * 8444 : ℕ) : ℝ≥0∞)) *
+      ((2 : ℕ) * ((2 ^ 64 + 8324 : ℕ) : ℝ≥0∞) + (((1 + 1) * 8324 : ℕ) : ℝ≥0∞)) *
         (((2 ^ 256 : ℕ) : ℝ≥0∞))⁻¹ +
       (((2 ^ 64 : ℕ) : ℝ≥0∞) + 1) / ((2 ^ 256 : ℕ) : ℝ≥0∞) +
       (((2 ^ 64 : ℕ) : ℝ≥0∞) + 1) / ((2 ^ 256 : ℕ) : ℝ≥0∞) < 1 := by
@@ -186,17 +186,17 @@ theorem rhs_256s_lt_one :
 
 /-- **The bound at SLH-DSA-SHAKE-256f is below one.** -/
 theorem rhs_256f_lt_one :
-    securityBound vp256f.params (2 ^ 256) 2 1 (2 ^ 64 + 17522) (2 ^ 64) +
+    securityBound vp256f.params (2 ^ 256) 2 1 (2 ^ 64 + 17267) (2 ^ 64) +
         (((2 ^ 64 : ℕ) : ℝ≥0∞) + 1) / ((2 ^ 256 : ℕ) : ℝ≥0∞) +
         (((2 ^ 64 : ℕ) : ℝ≥0∞) + 1) / ((2 ^ 256 : ℕ) : ℝ≥0∞) < 1 := by
   have hp : vp256f.params.h = 68 ∧ vp256f.params.a = 9 ∧ vp256f.params.k = 35 := by decide
   rw [securityBound, hp.1, hp.2.1, hp.2.2, verifyInternalQueryBound_256f]
   have hN : (∑ r ∈ Finset.range 36, (r + 1) * r ^ 35 : ℕ) < 2 ^ 186 := by decide
   have hI := weightedTargetCoverBound_le_of_le_h (h := 68) (a := 9) (k := 35) (by norm_num)
-    (two_pow_64_add_mul_div_two_pow_256_le_one 17522 (by norm_num))
-  have key : ((2 ^ 64 + 17522 : ℕ) + 1 : ℝ≥0∞) * (((2 ^ 186 : ℕ) : ℝ≥0∞) *
+    (two_pow_64_add_mul_div_two_pow_256_le_one 17267 (by norm_num))
+  have key : ((2 ^ 64 + 17267 : ℕ) + 1 : ℝ≥0∞) * (((2 ^ 186 : ℕ) : ℝ≥0∞) *
         (((2 : ℝ≥0∞) ^ 9)⁻¹) ^ 35) +
-      ((2 : ℕ) * ((2 ^ 64 + 17522 : ℕ) : ℝ≥0∞) + (((1 + 1) * 17522 : ℕ) : ℝ≥0∞)) *
+      ((2 : ℕ) * ((2 ^ 64 + 17267 : ℕ) : ℝ≥0∞) + (((1 + 1) * 17267 : ℕ) : ℝ≥0∞)) *
         (((2 ^ 256 : ℕ) : ℝ≥0∞))⁻¹ +
       (((2 ^ 64 : ℕ) : ℝ≥0∞) + 1) / ((2 ^ 256 : ℕ) : ℝ≥0∞) +
       (((2 ^ 64 : ℕ) : ℝ≥0∞) + 1) / ((2 ^ 256 : ℕ) : ℝ≥0∞) < 1 := by

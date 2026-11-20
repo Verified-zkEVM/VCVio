@@ -36,7 +36,7 @@ the preceding runtime chain executed. Use a fresh external report directory. Sou
 locked dependency snapshots bracket every acceptance input, build and evaluator query.
 
 `bindings.json` records the reviewed equation sources, the original runtime tests/support,
-exact rational evaluator/generator/checker, original eighteen-row CSV, and the source of the
+exact rational evaluator/generator/checker, checksum-aware eighteen-row CSV, and the source of the
 registered finite-index compiler rule. The original 127, low-q569 and verifier569–3824 statements
 are five of R0a's literal contracts; their framing/parsing, acceptance and lifetime premises
 remain intact. The new concrete equations also bind the actual128s dimensions, thirty-byte
@@ -49,3 +49,6 @@ The readable contracts and sampled runtime controls do not prove future implemen
 compatibility, arbitrary compiler behavior, a shared counted-game equivalence, or P4/P5 recovery.
 Those later gates require the stated mathematical observer and theorem-recovery proofs. No
 legacy body delegates to a new construction on the strength of this regression baseline.
+
+The R6c source map records the historical table digest. The current runtime bindings pin the
+checksum-aware evaluator table and its independent exact-rational checker.

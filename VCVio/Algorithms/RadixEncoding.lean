@@ -5,6 +5,7 @@ Authors: Vitalik Buterin, Nicolas Consigny, Alexander Hicks, Matthias Meijers
 -/
 
 module
+public import Mathlib.Data.Nat.ModEq
 public import ToMathlib.Data.Nat.Digits
 public import VCVio.Algorithms.Encoding
 
@@ -133,5 +134,40 @@ theorem getElem?_digitsOfBaseW (n w len j : ℕ) (hj : j < len) :
 theorem natToBytesBE_eq_map_digitsOfBaseW (x width : ℕ) :
     Encoding.natToBytesBE x width = (digitsOfBaseW x 256 width).map UInt8.ofNat := by
   simp [Encoding.natToBytesBE, digitsOfBaseW_eq_range, List.map_map, Function.comp_def]
+
+/-- A positional numeral and its digit sum are congruent modulo one less than the base. -/
+theorem fromBaseW_modEq_sum {base : ℕ} (hbase : 1 ≤ base) (digits : List ℕ) :
+    fromBaseW base digits ≡ digits.sum [MOD base - 1] := by
+  have h : base ≡ 1 [MOD base - 1] := ((Nat.modEq_iff_dvd' hbase).2 dvd_rfl).symm
+  induction digits with
+  | nil => rfl
+  | cons d ds ih =>
+    simpa only [fromBaseW_cons, List.sum_cons, one_pow, Nat.mul_one] using
+      ((h.pow ds.length).mul_left d).add ih
+
+private theorem fromBaseW_eq_zero_of_sum_eq_zero (base : ℕ) (digits : List ℕ)
+    (h : digits.sum = 0) : fromBaseW base digits = 0 := by
+  induction digits with
+  | nil => rfl
+  | cons d ds ih =>
+    simp only [List.sum_cons, Nat.add_eq_zero_iff] at h
+    simp [fromBaseW_cons, h.1, ih h.2]
+
+/-- When the check word encodes the complementary digit sum of a nonempty payload,
+the complete word has digit sum at least one less than the base. -/
+theorem pred_le_sum_append_of_fromBaseW_add_sum {base : ℕ} (hbase : 1 < base)
+    (payload check : List ℕ) (hlen : 0 < payload.length)
+    (hsum : fromBaseW base check + payload.sum = payload.length * (base - 1)) :
+    base - 1 ≤ (payload ++ check).sum := by
+  have hmod := (fromBaseW_modEq_sum hbase.le check).symm.add_right payload.sum
+  rw [hsum] at hmod
+  have hdvd := Nat.modEq_zero_iff_dvd.mp
+    (hmod.trans ((dvd_mul_left (base - 1) payload.length).modEq_zero_nat))
+  rw [List.sum_append, Nat.add_comm]
+  apply Nat.le_of_dvd _ hdvd
+  by_contra! hz
+  have hzero := fromBaseW_eq_zero_of_sum_eq_zero base check (by omega)
+  have hpos : 0 < payload.length * (base - 1) := Nat.mul_pos hlen (by omega)
+  omega
 
 end VCVio.Algorithms.RadixEncoding

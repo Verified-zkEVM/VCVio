@@ -102,8 +102,8 @@ theorem fixedContext_verify (ctx : SLHDSA.Security.PureContext)
     SLHDSA.Security.PureContext.encode_eq_external]
   rfl
 
-/-- Conservative intrinsic verifier cap for SHAKE-128s. -/
-@[expose] def verifierCap : Nat := GeneralScheme.verifyInternalQueryBound FIPS205.params.params
+/-- Conservative fixed-context verification allowance before accounting for checksum digits. -/
+@[expose] def verifierCap : Nat := 3929
 
 /-- The conservative SHAKE-128s verifier cap is 3929 oracle calls. -/
 theorem verifierCap_eq : verifierCap = 3929 := by decide
