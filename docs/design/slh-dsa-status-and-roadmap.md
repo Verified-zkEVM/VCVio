@@ -16,8 +16,9 @@ SP 800-230 profile corollary are on `main`. They leave the scheme-to-game reduct
 hypotheses and do not prove a small concrete bound or bound the same-message SUF residual. PR #766 adds an unconditional SUF-CMA bound, and with it EUF-CMA at the same bound, in the
 classical random-oracle model
 ([below](#classical-random-oracle-bound-merged-766)). It merged as
-`55c29f083ccde8850b4a0dc5a7d5d13ff5cc1dc8` on 2026-10-24. The specialized #912 development
-is an additive integration candidate until its own merge and exact-head validation are recorded.
+`55c29f083ccde8850b4a0dc5a7d5d13ff5cc1dc8` on 2026-10-24. The specialized SHAKE-128s
+development merged the next day in `9b4e1a0307414994c5fe7b136d4c52cdd39333fa`.
+[Specialized integration #912](https://github.com/Verified-zkEVM/VCVio/pull/912)
 
 ## Where the work lives
 
@@ -406,10 +407,11 @@ security profiles, and remaining construction/deployment obligations.
 
 ## Specialized SHAKE-128s strong-unforgeability proof (#912)
 
-The specialized development under `HashSig/SLHDSA/SHAKE128s/` contains a transcription, its
-probability proof and a program/distribution bridge to the library's deterministic pure-mode
-SHAKE-128s scheme. `SLHDSA.SHAKE128s.slhDsa_sufCma_127` bounds strong forging probability by
-`q / 2^127` for `q ≥ 1`, under probability-one work and lifetime caps. The original game permits
+PR #912 proved the joint-work bound on the paper transcription and transported it to the
+deterministic pure-mode FIPS byte game. This consolidation proves the bound on the FIPS game
+and transports it to the transcription. The theorem `SLHDSA.SHAKE128s.slhDsa_sufCma_127`
+bounds strong forging probability by `q / 2^127` for `q ≥ 1`, under probability-one work
+and lifetime caps. The original game permits
 variable contexts in signing requests and uses byte-string signatures. It shares one random
 oracle with fixed 30-byte answers across key generation, signing, the adversary and verification;
 shorter hash roles read the first 16 bytes. Key seeds are independent and uniform.
@@ -417,16 +419,18 @@ shorter hash roles read the first 16 bytes. Key seeds are independent and unifor
 Work is the sum of signing requests, direct adversary hash calls and final-verification hash
 calls, including repeated oracle inputs. At most `2^64` signing requests are allowed. The model
 records key-generation and signer hashes separately and excludes them from this work bound.
-The original public-key interface is structured. The additive candidate's
+The original public-key interface is structured. The bridge theorem
 `Bridge.strongUnforgeableAdvantage_eq_fixedContext` identifies its fixed-context adaptation with
 that actual byte-public-key wire game. `Bridge.withinSigningLimit_fixedContext` and
 `Bridge.fixedContextAdversary_hasQueryBound` derive the actual probability-one caps from a wire
 adversary's `RomQueryBound q_h q_s`. The work transport needs no lifetime premise; the signing
 limit and both security corollaries additionally use `q_s ≤ 2^64`. The external verifier has a
 proved universal cap of 3824 calls, including rejected signatures and invalid contexts.
-`wireStrongAdvantage_le` takes the minimum of `(q_h + q_s + 3824) / 2^127` and the
-existing general SHAKE bound.
-The original 3929-cap endpoints follow by weakening these bounds. These
+`wireStrongAdvantage_le_jointWorkBound` takes the minimum of the general SHAKE bound and
+`jointWorkBound (q_h + q_s + 3824)`. The sharper actual-work term is strictly below
+`(q_h + q_s + 3824) / 2^127` whenever the total is below `2^127`.
+`wireStrongAdvantage_le` gives the minimum with that linear term. The two 3929-cap
+corollaries follow by weakening the verifier allowance. These
 wire corollaries share deterministic signing, one fixed valid context, independent uniform seeds,
 and the fixed 30-byte oracle. The original variable-context theorem remains unchanged.
 
@@ -444,11 +448,11 @@ The later canonical build checkpoint K at `e32b95e2` passed the strict recorded-
 the actual `ecac686f` dependency lock. It covers C5 plus merged #886/#911. The exact C4/C6
 canonical union was independently reviewed and committed as K2, `611ddbe3`; its targeted
 source-candidate build, five public axiom audits, 11 preserved headline comparisons and four direct
-runtime checks passed on that lock. These targeted checks do not replace the final combined
-candidate's clean recorded-head full gate or remote CI, which remain pending. A historical
-ancestor's pass does not certify a later or rebased commit.
-The named `slhdsa_shake128s_compiler_tests` imports the enlarged `HashSig` umbrella;
-`slhdsa_shake128s_game_tests` checks actual source counts and cache-hit charging, and
+runtime checks passed on that lock. These results describe the additive integration at K2.
+The consolidation has its own validation record in [PR #1009](https://github.com/Verified-zkEVM/VCVio/pull/1009).
+The executable `slhdsa_shake128s_compiler_tests` checks direct and nested `Fin.cases` on a
+client that imports `ToMathlib.Compiler.FinCases` and the SHAKE-128s `Statement.Scheme` module.
+The executable `slhdsa_shake128s_game_tests` checks actual source counts and cache-hit charging, and
 `slhdsa_shake128s_wire_bridge_tests` executes actual adapter translation/freshness and rejected-input
 controls. All are explicit `lake test` steps whose assertions must actually execute in the final
 validation log; test-library compilation alone is insufficient. Variable-length-XOF game transport, concrete-SHAKE

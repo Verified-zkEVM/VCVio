@@ -1,6 +1,9 @@
-# Why two proof methods remain
+# Proof routes at the R6c planning baseline
 
-Source-import map only, not a new audit of all probability proofs.
+This note records the proof routes at the refactor planning baseline. Its source names
+identify the historical implementations surveyed by R6c. For the current FIPS game,
+probability argument and compatibility theorem, see the [SHAKE-128s security
+statement](../../slh-dsa-shake128s-suf-cma.md).
 
 * General #766 `Security.CoverageBound` consumes `CoverageRun` and `JointBound`.
   Its role-run/tape-hit/witness argument and byte/seed/randomizer bounds remain

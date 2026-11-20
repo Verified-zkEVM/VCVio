@@ -27,6 +27,26 @@ open scoped ENNReal
 namespace SLHDSA.SHAKE128s
 
 /-- The deterministic fixed-context wire advantage is bounded by the smaller of the general
+SHAKE bound with its weak-seed term and the actual joint-work bound. The final verifier is charged
+the checksum-sensitive intrinsic allowance, 3824 calls at SHAKE-128s. -/
+theorem wireStrongAdvantage_le_jointWorkBound (ctx : SLHDSA.Security.PureContext)
+    (adv : StrongUnforgeableAdversary (Bridge.wireAlgorithm ctx)) {qh qs : Nat}
+    (hadv : adv.RomQueryBound qh qs) (hqs : qs ≤ signingLimit) :
+    strongUnforgeableAdvantage (SLHDSA.Security.shakeRuntime FIPS205.params) adv ≤
+      min (SLHDSA.Security.byteBound FIPS205.params qh qs +
+        SLHDSA.Security.honestAdrsCount FIPS205.params / 2 ^ 256 *
+          SLHDSA.Security.weakSeedFactor FIPS205.params
+            (SLHDSA.Security.everySeedBound FIPS205.params qh qs))
+        (jointWorkBound
+          (qh + qs + GeneralScheme.verifyInternalQueryBound FIPS205.params.params)) := by
+  apply le_min
+  · exact SLHDSA.Security.wireStrongAdvantage_le_securityBound_validatedParams
+      .SLHDSA_SHAKE_128s ctx adv hadv
+  · rw [Bridge.strongUnforgeableAdvantage_eq_fixedContext ctx adv]
+    exact slhDsa_sufCma_le _ _ (Bridge.withinSigningLimit_fixedContext ctx adv hadv hqs)
+      (Bridge.fixedContextAdversary_hasQueryBound ctx adv hadv)
+
+/-- The deterministic fixed-context wire advantage is bounded by the smaller of the general
 SHAKE bound with its weak-seed term and the 127-bit work bound. The final verifier is charged
 the checksum-sensitive intrinsic allowance, 3824 calls at SHAKE-128s. -/
 theorem wireStrongAdvantage_le (ctx : SLHDSA.Security.PureContext)
@@ -39,14 +59,10 @@ theorem wireStrongAdvantage_le (ctx : SLHDSA.Security.PureContext)
             (SLHDSA.Security.everySeedBound FIPS205.params qh qs))
         (((qh + qs + GeneralScheme.verifyInternalQueryBound FIPS205.params.params : Nat) :
           ℝ≥0∞) / ((2 ^ 127 : Nat) : ℝ≥0∞)) := by
-  apply le_min
-  · exact SLHDSA.Security.wireStrongAdvantage_le_securityBound_validatedParams
-      .SLHDSA_SHAKE_128s ctx adv hadv
-  · rw [Bridge.strongUnforgeableAdvantage_eq_fixedContext ctx adv]
-    apply slhDsa_sufCma_127 _ (by rw [Bridge.verifyInternalQueryBound_eq]; omega)
-      (Bridge.fixedContextAdversary ctx adv)
-      (Bridge.withinSigningLimit_fixedContext ctx adv hadv hqs)
-    exact Bridge.fixedContextAdversary_hasQueryBound ctx adv hadv
+  apply (wireStrongAdvantage_le_jointWorkBound ctx adv hadv hqs).trans
+  apply min_le_min le_rfl
+  simpa only [Nat.cast_pow, Nat.cast_ofNat] using
+    jointWorkBound_le (qh + qs + GeneralScheme.verifyInternalQueryBound FIPS205.params.params)
 
 /-- The conservative work bound from the parameter-uniform verifier estimate. -/
 theorem wireStrongAdvantage_le_workBound (ctx : SLHDSA.Security.PureContext)

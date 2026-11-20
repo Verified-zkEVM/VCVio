@@ -1,5 +1,12 @@
 # SLH-DSA security-delta recovery pilot
 
+The Lean 4.35 pilot below records the 3929-call verifier allowance at its cited revisions.
+The current development proves `slhDsa_sufCma_le` for the FIPS 205 joint-work game and uses
+a 3824-call allowance in `wireStrongAdvantage_le_jointWorkBound` for fixed contexts.
+[Current security guide](slh-dsa-shake128s-suf-cma.md) ·
+[FIPS theorem](../../HashSig/SLHDSA/SHAKE128s/Statement/Theorems/StrongUnforgeability.lean) ·
+[Wire theorem](../../HashSig/SLHDSA/SHAKE128s/Statement/Theorems/WireStrongUnforgeability.lean)
+
 This bounded research record compares validated `b63fede77cfcf9e23fda94c28e951e4520fdeb91`
 with main `cc6ae6cc39c1cca024d292262f90880b551fb2b3`. It does not change production code or
 establish that either probability proof is indispensable. The original target remains
@@ -102,9 +109,11 @@ A finite next recovery attempt must discharge four obligations:
 4. Prove the exact original all-`q`, variable-context endpoint, preserving every stronger applicable
    #766 regime before retiring the specialized probability route.
 
-The existing parsed/accepted verifier interval is 569–3824. Rejecting branches have zero work, so
-an unconditional actual-RO 3824 cap and its byte-wire transport are a plausible separate finite
-corollary. They are **not proved here** and must not silently replace the existing universal 3929 cap.
+At the pilot revision the parsed verifier had a 569–3824 hash-call interval. A framing or
+signature-decoding failure returns before any hash query. A well-formed signature that fails the
+final root comparison still incurs verification work. The pilot used the universal 3929-call
+allowance. The current fixed-context wire theorem uses the proved 3824-call upper bound across
+all these branches. [Current wire theorem](../../HashSig/SLHDSA/SHAKE128s/Statement/Theorems/WireStrongUnforgeability.lean)
 
 ## Cost and salvage interpretation
 
