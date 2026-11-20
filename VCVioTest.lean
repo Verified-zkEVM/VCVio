@@ -220,6 +220,7 @@ public import VCVioTest.RandomOracleRouting
 public import VCVioTest.RandomOracleSettled
 public import VCVioTest.RandomOracleTouchRead
 public import VCVioTest.RandomOracleUnaryEdge
+public import VCVioTest.RandomOracleUndisclosed
 public import VCVioTest.RandomPermutationConditioning
 public import VCVioTest.ReactiveBudget
 public import VCVioTest.ReactiveKernel
