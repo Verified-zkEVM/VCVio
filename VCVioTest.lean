@@ -197,6 +197,7 @@ public import VCVioTest.QueryBounds
 public import VCVioTest.QueryCacheInstability
 public import VCVioTest.QueryHom
 public import VCVioTest.RandomOracleAcceptedScan
+public import VCVioTest.RandomOracleAcceptedScanMass
 public import VCVioTest.RandomOracleClassIndexedTape
 public import VCVioTest.RandomOracleControls
 public import VCVioTest.RandomOracleDefer
