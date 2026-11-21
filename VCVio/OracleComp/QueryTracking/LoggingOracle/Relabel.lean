@@ -28,11 +28,13 @@ of the relabelled log at `f msg` comes from an entry of the log at `msg`
 
 public section
 
+universe u v
+
 open OracleSpec OracleComp
 
 namespace OracleSpec.QueryLog
 
-variable {M D T : Type}
+variable {M : Type*} {D : Type*} {T : Type*}
 
 /-- Relabel every entry of a `(M →ₒ T)` query log by `f`, keeping the responses. -/
 @[expose] def relabel (f : M → D) (log : QueryLog (M →ₒ T)) : QueryLog (D →ₒ T) :=
@@ -117,7 +119,8 @@ end OracleSpec.QueryLog
 
 namespace QueryImpl
 
-variable {ι : Type} {spec : OracleSpec ι} {α A B : Type} {m : Type → Type} [Monad m] [LawfulMonad m]
+variable {ι : Type*} {spec : OracleSpec.{_, u} ι} {α A B : Type u} {m : Type u → Type v}
+  [Monad m] [LawfulMonad m]
 
 /-- Two logging handlers whose logs agree up to mapping each entry by `e` give runs whose logs
 agree up to the same map. -/
@@ -133,7 +136,7 @@ theorem run_simulateQ_map_log (e : A → B) (impl₁ : QueryImpl spec (WriterT (
 
 /-- Running a computation of the ambient oracles `spec`, lifted into `spec + spec'`, against
 `spec.passthrough + impl` runs it unchanged with an empty log. -/
-theorem run_simulateQ_passthrough_add_liftM {κ : Type} {spec' : OracleSpec κ}
+theorem run_simulateQ_passthrough_add_liftM {κ : Type*} {spec' : OracleSpec.{_, u} κ}
     (impl : QueryImpl spec' (WriterT (List A) (OracleComp spec))) (oa : OracleComp spec α) :
     (simulateQ (spec.passthrough + impl) (liftM oa : OracleComp (spec + spec') α)).run =
       (fun x => (x, [])) <$> oa := by
@@ -142,7 +145,7 @@ theorem run_simulateQ_passthrough_add_liftM {κ : Type} {spec' : OracleSpec κ}
   | pure x => simp
   | query_bind t f ih => simp [ih, map_bind]
 
-variable {M D T : Type}
+variable {M D T : Type u}
 
 /-- The handler that answers each `(M →ₒ T)` query `msg` by the `(D →ₒ T)` query `f msg`,
 passing the queries of `spec` through unchanged. -/
