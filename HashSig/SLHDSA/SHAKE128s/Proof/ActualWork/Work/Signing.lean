@@ -597,24 +597,12 @@ theorem marked_whole_paid_le_caps (s : FIPS205.core.PkSeed)
     ⟨fun action => StateT.lift action⟩
   let fwd := (QueryImpl.id' LabCommon).liftTarget (StateT PUnit.{1} (OracleComp LabCommon))
   let cost := Sum.elim (fun _ : A.Domain => (0, 0)) (policy true s)
-  let guard := QueryImpl.guardQueryBudget caps cost fwd fallback
-  let valid := fun st : PUnit.{1} × Paid => st.2.1 ≤ caps
   have relMem := source_support (Coverage.roleRunImpl FIPS205.core) _ _ out member
   have routeMem := source_support
     (CoverageDeferred.relative FIPS205.core s (metadataCost true s)) _ rel out.1 relMem
   have guardMem := source_support (routeLab s) _ ∅ out.1.1 routeMem
-  apply simulateQ_run_preserves_inv_of_query guard valid _ (commonSource true s adv)
-    (PUnit.unit, ((0, 0), false)) (show ((0, 0) : Nat × Nat) ≤ caps from bot_le) _ guardMem
-  intro input before prior res mem
-  simp only [guard, QueryImpl.guardQueryBudget, StateT.run_mk] at mem
-  split_ifs at mem with aborted fits
-  · simp only [support_pure, Set.mem_singleton_iff] at mem
-    exact mem ▸ prior
-  · rw [support_map] at mem
-    obtain ⟨_, _, rfl⟩ := mem
-    exact fits
-  · simp only [support_pure, Set.mem_singleton_iff] at mem
-    exact mem ▸ prior
+  exact QueryImpl.guardQueryBudget_counts_le_caps caps cost fwd fallback
+    (commonSource true s adv) PUnit.unit _ guardMem
 
 end SLHDSA.SHAKE128s.Bridge.SharedExperiment.SigningCounts
 

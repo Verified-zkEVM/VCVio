@@ -458,15 +458,8 @@ private theorem safe_query {s caps fb} (i : LabCommon.Domain)
     Safe s caps fb (liftM (LabCommon.query i)) := by
   intro st prior z mem
   rw [simulateQ_spec_query] at mem
-  simp only [engine, QueryImpl.guardQueryBudget, StateT.run_mk] at mem
-  split_ifs at mem
-  · simp only [support_pure, Set.mem_singleton_iff] at mem
-    exact mem ▸ prior
-  · rw [support_map] at mem
-    obtain ⟨v, hv, rfl⟩ := mem
-    exact admitted st prior v hv
-  · simp only [support_pure, Set.mem_singleton_iff] at mem
-    exact mem ▸ prior
+  exact QueryImpl.guardQueryBudget_cases_of_mem_support (P := fun out => good s out.2) mem
+    (fun _ => prior) (fun _ _ v hv => admitted st prior v hv)
 
 private theorem safe_free {s caps fb} (i : A.Domain) (free : ambientWeight s i = 0) :
     Safe s caps fb (liftM (LabCommon.query (.inl i))) := by

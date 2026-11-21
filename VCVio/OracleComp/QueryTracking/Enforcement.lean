@@ -192,12 +192,41 @@ def guardQueryBudget
       else pure (fallback input, (state.1, (state.2.1, true)))
 
 
+/-- On a supported guarded query the stopped branch returns its fallback with frozen cache and
+cost. The admitted branch returns the handler's actual reply and cache with the proposed cost. -/
+theorem guardQueryBudget_cases_of_mem_support
+    {m : Type → Type v} [Monad m] [LawfulMonad m] [MonadAttach m] [LawfulMonadAttach m]
+    {ι Cache C : Type} {spec : OracleSpec ι} [Add C] [LE C] [DecidableLE C]
+    {caps : C} {cost : spec.Domain → C} {handler : QueryImpl spec (StateT Cache m)}
+    {fallback : (i : spec.Domain) → spec.Range i} {i : spec.Domain} {state : Cache × C × Bool}
+    {result : spec.Range i × (Cache × C × Bool)} {P : spec.Range i × (Cache × C × Bool) → Prop}
+    (mem : result ∈ support ((guardQueryBudget caps cost handler fallback i).run state))
+    (stopped : (state.2.2 = true ∨ ¬state.2.1 + cost i ≤ caps) →
+      P (fallback i, state.1, state.2.1, true))
+    (admitted : state.2.2 = false → state.2.1 + cost i ≤ caps →
+      ∀ y ∈ support ((handler i).run state.1), P (y.1, y.2, state.2.1 + cost i, false)) :
+    P result := by
+  rcases state with ⟨cache, spent, flag⟩
+  cases flag with
+  | true =>
+    simp only [guardQueryBudget, StateT.run_mk, ite_true] at mem
+    rw [← LawfulMonadAttach.eq_of_canReturn_pure mem]
+    exact stopped (Or.inl rfl)
+  | false =>
+    simp only [guardQueryBudget, StateT.run_mk, Bool.false_eq_true, ite_false] at mem
+    split_ifs at mem with fits
+    · obtain ⟨y, hy, rfl⟩ := LawfulMonadAttach.canReturn_map_imp' mem
+      exact admitted rfl fits y hy
+    · rw [← LawfulMonadAttach.eq_of_canReturn_pure mem]
+      exact stopped (Or.inr fits)
+
 /-- Every supported guarded execution respects its accumulated cost cap. -/
 theorem guardQueryBudget_counts_le_caps
+    {m : Type → Type v} [Monad m] [LawfulMonad m] [MonadAttach m] [LawfulMonadAttach m]
     {ι α Cache C : Type} {spec : OracleSpec.{0, 0} ι}
     [AddMonoid C] [Preorder C] [CanonicallyOrderedAdd C] [DecidableLE C]
     (caps : C) (cost : spec.Domain → C)
-    (handler : QueryImpl spec (StateT Cache ProbComp))
+    (handler : QueryImpl spec (StateT Cache m))
     (fallback : (input : spec.Domain) → spec.Range input)
     (program : OracleComp spec α) (initial : Cache)
     (result : α × (Cache × (C × Bool)))
@@ -209,17 +238,8 @@ theorem guardQueryBudget_counts_le_caps
     fun state => state.2.1 ≤ caps
   have hinv : PreservesInv (guardQueryBudget caps cost handler fallback) P := by
     intro input state hs result hr
-    simp only [guardQueryBudget, StateT.run_mk] at hr
-    split_ifs at hr with hflag hcap
-    · simp only [support_pure, Set.mem_singleton_iff] at hr
-      subst result
-      exact hs
-    · rw [support_map] at hr
-      obtain ⟨out, _, rfl⟩ := hr
-      exact hcap
-    · simp only [support_pure, Set.mem_singleton_iff] at hr
-      subst result
-      exact hs
+    exact guardQueryBudget_cases_of_mem_support (P := fun z => P z.2) hr
+      (fun _ => hs) (fun _ fits _ _ => fits)
   exact simulateQ_run_preservesInv _ P hinv program _ (by simp [P]) result hresult
 
 private def sourceCounted {ι Cache C : Type} {spec : OracleSpec.{0, 0} ι}

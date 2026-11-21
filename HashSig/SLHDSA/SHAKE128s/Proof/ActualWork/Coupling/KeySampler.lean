@@ -460,32 +460,15 @@ private theorem native_preserves_ready {Cache : Type}
     ∀ state, Ready caps phase state →
       ∀ result ∈ support ((guarded (.inl input)).run state), Ready caps phase result.2 := by
   intro charge interpreted guarded state ready result member
-  rcases state with ⟨⟨cache, metadata⟩, counts, flag⟩
-  cases flag with
-  | true =>
-    simp only [guarded, QueryImpl.guardQueryBudget, StateT.run_mk, ite_true,
-      support_pure, Set.mem_singleton_iff] at member
-    subst result
-    simp [Ready]
-  | false =>
-    have zeroCost : counts + ((0, 0) : Nat × Nat) = counts := by
-      cases counts
-      rfl
-    by_cases fits : counts ≤ caps
-    · simp only [guarded, QueryImpl.guardQueryBudget, StateT.run_mk, Sum.elim_inl,
-        Bool.false_eq_true, ite_false, zeroCost, fits, ite_true, support_map] at member
-      obtain ⟨inner, innerMember, rfl⟩ := member
-      dsimp only [interpreted] at innerMember
-      rw [QueryImpl.extendState_apply, eraseObsImpl_inl, mem_support_bind_iff] at innerMember
-      obtain ⟨answer, _answerMember, member⟩ := innerMember
-      simp only [aux, support_pure, Set.mem_singleton_iff] at member
-      subst inner
-      exact ready
-    · simp only [guarded, QueryImpl.guardQueryBudget, StateT.run_mk, Sum.elim_inl,
-        Bool.false_eq_true, ite_false, zeroCost, fits, support_pure,
-        Set.mem_singleton_iff] at member
-      subst result
-      simp [Ready]
+  apply QueryImpl.guardQueryBudget_cases_of_mem_support (P := fun out => Ready caps phase out.2)
+    member (fun _ => by simp [Ready])
+  intro live fits inner innerMember
+  rw [QueryImpl.extendState_apply, eraseObsImpl_inl, mem_support_bind_iff] at innerMember
+  obtain ⟨answer, _, member⟩ := innerMember
+  simp only [aux, support_pure, Set.mem_singleton_iff] at member
+  subst inner
+  exact fun _ _ => ready live (by
+    simpa only [Sum.elim_inl, show ((0, 0) : Nat × Nat) = 0 from rfl, add_zero] using fits)
 
 /-- Any admitted marker sets its declared phase, while a rejected marker stops the guard. -/
 private theorem marker_establishes_ready {Cache : Type}
@@ -503,28 +486,13 @@ private theorem marker_establishes_ready {Cache : Type}
     ∀ state, ∀ result ∈ support ((guarded (.inr event)).run state),
       Ready caps phase result.2 := by
   intro charge interpreted guarded state result member
-  rcases state with ⟨⟨cache, metadata⟩, counts, flag⟩
-  cases flag with
-  | true =>
-    simp only [guarded, QueryImpl.guardQueryBudget, StateT.run_mk, ite_true,
-      support_pure, Set.mem_singleton_iff] at member
-    subst result
-    simp [Ready]
-  | false =>
-    by_cases fits : counts + policy reserve pkSeed event ≤ caps
-    · simp only [guarded, QueryImpl.guardQueryBudget, StateT.run_mk, Sum.elim_inr,
-        Bool.false_eq_true, ite_false, fits, ite_true] at member
-      dsimp only [interpreted] at member
-      rw [QueryImpl.extendState_apply, eraseObsImpl_inr] at member
-      simp only [StateT.run_pure, pure_bind] at member
-      subst result
-      intro _ _
-      exact setsPhase metadata
-    · simp only [guarded, QueryImpl.guardQueryBudget, StateT.run_mk, Sum.elim_inr,
-        Bool.false_eq_true, ite_false, fits, support_pure,
-        Set.mem_singleton_iff] at member
-      subst result
-      simp [Ready]
+  apply QueryImpl.guardQueryBudget_cases_of_mem_support (P := fun out => Ready caps phase out.2)
+    member (fun _ => by simp [Ready])
+  intro _ _ inner innerMember
+  rw [QueryImpl.extendState_apply, eraseObsImpl_inr] at innerMember
+  simp only [StateT.run_pure, pure_bind, support_pure, Set.mem_singleton_iff] at innerMember
+  subst inner
+  exact fun _ _ => setsPhase _
 
 /-- A sparse phase block preserves the exact local readiness needed by private derivations. -/
 private theorem sparse_preserves_ready {Cache : Type}
