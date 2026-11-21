@@ -40,7 +40,7 @@ ciphertext distributions, including at width zero.
    `(msg, key)`. Encryption evaluates `key xor msg` and the full round trip evaluates
    `key xor (key xor msg)`. In PolyFunFrontier, Samuel Schlesinger’s `polytime` tactic from
    cslib-frontier proves the primitive word-operation bound. `wordTerm_polyTime` gives the bound
-   for the entire term. [Scoped word terms](https://github.com/dtumad/PolyFun/blob/7c69cdbf24a1865bc7544496ef6d3b9fa746c2a3/PolyFunFrontier/PolyFunFrontier/IPFunctor/Scoped/PolyTime.lean)
+   for the entire term. [Scoped word terms](https://github.com/dtumad/PolyFun/blob/01547e783a20b7c3acee3137acf96d6c7fabbb7b/PolyFunFrontier/PolyFunFrontier/IPFunctor/Scoped/PolyTime.lean)
 2. PolyFunFrontier combines these local steps with the fair-bit handler. It noncomputably
    chooses a finite-control probabilistic multi-tape machine whose output law agrees with the handler on encoded
    inputs. Its polynomial clock bounds every supported run on every input word.
@@ -55,50 +55,78 @@ ciphertext distributions, including at width zero.
    [Original uniform-ciphertext proof](../Examples/OneTimePad/ComputationalComplexity.lean) ·
    [Machine and handler measure](VCVioFrontier/OracleComp/Realization.lean)
 
-## ElGamal
+## Follow the ElGamal reduction
 
-The typed VCVio reduction and its word implementation share the same three operations. The
-adversary chooses two messages and saves state, a fair coin selects the challenge, and the
-adversary guesses from the ciphertext and its saved state. `oneTimeChoice` translates between
-VCVio’s first message on a true bit and Frontier’s `msg₁`. `eval_ddhReduction_fixedBits`
-identifies the output law of this program with the fair mixture of Frontier’s two fixed-bit
-distinguishers, scoring each guess against its bit.
-[Word reduction](VCVioFrontier/Examples/ElGamal/Reduction.lean) ·
-[Frontier’s fixed-bit distinguisher](https://github.com/cslib-community/cslib-frontier/blob/87063d8acdd04168e47c55701c7497de584af566/CslibFrontier/Crypto/Computational/ElGamal.lean#L606)
+In VCVio’s one-time IND-CPA game, the adversary chooses two messages and saves state, then
+guesses which message was encrypted. The reduction runs that adversary on a Diffie–Hellman
+challenge. Its result is whether the guess matched the challenge bit.
+[Native game](../VCVio/CryptoFoundations/AsymmEncAlg/INDCPA/OneTime.lean) ·
+[Original algebraic reduction](../Examples/ElGamal/Basic.lean)
 
-Key generation, encryption and decryption are free programs over an exponent request. Installing
-fixed exponents proves decryption for every secret and nonce. Installing the bounded fair-coin
-sampler gives Frontier’s honest algorithms as equalities of programs. When selecting the group
-description is polynomial time, `wordScheme_efficient` certifies all three fields of VCVio’s
-word scheme, including the option-valued plaintext returned by decryption.
-[Programs and handlers](VCVioFrontier/Examples/ElGamal/HonestPrograms.lean) ·
-[Stateful round trip](VCVioFrontierTest/Examples/ElGamal/State.lean) ·
-[Frontier’s bounded sampler and algorithms](https://github.com/cslib-community/cslib-frontier/blob/87063d8acdd04168e47c55701c7497de584af566/CslibFrontier/Crypto/Computational/ElGamal/ProbComp.lean)
+From the nested package, run `lake build VCVioFrontierTest.Examples.ElGamal.Branches VCVioFrontierTest.Examples.ElGamal.State`.
+To inspect the result and its security bound, put the following in the same kind of scratch file
+as the pad example and run `lake env lean /path/to/ElGamalReview.lean`.
 
-The security results assume uniform machine DDH for a prime-order group family with a fixed
-public description at each security parameter.
+```lean
+import VCVioFrontierTest.Examples.ElGamal.Branches
+import VCVioFrontier.Examples.ElGamal.Bound
 
-- For bit messages, `bitAdversary_secure` covers every uniform strict-PPT two-stage bit-message
-  adversary. For arbitrary word messages, `wordGame_measure_negligible` covers every uniform
-  strict-PPT word adversary under a polynomial-time validity test whose accepted messages encode
-  group elements. [Bit and guarded-word games](VCVioFrontier/Examples/ElGamal/Honest.lean)
-- For the unguarded group-message experiment, a word adversary realizes a typed VCVio adversary
-  when both procedures are uniform strict-PPT, message selection preserves the joint law of both
-  messages and encoded state, and guessing agrees on encoded states and ciphertexts. For that
-  realization `R`, `machine_output_openOracle` identifies the output of `R.machine` at its
-  certified clock with the encoded result of the original handled VCVio reduction. Its halting
-  guarantee covers every input word. [Machine and typed reduction](VCVioFrontier/Examples/ElGamal/Security.lean)
-- For each realized adversary, `implemented_advantage_le` bounds the implemented one-time
-  IND-CPA advantage by `2 * AdvDDH + 4 / 2^n` at each parameter. The DDH term uses that
-  adversary’s own distinguisher. Each fixed-bit game contributes at most `2 / 2^n` of
-  bounded-sampling error. The pointwise bound holds before assuming DDH. Under DDH,
-  `implemented_secureAgainst` gives negligible advantage.
-  [Implemented security bound](VCVioFrontier/Examples/ElGamal/Bound.lean)
+#check VCVioFrontierTest.ElGamal.incorrectGuessLoses
+#check VCVioFrontier.ElGamal.AdversaryRealization.implemented_advantage_le
+```
+
+1. **Install the adversary and coin handlers.** The typed open reduction and the encoded request
+   tree `reductionSource` share the choose, coin and guess steps. `oneTimeChoice` translates
+   VCVio’s first message on a true bit to Frontier’s `msg₁`. In `incorrectGuessLoses` the
+   handler offers zero and the generator, supplies a false bit, receives the saved state and
+   the ciphertext of zero, and guesses true. The reduction therefore returns false.
+   [Original open reduction](../Examples/ElGamal/ComputationalComplexity.lean) ·
+   [Encoded requests and handlers](VCVioFrontier/Examples/ElGamal/Reduction.lean) ·
+   [Losing encoded run](VCVioFrontierTest/Examples/ElGamal/Branches.lean)
+2. **Identify the machine.** A realization `R` supplies uniform polynomial-time word procedures
+   for the two adversary stages. Its choose law preserves both messages and their saved state
+   jointly. Its guess law agrees on encoded states and ciphertexts. `machine_output_openOracle`
+   identifies the output of `R.machine` at its certified clock with the encoded result of the
+   original handled reduction. The clock bounds supported runs on every input word.
+   `eval_ddhReduction_fixedBits` also identifies the reducer’s law with the fair mixture of
+   Frontier’s two fixed-bit distinguishers after scoring their guesses.
+   [Machine correspondence](VCVioFrontier/Examples/ElGamal/Security.lean) ·
+   [Fixed-bit comparison](VCVioFrontier/Examples/ElGamal/Reduction.lean) ·
+   [Frontier’s distinguisher](https://github.com/cslib-community/cslib-frontier/blob/87063d8acdd04168e47c55701c7497de584af566/CslibFrontier/Crypto/Computational/ElGamal.lean#L606)
+3. **Install the exponent handler in the honest algorithms.** Fixed exponents recover every
+   encoded group-element message for every secret and nonce. A stateful tape handler feeds these
+   exponents to key generation and encryption. Decryption draws nothing from the remaining tape. Installing Frontier’s bounded fair-coin
+   sampler gives the three fields of the implemented word scheme. If selecting the group
+   description from the security parameter is polynomial time, `wordScheme_efficient`
+   certifies all three fields, including the option-valued plaintext returned by decryption.
+   [Honest programs and sampler equations](VCVioFrontier/Examples/ElGamal/HonestPrograms.lean) ·
+   [Implemented algorithms](VCVioFrontier/Examples/ElGamal/Honest.lean) ·
+   [Tape-handler round trip](VCVioFrontierTest/Examples/ElGamal/State.lean) ·
+   [Frontier’s bounded algorithms](https://github.com/cslib-community/cslib-frontier/blob/87063d8acdd04168e47c55701c7497de584af566/CslibFrontier/Crypto/Computational/ElGamal/ProbComp.lean)
+4. **Read the bound at a single parameter.** With exact exponents, `R.advantage_eq` gives
+   exactly twice the DDH advantage of this adversary’s named distinguisher. Each bounded
+   fixed-bit game incurs error at most `2 / 2^n`. Together these give
+   `R.implemented_advantage_le`, bounding the original VCVio game by `2 * AdvDDH + 4 / 2^n`.
+   Both statements hold before assuming DDH.
+   [Original factor-of-two proof](../Examples/ElGamal/Basic.lean) ·
+   [Exact-exponent machine games](VCVioFrontier/Examples/ElGamal/Security.lean) ·
+   [Implemented advantage](VCVioFrontier/Examples/ElGamal/Bound.lean)
+
+For asymptotic security, assume uniform machine DDH for a prime-order group family with a fixed
+public description at each security parameter. For bit messages, `bitAdversary_secure` covers
+every uniform strict-PPT two-stage bit-message adversary. For guarded word messages,
+`wordGame_measure_negligible` covers every uniform strict-PPT word adversary when the
+polynomial-time guard accepts only group-element encodings. For the unguarded group-message
+game, `implemented_secureAgainst` covers word adversaries realizing a typed adversary as in
+step 2. [Bit and guarded-word theorems](VCVioFrontier/Examples/ElGamal/Honest.lean) ·
+[Unguarded security theorem](VCVioFrontier/Examples/ElGamal/Bound.lean) ·
+[Uniform DDH assumption](https://github.com/cslib-community/cslib-frontier/blob/87063d8acdd04168e47c55701c7497de584af566/CslibFrontier/Crypto/Computational/DiffieHellman.lean#L338)
 
 ## Build
 
-The nested package follows PolyFunFrontier's immutable pins. At this revision it uses Lean
-4.36.0-rc2 and the root packages use stable 4.36.0. Use a separate worktree for the nested
+The stable root, its Interop consumer, and this optional package currently use the same PolyFun
+commit. The root and Interop resolve core PolyFun on Lean 4.36.0. The nested package selects
+PolyFunFrontier and cslib-frontier on their own Lean 4.36.0-rc2, CSLib and Mathlib pins. Use a separate worktree for the nested
 build, since the path dependency on VCVio writes into the parent directory's `.lake/build`.
 
 ```sh

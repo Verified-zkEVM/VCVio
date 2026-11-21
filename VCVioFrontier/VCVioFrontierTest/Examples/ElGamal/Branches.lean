@@ -38,7 +38,7 @@ open VCVioFrontier.ElGamal Cslib.Crypto Turing.MultiTapeTM PFunctor
 
 /-- Supply distinct group messages and a fixed false bit. Guess true exactly when the expected
 saved state and the encryption of the zero message both arrive at the second stage. -/
-private noncomputable def wrongGuess (F : PrimeOrderGroupFamily) (d : F.Desc) :
+@[expose] noncomputable def wrongGuess (F : PrimeOrderGroupFamily) (d : F.Desc) :
     Handler Id signature
   | .choose .. => ((F.encode d 0, F.encode d (F.generator d)), [true, false])
   | .coin => false
@@ -47,7 +47,7 @@ private noncomputable def wrongGuess (F : PrimeOrderGroupFamily) (d : F.Desc) :
 
 /-- With zero DDH components the encoded false-branch challenge is the zero message.
 The guess is true, so the actual reduction reports a loss. -/
-example (F : PrimeOrderGroupFamily) (n : ℕ) (d : F.Desc) :
+theorem incorrectGuessLoses (F : PrimeOrderGroupFamily) (n : ℕ) (d : F.Desc) :
     (reductionSource F ⟨⟨n, d, 0, 0⟩, 0⟩).liftM (wrongGuess F d) = false := by
   have h (q : Request) : (FreeM.lift (P := signature) q).liftM (wrongGuess F d) =
       wrongGuess F d q := FreeM.liftM_lift _ _
