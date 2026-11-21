@@ -275,7 +275,7 @@ theorem filled_native_mem_support_eager
     rw [mem_support_bind_iff]
     refine ⟨project block.2, deferred, ?_⟩
     rw [mem_support_bind_iff]
-    exact ⟨filled, hfilled, Set.mem_singleton _⟩
+    exact ⟨filled, hfilled, (mem_support_pure_iff _ _).2 rfl⟩
   have positive : 0 < Pr{let out ← (do
       let out ← (simulateQ G.deferredImpl program).run ((∅, ∅), [])
       let state ← RelabelState.endFill out.2
