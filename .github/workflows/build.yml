@@ -84,9 +84,9 @@ jobs:
       # at column 0. This check is text only, so it belongs in this job rather than behind
       # a build, and for lakefile.lean, Interop/ and scripts/ it is the only check of any
       # kind that reads them for this: Lake elaborates the lakefile from `import Lake` with
-      # no Mathlib linter registered, the interop job builds only Interop/'s listed bridges
-      # and does not gate on warnings, and scripts/ is built here but imports no Mathlib, so
-      # the `weak.` option is dropped.
+      # no Mathlib linter registered, the Interop sub-project jobs build only the modules
+      # their lakefiles list and do not gate on warnings, and scripts/ is built here but
+      # imports no Mathlib, so the `weak.` option is dropped.
       - name: Check comment fences
         run: |
           bash scripts/test-comment-fences.sh
@@ -99,9 +99,37 @@ jobs:
           uv run --no-project --python 3.12 python scripts/test-validation.py
           bash scripts/check-imports.sh
 
-  interop:
-    name: Interop Bridges
+  interop_subprojects:
+    name: List Interop Sub-projects
     runs-on: ubuntu-latest
+    outputs:
+      subprojects: ${{ steps.list.outputs.subprojects }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Set up uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          version: "0.13.6"
+          enable-cache: false
+      # Every directory `Interop/<Sub>/` with a `lakefile.toml` is a sub-project of its own.
+      - name: List the sub-projects
+        id: list
+        run: |
+          uv run --no-project --python 3.12 python scripts/test-interop-subprojects.py
+          subprojects="$(uv run --no-project --python 3.12 python scripts/interop-subprojects.py list)"
+          echo "subprojects=$subprojects" >> "$GITHUB_OUTPUT"
+
+  interop:
+    name: Interop ${{ matrix.subproject }}
+    needs: interop_subprojects
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        subproject: ${{ fromJSON(needs.interop_subprojects.outputs.subprojects) }}
+    defaults:
+      run:
+        working-directory: Interop/${{ matrix.subproject }}
     env:
       CLEAN_BUILD: ${{ github.event_name == 'schedule' || inputs.clean_build == true }}
     steps:
@@ -112,10 +140,11 @@ jobs:
           version: "0.13.6"
           enable-cache: false
       - name: Free unused hosted-runner SDKs
-        run: bash scripts/free-ci-disk-space.sh
-      # The same caches as `Build Project`. `Interop/lakefile.toml` shares the root's dependency
-      # cache (`packagesDir = "../.lake/packages"`) and requires VCVio by path, whose build lands in
-      # the root's `.lake/build`, so both restore as they are.
+        run: bash "$GITHUB_WORKSPACE/scripts/free-ci-disk-space.sh"
+      # The same caches as `Build Project`. A sub-project whose pins equal the root's shares the
+      # root's dependency cache (`packagesDir = "../../.lake/packages"`), and every sub-project
+      # requires VCVio by path, whose build lands in the root's `.lake/build`, so both restore as
+      # they are.
       - name: Restore dependency cache
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -145,22 +174,25 @@ jobs:
           lint: false
           use-github-cache: false
           use-mathlib-cache: false
-      - name: Build the Interop package (hax, Aeneas and the bridges)
-        working-directory: Interop
+          lake-package-directory: Interop/${{ matrix.subproject }}
+      - name: Build the sub-project
         run: |
           lake exe cache get
           lake build
-      # The modules are `InteropRust`'s roots in `Interop/lakefile.toml`.
-      - name: Enforce zero axiom and sorry debt in the bridges
-        working-directory: Interop
-        run: >-
-          lake exe axiomsweep --root Interop.Aeneas.ITree --root Interop.Aeneas.WP
-          --root Interop.Rust.Common --root Interop.Rust.Run --root Interop.Rust.RustM
-          --root Interop.Rust.Triple --root Interop.Hax.Holds
-          --root Interop.Hax.Adc.Verification --root Interop.Hax.Barrett.Verification
-          --root Interop.Hax.CenteredBinomial.Verification --root Interop.Hax.Computation.Verification
-          --root Interop.Hax.Division.Verification --root Interop.Hax.Examples.Verification
-          --baseline ../scripts/axiom_baseline.json --check
+      - name: Run the sub-project's tests
+        run: |
+          if lake check-test; then
+            lake test
+          else
+            echo "No test driver in Interop/${{ matrix.subproject }}."
+          fi
+      # The roots are those of the default libraries in the sub-project's `lakefile.toml`.
+      - name: Enforce zero axiom and sorry debt
+        run: |
+          roots="$(uv run --no-project --python 3.12 python ../../scripts/interop-subprojects.py roots .)"
+          args=()
+          while read -r root; do args+=(--root "$root"); done <<< "$roots"
+          lake exe axiomsweep "${args[@]}" --baseline ../../scripts/axiom_baseline.json --check
 
   downstream_stub_link:
     name: Downstream Consumer Build (no submodules)
@@ -417,8 +449,7 @@ jobs:
       # Zero debt: any taint (exit 1: `sorryAx` or a non-standard axiom) fails the build, as
       # do infrastructure failures (exit 2: missing, unparsable or nonempty baseline, tool
       # breakage) — a broken tool must never read as a clean verdict.
-      # Sweeps the non-test libraries; Interop (the declared TCB) is bounded by
-      # its import-isolation gate instead.
+      # Sweeps the non-test libraries; each Interop sub-project's job sweeps its own roots.
       # Exercise the sweep against its own fixtures before trusting its verdict on the
       # library: the fixtures carry synthetic taint of each shape the tool reasons about
       # (direct and transitive `sorryAx`, an axiom occurring only in a type, a mutual

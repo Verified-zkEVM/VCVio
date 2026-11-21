@@ -32,11 +32,11 @@ class IsolationTests(unittest.TestCase):
     def test_forbidden_edges_and_modifiers(self):
         edges = [("VCVio/Algorithms/X.lean", "VCVio.OracleComp"),
                  ("VCVio/Algorithms/X.lean", "HashSig"),
-                 ("VCVio/Algorithms/X.lean", "Interop.Hax"),
-                 ("HashSig/X.lean", "Interop.Rust"),
+                 ("VCVio/Algorithms/X.lean", "Interop.Aeneas.Hax"),
+                 ("HashSig/X.lean", "Interop.Aeneas.Lift"),
                  ("VCVio.lean", "Interop"),
                  ("VCVioTest/X.lean", "Hax"),
-                 ("Interop/Hax/X.lean", "HashSig")]
+                 ("Interop/Aeneas/Hax/X.lean", "HashSig")]
         for source, target in edges:
             for modifier in ("import", "public import", "import all", "public meta import", "public/-comment-/import",
                              "public\nimport", "import\n"):
@@ -47,7 +47,8 @@ class IsolationTests(unittest.TestCase):
 
     def test_allowed_edges_comments_and_multiple_imports(self):
         result = self.check({
-            "Interop/Hax/X.lean": "import VCVio\nimport ToMathlib\n",
+            "Interop/Aeneas/Hax/X.lean": "import VCVio\nimport ToMathlib\n"
+                                         "import Interop.Aeneas.Lift.RustM\n",
             "HashSig/X.lean": "import VCVio\n/- outer /- nested -/ import Interop -/\n",
             "VCVio/Schemes/X.lean": "module\npublic import VCVio.CryptoFoundations.X\n",
             "VCVio/Algorithms/X.lean": "import Mathlib\nimport ToMathlib\nimport PolyFun\nimport VCVio.Algorithms.Y\n",
@@ -57,8 +58,37 @@ class IsolationTests(unittest.TestCase):
         result = self.check({"HashSig/X.lean": "import Mathlib\nimport Interop.Cryptol.Model\n"})
         self.assertNotEqual(result.returncode, 0)
 
+    def test_imports_between_interop_subprojects(self):
+        allowlist = "scripts/interop_import_allowlist.txt"
+        edges = [("Interop/Other/X.lean", "Interop.Aeneas.Lift.RustM"),
+                 ("Interop/Aeneas/Hax/X.lean", "Interop.Other.Model"),
+                 ("Interop/Aeneas/X.lean", "Interop.Other"),
+                 ("Interop/Aeneas/X.lean", "Interop"),
+                 ("Interop.lean", "Interop.Aeneas.WP")]
+        for source, target in edges:
+            with self.subTest(source=source, target=target):
+                result = self.check({source: f"module\npublic import {target}\n"})
+                self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+                self.assertIn(f"{source}: forbidden import {target} from another Interop "
+                              "sub-project", result.stderr)
+        listed = "# importer imported\nOther\tAeneas # through a `require`\n\n"
+        result = self.check({"Interop/Other/X.lean": "import Interop.Aeneas.Lift.RustM\n"
+                                                     "import Interop.Other.Y\n",
+                             "Interop/Aeneas/X.lean": "import Interop.Aeneas.Lift.RustM\n",
+                             allowlist: listed})
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        # A pair allows one direction only.
+        result = self.check({"Interop/Aeneas/X.lean": "import Interop.Other.Y\n",
+                             allowlist: listed})
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn("forbidden import Interop.Other.Y", result.stderr)
+        result = self.check({"Interop/Other/X.lean": "import VCVio\n",
+                             allowlist: "Other Aeneas Extra\n"})
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("expected `<importer> <imported>`", result.stderr)
+
     def test_extern_boundary(self):
-        for source in ("VCVio.lean", "VCVio/X.lean", "HashSig/X.lean", "Interop/Hax/X.lean"):
+        for source in ("VCVio.lean", "VCVio/X.lean", "HashSig/X.lean", "Interop/Aeneas/Hax/X.lean"):
             result = self.check({source: "module\npublic import all Extern.X\n"}, extern=True)
             self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
             self.assertIn("forbidden import Extern.X", result.stderr)

@@ -13,6 +13,10 @@ import Lean.Elab.ParseImportsFast
 Checks the optional-backend, native-linking and pure-algorithm boundaries directly from source.
 Lean's own header parser handles import modifiers, comments and module names. No project or
 dependency build is needed. Run `lean --run scripts/CheckImports.lean [--extern]` from the root.
+
+Each directory `Interop/<A>/` is a sub-project with its own Lake package. A module of `Interop/<A>/`
+imports a module `Interop.<B>.…` of another sub-project only when the pair `A B` is listed in
+`scripts/interop_import_allowlist.txt`.
 -/
 
 public section
@@ -49,11 +53,36 @@ private def allowed (externOnly : Bool) (owner : String) (path : FilePath) (name
   else
     !(core.filter fun root => root != "VCVio" && root != "ToMathlib").contains head
 
+/-- The pairs `(A, B)` of `Interop/` sub-projects such that modules of `Interop/<A>/` may import
+modules of `Interop/<B>/`: the lines `A B` of `scripts/interop_import_allowlist.txt`, after `#`
+comments. A missing file lists no pair. -/
+private def interopAllowlist : IO (List (String × String)) := do
+  let file : FilePath := "scripts" / "interop_import_allowlist.txt"
+  unless ← file.pathExists do return []
+  let mut pairs := []
+  for line in ← IO.FS.lines file do
+    let body := (line.splitOn "#").headD ""
+    match ((body.replace "\t" " ").splitOn " ").filter (!·.isEmpty) with
+    | [] => pure ()
+    | [importer, imported] => pairs := (importer, imported) :: pairs
+    | _ => throw <| IO.userError s!"{file}: expected `<importer> <imported>`, got: {line}"
+  return pairs
+
+/-- Whether the `Interop/` source at `path` may import `name` as far as sub-projects go: a module
+`Interop.<B>.…` only from `Interop/<B>/` itself or from a sub-project `A` listing `(A, B)`. -/
+private def interopSubprojectAllowed (allow : List (String × String)) (path : FilePath)
+    (name : Name) : Bool :=
+  if name.getRoot != `Interop then true else
+  match (path.withExtension "").components[1]?, name.components[1]?.map (·.toString) with
+  | some importer, some imported => importer == imported || allow.contains (importer, imported)
+  | _, _ => false
+
 /-- Check source imports without resolving or compiling their targets. -/
 def main (args : List String) : IO UInt32 := do
   unless args.isEmpty || args == ["--extern"] do
     IO.eprintln "Usage: lean --run scripts/CheckImports.lean [--extern]"
     return 2
+  let allow ← if args.isEmpty then interopAllowlist else pure []
   let mut failed := false
   for owner in core ++ ["Interop"] do
     let mut paths ← sources owner
@@ -64,6 +93,11 @@ def main (args : List String) : IO UInt32 := do
       for imp in header.imports do
         unless allowed (args == ["--extern"]) owner path imp.module do
           IO.eprintln s!"{path}: forbidden import {imp.module}"
+          failed := true
+        if owner == "Interop" && args.isEmpty &&
+            !interopSubprojectAllowed allow path imp.module then
+          IO.eprintln s!"{path}: forbidden import {imp.module} from another Interop sub-project \
+            (scripts/interop_import_allowlist.txt)"
           failed := true
   if failed then return 1
   IO.println "Import isolation: OK"
