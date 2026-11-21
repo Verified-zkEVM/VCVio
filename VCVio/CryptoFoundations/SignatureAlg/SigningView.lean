@@ -181,6 +181,39 @@ variable {ι : Type idx} {spec : OracleSpec ι}
           OracleComp (target + (Request →ₒ Reply)) (target.Range native))) (impl input))
     (fun request => liftM ((target + (Request →ₒ Reply)).query (.inr request)))
 
+/-- Interpret a logged client through an ambient translation and then a handler.
+The returned value and raw signing replies are preserved together in the target monad. -/
+theorem simulateQ_runWithSigningOracle_mapClient
+    {iota kappa Request PK SK Sig Reply alpha : Type}
+    {spec : OracleSpec.{0, 0} iota} {target : OracleSpec.{0, 0} kappa}
+    {m : Type → Type v} [Monad m] [LawfulMonad m]
+    (route : QueryImpl spec (OracleComp target)) (handler : QueryImpl target m)
+    (view : SigningView (OracleComp target) Request PK SK Sig Reply) (pk : PK) (sk : SK)
+    (client : OracleComp (spec + (Request →ₒ Reply)) alpha) :
+    simulateQ handler (view.runWithSigningOracle pk sk (simulateQ (mapClient route) client)) =
+      (simulateQ (QueryImpl.add ((handler ∘ₛ route).liftTarget
+        (WriterT (QueryLog (Request →ₒ Reply)) m))
+        (QueryImpl.withLogging (spec := Request →ₒ Reply)
+          (fun req => simulateQ handler (view.sign pk sk req)))) client).run := by
+  let service := target.passthrough + view.signingOracle pk sk
+  let liftNative : QueryImpl target (OracleComp (target + (Request →ₒ Reply))) :=
+    fun input => liftM ((target + (Request →ₒ Reply)).query (.inl input))
+  have forward : service ∘ₛ liftNative =
+      (QueryImpl.id' target).liftTarget (WriterT (QueryLog (Request →ₒ Reply))
+        (OracleComp target)) := by
+    funext input
+    simp [service, liftNative, QueryImpl.compose, QueryImpl.passthrough_add]
+  rw [runWithSigningOracle, ← QueryImpl.simulateQ_compose]
+  apply simulateQ_WriterT_compose
+  intro input
+  rcases input with native | req
+  · change simulateQ handler (simulateQ service (simulateQ liftNative (route native))).run = _
+    rw [← QueryImpl.simulateQ_compose, forward, writerT_run_simulateQ_liftTarget,
+      simulateQ_id', simulateQ_map]
+    rfl
+  · simp [mapClient, QueryImpl.add, QueryImpl.passthrough_add, QueryImpl.compose,
+      signingOracle, QueryImpl.withLogging_apply]
+
 /-- Native interpretation commutes with the complete logged signing service. -/
 theorem simulateQ_runWithSigningOracle
     {iota kappa Request PK SK Sig Reply alpha : Type}
@@ -191,31 +224,15 @@ theorem simulateQ_runWithSigningOracle
     simulateQ impl (view.runWithSigningOracle pk sk client) =
       (view.map (simulateQ' impl)).runWithSigningOracle pk sk
         (simulateQ (mapClient impl) client) := by
-  let source := spec.passthrough + view.signingOracle pk sk
-  let targetService := target.passthrough + (view.map (simulateQ' impl)).signingOracle pk sk
-  let liftNative : QueryImpl target (OracleComp (target + (Request →ₒ Reply))) :=
-    fun input => liftM ((target + (Request →ₒ Reply)).query (.inl input))
-  have forward : targetService ∘ₛ liftNative =
-      (QueryImpl.id' target).liftTarget (WriterT (QueryLog (Request →ₒ Reply))
-        (OracleComp target)) := by
-    funext input
-    simp [targetService, liftNative, QueryImpl.compose, QueryImpl.passthrough_add]
-  have bridge : ∀ input, simulateQ impl ((source input).run) =
-      ((targetService ∘ₛ mapClient impl) input).run := by
-    intro input
-    rcases input with native | request
-    · dsimp only [QueryImpl.compose, mapClient, QueryImpl.add]
-      rw [← QueryImpl.simulateQ_compose, forward]
-      rw [writerT_run_simulateQ_liftTarget]
-      simp only [source, QueryImpl.passthrough_add, QueryImpl.add_apply_inl,
-        QueryImpl.liftTarget_apply, WriterT.run_monadLift', QueryImpl.id'_apply,
-        simulateQ_map, simulateQ_spec_query, List.empty_eq, simulateQ_id']
-    · simp [source, targetService, QueryImpl.compose, mapClient, QueryImpl.add,
-        QueryImpl.passthrough_add, signingOracle, map]
-  have h := simulateQ_WriterT_compose source impl (targetService ∘ₛ mapClient impl)
-    bridge client
-  simpa only [runWithSigningOracle, source, targetService,
-    QueryImpl.simulateQ_compose] using h
+  have routed := simulateQ_runWithSigningOracle_mapClient impl (QueryImpl.id' target)
+    (view.map (simulateQ' impl)) pk sk client
+  rw [simulateQ_id'] at routed
+  rw [routed, runWithSigningOracle]
+  apply simulateQ_WriterT_compose
+  rintro (native | req)
+  · simp [QueryImpl.passthrough_add, QueryImpl.add, QueryImpl.compose]
+  · simp [QueryImpl.passthrough_add, QueryImpl.add, signingOracle,
+      QueryImpl.withLogging_apply, map]
 
 /-- A client that makes no query returns an empty raw reply log. -/
 @[simp] theorem runWithSigningOracle_pure

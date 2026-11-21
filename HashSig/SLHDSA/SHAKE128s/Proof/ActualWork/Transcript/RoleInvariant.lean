@@ -770,107 +770,6 @@ private theorem client_signing_preserves_runInv
     rw [decoded]
     exact appended
 
-private theorem marked_client_query_run_eq
-    (s : FIPS205.core.PkSeed) (root : FIPS205.core.Y) {World : Type}
-    (outer : QueryImpl (SigningView.Events.Spec A Message) (StateT World ProbComp))
-    (input : (A + Sign).Domain) :
-  let key : PK := ⟨s, root⟩
-  let marked := SigningView.Events.viewWithEvents (commonView true s)
-  let ambient := outer ∘ₛ SigningView.Events.phaseImpl A Message .adversary
-  let service : QueryImpl Sign (StateT World ProbComp) := fun request =>
-    simulateQ outer (marked.sign key key request)
-  let mixed : QueryImpl (A + Sign) (WriterT (QueryLog Sign) (StateT World ProbComp)) :=
-    QueryImpl.add (ambient.liftTarget _) service.withLogging
-  let Marked := SigningView.Events.Spec A Message
-  let freeService : QueryImpl (Marked + Sign) (WriterT (QueryLog Sign) (OracleComp Marked)) :=
-    QueryImpl.add
-      ((QueryImpl.id' Marked).liftTarget (WriterT (QueryLog Sign) (OracleComp Marked)))
-      (marked.signingOracle key key)
-  let markClient : QueryImpl (A + Sign) (OracleComp (Marked + Sign)) :=
-    QueryImpl.add
-      (fun input => simulateQ
-        (fun native => liftM ((Marked + Sign).query (.inl native)))
-        (SigningView.Events.phaseImpl A Message .adversary input))
-      (fun request => liftM ((Marked + Sign).query (.inr request)))
-  let reduced := freeService ∘ₛ markClient
-  simulateQ outer (reduced input).run = (mixed input).run := by
-  intro key marked ambient service mixed Marked freeService markClient reduced
-  let liftNative : QueryImpl Marked (OracleComp (Marked + Sign)) :=
-    fun input => liftM ((Marked + Sign).query (.inl input))
-  have forward : freeService ∘ₛ liftNative =
-      (QueryImpl.id' Marked).liftTarget (WriterT (QueryLog Sign) (OracleComp Marked)) := by
-    funext input
-    simp [freeService, liftNative, QueryImpl.compose, QueryImpl.add]
-  rcases input with ambientInput | request
-  · dsimp only [reduced, QueryImpl.apply_compose, markClient, QueryImpl.add]
-    rw [← QueryImpl.simulateQ_compose, forward, writerT_run_simulateQ_liftTarget]
-    simp only [simulateQ_map, mixed, QueryImpl.add_eq_hAdd, QueryImpl.add_apply_inl,
-      QueryImpl.liftTarget_apply, WriterT.run_monadLift', ambient, QueryImpl.apply_compose]
-    exact congrArg
-      (fun program : OracleComp Marked (A.Range ambientInput) =>
-        (fun answer => (answer, (∅ : QueryLog Sign))) <$> simulateQ outer program)
-      (simulateQ_id' (SigningView.Events.phaseImpl A Message .adversary ambientInput))
-  · simp [reduced, markClient, freeService, mixed, service,
-      QueryImpl.add, SigningView.signingOracle]
-
-/-- The marked client and mixed services retain their complete joint result at every world. -/
-private theorem marked_client_run_eq
-    (s : FIPS205.core.PkSeed) (root : FIPS205.core.Y)
-    (adv : Game.Adversary FIPS205.Answer PK)
-    (raw : Raw.QueryCache) (state : CoverageDeferred.S FIPS205.core)
-    (role : Coverage.RoleState FIPS205.core) :
-  let key : PK := ⟨s, root⟩
-  let marked := SigningView.Events.viewWithEvents (commonView true s)
-  let World := Raw.QueryCache ×
-    (CoverageDeferred.S FIPS205.core × Coverage.RoleState FIPS205.core)
-  let native := QueryImpl.Stateful.link
-    (CoverageDeferred.relative FIPS205.core s (metadataCost true s))
-    (Coverage.roleRunImpl FIPS205.core)
-  let routed := QueryImpl.Stateful.link (routeLab s) native
-  let outer := routed ∘ₛ commonProjection
-  let ambient := outer ∘ₛ SigningView.Events.phaseImpl A Message .adversary
-  let service : QueryImpl Sign (StateT World ProbComp) := fun request =>
-    simulateQ outer (marked.sign key key request)
-  let mixed : QueryImpl (A + Sign) (WriterT (QueryLog Sign) (StateT World ProbComp)) :=
-    QueryImpl.add (ambient.liftTarget _) service.withLogging
-  let client := simulateQ commonProjection
-    (marked.runWithSigningOracle key key
-      (SigningView.Events.mainWithEvents (commonMain adv) key))
-  (simulateQ routed client).run (raw, (state, role)) =
-    (simulateQ mixed (commonMain adv key)).run.run (raw, (state, role)) := by
-  intro key marked World native routed outer ambient service mixed client
-  let Marked := SigningView.Events.Spec A Message
-  let freeService : QueryImpl (Marked + Sign) (WriterT (QueryLog Sign) (OracleComp Marked)) :=
-    QueryImpl.add
-      ((QueryImpl.id' Marked).liftTarget (WriterT (QueryLog Sign) (OracleComp Marked)))
-      (marked.signingOracle key key)
-  let markClient : QueryImpl (A + Sign) (OracleComp (Marked + Sign)) :=
-    QueryImpl.add
-      (fun input => simulateQ
-        (fun native => liftM ((Marked + Sign).query (.inl native)))
-        (SigningView.Events.phaseImpl A Message .adversary input))
-      (fun request => liftM ((Marked + Sign).query (.inr request)))
-  let reduced := freeService ∘ₛ markClient
-  have queries : ∀ input, simulateQ outer (reduced input).run = (mixed input).run :=
-    fun input => marked_client_query_run_eq s root outer input
-  have whole := simulateQ_WriterT_compose reduced outer mixed queries (commonMain adv key)
-  have clientEq : (simulateQ reduced (commonMain adv key)).run =
-      marked.runWithSigningOracle key key
-        (SigningView.Events.mainWithEvents (commonMain adv) key) := by
-    simpa only [reduced, freeService, markClient, SigningView.runWithSigningOracle,
-      SigningView.Events.mainWithEvents, QueryImpl.passthrough_add,
-      ← QueryImpl.add_eq_hAdd, Marked] using
-      congrArg
-        (fun action : WriterT (QueryLog Sign) (OracleComp Marked) (Message × List Byte) =>
-          action.run)
-        (QueryImpl.simulateQ_compose freeService markClient (commonMain adv key))
-  have source : simulateQ outer (simulateQ reduced (commonMain adv key)).run =
-      simulateQ routed client := by
-    rw [clientEq]
-    exact QueryImpl.simulateQ_compose routed commonProjection
-      (marked.runWithSigningOracle key key
-        (SigningView.Events.mainWithEvents (commonMain adv) key))
-  exact congrArg (fun action => action.run (raw, (state, role))) (source.symm.trans whole)
 private theorem native_client_preserves_runInv
     (s : FIPS205.core.PkSeed) (root : FIPS205.core.Y)
     (adv : Game.Adversary FIPS205.Answer PK)
@@ -934,10 +833,10 @@ private theorem native_client_preserves_runInv
     exact client_signing_preserves_runInv s root request entries before hbefore after hafter
   have service_square : out ∈ support
       ((simulateQ mixed (commonMain adv key)).run.run (raw, (state, role))) := by
-    have square := marked_client_run_eq s root adv raw state role
-    dsimp only at square
-    rw [← square]
-    exact hout
+    have square := SigningView.simulateQ_runWithSigningOracle_mapClient
+      (SigningView.Events.phaseImpl A Message .adversary) outer marked key key (commonMain adv key)
+    rw [← QueryImpl.simulateQ_compose] at hout
+    exact (congrArg (fun action => action.run (raw, (state, role))) square) ▸ hout
   exact QueryImpl.holds_of_mem_support_run_add_stateful_withLogging
     ambient service Allowed I ambient_step signing_step (commonMain adv key) allowed
     log (raw, (state, role)) hinitial out service_square

@@ -342,90 +342,24 @@ private theorem actual_client_eq (s : FIPS205.core.PkSeed) (pk sk : PK)
       (SigningView.Events.mainWithEvents (commonMain adv) pk)) =
       (simulateQ (clientHandler s pk sk) (Game.Counted.externalMain adv pk)).run := by
   let marked := SigningView.Events.viewWithEvents (commonView true s)
-  let Log := QueryLog Sign
-  let mainLift : QueryImpl (R + Sign) (OracleComp (A + Sign)) :=
-    QueryImpl.add
-      (QueryImpl.add
-        (QueryImpl.ofLift unifSpec (OracleComp (A + Sign)))
-        (fun raw => liftM ((A + Sign).query (.inl (.inr raw)))))
-      (fun request => liftM ((A + Sign).query (.inr request)))
-  let phaseMain : QueryImpl (A + Sign)
-      (OracleComp (SigningView.Events.Spec A Message + Sign)) :=
-    SigningView.mapClient (SigningView.Events.phaseImpl A Message .adversary)
-  let service : QueryImpl (SigningView.Events.Spec A Message + Sign)
-      (WriterT Log (OracleComp (SigningView.Events.Spec A Message))) :=
-    QueryImpl.add
-      ((QueryImpl.id' (SigningView.Events.Spec A Message)).liftTarget
-        (WriterT Log (OracleComp (SigningView.Events.Spec A Message))))
-      (marked.signingOracle pk sk)
-  have mainUniform (sample : unifSpec.Domain) :
-      mainLift (.inl (.inl sample)) =
-        (liftM ((A + Sign).query (.inl (.inl (.inl (.inl (.inl sample)))))) :
-          OracleComp (A + Sign) (unifSpec.Range sample)) := rfl
-  have mainRaw (raw : Raw.Domain) : mainLift (.inl (.inr raw)) =
-      (liftM ((A + Sign).query (.inl (.inr raw))) : OracleComp (A + Sign) (Raw.Range raw)) := rfl
-  have mainSign (request : Sign.Domain) : mainLift (.inr request) =
-      (liftM ((A + Sign).query (.inr request)) : OracleComp (A + Sign) (Sign.Range request)) := rfl
-  have phaseAmbient (input : A.Domain) : phaseMain (.inl input) =
-      simulateQ (fun event : (SigningView.Events.Spec A Message).Domain =>
-        (liftM ((SigningView.Events.Spec A Message + Sign).query (.inl event)) :
-          OracleComp (SigningView.Events.Spec A Message + Sign)
-            ((SigningView.Events.Spec A Message).Range event)))
-          (SigningView.Events.phaseImpl A Message .adversary input) := rfl
-  have phaseSign (request : Sign.Domain) : phaseMain (.inr request) =
-      (liftM ((SigningView.Events.Spec A Message + Sign).query (.inr request)) :
-        OracleComp (SigningView.Events.Spec A Message + Sign) (Sign.Range request)) := rfl
-  have serviceSign (request : Sign.Domain) :
-      service (.inr request) = marked.signingOracle pk sk request := rfl
-  have markedLog (request : Sign.Domain) :
-      ((marked.signingOracle pk sk) request).run = (do
-        let reply ← marked.sign pk sk request
-        pure (reply, [⟨request, reply⟩])) :=
-    QueryImpl.run_withLogging_apply (loggedSpec := Sign) (marked.sign pk sk) request
-  have serviceAmbient {alpha : Type}
-      (program : OracleComp (SigningView.Events.Spec A Message) alpha) :
-      (simulateQ service
-        (simulateQ (fun input : (SigningView.Events.Spec A Message).Domain =>
-          (liftM ((SigningView.Events.Spec A Message + Sign).query (.inl input)) :
-            OracleComp (SigningView.Events.Spec A Message + Sign)
-              ((SigningView.Events.Spec A Message).Range input))) program)).run =
-        (fun answer => (answer, (∅ : Log))) <$> program := by
-    have same : simulateQ service
-        (simulateQ (fun input : (SigningView.Events.Spec A Message).Domain =>
-          (liftM ((SigningView.Events.Spec A Message + Sign).query (.inl input)) :
-            OracleComp (SigningView.Events.Spec A Message + Sign)
-              ((SigningView.Events.Spec A Message).Range input))) program) =
-        simulateQ ((QueryImpl.id' (SigningView.Events.Spec A Message)).liftTarget
-          (WriterT Log (OracleComp (SigningView.Events.Spec A Message)))) program := by
-      apply QueryImpl.simulateQ_simulateQ_eq_of_apply
-      intro input
-      simp only [simulateQ_spec_query, service, QueryImpl.add]
-    rw [same, writerT_run_simulateQ_liftTarget, simulateQ_id']
-  have clientEquation :
-      simulateQ commonProjection (marked.runWithSigningOracle pk sk
-        (SigningView.Events.mainWithEvents (commonMain adv) pk)) =
-      (simulateQ (clientHandler s pk sk) (Game.Counted.externalMain adv pk)).run := by
-    have mainEquation : SigningView.Events.mainWithEvents (commonMain adv) pk =
-        simulateQ phaseMain (simulateQ mainLift (Game.Counted.externalMain adv pk)) := by
-      rfl
-    rw [SigningView.runWithSigningOracle, mainEquation]
-    simp only [QueryImpl.passthrough_add, ← QueryImpl.add_eq_hAdd]
-    rw [← QueryImpl.simulateQ_compose, ← QueryImpl.simulateQ_compose]
-    change simulateQ commonProjection
-      (simulateQ (service ∘ₛ phaseMain ∘ₛ mainLift)
-        (Game.Counted.externalMain adv pk)).run = _
-    apply simulateQ_WriterT_compose (service ∘ₛ phaseMain ∘ₛ mainLift)
-      commonProjection (clientHandler s pk sk)
-    intro input
-    rcases input with (sample | raw) | request
-    all_goals
-      simp [QueryImpl.apply_compose, mainUniform, mainRaw, mainSign,
-        phaseAmbient, phaseSign, serviceAmbient, serviceSign,
-        clientHandler, QueryImpl.add,
-        markedLog, simulateQ_map,
-        clientAmbient, signSource, marked]
-    all_goals rfl
-  exact clientEquation
+  have source := SigningView.simulateQ_runWithSigningOracle_mapClient
+    (SigningView.Events.phaseImpl A Message .adversary) commonProjection marked pk sk
+    (commonMain adv pk)
+  apply source.trans
+  unfold commonMain
+  rw [← QueryImpl.simulateQ_compose]
+  congr 2
+  funext input
+  rcases input with (sample | raw) | request
+  · change simulateQ _ (liftM ((A + Sign).query (.inl (.inl (.inl (.inl (.inl sample))))))) = _
+    rw [simulateQ_spec_query]
+    rfl
+  · change simulateQ _ (liftM ((A + Sign).query (.inl (.inr raw)))) = _
+    rw [simulateQ_spec_query]
+    rfl
+  · change simulateQ _ (liftM ((A + Sign).query (.inr request))) = _
+    rw [simulateQ_spec_query]
+    rfl
 
 private theorem suffix_safe (s : FIPS205.core.PkSeed) (root : FIPS205.core.Y) (sk : PK)
     (adv : Game.Adversary FIPS205.Answer PK) (caps : Nat × Nat)

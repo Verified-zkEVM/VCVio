@@ -525,57 +525,23 @@ private theorem simulateQ_client {ι Request PK SK Sig Reply C : Type} [AddMonoi
     simulateQ (costImpl policy)
       ((viewWithEvents view).runWithSigningOracle pk sk (mainWithEvents adv pk)) =
       countedPhase policy view pk sk (adv pk) := by
-  let red : QueryImpl (spec + (Request →ₒ Reply))
-      (WriterT (QueryLog (Request →ₒ Reply)) (OracleComp (Spec spec Request))) :=
-    ((Spec spec Request).passthrough + (viewWithEvents view).signingOracle pk sk) ∘ₛ
-      QueryImpl.add (spec₁ := spec) (spec₂ := Request →ₒ Reply)
-        (fun input => simulateQ
-          (fun native => liftM ((Spec spec Request + (Request →ₒ Reply)).query (.inl native)))
-          (phaseImpl spec Request .adversary input))
-        (fun request => liftM ((Spec spec Request + (Request →ₒ Reply)).query (.inr request)))
-  rw [runWithSigningOracle, mainWithEvents, ← QueryImpl.simulateQ_compose]
-  change simulateQ (costImpl policy) (simulateQ red (adv pk)).run =
-    (simulateQ (countedHandler policy view pk sk) (adv pk)).run
-  apply simulateQ_WriterT_compose
-  intro input
+  have source := simulateQ_runWithSigningOracle_mapClient (phaseImpl spec Request .adversary)
+    (costImpl policy) (viewWithEvents view) pk sk (adv pk)
+  apply source.trans
+  congr 2
+  funext input
   cases input with
-  | inl input =>
-    have step : (red (.inl input)).run =
-        (fun answer => (answer, [])) <$> (phaseImpl spec Request .adversary input) := by
-      simp only [red, QueryImpl.apply_compose, QueryImpl.add]
-      have h : simulateQ
-          ((Spec spec Request).passthrough + (viewWithEvents view).signingOracle pk sk)
-          (simulateQ
-            (fun native => liftM ((Spec spec Request + (Request →ₒ Reply)).query (.inl native)))
-            (phaseImpl spec Request .adversary input)) =
-          simulateQ ((QueryImpl.id' (Spec spec Request)).liftTarget
-            (WriterT (QueryLog (Request →ₒ Reply)) (OracleComp (Spec spec Request))))
-            (phaseImpl spec Request .adversary input) := by
-        apply QueryImpl.simulateQ_simulateQ_eq_of_apply
-        intro native
-        simp only [simulateQ_spec_query, QueryImpl.passthrough_add, QueryImpl.add_apply_inl]
-      rw [h, writerT_run_simulateQ_liftTarget, simulateQ_id']
-      rfl
-    rw [step, simulateQ_map]
-    have h := simulateQ_phaseImpl policy .adversary (liftM (spec.query input))
-    simp only [simulateQ_spec_query] at h
-    rw [h]
-    simp [countedHandler, countedHandlerUsing, costed, QueryImpl.withAddCost_apply]
+  | inl native =>
+    have interpreted := simulateQ_phaseImpl policy .adversary (liftM (spec.query native))
+    simp only [simulateQ_spec_query] at interpreted
+    simp [QueryImpl.add, countedHandlerUsing, QueryImpl.apply_compose,
+      interpreted, costed, QueryImpl.withAddCost_apply]
   | inr request =>
-    have step : (red (.inr request)).run =
-        (fun answer => (answer, [⟨request, answer⟩])) <$>
-          (viewWithEvents view).sign pk sk request := by
-      simp [red, QueryImpl.add, signingOracle, QueryImpl.withLogging_apply]
-    rw [step, simulateQ_map]
-    change (fun answer : Reply => (answer, ([⟨request, answer⟩] : QueryLog (Request →ₒ Reply)))) <$>
-      simulateQ (costImpl policy) (emit spec Request (.signingAttempt request) >>= fun _ =>
-        simulateQ (phaseImpl spec Request .signer) (view.sign pk sk request)) = _
-    have hemit : simulateQ (costImpl policy) (emit spec Request (.signingAttempt request)) =
+    have charge : simulateQ (costImpl policy) (emit spec Request (.signingAttempt request)) =
         AddWriterT.addTell (policy (.signingAttempt request)) := by
       simp [emit, costImpl, AddWriterT.addTell]
-    rw [simulateQ_bind, hemit]
-    simp [simulateQ_phaseImpl, countedHandler, countedHandlerUsing,
-      countedSigningOracleUsing_run, map_bind]
+    simp [QueryImpl.add, countedHandlerUsing, countedSigningOracleUsing,
+      viewWithEvents, simulateQ_bind, charge, simulateQ_phaseImpl, seqRight_eq_bind]
 
 /-- Interpreting the complete chronological source retains its keys, outcome and additive cost. -/
 theorem simulateQ_fullKeys
