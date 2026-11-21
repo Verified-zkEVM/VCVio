@@ -344,6 +344,97 @@ branch, key and secret jointly with the leaf. The scalar-generation specializati
 trivial private register of a fixed-function runtime; the underlying instrument factorization
 preserves private memory for general runtimes.
 
+### 14. Idealized endpoint-only sequentiality
+
+`Oracle/MaskedChain/Model.lean` defines the no-preprocessing recovery experiment. One uniform
+function `H : G → G` supplies both the public masks and all online quantum answers. A challenge
+samples `q + 2` independent uniform vertices in a finite abelian group `G` and publishes the
+initial vertex and `q + 1` masks `H(xᵢ) + xᵢ₊₁`. The adversary outputs only a candidate endpoint.
+Its local interpretation, initial substate and public-puzzle-indexed program family are fixed
+before the function and challenge are sampled.
+
+`Quantum.MaskedChain.recoveryAdvantage_le_root` bounds success for `q` adaptive online
+rounds of width at most `k` by `min 1 (rootRecoveryBound G q k)`. Writing `N = |G|`, its
+uncapped bound is
+`choose(q+1,2)/N + (N^(-1/2) + 2 * ∑ h < q, sqrt(k*(q-h)/N))²`.
+The vertex-collision term stays outside the square. For `k,q ≥ 1`, the result has order
+`kq³/N`; the explicit guessing term is retained at zero queries. Repeated inputs, zero-width
+rounds and mixed or subnormalized initial states are allowed. The earlier event-error bound
+`recoveryAdvantage_le` remains available.
+
+The classical coupling retains the full hidden tuple while replacing oracle-derived masks
+with independent public masks. Programmed inputs use their earliest occurrence on a collision;
+agreement is required only outside the explicitly charged collision event. Numbered-call
+hybrids then change one answering step at a time. Resampling future vertices keeps the earlier
+execution unchanged, supplying the independence needed by the averaged reprogramming estimate.
+Weighted Minkowski for square-root sums averages each root comparison, first over fresh suffixes
+and then over reached prefixes. This bounds the root of average success before accumulating
+the round errors; it does not reverse the Jensen inequality for the concave square root.
+Every comparison keeps the endpoint-dependent event joint with the challenger data. The final
+reference execution is independent of the endpoint.
+
+The generic table resampling, coordinate and collision facts live in
+`ToMathlib/MeasureTheory/Measure/UniformTable/Bounds.lean`; the masked-chain coupling and quantum
+hybrids remain in `Oracle/MaskedChain/`. `RootBounds.lean` derives the root-accumulated
+endpoint theorem using the [Afshar et al. §5](https://eprint.iacr.org/2023/932) hybrid
+structure. Their detailed Definition 5.1 and Theorem 5.3, printed p. 24, concern full-tuple
+recovery and give order `sqrt(kq³/N)`. Their Lemma 5.5 and informal Theorem 1.3 already bound
+the endpoint event. The different bookkeeping here accumulates root probabilities before
+squaring, giving order `kq³/N` for positive `k,q`, with a smaller asymptotic expression when
+`kq³ < N`. The endpoint event itself is not a new extension; no best-known or novelty claim
+is made.
+The CFHL compressed-oracle framework remains a separate proof track.
+
+`Schemes/MaskedChainPuzzle.lean` gives the named honest idealized puzzle. Its generator samples
+the full hidden tuple and makes one round of `q + 1` point queries; its solver traverses the
+`q + 1` links with one point per sequential round. Correctness holds for every fixed function
+and tuple. `MaskedChainPuzzle.qromDelayAdvantage_eq_recoveryAdvantage` connects the actual
+two-phase experiment, using the no-preprocessing adversary adapter, to the endpoint game with
+one function and jointly retained hidden tuple. `MaskedChainPuzzle.qromDelayAdvantage_le_root`
+therefore gives the root-accumulated bound for that named scheme. This establishes the idealized
+no-preprocessing application. The extension below handles query-bounded preprocessing.
+
+### 15. Query-bounded preprocessing
+
+`Oracle/MaskedChain/Preprocessing.lean` combines online and preprocessing root errors before
+squaring. Let `A_on = N^(-1/2) + 2 * ∑ h < q, sqrt(k*(q-h)/N)` and
+`β = choose(q+1,2)/N`, where `N = |G|`. Then `preprocessedRecoveryAdvantage_le_root` proves
+
+```
+min 1 (β + (A_on + 2 * sqrt(rpre * Qpre * (q+1) / N))²).
+```
+
+$r_{\mathrm{pre}}$ bounds preprocessing rounds and $Q_{\mathrm{pre}}$ bounds preprocessing points.
+The model leaves retained classical and quantum memory unrestricted. The joint mask-first coupling includes
+the complete two-phase experiment. Comparing preprocessing under the patched oracle with a
+base oracle whose preprocessing prefix is independent of the vertex and mask coins gives
+incidence `(q+1)/N` for the programmed input cells. The challenge-dependent online execution
+becomes a common oracle-free local observation. Conditioning on the base oracle permits an
+oracle-dependent preprocessing state in the conditional online argument. This query-bounded
+theorem requires no salting or presampling.
+
+`preprocessedRecoveryAdvantage_le_root_min` uses `min rpre Qpre` instead of `rpre`. Its proof
+removes empty preprocessing rounds: a width-zero call consumes a round but no points, so an
+arbitrary round bound need not be at most the point bound. Removing these calls preserves the
+entire run and yields at most $Q_{\mathrm{pre}}$ remaining rounds without a separate round
+assumption.
+The event-error APIs remain valid, including the point-only corollary with error
+`4 * Qpre * sqrt((q+1)/N)` added to `recoveryBound`.
+
+The reusable prerequisites are a full two-phase classical-generator law, a multi-round
+common-finisher comparison with prefix query weights independent of its oracle-free suffix,
+and trace-homogeneous online bounds that sum over all preprocessing branches. The latter count
+each branch's raw probability mass, so the online error is charged once. The birthday term is
+also charged once, by the outer classical coupling.
+
+`Schemes/MaskedChainPuzzle/Preprocessing.lean` transfers these bounds to the named scheme's
+actual three-phase experiment. `MaskedChainPuzzle.qromDelaySecure_root` establishes the
+root-accumulated security predicate for every budget-admitted two-phase adversary when the
+online round bound is at most `q`, using `min rpre Qpre`. The preprocessing state can depend
+on the sampled oracle, and no adversary adapter restricts that theorem's scope. The online
+point budget remains an admissibility condition; the online error uses rounds and width.
+The earlier `qromDelaySecure` and `qromDelaySecure_points` wrappers retain their statements.
+
 ### 16. Auxiliary-input security remains separate
 
 Auxiliary-input security allows an unbounded preprocessing computation on the oracle and

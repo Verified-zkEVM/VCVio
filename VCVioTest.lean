@@ -186,6 +186,8 @@ public import VCVioTest.Quantum.Emulated
 public import VCVioTest.Quantum.Hybrid
 public import VCVioTest.Quantum.InstabilityBound
 public import VCVioTest.Quantum.Kraus
+public import VCVioTest.Quantum.MaskedChain
+public import VCVioTest.Quantum.MaskedChainRootBounds
 public import VCVioTest.Quantum.MultiExtractableModule
 public import VCVioTest.Quantum.NumberedQueries
 public import VCVioTest.Quantum.Oracle
@@ -194,6 +196,7 @@ public import VCVioTest.Quantum.ParallelBridges
 public import VCVioTest.Quantum.ParallelPreimage
 public import VCVioTest.Quantum.ParallelSearch
 public import VCVioTest.Quantum.Pure
+public import VCVioTest.Quantum.QueryBoundedPreprocessing
 public import VCVioTest.Quantum.SaltedMerkleMultiExtractable
 public import VCVioTest.Quantum.Sequentialize
 public import VCVioTest.Quantum.SubState
