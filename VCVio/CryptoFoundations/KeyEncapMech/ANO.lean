@@ -7,28 +7,24 @@ Authors: Skas
 module
 
 public import VCVio.CryptoFoundations.KeyEncapMech
-public import VCVio.CryptoFoundations.SecExp.Measure
-public import VCVio.EvalDist.Monad.Bool
-public import VCVio.OracleComp.ProbCompLift
-public import VCVio.OracleComp.ProbComp.Basic
-public import VCVio.OracleComp.SimSemantics.QueryImpl.Basic
-public import VCVio.OracleComp.SimSemantics.Append.Core
-public import VCVio.OracleComp.Coercions.Add.Basic
-public import VCVio.OracleComp.Coercions.SubSpec.Basic
-public import VCVio.OracleComp.Constructions.SampleableType.Measure
 
 /-!
-# Ciphertext anonymity (key privacy) for key encapsulation mechanisms
+# Recipient anonymity for key encapsulation mechanisms
 
-ANO-CPA and ANO-CCA security for `KEMScheme` in the `OracleComp` idiom of
-the current `KeyEncapMech` surface, mirroring the IND-CPA/IND-CCA
-architecture: an adversary structure, hidden-bit games over `OracleComp`,
-advantage as `Measure.boolBias` of `runtime.evalDist`, a decapsulation
-oracle union `spec + ((Bool × C) →ₒ Option K)` answered through `QueryImpl.add`
-with `spec.passthrough`, the challenge ciphertext excluded per
-branch (`bc.2 = cStar → none`), and a CPA-to-CCA embedding whose phases
-are lifted through `simulateQ`, mirroring the IND game pair of
-`KeyEncapMech.lean`. -/
+Anonymity (key privacy) asks that a ciphertext reveal nothing about which public key it was
+encapsulated under. The adversary sees two honestly generated public keys and a challenge
+ciphertext encapsulated under one of them, chosen by a hidden bit, and guesses the bit. It never
+sees the encapsulated key. In `ANO_CPA_Game` it has only the ambient oracles `spec`;
+`ANO_CCA_Game` adds a decapsulation oracle under either secret key, which refuses the challenge
+ciphertext after the challenge. The advantages are the `Measure.boolBias` of the games, as for
+`KEMScheme.IND_CPA_Advantage`, and `ANO_CPA_Game_eq_ANO_CCA_Game_toANO_CCA` embeds the CPA game
+in the CCA game.
+
+## References
+
+* M. Bellare, A. Boldyreva, A. Desai and D. Pointcheval, *Key-Privacy in Public-Key Encryption*,
+  ASIACRYPT 2001.
+-/
 
 public section
 
@@ -36,7 +32,7 @@ namespace KEMScheme
 
 open OracleSpec OracleComp ENNReal
 
-universe u v
+universe u
 
 variable {ι : Type u} {spec : OracleSpec ι} {K PK SK C : Type}
   {kem : KEMScheme (OracleComp spec) K PK SK C}
@@ -48,7 +44,7 @@ hidden bit selects which of two public keys the challenge ciphertext
 encapsulates under; `postChallenge` sees both public keys (encoded in the
 state) and the ciphertext but never the encapsulated shared key. This is
 the anonymity analogue of `KEMScheme.IND_CPA_Adversary`. -/
-structure ANO_Adversary (kem : KEMScheme (OracleComp spec) K PK SK C) where
+structure ANO_CPA_Adversary (kem : KEMScheme (OracleComp spec) K PK SK C) where
   /-- Internal adversary state carried across the challenge. -/
   State : Type
   /-- Pre-challenge phase: sees both public keys, returns a state. -/
@@ -60,7 +56,7 @@ structure ANO_Adversary (kem : KEMScheme (OracleComp spec) K PK SK C) where
 the challenge ciphertext encapsulates under `pk0` (`b = false`) or `pk1`
 (`b = true`); the value is the adversary's verdict bit. -/
 @[expose]
-noncomputable def ANO_CPA_Experiment (adversary : kem.ANO_Adversary) (b : Bool) :
+noncomputable def ANO_CPA_Experiment (adversary : kem.ANO_CPA_Adversary) (b : Bool) :
     OracleComp spec Bool := do
   let (pk0, _) ← kem.keygen
   let (pk1, _) ← kem.keygen
@@ -73,7 +69,7 @@ adversary guesses it from the challenge ciphertext alone; the game returns
 whether the guess matched. -/
 @[expose]
 noncomputable def ANO_CPA_Game (runtime : ProbCompRuntime (OracleComp spec))
-    (adversary : kem.ANO_Adversary) : OracleComp spec Bool := do
+    (adversary : kem.ANO_CPA_Adversary) : OracleComp spec Bool := do
   let (pk0, _) ← kem.keygen
   let (pk1, _) ← kem.keygen
   let st ← adversary.preChallenge pk0 pk1
@@ -87,16 +83,14 @@ bias is the distinguishing advantage exactly when the game is total (both
 branches produce an output; see `Measure.boolBias`'s hidden-bit identity). -/
 @[expose]
 noncomputable def ANO_CPA_Advantage (runtime : ProbCompRuntime (OracleComp spec))
-    (adversary : kem.ANO_Adversary) : ℝ≥0∞ :=
+    (adversary : kem.ANO_CPA_Adversary) : ℝ≥0∞ :=
   (runtime.evalDist (kem.ANO_CPA_Game runtime adversary)).boolBias
 
 /-- The ANO-CPA advantage is definitionally the bias of the single game. -/
 theorem ANO_CPA_Advantage_eq_game_bias (runtime : ProbCompRuntime (OracleComp spec))
-    (adversary : kem.ANO_Adversary) :
+    (adversary : kem.ANO_CPA_Adversary) :
     kem.ANO_CPA_Advantage runtime adversary =
-      (runtime.evalDist (kem.ANO_CPA_Game runtime adversary)).boolBias := by
-  unfold ANO_CPA_Advantage
-  rfl
+      (runtime.evalDist (kem.ANO_CPA_Game runtime adversary)).boolBias := rfl
 
 /-! ## The ANO-CCA decapsulation oracle -/
 
@@ -162,9 +156,7 @@ theorem ANO_CCA_Advantage_eq_game_bias [DecidableEq C]
     (runtime : ProbCompRuntime (OracleComp spec))
     (adversary : kem.ANO_CCA_Adversary) :
     kem.ANO_CCA_Advantage runtime adversary =
-      (runtime.evalDist (kem.ANO_CCA_Game runtime adversary)).boolBias := by
-  unfold ANO_CCA_Advantage
-  rfl
+      (runtime.evalDist (kem.ANO_CCA_Game runtime adversary)).boolBias := rfl
 
 /-! ## The CPA-to-CCA embedding -/
 
@@ -173,7 +165,7 @@ adversary that simply ignores the decapsulation oracle while preserving its
 ordinary pre-challenge interaction with the base oracle set `spec`. This is
 the anonymity analogue of `KEMScheme.IND_CPA_Adversary.toIND_CCA`. -/
 @[expose]
-def ANO_Adversary.toANO_CCA (adversary : kem.ANO_Adversary) : kem.ANO_CCA_Adversary where
+def ANO_CPA_Adversary.toANO_CCA (adversary : kem.ANO_CPA_Adversary) : kem.ANO_CCA_Adversary where
   State := adversary.State
   preChallenge pk0 pk1 := simulateQ
     (HasQuery.toQueryImpl (spec := spec)
@@ -185,71 +177,42 @@ def ANO_Adversary.toANO_CCA (adversary : kem.ANO_Adversary) : kem.ANO_CCA_Advers
     (adversary.postChallenge st cStar)
 
 -- The name mirrors `IND_CPA_Adversary.toIND_CCA`, whose underscore is likewise exempt.
-attribute [nolint defsWithUnderscore] ANO_Adversary.toANO_CCA
-
-/-- Running a lifted computation with any handler for the added oracles folded
-on top of the ambient `spec.passthrough` is the identity semantics: the
-folded answers are only reachable through queries the lifted computation
-emits, but its base `spec` queries pass through and it never emits an added
-query, so every query is answered exactly as the ambient oracle would. -/
-theorem simulateQ_add_liftM_left {α : Type}
-    (impl₂ : QueryImpl ((Bool × C) →ₒ Option K) (OracleComp spec))
-    (oa : OracleComp spec α) :
-    simulateQ (QueryImpl.add spec.passthrough impl₂)
-      (simulateQ (HasQuery.toQueryImpl (spec := spec)
-          (m := OracleComp (spec + ((Bool × C) →ₒ Option K)))) oa)
-      = oa := by
-  rw [← QueryImpl.simulateQ_compose]
-  have hcomp : QueryImpl.add spec.passthrough impl₂ ∘ₛ
-      HasQuery.toQueryImpl (spec := spec)
-        (m := OracleComp (spec + ((Bool × C) →ₒ Option K))) =
-      QueryImpl.id' spec := by
-    rw [QueryImpl.add_eq_hAdd]
-    ext t
-    simp [QueryImpl.compose]
-    simpa using (QueryImpl.simulateQ_add_liftM_query_left (QueryImpl.id' spec) impl₂ t)
-  rw [hcomp, simulateQ_id']
-
-/-- Composing the game handler `QueryImpl.add spec.passthrough impl` with the
-oracle-ignoring lift's identity handler is the identity semantics, so no
-oracle answer ever enters the lifted adversary's phases. -/
-theorem simulateQ_toANO_CCA {α : Type} (oa : OracleComp spec α) :
-    simulateQ (QueryImpl.add spec.passthrough
-        (fun (_ : Bool × C) => (pure none : OracleComp spec (Option K))))
-      (simulateQ (HasQuery.toQueryImpl (spec := spec)
-          (m := OracleComp (spec + ((Bool × C) →ₒ Option K)))) oa)
-      = oa :=
-  simulateQ_add_liftM_left _ oa
+attribute [nolint defsWithUnderscore] ANO_CPA_Adversary.toANO_CCA
 
 /-- The oracle-ignoring lift's pre-challenge phase, run under the game's real
 pre-challenge handler, is exactly the CPA adversary's own phase re-expressed
 back in `OracleComp spec` — the decapsulation oracle contributes nothing it
 does not query. -/
-theorem toANO_CCA_preChallenge (adversary : kem.ANO_Adversary) (sk0 sk1 : SK) (pk0 pk1 : PK) :
+theorem toANO_CCA_preChallenge (adversary : kem.ANO_CPA_Adversary) (sk0 sk1 : SK) (pk0 pk1 : PK) :
     simulateQ (kem.ANO_CCA_preChallengeImpl sk0 sk1)
       ((adversary.toANO_CCA).preChallenge pk0 pk1)
-      = adversary.preChallenge pk0 pk1 :=
-  simulateQ_add_liftM_left _ _
+      = adversary.preChallenge pk0 pk1 := by
+  simp only [ANO_CCA_preChallengeImpl, ANO_CPA_Adversary.toANO_CCA, ANO_CCA_oracleSpec,
+    QueryImpl.add_eq_hAdd, QueryImpl.simulateQ_add_simulateQ_toQueryImpl_left]
+  simp
 
 /-- The oracle-ignoring lift's post-challenge phase, run under the game's real
 post-challenge handler, is exactly the CPA adversary's own phase re-expressed
 back in `OracleComp spec` — the challenge ciphertext is masked only on
 queries the lifted adversary never emits. -/
-theorem toANO_CCA_postChallenge (adversary : kem.ANO_Adversary) [DecidableEq C]
+theorem toANO_CCA_postChallenge (adversary : kem.ANO_CPA_Adversary) [DecidableEq C]
     (sk0 sk1 : SK) (cStar : C) (st : adversary.State) (c : C) :
     simulateQ (kem.ANO_CCA_postChallengeImpl sk0 sk1 cStar)
       ((adversary.toANO_CCA).postChallenge st c)
-      = adversary.postChallenge st c :=
-  simulateQ_add_liftM_left _ _
+      = adversary.postChallenge st c := by
+  simp only [ANO_CCA_postChallengeImpl, ANO_CPA_Adversary.toANO_CCA, ANO_CCA_oracleSpec,
+    QueryImpl.add_eq_hAdd, QueryImpl.simulateQ_add_simulateQ_toQueryImpl_left]
+  simp
 
 /-- The one-phase ANO-CPA game is exactly the ANO-CCA game instantiated with
 the trivial CPA-to-CCA embedding `toANO_CCA` that never uses the decryption
 oracle, mirroring `IND_CPA_Game_eq_IND_CCA_Game_toIND_CCA`. -/
 theorem ANO_CPA_Game_eq_ANO_CCA_Game_toANO_CCA [DecidableEq C]
-    (runtime : ProbCompRuntime (OracleComp spec)) (adversary : kem.ANO_Adversary) :
+    (runtime : ProbCompRuntime (OracleComp spec)) (adversary : kem.ANO_CPA_Adversary) :
     kem.ANO_CPA_Game runtime adversary = kem.ANO_CCA_Game runtime adversary.toANO_CCA := by
-  simp only [ANO_CPA_Game, ANO_CCA_Game, ANO_Adversary.toANO_CCA,
-    ANO_CCA_preChallengeImpl, ANO_CCA_postChallengeImpl, ANO_CCA_oracleSpec,
-    simulateQ_add_liftM_left]
+  simp only [ANO_CPA_Game, ANO_CCA_Game, ANO_CPA_Adversary.toANO_CCA, ANO_CCA_preChallengeImpl,
+    ANO_CCA_postChallengeImpl, ANO_CCA_oracleSpec, QueryImpl.add_eq_hAdd,
+    QueryImpl.simulateQ_add_simulateQ_toQueryImpl_left]
+  simp
 
 end KEMScheme
