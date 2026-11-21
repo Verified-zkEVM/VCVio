@@ -22,13 +22,21 @@ open OracleComp OracleSpec
 
 namespace CanonicalGraph
 
-variable {ι X K R α : Type} {pub : OracleSpec ι} (G : CanonicalGraph pub X K R)
-  [DecidableEq ι] [DecidableEq X] [DecidableEq K] [SampleableType R]
-  [∀ t, SampleableType (pub.Range t)]
+variable {ι X K R : Type} {pub : OracleSpec ι}
 
 /-- The graph query corresponding to a raw public input. -/
 def publicRequests : QueryImpl pub (OracleComp (pub.withLabels X K R)) :=
   fun t => query (spec := pub.withLabels X K R) (.inl (.inl (.inr t)))
+
+/-- A public request forwards its input to the public port of the graph oracle. -/
+theorem publicRequests_apply (row : ι) :
+    publicRequests (pub := pub) (X := X) (K := K) (R := R) row =
+      query (spec := pub.withLabels X K R) (.inl (.inl (.inr row))) := by
+  rw [publicRequests]
+
+variable {α : Type} (G : CanonicalGraph pub X K R)
+  [DecidableEq ι] [DecidableEq X] [DecidableEq K] [SampleableType R]
+  [∀ t, SampleableType (pub.Range t)]
 
 /-- A public reply remains available in a later conflict-free merged table. -/
 theorem merged_public_reply (row : ι) (s : RelabelState pub X K R × List (X ⊕ K)) {z}
