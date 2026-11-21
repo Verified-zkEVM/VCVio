@@ -13,16 +13,16 @@ experimental.vcgen = true
 name = "VCVio"
 path = ".."
 
-# Select both PolyFun packages at one commit. The core VCVio checkout can keep its stable pin.
+# Resolve both nested imports from one PolyFun revision on Frontier’s toolchain.
 [[require]]
 name = "PolyFunFrontier"
 git = { url = "https://github.com/dtumad/PolyFun", subDir = "PolyFunFrontier" }
-rev = "7c69cdbf24a1865bc7544496ef6d3b9fa746c2a3"
+rev = "01547e783a20b7c3acee3137acf96d6c7fabbb7b"
 
 [[require]]
 name = "PolyFun"
 git = "https://github.com/dtumad/PolyFun"
-rev = "7c69cdbf24a1865bc7544496ef6d3b9fa746c2a3"
+rev = "01547e783a20b7c3acee3137acf96d6c7fabbb7b"
 
 # Lake resolves direct dependencies in reverse order. Use Frontier's complete toolchain.
 [[require]]

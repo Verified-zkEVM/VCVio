@@ -23,7 +23,8 @@ def revisions(manifest):
 
 def check_root(root):
     """Catch an accidental root requirement even before someone regenerates the lockfile."""
-    stable = revisions((root / "lake-manifest.json").read_text())
+    stable = {entry["name"].strip("«»"): entry
+              for entry in json.loads((root / "lake-manifest.json").read_text())["packages"]}
     for name in stable:
         if name in FRONTIER_NAMES:
             sys.exit(f"stable VCVio unexpectedly resolves {name}")
@@ -31,6 +32,16 @@ def check_root(root):
         name = token[0].strip('«»"').removesuffix(".git").rsplit("/", 1)[-1]
         if name in FRONTIER_NAMES:
             sys.exit(f"stable VCVio lakefile names the optional dependency {name}")
+
+    # Interop requires VCVio by path, so its inherited core PolyFun entry must follow VCVio.
+    # The optional Frontier package resolves its own pins on its own toolchain.
+    interop = json.loads((root / "Interop/lake-manifest.json").read_text())
+    inherited = next((p for p in interop["packages"] if p["name"] == "PolyFun"), {})
+    core = stable.get("PolyFun", {})
+    fields = ("type", "url", "subDir", "rev", "inputRev")
+    if (not core.get("rev") or not inherited.get("inherited")
+            or any(core.get(k) != inherited.get(k) for k in fields)):
+        sys.exit("Interop must inherit the stable VCVio PolyFun repository and revision")
 
 
 def check(root=ROOT):

@@ -18,7 +18,12 @@ class FrontierPins(unittest.TestCase):
         self.package = self.root / "VCVioFrontier"
         self.package.mkdir()
         (self.root / "lakefile.lean").write_text("require PolyFun from git\n")
-        (self.root / "lake-manifest.json").write_text('{"packages": []}')
+        self.core = {"name": "PolyFun", "type": "git", "url": "https://example.org/PolyFun",
+                     "rev": "a" * 40, "inputRev": "a" * 40}
+        (self.root / "lake-manifest.json").write_text(json.dumps({"packages": [self.core]}))
+        (self.root / "Interop").mkdir()
+        self.interop = self.root / "Interop/lake-manifest.json"
+        self.interop.write_text(json.dumps({"packages": [dict(self.core, inherited=True)]}))
 
     def test_root_without_updated_lockfile(self):
         lakefile = self.root / "lakefile.lean"
@@ -35,6 +40,16 @@ class FrontierPins(unittest.TestCase):
         (self.root / "lake-manifest.json").write_text('{"packages":[{"name":"«cslib-frontier»"}]}')
         with self.assertRaisesRegex(SystemExit, "unexpectedly resolves"):
             PINS["check_root"](self.root)
+
+    def test_interop_inherits_stable_polyfun(self):
+        PINS["check_root"](self.root)
+        for mutation in ({"rev": "b" * 40}, {"url": "https://example.org/other"},
+                         {"inherited": False}):
+            with self.subTest(mutation=mutation):
+                entry = {**self.core, "inherited": True, **mutation}
+                self.interop.write_text(json.dumps({"packages": [entry]}))
+                with self.assertRaisesRegex(SystemExit, "Interop must inherit"):
+                    PINS["check_root"](self.root)
 
     def test_polyfun_locations(self):
         for name in ("lakefile.toml", "lake-manifest.json", "lean-toolchain"):
