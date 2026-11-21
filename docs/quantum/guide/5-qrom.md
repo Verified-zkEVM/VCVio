@@ -299,11 +299,13 @@ this experiment has no oracle preprocessing.
 The expression inside the minimum is `Quantum.MaskedChain.rootRecoveryBound`.
 The guessing and online hybrid terms are combined as root probabilities and squared once;
 the collision allowance for the `q + 1` programmed input vertices is added outside that
-square. The endpoint is not a programmed input. At zero rounds the allowance is zero, so
-the bound reduces to the exact `1/N` guessing probability. The sum is at most
-`q * sqrt(kq / N)`, giving order `kq³ / N` for `k,q ≥ 1`. The explicit guessing term remains
-when no queries are made. Adaptive widths, repeated query inputs, zero-width rounds and
-mixed or subnormalized initial states are allowed. Missing mass counts as failure.
+square. Only the programmed inputs contribute to that allowance. For the one-link puzzle
+(`q = 0`), it vanishes and the bound reduces to the guessing baseline `1/N`. For longer
+chains, the public masks can improve a guess even without oracle queries, and the bound
+retains the collision allowance. The sum is at most `q * sqrt(kq / N)`, giving order
+`kq³ / N` for `k,q ≥ 1`. The explicit guessing term remains when no queries are made.
+Adaptive widths, repeated query inputs, zero-width rounds and mixed or subnormalized
+initial states are allowed. Missing mass counts as failure.
 
 The proof keeps the oracle, full hidden vertex tuple, public masks and endpoint comparison
 joint. A classical coupling moves randomness from oracle values to the public masks,

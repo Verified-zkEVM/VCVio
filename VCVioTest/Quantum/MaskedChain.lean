@@ -69,7 +69,7 @@ example : (Finset.univ.filter fun p : (ZMod 2 → ZMod 2) × (Fin 2 → ZMod 2) 
 universe u v
 variable {L : LocalSig.{u, v}}
 
-/-- At zero rounds, the explicit bound is the exact guessing probability. -/
+/-- For the one-link puzzle, the explicit bound is the exact guessing probability. -/
 example (I : L.Interp) (adv : OnlineAdversary L (ZMod 256) 0)
     (hb : adv.IsQueryBound 0 7) : recoveryAdvantage I adv ≤ 1 / 256 := by
   have h := recoveryAdvantage_le I adv hb
