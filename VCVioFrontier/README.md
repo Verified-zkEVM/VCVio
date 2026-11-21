@@ -55,6 +55,46 @@ ciphertext distributions, including at width zero.
    [Original uniform-ciphertext proof](../Examples/OneTimePad/ComputationalComplexity.lean) ·
    [Machine and handler measure](VCVioFrontier/OracleComp/Realization.lean)
 
+## ElGamal
+
+The typed VCVio reduction and its word implementation share the same three operations. The
+adversary chooses two messages and saves state, a fair coin selects the challenge, and the
+adversary guesses from the ciphertext and its saved state. `oneTimeChoice` translates between
+VCVio’s first message on a true bit and Frontier’s `msg₁`. `eval_ddhReduction_fixedBits`
+identifies the output law of this program with the fair mixture of Frontier’s two fixed-bit
+distinguishers, scoring each guess against its bit.
+[Word reduction](VCVioFrontier/Examples/ElGamal/Reduction.lean) ·
+[Frontier’s fixed-bit distinguisher](https://github.com/cslib-community/cslib-frontier/blob/87063d8acdd04168e47c55701c7497de584af566/CslibFrontier/Crypto/Computational/ElGamal.lean#L606)
+
+Key generation, encryption and decryption are free programs over an exponent request. Installing
+fixed exponents proves decryption for every secret and nonce. Installing the bounded fair-coin
+sampler gives Frontier’s honest algorithms as equalities of programs. When selecting the group
+description is polynomial time, `wordScheme_efficient` certifies all three fields of VCVio’s
+word scheme, including the option-valued plaintext returned by decryption.
+[Programs and handlers](VCVioFrontier/Examples/ElGamal/HonestPrograms.lean) ·
+[Stateful round trip](VCVioFrontierTest/Examples/ElGamal/State.lean) ·
+[Frontier’s bounded sampler and algorithms](https://github.com/cslib-community/cslib-frontier/blob/87063d8acdd04168e47c55701c7497de584af566/CslibFrontier/Crypto/Computational/ElGamal/ProbComp.lean)
+
+The security results assume uniform machine DDH for a prime-order group family with a fixed
+public description at each security parameter.
+
+- For bit messages, `bitAdversary_secure` covers every uniform strict-PPT two-stage bit-message
+  adversary. For arbitrary word messages, `wordGame_measure_negligible` covers every uniform
+  strict-PPT word adversary under a polynomial-time validity test whose accepted messages encode
+  group elements. [Bit and guarded-word games](VCVioFrontier/Examples/ElGamal/Honest.lean)
+- For the unguarded group-message experiment, a word adversary realizes a typed VCVio adversary
+  when both procedures are uniform strict-PPT, message selection preserves the joint law of both
+  messages and encoded state, and guessing agrees on encoded states and ciphertexts. For that
+  realization `R`, `machine_output_openOracle` identifies the output of `R.machine` at its
+  certified clock with the encoded result of the original handled VCVio reduction. Its halting
+  guarantee covers every input word. [Machine and typed reduction](VCVioFrontier/Examples/ElGamal/Security.lean)
+- For each realized adversary, `implemented_advantage_le` bounds the implemented one-time
+  IND-CPA advantage by `2 * AdvDDH + 4 / 2^n` at each parameter. The DDH term uses that
+  adversary’s own distinguisher. Each fixed-bit game contributes at most `2 / 2^n` of
+  bounded-sampling error. The pointwise bound holds before assuming DDH. Under DDH,
+  `implemented_secureAgainst` gives negligible advantage.
+  [Implemented security bound](VCVioFrontier/Examples/ElGamal/Bound.lean)
+
 ## Build
 
 The nested package follows PolyFunFrontier's immutable pins. At this revision it uses Lean

@@ -17,7 +17,8 @@ The current reviewer-facing evidence classification and promotion gates are in t
 ## Implementation snapshot
 
 The optional [VCVioFrontier package](../../VCVioFrontier/README.md) connects a concrete uniform
-probabilistic machine model to the original oracle programs for the one-time pad.
+probabilistic machine model to the original oracle programs for the one-time pad and ElGamal.
+The typed and encoded ElGamal reductions share the message-selection, coin and guessing steps.
 Its certificates describe free-program composition, typed local functions, and the encodings on
 which each machine operates. The backend-relative resource model below also serves open systems.
 

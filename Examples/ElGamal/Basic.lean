@@ -76,6 +76,15 @@ variable {F : Type} [Field F] [Fintype F] [DecidableEq F] [SampleableType F]
 variable {G : Type} [AddCommGroup G] [Module F G] [SampleableType G]
 variable {gen : G}
 
+/-- Choose messages and state, sample the hidden bit, and score the guess on the resulting
+challenge. The challenge processing can use typed group elements or their encoded words. -/
+abbrev oneTimeDDHReductionWith {m : Type → Type} [Monad m] {Choice : Type}
+    (choose : m Choice) (coin : m Bool) (guess : Choice → Bool → m Bool) : m Bool := do
+  let choice ← choose
+  let bit ← coin
+  let out ← guess choice bit
+  return bit == out
+
 /-- The shared one-time DDH reduction body, parameterized by its three effectful operations.
 
 The closed probabilistic reduction, the open adversary interface, the profiled reduction, and the
@@ -83,10 +92,8 @@ fully syntactic oracle program all instantiate this definition. -/
 abbrev oneTimeDDHReductionBody {m : Type → Type} [Monad m] {State : Type}
     (chooseMessages : m (G × G × State)) (coin : m Bool)
     (distinguish : State → G × G → m Bool) (B T : G) : m Bool :=
-  chooseMessages >>= fun ⟨m₁, m₂, state⟩ ↦
-    coin >>= fun bit ↦ do
-      let bit' ← distinguish state (B, T + if bit then m₁ else m₂)
-      pure (bit == bit')
+  oneTimeDDHReductionWith chooseMessages coin fun c bit ↦
+    distinguish c.2.2 (B, T + if bit then c.1 else c.2.1)
 
 /-- ElGamal decryption perfectly inverts encryption: `Dec(sk, Enc(pk, msg)) = msg`. -/
 theorem correct [DecidableEq G] :
@@ -235,7 +242,7 @@ private lemma IND_CPA_OneTime_DDHReduction_rand_half
         pure (decide (bit = bit'))] {true}
       · congr 1
         simpa [DiffieHellman.ddhRandomExperiment, IND_CPA_OneTime_DDHReduction,
-          oneTimeDDHReductionBody, monad_norm,
+          oneTimeDDHReductionBody, oneTimeDDHReductionWith, monad_norm,
           show ∀ a b : Bool, (a == b) = decide (a = b) from by decide] using
           evalDist_bind_bijective_uniform_cross ($ᵗ F) ($ᵗ G) hF hG (· • gen) hg
             (fun pk => do
