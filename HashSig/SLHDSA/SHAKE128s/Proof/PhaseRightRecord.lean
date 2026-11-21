@@ -279,7 +279,7 @@ theorem right_record_phase (leftKeep rightKeep : Bytes → QueryCache HashSpec �
         obtain ⟨signed, hsigned, hpure⟩ := support_bind_exists houter'
         have hsignedState : outer.2 = signed.2 := by
           simp only [simulateQ_pure, StateT.run_pure] at hpure
-          exact congrArg Prod.snd hpure
+          exact congrArg Prod.snd (eq_of_mem_support_pure hpure)
         rw [hsignedState] at houterMem
         cases hframe : request.frame with
         | none =>

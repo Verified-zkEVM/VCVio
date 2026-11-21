@@ -6,7 +6,7 @@ Authors: Alexander Hicks
 module
 
 public import Mathlib.Data.Fintype.EquivFin
-public import Mathlib.Data.Finite.Prod
+public import Mathlib.Basic.Finite.Prod
 
 /-! # The spelling that is not a hazard
 

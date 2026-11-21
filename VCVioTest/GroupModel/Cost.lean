@@ -45,9 +45,12 @@ theorem three_operations (tbl : Tbl (fun _ : Unit => ZMod 7)) :
     change (¬ true = true) ∨ 0 < 0 at bad
     simp only [not_true_eq_false, Nat.lt_irrefl, or_self] at bad
   · intro z hz
-    simp [runGen, run, impl, push, StateT.run, modifyGet, MonadStateOf.modifyGet,
-      StateT.modifyGet] at hz
-    subst z
+    simp only [runGen, run, StateT.run, QueryImpl.ofLift_eq_id', add_apply_inl, bind_pure_comp,
+      simulateQ_bind, simulateQ_query, OracleQuery.input_query, OracleQuery.cont_query,
+      QueryImpl.add_apply_inl, impl, push, modifyGet, MonadStateOf.modifyGet, StateT.modifyGet,
+      id_eq, map_bind, id_map, smul_eq_mul, simulateQ_map, bind_assoc,
+      MonadAttach.mem_support] at hz
+    cases hz
     simp [append]
 
 /-- Three equality queries preserve the entire table and require no group-operation budget. -/

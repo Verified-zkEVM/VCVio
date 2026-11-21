@@ -5,7 +5,7 @@ Authors: Devon Tuma
 -/
 
 module
-public import Mathlib.Data.Fintype.Card
+public import Mathlib.Data.Fintype.Fin
 public import Mathlib.Algebra.BigOperators.Group.Finset.Basic
 public import Mathlib.Data.List.FinRange
 public import Mathlib.Algebra.BigOperators.Ring.Finset
@@ -24,16 +24,8 @@ public section
 /-- Summing `1` over list indices that satisfy a predicate is just `countP` applied to `p`. -/
 lemma List.countP_eq_sum_fin_ite {α : Type*} (xs : List α) (p : α → Bool) :
     (∑ i : Fin xs.length, if p xs[i] then 1 else 0) = xs.countP p := by
-  induction xs with
-  | nil => {
-    simp only [length_nil, Finset.univ_eq_empty, Finset.sum_boole, Fin.getElem_fin,
-      Finset.filter_empty, Finset.card_empty, CharP.cast_eq_zero, countP_nil]
-  }
-  | cons x xs h => {
-    rw [List.countP_cons, ← h]
-    refine (Fin.sum_univ_succ _).trans ((add_comm _ _).trans ?_)
-    congr 1
-  }
+  simpa only [Finset.sum_boole, List.ofFn_getElem, Fin.getElem_fin, Nat.cast_id] using
+    (List.countP_ofFn (fun i : Fin xs.length => xs[i.val]) p).symm
 
 lemma List.countP_finRange_getElem {α : Type} (l : List α) (p : α → Bool) :
     (List.finRange l.length).countP (fun i => p l[↑i]) = l.countP p := by
@@ -49,15 +41,9 @@ lemma Array.card_eq_countP {α : Type} (as : Array α)
     (p : α → Prop) [DecidablePred p] :
     ({i : Fin as.size | p as[↑i]} : Finset (Fin as.size)).card =
       as.countP (fun a => decide (p a)) := by
-  rw [← Array.countP_toList]
-  rw [← List.map_getElem_finRange as.toList, List.countP_map]
-  have hcard := Fin.card_eq_countP_mem ({i : Fin as.size | p as[↑i]} : Finset (Fin as.size))
-  rw [Fin.countP_eq_countP_map_finRange] at hcard
-  convert hcard using 1
-  simp only [Array.length_toList, Array.getElem_toList]
-  congr 1
-  funext i
-  simp
+  simpa only [← Array.toList_ofFn, Array.ofFn_getElem, Array.countP_toList,
+    Fin.getElem_fin, decide_eq_true_eq] using
+    (List.countP_ofFn (fun i : Fin as.size => as[i.val]) (fun a => decide (p a))).symm
 
 namespace List
 
