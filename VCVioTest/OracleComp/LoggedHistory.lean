@@ -138,7 +138,7 @@ private theorem zero_query_completion (initial : Nat) :
       (runLogged ambient zeroService
         (liftM ((rawSpec + (Nat →ₒ Option Nat)).query (.inr 6))) initial) := by
     rw [eqn]
-    exact Set.mem_singleton _
+    exact (mem_support_pure_iff _ _).2 rfl
   obtain ⟨h, same, logs⟩ := exists_loggedHistory_of_mem_support ambient zeroService
     (liftM ((rawSpec + (Nat →ₒ Option Nat)).query (.inr 6))) initial _ supported
   have count := congrArg List.length logs
@@ -211,7 +211,7 @@ private theorem compiled_style_error_data (initial : Nat) :
   have supported : ((.error 7, [⟨0, .ok (.error false)⟩, ⟨1, .error 7⟩]), initial) ∈ support
       (runLogged ambient errorService (errorClient 0) initial) := by
     rw [eqn]
-    exact Set.mem_singleton _
+    exact (mem_support_pure_iff _ _).2 rfl
   obtain ⟨h, same, logs⟩ := exists_loggedHistory_of_mem_support ambient errorService
     (errorClient 0) initial _ supported
   have count := congrArg List.length logs
