@@ -22,6 +22,7 @@ To build on a sub-project, pin a VCVio commit and open an issue describing what 
 | Sub-project | What it connects | Trusted base | Assumptions | Implementations covered |
 |---|---|---|---|---|
 | [`Interop/Aeneas`](Aeneas/README.md) | Rust code extracted by hax 0.5 and Aeneas, in Aeneas's monad `RustM`, lifted into `OracleComp` | hax's frontend, Charon and Aeneas, which translate the Rust crates, and the Rust models in the Lean libraries of Aeneas and hax; the extractions are committed and checked fresh in CI | a Rust function means its extracted `RustM` program, which returns, panics or diverges; Aeneas's scalar operations panic on overflow and on division by zero | ML-KEM's centred binomial sampler (η = 1) and signed Barrett reduction, 32-bit add-with-carry, checked arithmetic and division, and a Rust step after an oracle query |
+| [`Interop/Squirrel`](Squirrel/README.md) | the higher-order CCSA logic of the Squirrel prover (LICS23, CSF24, CCS26), embedded deeply on PolyFun's scoped syntax, with a semantics over VCVio's machines and the soundness of its rules | nothing beyond Lean | the modelling choices in the obligations table of its [design record](../docs/design/interop-squirrel.md) | none yet |
 
 ## Shared rules
 

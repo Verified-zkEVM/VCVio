@@ -123,7 +123,8 @@ build boundaries and the staged consolidation.
 - `VCVio/Schemes/` owns reusable Schnorr, Pedersen, KEM–DEM and MAC-from-PRF constructions;
   `Examples/` includes small consumers of these APIs.
 - `Interop/` contains experimental sub-projects connecting VCVio to outside tools, each its own
-  Lake package; `Interop/Aeneas` verifies Rust code extracted by hax and Aeneas.
+  Lake package; `Interop/Aeneas` verifies Rust code extracted by hax and Aeneas, and
+  `Interop/Squirrel` embeds the logic of the Squirrel prover and proves its rules sound.
 - `csrc/` contains C FFI bridges for the native ML-DSA, ML-KEM, and Falcon implementations used in tests.
 - `third_party/` contains the native backends as git submodules, used by the `Extern` FFI layer and differential tests.
 - `ToMathlib/` contains supporting constructions that may eventually move to a separate project.

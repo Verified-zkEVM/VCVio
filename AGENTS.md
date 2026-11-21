@@ -114,8 +114,9 @@ build boundaries and the staged consolidation.
 - `Examples/`: compact framework examples such as OneTimePad, ElGamal, Schnorr, and program-logic tactic walkthroughs; `Examples/Widgets/` holds the proof widgets they display.
 - `Interop/`: sub-projects connecting VCVio to code and tools outside Lean, each a directory with
   its own Lake package, trusted base and README, so their requires never reach VCVio's dependents;
-  `Interop/Aeneas` carries Rust code extracted by hax and Aeneas. **Strict TCB isolation**: nothing
-  in core VCVio depends on it. See `Interop/README.md` and `docs/agents/interop.md`.
+  `Interop/Aeneas` carries Rust code extracted by hax and Aeneas, and `Interop/Squirrel` the logic
+  of the Squirrel prover with the soundness of its rules. **Strict TCB isolation**: nothing in core
+  VCVio depends on it. See `Interop/README.md` and `docs/agents/interop.md`.
 - `csrc/`: C FFI shims used for differential testing against native ML-DSA, ML-KEM, and Falcon code.
 - `third_party/`: native backends as git submodules; when they are not checked out (fresh clones, Lake dependency checkouts), the native `extern_lib` targets build as empty stub archives.
 

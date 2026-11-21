@@ -30,6 +30,11 @@ rules for agents:
   `vcgen` is core's tactic; VCVio's own driver is `pvcgen`.
 - **Extracted code.** A module holding hax or Aeneas output names its Rust source and states
   whether the code was emitted by the tool or transcribed.
+- **Rules of Squirrel's logic.** In `Interop/Squirrel`, a new rule of the logic adds its row to
+  the rules table of [the design record](../design/interop-squirrel.md), and a row to its
+  obligations table for each modelling choice it makes. A rule whose proof needs the class of
+  machines to admit a reduction adds that field to `AdvClass` together with the construction it
+  admits, and proves that `AdvClass.all` meets it.
 - **Building.** `cd Interop/<Sub> && lake build`. The libraries in the lakefile's `defaultTargets`
   list their roots; add a module there once it builds, and CI's `Interop <Sub>` job sweeps it for
   axioms.
