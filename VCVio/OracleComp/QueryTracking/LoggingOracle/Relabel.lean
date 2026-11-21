@@ -30,7 +30,7 @@ public section
 
 open OracleSpec OracleComp
 
-namespace QueryLog
+namespace OracleSpec.QueryLog
 
 variable {M D T : Type}
 
@@ -113,7 +113,7 @@ theorem mem_map_fst_of_mem_map_fst_relabel [DecidableEq M] [DecidableEq D] (f : 
   · exact ⟨e, he, hne⟩
   · simp [hasCollision_of_mem f msg log he hne hf] at hcoll
 
-end QueryLog
+end OracleSpec.QueryLog
 
 namespace QueryImpl
 
