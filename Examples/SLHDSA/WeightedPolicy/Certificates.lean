@@ -40,6 +40,16 @@ theorem advantage_eq_zero_fips
     Pr{let observed ← run FIPS205.scheme adv}[SigningView.Wins id observed.toOutcome] = 0 := by
   exact ScalarPolicy.advantage_eq_zero_fips policy policy_domination adv q hq hcap
 
+/-- The byte-sensitive cap bounds forgery by the piecewise joint-work expression. -/
+theorem advantage_le_jointWorkBound (q : Nat)
+    (adv : Game.Adversary FIPS205.Answer (PublicKeyCore FIPS205.core))
+    (hlimit :
+      Pr{let result ← (observedGame FIPS205.scheme).experiment () adv}[result.2 .sign ≤ 2 ^ 64] = 1)
+    (hcap : Pr{let observed ← run FIPS205.scheme adv}[observed.cost ≤ q] = 1) :
+    Pr{let observed ← run FIPS205.scheme adv}[SigningView.Wins id observed.toOutcome] ≤
+      jointWorkBound q :=
+  ScalarPolicy.advantage_le_jointWorkBound policy policy_domination q adv hlimit hcap
+
 /-- The original signing lifetime and a positive scalar cap give the same 127-bit certificate. -/
 theorem advantage_le_127 (q : Nat) (hq : 1 ≤ q)
     (adv : Game.Adversary FIPS205.Answer (PublicKeyCore FIPS205.core))

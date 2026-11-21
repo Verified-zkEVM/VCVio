@@ -10,8 +10,10 @@ public import HashSig.SLHDSA.SHAKE128s.Bridge.SharedExperiment.Certificates
 /-!
 # Choosing an eligible shared-work certificate
 
-Use the matching zero theorem below 569 actual joint selected calls. Otherwise the 127-bit
-certificate requires a positive cap and the original almost-sure signing lifetime. These are
+Use the matching zero theorem below 569 actual joint selected calls. At any budget the
+original signing lifetime gives the piecewise bound through
+`SharedExperiment.advantage_le_jointWorkBound`.
+Its positive-cap corollary gives the linear 127-bit bound. These are
 the deterministic SHAKE-128s empty-cache shared-ROM games, with per-request message/context,
 oversized rejection and independent uniform seeds. Their selected-work `q` is distinct from
 the Profile `(qh, qs)` metric; these clients assert no minimum between the two metrics.

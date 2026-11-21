@@ -9,7 +9,7 @@ public import HashSig.SLHDSA.SHAKE128s.Bridge.SharedExperiment.Joint
 public import HashSig.SLHDSA.SHAKE128s.Bridge.SharedExperiment.Component
 public import HashSig.SLHDSA.SHAKE128s.Statement.FIPS205
 public import HashSig.SLHDSA.SHAKE128s.Bridge.PaperGame
-import HashSig.SLHDSA.SHAKE128s.Statement.Theorems.StrongUnforgeability
+public import HashSig.SLHDSA.SHAKE128s.Statement.Theorems.StrongUnforgeability
 import HashSig.SLHDSA.SHAKE128s.Statement.Game.CompleteBudget
 import HashSig.SLHDSA.SHAKE128s.Statement.Theorems.SmallBudget
 import HashSig.SLHDSA.SHAKE128s.Proof.VerificationBudget
@@ -35,6 +35,19 @@ private theorem advantage_eq {Output PK SK : Type} [SampleableType Output]
       (Game.securityGame scheme).advantage () adversary := by
   simp only [SecurityGame.advantage, jointExperiment]
 
+/-- The shared FIPS observation retains the piecewise joint-work bound at every budget. -/
+theorem advantage_le_jointWorkBound (q : Nat)
+    (adversary : Game.Adversary FIPS205.Answer (PublicKeyCore FIPS205.core))
+    (hlimit : Pr{let result ←
+      (observedGame FIPS205.scheme).experiment () adversary}[result.2 .sign ≤ 2 ^ 64] = 1)
+    (hbound : (observedGame FIPS205.scheme).HasQueryBound () Game.adversaryWork adversary q) :
+    (observedGame FIPS205.scheme).advantage () adversary ≤
+      jointWorkBound q := by
+  rw [advantage_eq]
+  apply slhDsa_sufCma_le adversary q
+  · simpa only [jointExperiment, Game.WithinSigningLimit, signingLimit] using hlimit
+  · simpa only [SecurityGame.HasQueryBound, jointExperiment] using hbound
+
 /-- A positive joint-work budget gives 127 bits within the signing lifetime. -/
 theorem advantage_le_127 (q : Nat) (hq : 1 ≤ q)
     (adversary : Game.Adversary FIPS205.Answer (PublicKeyCore FIPS205.core))
@@ -43,10 +56,9 @@ theorem advantage_le_127 (q : Nat) (hq : 1 ≤ q)
     (hbound : (observedGame FIPS205.scheme).HasQueryBound () Game.adversaryWork adversary q) :
     (observedGame FIPS205.scheme).advantage () adversary ≤
       q / ((2 ^ 127 : Nat) : ℝ≥0∞) := by
-  rw [advantage_eq]
-  apply slhDsa_sufCma_127 q hq adversary
-  · simpa only [jointExperiment, Game.WithinSigningLimit, signingLimit] using hlimit
-  · simpa only [SecurityGame.HasQueryBound, jointExperiment] using hbound
+  have _ := hq
+  simpa only [Nat.cast_pow, Nat.cast_ofNat] using
+    (advantage_le_jointWorkBound q adversary hlimit hbound).trans (jointWorkBound_le q)
 
 /-- A model adversary below 569 joint calls never wins, with no lifetime or positivity premise. -/
 theorem advantage_eq_zero_model (adversary : Game.Adversary HashOutput PublicKey)

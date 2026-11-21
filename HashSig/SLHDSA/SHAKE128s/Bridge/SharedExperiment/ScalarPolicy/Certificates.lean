@@ -46,6 +46,20 @@ theorem advantage_eq_zero_fips (policy : Event FIPS205.Answer → Nat)
   rw [success_probability]
   exact SharedExperiment.advantage_eq_zero_fips adv q hq (cap_transport policy hdom _ adv q hcap)
 
+/-- A dominating scalar policy retains the piecewise forgery bound at its own budget. -/
+theorem advantage_le_jointWorkBound (policy : Event FIPS205.Answer → Nat)
+    (hdom : ∀ event, selectedWork (sourcePolicy event) ≤ policy event)
+    (q : Nat)
+    (adv : Game.Adversary FIPS205.Answer (PublicKeyCore FIPS205.core))
+    (hlimit :
+      Pr{let result ← (observedGame FIPS205.scheme).experiment () adv}[result.2 .sign ≤ 2 ^ 64] = 1)
+    (hcap : Pr{let observed ← run policy FIPS205.scheme adv}[observed.cost ≤ q] = 1) :
+    Pr{let observed ← run policy FIPS205.scheme adv}[SigningView.Wins id observed.toOutcome] ≤
+      jointWorkBound q := by
+  rw [success_probability]
+  exact SharedExperiment.advantage_le_jointWorkBound q adv hlimit
+    (cap_transport policy hdom _ adv q hcap)
+
 /-- The original signing lifetime and a positive scalar cap give the same 127-bit certificate. -/
 theorem advantage_le_127 (policy : Event FIPS205.Answer → Nat)
     (hdom : ∀ event, selectedWork (sourcePolicy event) ≤ policy event)
@@ -56,7 +70,8 @@ theorem advantage_le_127 (policy : Event FIPS205.Answer → Nat)
     (hcap : Pr{let observed ← run policy FIPS205.scheme adv}[observed.cost ≤ q] = 1) :
     Pr{let observed ← run policy FIPS205.scheme adv}[SigningView.Wins id observed.toOutcome] ≤
       q / ((2 ^ 127 : Nat) : ℝ≥0∞) := by
-  rw [success_probability]
-  exact SharedExperiment.advantage_le_127 q hq adv hlimit (cap_transport policy hdom _ adv q hcap)
+  have _ := hq
+  simpa only [Nat.cast_pow, Nat.cast_ofNat] using
+    (advantage_le_jointWorkBound policy hdom q adv hlimit hcap).trans (jointWorkBound_le q)
 
 end SLHDSA.SHAKE128s.Bridge.SharedExperiment.ScalarPolicy
