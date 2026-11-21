@@ -490,6 +490,7 @@ public import VCVio.OracleComp.QueryTracking.RandomOracle.PairedValue.Derivation
 public import VCVio.OracleComp.QueryTracking.RandomOracle.PairedValue.GraphCost
 public import VCVio.OracleComp.QueryTracking.RandomOracle.PairedValue.GraphReadback
 public import VCVio.OracleComp.QueryTracking.RandomOracle.PairedValue.Mixed
+public import VCVio.OracleComp.QueryTracking.RandomOracle.PairedValue.MixedCap
 public import VCVio.OracleComp.QueryTracking.RandomOracle.PairedValue.Presence
 public import VCVio.OracleComp.QueryTracking.RandomOracle.PairedValue.ProjectedHits
 public import VCVio.OracleComp.QueryTracking.RandomOracle.ProbeEps
@@ -514,6 +515,7 @@ public import VCVio.OracleComp.QueryTracking.Tracing.Core
 public import VCVio.OracleComp.QueryTracking.Unpredictability
 public import VCVio.OracleComp.QueryTracking.WeightedCap
 public import VCVio.OracleComp.QueryTracking.WeightedCap.Domination
+public import VCVio.OracleComp.QueryTracking.WeightedCap.Resource
 public import VCVio.OracleComp.QueryTracking.WriterCost
 public import VCVio.OracleComp.QueryTracking.WriterCost.StateT
 public import VCVio.OracleComp.ReachableWhen
