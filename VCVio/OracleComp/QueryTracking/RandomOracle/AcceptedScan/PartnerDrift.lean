@@ -37,13 +37,18 @@ noncomputable def priorPairRate (key : A → K) (decode : Y → Option D)
   Pr{let y ← $ᵗ Y}[∃ d, decode y = some d ∧ ∃ b ≠ a, key b = key a ∧
     ∃ w, c b = some w ∧ decode w = some d]
 
+/-- A word decodes to a digest already present at the given key, from any message. -/
+def StoredDigest (key : A → K) (decode : Y → Option D) (c : (A →ₒ Y).QueryCache)
+    (k : K) (w : Y) : Prop :=
+  ∃ d, decode w = some d ∧ ∃ b, key b = k ∧ ∃ u, c b = some u ∧ decode u = some d
+
 omit [DecidableEq A] [DecidableEq Y] in
 /-- An occupied row of the probe's key can account for at most one digest. -/
-theorem priorPairRate_le (key : A → K) (decode : Y → Option D) (c : (A →ₒ Y).QueryCache)
-    (a : A) (rows : Finset A) (ε : ℝ≥0∞)
-    (covered : ∀ b, key b = key a → ∀ w, c b = some w → ∀ d, decode w = some d → b ∈ rows)
+theorem storedDigest_rate_le (key : A → K) (decode : Y → Option D) (c : (A →ₒ Y).QueryCache)
+    (k : K) (rows : Finset A) (ε : ℝ≥0∞)
+    (covered : ∀ b, key b = k → ∀ w, c b = some w → ∀ d, decode w = some d → b ∈ rows)
     (rate : ∀ d, Pr{let w ← $ᵗ Y}[decode w = some d] ≤ ε) :
-    priorPairRate key decode c a ≤ ε * rows.card := by
+    Pr{let w ← $ᵗ Y}[StoredDigest key decode c k w] ≤ ε * rows.card := by
   classical
   let hit (r : A) (v : Y) := ∃ w d, c r = some w ∧ decode w = some d ∧ decode v = some d
   have each (r : A) : Pr{let v ← $ᵗ Y}[hit r v] ≤ ε := by
@@ -61,11 +66,23 @@ theorem priorPairRate_le (key : A → K) (decode : Y → Option D) (c : (A →�
   calc
     _ ≤ Pr{let v ← $ᵗ Y}[∃ r ∈ rows, hit r v] := by
       apply prEvent_mono
-      rintro v ⟨d, hv, b, _, hk, w, hw, hd⟩
+      rintro v ⟨d, hv, b, hk, w, hw, hd⟩
       exact ⟨b, covered b hk w hw d hd, w, d, hw, hd, hv⟩
     _ ≤ ∑ r ∈ rows, Pr{let v ← $ᵗ Y}[hit r v] := prEvent_exists_finset_le rows _ hit
     _ ≤ ∑ _r ∈ rows, ε := Finset.sum_le_sum fun r _ => each r
     _ = _ := by simp [nsmul_eq_mul, mul_comm]
+
+omit [DecidableEq A] [DecidableEq Y] in
+/-- An occupied row of the probe's key can account for at most one digest. -/
+theorem priorPairRate_le (key : A → K) (decode : Y → Option D) (c : (A →ₒ Y).QueryCache)
+    (a : A) (rows : Finset A) (ε : ℝ≥0∞)
+    (covered : ∀ b, key b = key a → ∀ w, c b = some w → ∀ d, decode w = some d → b ∈ rows)
+    (rate : ∀ d, Pr{let w ← $ᵗ Y}[decode w = some d] ≤ ε) :
+    priorPairRate key decode c a ≤ ε * rows.card := by
+  refine (prEvent_mono _ _ _ ?_).trans (storedDigest_rate_le key decode c
+    (key a) rows ε covered rate)
+  rintro v ⟨d, hd, b, _, hk, w, hw, wd⟩
+  exact ⟨d, hd, b, hk, w, hw, wd⟩
 
 private theorem paired_gain (key : A → K) (decode : Y → Option D) (accepted : Finset Y)
     (encode : X → A) (xs : List X) (distinct : (xs.map encode).Nodup)

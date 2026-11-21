@@ -466,6 +466,7 @@ public import VCVio.OracleComp.QueryTracking.RandomOracle.AcceptedScan.PartnerSe
 public import VCVio.OracleComp.QueryTracking.RandomOracle.AcceptedScan.Partners
 public import VCVio.OracleComp.QueryTracking.RandomOracle.AcceptedScan.Probe
 public import VCVio.OracleComp.QueryTracking.RandomOracle.AcceptedScan.Selection
+public import VCVio.OracleComp.QueryTracking.RandomOracle.AcceptedScan.StoppedPartner
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
 public import VCVio.OracleComp.QueryTracking.RandomOracle.CachePartial
 public import VCVio.OracleComp.QueryTracking.RandomOracle.CachePartial.Cost

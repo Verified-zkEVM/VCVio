@@ -216,6 +216,7 @@ public import VCVioTest.RandomOracleRelabel
 public import VCVioTest.RandomOracleRouting
 public import VCVioTest.RandomOracleScanPartners
 public import VCVioTest.RandomOracleSettled
+public import VCVioTest.RandomOracleStoppedPartner
 public import VCVioTest.RandomOracleTouchRead
 public import VCVioTest.RandomPermutationConditioning
 public import VCVioTest.ReactiveBudget
