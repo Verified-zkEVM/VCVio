@@ -60,7 +60,7 @@ theorem ex_comm {α β : Type} (mx : ProbComp α) (my : ProbComp β) (f : α →
     ex mx (fun a => ex my (f a)) = ex my (fun b => ex mx (fun a => f a b)) := by
   unfold ex
   simp_rw [← ENNReal.tsum_mul_left]
-  rw [ENNReal.tsum_comm]
+  rw [tsum_comm]
   refine tsum_congr fun b => tsum_congr fun a => ?_
   ring
 

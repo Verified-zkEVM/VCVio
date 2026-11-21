@@ -517,7 +517,7 @@ lemma reservoir_embed_commute_residual [DecidableEq Domain] [Inhabited Range]
   -- never-firing `none` atom (`tsum_option`, terms nonnegative).
   calc trap = ∑' j : ℕ, g j := hgsum.symm
     _ ≤ ∑' j : ℕ, (Q : ENNReal) * Pr{let x ← reservoirWinnerIndex Q}[x = some j] * S (some j) :=
-        ENNReal.tsum_le_tsum hgle
+        tsum_le_tsum hgle
     _ = ∑' j : ℕ, (Q : ENNReal) * (Pr{let x ← reservoirWinnerIndex Q}[
         x = some j] * S (some j)) := by
         simp_rw [mul_assoc]
@@ -525,7 +525,7 @@ lemma reservoir_embed_commute_residual [DecidableEq Domain] [Inhabited Range]
         ∑' wOpt : Option ℕ, Pr{let x ← reservoirWinnerIndex Q}[x = wOpt] * S wOpt := by
         rw [ENNReal.tsum_mul_left]
         gcongr
-        rw [tsum_option _ ENNReal.summable]
+        rw [tsum_option _ CompleteLattice.summable]
         exact le_add_self
 
 open Classical in
@@ -599,10 +599,10 @@ lemma reservoir_embed_commute [DecidableEq Domain] [Inhabited Range]
   -- Per-target: dropping the conjunct `decide (r.2.1 (r.1.2.1, r.1.1) = some y)` only increases
   -- the winning mass (the event is monotone over the conjoined Bool body).
   rw [OracleComp.prEvent_bind_eq_tsum, OracleComp.prEvent_bind_eq_tsum]
-  refine ENNReal.tsum_le_tsum fun x => ?_
+  refine tsum_le_tsum fun x => ?_
   gcongr
   rw [OracleComp.prEvent_bind_eq_tsum, OracleComp.prEvent_bind_eq_tsum]
-  refine ENNReal.tsum_le_tsum fun r => ?_
+  refine tsum_le_tsum fun r => ?_
   gcongr
   rw [prEvent_pure, prEvent_pure]
   by_cases hxr : r.1.2.2 = x
@@ -719,7 +719,7 @@ lemma gpv_perKey_exactMatch_le_reservoir [DecidableEq Domain] [Inhabited Range]
     simp_rw [OracleComp.prEvent_bind_eq_tsum (reservoirWinnerIndex (qSign + qHash)),
       OracleComp.prEvent_bind_eq_tsum (psf.trapdoorSample pk sk i), ← ENNReal.tsum_mul_left,
       ← mul_assoc]
-    rw [ENNReal.tsum_comm]
+    rw [tsum_comm]
     exact tsum_congr fun wOpt => tsum_congr fun x => by ring
   -- Reassociate the per-target sum into the multi-target factor times the reservoir/target average
   -- that `reservoir_embed_commute` equates to the trap exact-match mass.
@@ -744,7 +744,7 @@ lemma gpv_perKey_exactMatch_le_reservoir [DecidableEq Domain] [Inhabited Range]
                 pure (decide (r.1.2.2 = x)) : ProbComp Bool)}[z = true] := by
     rw [← ENNReal.tsum_mul_left]
     simp_rw [← ENNReal.tsum_mul_left, ← mul_assoc]
-    rw [ENNReal.tsum_comm]
+    rw [tsum_comm]
     exact tsum_congr fun wOpt => tsum_congr fun y => by ring
   simp_rw [hpull]
   rw [hrhs]

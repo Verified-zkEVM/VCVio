@@ -156,9 +156,10 @@ jobs:
         run: >-
           lake exe axiomsweep --root Interop.Aeneas.ITree --root Interop.Aeneas.WP
           --root Interop.Rust.Common --root Interop.Rust.Run --root Interop.Rust.RustM
-          --root Interop.Rust.Triple --root Interop.Hax.Adc --root Interop.Hax.Barrett
-          --root Interop.Hax.CenteredBinomial --root Interop.Hax.Computation
-          --root Interop.Hax.Division --root Interop.Hax.Examples
+          --root Interop.Rust.Triple --root Interop.Hax.Holds
+          --root Interop.Hax.Adc.Verification --root Interop.Hax.Barrett.Verification
+          --root Interop.Hax.CenteredBinomial.Verification --root Interop.Hax.Computation.Verification
+          --root Interop.Hax.Division.Verification --root Interop.Hax.Examples.Verification
           --baseline ../scripts/axiom_baseline.json --check
 
   downstream_stub_link:
@@ -259,7 +260,7 @@ jobs:
             echo '-- `public import`: the universe example below is a `public` declaration, so'
             echo '-- the names in its type must be publicly imported, not just privately visible.'
             echo 'public import VCVio'
-            echo 'public import VCVio.EvalDist.PFunctorMeasure.Core'
+            echo 'public import PolyFun.PFunctor.Free.Measure.EvalDist'
             echo 'public import SchemeAPI'
             echo 'public import CountingAPI'
             echo 'public import CacheAPI'

@@ -104,7 +104,7 @@ theorem prEvent_le_tsum_prEvent_mul_cost (oa : OracleComp spec α) (p : α → P
     (hc : ∀ x, p x → 1 ≤ c x) : Pr{let y ← oa}[p y] ≤ ∑' x, Pr{let y ← oa}[y = x] * c x := by
   classical
   rw [prEvent_eq_tsum_ite]
-  refine ENNReal.tsum_le_tsum fun x ↦ ?_
+  refine tsum_le_tsum fun x ↦ ?_
   split_ifs with hx
   · exact le_mul_of_one_le_right' (hc x hx)
   · exact zero_le
@@ -176,7 +176,7 @@ theorem measureTVDist_bind_left_le_tsum [MeasurableSpace β] (oa : OracleComp sp
     refine ne_top_of_le_ne_top ENNReal.one_ne_top ?_
     calc ∑' x, Pr{let y ← oa}[y = x] * measureETVDist (f x) (g x)
         ≤ ∑' x, Pr{let y ← oa}[y = x] * 1 :=
-          ENNReal.tsum_le_tsum fun x ↦ mul_le_mul' le_rfl (measureETVDist_le_one _ _)
+          tsum_le_tsum fun x ↦ mul_le_mul' le_rfl (measureETVDist_le_one _ _)
       _ = 1 := by simp only [mul_one, tsum_prEvent_eq_one]
   rw [measureTVDist_eq_toReal_measureETVDist]
   calc (measureETVDist (oa >>= f) (oa >>= g)).toReal
@@ -196,7 +196,7 @@ theorem measureETVDist_bind_left_le_of_forall_le [MeasurableSpace β] (oa : Orac
       ≤ ∑' x, Pr{let y ← oa}[y = x] * measureETVDist (f x) (g x) :=
         measureETVDist_bind_left_le_tsum oa f g
     _ ≤ ∑' x, Pr{let y ← oa}[y = x] * δ :=
-        ENNReal.tsum_le_tsum fun x ↦ mul_le_mul' le_rfl (h x)
+        tsum_le_tsum fun x ↦ mul_le_mul' le_rfl (h x)
     _ = δ := by rw [ENNReal.tsum_mul_right, tsum_prEvent_eq_one, one_mul]
 
 /-- A uniform bound on the continuations' real total variations bounds the real total variation
@@ -219,7 +219,7 @@ theorem measureETVDist_bind_left_le_prEvent_of_evalDistEq [MeasurableSpace β]
       ≤ ∑' x, Pr{let y ← oa}[y = x] * measureETVDist (f x) (g x) :=
         measureETVDist_bind_left_le_tsum oa f g
     _ ≤ ∑' x, if bad x then Pr{let y ← oa}[y = x] else 0 := by
-        refine ENNReal.tsum_le_tsum fun x ↦ ?_
+        refine tsum_le_tsum fun x ↦ ?_
         by_cases hx : bad x
         · simp only [hx, ite_true]
           exact mul_le_of_le_one_right' (measureETVDist_le_one _ _)

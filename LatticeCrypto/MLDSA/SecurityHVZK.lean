@@ -15,8 +15,8 @@ This file proves that the ML-DSA identification scheme with `t₀` in the statem
 `identificationSchemeFull`, is perfectly honest-verifier zero-knowledge for a named simulator,
 `hvzkSimulator` (`MLDSA.identificationSchemeFull_perfectHVZK`). An existential statement asserting
 only that *some* simulator with *some* error exists would be trivially dischargeable with
-`ζ_zk := 1` (because total variation is at most one, `Measure.etvDist_le_one`) and would carry no
-content.
+`ζ_zk := 1` (because the statistical distance is at most one, `Measure.statEDist_le_one`) and
+would carry no content.
 
 ## The simulator
 
@@ -86,7 +86,7 @@ private lemma rqVec_sub_add_cancel {k : ℕ} (z v : RqVec k) : z - v + v = z := 
   simp only [Vector.getElem_sub, Vector.getElem_add]
   exact sub_add_cancel _ _
 
-variable [nttOps : NTTRingOps]
+variable (nttOps : NTTRingOps)
 
 /-- **The mask coupling.** With `s` a vector whose challenge products stay `β`-bounded and
 `2γ₁ < q`, the honest pre-gate joint distribution of the challenge hash and the masked response
@@ -148,25 +148,25 @@ commitment components agree by the hint round-trip `useHint_makeHint` followed b
 the `c·s₂` perturbation. -/
 theorem hvzkSimulator_accept_match (h_laws : Primitives.Laws prims nttOps)
     {pk : PublicKey p prims} {sk : SecretKey p} (seed : Bytes 32)
-    (hkeygen : keyGenFromSeed p prims seed = (pk, sk))
+    (hkeygen : keyGenFromSeed p prims nttOps seed = (pk, sk))
     (cTilde : CommitHashBytes p) (y : RqVec p.l)
     (hr0 : polyVecNorm (prims.lowBitsVec
       (prims.expandA pk.rho * y - prims.sampleInBall cTilde • sk.s2)) < p.gamma2 - p.beta)
     (hct0 : polyVecNorm (prims.sampleInBall cTilde • sk.t0) < p.gamma2) :
     (prims.useHintVec
         (prims.makeHintVec (-(prims.sampleInBall cTilde • sk.t0))
-          (computeWApprox p prims (prims.expandA pk.rho) (prims.sampleInBall cTilde)
+          (computeWApprox p prims nttOps (prims.expandA pk.rho) (prims.sampleInBall cTilde)
             (y + prims.sampleInBall cTilde • sk.s1) pk.t1))
-        (computeWApprox p prims (prims.expandA pk.rho) (prims.sampleInBall cTilde)
+        (computeWApprox p prims nttOps (prims.expandA pk.rho) (prims.sampleInBall cTilde)
           (y + prims.sampleInBall cTilde • sk.s1) pk.t1),
       prims.makeHintVec (-(prims.sampleInBall cTilde • sk.t0))
-        (computeWApprox p prims (prims.expandA pk.rho) (prims.sampleInBall cTilde)
+        (computeWApprox p prims nttOps (prims.expandA pk.rho) (prims.sampleInBall cTilde)
           (y + prims.sampleInBall cTilde • sk.s1) pk.t1)) =
     (prims.highBitsVec (prims.expandA pk.rho * y),
       prims.makeHintVec (-(prims.sampleInBall cTilde • sk.t0))
         (prims.expandA pk.rho * y - prims.sampleInBall cTilde • sk.s2
           + prims.sampleInBall cTilde • sk.t0)) := by
-  have hwa := keyGenFromSeed_wApprox_eq p prims h_laws seed hkeygen
+  have hwa := keyGenFromSeed_wApprox_eq p prims nttOps h_laws seed hkeygen
     (prims.sampleInBall cTilde) y
   rw [hwa]
   set c := prims.sampleInBall cTilde with hc_def
@@ -196,7 +196,7 @@ theorem hvzkSimulator_accept_match (h_laws : Primitives.Laws prims nttOps)
     simp only [Vector.getElem_add, Vector.getElem_sub]; abel
   -- The high bits are unchanged by subtracting `c·s₂`.
   have hhide : prims.highBitsVec (aHat * y - c • sk.s2) = prims.highBitsVec (aHat * y) := by
-    have h := hide_lowVec p prims h_laws (aHat * y - c • sk.s2) (c • sk.s2) p.beta
+    have h := hide_lowVec p prims nttOps h_laws (aHat * y - c • sk.s2) (c • sk.s2) p.beta
       (fun j => le_trans
         (LatticeCrypto.PolyVec.component_cInfNorm_le normOps (c • sk.s2) j) hcs2_norm)
       (fun j => by
@@ -208,7 +208,7 @@ theorem hvzkSimulator_accept_match (h_laws : Primitives.Laws prims nttOps)
         omega)
     rw [harith2] at h
     exact h.symm
-  rw [useHintVec_makeHintVec p prims h_laws (-(c • sk.t0))
+  rw [useHintVec_makeHintVec p prims nttOps h_laws (-(c • sk.t0))
       (aHat * y - c • sk.s2 + c • sk.t0) hcond_t0, harith1, hhide]
 
 /-! ### The simulator -/
@@ -220,7 +220,7 @@ def hvzkSimOut (fpk : FullPublicKey p prims) (cTilde : CommitHashBytes p)
     (z : RqVec p.l) :
     Option (Commitment p prims × CommitHashBytes p × Response p prims) :=
   let c := prims.sampleInBall cTilde
-  let wApprox := computeWApprox p prims (prims.expandA fpk.pk.rho) c z fpk.pk.t1
+  let wApprox := computeWApprox p prims nttOps (prims.expandA fpk.pk.rho) c z fpk.pk.t1
   let ct0 := c • fpk.t0
   let r0 := prims.lowBitsVec (wApprox - ct0)
   if polyVecNorm z < p.gamma1 - p.beta ∧ polyVecNorm r0 < p.gamma2 - p.beta then
@@ -238,7 +238,7 @@ def hvzkSimulator [SampleableType (CommitHashBytes p)] [NeZero p.gamma1]
     ProbComp (Option (Commitment p prims × CommitHashBytes p × Response p prims)) := do
   let cTilde ← $ᵗ (CommitHashBytes p)
   let z ← sampleMaskVec p.l p.gamma1
-  return hvzkSimOut p prims fpk cTilde z
+  return hvzkSimOut p prims nttOps fpk cTilde z
 
 /-! ### The honest transcript as a function of `(c̃, z)` -/
 
@@ -264,16 +264,16 @@ def hvzkHonestOut (pk : PublicKey p prims) (sk : SecretKey p)
 gates and the hint coincide; on accept the commitment does too (`hvzkSimulator_accept_match`). -/
 lemma hvzkHonestOut_eq_hvzkSimOut (h_laws : Primitives.Laws prims nttOps)
     {fpk : FullPublicKey p prims} {sk : SecretKey p} (seed : Bytes 32)
-    (hkeygen : keyGenFromSeed p prims seed = (fpk.pk, sk)) (ht0 : fpk.t0 = sk.t0)
+    (hkeygen : keyGenFromSeed p prims nttOps seed = (fpk.pk, sk)) (ht0 : fpk.t0 = sk.t0)
     (cTilde : CommitHashBytes p) (z : RqVec p.l) :
-    hvzkHonestOut p prims fpk.pk sk cTilde z = hvzkSimOut p prims fpk cTilde z := by
+    hvzkHonestOut p prims nttOps fpk.pk sk cTilde z = hvzkSimOut p prims nttOps fpk cTilde z := by
   have hy := rqVec_sub_add_cancel z (prims.sampleInBall cTilde • sk.s1)
-  have hwa := keyGenFromSeed_wApprox_eq p prims h_laws seed hkeygen
+  have hwa := keyGenFromSeed_wApprox_eq p prims nttOps h_laws seed hkeygen
     (prims.sampleInBall cTilde) (z - prims.sampleInBall cTilde • sk.s1)
   rw [hy] at hwa
   simp only [hvzkHonestOut, hvzkSimOut, ht0, hwa, rqVec_add_sub_cancel]
   split_ifs with h1 h2
-  · have hmatch := hvzkSimulator_accept_match p prims h_laws seed hkeygen cTilde
+  · have hmatch := hvzkSimulator_accept_match p prims nttOps h_laws seed hkeygen cTilde
       (z - prims.sampleInBall cTilde • sk.s1) h1.2 h2.1
     rw [hy, hwa, Prod.mk.injEq] at hmatch
     rw [hmatch.1]
@@ -287,10 +287,10 @@ lemma hvzkHonestOut_eq_hvzkSimOut (h_laws : Primitives.Laws prims nttOps)
 `honest_pregate_evalDistEq` applies. -/
 lemma honestExecution_eq_pregate [DecidableEq prims.High] [SampleableType (CommitHashBytes p)]
     [NeZero p.gamma1] (pk : PublicKey p prims) (sk : SecretKey p) :
-    (identificationScheme p prims).honestExecution pk sk =
+    (identificationScheme p prims nttOps).honestExecution pk sk =
       sampleMaskVec p.l p.gamma1 >>= fun y => ($ᵗ (CommitHashBytes p)) >>= fun cTilde =>
         (fun cT zv =>
-            (pure (hvzkHonestOut p prims pk sk cT zv) :
+            (pure (hvzkHonestOut p prims nttOps pk sk cT zv) :
               ProbComp (Option (Commitment p prims × CommitHashBytes p × Response p prims))))
           cTilde (y + prims.sampleInBall cTilde • sk.s1) := by
   simp only [IdenSchemeWithAbort.honestExecution, identificationScheme, bind_assoc, pure_bind]
@@ -305,22 +305,22 @@ lemma honestExecution_evalDistEq_gated [DecidableEq prims.High] [NeZero p.gamma1
     [SampleableType (CommitHashBytes p)] (h_laws : Primitives.Laws prims nttOps)
     (hq : 2 * p.gamma1 < modulus)
     {pk : PublicKey p prims} {sk : SecretKey p} (seed : Bytes 32)
-    (hkeygen : keyGenFromSeed p prims seed = (pk, sk)) :
-    (identificationScheme p prims).honestExecution pk sk =ᵈ
+    (hkeygen : keyGenFromSeed p prims nttOps seed = (pk, sk)) :
+    (identificationScheme p prims nttOps).honestExecution pk sk =ᵈ
       (do
         let cTilde ← $ᵗ (CommitHashBytes p)
         let z ← sampleMaskVec p.l p.gamma1
-        return hvzkHonestOut p prims pk sk cTilde z) := by
+        return hvzkHonestOut p prims nttOps pk sk cTilde z) := by
   have hs1 : polyVecBounded sk.s1 p.eta := by
     have h := congrArg Prod.snd hkeygen
     simp only [keyGenFromSeed] at h
     rw [← h]
     exact (h_laws.expandS_bound _).1
-  rw [honestExecution_eq_pregate p prims pk sk]
-  exact honest_pregate_evalDistEq p prims hq
+  rw [honestExecution_eq_pregate p prims nttOps pk sk]
+  exact honest_pregate_evalDistEq p prims nttOps hq
     (fun cTilde => h_laws.sampleInBall_smul_bound cTilde sk.s1 hs1)
     (fun cT zv =>
-      (pure (hvzkHonestOut p prims pk sk cT zv) :
+      (pure (hvzkHonestOut p prims nttOps pk sk cT zv) :
         ProbComp (Option (Commitment p prims × CommitHashBytes p × Response p prims))))
     (fun _ => pure none) (fun cT z hz => by simp [hvzkHonestOut, hz])
 
@@ -328,8 +328,8 @@ lemma honestExecution_evalDistEq_gated [DecidableEq prims.High] [NeZero p.gamma1
 public key `fpk.pk`. -/
 lemma honestExecution_identificationSchemeFull [DecidableEq prims.High] [NeZero p.gamma1]
     [SampleableType (CommitHashBytes p)] (fpk : FullPublicKey p prims) (sk : SecretKey p) :
-    (identificationSchemeFull p prims).honestExecution fpk sk =
-      (identificationScheme p prims).honestExecution fpk.pk sk := rfl
+    (identificationSchemeFull p prims nttOps).honestExecution fpk sk =
+      (identificationScheme p prims nttOps).honestExecution fpk.pk sk := rfl
 
 /-! ### The headline statement -/
 
@@ -341,13 +341,14 @@ decoding injective. -/
 theorem identificationSchemeFull_perfectHVZK [DecidableEq prims.High] [NeZero p.gamma1]
     [SampleableType (CommitHashBytes p)] (h_laws : Primitives.Laws prims nttOps)
     (hq : 2 * p.gamma1 < modulus) :
-    (identificationSchemeFull p prims).PerfectHVZK (hvzkSimulator p prims) := by
+    (identificationSchemeFull p prims nttOps).PerfectHVZK (hvzkSimulator p prims nttOps) := by
   intro fpk sk hrel
-  obtain ⟨hvalid, ht0⟩ := (validFullKeyPair_eq_true_iff p prims fpk sk).mp hrel
-  obtain ⟨seed, hkeygen⟩ := (validKeyPair_eq_true_iff p prims fpk.pk sk).mp hvalid
+  obtain ⟨hvalid, ht0⟩ := (validFullKeyPair_eq_true_iff p prims nttOps fpk sk).mp hrel
+  obtain ⟨seed, hkeygen⟩ := (validKeyPair_eq_true_iff p prims nttOps fpk.pk sk).mp hvalid
   rw [honestExecution_identificationSchemeFull]
-  simpa only [hvzkSimulator, hvzkHonestOut_eq_hvzkSimOut p prims h_laws seed hkeygen ht0] using
-    honestExecution_evalDistEq_gated p prims h_laws hq seed hkeygen
+  simpa only [hvzkSimulator,
+    hvzkHonestOut_eq_hvzkSimOut p prims nttOps h_laws seed hkeygen ht0] using
+    honestExecution_evalDistEq_gated p prims nttOps h_laws hq seed hkeygen
 
 end RealHVZK
 
@@ -355,12 +356,12 @@ end RealHVZK
 
 section FullTransfer
 
-variable [nttOps : NTTRingOps]
+variable (nttOps : NTTRingOps)
 
 /-- Key generation with `t₀` published: run `hr.gen` and publish the secret key's `t₀`. -/
 def fullRelation
-    (hr : GenerableRelation (PublicKey p prims) (SecretKey p) (validKeyPair p prims)) :
-    GenerableRelation (FullPublicKey p prims) (SecretKey p) (validFullKeyPair p prims) where
+    (hr : GenerableRelation (PublicKey p prims) (SecretKey p) (validKeyPair p prims nttOps)) :
+    GenerableRelation (FullPublicKey p prims) (SecretKey p) (validFullKeyPair p prims nttOps) where
   gen := (fun ks => (⟨ks.1, ks.2.t0⟩, ks.2)) <$> hr.gen
   gen_sound fpk sk h := by
     rw [support_map] at h
@@ -376,8 +377,8 @@ lemma fsAbortSignLoop_identificationSchemeFull [DecidableEq prims.High] [NeZero 
     {m : Type → Type} [Monad m]
     [MonadLiftT ProbComp m] [HasQuery (M × Commitment p prims →ₒ CommitHashBytes p) m]
     (fpk : FullPublicKey p prims) (sk : SecretKey p) (msg : M) (n : ℕ) :
-    fsAbortSignLoop (identificationSchemeFull p prims) (m := m) M fpk sk msg n =
-      fsAbortSignLoop (identificationScheme p prims) M fpk.pk sk msg n := by
+    fsAbortSignLoop (identificationSchemeFull p prims nttOps) (m := m) M fpk sk msg n =
+      fsAbortSignLoop (identificationScheme p prims nttOps) M fpk.pk sk msg n := by
   induction n with
   | zero => rfl
   | succ n ih =>
@@ -390,18 +391,18 @@ and verification ignore `t₀`, so running a forger for the Fiat-Shamir-with-abo
 gives the same unforgeability advantage. -/
 theorem unforgeableAdvantage_eq_full [DecidableEq prims.High] [NeZero p.gamma1] {M : Type}
     [DecidableEq M] [SampleableType (CommitHashBytes p)]
-    (hr : GenerableRelation (PublicKey p prims) (SecretKey p) (validKeyPair p prims))
+    (hr : GenerableRelation (PublicKey p prims) (SecretKey p) (validKeyPair p prims nttOps))
     (maxAttempts : ℕ)
     (adv : SignatureAlg.UnforgeableAdversary
-      (FiatShamirWithAbort (identificationScheme p prims) hr M maxAttempts)) :
+      (FiatShamirWithAbort (identificationScheme p prims nttOps) hr M maxAttempts)) :
     SignatureAlg.unforgeableAdvantage
         (FiatShamirWithAbort.runtime (Commit := Commitment p prims) (Chal := CommitHashBytes p) M)
         adv =
       SignatureAlg.unforgeableAdvantage
         (FiatShamirWithAbort.runtime (Commit := Commitment p prims) (Chal := CommitHashBytes p) M)
         (⟨fun fpk => adv.main fpk.pk⟩ : SignatureAlg.UnforgeableAdversary
-          (FiatShamirWithAbort (identificationSchemeFull p prims) (fullRelation p prims hr) M
-            maxAttempts)) := by
+          (FiatShamirWithAbort (identificationSchemeFull p prims nttOps)
+            (fullRelation p prims nttOps hr) M maxAttempts)) := by
   unfold SignatureAlg.unforgeableAdvantage
   congr 1
   simp only [SignatureAlg.unforgeableExperiment, FiatShamirWithAbort, fullRelation,

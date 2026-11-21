@@ -16,7 +16,9 @@ public import VCVio.OracleComp.QueryTracking.LoggingOracle.Core
 public import VCVio.OracleComp.QueryTracking.QueryCost
 public import VCVio.OracleComp.Coercions.Add.Basic
 public import VCVio.OracleComp.ProbCompLift
-public import VCVio.EvalDist.Defs.Semantics.Core
+public import PolyFun.Control.Monad.Measure.SemanticsVia
+public import VCVio.EvalDist.Defs.Measure.Core
+public import ToMathlib.MeasureTheory.Measure.GiryMonad
 public import Mathlib.Data.FinEnum
 public import Mathlib.Data.Nat.Choose.Basic
 public import Mathlib.Order.Interval.Finset.Fin
@@ -75,11 +77,17 @@ open OracleComp OracleSpec
 /-- Input to the Fischlin random oracle. Defined as a structure rather than a nested product
 to give fast `DecidableEq` synthesis (avoiding deep product-type unfolding). -/
 structure FischlinROInput (Stmt Commit Chal Resp : Type) (ρ : ℕ) (M : Type) where
+  /-- The statement being proved, which is the signer's public key. -/
   stmt : Stmt
+  /-- The message being signed. -/
   msg : M
+  /-- The commitments of all `ρ` repetitions. -/
   comList : List Commit
+  /-- The repetition this query belongs to. -/
   rep : Fin ρ
+  /-- The candidate challenge for that repetition. -/
   chal : Chal
+  /-- The prover's response to the candidate challenge. -/
   resp : Resp
   deriving DecidableEq
 

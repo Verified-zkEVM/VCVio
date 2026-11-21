@@ -8,7 +8,8 @@ module
 public import VCVio.EvalDist.ProbabilityNotation
 public import VCVio.EvalDist.Monad.Support
 public import ToMathlib.MeasureTheory.Integral.Quadratic
-public import ToMathlib.MeasureTheory.Measure.Option
+public import ToCslib.MeasureTheory.Measure.Option
+public import ToMathlib.MeasureTheory.Measure.GiryMonad
 import Mathlib.MeasureTheory.Integral.Lebesgue.Sub
 
 /-!
@@ -86,7 +87,8 @@ theorem prEvent_isSome_eq_sum {γ : Type} [Fintype γ] (mx : m α) (f : α → O
     Pr{let x ← mx}[(f x).isSome] = ∑ k, Pr{let x ← mx}[f x = some k] := by
   let : MeasurableSpace α := ⊤
   simp only [prEvent_eq_evalDist_of_discrete]
-  rw [← measure_biUnion_finset (fun i _ j _ hij ↦ Set.disjoint_left.mpr fun _ hi hj ↦
+  rw [← measure_biUnion_finset (f := fun i ↦ {x | f x = some i})
+    (fun i _ j _ hij ↦ Set.disjoint_left.mpr fun _ hi hj ↦
       hij (Option.some.inj (hi.symm.trans hj))) fun _ _ ↦ MeasurableSet.of_discrete]
   congr 1
   ext x
@@ -137,7 +139,8 @@ theorem prEvent_eq_prEvent_and_add_prEvent_and_not (mx : m α) (p q : α → Pro
     Pr{let x ← mx}[p x] = Pr{let x ← mx}[p x ∧ q x] + Pr{let x ← mx}[p x ∧ ¬ q x] := by
   let : MeasurableSpace α := ⊤
   simp only [prEvent_eq_evalDist_of_discrete]
-  rw [← measure_union (Set.disjoint_left.mpr fun x hx hx' ↦ hx'.2 hx.2) MeasurableSet.of_discrete]
+  rw [← measure_union (s₁ := {x | p x ∧ q x}) (s₂ := {x | p x ∧ ¬ q x})
+    (Set.disjoint_left.mpr fun _ hx hx' ↦ hx'.2 hx.2) MeasurableSet.of_discrete]
   congr 1
   ext x
   simp only [Set.mem_ofPred_eq, Set.mem_union]
@@ -502,32 +505,3 @@ theorem prEvent_bind_le_prEvent_mul_of_forall_le_of_support (mx : m α) (f : α 
   rw [prEvent_map]
 
 end attach
-
-/-! ## Failure of a bind -/
-
-section prFail
-
-variable {m : Type → Type v} [Monad m] [LawfulMonad m] [EvalDistSemantics m]
-  [LawfulEvalDistSemantics m] {α β : Type}
-
-/-- A bind fails when its prefix fails, or when the continuation fails after a successful prefix
-output. -/
-theorem prFail_bind_eq_add_lintegral_of_discrete [MeasurableSpace α] [DiscreteMeasurableSpace α]
-    (mx : m α) (f : α → m β) :
-    prFail (mx >>= f) = prFail mx + ∫⁻ x, prFail (f x) ∂𝒟[mx] := by
-  have hbind : Pr{let _ ← mx >>= f}[True] = ∫⁻ x, Pr{let _ ← f x}[True] ∂𝒟[mx] :=
-    prEvent_bind_eq_lintegral_of_discrete mx f (fun _ ↦ True)
-  have hle : ∫⁻ x, Pr{let _ ← f x}[True] ∂𝒟[mx] ≤ 𝒟[mx] Set.univ :=
-    calc ∫⁻ x, Pr{let _ ← f x}[True] ∂𝒟[mx] ≤ ∫⁻ _, 1 ∂𝒟[mx] :=
-          lintegral_mono fun x ↦ prEvent_le_one _
-      _ = 𝒟[mx] Set.univ := by simp
-  have hsub : ∫⁻ x, prFail (f x) ∂𝒟[mx] =
-      𝒟[mx] Set.univ - ∫⁻ x, Pr{let _ ← f x}[True] ∂𝒟[mx] := by
-    simp only [prFail_def]
-    rw [lintegral_sub Measurable.of_discrete (ne_top_of_le_ne_top (measure_ne_top _ _) hle)
-      (Filter.Eventually.of_forall fun x ↦ prEvent_le_one _)]
-    simp
-  rw [prFail_def, prFail_eq_one_sub_evalDist_univ, hsub, hbind]
-  exact (tsub_add_tsub_cancel (evalDist_apply_univ_le_one mx) hle).symm
-
-end prFail

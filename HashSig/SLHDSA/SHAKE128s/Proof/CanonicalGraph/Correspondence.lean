@@ -40,12 +40,12 @@ def wotsPosition (key : WotsKey) (chain : Fin chains) (position : Fin w) : Struc
   .tree ⟨⟨layers - 1, by decide⟩, ⟨0, by decide⟩⟩
     ⟨subtreeHeight - 1, by decide⟩ ⟨0, by decide⟩
 
-variable [HasQuery HashSpec Id]
+variable {hash : HasQuery HashSpec Id}
 
 /-- The cell at a WOTS+ chain position is the chain value at that position. -/
 theorem value_wotsPosition (secretSeed publicSeed : Digest) (key : WotsKey)
     (chain : Fin chains) (position : Fin w) :
-    value secretSeed publicSeed (.structural (wotsPosition key chain position)) =
+    value hash secretSeed publicSeed (.structural (wotsPosition key chain position)) =
       Wots.chain (m := Id) publicSeed
         { key.address with chainOrHeight := BitVec.ofNat 32 chain.val } 0 position.val
         (Hashing.derive (m := Id) publicSeed secretSeed
@@ -61,7 +61,7 @@ theorem value_wotsPosition (secretSeed publicSeed : Digest) (key : WotsKey)
 /-- A WOTS+ signature discloses, on each chain, the cell at the position the message selects. -/
 theorem wots_sign_cells (message secretSeed publicSeed : Digest) (key : WotsKey) :
     Wots.sign (m := Id) message secretSeed publicSeed key.address =
-      fun chain => value secretSeed publicSeed
+      fun chain => value hash secretSeed publicSeed
         (.structural (wotsPosition key chain (Checksum.encode message chain))) := by
   simp only [Wots.sign, Correctness.sequenceFin_id, bind]
   funext chain
@@ -71,7 +71,7 @@ theorem wots_sign_cells (message secretSeed publicSeed : Digest) (key : WotsKey)
 theorem fors_secret_cell (secretSeed publicSeed : Digest) (key : ForsKey)
     (index : Fin (forsTrees * 2 ^ forsHeight)) :
     Fors.secret (m := Id) secretSeed publicSeed key.address index.val =
-      value secretSeed publicSeed (.structural (.forsPrf key index)) := rfl
+      value hash secretSeed publicSeed (.structural (.forsPrf key index)) := rfl
 
 /-- Every selected FORS message authenticates the same canonical collection of roots. -/
 theorem fors_publicKey_cell (indices : Fors.Indices) (secretSeed publicSeed : Digest)
@@ -79,12 +79,12 @@ theorem fors_publicKey_cell (indices : Fors.Indices) (secretSeed publicSeed : Di
     Fors.publicKeyFromSignature (m := Id)
         (Fors.sign (m := Id) indices secretSeed publicSeed key.address)
         indices publicSeed key.address =
-      value secretSeed publicSeed (.structural (.forsRoots key)) :=
+      value hash secretSeed publicSeed (.structural (.forsRoots key)) :=
   Correctness.Fors.publicKeyFromSignature_sign _ _ _ _
 
 /-- The public-key root is the cell of the top Merkle node. -/
 theorem keygen_root_cell (secretSeed prfSeed publicSeed : Digest) :
     (Scheme.keygenInternal (m := Id) secretSeed prfSeed publicSeed).2.root =
-      value secretSeed publicSeed (.structural topRoot) := rfl
+      value hash secretSeed publicSeed (.structural topRoot) := rfl
 
 end SLHDSA.SHAKE128s.CanonicalGraph

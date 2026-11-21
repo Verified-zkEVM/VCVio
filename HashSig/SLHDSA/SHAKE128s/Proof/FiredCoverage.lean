@@ -340,8 +340,8 @@ theorem reachMass_mono_index (leftLength rightLength : Nat) {early late : Nat}
     (horder : early ≤ late) (weight : List HashOutput → List HashOutput → ℝ≥0∞) :
     reachMass run len leftLength rightLength late weight ≤
       reachMass run len leftLength rightLength early weight := by
-  refine ENNReal.tsum_le_tsum fun leftTape => mul_le_mul' le_rfl ?_
-  refine ENNReal.tsum_le_tsum fun rightTape => mul_le_mul' le_rfl ?_
+  refine tsum_le_tsum fun leftTape => mul_le_mul' le_rfl ?_
+  refine tsum_le_tsum fun rightTape => mul_le_mul' le_rfl ?_
   exact mul_le_mul' le_rfl (prEvent_mono _ _ _ fun z hlate => lt_of_le_of_lt horder hlate)
 
 /-- **A thinning, integrated over the blocks.** An event of the run whose probability, for every
@@ -359,8 +359,8 @@ theorem prob_thin_le (leftLength rightLength index : Nat) (thinned : ρ → Prop
         (fun leftTape rightTape => if event leftTape rightTape then 1 else 0) := by
   classical
   rw [← reachMass_const_mul, prEvent_blockRunOf_eq, reachMass]
-  refine ENNReal.tsum_le_tsum fun leftTape => mul_le_mul' le_rfl ?_
-  refine ENNReal.tsum_le_tsum fun rightTape => mul_le_mul' le_rfl ?_
+  refine tsum_le_tsum fun leftTape => mul_le_mul' le_rfl ?_
+  refine tsum_le_tsum fun rightTape => mul_le_mul' le_rfl ?_
   by_cases hevent : event leftTape rightTape
   · rw [ite_eq_left hevent, mul_one]
     refine le_trans (le_of_eq (prEvent_congr _ _ _ fun z => ?_)) (hthin leftTape rightTape)
@@ -379,8 +379,8 @@ theorem reachMass_le_const_of_length (leftLength rightLength index : Nat)
   classical
   rw [prEvent_reach_eq run len leftLength rightLength index,
     ← reachMass_const_mul run len leftLength rightLength index bound]
-  refine ENNReal.tsum_le_tsum fun leftTape => mul_le_mul' le_rfl ?_
-  refine ENNReal.tsum_le_tsum fun rightTape => ?_
+  refine tsum_le_tsum fun leftTape => mul_le_mul' le_rfl ?_
+  refine tsum_le_tsum fun rightTape => ?_
   by_cases hmem : rightTape ∈ support (padding rightLength)
   · refine mul_le_mul' le_rfl (mul_le_mul' ?_ le_rfl)
     rw [mul_one]
@@ -582,7 +582,7 @@ theorem tsum_tsum_swap (f : HashOutput → HashOutput → ℝ≥0∞) :
     ∑' second, Pr{let x ← ($ᵗ HashOutput : ProbComp HashOutput)}[x = second] *
       ∑' first, Pr{let x ← ($ᵗ HashOutput : ProbComp HashOutput)}[x = first] * f first second := by
   simp_rw [← ENNReal.tsum_mul_left]
-  rw [ENNReal.tsum_comm]
+  rw [tsum_comm]
   exact tsum_congr fun second => tsum_congr fun first => by ring
 
 section Charges
@@ -711,11 +711,11 @@ theorem prob_not_goodLeft_le {ρ : Type} (run : List HashOutput → List HashOut
     exact ForsDisclosureTape.bad_load_probability_sharper leftLength hcap
   refine le_trans ?_ hblock
   rw [prEvent_blockRunOf_eq, ← tsum_ite_eq_probEvent]
-  refine ENNReal.tsum_le_tsum fun leftTape => mul_le_mul' le_rfl ?_
+  refine tsum_le_tsum fun leftTape => mul_le_mul' le_rfl ?_
   by_cases hgood : GoodLeft leftLength leftTape
   · simp [hgood]
   · rw [ite_eq_left hgood]
-    exact le_trans (ENNReal.tsum_le_tsum fun _ => mul_le_of_le_one_right' (prEvent_le_one _))
+    exact le_trans (tsum_le_tsum fun _ => mul_le_of_le_one_right' (prEvent_le_one _))
       (tsum_prEvent_le_one _)
 
 set_option exponentiation.threshold 1024 in

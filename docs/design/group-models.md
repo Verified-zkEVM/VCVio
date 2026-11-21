@@ -581,8 +581,8 @@ The same template gives CDH and the discrete-log relation problem, and with a pa
 `(q₁, q₂)`-DLog family of Bauer, Fuchsbauer and Loss, co-CDH, `t`-SDH and ARSDH (T8 in
 Section 6.5), with the constants fixed by the proofs. For the relation problem on `n` random
 elements the table starts with `n` entries, so the bound has `n` in it:
-`((q + n + 1).choose 2 + 1)/|F|` (`DiscreteLogRelation.experiment_ofGeneric_le`). DDH needs
-one more lemma (T6). Note the form: the statement is about `ofGeneric A`, a `DLogAdversary`.
+`((q + n + 1).choose 2 + 1)/|F|` (`DiscreteLogRelation.plainExperiment_ofGeneric_le`). DDH
+needs one more lemma (T6). Note the form: the statement is about `ofGeneric A`, a `DLogAdversary`.
 It bounds a reduction to DLog when the reduction, run on its adversary, is itself `ofGeneric A'`
 for a generic computation `A'` whose group operations are counted; T5 is meant to supply such
 reductions and their counts. It says nothing about an arbitrary `DLogAdversary`, nor about a
@@ -899,8 +899,11 @@ T3 on each side and T6 (`SameKernel.runGen_fst_eq`) in the middle.
 `measureETVDist_runGen_sameKernel_uniform_le` specializes it to uniform points. Its test shows
 that neither clause of `SameKernel` can be dropped: over `ZMod 17` the tables `[1, X₀, X₀]` and
 `[1, X₀, X₁]` have equal lengths and degree one, and one free equality test separates their runs
-by at least `16/17`, above the `12/17` the bound would give. The per-sort form and T7 at the
-pairing signatures remain targets.
+by at least `16/17`, above the `12/17` the bound would give. At the Type 3 signature
+`pairingSig`, `DecisionalPairing.lean` proves T7 in the per-sort form above as
+`measureETVDist_runGen_pairing_sameKernel_le`, with per-sort append budgets and degree bounds
+closed under the pairing. The per-sort form at `discreteSig S` and T7 at the Type 1 and Type 2
+signatures remain targets.
 
 Three instances show what the hypothesis means.
 
@@ -1190,14 +1193,14 @@ named reduction and composes as it is.
 | Result | Statement | Composes with | Source |
 |---|---|---|---|
 | presentations agree (T1) | exact translations among the four presentations of Section 4.4 | agm-lean `Adversary.run_valid`; ArkLib `GroupRepresentation` | Fuchsbauer, Kiltz, Loss |
-| discrete-log relation | finding a nontrivial relation among `n` random elements is at most DLog plus `1/\|F\|` (`DiscreteLogRelation.experiment_le`, for a nonzero generator); against a generic adversary with `q` group operations, at most `((q + n + 1).choose 2 + 1)/\|F\|` (`DiscreteLogRelation.experiment_ofGeneric_le`) | T3; ironwood proves the reduction on other foundations | Jaeger, Tessaro, Lemma 3 |
+| discrete-log relation | finding a nontrivial relation among `n` random elements is at most DLog plus `1/\|F\|` (`DiscreteLogRelation.experiment_le`, for a nonzero generator); against a generic adversary with `q` group operations, at most `((q + n + 1).choose 2 + 1)/\|F\|` (`DiscreteLogRelation.plainExperiment_ofGeneric_le`) | T3; ironwood proves the reduction on other foundations | Jaeger, Tessaro, Lemma 3 |
 | linear-functional signatures, BLS | `advantage ≤ adv(goodReduction A) + adv(badReduction A) + 1/\|F\|` against `(1,1)`-DLog | proved in `signature-security-lean` at VCVio `f5119c64e` |  |
 | BLS, unconditional | a bound in `q`, `q_H`, `q_S` and `\|F\|` only | the row above, T5, and generic `(1,1)`-DLog. The last is `PairingDLog.experiment_ofGeneric_le` at `q₁ = q₂ = 1` (Section 8.3); T5 remains | Jaeger, Mohan |
 | inner-product and Bulletproofs-style arguments | binding of the vector commitment against an algebraic prover | the discrete-log relation row | Jaeger, Tessaro |
 
 The generic bound for the relation problem has the number `n` of given elements in it. T3 on
 the table of `n` variables gives `((q + n + 1).choose 2 + 1)/|F|` directly (Section 5), proved as
-`DiscreteLogRelation.experiment_ofGeneric_le`. T4 applied through the reduction gives a larger
+`DiscreteLogRelation.plainExperiment_ofGeneric_le`. T4 applied through the reduction gives a larger
 bound. The reduction programs slot `i` as `xᵢ • g + yᵢ • Z` from the DLog challenge `Z`, as
 ironwood's `ProgrammedBasisEmbedding` does. That is two `smul` and one `add`, so its cost
 certificate has `c₀ = 3n`, cost `1` for each group operation of `A` and `0` for each equality
@@ -1211,7 +1214,7 @@ are equal, free equality tests find them, and their difference is a relation.
 |---|---|---|---|
 | generic `(q₁, q₂)`-DLog; co-CDH in both forms | T8. The `(q₁, q₂)`-DLog bound is proved as `PairingDLog.experiment_ofGeneric_le`: with `n₁`, `n₂` and `nₜ` appends to the three sorts, `((q₁ + n₁ + 2).choose 2 · q₁ + (q₂ + n₂ + 2).choose 2 · q₂ + (nₜ + 1).choose 2 · (q₁ + q₂) + 1)/\|F\|`, for generators whose pairing is nonzero; `PairingDLog.experiment_ofGeneric_le_of_total` takes one total budget. Co-CDH is a target | the signature repository's `dlog11Exp` and `coCDHExp` (the Type 3 form) | Bauer, Fuchsbauer, Loss; Boneh, Gentry, Lynn, Shacham |
 | generic `t`-SDH and ARSDH | T8, for ArkLib's experiments: `tSdhExperiment D (ofGeneric A)` and `arsdhExperiment D (ofGeneric A)` | ArkLib `KZG/HardnessAssumptions.lean` | Boneh, Boyen; Chiesa, Guan, Knabenhans, Yu, Definition 9.6 |
-| SXDH; decisional uber | T7, with the accessible span of the signature at hand |  | Boneh, Boyen, Goh; Boyen |
+| XDH; SXDH; decisional uber | T7, with the accessible span of the signature at hand. XDH (DDH in the first source group, with `g₂` and the pairing public) is proved as `XDH.advantage_ofGeneric_le`: with `n₁`, `n₂` and `nₜ` appends to the three sorts, `3 · ((n₁ + 5).choose 2 + (nₜ + 1).choose 2)/\|F\|`, for generators whose pairing is nonzero. SXDH and decisional uber are targets |  | Boneh, Boyen, Goh; Boyen |
 | KZG evaluation binding and function binding, unconditional | for a generic adversary, at most the generic `t`-SDH and ARSDH bounds at a counted number of operations | ArkLib `KZG.CommitmentScheme.binding` with `bindingReduction`, `KZG.CommitmentScheme.function_binding` with `reduction` |  |
 | KZG extraction | a named straight-line extractor; `Pr[accept ∧ p(z) ≠ v] ≤` the `t`-SDH advantage of a named reduction | ArkLib `Commitment.extractability`, today a placeholder, once its game says what the extractor receives (below) | Marlin, Theorem B.12 |
 | uber family from `q`-DLog, algebraic adversaries | a reduction that factors `W` |  | Bauer, Fuchsbauer, Loss; Rotem |
@@ -1329,7 +1332,7 @@ against the paper before a theorem cites it).
 | Rotem, ePrint 2022/584 | target-group representations (`CoeffsT`); the degree needed in `q`-DLog | library target | read |
 | Rotem, Segev, ePrint 2020/1144 | algebraic distinguishers for decisional problems | not planned | abstract |
 | Bauer, Farshim, Harasser, Kohlweiss, *The uber-knowledge assumption* (IACR CiC 1(3)) | knowledge assumptions that instantiate algebraic extraction | not planned | abstract |
-| Jaeger, Tessaro, ePrint 2020/1213, Lemma 3 | discrete-log relation ≤ DLog + `1/\|F\|` | proved as `DiscreteLogRelation.experiment_le`; its generic corollary `DiscreteLogRelation.experiment_ofGeneric_le` gives `((q + n + 1).choose 2 + 1)/\|F\|`; ironwood proves the lemma on other foundations | recalled; ironwood's statement was read |
+| Jaeger, Tessaro, ePrint 2020/1213, Lemma 3 | discrete-log relation ≤ DLog + `1/\|F\|` | proved as `DiscreteLogRelation.experiment_le`; its generic corollary `DiscreteLogRelation.plainExperiment_ofGeneric_le` gives `((q + n + 1).choose 2 + 1)/\|F\|`; ironwood proves the lemma on other foundations | recalled; ironwood's statement was read |
 | Fuchsbauer, Plouviez, Seurin, ePrint 2019/877 | Schnorr, tight, algebraic adversaries | not planned yet | recalled |
 | Bauer, Fuchsbauer, Plouviez, ePrint 2021/866 | one-more discrete log, beyond T3 (Section 8.5) | not planned | abstract |
 | Katz, Zhang, Zhou, ePrint 2022/210 | S2 | target | recalled |
@@ -1423,7 +1426,7 @@ T4 is proved in `GenericHardness.lean` as `dlogExperiment_ofGeneric_le` and
 The relation-problem bounds are proved in `DiscreteLogRelation.lean` and `GenericRelation.lean`.
 `DiscreteLogRelation.experiment_le` bounds relation finding on `n` elements by the DLog success
 of the named reduction plus `1/|F|`, for any nonzero generator.
-`DiscreteLogRelation.experiment_ofGeneric_le` bounds the adversary that
+`DiscreteLogRelation.plainExperiment_ofGeneric_le` bounds the adversary that
 `DiscreteLogRelation.Adversary.ofGeneric` induces from a generic computation with `q` group
 operations by `((q + n + 1).choose 2 + 1)/|F|`.
 
@@ -1431,12 +1434,14 @@ T7 is proved in `Decisional.lean` as `measureETVDist_runGen_sameKernel_le`, at `
 with one total group-operation budget `q` and one degree bound for each table, rather than the
 per-sort form of Section 6.5. Its event form is `prEvent_runGen_sameKernel_le_add`, and its
 Schwartz–Zippel specialization for uniform points is
-`measureETVDist_runGen_sameKernel_uniform_le`.
+`measureETVDist_runGen_sameKernel_uniform_le`. At `pairingSig`, T7 is proved per sort in
+`DecisionalPairing.lean` as `measureETVDist_runGen_pairing_sameKernel_le`, and generic XDH follows
+as `XDH.advantage_ofGeneric_le`.
 
 Everything else is a paper argument or theorem target: T5 and its cost certificate, T7 in its
-per-sort form and at the pairing signatures, T8 for problems other than `(q₁, q₂)`-DLog, S1–S3,
+per-sort form at `discreteSig S` and at the Type 1 and Type 2 signatures, T8 for problems other than `(q₁, q₂)`-DLog, S1–S3,
 P1–P3, restriction along a map of signatures, the invariant at the target sort over `CoeffsT`,
 the free and tracking models for Types 1 and 2, the accessible spans, the polynomial-table
 instance of T6, and the numeric constants in Section 8 other than those of T4, T7, the relation
-problem and `(q₁, q₂)`-DLog. The trilemma in
+problem, `(q₁, q₂)`-DLog and XDH. The trilemma in
 Section 3 and the argument about ArkLib's KZG hypotheses in Section 8.3 are paper arguments.

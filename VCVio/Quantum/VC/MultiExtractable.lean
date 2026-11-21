@@ -141,7 +141,7 @@ theorem QuantumRuntime.outcomeMeasure_run_forgetReg {L : LocalSig.{u, v}}
   rw [QuantumRuntime.run_forgetReg, DSubInstrument.map_eq_bind_ret,
     DSubInstrument.outcomeMeasure_bind, Measure.sum_apply _ hs',
     DSubInstrument.outcomeMeasure_apply _ _ hs]
-  simp only [DSubInstrument.outcomeMeasure_ret, Measure.smul_apply, Measure.dirac_apply' _ hs',
+  simp only [DSubInstrument.outcomeMeasure_ret, smul_apply, Measure.dirac_apply' _ hs',
     smul_eq_mul, DSubInstrument.matrix_post]
   refine ((QuantumComp₂.leafEquiv B α).tsum_eq _).symm.trans (tsum_congr fun a ↦ ?_)
   rfl
@@ -230,8 +230,8 @@ theorem mixedLawWith_apply (p : StdSimplex ℝ Ω) (R : Ω → QuantumRuntime sp
     (x : QuantumComp L spec W A) (ρ : SubState A) (f : Ω → (Σ u, W u) → β) (s : Set β) :
     mixedLawWith p R I x ρ f s =
       p.weights.sum fun ω r ↦ ENNReal.ofReal r * (R ω).evalDistMap I x ρ (f ω) s := by
-  simp only [mixedLawWith, Finsupp.sum, Measure.coe_finsetSum, Finset.sum_apply,
-    Measure.smul_apply, smul_eq_mul]
+  simp only [mixedLawWith, Finsupp.sum, FunLike.coe_sum, Finset.sum_apply,
+    smul_apply, smul_eq_mul]
 
 /-- The uniform distribution on a sampleable type, as a finitely supported distribution: the
 barycenter of the standard simplex. -/
@@ -577,12 +577,12 @@ theorem readComDefect_trace_le_four (Env : QReg) (c : Fin k × X)
 theorem comBound_four : ComBound.{v, w} E ME code (fun _ ↦ 4) := by
   constructor
   · intro i t A Env α x ρ _
-    exact (ENNReal.tsum_le_tsum fun a ↦ comDefect_trace_le_four E ME code Env i
+    exact (tsum_le_tsum fun a ↦ comDefect_trace_le_four E ME code Env i
       ((E.mixedExtractRuntime ME code).jointPost₂ .instruments x ρ a)).trans
       (tsum_weighted_trace_le _
         (QuantumRuntime.tsum_jointPost₂_trace_le_one _ _ x ρ) 4)
   · intro t A Env α x ρ c _
-    exact (ENNReal.tsum_le_tsum fun a ↦ readComDefect_trace_le_four E ME code Env (c a)
+    exact (tsum_le_tsum fun a ↦ readComDefect_trace_le_four E ME code Env (c a)
       ((E.mixedExtractRuntime ME code).jointPost₂ .instruments x ρ a)).trans
       (tsum_weighted_trace_le _
         (QuantumRuntime.tsum_jointPost₂_trace_le_one _ _ x ρ) 4)

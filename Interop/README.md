@@ -4,14 +4,29 @@ Bridges that let VCVio reason about Lean code produced by external verification 
 Rust frontends [hax](https://github.com/cryspen/hax) and
 [Aeneas](https://github.com/AeneasVerif/aeneas).
 
+## Stability
+
+`Interop/` is experimental, and it changes much faster than the rest of VCVio.
+- *No stable interface.* Any PR may rename its modules, restate its theorems or move its hax and
+  Aeneas pins, without deprecations.
+- *It follows the tools.* hax and Aeneas change their Lean output and libraries between releases,
+  and the bridges change with them.
+- *The core is unaffected.* Core VCVio never depends on `Interop/` (see
+  [TCB isolation](#tcb-isolation)).
+
+To build on these bridges, pin a VCVio commit and open an issue describing what you rely on.
+
 ## A separate package
 
 The Rust bridges need hax's and Aeneas's Lean libraries, and every package that requires VCVio
 would resolve any `require` in VCVio's root lakefile. So `Interop/lakefile.toml` is its own Lake
-package. It requires VCVio by path and hax by commit; hax brings Aeneas.
+package. It requires VCVio by path and pins hax and its Aeneas backend by commit. The Aeneas fork
+combines hax's `RustM` interface with the upstream Lean 4.36 fixes for enum declarations and
+scalar set-membership rules. The override can be removed when hax pins a compatible backend.
+[Aeneas Lean update](https://github.com/AeneasVerif/aeneas/pull/1547).
 - *Sources.* It reads them from the repository root (`srcDir = ".."`), so modules keep their
   `Interop.` names.
-- *Pins.* Its pins equal the root's (Lean v4.35.0, Mathlib v4.35.0), so it shares the root's
+- *Pins.* Its pins equal the root's (Lean v4.36.0, Mathlib v4.36.0), so it shares the root's
   dependency cache. A bridge with no Lake dependency of its own can build in the root package
   instead.
 
@@ -37,6 +52,13 @@ Charon, its runtime library) must never reach a routine build of the core.
 
 ## The Rust bridges
 
+A `Std.WP` contract for `RustOracleComp` can specify each exception channel by type.
+`throws (e : Interop.Rust.Error) => …` describes a panic and `throws (u : Unit) => …`
+describes divergence. The [Lean example](Hax/Examples/Verification.lean) uses different
+postconditions for the two exits under an arbitrary interpretation of oracle queries. Its
+caller applies the generated `panicOrDiverge.spec` theorem directly. On Lean 4.36, bare
+`vcgen` fails to reconstruct this two-slot rule at a call site.
+
 hax and Aeneas emit code in one monad, `Aeneas.Std.RustM`. hax's Lean library builds on Aeneas's,
 and the fork of Aeneas it pins names it `RustM`; upstream Aeneas calls the same definition
 `Result`.
@@ -50,12 +72,7 @@ and the fork of Aeneas it pins names it `RustM`; upstream Aeneas calls the same 
 | `Interop.Rust.Common` | `RustOracleComp spec α := ExceptT Error (OptionT (OracleComp spec)) α`: Rust panics, then divergence, then oracle queries |
 | `Interop.Rust.Run` | `.run.run` equations for that stack, for probabilistic proofs |
 | `Interop.Rust.RustM` | the lift `RustM → RustOracleComp spec`, with its `pure`/`bind` laws, `LawfulMonadLift` and a bundled `MonadHom` |
-| `Interop.Rust.Triple` | Aeneas's specifications (`spec`, `dspec`, `Std.Do` triples) as `Std.WP` triples for the lift, under any interpretation of `OracleComp spec`, and the `vcgen` rule `Spec.liftRustM` |
+| `Interop.Rust.Triple` | Aeneas's specifications (`spec`, `dspec`, `Std.Do` triples, and the implication form of hax's extracted contracts) as `Std.WP` triples for the lift, under any interpretation of `OracleComp spec`, and the `vcgen` rule `Spec.liftRustM` |
 | `Interop.Aeneas.ITree` | Aeneas's interaction trees as PolyFun's: an injective monad morphism into `ITree ⟨E.I, E.O⟩`, sending `div` to `ITree.diverge` |
 | `Interop.Aeneas.WP` | Aeneas's total and partial correctness (`DWP`, `DWLP`) are PolyFun's `ITree.wpTotal` and `ITree.wpPartial` along `toPolyFun`, for every Aeneas effect, with exact `bind` laws as corollaries |
-| `Interop.Hax.*` | hax examples, from Rust source through `RustM` into VCVio: ML-KEM's centred binomial sampler and Barrett reduction, add-with-carry, checked arithmetic and division, and a Rust step after an oracle query; see [their README](Hax/README.md) |
-
-## Not yet done
-
-- **Regenerate extractions.** Regenerate the hax examples with the hax CLI (`third_party/hax-cbd`
-  for the sampler). Their code is transcribed in hax's current emission style.
+| `Interop.Hax.*` | hax examples, extracted from Rust crates by the hax CLI and proved in VCVio: ML-KEM's centred binomial sampler and Barrett reduction, add-with-carry, checked arithmetic and division, and a Rust step after an oracle query; see [their README](Hax/README.md) |

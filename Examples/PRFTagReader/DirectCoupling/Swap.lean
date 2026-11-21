@@ -101,7 +101,7 @@ swap-bridge: averaging any continuation `F` over a uniform `gS` is invariant und
 lemma evalDist_uniformSample_comp_cellSwap [DecidableEq Nonce] [SampleableType Digest]
     [Fintype Nonce]
     [MeasurableSpace Digest] [MeasurableSingletonClass Digest]
-    [EvalDistSemantics ProbComp] [LawfulEvalDistSemantics ProbComp]
+    {semantics : EvalDistSemantics ProbComp} [LawfulEvalDistSemantics ProbComp]
     (hTable : 𝒟[$ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)] = uniformOn Set.univ)
     (a b : (TagId × Fin sessionsPerTag) × Nonce) :
     𝒟[(fun gS : (TagId × Fin sessionsPerTag) × Nonce → Digest =>
@@ -132,7 +132,7 @@ consequence of `evalDist_uniformSample_comp_cellSwap` combined with `map_bind`. 
 lemma evalDist_uniformSample_bind_cellSwap [DecidableEq Nonce] [SampleableType Digest]
     [Fintype Nonce]
     [MeasurableSpace Digest] [MeasurableSingletonClass Digest]
-    [EvalDistSemantics ProbComp] [LawfulEvalDistSemantics ProbComp]
+    {semantics : EvalDistSemantics ProbComp} [LawfulEvalDistSemantics ProbComp]
     (hTable : 𝒟[$ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)] = uniformOn Set.univ)
     {α : Type} [MeasurableSpace α] (a b : (TagId × Fin sessionsPerTag) × Nonce)
     (F : ((TagId × Fin sessionsPerTag) × Nonce → Digest) → ProbComp α) :
@@ -374,7 +374,7 @@ POINTWISE equality between the rewritten LHS body and the RHS body, because:
   `gS((tag, 0), n)` (uncached by `hc0`). -/
 lemma evalDist_singleTableHandler_cache_swap_eq [Fintype Nonce]
     [MeasurableSpace Digest] [MeasurableSingletonClass Digest]
-    [EvalDistSemantics ProbComp] [LawfulEvalDistSemantics ProbComp]
+    {semantics : EvalDistSemantics ProbComp} [LawfulEvalDistSemantics ProbComp]
     (hTable : 𝒟[$ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)] = uniformOn Set.univ)
     (s : UnlinkState TagId)
     (c : (((TagId × Fin sessionsPerTag) × Nonce) →ₒ Digest).QueryCache)

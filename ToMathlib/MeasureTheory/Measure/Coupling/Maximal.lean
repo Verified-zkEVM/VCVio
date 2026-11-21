@@ -6,7 +6,7 @@ Authors: Devon Tuma
 
 module
 
-public import ToMathlib.MeasureTheory.Measure.Coupling
+public import ToCslib.MeasureTheory.Measure.Coupling
 public import ToMathlib.MeasureTheory.Measure.TotalVariation
 public import Mathlib.MeasureTheory.Measure.Dirac.Basic
 public import Mathlib.MeasureTheory.Measure.Sub
@@ -15,9 +15,10 @@ public import Mathlib.MeasureTheory.Measure.Sub
 # Maximal couplings of finitely supported measures
 
 Two probability measures concentrated on a common finite set `F` overlap by
-`∑ a ∈ F, min (μ {a}) (ν {a})`, and their total variation is one minus this overlap. No coupling
-puts more than the overlap `min (μ {a}) (ν {a})` on a diagonal point, and `maximalCoupling`, which
-puts the overlap on the diagonal and spreads the residual masses independently, attains it.
+`∑ a ∈ F, min (μ {a}) (ν {a})`, and their statistical distance is one minus this overlap. No
+coupling puts more than the overlap `min (μ {a}) (ν {a})` on a diagonal point, and
+`maximalCoupling`, which puts the overlap on the diagonal and spreads the residual masses
+independently, attains it.
 
 Singleton domination by a measure concentrated on a finite set gives measure domination.
 -/
@@ -103,11 +104,11 @@ theorem sum_tsub_comm [IsProbabilityMeasure μ] [IsProbabilityMeasure ν]
   rw [← one_sub_sum_min_eq_sum_tsub hν, ← one_sub_sum_min_eq_sum_tsub hμ]
   simp only [min_comm]
 
-/-- Total variation between measures concentrated on a common finite set is the total excess of
-the first over the second. -/
-theorem etvDist_eq_sum_tsub [IsProbabilityMeasure μ] [IsProbabilityMeasure ν]
+/-- The statistical distance between measures concentrated on a common finite set is the total
+excess of the first over the second. -/
+theorem statEDist_eq_sum_tsub [IsProbabilityMeasure μ] [IsProbabilityMeasure ν]
     (hμ : μ (↑F)ᶜ = 0) (hν : ν (↑F)ᶜ = 0) :
-    μ.etvDist ν = ∑ a ∈ F, (μ {a} - ν {a}) := by
+    μ.statEDist ν = ∑ a ∈ F, (μ {a} - ν {a}) := by
   classical
   have hsymm := sum_tsub_comm hμ hν
   have hexcess (μ ν : Measure α) (hμ : μ (↑F)ᶜ = 0) (hν : ν (↑F)ᶜ = 0) (s : Set α) :
@@ -125,7 +126,7 @@ theorem etvDist_eq_sum_tsub [IsProbabilityMeasure μ] [IsProbabilityMeasure ν]
     exact hexcess ν μ hν hμ s
   · let t : Finset α := F.filter fun a => ν {a} < μ {a}
     have ht : MeasurableSet (↑t : Set α) := t.measurableSet
-    refine le_trans ?_ (absDiff_apply_le_etvDist μ ν ht)
+    refine le_trans ?_ (absDiff_apply_le_statEDist μ ν ht)
     refine le_trans ?_ (le_self_add : μ ↑t - ν ↑t ≤ (μ ↑t - ν ↑t) + (ν ↑t - μ ↑t))
     rw [← sum_measure_singleton, ← sum_measure_singleton,
       ← sum_tsub_distrib_of_le _ (sum_apply_singleton_ne_top ν t)
@@ -135,12 +136,12 @@ theorem etvDist_eq_sum_tsub [IsProbabilityMeasure μ] [IsProbabilityMeasure ν]
     · rfl
     · exact tsub_eq_zero_of_le (not_lt.1 h)
 
-/-- Total variation between measures concentrated on a common finite set is one minus their
-overlap. -/
-theorem etvDist_eq_one_sub_sum_min [IsProbabilityMeasure μ] [IsProbabilityMeasure ν]
+/-- The statistical distance between measures concentrated on a common finite set is one minus
+their overlap. -/
+theorem statEDist_eq_one_sub_sum_min [IsProbabilityMeasure μ] [IsProbabilityMeasure ν]
     (hμ : μ (↑F)ᶜ = 0) (hν : ν (↑F)ᶜ = 0) :
-    μ.etvDist ν = 1 - ∑ a ∈ F, min (μ {a}) (ν {a}) := by
-  rw [etvDist_eq_sum_tsub hμ hν, one_sub_sum_min_eq_sum_tsub hμ]
+    μ.statEDist ν = 1 - ∑ a ∈ F, min (μ {a}) (ν {a}) := by
+  rw [statEDist_eq_sum_tsub hμ hν, one_sub_sum_min_eq_sum_tsub hμ]
 
 end overlap
 
@@ -185,7 +186,7 @@ theorem isCoupling_maximalCoupling [IsProbabilityMeasure μ] [IsProbabilityMeasu
   constructor
   · ext s hs
     rw [Measure.fst_apply hs, apply_eq_sum_indicator_of_compl_eq_zero hμ s, maximalCoupling]
-    simp only [Measure.add_apply, Measure.coe_finsetSum, Finset.sum_apply, Measure.smul_apply,
+    simp only [add_apply, FunLike.coe_sum, Finset.sum_apply, smul_apply,
       smul_eq_mul, Measure.dirac_apply' _ (measurable_fst hs)]
     rw [← Finset.sum_add_distrib]
     refine Finset.sum_congr rfl fun a ha => ?_
@@ -198,7 +199,7 @@ theorem isCoupling_maximalCoupling [IsProbabilityMeasure μ] [IsProbabilityMeasu
     · simp [Set.indicator, has]
   · ext s hs
     rw [Measure.snd_apply hs, apply_eq_sum_indicator_of_compl_eq_zero hν s, maximalCoupling]
-    simp only [Measure.add_apply, Measure.coe_finsetSum, Finset.sum_apply, Measure.smul_apply,
+    simp only [add_apply, FunLike.coe_sum, Finset.sum_apply, smul_apply,
       smul_eq_mul, Measure.dirac_apply' _ (measurable_snd hs)]
     rw [Finset.sum_comm (s := F) (t := F), ← Finset.sum_add_distrib]
     refine Finset.sum_congr rfl fun b hb => ?_
@@ -212,9 +213,9 @@ theorem isCoupling_maximalCoupling [IsProbabilityMeasure μ] [IsProbabilityMeasu
 /-- The maximal coupling puts at least the overlap on each diagonal point of the set. -/
 theorem min_le_maximalCoupling_apply_diag {a : α} (ha : a ∈ F) :
     min (μ {a}) (ν {a}) ≤ maximalCoupling F μ ν {(a, a)} := by
-  rw [maximalCoupling, Measure.add_apply]
+  rw [maximalCoupling, add_apply]
   refine le_add_right ?_
-  simp only [Measure.coe_finsetSum, Finset.sum_apply, Measure.smul_apply, smul_eq_mul]
+  simp only [FunLike.coe_sum, Finset.sum_apply, smul_apply, smul_eq_mul]
   refine le_trans ?_ (Finset.single_le_sum (fun _ _ => zero_le) ha)
   simp
 

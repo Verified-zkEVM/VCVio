@@ -322,7 +322,7 @@ lemma isQueryBoundP_bind
     (h : IsQueryBoundP oa p n) (h' : ∀ x ∈ support oa, IsQueryBoundP (ob x) p m) :
     IsQueryBoundP (oa >>= ob) p (n + m) := by
   rw [isQueryBoundP_iff_isChargeBound] at h ⊢
-  exact h.bind_supp fun x hx => (isQueryBoundP_iff_isChargeBound p (ob x) m).1 (h' x hx)
+  exact h.bind_support fun x hx => (isQueryBoundP_iff_isChargeBound p (ob x) m).1 (h' x hx)
 
 /-- `oa >>= ob` makes no `p`-query when `oa` and every continuation `ob x` make none. The
 continuations are taken at every value, so the bound composes as a predicate on programs that
@@ -331,6 +331,34 @@ lemma isQueryBoundP_bind_zero (oa : OracleComp spec α) (ob : α → OracleComp 
     (h : IsQueryBoundP oa p 0) (h' : ∀ x, IsQueryBoundP (ob x) p 0) :
     IsQueryBoundP (oa >>= ob) p 0 :=
   isQueryBoundP_bind h fun x _ => h' x
+
+/-- `oa >>= g` is `p`-bounded by `n` when `oa >>= f` is and, at every possible output `x` of
+`oa`, every `p`-budget of `f x` is a `p`-budget of `g x`. The comparison ranges over all budgets
+because a bound on the whole program leaves each continuation the budget its path through `oa` has
+not spent. -/
+theorem IsQueryBoundP.bind_mono_right {oa : OracleComp spec α} {f g : α → OracleComp spec β}
+    {n : ℕ} (h : IsQueryBoundP (oa >>= f) p n)
+    (hfg : ∀ x ∈ support oa, ∀ m, IsQueryBoundP (f x) p m → IsQueryBoundP (g x) p m) :
+    IsQueryBoundP (oa >>= g) p n := by
+  induction oa using OracleComp.inductionOn generalizing n with
+  | pure a =>
+    rw [pure_bind] at h ⊢
+    exact hfg a (by simp) n h
+  | query_bind t k ih =>
+    rw [bind_assoc, isQueryBoundP_query_bind_iff] at h ⊢
+    exact ⟨h.1, fun u ↦ ih u (h.2 u) fun x hx ↦
+      hfg x ((mem_support_bind_iff _ _ _).2 ⟨u, by simp, hx⟩)⟩
+
+/-- A probabilistic computation lifted to `unifSpec + hs` makes no query to `hs`. -/
+theorem isQueryBoundP_liftM_isRight {ι : Type} {hs : OracleSpec ι} {α : Type} (oa : ProbComp α) :
+    IsQueryBoundP (liftM oa : OracleComp (unifSpec + hs) α) (fun t => t.isRight) 0 := by
+  induction oa using OracleComp.inductionOn with
+  | pure a => trivial
+  | query_bind n k ih =>
+    simp only [liftM_bind]
+    exact isQueryBoundP_bind_zero _ _
+      ((isQueryBoundP_query_iff (spec := unifSpec + hs) _ (.inl n) 0).2 fun h => by
+        simp at h) ih
 
 /-- Transfer a predicate-targeted query bound through a `StateT` simulation
 whose handler step consumes at most one target-side predicate query exactly when
@@ -746,7 +774,7 @@ theorem isTotalQueryBound_bind_of_mem_support
     (hsuffix : ∀ x ∈ support oa, IsTotalQueryBound (ob x) suffixBound) :
     IsTotalQueryBound (oa >>= ob) (prefixBound + suffixBound) := by
   rw [isTotalQueryBound_iff_isChargeBound] at hprefix ⊢
-  exact hprefix.bind_supp fun x hx =>
+  exact hprefix.bind_support fun x hx =>
     (isTotalQueryBound_iff_isChargeBound _ _).1 (hsuffix x hx)
 
 /-- If `oa >>= ob` has a total query bound `n`, then `oa` alone has total query bound `n`
