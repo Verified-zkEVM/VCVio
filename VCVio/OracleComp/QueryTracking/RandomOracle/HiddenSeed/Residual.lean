@@ -21,7 +21,10 @@ namespace SecretEncoding.Residual
 
 variable {I J X Z R : Type} (pub : OracleSpec I) (aux : OracleSpec J)
 
+/-- The local caches hold answers to auxiliary queries and keys indexed by `Z`. -/
 abbrev Local (Z R : Type) := aux.QueryCache × (Z →ₒ R).QueryCache
+
+/-- The original game caches both public oracles and private keys indexed by `X ⊕ Z`. -/
 abbrev Source (X Z R : Type) := SplitCache (pub + aux) (X ⊕ Z) R
 
 /-- Select the external public cache and the retained private labels. -/
