@@ -736,36 +736,20 @@ private theorem native_guarded_program_preserves_provenance
       ∀ output ∈ support ((guardedHandler input).run before), Inv output.2 := by
     intro output hout
     rcases before with ⟨cache, counts, flag⟩
-    cases flag with
-    | true =>
-      simp only [guardedHandler, QueryImpl.guardQueryBudget, StateT.run_mk, ↓reduceIte,
-        support_pure, Set.mem_singleton_iff] at hout
-      subst output
-      exact hbefore
-    | false =>
-      by_cases hfit : counts + charge input ≤ caps
-      · simp only [guardedHandler, QueryImpl.guardQueryBudget, StateT.run_mk,
-          Bool.false_eq_true, ↓reduceIte, hfit,
-          ↓reduceIte, support_map] at hout
-        obtain ⟨z, hz, rfl⟩ := hout
-        have hallowed : Sum.elim (Sum.elim
-            (NativeProvenanceInput s initialPK (counts, false)) (fun _ => True))
-            (fun _ => True) input := by
-          rcases input with (lab | bytes) | event
-          · exact input_mono hbefore.2 hi
-          · trivial
-          · trivial
-        have hstate := routed_query (counts, false) input hallowed cache hbefore.1 z hz
-        have hcounts : counts.2 ≤ (counts + charge input).2 := by
-          change counts.2 ≤ counts.2 + (charge input).2
-          exact Nat.le_add_right _ _
-        exact ⟨state_mono_paid s initialPK (counts, false)
-          (counts + charge input, false) _ hcounts hstate, hbefore.2.trans hcounts⟩
-      · simp only [guardedHandler, QueryImpl.guardQueryBudget, StateT.run_mk,
-          Bool.false_eq_true, ↓reduceIte, hfit,
-          ↓reduceIte, support_pure, Set.mem_singleton_iff] at hout
-        subst output
-        exact hbefore
+    apply QueryImpl.guardQueryBudget_cases_of_mem_support (P := fun out => Inv out.2) hout
+    · exact fun _ => hbefore
+    · intro _ _ z hz
+      have hallowed : Sum.elim (Sum.elim
+          (NativeProvenanceInput s initialPK (counts, flag)) (fun _ => True))
+          (fun _ => True) input := by
+        rcases input with (lab | bytes) | event
+        · exact input_mono hbefore.2 hi
+        · trivial
+        · trivial
+      have hstate := routed_query (counts, flag) input hallowed cache hbefore.1 z hz
+      have hcounts : counts.2 ≤ (counts + charge input).2 := Nat.le_add_right _ _
+      exact ⟨state_mono_paid s initialPK (counts, flag)
+        (counts + charge input, false) _ hcounts hstate, hbefore.2.trans hcounts⟩
   have hfold : ∀ output ∈ support
       ((simulateQ guardedHandler program).run (initialCache, paid)), Inv output.2 := by
     intro output hout
