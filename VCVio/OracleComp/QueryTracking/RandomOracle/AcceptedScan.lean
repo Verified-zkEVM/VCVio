@@ -161,4 +161,16 @@ theorem probability_eq_fold [DecidableEq X] (accepted : Finset Y) (encode : X �
     | none =>
       by_cases atTarget : x = target <;> simp [event, atTarget, prEvent_not_eq_one_sub]
 
+/-- A finder event depends only on the initial cache entries in its own query schedule. -/
+theorem selection_congr (accepted : Finset Y) (encode : X → A) (xs : List X)
+    (distinct : (xs.map encode).Nodup) (c d : QueryCache (A →ₒ Y)) (event : Option X → Prop)
+    (agree : ∀ x ∈ xs, c (encode x) = d (encode x)) :
+    Pr{let z ← (simulateQ randomOracle (scan accepted encode xs)).run c}[event z.1] =
+      Pr{let z ← (simulateQ randomOracle (scan accepted encode xs)).run d}[event z.1] := by
+  let E (o : Option (X × Y)) := event (o.map Prod.fst)
+  simp only [scan, simulateQ_map, StateT.run_map, prEvent_norm]
+  exact (prEvent_scanWithAnswer accepted encode xs distinct c E).trans
+    ((answerProbability_congr accepted encode c d E xs agree).trans
+      (prEvent_scanWithAnswer accepted encode xs distinct d E).symm)
+
 end OracleComp.AcceptedScan

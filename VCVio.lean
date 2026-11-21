@@ -456,6 +456,7 @@ public import VCVio.OracleComp.QueryTracking.QueryLog
 public import VCVio.OracleComp.QueryTracking.QueryLogCheck
 public import VCVio.OracleComp.QueryTracking.RandomOracle.AcceptedScan
 public import VCVio.OracleComp.QueryTracking.RandomOracle.AcceptedScan.Compensation
+public import VCVio.OracleComp.QueryTracking.RandomOracle.AcceptedScan.ForeignKey
 public import VCVio.OracleComp.QueryTracking.RandomOracle.AcceptedScan.NewPartner
 public import VCVio.OracleComp.QueryTracking.RandomOracle.AcceptedScan.Occupied
 public import VCVio.OracleComp.QueryTracking.RandomOracle.AcceptedScan.OccupiedMass
