@@ -16,8 +16,7 @@ Its continuation cannot issue a third query.
 
 open OracleComp OracleSpec
 
-
-@[expose] public section
+public section
 namespace VCVioTest.OptionalAnswer
 
 abbrev Calls := Bool →ₒ Bool
