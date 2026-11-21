@@ -6,6 +6,7 @@ Authors: VCVio Contributors
 
 module
 
+public import VCVio.OracleComp.QueryTracking.RandomOracle.ExpectedPotential
 public import VCVio.OracleComp.QueryTracking.RandomOracle.MarkedReplies.Registration
 import VCVio.OracleComp.Constructions.SampleableType.Measure
 
@@ -74,5 +75,18 @@ theorem registered_cold (t : Nat) :
   simp [-SampleableType.prEvent_uniformSample,
     SampleableType.prEvent_uniformSample_eq_singleton_natCard,
     Nat.card_eq_fintype_card]
+
+/-- An adaptive caller pays one half of its expected number of cold, registered queries. -/
+theorem registered_expected {α : Type} (caller : OracleComp Q α) :
+    let m := (simulateQ (impl register (fun _ : Nat => some ()) (fun _ b => b)) caller).run initial
+    Pr{let z ← m}[z.2.hit = true] ≤ (∑' z, Pr{let u ← m}[u = z] * z.2.paid) / 2 := by
+  intro m
+  have charged := randomOracle.Targets.charged register (fun _ : Nat => some ())
+    (fun _ b => b) (2 : ℝ≥0∞)⁻¹ (fun _ _ _ v => by
+      rw [SampleableType.prEvent_uniformSample_eq_singleton_natCard, Nat.card_eq_fintype_card]
+      simp)
+  have bound := charged.prEvent_le_expected caller initial (by decide)
+  change _ ≤ ∑' z, Pr{let u ← m}[u = z] * (_ * _) at bound
+  simpa only [div_eq_mul_inv, ← ENNReal.tsum_mul_right, mul_assoc] using bound
 
 end VCVioTest.RandomOracleRegisteredTarget
