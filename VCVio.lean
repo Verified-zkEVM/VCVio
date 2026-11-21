@@ -426,7 +426,11 @@ public import VCVio.OracleComp.QueryTracking.CachingOracle
 public import VCVio.OracleComp.QueryTracking.Collision
 public import VCVio.OracleComp.QueryTracking.CostModel
 public import VCVio.OracleComp.QueryTracking.CostModel.Simulation
+public import VCVio.OracleComp.QueryTracking.CountingOracle.AdaptiveMoment
+public import VCVio.OracleComp.QueryTracking.CountingOracle.BernoulliMoment
 public import VCVio.OracleComp.QueryTracking.CountingOracle.Core
+public import VCVio.OracleComp.QueryTracking.CountingOracle.FreshTrials
+public import VCVio.OracleComp.QueryTracking.CountingOracle.ObserveTrials
 public import VCVio.OracleComp.QueryTracking.DeterminedCost
 public import VCVio.OracleComp.QueryTracking.Enforcement
 public import VCVio.OracleComp.QueryTracking.ExpectedQueryCount
@@ -454,6 +458,7 @@ public import VCVio.OracleComp.QueryTracking.QueryBound.Truncate
 public import VCVio.OracleComp.QueryTracking.QueryCost
 public import VCVio.OracleComp.QueryTracking.QueryLog
 public import VCVio.OracleComp.QueryTracking.QueryLogCheck
+public import VCVio.OracleComp.QueryTracking.RandomOracle.AcceptedScan
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
 public import VCVio.OracleComp.QueryTracking.RandomOracle.CachePartial
 public import VCVio.OracleComp.QueryTracking.RandomOracle.CachePartial.Cost

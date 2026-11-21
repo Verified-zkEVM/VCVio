@@ -2,6 +2,7 @@ module  -- shake: keep-all --deprecated_module: ignore
 
 public import VCVioTest.AKE.UAKE.ExperimentFixtures
 public import VCVioTest.AKE.UAKE.TranscriptFixtures
+public import VCVioTest.AdaptiveTrialCount
 public import VCVioTest.Algorithms.Hash
 public import VCVioTest.AnswerTapeAdaptedUnion
 public import VCVioTest.Asymptotics.Negligible
@@ -196,6 +197,7 @@ public import VCVioTest.Quantum.VectorCommitmentQuantum
 public import VCVioTest.QueryBounds
 public import VCVioTest.QueryCacheInstability
 public import VCVioTest.QueryHom
+public import VCVioTest.RandomOracleAcceptedScan
 public import VCVioTest.RandomOracleChildren
 public import VCVioTest.RandomOracleClassIndexedTape
 public import VCVioTest.RandomOracleControls
