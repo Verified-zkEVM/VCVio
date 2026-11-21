@@ -213,6 +213,7 @@ public import VCVioTest.RandomOracleReadSet
 public import VCVioTest.RandomOracleRedirect
 public import VCVioTest.RandomOracleRelabel
 public import VCVioTest.RandomOracleRouting
+public import VCVioTest.RandomOracleScanPartners
 public import VCVioTest.RandomOracleSettled
 public import VCVioTest.RandomOracleTouchRead
 public import VCVioTest.RandomPermutationConditioning
