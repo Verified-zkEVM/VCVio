@@ -215,6 +215,7 @@ public import VCVioTest.RandomOracleHitPotential
 public import VCVioTest.RandomOracleJointPotential
 public import VCVioTest.RandomOracleMixedCap
 public import VCVioTest.RandomOracleMixedQueries
+public import VCVioTest.RandomOracleOrdinaryWord
 public import VCVioTest.RandomOraclePairedDerivations
 public import VCVioTest.RandomOraclePairedGraphReadback
 public import VCVioTest.RandomOraclePairedValue
