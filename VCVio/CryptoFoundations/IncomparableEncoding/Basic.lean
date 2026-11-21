@@ -55,15 +55,6 @@ theorem mem_code_of_value_eq_some (enc : IncomparableEncoding PP M R E n radix)
     enc.value p m r e = none ↔ enc.encode p m r e = none := by
   simp [value]
 
-/-- An encoding with an empty global code returns failure on every input. -/
-theorem encode_eq_none_of_code_eq_empty
-    (enc : IncomparableEncoding PP M R E n radix) (h : enc.code = ∅)
-    (p : PP) (m : M) (r : R) (e : E) :
-    enc.encode p m r e = none := by
-  cases hresult : enc.encode p m r e with
-  | none => rfl
-  | some x => simpa [h] using x.property
-
 /-- Distinct successful words are incomparable even when all four inputs differ. -/
 theorem incomparableWords_of_successes
     (enc : IncomparableEncoding PP M R E n radix)

@@ -14,5 +14,5 @@ public import VCVio.CryptoFoundations.IncomparableEncoding.Retry
 # Incomparable encodings
 
 Arbitrary global incomparable codes, fallible encoding, explicit sampling error and bounded retry
-observations. Collision security and concrete code families have separate interfaces.
+observations.
 -/

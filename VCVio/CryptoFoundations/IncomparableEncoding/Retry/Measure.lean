@@ -11,9 +11,9 @@ public import VCVio.CryptoFoundations.IncomparableEncoding.Error
 /-!
 # Probability laws for encoding retries
 
-Encoding retries specialize the shared first-success mass laws. Returned exhaustion, success and
-missing execution mass remain distinct; a canonical pointwise encoding bound controls exhaustion
-without any additional uniformity premise.
+Encoding retries specialize the first-success mass laws of `FirstSuccess`. Returned exhaustion,
+success and missing execution mass remain distinct; a canonical pointwise encoding bound controls
+exhaustion without any additional uniformity premise.
 -/
 
 public section
@@ -22,7 +22,7 @@ namespace IncomparableEncoding.Retry
 
 open ENNReal VCVio.Algorithms
 
-variable {PP M R E : Type} {n radix : ℕ} {m : Type → Type*} [Monad m]
+variable {PP M E : Type*} {R : Type} {n radix : ℕ} {m : Type → Type*} [Monad m]
 
 /-- Failure of a selected word/randomizer payload is exactly failure of the encoding value. -/
 private theorem failureMass_attempt_eq (enc : IncomparableEncoding PP M R E n radix)
@@ -47,12 +47,6 @@ private theorem successMass_attempt_eq (enc : IncomparableEncoding PP M R E n ra
   unfold FirstSuccess.successMass FirstSuccess.failureIndicatorDist
     IncomparableEncoding.successMass IncomparableEncoding.failureIndicatorDist
   rw [hclass]
-
-/-- Boolean exhaustion observation of the complete encoding retry program. -/
-@[expose] noncomputable def failureIndicatorDist (enc : IncomparableEncoding PP M R E n radix)
-    (runtime : ProbCompRuntime m) (sample : m R) (pp : PP) (msg : M) (ep : E) (k : ℕ) :
-    MeasureTheory.Measure Bool :=
-  FirstSuccess.failureIndicatorDist runtime (enc.retry sample pp msg ep k) id
 
 /-- Unnormalized returned exhaustion mass. -/
 @[expose] noncomputable def failureMass (enc : IncomparableEncoding PP M R E n radix)
@@ -125,9 +119,9 @@ theorem missingMass_succ (enc : IncomparableEncoding PP M R E n radix)
     (runtime : ProbCompRuntime m) (laws : runtime.SamplingLaws) (sample : m R)
     (pp : PP) (msg : M) (ep : E) (k : ℕ) :
     missingMass enc runtime sample pp msg ep (k + 1) =
-      IncomparableEncoding.missingMass runtime sample +
+      FirstSuccess.missingMass runtime sample +
         enc.failureMass runtime sample pp msg ep * missingMass enc runtime sample pp msg ep k := by
-  simpa only [missingMass, retry, IncomparableEncoding.missingMass, FirstSuccess.missingMass,
+  simpa only [missingMass, retry, FirstSuccess.missingMass,
     failureMass_attempt_eq] using
     FirstSuccess.missingMass_runWith_succ runtime laws sample (enc.attempt pp msg ep) k
 
@@ -136,14 +130,14 @@ theorem missingMass_eq_mul_sum (enc : IncomparableEncoding PP M R E n radix)
     (runtime : ProbCompRuntime m) (laws : runtime.SamplingLaws) (sample : m R)
     (pp : PP) (msg : M) (ep : E) (k : ℕ) :
     missingMass enc runtime sample pp msg ep k =
-      IncomparableEncoding.missingMass runtime sample *
+      FirstSuccess.missingMass runtime sample *
         ∑ j ∈ Finset.range k, (enc.failureMass runtime sample pp msg ep) ^ j := by
-  simpa only [missingMass, retry, IncomparableEncoding.missingMass, FirstSuccess.missingMass,
+  simpa only [missingMass, retry, FirstSuccess.missingMass,
     failureMass_attempt_eq] using
     FirstSuccess.missingMass_runWith_eq_mul_sum runtime laws sample (enc.attempt pp msg ep) k
 
 /-- A further retry succeeds immediately or after a returned failure. -/
-theorem successMass_succ_aux (enc : IncomparableEncoding PP M R E n radix)
+theorem successMass_succ (enc : IncomparableEncoding PP M R E n radix)
     (runtime : ProbCompRuntime m) (laws : runtime.SamplingLaws) (sample : m R)
     (pp : PP) (msg : M) (ep : E) (k : ℕ) :
     successMass enc runtime sample pp msg ep (k + 1) =

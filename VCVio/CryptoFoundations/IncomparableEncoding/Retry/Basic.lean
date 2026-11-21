@@ -12,9 +12,9 @@ public import PolyFun.Control.Monad.Support
 /-!
 # Bounded encoding retries
 
-The shared first-success search returns the selected word/randomizer pair. Indexed search uses
-the common payload result, retaining its one-based attempt, ordered consumed prefix and returned
-exhaustion. Native monadic failure remains an execution failure.
+The first-success search `FirstSuccess.runWith` returns the selected word/randomizer pair.
+Indexed search uses the common payload result, retaining its one-based attempt, ordered
+consumed prefix and returned exhaustion. Native monadic failure remains an execution failure.
 -/
 
 public section
@@ -23,7 +23,9 @@ namespace IncomparableEncoding
 
 open VCVio.Algorithms
 
-variable {PP M R E : Type} {n radix : ℕ} {m : Type → Type*} [Monad m]
+universe u
+
+variable {PP M E : Type*} {R : Type u} {n radix : ℕ} {m : Type u → Type*} [Monad m]
 
 /-- Classify one randomizer, retaining it alongside any successfully encoded word. -/
 @[expose] def attempt (enc : IncomparableEncoding PP M R E n radix)

@@ -83,15 +83,15 @@ theorem indexed_exhaustion_trace :
     enc.retryIndexed (m := Id) () () () 3 (fun i => (i.val == 0) && false) =
       FirstSuccess.Result.exhausted [false, false, false] := rfl
 
-/-- The existing stateful fixed sampler is the exact output observation of the
-shared indexed operation with a constant sampler. -/
+/-- The stateful fixed sampler is the exact output observation of the indexed operation with a
+constant sampler. -/
 theorem fixed_sampler_specialization :
     (enc.retry draw () () () 3).run [false, true, false] =
       (FirstSuccess.Result.output <$>
         enc.retryIndexed () () () 3 (fun _ => draw)).run [false, true, false] := by
   rw [enc.retry_eq_indexed_constant draw () () () 3]
 
-/-- Canonical uniform randomizers reuse the established uniform sampler theorem. -/
+/-- Canonical uniform randomizers are uniform (`uniformSampler_uniformSample`). -/
 theorem uniform_randomizers : UniformSampler ProbCompRuntime.probComp ($ᵗ Bool) :=
   uniformSampler_uniformSample Bool
 
@@ -129,8 +129,9 @@ theorem optional_sampling_laws : optionalRuntime.SamplingLaws where
 
 /-- An explicit optional abort has missing mass one. No operational divergence is asserted. -/
 theorem abort_missing_mass :
-    IncomparableEncoding.missingMass optionalRuntime (failure : OptionT ProbComp Bool) = 1 := by
-  simp [IncomparableEncoding.missingMass, optionalRuntime, ProbCompRuntime.evalDist,
+    VCVio.Algorithms.FirstSuccess.missingMass optionalRuntime
+      (failure : OptionT ProbComp Bool) = 1 := by
+  simp [VCVio.Algorithms.FirstSuccess.missingMass, optionalRuntime, ProbCompRuntime.evalDist,
     SemanticsVia.ofEvalDistSemantics_evalDist]
 
 /-- Zero retries return exhaustion without evaluating the always-aborting sampler. -/

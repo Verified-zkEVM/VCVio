@@ -32,7 +32,7 @@ abbrev Codeword (n radix : ℕ) := Fin n → Fin radix
     (∃ i, x i < y i) ∧ (∃ j, y j < x j)
 
 /-- Comparable words with equal natural-valued coordinate sums are equal. -/
-theorem eq_of_sum_eq_of_le {n radix : ℕ} {x y : Codeword n radix}
+private theorem eq_of_sum_eq_of_le {n radix : ℕ} {x y : Codeword n radix}
     (hsum : ∑ i, (x i).val = ∑ i, (y i).val)
     (hle : ∀ i, x i ≤ y i) : x = y := by
   have hcoords : ∀ i ∈ Finset.univ, (x i).val = (y i).val :=

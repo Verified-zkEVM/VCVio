@@ -11,7 +11,7 @@ public import Mathlib.Data.Fin.VecNotation
 public import Mathlib.Tactic.FinCases
 
 /-!
-# Independently derived encoding convention probes
+# Encoding convention probes
 
 For length two and radix four, `(0, 3)` and `(1, 2)` both sum to three. Coordinate zero
 increases and coordinate one decreases. The distinct pair `(0, 1)` and `(1, 2)` is comparable
