@@ -30,67 +30,6 @@ open scoped ENNReal
 namespace SLHDSA.SHAKE128s.Bridge.SharedExperiment.DeferredReserve
 open Guarded
 
-/-- Restricting a one-point cache footprint to any predicate adds at most its indicator. -/
-private theorem cached_pred_encard_le
-    (before after : H.QueryCache) (point : H.Domain) (predicate : H.Domain → Prop)
-    [DecidablePred predicate]
-    (footprint : {query | (after query).isSome} ⊆
-      insert point {query | (before query).isSome}) :
-    ({query | (after query).isSome ∧ predicate query}.encard : ℝ≥0∞) ≤
-      ({query | (before query).isSome ∧ predicate query}.encard : ℝ≥0∞) +
-        (if predicate point then 1 else 0) := by
-  classical
-  by_cases selected : predicate point
-  · have subset : {query | (after query).isSome ∧ predicate query} ⊆
-        insert point {query | (before query).isSome ∧ predicate query} := by
-      intro query present
-      rcases footprint present.1 with same | old
-      · exact Or.inl same
-      · exact Or.inr ⟨old, present.2⟩
-    have card := (Set.encard_le_encard subset).trans (Set.encard_insert_le _ point)
-    simpa only [selected, ite_true, ENat.toENNReal_add, ENat.toENNReal_one] using
-      ENat.toENNReal_mono card
-  · have subset : {query | (after query).isSome ∧ predicate query} ⊆
-        {query | (before query).isSome ∧ predicate query} := by
-      intro query present
-      rcases footprint present.1 with same | old
-      · subst query
-        exact (selected present.2).elim
-      · exact ⟨old, present.2⟩
-    simpa only [selected, ite_false, add_zero] using
-      ENat.toENNReal_mono (Set.encard_le_encard subset)
-
-/-- Node and derivable entry weights grow by at most the supplied point's weight. -/
-private theorem public_weight_le_of_footprint
-    (s : FIPS205.core.PkSeed) (before after : H.QueryCache) (point : H.Domain)
-    (footprint : {query | (after query).isSome} ⊆
-      insert point {query | (before query).isSome}) :
-    let weight := fun cache : H.QueryCache =>
-      32 * (((slhNodeKeys FIPS205.core s).keyEntries cache).encard : ℝ≥0∞) +
-        16 * ({query | (cache query).isSome ∧
-          IsDerivablePublicQuery FIPS205.core s (.inl (.inr query))}.encard : ℝ≥0∞)
-    let pointWeight : Nat :=
-      32 * (if ((slhNodeKeys FIPS205.core s).node point).isSome then 1 else 0) +
-        16 * (if IsDerivablePublicQuery FIPS205.core s (.inl (.inr point)) then 1 else 0)
-    weight after ≤ weight before + (pointWeight : ℝ≥0∞) := by
-  classical
-  have nodeBound := cached_pred_encard_le before after point
-    (fun query => ((slhNodeKeys FIPS205.core s).node query).isSome) footprint
-  have deriveBound := cached_pred_encard_le before after point
-    (fun query => IsDerivablePublicQuery FIPS205.core s (.inl (.inr query))) footprint
-  generalize nodeDefinition : slhNodeKeys FIPS205.core s = nodes at *
-  have scaled (a b c d n e : ℝ≥0∞) (ha : a ≤ b + n) (hc : c ≤ d + e) :
-      32 * a + 16 * c ≤ 32 * b + 16 * d + (32 * n + 16 * e) := by
-    calc
-      _ ≤ 32 * (b + n) + 16 * (d + e) := add_le_add
-        (mul_le_mul_of_nonneg_left ha zero_le)
-        (mul_le_mul_of_nonneg_left hc zero_le)
-      _ = _ := by ring
-  have combined := scaled _ _ _ _ _ _ nodeBound deriveBound
-  dsimp only
-  simp only [CanonicalGraph.NodeKeys.keyEntries] at *
-  convert combined using 1; push_cast; split_ifs <;> ring
-
 /-- A point at a node key cannot also encode a private derivation. -/
 private theorem node_point_not_derivable
     (s : FIPS205.core.PkSeed) (point : H.Domain)
@@ -228,27 +167,32 @@ private theorem graph_point (s : FIPS205.core.PkSeed) (n : Lab.Domain) (before :
     entries s out.2.1.1 ≤ entries s before.1.1 +
       ((pointOf n).elim 0 (pointWeight s) : Nat) := by
   classical
-  have foot := (slhGraph FIPS205.core s).deferredImpl_cachesOnlyQueryPoint n before out mem
-  change {q | (out.2.1.1 q).isSome} ⊆
-    {q | (before.1.1 q).isSome} ∪ {q | pointOf n = some q} at foot
-  cases which : pointOf n with
-  | none =>
-    have sub : {q | (out.2.1.1 q).isSome} ⊆ {q | (before.1.1 q).isSome} := by
-      simpa only [which, reduceCtorEq, Set.ofPred_false, Set.union_empty] using foot
-    have filtered (P : H.Domain → Prop) :
-        {q | (out.2.1.1 q).isSome ∧ P q}.encard ≤
-          {q | (before.1.1 q).isSome ∧ P q}.encard :=
-      Set.encard_le_encard (fun _ h => ⟨sub h.1, h.2⟩)
-    simp only [Option.elim_none, Nat.cast_zero, add_zero, entries,
-      CanonicalGraph.NodeKeys.keyEntries]
-    exact add_le_add (mul_le_mul_of_nonneg_left (ENat.toENNReal_mono (filtered _)) zero_le)
-      (mul_le_mul_of_nonneg_left (ENat.toENNReal_mono (filtered _)) zero_le)
-  | some p =>
-    apply public_weight_le_of_footprint s before.1.1 out.2.1.1 p
-    intro t ht
-    rcases foot ht with old | same
-    · exact Or.inr old
-    · exact Or.inl (Option.some.inj (which.symm.trans same)).symm
+  have count (D : Set H.Domain) :
+      ({q | (out.2.1.1 q).isSome ∧ q ∈ D}.encard : ℝ≥0∞) ≤
+        ({q | (before.1.1 q).isSome ∧ q ∈ D}.encard : ℝ≥0∞) +
+          (if (pointOf n).elim False (· ∈ D) then 1 else 0) := by
+    let selects (i : Lab.Domain) := (pointOf i).elim False (· ∈ D)
+    have step := (slhGraph FIPS205.core s).deferredImpl_cachesOnlyQueryPoint
+      |>.encard_inter_le_add_of_mem_support (D := D) (p := selects) (fun i q hq hD => by
+        change pointOf i = some q at hq
+        simpa only [selects, hq, Option.elim_some] using hD) mem
+    rw [Set.inter_comm D, Set.inter_comm D] at step
+    simpa only [Set.inter_def, Set.mem_ofPred_eq, ENat.toENNReal_add, apply_ite ENat.toENNReal,
+      ENat.toENNReal_one, ENat.toENNReal_zero, selects] using ENat.toENNReal_mono step
+  let nodes : Set H.Domain := {q | ((slhNodeKeys FIPS205.core s).node q).isSome}
+  let derivable : Set H.Domain := {q | IsDerivablePublicQuery FIPS205.core s (.inl (.inr q))}
+  have combined := add_le_add
+    (mul_le_mul_of_nonneg_left (count nodes) (zero_le : 0 ≤ (32 : ℝ≥0∞)))
+    (mul_le_mul_of_nonneg_left (count derivable) (zero_le : 0 ≤ (16 : ℝ≥0∞)))
+  refine combined.trans_eq ?_
+  cases h : pointOf n with
+  | none => simp [entries, CanonicalGraph.NodeKeys.keyEntries, nodes, derivable]
+  | some q =>
+    simp only [Option.elim_some, entries, pointWeight, CanonicalGraph.NodeKeys.keyEntries,
+      nodes, derivable, Set.mem_ofPred_eq, Nat.cast_add, Nat.cast_mul, Nat.cast_ofNat]
+    by_cases node : ((slhNodeKeys FIPS205.core s).node q).isSome <;>
+      by_cases derives : IsDerivablePublicQuery FIPS205.core s (.inl (.inr q)) <;>
+      simp [node, derives] <;> ring
 
 private theorem ordinary_native (s : FIPS205.core.PkSeed) (n : Lab.Domain) (m : Meta)
     (g : Graph) :
