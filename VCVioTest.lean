@@ -8,6 +8,7 @@ public import VCVioTest.Asymptotics.Negligible
 public import VCVioTest.CachedPointsBound
 public import VCVioTest.ComplementaryChecksum
 public import VCVioTest.Computability
+public import VCVioTest.CryptoFoundations.AsymmEncOneTime
 public import VCVioTest.CryptoFoundations.BR93Measure
 public import VCVioTest.CryptoFoundations.ComplexityAdapters
 public import VCVioTest.CryptoFoundations.ComplexityTactics
@@ -208,6 +209,7 @@ public import VCVioTest.RandomOracleHiddenSeed
 public import VCVioTest.RandomOracleHiddenSeedCacheExtension
 public import VCVioTest.RandomOracleHiddenSeedCollapse
 public import VCVioTest.RandomOracleHitPotential
+public import VCVioTest.RandomOracleIterateCollision
 public import VCVioTest.RandomOracleJointPotential
 public import VCVioTest.RandomOracleReadSet
 public import VCVioTest.RandomOracleRedirect
@@ -240,6 +242,7 @@ public import VCVioTest.SMDTUD
 public import VCVioTest.SMDTUDFinalValidity
 public import VCVioTest.SaltedMerkle
 public import VCVioTest.SampleableType
+public import VCVioTest.SampleableTypeUpdate
 public import VCVioTest.Schemes.KEMDEM
 public import VCVioTest.Schemes.MerkleDamgard
 public import VCVioTest.Schemes.Pedersen.Generic
@@ -266,6 +269,7 @@ public import VCVioTest.TimeLockPuzzle.LogSide
 public import VCVioTest.TimeLockPuzzle.Truncate
 public import VCVioTest.ToFinalValidity
 public import VCVioTest.ToMathlib.AbsDiff
+public import VCVioTest.ToMathlib.NatLog
 public import VCVioTest.UniformOn
 public import VCVioTest.UniversePolymorphism
 public import VCVioTest.Unpredictability

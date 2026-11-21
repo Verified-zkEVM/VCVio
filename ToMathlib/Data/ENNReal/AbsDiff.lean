@@ -25,6 +25,7 @@ interactions. `absDiff` is the event discrepancy in the measure-level statistica
 - `ENNReal.absDiff_eq_edist` — `absDiff` is Mathlib's `edist` on `ℝ≥0∞` (the weak extended metric)
 - `ENNReal.absDiff_toReal` — connection to real-valued absolute difference
 - `ENNReal.absDiff_triangle` — triangle inequality
+- `ENNReal.absDiff_add_add_le` — subadditivity along sums
 - `ENNReal.absDiff_tsum_le` — subadditivity of `absDiff` over infinite sums
 - `ENNReal.absDiff_mul_right_le` — `|ac - bc| ≤ |a - b| · c`
 - `ENNReal.tsum_fiber` — fiber decomposition for `ℝ≥0∞`-valued sums
@@ -87,6 +88,14 @@ lemma absDiff_triangle (a b c : ℝ≥0∞) :
     ENNReal.absDiff a c ≤ ENNReal.absDiff a b + ENNReal.absDiff b c := by
   simp only [absDiff_eq_edist]
   exact WeakPseudoEMetricSpace.edist_triangle a b c
+
+/-- `absDiff` is subadditive along sums, the `ℝ≥0∞` form of `edist_add_add_le`. -/
+lemma absDiff_add_add_le (a b c d : ℝ≥0∞) :
+    ENNReal.absDiff (a + b) (c + d) ≤ ENNReal.absDiff a c + ENNReal.absDiff b d := by
+  obtain ⟨hac, hca⟩ := absDiff_le_iff.1 (le_refl (ENNReal.absDiff a c))
+  obtain ⟨hbd, hdb⟩ := absDiff_le_iff.1 (le_refl (ENNReal.absDiff b d))
+  exact absDiff_le_iff.2 ⟨(add_le_add hac hbd).trans_eq (add_add_add_comm _ _ _ _),
+    (add_le_add hca hdb).trans_eq (add_add_add_comm _ _ _ _)⟩
 
 /-- `|a - b| + 2·min a b = a + b`, the truncated-subtraction form of the identity that splits a
 total mass into its overlap and its discrepancy. -/
