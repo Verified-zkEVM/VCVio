@@ -1,0 +1,74 @@
+name: VCVioFrontier
+
+on:
+  push:
+    branches: [main]
+    paths: &frontier-paths
+      - 'VCVioFrontier/**'
+      - 'VCVio/**'
+      - 'ToMathlib/**'
+      - 'Examples/**'
+      - 'lakefile.lean'
+      - 'lake-manifest.json'
+      - 'lean-toolchain'
+      - 'scripts/AxiomSweep.lean'
+      - 'scripts/axiom_baseline.json'
+      - 'scripts/lean_source_tokens.py'
+      - 'scripts/free-ci-disk-space.sh'
+      - '.github/workflows/frontier.yml'
+  pull_request:
+    paths: *frontier-paths
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  frontier:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: VCVioFrontier
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - run: bash ../scripts/free-ci-disk-space.sh
+      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9
+        with:
+          version: "0.13.6"
+          enable-cache: false
+      - name: Restore pinned dependencies
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        id: deps
+        with:
+          path: |
+            VCVioFrontier/.lake/packages
+            !VCVioFrontier/.lake/packages/**/*.setup.json
+          key: frontier-deps-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('VCVioFrontier/lean-toolchain', 'VCVioFrontier/lake-manifest.json') }}
+      - uses: leanprover/lean-action@fe408643ea7367d8c0404a8be3975bb145f5fb64 # v1
+        with:
+          lake-package-directory: VCVioFrontier
+          auto-config: false
+          build: false
+          test: false
+          lint: false
+          use-github-cache: false
+          use-mathlib-cache: false
+      - run: lake exe cache get
+      - run: uv run --no-project --python 3.12 python scripts/check-pins.py
+      - run: lake build VCVioFrontier VCVioFrontierTest
+      - run: lake exe mk_all --lib VCVioFrontier --module --check
+      - name: Check axioms and sorry debt
+        run: >-
+          lake exe axiomsweep --root VCVioFrontier
+          --baseline ../scripts/axiom_baseline.json --check
+      - name: Save pinned dependencies
+        if: success() && github.ref == 'refs/heads/main' && steps.deps.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: |
+            VCVioFrontier/.lake/packages
+            !VCVioFrontier/.lake/packages/**/*.setup.json
+          key: frontier-deps-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('VCVioFrontier/lean-toolchain', 'VCVioFrontier/lake-manifest.json') }}

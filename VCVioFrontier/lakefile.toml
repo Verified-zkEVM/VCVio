@@ -1,0 +1,50 @@
+name = "VCVioFrontier"
+defaultTargets = ["VCVioFrontier"]
+testDriver = "VCVioFrontierTest"
+
+[leanOptions]
+pp.unicode.fun = true
+autoImplicit = false
+relaxedAutoImplicit = false
+weak.linter.mathlibStandardSet = true
+experimental.vcgen = true
+
+[[require]]
+name = "VCVio"
+path = ".."
+
+# Select both PolyFun packages at one commit. The core VCVio checkout can keep its stable pin.
+[[require]]
+name = "PolyFunFrontier"
+git = { url = "https://github.com/dtumad/PolyFun", subDir = "PolyFunFrontier" }
+rev = "7c69cdbf24a1865bc7544496ef6d3b9fa746c2a3"
+
+[[require]]
+name = "PolyFun"
+git = "https://github.com/dtumad/PolyFun"
+rev = "7c69cdbf24a1865bc7544496ef6d3b9fa746c2a3"
+
+# Lake resolves direct dependencies in reverse order. Use Frontier's complete toolchain.
+[[require]]
+name = "cslib-frontier"
+git = "https://github.com/cslib-community/cslib-frontier"
+rev = "87063d8acdd04168e47c55701c7497de584af566"
+
+[[require]]
+name = "cslib"
+git = "https://github.com/leanprover/cslib"
+rev = "98f9a62ac1fafa0d5091bbd78bc24091c5923aab"
+
+[[require]]
+name = "mathlib"
+git = "https://github.com/leanprover-community/mathlib4"
+rev = "bbff2954fe5ee3b7a4b33cc26ef873a1c3277d91"
+
+[[lean_lib]]
+name = "VCVioFrontier"
+leanOptions = {warningAsError = true}
+
+[[lean_lib]]
+name = "VCVioFrontierTest"
+globs = ["VCVioFrontierTest.+"]
+leanOptions = {warningAsError = true}

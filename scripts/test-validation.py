@@ -34,6 +34,11 @@ class ValidationTests(unittest.TestCase):
         # Not a no-op stub: the default pass has to be shown to reach it.
         (scripts / "check-comment-fences.py").write_text(
             'print("comment fences: stub")\n')
+        frontier = self.root / "VCVioFrontier" / "scripts"
+        frontier.mkdir(parents=True)
+        (frontier / "check-pins.py").write_text(
+            'import sys\nassert sys.argv[1:] == ["--root-only"]\nprint("root pin guard ran")\n')
+        (frontier / "test-pins.py").write_text('print("pin fixtures ran")\n')
         binary = self.root / "bin"
         binary.mkdir()
         self.script(binary / "lake", '''
@@ -109,6 +114,12 @@ exec {shlex.quote(sys.executable)} "$@"
         result = self.validate()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("comment fences: stub", result.stdout)
+
+    def test_frontier_isolation_runs_in_the_default_pass(self):
+        result = self.validate()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("root pin guard ran", result.stdout)
+        self.assertIn("pin fixtures ran", result.stdout)
 
     def test_init_sweep_runs_in_the_default_pass(self):
         result = self.validate()

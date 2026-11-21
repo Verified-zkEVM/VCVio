@@ -44,6 +44,8 @@ jobs:
         run: |
           uv run --no-project --python 3.12 python scripts/test-interop-isolation.py
           bash scripts/check-interop-isolation.sh
+          uv run --no-project --python 3.12 python VCVioFrontier/scripts/check-pins.py --root-only
+          uv run --no-project --python 3.12 python VCVioFrontier/scripts/test-pins.py
 
       - name: Run Extern isolation check
         run: bash scripts/check-extern-isolation.sh

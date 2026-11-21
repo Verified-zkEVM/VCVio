@@ -17,6 +17,7 @@ Status: current placement policy; the migration table distinguishes planned move
 | `VCVioTest/`, `LatticeCryptoTest/`, `HashSigTest/` | Tests, vectors and executable regressions | Mirror the owning implementation; fixtures do not enter proof libraries |
 | `Extern/`, `csrc/`, `third_party/` | FFI bindings, native shims and vendored backends | Proof libraries never import Extern; downstream links work without submodules |
 | `Interop/` | Source-language models, imported references and conformance | Optional downstream development; core never imports it |
+| `VCVioFrontier/` | Uniform machine realizations and security of probabilistic programs | Nested package on PolyFunFrontier's Lean, CSLib and Mathlib pins |
 | `docs/`, `scripts/`, `.github/` | Guides, validation tools and CI | Commands and references follow the same ownership boundaries |
 
 Root Lean files are public umbrellas; root Lake files define package and target boundaries.
@@ -31,10 +32,10 @@ be shared by other test libraries without pulling a scheme into pure implementat
 
 ## Optional backends and external bridges
 
-Core VCVio stays backend-neutral: PolyFun owns the generic realizability theory, and a concrete
-machine model enters only through an optional package. A planned nested package, `VCVioFrontier`,
-built on PolyFun's `PolyFunFrontier` package and through it on
-[cslib-frontier](https://github.com/cslib-community/cslib-frontier), will hold that role.
+PolyFun owns the generic realizability theory. The optional VCVioFrontier package uses
+PolyFunFrontier's interpretation of polynomial free programs as multi-tape Turing machines.
+The VCVio package connects their output laws to its measure semantics and uses them in security
+experiments. See the [package guide](../../VCVioFrontier/README.md).
 
 The `VCVioCslib` library, a one-file non-uniform P/poly facade over PolyFun's
 `ComplexityBackends.CslibSingleTape`, was removed. cslib-frontier has its own P/poly, so the

@@ -16,6 +16,11 @@ The current reviewer-facing evidence classification and promotion gates are in t
 
 ## Implementation snapshot
 
+The optional [VCVioFrontier package](../../VCVioFrontier/README.md) connects a concrete uniform
+probabilistic machine model to the original oracle programs for the one-time pad.
+Its certificates describe free-program composition, typed local functions, and the encodings on
+which each machine operates. The backend-relative resource model below also serves open systems.
+
 The current branches contain the following machine-checked slice:
 
 Here, "landed" means present in these implementation branches; it does not
@@ -71,8 +76,8 @@ claim that a pull request has been opened or merged.
 - The optional `VCVioComplexity` nested package, which pinned complexitylib at
   `b6738219`, has been removed. cslib-frontier, the renamed complexitylib, supersedes
   that pin, and its oracle machines replace the VCVio-owned `OracleTM` planned for
-  phases 4 and 5 ([#906](https://github.com/Verified-zkEVM/VCVio/issues/906)); a cslib-frontier-based nested package will take over the
-  concrete-backend role (see the [repository layout](repository-layout.md#optional-backends-and-external-bridges)).
+  phases 4 and 5 ([#906](https://github.com/Verified-zkEVM/VCVio/issues/906)); the nested VCVioFrontier package now connects closed handled programs to that
+  machine model (see the [repository layout](repository-layout.md#optional-backends-and-external-bridges)).
   The removed package directly imported the compatible
   complexitylib machine and Cobham-definition modules. It provided closed
   representations, exact `TM.reachesIn` run certificates, exact run costs, a
@@ -97,8 +102,8 @@ claim that a pull request has been opened or merged.
   and a counting nontriviality theorem. The optional `VCVioCslib` library, a
   thin crypto-facing facade over that model that added oracle specialization, a
   fair-coin boundary, and a security-game bridge, has been removed: cslib-frontier
-  has its own P/poly, and the facade's role moves to the planned cslib-frontier-based
-  package (see the [repository layout](repository-layout.md#optional-backends-and-external-bridges)).
+  has its own P/poly, and the former facade's nonuniform P/poly interface is distinct from the strict uniform
+  machine results in VCVioFrontier (see the [repository layout](repository-layout.md#optional-backends-and-external-bridges)).
   This backend is explicitly nonuniform and backend-relative; core PolyFun and core VCVio
   remain neutral.
 
