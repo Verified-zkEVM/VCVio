@@ -54,6 +54,7 @@ public import VCVioTest.EvalDist.TotalVariationMeasure
 public import VCVioTest.EvalDist.TotalVariationReal
 public import VCVioTest.EvalDist.Transformers
 public import VCVioTest.EvalDist.UniformTable
+public import VCVioTest.ExpectedMarkedHit
 public import VCVioTest.FiatShamirAbort
 public import VCVioTest.FiatShamirKnowledgeExtraction
 public import VCVioTest.FillEndpoint
@@ -64,6 +65,7 @@ public import VCVioTest.FischlinExtraction
 public import VCVioTest.ForkBounds
 public import VCVioTest.Forking.WithoutReplacement
 public import VCVioTest.Foundations
+public import VCVioTest.FreshTrialMean
 public import VCVioTest.GrindFailFast
 public import VCVioTest.GroupModel.Basic
 public import VCVioTest.GroupModel.Collision
@@ -204,6 +206,7 @@ public import VCVioTest.RandomOracleChildren
 public import VCVioTest.RandomOracleClassIndexedTape
 public import VCVioTest.RandomOracleControls
 public import VCVioTest.RandomOracleDefer
+public import VCVioTest.RandomOracleDerivationKeys
 public import VCVioTest.RandomOracleEagerSubgraph
 public import VCVioTest.RandomOracleEncoded
 public import VCVioTest.RandomOracleEncodedFullCache
@@ -212,9 +215,13 @@ public import VCVioTest.RandomOracleFreshQuery
 public import VCVioTest.RandomOracleHiddenSeed
 public import VCVioTest.RandomOracleHiddenSeedCacheExtension
 public import VCVioTest.RandomOracleHiddenSeedCollapse
+public import VCVioTest.RandomOracleHiddenSeedUnit
 public import VCVioTest.RandomOracleHitPotential
 public import VCVioTest.RandomOracleJointPotential
+public import VCVioTest.RandomOracleMixedCap
 public import VCVioTest.RandomOracleMixedQueries
+public import VCVioTest.RandomOracleOrdinaryWord
+public import VCVioTest.RandomOraclePairedDerivations
 public import VCVioTest.RandomOraclePairedGraphReadback
 public import VCVioTest.RandomOraclePairedValue
 public import VCVioTest.RandomOraclePartnerCompensation
@@ -223,12 +230,14 @@ public import VCVioTest.RandomOracleRedirect
 public import VCVioTest.RandomOracleRegisteredCost
 public import VCVioTest.RandomOracleRegisteredTarget
 public import VCVioTest.RandomOracleRelabel
+public import VCVioTest.RandomOracleResidualTables
 public import VCVioTest.RandomOracleRouting
 public import VCVioTest.RandomOracleScanPartners
 public import VCVioTest.RandomOracleSettled
 public import VCVioTest.RandomOracleStoppedPartner
 public import VCVioTest.RandomOracleTouchRead
 public import VCVioTest.RandomOracleUnaryEdge
+public import VCVioTest.RandomOracleUndisclosed
 public import VCVioTest.RandomPermutationConditioning
 public import VCVioTest.ReactiveBudget
 public import VCVioTest.ReactiveKernel
@@ -285,4 +294,7 @@ public import VCVioTest.UniversePolymorphism
 public import VCVioTest.Unpredictability
 public import VCVioTest.UntilBadBind
 public import VCVioTest.VCGenAmbiguity
+public import VCVioTest.WeightedCap
+public import VCVioTest.WeightedCapDomination
+public import VCVioTest.WeightedCapHandler
 public import VCVioTest.WriterCostStateT
