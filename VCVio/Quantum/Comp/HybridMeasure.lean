@@ -483,8 +483,8 @@ private theorem tsum_queryWeight_ext_le (x : QuantumComp L spec X A) (ρ : SubSt
         x ((MatrixMap.conj (inj D false)).amplifyLeft A (ρ.matrix ⊗ₖ σ.matrix)) j ≤
       ∑' i, (∑' r, ENNReal.ofReal (‖measComm P Q U i r‖ ^ 2)) *
         (QuantumRuntime.mk D σ s).queryMass I x (ρ.matrix ⊗ₖ σ.matrix) i := by
-  refine (ENNReal.tsum_le_tsum fun j ↦ queryWeight_ext_le I hU x ρ P Q j).trans_eq ?_
-  rw [ENNReal.tsum_comm]
+  refine (tsum_le_tsum fun j ↦ queryWeight_ext_le I hU x ρ P Q j).trans_eq ?_
+  rw [tsum_comm]
   simp only [queryMass, ENNReal.tsum_mul_left]
 
 /-- **ePrint 2025/2166, Cor 5.8, with the masses of each call**, for general programs. Let the
@@ -509,7 +509,7 @@ theorem tsum_trace_conj_one_sub_le_of_inImage (x : QuantumComp L spec X A) (ρ :
         (QuantumRuntime.mk D σ s).queryMassAt I x (ρ.matrix ⊗ₖ σ.matrix) i j) ^ (2⁻¹ : ℝ)) ^
           2 := by
   have hw := (rpow_inv_two_tsum_trace_conj_one_sub_le I hU x ρ hP hQ hQQ hQσ h).trans <|
-    ENNReal.tsum_le_tsum fun j ↦
+    tsum_le_tsum fun j ↦
       ENNReal.rpow_le_rpow (queryWeight_ext_le I hU x ρ P Q j) (by norm_num)
   rw [← ENNReal.rpow_two]
   calc _ = ((∑' p, ENNReal.ofReal (MatrixMap.conj ((1 : Matrix p.1 p.1 ℂ) ⊗ₖ (1 - Q))
@@ -603,7 +603,7 @@ theorem tsum_trace_conj_one_sub_le_of_inImage_indexMass {κ : spec.Port → Type
         (QuantumRuntime.mk D σ s).indexMassAt I B x (ρ.matrix ⊗ₖ σ.matrix) c j) ^ (2⁻¹ : ℝ)) ^
           2 := by
   have hw := (rpow_inv_two_tsum_trace_conj_one_sub_le I hU x ρ hP hQ hQQ hQσ h).trans <|
-    ENNReal.tsum_le_tsum fun j ↦
+    tsum_le_tsum fun j ↦
       ENNReal.rpow_le_rpow (queryWeight_ext_le_indexMassAt I hU hB hUB x ρ P Q j) (by norm_num)
   rw [← ENNReal.rpow_two]
   calc _ = ((∑' p, ENNReal.ofReal (MatrixMap.conj ((1 : Matrix p.1 p.1 ℂ) ⊗ₖ (1 - Q))
@@ -632,9 +632,9 @@ theorem tsum_trace_conj_one_sub_le_of_inImage_indexMass_of_isQueryBound {κ : sp
   refine (rpow_inv_two_tsum_trace_conj_one_sub_le I hU x ρ hP hQ hQQ hQσ h).trans
     ((tsum_rpow_inv_two_queryWeight_le_of_isQueryBound I _ hx t ht _).trans ?_)
   gcongr
-  refine (ENNReal.tsum_le_tsum fun j ↦
+  refine (tsum_le_tsum fun j ↦
     queryWeight_ext_le_indexMassAt I hU hB hUB x ρ P Q j).trans_eq ?_
-  rw [ENNReal.tsum_comm]
+  rw [tsum_comm]
   simp only [indexMass, ENNReal.tsum_mul_left]
 
 end Extended

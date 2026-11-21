@@ -37,13 +37,7 @@ lemma Vector.getElem_eq_get {α n} (xs : List.Vector α n) (i : ℕ) (h : i < n)
 
 lemma List.Vector.toList_eq_ofFn_get {α : Type} {n : ℕ}
     (xs : List.Vector α n) : xs.toList = List.ofFn xs.get := by
-  apply List.ext_getElem
-  · simp [List.Vector.toList_length]
-  · intro i hi1 hi2
-    rw [show xs.toList[i] = xs.get ⟨i, by simpa [List.Vector.toList_length] using hi1⟩ by
-        simpa using (List.Vector.get_eq_get_toList xs
-          ⟨i, by simpa [List.Vector.toList_length] using hi1⟩).symm]
-    simp [List.getElem_ofFn (f := xs.get) (i := i) hi2]
+  rw [← List.Vector.toList_ofFn, List.Vector.ofFn_get]
 
 end List.Vector
 
@@ -53,29 +47,11 @@ lemma List.Vector.card_eq_countP {α : Type} {n : ℕ}
     (xs : List.Vector α n) (p : α → Prop) [DecidablePred p] :
     ({i : Fin n | p (xs.get i)} : Finset (Fin n)).card =
       xs.toList.countP (fun a => decide (p a)) := by
-  let ys : _root_.Vector α n := _root_.Vector.ofFn xs.get
-  have hcard : ({i : Fin n | p (xs.get i)} : Finset (Fin n)).card =
-      ({i : Fin n | p ys[↑i]} : Finset (Fin n)).card := by
-    simp [ys, _root_.Vector.getElem_ofFn]
-  have hcount : ys.countP (fun a => decide (p a)) =
-      xs.toList.countP (fun a => decide (p a)) := by
-    rw [← _root_.Vector.countP_toList]
-    simp [ys, _root_.Vector.toList_ofFn, List.Vector.toList_eq_ofFn_get]
-  calc
-    ({i : Fin n | p (xs.get i)} : Finset (Fin n)).card =
-        ({i : Fin n | p ys[↑i]} : Finset (Fin n)).card := hcard
-    _ = ys.countP (fun a => decide (p a)) := _root_.Vector.card_eq_countP ys p
-    _ = xs.toList.countP (fun a => decide (p a)) := hcount
+  simpa only [decide_eq_true_eq] using (List.Vector.countP_toList (fun a => decide (p a)) xs).symm
 
 lemma List.Vector.card_eq_count {α : Type} [DecidableEq α] {n : ℕ}
     (xs : List.Vector α n) (x : α) :
     ({i : Fin n | x = xs.get i} : Finset (Fin n)).card = xs.toList.count x := by
-  have h := List.Vector.card_eq_countP xs (p := fun a => x = a)
-  have hcount : xs.toList.count x = xs.toList.countP (fun a => decide (x = a)) := by
-    rw [List.count_eq_countP]
-    congr 1
-    funext y
-    simp [BEq.beq, eq_comm]
-  exact h.trans hcount.symm
+  simpa only [eq_comm] using (List.Vector.count_toList x xs).symm
 
 end ListVectorCounting

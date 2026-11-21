@@ -14,11 +14,15 @@ public import Mathlib.Data.List.Rotate
 /-!
 # Salted Merkle commitments
 
-The commitment of Chiesa, Di, Hu and Zheng, ePrint 2025/2166, Definition 8.2 uses perfect binary
-trees and a common oracle for leaf payloads and node labels. Openings carry salts, path labels,
-and siblings. The verifier checks a fixed query log of prescribed checks, deduplicated
+The commitment of Chiesa, Di, Hu and Zheng, ePrint 2025/2166, Definition 8.2 (pp. 52–53) uses
+perfect binary trees and a common oracle for leaf payloads and node labels. Openings carry salts,
+path labels, and siblings. The verifier checks a fixed query log of prescribed checks, deduplicated
 across paths. One path contains `d + 1` checks, including its leaf; openings from one trapdoor
 contain at most `2 * 2 ^ d - 1` distinct checks.
+
+`SaltedMerkle.scheme` is the paper's `MT[σ, Σ, ℓ, ν]` with `ℓ = 2 ^ d`.
+`SaltedMerkle.perfectlyComplete` and `SaltedMerkle.perfectlyComplete_toVectorCommitment` give its
+perfect completeness in the sense of the paper's Definition 3.7 (p. 27); see also §8.3 (p. 54).
 -/
 
 public section
@@ -314,7 +318,7 @@ section Scheme
 
 variable {X : Type uX} {Y Salt : Type} {Msg : Type uM}
 
-/-- The salted Merkle commitment `MT[σ, Σ, ℓ = 2 ^ d, ν]` (Def 8.2, pp. 52–53). `Commit` samples
+/-- The salted Merkle commitment `MT[σ, Σ, ℓ = 2 ^ d, ν]`. `Commit` samples
 the salts uniformly with `unifSpec` and hashes bottom-up, `Open` reads the paths from the
 trapdoor, and `Check` rechecks the prescribed query log.
 `Open` is deterministic and `Check` is coin-free, so the scheme is a `DetVectorCommitment`. -/
@@ -346,7 +350,7 @@ theorem nonadaptiveCheck_checkOn [DecidableEq X] [DecidableEq Y] [SampleableType
   rfl
 
 /-- **Perfect completeness** of the salted Merkle commitment against every fixed oracle function
-(Def 3.7, p. 27; §8.3, p. 55). -/
+(`DetVectorCommitment.PerfectlyComplete`). -/
 theorem perfectlyComplete [DecidableEq X] [DecidableEq Y] [SampleableType Salt]
     (enc : QueryEncoding X Unit Unit (Msg × Salt) Y) (d : ℕ) :
     (scheme (Msg := Msg) enc d).PerfectlyComplete := by
@@ -368,9 +372,9 @@ theorem perfectlyComplete [DecidableEq X] [DecidableEq Y] [SampleableType Salt]
   intro p hp
   simp [hG p hp]
 
-/-- **Perfect completeness relative to every oracle distribution** (Def 3.7, p. 27): the salted
-Merkle commitment, as a general vector commitment, is perfectly complete for every distribution `D`
-on oracle functions. -/
+/-- **Perfect completeness relative to every oracle distribution**: the salted Merkle commitment,
+as a general vector commitment, is perfectly complete (`VectorCommitment.PerfectlyComplete`) for
+every distribution `D` on oracle functions. It follows from `perfectlyComplete`. -/
 theorem perfectlyComplete_toVectorCommitment [DecidableEq X] [DecidableEq Y] [SampleableType Salt]
     [MeasurableSpace (X → Y)] (enc : QueryEncoding X Unit Unit (Msg × Salt) Y) (d : ℕ)
     (D : MeasureTheory.Measure (X → Y)) [MeasureTheory.IsProbabilityMeasure D] :

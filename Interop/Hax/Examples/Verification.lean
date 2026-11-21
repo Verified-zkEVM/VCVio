@@ -44,7 +44,6 @@ namespace Interop.Hax.Examples.OracleThenAdd
 theorem U32_MAX_val : core.num.U32.MAX.val = 2 ^ 32 - 1 := by
   simp [core.num.U32.MAX, UScalar.ofNat, UScalar.ofNatCore_val_eq, U32.rMax]
 
-set_option mvcgen.warning false in
 set_option hax_mvcgen.warnings false in
 /-- hax's proof obligation for `add_or_panic`: the extracted contract holds. -/
 theorem add_or_panic_spec (x y : U32) : add_or_panic.spec x y := by

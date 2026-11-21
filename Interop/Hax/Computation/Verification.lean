@@ -44,7 +44,6 @@ open Aeneas Aeneas.Std Std.Do hax_computation
 
 namespace Interop.Hax.Examples.Computation
 
-set_option mvcgen.warning false in
 set_option hax_mvcgen.warnings false in
 /-- hax's proof obligation for `computation`: the extracted contract holds. -/
 theorem computation_spec (x : U32) : computation.spec x := by

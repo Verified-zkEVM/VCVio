@@ -64,13 +64,13 @@ Enable with `open scoped OracleComp.Rel.Probabilistic`. -/
 noncomputable scoped instance instRelWP_prob :
     VCVio.ProgramLogic.RelWP (OracleComp spec₁) (OracleComp spec₂) Prob
       EStack⟨⟩ EStack⟨⟩ where
-  rwpTrans oa ob post _epost₁ _epost₂ :=
+  trans oa ob post _epost₁ _epost₂ :=
     ⟨rwpVal oa ob post, by exact rwpVal_le_one oa ob post⟩
-  rwp_trans_pure a b := by
+  trans_pure a b := by
     intro post _epost₁ _epost₂
     change (post a b).val ≤ rwpVal (pure a : OracleComp spec₁ _) (pure b : OracleComp spec₂ _) post
     rw [rwpVal, OracleComp.ProgramLogic.Relational.eRelWP_pure]
-  rwp_trans_bind_le {α β γ δ} oa ob f g := by
+  trans_bind_le {α β γ δ} oa ob f g := by
     intro post _epost₁ _epost₂
     change OracleComp.ProgramLogic.Relational.eRelWP oa ob (fun a b =>
       OracleComp.ProgramLogic.Relational.eRelWP (f a) (g b) (fun x y => (post x y).val)) ≤
@@ -78,7 +78,7 @@ noncomputable scoped instance instRelWP_prob :
           (fun x y => (post x y).val)
     exact OracleComp.ProgramLogic.Relational.eRelWP_bind_le
       (spec₁ := spec₁) (spec₂ := spec₂) oa ob f g (fun x y => (post x y).val)
-  rwp_trans_monotone {α β} oa ob post post' _epost₁ _epost₁' _epost₂ _epost₂' := by
+  trans_monotone {α β} oa ob post post' _epost₁ _epost₁' _epost₂ _epost₂' := by
     intro _h₁ _h₂ hpost
     change rwpVal oa ob post ≤ rwpVal oa ob post'
     exact OracleComp.ProgramLogic.Relational.eRelWP_mono

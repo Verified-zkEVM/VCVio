@@ -54,7 +54,7 @@ theorem deviatingCollision_of_compressionCollision {α : Type} (publicSeed : Dig
         (Hashing.tweakableInput publicSeed (Extraction.Fors.rootAddress address)
           (digestArrayBytes canonicalRoots)))
     -- the collision, and the cache entry its own query left behind
-    (hcollision : @Extraction.Fors.CompressionCollision (CacheReplay.replayQuery cache)
+    (hcollision : Extraction.Fors.CompressionCollision (CacheReplay.replayQuery cache)
       actualRoots canonicalRoots publicSeed address)
     (result : α × QueryCache HashSpec) (output : HashOutput)
     (hcache : result.2 = cache)
@@ -90,17 +90,17 @@ map is injective because the constructor is and `Fin.val` determines the index; 
 theorem deviatingCollision_of_compressionCollision_canonical {α : Type}
     (secretSeed publicSeed : Digest) (cache : QueryCache HashSpec) (key : ForsKey)
     (actualRoots : Fin forsTrees → Digest)
-    (hcollision : @Extraction.Fors.CompressionCollision (CacheReplay.replayQuery cache)
-      actualRoots (@Extraction.Fors.canonicalRoots (CacheReplay.replayQuery cache)
+    (hcollision : Extraction.Fors.CompressionCollision (CacheReplay.replayQuery cache)
+      actualRoots (Extraction.Fors.canonicalRoots (CacheReplay.replayQuery cache)
         secretSeed publicSeed key.address) publicSeed key.address)
     (result : α × QueryCache HashSpec) (output : HashOutput)
     (hcache : result.2 = cache)
     (hentry : cache (Hashing.tweakableInput publicSeed
       (StructuralNode.forsRoots key).address (digestArrayBytes actualRoots)) = some output) :
     StructuralTerm.DeviatingCollision publicSeed
-      (@value (CacheReplay.replayQuery cache) secretSeed publicSeed) result := by
+      (value (CacheReplay.replayQuery cache) secretSeed publicSeed) result := by
   refine deviatingCollision_of_compressionCollision publicSeed
-    (@value (CacheReplay.replayQuery cache) secretSeed publicSeed) cache (.forsRoots key)
+    (value (CacheReplay.replayQuery cache) secretSeed publicSeed) cache (.forsRoots key)
     (fun tree : Fin forsTrees =>
       .structural (.forsTree key ⟨forsHeight, by omega⟩ ⟨tree.val, by simp [tree.isLt]⟩))
     actualRoots _ key.address rfl ?_ rfl (fun _ => rfl) ?_ hcollision result output

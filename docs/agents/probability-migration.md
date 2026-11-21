@@ -25,6 +25,12 @@ record is `docs/reading/denotational-probability-semantics.md`.
 3. Build. Work through the reported sites and the remaining errors with the *Symptoms* table.
 4. Check that definitions fix their σ-algebras (see *Semantic contract*).
 
+The codemod leaves statistical-distance names for manual review. For recognized qualified
+spellings, including `Measure` and `Kernel` forms, it suggests the corresponding VCVio
+declaration. Check which declaration the proof uses, especially for unqualified names, dot
+notation, and references inside string interpolations. VCVio’s `Measure.statEDist` takes the supremum over measurable events. Mathlib’s
+`MeasureTheory.etvDist` measures total variation.
+
 The codemod is textual: it never needs a build and is idempotent, so it can be rerun after a
 further repin. It does not convert proofs; a proof that computed with `probOutput` sums, `SPMF`
 equalities or `tvDist` follows the *Standard proof conversion* table of the roadmap.
@@ -45,6 +51,7 @@ remaining build errors by kind, file scope and whether the codemod knows the nam
 | `Pr{x ← mx}[p x]` (a bare draw) | `Pr{let x ← mx}[p x]`: the braces hold an ordinary `do` sequence |
 | `evalSPMF mx`, `𝒮[mx]`, `SPMF α` | `𝒟[mx] : Measure α`; `evalDistWithFailure mx : Measure (Option α)` records the failure mass at `none` |
 | `tvDist mx my` | `measureTVDist mx my` (real) or `measureETVDist mx my` (`ℝ≥0∞`); `Measure.statDist` and `Measure.statEDist` on measures |
+| `Measure.tvDist_triangle`, `Measure.etvDist_bind_bind_le_lintegral` | `Measure.statDist_triangle`, `Measure.statEDist_bind_bind_le_lintegral` |
 | `expectedValue mx f` | `∫⁻ x, f x ∂𝒟[mx]` |
 | `NeverFail mx` | nothing on `OracleComp`; `IsProbabilityMeasure 𝒟[mx]` for failing monads |
 | `RelTriple'` | `RelTriple` |
@@ -236,11 +243,43 @@ pass `ENNReal.ofReal ζ_zk` to `HVZK`, as `FiatShamirWithAbort.euf_cma_to_nma` d
 | `VCVio.ProgramLogic.Relational.WP.Coherence` | `VCVio.ProgramLogic.Relational.WP.Quantitative` |
 | `VCVio.Prelude` | the modules it re-exported, e.g. `VCVio.Prelude.Core` |
 
-A removed module may have re-exported other modules; add the imports the build then asks for.
-The modules whose declarations moved to PolyFun's measure companions remain as deprecated
-re-exports, and each deprecation warning lists the modules to import instead: the PolyFun module
-and, where the old module provided them, VCVio's notation hosts and other modules (see
-[module boundaries](module-system.md#architectural-decision)).
+### Measure imports on Lean v4.36
+
+The codemod expands each removed import to the direct imports in the table and preserves
+public re-exports. Clients that use only the underlying declarations can import their defining
+module alone.
+
+| Removed module | Import instead |
+|---|---|
+| `ToMathlib.MeasureTheory.DiscreteInstances` | `ToCslib.MeasureTheory.MeasurableSpace.Instances` |
+| `ToMathlib.MeasureTheory.Function.AEMeasurable` | `ToCslib.MeasureTheory.Function.AEMeasurable` |
+| `ToMathlib.MeasureTheory.MeasurableSpace.Except` | `ToCslib.MeasureTheory.MeasurableSpace.Except` |
+| `ToMathlib.MeasureTheory.MeasurableSpace.Option` | `ToCslib.MeasureTheory.MeasurableSpace.Option` |
+| `ToMathlib.MeasureTheory.Measure.Coupling` | `ToCslib.MeasureTheory.Measure.Coupling` |
+| `ToMathlib.MeasureTheory.Measure.Coupling.Bind` | `ToCslib.MeasureTheory.Measure.Coupling.Bind`, `ToCslib.MeasureTheory.Function.AEMeasurable`, `ToMathlib.MeasureTheory.Measure.GiryMonad`, `ToMathlib.MeasureTheory.Measure.Monotone` |
+| `ToMathlib.MeasureTheory.Measure.Except` | `ToCslib.MeasureTheory.Measure.Except`, `ToMathlib.MeasureTheory.Measure.GiryMonad` |
+| `ToMathlib.MeasureTheory.Measure.Option` | `ToCslib.MeasureTheory.Measure.Option`, `ToMathlib.MeasureTheory.Measure.GiryMonad` |
+| `ToMathlib.MeasureTheory.Measure.Prop` | `ToCslib.MeasureTheory.Measure.Prop` |
+| `ToMathlib.MeasureTheory.Measure.Subprobability` | `ToCslib.MeasureTheory.Measure.Subprobability` |
+| `ToMathlib.Probability.Kernel.Subprobability` | `ToCslib.Probability.Kernel.Subprobability` |
+| `ToMathlib.Probability.UniformOn` | `ToCslib.Probability.UniformOn` |
+| `VCVio.EvalDist.Defs.Measure.Deterministic` | `PolyFun.Control.Monad.Measure.Deterministic`, `ToMathlib.Control.Except`, `ToMathlib.Control.Option`, `VCVio.EvalDist.ProbabilityNotation` |
+| `VCVio.EvalDist.Defs.Measure.ExceptT` | `PolyFun.Control.Monad.Measure.ExceptT`, `ToMathlib.MeasureTheory.Measure.GiryMonad`, `VCVio.EvalDist.Defs.Measure.Core` |
+| `VCVio.EvalDist.Defs.Measure.Failure` | `PolyFun.Control.Monad.Measure.Failure`, `VCVio.EvalDist.Defs.Measure.Core` |
+| `VCVio.EvalDist.Defs.Measure.OptionT` | `PolyFun.Control.Monad.Measure.OptionT`, `ToMathlib.MeasureTheory.Measure.GiryMonad`, `VCVio.EvalDist.Defs.Measure.Core` |
+| `VCVio.EvalDist.Defs.Semantics.Core` | `PolyFun.Control.Monad.Measure.SemanticsVia`, `ToMathlib.MeasureTheory.Measure.GiryMonad`, `VCVio.EvalDist.Defs.Measure.Core` |
+| `VCVio.EvalDist.Lossless` | `PolyFun.Control.Monad.Measure.Lossless`, `Mathlib.MeasureTheory.Measure.ProbabilityMeasure`, `VCVio.EvalDist.Defs.Measure.Core` |
+| `VCVio.EvalDist.Monad.Failure` | `PolyFun.Control.Monad.Measure.Failure`, `VCVio.EvalDist.ProbabilityNotation` |
+| `VCVio.EvalDist.PFunctorKernel` | `PolyFun.PFunctor.Free.Measure.Kernel`, `ToCslib.MeasureTheory.Function.AEMeasurable`, `ToCslib.MeasureTheory.Measure.Coupling.Bind`, `ToMathlib.MeasureTheory.Measure.GiryMonad`, `ToMathlib.MeasureTheory.Measure.Monotone` |
+| `VCVio.EvalDist.PFunctorKernelTransport` | `PolyFun.PFunctor.Free.Measure.Kernel.Transport`, `ToCslib.MeasureTheory.Function.AEMeasurable`, `ToCslib.MeasureTheory.Measure.Coupling.Bind`, `ToMathlib.MeasureTheory.Measure.GiryMonad`, `ToMathlib.MeasureTheory.Measure.Monotone` |
+| `VCVio.EvalDist.PFunctorMeasure.Core` | `PolyFun.PFunctor.Free.Measure.EvalDist`, `Mathlib.MeasureTheory.Measure.ProbabilityMeasure`, `VCVio.EvalDist.Defs.Measure.Core` |
+| `VCVio.EvalDist.PFunctorPath` | `PolyFun.PFunctor.Free.Measure.Path`, `Mathlib.MeasureTheory.Measure.ProbabilityMeasure`, `PolyFun.PFunctor.Free.Measure.EvalDist`, `VCVio.EvalDist.Defs.Measure.Core` |
+| `VCVio.EvalDist.WiringKernel` | `PolyFun.PFunctor.Wiring.Measure`, `ToCslib.MeasureTheory.Function.AEMeasurable`, `ToCslib.MeasureTheory.Measure.Coupling.Bind`, `ToMathlib.MeasureTheory.Measure.GiryMonad`, `ToMathlib.MeasureTheory.Measure.Monotone` |
+| `VCVio.EvalDist.WithFailure` | `PolyFun.Control.Monad.Measure.WithFailure`, `ToMathlib.MeasureTheory.Measure.GiryMonad`, `VCVio.EvalDist.ProbabilityNotation` |
+| `VCVio.ProgramLogic.Relational.Measure` | `PolyFun.Control.Monad.Measure.Relational`, `VCVio.EvalDist.Defs.Measure.Core` |
+| `VCVio.ProgramLogic.Relational.Measure.Bind` | `PolyFun.Control.Monad.Measure.Relational.Bind`, `ToMathlib.MeasureTheory.Measure.GiryMonad`, `ToMathlib.MeasureTheory.Measure.Monotone`, `VCVio.EvalDist.Defs.Measure.Core` |
+| `VCVio.ProgramLogic.Relational.Measure.Deterministic` | `PolyFun.Control.Monad.Measure.Relational.Deterministic`, `ToMathlib.Control.Except`, `ToMathlib.Control.Option`, `VCVio.EvalDist.ProbabilityNotation` |
+
 The hubs `VCVio.OracleComp.EvalDist`, `VCVio.OracleComp.ProbComp`,
 `VCVio.OracleComp.Coercions.SubSpec` and `VCVio.OracleComp.Constructions.SampleableType` remain
 and import the measure semantics of their area. `import VCVio.Foundations` is an entry point for

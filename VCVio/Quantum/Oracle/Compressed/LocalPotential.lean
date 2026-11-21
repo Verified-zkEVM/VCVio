@@ -127,14 +127,14 @@ theorem cellDiag_eq (u v : ℝ) :
     (cellDiag u v : Matrix (Option Y) (Option Y) ℂ) = v • 1 - (v - u) • cellEmpty := by
   ext a b
   rcases a with _ | a <;> rcases b with _ | b <;>
-    simp [cellDiag, cellEmpty, diagonal_apply, one_apply]
+    simp [cellDiag, cellEmpty, diagonal_apply, Matrix.one_apply]
 
 /-- Adding a scalar shifts both values of a cell potential. -/
 theorem cellDiag_add_smul_one (u v θ : ℝ) :
     (cellDiag u v : Matrix (Option Y) (Option Y) ℂ) + θ • 1 = cellDiag (u + θ) (v + θ) := by
   ext a b
   rcases a with _ | a <;> rcases b with _ | b
-  all_goals simp [cellDiag, diagonal_apply, one_apply, ite_add_ite]
+  all_goals simp [cellDiag, diagonal_apply, Matrix.one_apply, ite_add_ite]
 
 /-- `cellDiag u v` is positive semidefinite when `u` and `v` are nonnegative. -/
 theorem posSemidef_cellDiag {u v : ℝ} (hu : 0 ≤ u) (hv : 0 ≤ v) :
@@ -176,7 +176,7 @@ theorem cellDiag_add_sub_eq (χ : AddChar Y ℂ) (p₀ p₁ u v θ : ℝ) :
     rw [cellDiag_add_smul_one]
     ext a b
     rcases a with _ | a <;> rcases b with _ | b
-    all_goals simp [cellDiag, diagonal_apply, one_apply, ite_sub_ite]
+    all_goals simp [cellDiag, diagonal_apply, Matrix.one_apply, ite_sub_ite]
   rw [h, cellDiag_eq u v, Matrix.mul_sub, Matrix.sub_mul, Matrix.mul_smul, Matrix.smul_mul,
     Matrix.mul_one, conjTranspose_phaseCell_mul_self, Matrix.mul_smul, Matrix.smul_mul]
   abel

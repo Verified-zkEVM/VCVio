@@ -80,7 +80,6 @@ theorem sample_cbd1_three : sample_cbd1 3#u8 = RustM.ok 0#i32 := by cbd_eval
 theorem bmod_emod_two (x : ℤ) : (x % 2).bmod 4294967296 = x % 2 :=
   Int.bmod_eq_of_le (by omega) (by omega)
 
-set_option mvcgen.warning false in
 set_option hax_mvcgen.warnings false in
 /-- hax's proof obligation for `sample_cbd1`: the extracted contract holds, so the result lies in
 `{-1, 0, 1}`. -/

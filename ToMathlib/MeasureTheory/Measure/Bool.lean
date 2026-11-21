@@ -84,7 +84,7 @@ lemma fst_apply_eq_add {α : Type*} [MeasurableSpace α] (μ : Measure (α × Bo
     cases b <;> simp
   conv_lhs => rw [← μ.restrict_add_restrict_compl
     (MeasurableSet.univ.prod (measurableSet_singleton true))]
-  rw [hc, fst_add, hbranch true, hbranch false, Measure.add_apply,
+  rw [hc, fst_add, hbranch true, hbranch false, add_apply,
     (measurableEmbedding_prod_mk_right true).comap_apply,
     (measurableEmbedding_prod_mk_right false).comap_apply]
   congr 2 <;> ext ⟨a, b⟩ <;> simp
