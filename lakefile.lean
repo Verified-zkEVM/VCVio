@@ -76,8 +76,8 @@ requirement authoritative over their inherited pins and makes
 `lake update --keep-toolchain` idempotent.
 -/
 require PolyFun from git
-  "https://github.com/Verified-zkEVM/PolyFun" @
-  "713d8857e49d20927c1447b3ba7397acc5537319"
+  "https://github.com/dtumad/PolyFun" @
+  "e67f951658b2738b77a249afea3a27ebe471e7fe"
 
 /-
 The Mathlib-only quantum foundation (matrix maps, instruments, registers,
