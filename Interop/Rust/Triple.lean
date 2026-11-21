@@ -10,6 +10,7 @@ public import Aeneas.Std.WP
 public import Interop.Rust.RustM
 public import Std.WP
 public import VCVio.ProgramLogic.Unary.WP.Necessary
+import PolyFun.Control.Do.Spec
 
 /-!
 # Aeneas's specifications in VCVio's program logic
@@ -125,11 +126,11 @@ theorem Spec.liftRustM (x : RustM α) (post : α → Pred)
   | vis i k =>
     obtain ⟨e, he⟩ := RustM.vis_eq_fail i k
     rw [he, liftRustM_fail, rustPre_fail]
-    exact Std.WP.Spec.throw_ExceptT (m := OptionT (OracleComp spec)) (errorOfAeneas e) post epost
+    vcgen [RustOracleComp.fail]
   | div =>
     rw [liftRustM_div, rustPre_div]
-    exact ⟨Std.WP.WPMonad.pure_le_wp_pure (m := OracleComp spec)
-      (none : Option (Except Error α)) (pushOption (pushExcept post epost.1) epost.2.1) epost.2.2⟩
+    vcgen [RustOracleComp.div]
+    exact PartialOrder.rel_refl
 
 /-- A total-correctness Aeneas specification is a triple for the lifted program, whatever the
 exception postconditions. -/
@@ -164,25 +165,19 @@ theorem triple_liftRustM_of_triple {x : RustM α} {pre : Prop} {post : α → Pr
       (fun v => ⌜post v⌝, fun e => ⌜perr (errorOfAeneas e.down)⌝, R, fun _ => ⌜pdiv⌝, ())) :
     Std.WP.Triple (liftRustM x : RustOracleComp spec α) pre post (perr, fun _ => pdiv, ()) := by
   simp only [Std.Do.Triple, WP.wp, PredTrans.apply] at h
+  refine ⟨fun hpre => (Spec.liftRustM x post (perr, fun _ => pdiv, ())).le_wp ?_⟩
   cases x using RustM.cases with
   | ret v =>
-    simp only [RustM.match.ok] at h
-    rw [liftRustM_ok]
-    exact Std.WP.Triple.pure v (fun hpre => (h hpre))
+    simp only [rustPre_ok, RustM.match.ok] at h ⊢
+    exact h hpre
   | vis i k =>
     obtain ⟨e, he⟩ := RustM.vis_eq_fail i k
     rw [he] at h ⊢
-    simp only [RustM.match.fail] at h
-    rw [liftRustM_fail]
-    exact ⟨fun hpre => (Std.WP.Spec.throw_ExceptT (m := OptionT (OracleComp spec)) (α := α)
-      (errorOfAeneas e) post (perr, fun _ => pdiv, ())).le_wp (h hpre)⟩
+    simp only [rustPre_fail, RustM.match.fail] at h ⊢
+    exact h hpre
   | div =>
-    simp only [RustM.match.div] at h
-    rw [liftRustM_div]
-    exact ⟨fun hpre => Std.WP.WPMonad.pure_le_wp_pure (m := OracleComp spec)
-      (none : Option (Except Error α))
-      (Lean.Order.pushOption (Lean.Order.pushExcept post perr) fun _ => pdiv) ()
-      (h hpre)⟩
+    simp only [rustPre_div, RustM.match.div] at h ⊢
+    exact h hpre
 
 /-- A triple whose precondition is a hypothesis, `pre → ⦃⌜True⌝⦄ x ⦃⇓ v => ⌜post v⌝⦄`, is a
 `Std.WP` triple for the lifted program with precondition `pre`, which neither panics nor diverges.
