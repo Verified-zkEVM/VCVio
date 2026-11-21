@@ -26,7 +26,7 @@ import VCVio.OracleComp.EvalDist.Measure
 
 public section
 
-namespace SquirrelLogic
+namespace Interop.Squirrel
 
 open IPFunctor IPFunctor.ScopedSignature
 
@@ -74,4 +74,4 @@ theorem Valid.not_equiv_tt_ff (hD : ∀ b, ¬ D.labels b .large) :
   rw [OracleComp.prEvent_true_eq_one,
     prEvent_eq_zero_of_forall_not _ _ fun _ h => Bool.noConfusion h, ENNReal.absDiff_zero_right]
 
-end SquirrelLogic
+end Interop.Squirrel

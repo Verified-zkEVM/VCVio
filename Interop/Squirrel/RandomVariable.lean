@@ -31,7 +31,7 @@ variables; `LTerm.denote_rvInterp_app_lam` is β.
 
 public section
 
-namespace SquirrelLogic
+namespace Interop.Squirrel
 
 open IPFunctor IPFunctor.ScopedSignature
 
@@ -132,4 +132,4 @@ theorem LTerm.denote_rvInterp_app_lam {Γ : List (Kind B)} {a b : Ty B}
   exact (eval_denote_rvInterp M η ρ _ env).trans
     ((denote_app_lam body v).trans (eval_denote_rvInterp M η ρ _ env).symm)
 
-end SquirrelLogic
+end Interop.Squirrel

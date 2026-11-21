@@ -180,7 +180,7 @@ premise is needed: `[false]` follows from the hypothesis `[false]` but not from 
 Each row is a point where the papers leave something informal or where the formalization makes a
 modelling choice. A row is closed only by a Lean theorem, or a countermodel, named in its last
 column. The ids are stable: a row keeps its id when rows are added, so the ids here are not
-contiguous. Every name in the last column is in the namespace `SquirrelLogic`.
+contiguous. Every name in the last column is in the namespace `Interop.Squirrel`.
 
 | Id | Kind | Source anchor | Obligation | Status | Lean anchor |
 |---|---|---|---|---|---|

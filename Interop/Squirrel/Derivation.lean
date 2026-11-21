@@ -26,7 +26,7 @@ uses a property of the class of machines, so soundness holds for every class.
 
 public section
 
-namespace SquirrelLogic
+namespace Interop.Squirrel
 
 open IPFunctor IPFunctor.ScopedSignature
 
@@ -79,4 +79,4 @@ theorem Derivation.sound (R : Model D → Prop) (C : ∀ M : Model D, AdvClass M
   | _, _, _, .byLoc d => Valid.byLoc (d.sound R C)
   | _, _, _, .localAll Γl d => Valid.local_all Γl (d.sound R C)
 
-end SquirrelLogic
+end Interop.Squirrel

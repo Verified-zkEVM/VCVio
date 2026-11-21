@@ -55,7 +55,7 @@ every formula of `Θ` holds. A local sequent `Θ; Γl ⊢ φ` is `Θ ⊢ [∧Γl
 
 public section
 
-namespace SquirrelLogic
+namespace Interop.Squirrel
 
 open IPFunctor IPFunctor.ScopedSignature
 
@@ -463,4 +463,4 @@ theorem byLoc {φ : FTerm D Γ .bool} (h : LValid R C Θ [] φ) : Valid R C Θ (
 
 end Valid
 
-end SquirrelLogic
+end Interop.Squirrel

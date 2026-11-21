@@ -62,7 +62,7 @@ result `Ty.res`: this is how a machine queries an input of order at most one.
 
 public section
 
-namespace SquirrelLogic
+namespace Interop.Squirrel
 
 open IPFunctor IPFunctor.ScopedSignature
 
@@ -513,4 +513,4 @@ theorem denote_eq_app_of_eq {f g : LTerm D Γ (.arrow a b)} {t u : LTerm D Γ a}
 
 end LTerm
 
-end SquirrelLogic
+end Interop.Squirrel

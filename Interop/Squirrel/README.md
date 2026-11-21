@@ -55,7 +55,7 @@ None yet: the sub-project states the logic and proves its rules.
 | `Interop.Squirrel.Rules.Local` | L.R-∀ |
 | `Interop.Squirrel.Derivation` | derivations of these rules as data, and `Derivation.sound` |
 
-The declarations are in the namespace `SquirrelLogic`. CI's axiom sweep holds every root of
+The declarations are in the namespace `Interop.Squirrel`. CI's axiom sweep holds every root of
 `InteropSquirrel` at zero `sorry` and nonstandard-axiom debt.
 
 ## Stability

@@ -40,7 +40,7 @@ information-theoretic class of the satisfiability models and countermodels.
 
 public section
 
-namespace SquirrelLogic
+namespace Interop.Squirrel
 
 open IPFunctor IPFunctor.ScopedSignature
 
@@ -92,4 +92,4 @@ advantage. -/
 
 end AdvClass
 
-end SquirrelLogic
+end Interop.Squirrel

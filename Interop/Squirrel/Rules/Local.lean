@@ -28,7 +28,7 @@ constant `RV.constAt η a` that the local quantifier binds.
 
 public section
 
-namespace SquirrelLogic
+namespace Interop.Squirrel
 
 open IPFunctor IPFunctor.ScopedSignature
 
@@ -95,4 +95,4 @@ theorem local_all {τ : Ty B} {φ : FTerm D (.loc τ :: Γ) .bool} (Γl : List (
 
 end Valid
 
-end SquirrelLogic
+end Interop.Squirrel

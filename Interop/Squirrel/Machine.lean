@@ -49,7 +49,7 @@ most `t(η)` queries.
 
 public section
 
-namespace SquirrelLogic
+namespace Interop.Squirrel
 
 open IPFunctor IPFunctor.ScopedSignature OracleComp
 
@@ -247,4 +247,4 @@ theorem queryBound_input (y : ScopedVar τs a) (ha : a.IsGround) :
 
 end Machine
 
-end SquirrelLogic
+end Interop.Squirrel

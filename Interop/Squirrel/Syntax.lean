@@ -46,7 +46,7 @@ variables are the free variables of a term.
 
 public section
 
-namespace SquirrelLogic
+namespace Interop.Squirrel
 
 open IPFunctor IPFunctor.ScopedSignature
 
@@ -208,4 +208,4 @@ variable {Γ : List (Kind B)} {a b : Ty B}
 
 end LTerm
 
-end SquirrelLogic
+end Interop.Squirrel

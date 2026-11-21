@@ -22,7 +22,7 @@ input queries.
 
 public section
 
-namespace SquirrelLogic
+namespace Interop.Squirrel
 
 open IPFunctor IPFunctor.ScopedSignature
 
@@ -67,4 +67,4 @@ theorem Machine.not_queryBound_input_zero :
     OracleComp.isQueryBoundP_query_iff] at h0
   exact absurd (h0 rfl) (lt_irrefl 0)
 
-end SquirrelLogic
+end Interop.Squirrel

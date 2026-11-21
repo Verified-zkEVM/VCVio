@@ -31,7 +31,7 @@ needs its premise, here the local validity of `x = true`.
 
 public section
 
-namespace SquirrelLogic
+namespace Interop.Squirrel
 
 open IPFunctor IPFunctor.ScopedSignature
 
@@ -85,4 +85,4 @@ theorem Valid.not_box_all_eq_tt (hD : ∀ b, ¬ D.labels b .large) (C : ∀ M : 
   refine (OracleComp.prEvent_eq_one_of_forall_mem_support _ _ fun ρ _ => ?_).symm
   simp [FTerm.denote_all, FTerm.denote_eq]
 
-end SquirrelLogic
+end Interop.Squirrel
