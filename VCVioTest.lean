@@ -212,6 +212,7 @@ public import VCVioTest.RandomOracleHiddenSeedCollapse
 public import VCVioTest.RandomOracleHiddenSeedUnit
 public import VCVioTest.RandomOracleHitPotential
 public import VCVioTest.RandomOracleJointPotential
+public import VCVioTest.RandomOracleMixedCap
 public import VCVioTest.RandomOracleMixedQueries
 public import VCVioTest.RandomOraclePairedDerivations
 public import VCVioTest.RandomOraclePairedGraphReadback
