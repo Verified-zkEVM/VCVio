@@ -295,39 +295,45 @@ private noncomputable abbrev clientHandler (s : FIPS205.core.PkSeed) (pk sk : PK
   QueryImpl.add (clientAmbient.liftTarget (WriterT (QueryLog Sign) (OracleComp LabCommon)))
     (QueryImpl.withLogging (spec := Sign) (signSource s pk sk))
 
+/-- A client built from these two services preserves any property closed under pure and bind
+whenever each ambient query and signing call preserves it. -/
+private theorem clientHandler_preserves {s : FIPS205.core.PkSeed} {pk sk : PK}
+    (P : {β : Type} → OracleComp LabCommon β → Prop)
+    (hpure : ∀ {β : Type} (x : β), P (pure x))
+    (hbind : ∀ {β γ : Type} {p : OracleComp LabCommon β} {f : β → OracleComp LabCommon γ},
+      P p → (∀ x, P (f x)) → P (p >>= f))
+    (ambient : ∀ i, P (clientAmbient i)) (service : ∀ req, P (signSource s pk sk req))
+    {α : Type} (program : OracleComp (R + Sign) α) :
+    P (simulateQ (clientHandler s pk sk) program).run := by
+  have hmap {β γ : Type} {p : OracleComp LabCommon β} (f : β → γ) (hp : P p) : P (f <$> p) := by
+    rw [map_eq_bind_pure_comp]
+    exact hbind hp (fun _ => hpure _)
+  induction program using OracleComp.inductionOn with
+  | pure x => exact hpure _
+  | query_bind input next ih =>
+    rw [simulateQ_bind, simulateQ_spec_query, WriterT.run_bind]
+    refine hbind ?_ (fun ⟨ans, _⟩ => hmap _ (ih ans))
+    cases input with
+    | inl i => exact hmap _ (ambient i)
+    | inr req =>
+      change P ((QueryImpl.withLogging (spec := Sign) (signSource s pk sk)) req).run
+      rw [QueryImpl.run_withLogging_apply]
+      exact hbind (service req) (fun _ => hpure _)
+
 private theorem logged_safe {α : Type} (s : FIPS205.core.PkSeed) (pk sk : PK)
     (caps : Nat × Nat) (fallback : (i : LabCommon.Domain) → LabCommon.Range i)
     (p : Prop) (program : OracleComp (R + Sign) α) :
     Safe s caps fallback p (simulateQ (clientHandler s pk sk) program).run := by
-  induction program using OracleComp.inductionOn with
-  | pure x => exact safe_pure _ _ _ _ _
-  | query_bind input next ih =>
-    rw [simulateQ_bind, simulateQ_spec_query, WriterT.run_bind]
-    apply safe_bind
-    · rcases input with (n | raw) | request
-      · change Safe _ _ _ _ ((fun reply => (reply, (∅ : QueryLog Sign))) <$>
-          clientAmbient (.inl n))
-        rw [map_eq_bind_pure_comp]
-        exact safe_bind (uniform_safe _ _ _ _ _) (fun _ => safe_pure _ _ _ _ _)
-      · change Safe _ _ _ _ ((fun reply => (reply, (∅ : QueryLog Sign))) <$>
-          clientAmbient (.inr raw))
-        rw [map_eq_bind_pure_comp]
-        apply safe_bind _ (fun _ => safe_pure _ _ _ _ _)
-        intro before prior out mem
-        have rawStep := marked_raw_count_offsets s .adversary raw (Or.inl rfl) caps fallback
-          before.1 before.2.1 before.2.2.1 before.2.2.2 out mem
-        exact invariant_of_offsets prior
-          ⟨rawStep.1, rawStep.2.1, rawStep.2.2.2, fun _ => rawStep.2.2.1⟩
-      · change Safe _ _ _ _ ((QueryImpl.withLogging (spec := Sign) (signSource s pk sk))
-          request).run
-        rw [QueryImpl.run_withLogging_apply]
-        exact safe_bind (fun before prior out mem =>
-          (marked_signing_counts s pk sk request caps fallback p before prior out mem).1)
-          (fun _ => safe_pure _ _ _ _ _)
-    · rintro ⟨answer, left⟩
-      dsimp only
-      rw [map_eq_bind_pure_comp]
-      exact safe_bind (ih answer) (fun _ => safe_pure _ _ _ _ _)
+  refine clientHandler_preserves (fun action => Safe s caps fallback p action)
+    (safe_pure s caps fallback p) (fun first next => safe_bind first next) ?_
+    (fun request before prior out mem =>
+      (marked_signing_counts s pk sk request caps fallback p before prior out mem).1) program
+  rintro (n | raw)
+  · exact uniform_safe _ _ _ _ _
+  · intro before prior out mem
+    have step := marked_raw_count_offsets s .adversary raw (Or.inl rfl) caps fallback
+      before.1 before.2.1 before.2.2.1 before.2.2.2 out mem
+    exact invariant_of_offsets prior ⟨step.1, step.2.1, step.2.2.2, fun _ => step.2.2.1⟩
 
 private theorem actual_client_eq (s : FIPS205.core.PkSeed) (pk sk : PK)
     (adv : Game.Adversary FIPS205.Answer PK) :

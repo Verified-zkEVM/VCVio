@@ -415,6 +415,24 @@ theorem verify_point_graph_reserve (s : FIPS205.core.PkSeed) (root : FIPS205.cor
         commonProjection, commonEvent, sourceInput, QueryImpl.add, seqRight_eq_bind]
     rwa [← eq]
 
+/-- Executing the program preserves the graph-entry budget on every supported result. -/
+abbrev Safe {α : Type} (s : FIPS205.core.PkSeed) (caps : Nat × Nat)
+    (fb : (i : LabCommon.Domain) → LabCommon.Range i) (p : OracleComp LabCommon α) :=
+  ∀ st, good s st → ∀ z ∈ support ((simulateQ (engine s caps fb) p).run st), good s z.2
+
+private theorem safe_pure {α : Type} {s caps fb} (x : α) : Safe s caps fb (pure x) := by
+  intro st prior z mem
+  simp only [simulateQ_pure, StateT.run_pure, support_pure, Set.mem_singleton_iff] at mem
+  exact mem ▸ prior
+
+private theorem safe_bind {α β : Type} {s caps fb} {p : OracleComp LabCommon α}
+    {f : α → OracleComp LabCommon β} (hp : Safe s caps fb p) (hf : ∀ a, Safe s caps fb (f a)) :
+    Safe s caps fb (p >>= f) := by
+  intro st prior z mem
+  simp only [simulateQ_bind, StateT.run_bind, mem_support_bind_iff] at mem
+  obtain ⟨mid, hm, hz⟩ := mem
+  exact hf mid.1 mid.2 (hp st prior mid hm) z hz
+
 /-- The actual rejecting verifier preserves the graph reserve for every decoded wire output;
 framing and signature decoding rejections return false before spending any reserve. -/
 theorem verify_graph_reserve (s : FIPS205.core.PkSeed) (root : FIPS205.core.Y)
@@ -427,19 +445,15 @@ theorem verify_graph_reserve (s : FIPS205.core.PkSeed) (root : FIPS205.core.Y)
   split at mem
   next message sig hMessage hSig =>
     let mark := VerificationOffsets.markedLab
-    let Q {α : Type} (p : OracleComp Lab α) := ∀ (before : State), good s before →
-      ∀ z ∈ support ((simulateQ (engine s caps fallback) (simulateQ mark p)).run before), good s z.2
+    let Q {α : Type} (p : OracleComp Lab α) := Safe s caps fallback (simulateQ mark p)
     have valid : Q (GeneralScheme.verifyInternalM FIPS205.params FIPS205.core message sig
         (⟨s, root⟩ : PK)) := by
       refine verifyInternalM_pred_of_ledger (m := OracleComp Lab) (Q := @Q) ?_ ?_
         FIPS205.core message sig (⟨s, root⟩ : PK) ?_ ?_
-      · intro α x before old z hz
-        simp only [simulateQ_pure, StateT.run_pure, support_pure, Set.mem_singleton_iff] at hz
-        exact hz ▸ old
-      · intro α β p next hp hn before old z hz
-        simp only [simulateQ_bind, StateT.run_bind, mem_support_bind_iff] at hz
-        obtain ⟨mid, hm, hz⟩ := hz
-        exact hn mid.1 mid.2 (hp before old mid hm) z hz
+      · intro α x
+        simpa only [Q, simulateQ_pure] using (safe_pure (s := s) (caps := caps) (fb := fallback) x)
+      · intro α β p next hp hn
+        simpa only [Q, simulateQ_bind] using safe_bind hp hn
       · intro addr haddr values before old z hz
         let q := PublicHashQuery.thash s (FIPS205.core.adrsToKey addr) values
         have honest : IsHonestKey FIPS205.params FIPS205.core (FIPS205.core.adrsToKey addr) :=
@@ -460,78 +474,46 @@ theorem verify_graph_reserve (s : FIPS205.core.PkSeed) (root : FIPS205.core.Y)
     simp only [simulateQ_pure, StateT.run_pure, support_pure, Set.mem_singleton_iff] at mem
     exact mem ▸ prior
 
-/-- Executing the program preserves the graph-entry budget on every supported result. -/
-abbrev Safe {α : Type} (s : FIPS205.core.PkSeed) (caps : Nat × Nat)
-    (fb : (i : LabCommon.Domain) → LabCommon.Range i) (p : OracleComp LabCommon α) :=
-  ∀ st, good s st → ∀ z ∈ support ((simulateQ (engine s caps fb) p).run st), good s z.2
-
-private theorem safe_pure {α : Type} {s caps fb} (x : α) : Safe s caps fb (pure x) := by
+private theorem safe_query {s caps fb} (i : LabCommon.Domain)
+    (admitted : ∀ st : State, good s st → ∀ v ∈ support ((routed s i).run st.1),
+      good s (v.2, (st.2.1 + Sum.elim (fun _ : A.Domain => (0, 0)) (policy true s) i, false))) :
+    Safe s caps fb (liftM (LabCommon.query i)) := by
   intro st prior z mem
-  simp only [simulateQ_pure, StateT.run_pure, support_pure, Set.mem_singleton_iff] at mem
-  exact mem ▸ prior
-
-private theorem safe_bind {α β : Type} {s caps fb} {p : OracleComp LabCommon α}
-    {f : α → OracleComp LabCommon β} (hp : Safe s caps fb p) (hf : ∀ a, Safe s caps fb (f a)) :
-    Safe s caps fb (p >>= f) := by
-  intro st prior z mem
-  simp only [simulateQ_bind, StateT.run_bind, mem_support_bind_iff] at mem
-  obtain ⟨mid, hm, hz⟩ := mem
-  exact hf mid.1 mid.2 (hp st prior mid hm) z hz
+  rw [simulateQ_spec_query] at mem
+  simp only [engine, QueryImpl.guardQueryBudget, StateT.run_mk] at mem
+  split_ifs at mem
+  · simp only [support_pure, Set.mem_singleton_iff] at mem
+    exact mem ▸ prior
+  · rw [support_map] at mem
+    obtain ⟨v, hv, rfl⟩ := mem
+    exact admitted st prior v hv
+  · simp only [support_pure, Set.mem_singleton_iff] at mem
+    exact mem ▸ prior
 
 private theorem safe_free {s caps fb} (i : A.Domain) (free : ambientWeight s i = 0) :
     Safe s caps fb (liftM (LabCommon.query (.inl i))) := by
-  intro st prior z mem
-  rw [simulateQ_spec_query] at mem
-  cases stopped : st.2.2 with
-  | true =>
-    have eqOut : z = (fb (.inl i), st) := by
-      simpa [engine, QueryImpl.guardQueryBudget, stopped] using mem
-    exact eqOut ▸ prior
-  | false =>
-    by_cases fits : st.2.1 ≤ caps
-    · have computed : (engine s caps fb (.inl i)).run st =
-          (fun v => (v.1, v.2, (st.2.1, false))) <$> ((routed s (.inl i)).run st.1) := by
-        simp [engine, QueryImpl.guardQueryBudget, stopped,
-          show ((0,0) : Nat × Nat) = 0 from rfl, fits]
-      rw [computed, support_map] at mem
-      obtain ⟨v, hv, rfl⟩ := mem
-      obtain ⟨same, weight⟩ := ambient_query s i st.1 v hv
-      simp only [free, Nat.cast_zero, add_zero] at weight
-      change entries s v.2.2.2.1.1 + (31 * v.2.2.1.1 + 32 * st.2.1.2 : Nat) ≤ _
-      rw [same]
-      exact (add_le_add weight le_rfl).trans prior
-    · have eqOut : z = (fb (.inl i), st.1, st.2.1, true) := by
-        simpa [engine, QueryImpl.guardQueryBudget, stopped, fits,
-          show ((0,0) : Nat × Nat) = 0 from rfl] using mem
-      exact eqOut ▸ prior
+  apply safe_query
+  intro st prior v hv
+  obtain ⟨same, weight⟩ := ambient_query s i st.1 v hv
+  simp only [free, Nat.cast_zero, add_zero] at weight
+  simpa only [Sum.elim_inl, show ((0, 0) : Nat × Nat) = 0 from rfl, add_zero, good, same] using
+    (add_le_add weight le_rfl).trans prior
 
 private theorem safe_event {s caps fb} (e : Ev)
     (funded : 31 * metadataCost true s e + 32 * (policy true s e).2 ≤ (policy true s e).1) :
     Safe s caps fb (liftM (LabCommon.query (.inr e))) := by
+  apply safe_query
   intro st prior z mem
-  rw [simulateQ_spec_query] at mem
-  cases stopped : st.2.2 with
-  | true =>
-    have eqOut : z = (fb (.inr e), st) := by
-      simpa [engine, QueryImpl.guardQueryBudget, stopped] using mem
-    exact eqOut ▸ prior
-  | false =>
-    by_cases fits : st.2.1 + policy true s e ≤ caps
-    · have eqOut : z = (PUnit.unit, marker s e st.1, st.2.1 + policy true s e, false) := by
-        have eqn := marker_query s e st.1
-        simpa [engine, QueryImpl.guardQueryBudget, stopped, fits, eqn] using mem
-      subst z
-      have m : (marker s e st.1).2.1.1 = st.1.2.1.1 + metadataCost true s e := by cases e <;> rfl
-      change entries s st.1.2.2.1.1 +
-        (31 * (marker s e st.1).2.1.1 + 32 * (st.2.1.2 + (policy true s e).2) : Nat) ≤ _
-      rw [m]
-      have increase : ((31 * metadataCost true s e + 32 * (policy true s e).2 : Nat) : ℝ≥0∞)
-          ≤ ((policy true s e).1 : ℝ≥0∞) := by exact_mod_cast funded
-      convert add_le_add prior increase using 1 <;>
-        simp only [Prod.fst_add, Nat.cast_add, Nat.cast_mul]; ring
-    · have eqOut : z = (fb (.inr e), st.1, st.2.1, true) := by
-        simpa [engine, QueryImpl.guardQueryBudget, stopped, fits] using mem
-      exact eqOut ▸ prior
+  rw [marker_query, support_pure, Set.mem_singleton_iff] at mem
+  subst z
+  have m : (marker s e st.1).2.1.1 = st.1.2.1.1 + metadataCost true s e := by cases e <;> rfl
+  change entries s st.1.2.2.1.1 +
+    (31 * (marker s e st.1).2.1.1 + 32 * (st.2.1.2 + (policy true s e).2) : Nat) ≤ _
+  rw [m]
+  have increase : ((31 * metadataCost true s e + 32 * (policy true s e).2 : Nat) : ℝ≥0∞)
+      ≤ ((policy true s e).1 : ℝ≥0∞) := by exact_mod_cast funded
+  convert add_le_add prior increase using 1 <;>
+    simp only [Sum.elim_inr, Prod.fst_add, Nat.cast_add, Nat.cast_mul]; ring
 
 private theorem uncharged_zero {s} (n : Lab.Domain)
     (h : ¬IsChargedLabQuery FIPS205.core s n) : ambientWeight s (.inl n) = 0 := by
@@ -572,65 +554,42 @@ theorem signing_graph_reserve (s : FIPS205.core.PkSeed) (pk sk : PK) (request : 
     let handler := SigningCounts.embed ∘ₛ
       (NativeCounts.phaseObservation FIPS205.core SigningCounts.observe .signer)
     change Safe s caps fb (simulateQ handler src)
-    have allSafe {β : Type} (prog : OracleComp Lab β)
-        (allowed : prog.AllQueriesSatisfy (fun t => ¬IsChargedLabQuery FIPS205.core s t)) :
-        Safe s caps fb (simulateQ handler prog) := by
-      induction prog using OracleComp.inductionOn with
-      | pure x => simpa only [simulateQ_pure] using (safe_pure (s := s) (caps := caps) (fb := fb) x)
-      | query_bind t next ih =>
-        rw [allQueriesSatisfy_query_bind_iff] at allowed
-        rw [simulateQ_bind, simulateQ_spec_query]
-        apply safe_bind _ (fun a => ih a (allowed.2 a))
-        have native := safe_free (caps := caps) (fb := fb) (.inl t) (uncharged_zero t allowed.1)
-        cases obs : SigningCounts.observe t with
-        | none =>
-          simp only [handler, QueryImpl.apply_compose, NativeCounts.phaseObservation,
-            QueryImpl.preInsert_apply, obs, pure_bind]
-          exact native
-        | some label =>
-          have e := safe_event (s := s) (caps := caps) (fb := fb) (.ambient .signer label) (by
-            cases label <;> simp [metadataCost, selectedRaw, policy, reserveExtra, originalPolicy,
-              Game.Counted.sourcePolicy, Game.Counted.sourceKind])
-          simp only [handler, QueryImpl.apply_compose, NativeCounts.phaseObservation,
-            QueryImpl.preInsert_apply, obs, simulateQ_bind, simulateQ_spec_query]
-          exact safe_bind e (fun _ => native)
-    exact allSafe src allowed
+    intro st prior out mem
+    rw [← QueryImpl.simulateQ_compose] at mem
+    refine allowed.holds_of_mem_support_run_simulateQ (good s) (fun t uncharged => ?_) prior mem
+    have native := safe_free (caps := caps) (fb := fb) (.inl t) (uncharged_zero t uncharged)
+    change Safe s caps fb (handler t)
+    cases obs : SigningCounts.observe t with
+    | none =>
+      simp only [handler, QueryImpl.apply_compose, NativeCounts.phaseObservation,
+        QueryImpl.preInsert_apply, obs, pure_bind]
+      exact native
+    | some label =>
+      have event := safe_event (s := s) (caps := caps) (fb := fb) (.ambient .signer label) (by
+        cases label <;> simp [metadataCost, selectedRaw, policy, reserveExtra, originalPolicy,
+          Game.Counted.sourcePolicy, Game.Counted.sourceKind])
+      simp only [handler, QueryImpl.apply_compose, NativeCounts.phaseObservation,
+        QueryImpl.preInsert_apply, obs, simulateQ_bind, simulateQ_spec_query]
+      exact safe_bind event (fun _ => native)
 
 private theorem logged_graph_reserve {s caps fb} (pk sk : PK) {α : Type}
     (program : OracleComp (R + Sign) α) :
     Safe s caps fb (simulateQ (SigningCounts.clientHandler s pk sk) program).run := by
-  induction program using OracleComp.inductionOn with
-  | pure x => exact safe_pure _
-  | query_bind input next ih =>
-    rw [simulateQ_bind, simulateQ_spec_query, WriterT.run_bind]
-    apply safe_bind
-    · rcases input with (n | raw) | request
-      · change Safe _ _ _ ((fun reply => (reply, (∅ : QueryLog Sign))) <$>
-          SigningCounts.clientAmbient (.inl n))
-        rw [map_eq_bind_pure_comp]
-        apply safe_bind _ (fun _ => safe_pure _)
-        let i : A.Domain := .inl (.inl (.inl (.inl n)))
-        let e : Ev := .ambient .adversary (.inl n)
-        have eqn : SigningCounts.clientAmbient (.inl n) = transaction e i := by
-          simp [SigningCounts.clientAmbient, e, i, transaction, SigningView.Events.phaseImpl,
-            SigningView.Events.emit, commonProjection, commonEvent, sourceInput, QueryImpl.add,
-            seqRight_eq_bind]
-        rw [eqn]
-        apply paid_transaction s caps fb e i
-        simp [e, i, ambientWeight, pointOf, metadataCost, selectedRaw, policy, originalPolicy,
-          Game.Counted.sourcePolicy, Game.Counted.sourceKind, reserveExtra]
-      · change Safe _ _ _ ((fun reply => (reply, (∅ : QueryLog Sign))) <$>
-          SigningCounts.clientAmbient (.inr raw))
-        rw [map_eq_bind_pure_comp]
-        exact safe_bind (marked_raw_graph_reserve s caps fb raw) (fun _ => safe_pure _)
-      · change Safe _ _ _ ((QueryImpl.withLogging (spec := Sign)
-          (SigningCounts.signSource s pk sk)) request).run
-        rw [QueryImpl.run_withLogging_apply]
-        exact safe_bind (signing_graph_reserve s pk sk request caps fb) (fun _ => safe_pure _)
-    · rintro ⟨ans, log⟩
-      dsimp only
-      rw [map_eq_bind_pure_comp]
-      exact safe_bind (ih ans) (fun _ => safe_pure _)
+  refine SigningCounts.clientHandler_preserves (fun action => Safe s caps fb action)
+    (fun x => safe_pure x) (fun first next => safe_bind first next) ?_
+    (fun request => signing_graph_reserve s pk sk request caps fb) program
+  rintro (n | raw)
+  · let i : A.Domain := .inl (.inl (.inl (.inl n)))
+    let e : Ev := .ambient .adversary (.inl n)
+    have eqn : SigningCounts.clientAmbient (.inl n) = transaction e i := by
+      simp [SigningCounts.clientAmbient, e, i, transaction, SigningView.Events.phaseImpl,
+        SigningView.Events.emit, commonProjection, commonEvent, sourceInput, QueryImpl.add,
+        seqRight_eq_bind]
+    rw [eqn]
+    apply paid_transaction s caps fb e i
+    simp [e, i, ambientWeight, pointOf, metadataCost, selectedRaw, policy, originalPolicy,
+      Game.Counted.sourcePolicy, Game.Counted.sourceKind, reserveExtra]
+  · exact marked_raw_graph_reserve s caps fb raw
 
 private theorem suffix_graph_reserve {s caps fb} (root : FIPS205.core.Y) (sk : PK)
     (adv : Game.Adversary FIPS205.Answer PK) :
