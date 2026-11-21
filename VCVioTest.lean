@@ -6,6 +6,7 @@ public import VCVioTest.AdaptiveTrialCount
 public import VCVioTest.Algorithms.Hash
 public import VCVioTest.AnswerTapeAdaptedUnion
 public import VCVioTest.Asymptotics.Negligible
+public import VCVioTest.CacheReplay
 public import VCVioTest.CachedPointsBound
 public import VCVioTest.CompensatedState
 public import VCVioTest.ComplementaryChecksum
