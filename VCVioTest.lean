@@ -118,6 +118,7 @@ public import VCVioTest.ModuleAPI.Counting
 public import VCVioTest.ModuleAPI.Heap
 public import VCVioTest.ModuleAPI.QueryImpl
 public import VCVioTest.MonadProbability
+public import VCVioTest.OptionalAnswer
 public import VCVioTest.OracleComp.AdaptiveMeasure
 public import VCVioTest.OracleComp.BudgetedPotential
 public import VCVioTest.OracleComp.CostSimulation

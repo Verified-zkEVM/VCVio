@@ -557,6 +557,7 @@ public import VCVio.OracleComp.SimSemantics.Append
 public import VCVio.OracleComp.SimSemantics.Append.Core
 public import VCVio.OracleComp.SimSemantics.Batch
 public import VCVio.OracleComp.SimSemantics.Measure
+public import VCVio.OracleComp.SimSemantics.OptionT.Answer
 public import VCVio.OracleComp.SimSemantics.OptionT.Basic
 public import VCVio.OracleComp.SimSemantics.QueryImpl.Basic
 public import VCVio.OracleComp.SimSemantics.QueryImpl.Compose
