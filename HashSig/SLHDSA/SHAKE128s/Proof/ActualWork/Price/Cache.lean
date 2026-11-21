@@ -45,19 +45,14 @@ open Classical in
     (if IsWeakKey FIPS205.params terminal.1.1.1 then 1 else 0)
 
 open Classical in
-/-- The complete native charge is funded on every supported cold execution. -/
-theorem complete_charge_reserve :
-  ∀ (q : Nat), 2 * q < 2 ^ 128 →
-  ∀ (s : FIPS205.core.PkSeed) (adv : Game.Adversary FIPS205.Answer PK)
-    (fallback : (input : LabCommon.Domain) → LabCommon.Range input)
-    (leftTape rightTape : List HashOutput),
-    ∀ terminal ∈ support
-        (nativeRun s adv true (32 * q - 1, 2 ^ 64) fallback leftTape rightTape),
-      completeCharge s (16 * 2 ^ 128) terminal ≤
-        (terminal.2.2.1.1 : ℝ≥0∞) / ((16 * 2 ^ 128 : Nat) : ℝ≥0∞) +
-          32 * (if IsWeakKey FIPS205.params terminal.1.1.1 then 1 else 0) := by
+/-- The returned counters and cache pay for the complete charge whenever the work actually
+consumed is at most the canonical forger-tape budget of `16 * 2 ^ 128`. -/
+theorem TerminalReserve.complete_charge_le {s : FIPS205.core.PkSeed} {caps : Nat × Nat}
+    {t : NativeTerminal} (owned : TerminalReserve s caps t) (work : t.2.2.1.1 ≤ 16 * 2 ^ 128) :
+    completeCharge s (16 * 2 ^ 128) t ≤
+      (t.2.2.1.1 : ℝ≥0∞) / ((16 * 2 ^ 128 : Nat) : ℝ≥0∞) +
+        32 * (if IsWeakKey FIPS205.params t.1.1.1 then 1 else 0) := by
   classical
-  intro q hqSmall s adv fallback leftTape rightTape t ht
   let cache := t.2.1.1.2.1.1.1
   let A := (slhNodeKeys FIPS205.core s).keyEntries cache
   let B := {point | (cache point).isSome ∧
@@ -69,8 +64,7 @@ theorem complete_charge_reserve :
   let Nf := t.2.1.2.2.1.cnt .forger
   let C := t.2.1.2.2.1.cnt .signer
   let weak := decide (IsWeakKey FIPS205.params t.1.1.1)
-  have owned := native_whole_reserve s adv (32 * q - 1, 2 ^ 64) fallback leftTape rightTape t ht
-  obtain ⟨hbudget, hcard, hCS, hSNfZ, cap, hnonweak⟩ := owned
+  obtain ⟨hbudget, hcard, hCS, hSNfZ, _, hnonweak⟩ := owned
   change 32 * (A.encard : ℝ≥0∞) + 16 * (B.encard : ℝ≥0∞) +
       (31 * M + 32 * S : Nat) ≤ (Z : ℝ≥0∞) at hbudget
   change S + Nf ≤ Z at hSNfZ
@@ -85,7 +79,6 @@ theorem complete_charge_reserve :
     rw [Set.Infinite.encard_eq h] at hbudget
     simp at hbudget
   have hH : H.Finite := Set.finite_of_encard_le_coe hcard
-  have hZcap : Z ≤ 32 * q - 1 := cap.1
   have hHC : H.encard ≤ (Nf + C : Nat) := by
     simpa only [Nat.add_comm Nf C] using hcard
   obtain ⟨a, ha⟩ := hA.exists_encard_eq_coe
@@ -104,7 +97,6 @@ theorem complete_charge_reserve :
     exact_mod_cast hbudget
   have hHNat : h ≤ Nf + C := by exact_mod_cast hHC
   have hNfZ : Nf ≤ Z := by omega
-  have hZR : Z ≤ 16 * 2 ^ 128 := by omega
   have hweak : weak = false → Nf ≤ M := by
     intro hw
     exact hnonweak (by simpa [weak] using hw)
@@ -117,7 +109,7 @@ theorem complete_charge_reserve :
     change Nat.card FIPS205.core.Y = 2 ^ 128
     exact hcardY
   have numeric := complete_charge_numeric_bound a b h M S C Nf Z weak
-    hbudgetNat hHNat hCS hNfZ hZR hweak
+    hbudgetNat hHNat hCS hNfZ work hweak
   change
     2 * (A.encard : ℝ≥0∞) / Nat.card FIPS205.core.Y +
       (B.encard : ℝ≥0∞) / Nat.card FIPS205.core.Y +

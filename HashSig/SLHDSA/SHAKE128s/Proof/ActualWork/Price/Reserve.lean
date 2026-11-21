@@ -45,8 +45,8 @@ theorem native_price_with_escapes_le_strict_cap (q : Nat) (small : 2 * q < 2 ^ 1
         Native.completeCharge s R b.2 ≤ (K : ℝ≥0∞) / den + 32 * (if weak b then 1 else 0) := by
       have hr := (NoticingTape.mem_support_blockRunOf _ _ _ b hb).2.2
       have reserve := Native.native_whole_reserve s adv (K, 2 ^ 64) (fb s) b.1.1 b.1.2 b.2 hr
-      have cap := reserve.2.2.2.2.1.1
-      apply (Native.complete_charge_reserve q small s adv (fb s) b.1.1 b.1.2 b.2 hr).trans
+      have cap : b.2.2.2.1.1 ≤ K := reserve.paid_le.1
+      apply (reserve.complete_charge_le (cap.trans (by dsimp only [K]; omega))).trans
       apply add_le_add _ le_rfl
       simpa only [div_eq_mul_inv] using mul_le_mul_left (Nat.cast_le.mpr cap :
         (b.2.2.2.1.1 : ℝ≥0∞) ≤ K) den⁻¹
