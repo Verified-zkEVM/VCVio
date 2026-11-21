@@ -501,7 +501,7 @@
       "id": "1193-F3",
       "finding": "F3 (nit): the collision term charges all q+2 vertices; only the q+1 inputs matter",
       "disposition": "implemented",
-      "action": "The coupling needs injectivity only of the programmed input prefix. Its allowance is choose(q+1,2)/N, with the endpoint excluded. Root, event, conditional and preprocessing formulas and regressions propagate this strengthening; without preprocessing, zero rounds recover the exact 1/N bound.",
+      "action": "The coupling needs injectivity only of the programmed input prefix. Its allowance is choose(q+1,2)/N, with the endpoint excluded. Root, event, conditional and preprocessing formulas and regressions propagate this strengthening; for the one-link puzzle (q = 0) without preprocessing, the bound is exactly 1/N.",
       "references": [
         "VCVio/Quantum/Oracle/MaskedChain/Coupling.lean",
         "VCVio/Quantum/Oracle/MaskedChain/RootBounds.lean",

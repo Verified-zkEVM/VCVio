@@ -13,9 +13,10 @@ public import Mathlib.Data.ZMod.Basic
 # Root-accumulated masked-chain regressions
 
 Guessing the published first vertex has exact success equal to the input mass divided by the
-vertex-space size. The patched zero-round bound keeps this baseline; the real-game coupling
-has no collision allowance for its sole programmed input. With sixteen vertices and one round
-of width one, the capped root bound is five eighths, while the event-error bound is capped at one.
+vertex-space size. For the one-link puzzle (`q = 0`), the patched bound keeps this baseline
+and the real-game coupling has no collision allowance for its sole programmed input. With sixteen
+vertices and one round of width one, the capped root bound is five eighths, while the event-error
+bound is capped at one.
 -/
 
 public section
@@ -112,7 +113,7 @@ example (q : ℕ) : recoveryAdvantage .instruments (guessFirst halfInput q) = 1 
   apply (ENNReal.toReal_eq_toReal_iff' (by finiteness) (by finiteness)).mp
   norm_num
 
-/-- At zero rounds the real and patched bounds both equal the exact guessing baseline. -/
+/-- For the one-link puzzle, the real and patched bounds equal the exact guessing baseline. -/
 example : rootPatchedRecoveryBound (ZMod 16) 0 7 = 1 / 16 ∧
     rootRecoveryBound (ZMod 16) 0 7 = 1 / 16 := by
   simp only [rootRecoveryBound, rootPatchedRecoveryBound, Finset.range_zero,

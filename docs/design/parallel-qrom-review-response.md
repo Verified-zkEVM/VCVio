@@ -11,7 +11,7 @@ with unrestricted retained memory.
 
 | Topic | Response |
 |---|---|
-| Masked-chain collision allowance | Only the `q + 1` programmed input vertices need to be distinct. The allowance is `choose(q+1,2)/N`; the endpoint remains in the joint observation but is not part of that bad event. Without preprocessing, the zero-round bound is exactly `1/N`. |
+| Masked-chain collision allowance | Only the `q + 1` programmed input vertices need to be distinct. The allowance is `choose(q+1,2)/N`; the endpoint remains in the joint observation but is not part of that bad event. For the one-link puzzle (`q = 0`) without preprocessing, the bound is exactly `1/N`. |
 | Online point budget | `qromDelaySecure_quantumWindowScheme_min_width_points` uses `min onlineWidth onlinePoints` for the same admissible adversaries. This is a width refinement; a round-times-total-online-points hybrid is separate. |
 | Whole-bit inversion claims | `parallelQROMBits_plantedPreimage_127` and `parallelQROMBits_plantedPreimage_128` state the advertised large-cardinality certificates for the actual planted-preimage game and its syntactic budgets. |
 | Exact-encoding prerequisites | The delay proof uses the raw window runtime, honest execution laws and injective honest-input encoding. Table splitting is a separate exact encoding result, retained as a reusable API. |
@@ -152,9 +152,14 @@ the actual working-tree status and dependency manifests. The output files themse
 created only for this reproduction, so their provenance metadata need not match the older
 machine-local snapshot bytes.
 
-The comparison is not a proof-axiom check. Run the current repository checks independently:
+Switch to the reviewed source commit before running the build and the current axiom,
+initializer, lint, test and import checks. The default build supplies all six production
+libraries imported by the axiom sweep.
 
 ```bash
+git checkout --detach 575a39ffd1c5baf20862b54a420abdf913341118
+lake exe cache get
+lake build
 lake exe axiomsweep --check
 lake exe initsweep --check
 lake lint
