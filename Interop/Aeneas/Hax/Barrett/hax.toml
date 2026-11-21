@@ -1,5 +1,5 @@
-# Extract into the Lean modules `Interop.Hax.Barrett.Extraction.*` next to this crate.
+# Extract into the Lean modules `Interop.Aeneas.Hax.Barrett.Extraction.*` next to this crate.
 [scenario.barrett]
 backend = "lean"
 project-files = false
-aeneas-args = ["-dest", "../../..", "-subdir", "Interop/Hax/Barrett/Extraction"]
+aeneas-args = ["-dest", "../../../..", "-subdir", "Interop/Aeneas/Hax/Barrett/Extraction"]

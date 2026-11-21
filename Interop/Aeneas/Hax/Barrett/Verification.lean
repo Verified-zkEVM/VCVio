@@ -7,17 +7,17 @@ Authors: Quang Dao, Devon Tuma
 module
 
 public import Hax
-public import Interop.Hax.Barrett.Extraction.Specs
-public import Interop.Hax.Holds
-public import Interop.Rust.RustM
-public import Interop.Rust.Triple
+public import Interop.Aeneas.Hax.Barrett.Extraction.Specs
+public import Interop.Aeneas.Hax.Holds
+public import Interop.Aeneas.Lift.RustM
+public import Interop.Aeneas.Lift.Triple
 public import VCVio.ProgramLogic.Unary.WP.Necessary
 
 /-!
 # A Rust Barrett reduction, extracted by hax, in VCVio
 
 hax's `barrett` example, signed Barrett reduction modulo ML-KEM's prime `3329`, vendored in the
-crate next to this file (`Interop/Hax/Barrett/src/lib.rs`):
+crate next to this file (`Interop/Aeneas/Hax/Barrett/src/lib.rs`):
 
 ```rust
 const BARRETT_SHIFT: i64 = 26;
@@ -38,10 +38,10 @@ pub fn barrett_reduce(value: FieldElement) -> FieldElement {
 }
 ```
 
-`scripts/regenerate-hax.sh` extracts it with the hax CLI into `Interop.Hax.Barrett.Extraction`:
-the constants, the function `hax_barrett.barrett_reduce` (widening through core-models'
-`From<i32> for i64`), its clauses `barrett_reduce.pre` and `barrett_reduce.post`, and its contract
-`barrett_reduce.spec`.
+`scripts/regenerate-hax.sh` extracts it with the hax CLI into
+`Interop.Aeneas.Hax.Barrett.Extraction`: the constants, the function `hax_barrett.barrett_reduce`
+(widening through core-models' `From<i32> for i64`), its clauses `barrett_reduce.pre` and
+`barrett_reduce.post`, and its contract `barrett_reduce.spec`.
 - The contract is proved by hax's own proof of it, with `hax_mvcgen` and `grind`. That proof needs
   a spec for `i32::rem_euclid` that hax's core models lack, which hax's example states locally
   (`I32_rem_euclid_spec`).

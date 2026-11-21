@@ -7,17 +7,17 @@ Authors: Quang Dao, Devon Tuma
 module
 
 public import Hax
-public import Interop.Hax.Adc.Extraction.Specs
-public import Interop.Hax.Holds
-public import Interop.Rust.RustM
-public import Interop.Rust.Triple
+public import Interop.Aeneas.Hax.Adc.Extraction.Specs
+public import Interop.Aeneas.Hax.Holds
+public import Interop.Aeneas.Lift.RustM
+public import Interop.Aeneas.Lift.Triple
 public import VCVio.ProgramLogic.Unary.WP.Necessary
 
 /-!
 # A Rust add-with-carry, extracted by hax, in VCVio
 
 hax's `adc` example, the building block of multi-precision addition, vendored in the crate next to
-this file (`Interop/Hax/Adc/src/lib.rs`):
+this file (`Interop/Aeneas/Hax/Adc/src/lib.rs`):
 
 ```rust
 #[hax_lib::requires(carry_in <= 1)]
@@ -35,12 +35,12 @@ pub fn adc_u32(a: u32, b: u32, carry_in: u32) -> (u32, u32) {
 }
 ```
 
-`scripts/regenerate-hax.sh` extracts it with the hax CLI into `Interop.Hax.Adc.Extraction`: the
-function `hax_adc.adc_u32`, its `requires` and `ensures` clauses as `adc_u32.pre` and
-`adc_u32.post`, and its contract `adc_u32.spec`. The contract is proved by hax's own proof of it,
-with `hax_mvcgen` and `scalar_tac`. Its clauses read as plain arithmetic (`adcPost`), and it reaches
-VCVio's program logic, under any `Prop`-valued interpretation of oracle computations, through
-`Interop.Rust.triple_liftRustM_of_imp`.
+`scripts/regenerate-hax.sh` extracts it with the hax CLI into
+`Interop.Aeneas.Hax.Adc.Extraction`: the function `hax_adc.adc_u32`, its `requires` and `ensures`
+clauses as `adc_u32.pre` and `adc_u32.post`, and its contract `adc_u32.spec`. The contract is
+proved by hax's own proof of it, with `hax_mvcgen` and `scalar_tac`. Its clauses read as plain
+arithmetic (`adcPost`), and it reaches VCVio's program logic, under any `Prop`-valued
+interpretation of oracle computations, through `Interop.Rust.triple_liftRustM_of_imp`.
 
 ## Main results
 

@@ -1,22 +1,25 @@
-# Interop / Hax
+# Interop/Aeneas/Hax
 
-Rust programs extracted by the hax CLI and carried into VCVio. hax emits code in Aeneas's `RustM`,
-which `Interop.Rust.liftRustM` lifts into `RustOracleComp`, so these examples need no hax-specific
-bridge.
+The hax examples of the [`Interop/Aeneas`](../README.md) sub-project, listed under its
+*Implementations covered*: Rust programs extracted by the hax CLI and carried into VCVio. hax emits
+code in Aeneas's `RustM`, which `Interop.Rust.liftRustM` lifts into `RustOracleComp`, so these
+examples need no hax-specific bridge.
 
 ## Layout
 
-Each example is one directory, `Interop/Hax/<Name>/`, holding three things:
+Each example is one directory, `Interop/Aeneas/Hax/<Name>/`, holding three things:
 
 | Path | What | Written by |
 |---|---|---|
 | `Cargo.toml`, `hax.toml`, `src/lib.rs` | the Rust crate, with its `#[requires]` and `#[ensures]` contract | hand (Adc and Barrett are vendored from hax's examples, with provenance) |
-| `Extraction/` | the Lean modules `Interop.Hax.<Name>.Extraction.{Types,Funs,Specs}`: the function, its `requires` and `ensures` clauses as `f.pre` and `f.post`, and its contract `f.spec` | `scripts/regenerate-hax.sh`, committed |
+| `Extraction/` | the Lean modules `Interop.Aeneas.Hax.<Name>.Extraction.{Types,Funs,Specs}`: the function, its `requires` and `ensures` clauses as `f.pre` and `f.post`, and its contract `f.spec` | `scripts/regenerate-hax.sh`, committed |
 | `Verification.lean` | the proofs: the contract, its clauses in plain arithmetic, and the lifted VCVio triple | hand |
 
-`Interop/Hax/Cargo.toml` is the workspace. It pins `hax-lib` to the hax release that
-`Interop/lakefile.toml` requires. `Extraction/FunsExternal.lean` and `TypesExternal.lean` model
-external definitions; they are seeded once from hax's templates, and none of the examples has any.
+`Interop/Aeneas/Hax/Cargo.toml` is the workspace. It pins `hax-lib` to the hax release that
+`Interop/Aeneas/lakefile.toml` requires. `Extraction/FunsExternal.lean` and `TypesExternal.lean`
+model external definitions; they are seeded once from hax's templates, and none of the examples
+has any. Each crate's `hax.toml` sends the extraction to the repository root (`-dest`) under its
+own path (`-subdir`), so the module names follow the paths.
 
 ## Regenerating
 
@@ -29,10 +32,10 @@ scripts/regenerate-hax.sh          # regenerate in place
 scripts/regenerate-hax.sh --check  # compare a fresh extraction with the committed modules
 ```
 
-The extracted modules are committed, so building `Interop/` needs no Rust. CI's `hax Extraction`
-workflow runs `--check` whenever a crate, an extracted module, the pin or the script changes. The
-extracted modules form the library `InteropHaxExtraction`, built without the header linter,
-because aeneas writes no module docstring.
+The extracted modules are committed, so building the sub-project needs no Rust. CI's
+`hax Extraction` workflow runs `--check` whenever a crate, an extracted module, the pin or the
+script changes. The extracted modules form the library `InteropAeneasHaxExtraction`, built without
+the header linter, because aeneas writes no module docstring.
 
 ## Proving a contract
 
@@ -44,14 +47,10 @@ because aeneas writes no module docstring.
 - **The lifted triple.** `Interop.Rust.triple_liftRustM_of_imp` turns the contract into a core
   `Std.WP` triple for the lifted program, under any `Prop`-valued interpretation of `OracleComp`.
 
-| Example | Shows |
-|---|---|
-| `CenteredBinomial` | ML-KEM's CBD(η = 1) step: its contract that the result is `-1`, `0` or `1`, its exact distribution, and its possible values by core's `vcgen` |
-| `Barrett` | ML-KEM's signed Barrett reduction modulo 3329: the result is reduced and congruent to the input, by hax's own proof |
-| `Adc` | 32-bit add-with-carry, the multi-precision building block, by hax's own proof |
-| `Computation` | `x + x + 1` from hax's Lean test suite, without overflow |
-| `Division` | checked `/`: the quotient for a nonzero divisor, a panic for zero, and a panic probability of `1/2` under a uniform bit |
-| `Examples` | a Rust addition after an oracle query, specified over every possible answer |
+## Adding an example
 
-All of `Verification.lean` and `Interop.Hax.Holds` are roots of `InteropRust` and of the axiom-sweep
-step of CI's `Interop Bridges` job.
+Add the crate to the workspace members in `Cargo.toml`, give it a `hax.toml` like its neighbours',
+and run `scripts/regenerate-hax.sh`. In `../lakefile.toml`, add a glob for its `Extraction`
+modules to the library `InteropAeneasHaxExtraction` and its `Verification` module to the roots of
+`InteropAeneas`. Those roots are also the roots of the sub-project's axiom sweep in CI, and the
+example gets a row under *Implementations covered* in [the sub-project's README](../README.md).

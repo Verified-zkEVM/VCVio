@@ -7,7 +7,7 @@ Authors: Devon Tuma
 module
 
 public import Aeneas.Std.WP
-public import Interop.Rust.RustM
+public import Interop.Aeneas.Lift.RustM
 public import Std.WP
 public import VCVio.ProgramLogic.Unary.WP.Necessary
 import PolyFun.Control.Do.Spec

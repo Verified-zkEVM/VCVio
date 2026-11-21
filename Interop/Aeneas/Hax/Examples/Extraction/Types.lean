@@ -3,7 +3,7 @@
 module
 public import Aeneas
 public import CoreModels
-public import Interop.Hax.Examples.Extraction.TypesExternal
+public import Interop.Aeneas.Hax.Examples.Extraction.TypesExternal
 @[expose] public section
 open CoreModels Aeneas
 open Aeneas.Std hiding namespace core alloc

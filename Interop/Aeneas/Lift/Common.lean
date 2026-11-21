@@ -26,8 +26,8 @@ queries.
 
 The `Error` enum in this file covers the errors Rust frontends report. It is local, so this module
 compiles without the hax or Aeneas Lake packages. hax and Aeneas both emit code in
-`Aeneas.Std.RustM`, whose computations return, fail or diverge; `Interop.Rust.RustM` lifts it into
-`RustOracleComp spec` by that case analysis.
+`Aeneas.Std.RustM`, whose computations return, fail or diverge; `Interop.Aeneas.Lift.RustM` lifts it
+into `RustOracleComp spec` by that case analysis.
 
 ## Why a transformer stack?
 

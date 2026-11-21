@@ -7,15 +7,15 @@ Authors: Quang Dao, Devon Tuma
 module
 
 public import Hax
-public import Interop.Hax.Computation.Extraction.Specs
-public import Interop.Rust.Triple
+public import Interop.Aeneas.Hax.Computation.Extraction.Specs
+public import Interop.Aeneas.Lift.Triple
 public import VCVio.ProgramLogic.Unary.WP.Necessary
 
 /-!
 # A Rust constant function, extracted by hax, in VCVio
 
 `x + x + 1` from hax's Lean test suite, made public with a no-overflow contract in the crate next
-to this file (`Interop/Hax/Computation/src/lib.rs`):
+to this file (`Interop/Aeneas/Hax/Computation/src/lib.rs`):
 
 ```rust
 #[hax_lib::requires(x <= 0x7FFF_FFFF)]
@@ -25,9 +25,10 @@ pub fn computation(x: u32) -> u32 {
 }
 ```
 
-`scripts/regenerate-hax.sh` extracts it with the hax CLI into `Interop.Hax.Computation.Extraction`:
-the function `hax_computation.computation`, its `requires` and `ensures` clauses as
-`computation.pre` and `computation.post`, and its contract `computation.spec`.
+`scripts/regenerate-hax.sh` extracts it with the hax CLI into
+`Interop.Aeneas.Hax.Computation.Extraction`: the function `hax_computation.computation`, its
+`requires` and `ensures` clauses as `computation.pre` and `computation.post`, and its contract
+`computation.spec`.
 
 ## Main results
 

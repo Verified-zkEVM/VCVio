@@ -1,9 +1,10 @@
 name: hax Extraction
 
-# The Lean modules under `Interop/Hax/<Name>/Extraction/` are extracted by the hax CLI from the Rust
-# crates next to them (`scripts/regenerate-hax.sh`) and committed, so building `Interop/` needs no
-# Rust. This job reruns the extraction with the `cargo-hax` release that `Interop/lakefile.toml`
-# pins and fails if a committed module differs from a fresh extraction.
+# The `Interop/Aeneas` sub-project's own check. The Lean modules under
+# `Interop/Aeneas/Hax/<Name>/Extraction/` are extracted by the hax CLI from the Rust crates next to
+# them (`scripts/regenerate-hax.sh`) and committed, so building the sub-project needs no Rust. This
+# job reruns the extraction with the `cargo-hax` release that `Interop/Aeneas/lakefile.toml` pins
+# and fails if a committed module differs from a fresh extraction.
 #
 # It runs when a crate, an extracted module, the workspace manifests, the pin or the script changes,
 # and not for edits to the proofs (`Verification.lean`).
@@ -12,24 +13,24 @@ on:
   push:
     branches: [main]
     paths:
-      - "Interop/Hax/*/src/**"
-      - "Interop/Hax/*/Cargo.toml"
-      - "Interop/Hax/*/hax.toml"
-      - "Interop/Hax/*/Extraction/**"
-      - "Interop/Hax/Cargo.toml"
-      - "Interop/Hax/Cargo.lock"
-      - "Interop/lakefile.toml"
+      - "Interop/Aeneas/Hax/*/src/**"
+      - "Interop/Aeneas/Hax/*/Cargo.toml"
+      - "Interop/Aeneas/Hax/*/hax.toml"
+      - "Interop/Aeneas/Hax/*/Extraction/**"
+      - "Interop/Aeneas/Hax/Cargo.toml"
+      - "Interop/Aeneas/Hax/Cargo.lock"
+      - "Interop/Aeneas/lakefile.toml"
       - "scripts/regenerate-hax.sh"
       - ".github/workflows/hax-extraction.yml"
   pull_request:
     paths:
-      - "Interop/Hax/*/src/**"
-      - "Interop/Hax/*/Cargo.toml"
-      - "Interop/Hax/*/hax.toml"
-      - "Interop/Hax/*/Extraction/**"
-      - "Interop/Hax/Cargo.toml"
-      - "Interop/Hax/Cargo.lock"
-      - "Interop/lakefile.toml"
+      - "Interop/Aeneas/Hax/*/src/**"
+      - "Interop/Aeneas/Hax/*/Cargo.toml"
+      - "Interop/Aeneas/Hax/*/hax.toml"
+      - "Interop/Aeneas/Hax/*/Extraction/**"
+      - "Interop/Aeneas/Hax/Cargo.toml"
+      - "Interop/Aeneas/Hax/Cargo.lock"
+      - "Interop/Aeneas/lakefile.toml"
       - "scripts/regenerate-hax.sh"
       - ".github/workflows/hax-extraction.yml"
   workflow_dispatch:

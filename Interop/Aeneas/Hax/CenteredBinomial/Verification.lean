@@ -8,10 +8,10 @@ module
 
 public import Aeneas.Std.Scalar
 public import Hax
-public import Interop.Hax.CenteredBinomial.Extraction.Specs
-public import Interop.Rust.RustM
-public import Interop.Rust.Run
-public import Interop.Rust.Triple
+public import Interop.Aeneas.Hax.CenteredBinomial.Extraction.Specs
+public import Interop.Aeneas.Lift.RustM
+public import Interop.Aeneas.Lift.Run
+public import Interop.Aeneas.Lift.Triple
 public import VCVio.OracleComp.ProbComp
 public import VCVio.EvalDist.Monad.Basic
 public import VCVio.ProgramLogic.Tactics
@@ -20,7 +20,7 @@ public import VCVio.ProgramLogic.Tactics
 # A Rust centered-binomial sampler, extracted by hax, in VCVio
 
 One step of ML-KEM's `SamplePolyCBD_η` at `η = 1`, as Rust, in the crate next to this file
-(`Interop/Hax/CenteredBinomial/src/lib.rs`):
+(`Interop/Aeneas/Hax/CenteredBinomial/src/lib.rs`):
 
 ```rust
 #[hax_lib::ensures(|result| -1 <= result && result <= 1)]
@@ -32,9 +32,9 @@ pub fn sample_cbd1(b: u8) -> i32 {
 ```
 
 `scripts/regenerate-hax.sh` extracts it with the hax CLI into
-`Interop.Hax.CenteredBinomial.Extraction` as `hax_cbd.sample_cbd1`, with its `ensures` clause as
-`sample_cbd1.post` and its contract `sample_cbd1.spec`: the bitwise `&&&` and the casts are pure,
-lifted into `RustM`, while the shift and the subtraction are checked.
+`Interop.Aeneas.Hax.CenteredBinomial.Extraction` as `hax_cbd.sample_cbd1`, with its `ensures`
+clause as `sample_cbd1.post` and its contract `sample_cbd1.spec`: the bitwise `&&&` and the casts
+are pure, lifted into `RustM`, while the shift and the subtraction are checked.
 
 Lifted into `RustOracleComp unifSpec` by `Interop.Rust.liftRustM` and fed two uniform bits, it
 returns `0` with probability `1/2` and `±1` with probability `1/4` each: the centered binomial

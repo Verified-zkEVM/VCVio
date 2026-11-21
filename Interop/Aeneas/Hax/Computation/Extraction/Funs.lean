@@ -3,8 +3,8 @@
 module
 public import Aeneas
 public import CoreModels
-public import Interop.Hax.Computation.Extraction.Types
-public import Interop.Hax.Computation.Extraction.FunsExternal
+public import Interop.Aeneas.Hax.Computation.Extraction.Types
+public import Interop.Aeneas.Hax.Computation.Extraction.FunsExternal
 @[expose] public section
 open CoreModels Aeneas
 open Aeneas.Std hiding namespace core alloc

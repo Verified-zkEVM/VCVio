@@ -21,7 +21,8 @@ Usage: ./scripts/validate.sh [--lint] [--test] [--ffi] [--axioms]
 Default fast checks (shared with per-PR CI):
   - lake build of the six default proof libraries, with the non-sorry warning budget
   - ./scripts/check-imports.sh (generated umbrella modules are current)
-  - the boundary checks: PolyFun, broad expose, Extern and Interop isolation
+  - the boundary checks: PolyFun, broad expose, Extern and Interop isolation, and the
+    listing of the Interop sub-projects and their axiom-sweep roots
   - the fixture tests of the downstream probability codemod
   - the comment-fence rule over every Lean source the repository tracks or would
     track, `third_party/` excluded and the lakefile included
@@ -97,6 +98,7 @@ uv run --no-project --python 3.12 python ./scripts/test-classify-migration-error
 bash scripts/check-extern-isolation.sh
 uv run --no-project --python 3.12 python scripts/test-interop-isolation.py
 bash scripts/check-interop-isolation.sh
+uv run --no-project --python 3.12 python scripts/test-interop-subprojects.py
 bash scripts/test-comment-fences.sh
 uv run --no-project --python 3.12 python ./scripts/check-comment-fences.py
 

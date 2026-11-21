@@ -1,5 +1,5 @@
-# Extract into the Lean modules `Interop.Hax.Adc.Extraction.*` next to this crate.
+# Extract into the Lean modules `Interop.Aeneas.Hax.Adc.Extraction.*` next to this crate.
 [scenario.adc]
 backend = "lean"
 project-files = false
-aeneas-args = ["-dest", "../../..", "-subdir", "Interop/Hax/Adc/Extraction"]
+aeneas-args = ["-dest", "../../../..", "-subdir", "Interop/Aeneas/Hax/Adc/Extraction"]

@@ -7,7 +7,7 @@ Authors: Quang Dao, Devon Tuma
 module
 
 public import Aeneas.Std.Primitives
-public import Interop.Rust.Common
+public import Interop.Aeneas.Lift.Common
 public import PolyFun.Control.Monad.Hom
 
 /-!

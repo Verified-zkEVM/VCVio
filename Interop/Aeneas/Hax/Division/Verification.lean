@@ -7,10 +7,10 @@ Authors: Quang Dao, Devon Tuma
 module
 
 public import Hax
-public import Interop.Hax.Division.Extraction.Specs
-public import Interop.Rust.RustM
-public import Interop.Rust.Run
-public import Interop.Rust.Triple
+public import Interop.Aeneas.Hax.Division.Extraction.Specs
+public import Interop.Aeneas.Lift.RustM
+public import Interop.Aeneas.Lift.Run
+public import Interop.Aeneas.Lift.Triple
 public import VCVio.OracleComp.ProbComp
 public import VCVio.EvalDist.Monad.Basic
 public import VCVio.ProgramLogic.Tactics
@@ -19,7 +19,7 @@ public import VCVio.ProgramLogic.Tactics
 # Checked division in Rust, extracted by hax, in VCVio
 
 Rust's `x / y` on `u32` panics when `y` is zero. The crate next to this file
-(`Interop/Hax/Division/src/lib.rs`) states the contract
+(`Interop/Aeneas/Hax/Division/src/lib.rs`) states the contract
 
 ```rust
 #[hax_lib::requires(y != 0)]
@@ -30,8 +30,8 @@ pub fn checked_div(x: u32, y: u32) -> u32 {
 ```
 
 and `scripts/regenerate-hax.sh` extracts it with the hax CLI into
-`Interop.Hax.Division.Extraction` as `hax_division.checked_div`, Aeneas's checked division, which
-fails with `panic` on a zero divisor. This example follows both branches into VCVio:
+`Interop.Aeneas.Hax.Division.Extraction` as `hax_division.checked_div`, Aeneas's checked division,
+which fails with `panic` on a zero divisor. This example follows both branches into VCVio:
 
 * `checked_div_spec`: the extracted contract holds, by `hax_mvcgen`. Its clauses read as plain
   arithmetic (`checked_div_pre_holds_iff`, `checked_div_post_holds_iff`), and the lifted triple

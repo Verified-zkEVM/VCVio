@@ -7,10 +7,10 @@ Authors: Quang Dao, Devon Tuma
 module
 
 public import Hax
-public import Interop.Hax.Examples.Extraction.Specs
-public import Interop.Hax.Holds
-public import Interop.Rust.RustM
-public import Interop.Rust.Triple
+public import Interop.Aeneas.Hax.Examples.Extraction.Specs
+public import Interop.Aeneas.Hax.Holds
+public import Interop.Aeneas.Lift.RustM
+public import Interop.Aeneas.Lift.Triple
 public import VCVio.ProgramLogic.Tactics
 
 /-!
@@ -18,10 +18,10 @@ public import VCVio.ProgramLogic.Tactics
 
 `RustM` has no oracle; `RustOracleComp` does. This example queries an oracle and passes its answer
 to a checked Rust addition, so its specification ranges over every possible answer. The addition
-is `add_or_panic` in the crate next to this file (`Interop/Hax/Examples/src/lib.rs`), with the
-contract `requires(x <= u32::MAX - y)` and `ensures(result.to_int() == x.to_int() + y.to_int())`;
-`scripts/regenerate-hax.sh` extracts it with the hax CLI into `Interop.Hax.Examples.Extraction` as
-`hax_add_or_panic.add_or_panic`.
+is `add_or_panic` in the crate next to this file (`Interop/Aeneas/Hax/Examples/src/lib.rs`), with
+the contract `requires(x <= u32::MAX - y)` and
+`ensures(result.to_int() == x.to_int() + y.to_int())`; `scripts/regenerate-hax.sh` extracts it with
+the hax CLI into `Interop.Aeneas.Hax.Examples.Extraction` as `hax_add_or_panic.add_or_panic`.
 
 * `add_or_panic_spec`: the extracted contract holds, by `hax_mvcgen`, and its clauses read as plain
   arithmetic (`add_or_panic_pre_holds_iff`, `add_or_panic_post_holds_iff`).
@@ -33,8 +33,8 @@ contract `requires(x <= u32::MAX - y)` and `ensures(result.to_int() == x.to_int(
 The Lean contract `Interop.Hax.Examples.panicOrDiverge.spec` states what each exceptional exit
 requires of the caller.
 
-Probabilities of Rust panics are in `Interop.Hax.Division.Verification` and
-`Interop.Hax.CenteredBinomial.Verification`.
+Probabilities of Rust panics are in `Interop.Aeneas.Hax.Division.Verification` and
+`Interop.Aeneas.Hax.CenteredBinomial.Verification`.
 -/
 
 public section

@@ -6,7 +6,7 @@ Authors: Quang Dao
 
 module
 
-public import Interop.Rust.Common
+public import Interop.Aeneas.Lift.Common
 
 /-!
 # Peeling the `RustOracleComp` transformer stack

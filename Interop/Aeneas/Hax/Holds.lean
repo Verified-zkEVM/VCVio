@@ -7,7 +7,7 @@ Authors: Devon Tuma
 module
 
 public import Hax
-public import Interop.Rust.RustM
+public import Interop.Aeneas.Lift.RustM
 
 /-!
 # Reading extracted `requires` and `ensures` clauses
