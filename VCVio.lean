@@ -455,6 +455,13 @@ public import VCVio.OracleComp.QueryTracking.QueryCost
 public import VCVio.OracleComp.QueryTracking.QueryLog
 public import VCVio.OracleComp.QueryTracking.QueryLogCheck
 public import VCVio.OracleComp.QueryTracking.RandomOracle.AcceptedScan
+public import VCVio.OracleComp.QueryTracking.RandomOracle.AcceptedScan.NewPartner
+public import VCVio.OracleComp.QueryTracking.RandomOracle.AcceptedScan.Occupied
+public import VCVio.OracleComp.QueryTracking.RandomOracle.AcceptedScan.PartnerProbe
+public import VCVio.OracleComp.QueryTracking.RandomOracle.AcceptedScan.PartnerSet
+public import VCVio.OracleComp.QueryTracking.RandomOracle.AcceptedScan.Partners
+public import VCVio.OracleComp.QueryTracking.RandomOracle.AcceptedScan.Probe
+public import VCVio.OracleComp.QueryTracking.RandomOracle.AcceptedScan.Selection
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
 public import VCVio.OracleComp.QueryTracking.RandomOracle.CachePartial
 public import VCVio.OracleComp.QueryTracking.RandomOracle.CachePartial.Cost

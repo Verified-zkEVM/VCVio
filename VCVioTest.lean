@@ -220,6 +220,7 @@ public import VCVioTest.RandomOracleRegisteredCost
 public import VCVioTest.RandomOracleRegisteredTarget
 public import VCVioTest.RandomOracleRelabel
 public import VCVioTest.RandomOracleRouting
+public import VCVioTest.RandomOracleScanPartners
 public import VCVioTest.RandomOracleSettled
 public import VCVioTest.RandomOracleTouchRead
 public import VCVioTest.RandomOracleUnaryEdge
