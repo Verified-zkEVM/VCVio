@@ -477,6 +477,7 @@ public import VCVio.OracleComp.QueryTracking.RandomOracle.Commute
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Defer
 public import VCVio.OracleComp.QueryTracking.RandomOracle.DeferredSampling
 public import VCVio.OracleComp.QueryTracking.RandomOracle.DependentTable
+public import VCVio.OracleComp.QueryTracking.RandomOracle.DisclosureTrace
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Eager
 public import VCVio.OracleComp.QueryTracking.RandomOracle.EagerTable
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Encoded
@@ -491,9 +492,9 @@ public import VCVio.OracleComp.QueryTracking.RandomOracle.FiniteSupport
 public import VCVio.OracleComp.QueryTracking.RandomOracle.FreshAnswer
 public import VCVio.OracleComp.QueryTracking.RandomOracle.FreshQuery
 public import VCVio.OracleComp.QueryTracking.RandomOracle.HiddenSeed
+public import VCVio.OracleComp.QueryTracking.RandomOracle.HiddenSeed.CacheExtension
 public import VCVio.OracleComp.QueryTracking.RandomOracle.HiddenSeed.Reindex
 public import VCVio.OracleComp.QueryTracking.RandomOracle.HiddenSeed.Residual
-public import VCVio.OracleComp.QueryTracking.RandomOracle.HiddenSeed.CacheExtension
 public import VCVio.OracleComp.QueryTracking.RandomOracle.HiddenSeed.Unit
 public import VCVio.OracleComp.QueryTracking.RandomOracle.HiddenSeedCollapse
 public import VCVio.OracleComp.QueryTracking.RandomOracle.InitialCacheExpectedQuery
@@ -517,6 +518,7 @@ public import VCVio.OracleComp.QueryTracking.RandomOracle.PairedValue.ProjectedH
 public import VCVio.OracleComp.QueryTracking.RandomOracle.ProbeEps
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Programming
 public import VCVio.OracleComp.QueryTracking.RandomOracle.ProjectedHazards
+public import VCVio.OracleComp.QueryTracking.RandomOracle.PublicReplay
 public import VCVio.OracleComp.QueryTracking.RandomOracle.ReadSet
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Redirect
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Relabel
@@ -527,6 +529,7 @@ public import VCVio.OracleComp.QueryTracking.RandomOracle.Tape
 public import VCVio.OracleComp.QueryTracking.RandomOracle.TouchRead
 public import VCVio.OracleComp.QueryTracking.RandomOracle.TouchRead.Children
 public import VCVio.OracleComp.QueryTracking.RandomOracle.TouchRead.Unary
+public import VCVio.OracleComp.QueryTracking.RandomOracle.Undisclosed
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Wiring
 public import VCVio.OracleComp.QueryTracking.ResourceProfile
 public import VCVio.OracleComp.QueryTracking.SeededOracle
@@ -536,6 +539,7 @@ public import VCVio.OracleComp.QueryTracking.Tracing.Core
 public import VCVio.OracleComp.QueryTracking.Unpredictability
 public import VCVio.OracleComp.QueryTracking.WeightedCap
 public import VCVio.OracleComp.QueryTracking.WeightedCap.Domination
+public import VCVio.OracleComp.QueryTracking.WeightedCap.Handler
 public import VCVio.OracleComp.QueryTracking.WeightedCap.Resource
 public import VCVio.OracleComp.QueryTracking.WriterCost
 public import VCVio.OracleComp.QueryTracking.WriterCost.StateT

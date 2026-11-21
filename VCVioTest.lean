@@ -206,8 +206,6 @@ public import VCVioTest.RandomOracleControls
 public import VCVioTest.RandomOracleDefer
 public import VCVioTest.RandomOracleDerivationKeys
 public import VCVioTest.RandomOracleEagerSubgraph
-public import VCVioTest.RandomOracleHiddenSeedUnit
-public import VCVioTest.RandomOracleResidualTables
 public import VCVioTest.RandomOracleEncoded
 public import VCVioTest.RandomOracleEncodedFullCache
 public import VCVioTest.RandomOracleFreshAnswer
@@ -215,6 +213,7 @@ public import VCVioTest.RandomOracleFreshQuery
 public import VCVioTest.RandomOracleHiddenSeed
 public import VCVioTest.RandomOracleHiddenSeedCacheExtension
 public import VCVioTest.RandomOracleHiddenSeedCollapse
+public import VCVioTest.RandomOracleHiddenSeedUnit
 public import VCVioTest.RandomOracleHitPotential
 public import VCVioTest.RandomOracleJointPotential
 public import VCVioTest.RandomOracleMixedCap
@@ -228,11 +227,13 @@ public import VCVioTest.RandomOracleRedirect
 public import VCVioTest.RandomOracleRegisteredCost
 public import VCVioTest.RandomOracleRegisteredTarget
 public import VCVioTest.RandomOracleRelabel
+public import VCVioTest.RandomOracleResidualTables
 public import VCVioTest.RandomOracleRouting
 public import VCVioTest.RandomOracleScanPartners
 public import VCVioTest.RandomOracleSettled
 public import VCVioTest.RandomOracleTouchRead
 public import VCVioTest.RandomOracleUnaryEdge
+public import VCVioTest.RandomOracleUndisclosed
 public import VCVioTest.RandomPermutationConditioning
 public import VCVioTest.ReactiveBudget
 public import VCVioTest.ReactiveKernel
@@ -291,4 +292,5 @@ public import VCVioTest.UntilBadBind
 public import VCVioTest.VCGenAmbiguity
 public import VCVioTest.WeightedCap
 public import VCVioTest.WeightedCapDomination
+public import VCVioTest.WeightedCapHandler
 public import VCVioTest.WriterCostStateT
