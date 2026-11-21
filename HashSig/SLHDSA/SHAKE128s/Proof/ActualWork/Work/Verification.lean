@@ -284,7 +284,8 @@ private theorem verifySource_preserves (s : FIPS205.core.PkSeed) (root : FIPS205
   split
   next message sig _ _ =>
     let Q {α : Type} (p : OracleComp Lab α) := P (simulateQ markedLab p)
-    change Q (GeneralScheme.verifyInternalM FIPS205.params FIPS205.core message sig (⟨s, root⟩ : PK))
+    change Q (GeneralScheme.verifyInternalM FIPS205.params FIPS205.core
+      message sig (⟨s, root⟩ : PK))
     refine verifyInternalM_pred_of_ledger (m := OracleComp Lab) (Q := @Q) ?_ ?_
       FIPS205.core message sig (⟨s, root⟩ : PK) ?_ ?_
     · intro α x
@@ -328,7 +329,8 @@ theorem marked_verify_count_offsets (s : FIPS205.core.PkSeed) (root : FIPS205.co
     out ∈ support (execute s caps fallback p st) →
       offsets (¬IsWeakKey FIPS205.params (⟨s, root⟩ : PK)) st (world out)
   refine verifySource_preserves s root request wire (@P) ?_ ?_
-    (fun a _ xs => point_offsets s root (.thash s (FIPS205.core.adrsToKey a) xs) trivial caps fallback)
+    (fun a _ xs =>
+      point_offsets s root (.thash s (FIPS205.core.adrsToKey a) xs) trivial caps fallback)
     (fun r msg => point_offsets s root (.hmsg r s root msg) ⟨rfl, rfl⟩ caps fallback)
     before result member
   · intro α x st out mem

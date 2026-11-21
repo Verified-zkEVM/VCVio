@@ -21,7 +21,8 @@ namespace SLHDSA.SHAKE128s.Bridge.SharedExperiment.Native
 open Guarded
 
 /-- Resources of a single guarded native terminal that pay for its cache and marked events. -/
-structure TerminalReserve (s : FIPS205.core.PkSeed) (caps : Nat × Nat) (t : NativeTerminal) : Prop where
+structure TerminalReserve (s : FIPS205.core.PkSeed) (caps : Nat × Nat)
+    (t : NativeTerminal) : Prop where
   graph : DeferredReserve.entries s t.2.1.1.2.1.1.1 +
     (31 * t.2.1.1.2.2.1 + 32 * t.2.2.1.2 : Nat) ≤ (t.2.2.1.1 : ℝ≥0∞)
   digests : {p | (t.2.1.1.2.1.1.1 p).isSome ∧

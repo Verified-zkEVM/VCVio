@@ -27,7 +27,8 @@ theorem marked_mem_of_native_mem {s : FIPS205.core.PkSeed} {adv : Game.Adversary
       | .forger => b.map Bridge.answerEquiv
       | .other => []
     ((((t.1, (PUnit.unit, t.2.2)), t.2.1.1.1), t.2.1.1.2), t.2.1.2) ∈ support
-      (SLHDSA.SHAKE128s.MarkedPrefix.wholeRun s adv caps fb (((∅, ∅), []), (0, .keygen)) tapes) := by
+      (SLHDSA.SHAKE128s.MarkedPrefix.wholeRun s adv caps fb
+        (((∅, ∅), []), (0, .keygen)) tapes) := by
   intro tapes
   change t ∈ support (SLHDSA.SHAKE128s.MarkedPrefix.wholeRun s adv caps fb _ tapes >>= _) at mem
   rw [mem_support_bind_iff] at mem
