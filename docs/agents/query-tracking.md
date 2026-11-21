@@ -7,6 +7,9 @@ The current design is intentionally **weighted-first**:
 - `QueryCost[...]` and `ExpectedQueryCost[...]` are the primary notions.
 - `Queries[...]` and `ExpectedQueries[...]` are the unit-cost specializations.
 
+For a stateful handler, `OracleComp.expectedSimulatedQueryCount_mono` lets `gcongr`
+and `apply_rw` lift an implication between charged-query predicates through the expected count.
+
 The stack is also intentionally split into:
 
 - a writer-cost layer for pathwise and expected-cost facts
