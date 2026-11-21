@@ -8,6 +8,7 @@ module
 
 public import VCVio.OracleComp.QueryTracking.WeightedCap
 public import VCVio.OracleComp.SimSemantics.OptionT.Basic
+public import VCVio.OracleComp.QueryTracking.QueryBound.Basic
 
 /-!
 # A query handler for a weighted cap
@@ -45,5 +46,19 @@ theorem run_guard (weight : ι → Nat) (impl : QueryImpl spec m) (oa : OracleCo
         StateT.run_bind, guard, OptionT.run_mk, StateT.run_mk, map_bind, bind_map_left]
       exact bind_congr (fun a => ih a _)
     · simp [fits, guard, OptionT.run_bind, Option.elimM]
+
+/-- A caller restricted to zero-cost queries keeps its entire budget, including at zero. -/
+theorem run_guard_free (weight : ι → Nat) (impl : QueryImpl spec m) (oa : OracleComp spec α)
+    (remaining : Nat) (free : oa.AllQueriesSatisfy (fun t => weight t = 0)) :
+    ((simulateQ (guard weight impl) oa).run).run remaining =
+      (fun a => (some a, remaining)) <$> simulateQ impl oa := by
+  induction oa using OracleComp.inductionOn with
+  | pure a => simp
+  | query_bind t next ih =>
+    obtain ⟨head, tail⟩ := (allQueriesSatisfy_query_bind_iff _ _ _).mp free
+    simp only [simulateQ_bind, simulateQ_spec_query, OptionT.run_bind, Option.elimM,
+      StateT.run_bind, guard, OptionT.run_mk, StateT.run_mk, head, Nat.zero_le,
+      ite_true, Nat.sub_zero, bind_map_left, Option.elim_some, map_bind]
+    exact bind_congr (fun a => ih a (tail a))
 
 end OracleComp.WeightedCap
