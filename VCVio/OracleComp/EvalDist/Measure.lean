@@ -319,6 +319,7 @@ theorem mem_support_iff_evalDist_singleton_pos_of_fullSupport
     x ∈ support mx ↔ 0 < 𝒟[mx] {x} := by
   induction mx using OracleComp.inductionOn with
   | pure a =>
+      rw [mem_support_pure_iff]
       change x = a ↔ 0 < (Measure.dirac a) {x}
       constructor
       · intro h

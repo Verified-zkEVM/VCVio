@@ -1295,7 +1295,7 @@ lemma embedAtIndexImpl_run_count_le (domainSample : PK → ProbComp Domain) (pk 
         rw [embedAtIndexImpl_run_inl_inl, map_eq_bind_pure_comp] at hps
         obtain ⟨x, -, hh⟩ := (mem_support_bind_iff _ _ _).1 hps
         simp only [Function.comp_apply] at hh
-        have hps' : pst = s := (Prod.ext_iff.mp hh).2
+        have hps' : pst = s := (Prod.ext_iff.mp (eq_of_mem_support_pure hh)).2
         have hpst2 : pst.2 = s.2 := by rw [hps']
         have hbS := hQS2 pv
         have hbH := hQH2 pv
@@ -1319,7 +1319,7 @@ lemma embedAtIndexImpl_run_count_le (domainSample : PK → ProbComp Domain) (pk 
             obtain ⟨sd, -, hpst⟩ := (mem_support_bind_iff _ _ _).1 hps
             simp only [Function.comp_apply] at hpst
             have hpst2 : pst.2 = s.2 + 1 := by
-              have h2 := congrArg (Prod.snd ∘ Prod.snd) hpst
+              have h2 := congrArg (Prod.snd ∘ Prod.snd) (eq_of_mem_support_pure hpst)
               split_ifs at h2 <;> simpa using h2
             exact le_trans (ih pv pst qS (qH - 1) hbS hbH z hz) (by omega)
       · -- signing query: increments the counter, charged against the signing budget
@@ -1333,7 +1333,7 @@ lemma embedAtIndexImpl_run_count_le (domainSample : PK → ProbComp Domain) (pk 
         obtain ⟨sd, -, hpst⟩ := (mem_support_bind_iff _ _ _).1 hps
         simp only [Function.comp_apply] at hpst
         have hpst2 : pst.2 = s.2 + 1 := by
-          have h2 := congrArg (Prod.snd ∘ Prod.snd) hpst
+          have h2 := congrArg (Prod.snd ∘ Prod.snd) (eq_of_mem_support_pure hpst)
           simpa using h2
         exact le_trans (ih pv pst (qS - 1) qH hbS hbH z hz) (by omega)
 

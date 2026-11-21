@@ -322,7 +322,7 @@ lemma isQueryBoundP_bind
     (h : IsQueryBoundP oa p n) (h' : ∀ x ∈ support oa, IsQueryBoundP (ob x) p m) :
     IsQueryBoundP (oa >>= ob) p (n + m) := by
   rw [isQueryBoundP_iff_isChargeBound] at h ⊢
-  exact h.bind_supp fun x hx => (isQueryBoundP_iff_isChargeBound p (ob x) m).1 (h' x hx)
+  exact h.bind_support fun x hx => (isQueryBoundP_iff_isChargeBound p (ob x) m).1 (h' x hx)
 
 /-- `oa >>= ob` makes no `p`-query when `oa` and every continuation `ob x` make none. The
 continuations are taken at every value, so the bound composes as a predicate on programs that
@@ -774,7 +774,7 @@ theorem isTotalQueryBound_bind_of_mem_support
     (hsuffix : ∀ x ∈ support oa, IsTotalQueryBound (ob x) suffixBound) :
     IsTotalQueryBound (oa >>= ob) (prefixBound + suffixBound) := by
   rw [isTotalQueryBound_iff_isChargeBound] at hprefix ⊢
-  exact hprefix.bind_supp fun x hx =>
+  exact hprefix.bind_support fun x hx =>
     (isTotalQueryBound_iff_isChargeBound _ _).1 (hsuffix x hx)
 
 /-- If `oa >>= ob` has a total query bound `n`, then `oa` alone has total query bound `n`

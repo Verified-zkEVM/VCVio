@@ -5,6 +5,8 @@ Authors: Oleksandr Vovkotrub
 -/
 
 module
+meta import Mathlib.Tactic.Inclusion.Extension.IntervalDyadicReal.Exp
+import Mathlib.Tactic.Inclusion.Extension.IntervalDyadicReal.Tactic
 import all LatticeCrypto.Falcon.Concrete.FPR
 public import LatticeCrypto.Falcon.Concrete.FPR
 import all Extern.Falcon.FPR.Decode
@@ -23,9 +25,8 @@ public import Extern.Falcon.ExpmBridge
 evidence that those hypotheses are necessary rather than defensive: it refutes each bound read
 without them, at an explicit `UInt64` input, in the kernel.
 
-Each refutation has the same shape, and none of them needs a numeric estimate. Dropping the
-restriction lets the routine return a value at or below zero while the exact result is strictly
-positive, and `not_error_of_sign_flip` turns that into a violated relative-error bound directly:
+For the arithmetic kernels, dropping a restriction lets the routine return a value at or
+below zero while the exact result is strictly positive. By `not_error_of_sign_flip`,
 the absolute error is then at least the whole exact value, which no `ε < 1` multiple of it can
 cover. The three ways it happens here are all real behaviours of the kernels:
 
@@ -37,8 +38,8 @@ cover. The three ways it happens here are all real behaviours of the kernels:
 * **Subnormal operands discarded.** `FPR.div`'s flush guard fires on a zero exponent field, so a
   subnormal numerator is dropped and the quotient returns `+0`.
 
-`expm_p63` fails differently again: its `ccs` is read through a 63-bit fixed-point conversion
-that wraps at `1`.
+`expm_p63` reads its `ccs` through a 63-bit fixed-point conversion that wraps at `1`.
+The certified argument interval also contains a binary64 input with `exp (-x) < 1/2`.
 
 The two closure statements at the end are why the operand domain is `FPR.IsNormalOrZero` rather
 than `FPR.IsNormal`.
@@ -286,10 +287,23 @@ theorem decode_add_one_negOne :
 `expm_p63_error` constrains `ccs` to `[0, 1)`. Both ends are load-bearing; the lower end because
 the fixed-point conversion drops the sign bit, and the upper because it keeps only 63 bits. -/
 
-/-- `expm_p63_error` is false without its `ccs` hypotheses. At `ccs = 1` the fixed-point
-conversion `⌊2 ^ 63 * ccs⌋` wraps to `0` and takes the whole product with it, for *every* `x` in
-range — against a true value of `Real.exp (-x)`, which on this domain never falls below one
-half. -/
+/-- The certified argument interval includes the binary64 value `355 / 512`, at which
+`exp (-x)` is strictly below one half. -/
+theorem exists_expm_argument_exp_lt_half :
+    ∃ x : FPR, 0 ≤ toReal x ∧ toReal x ≤ 694 / 1000 ∧ Real.exp (-(toReal x)) < 1 / 2 := by
+  have hx : toReal (0x3FE6300000000000 : UInt64) = 0.693359375 := by
+    unfold toReal toRealBits
+    rw [show FPR.decode (0x3FE6300000000000 : UInt64) = ⟨false, 1022, 0x6300000000000⟩ from by
+      unfold FPR.decode; decide]
+    norm_num [FPR.Bits.toReal]
+  refine ⟨0x3FE6300000000000, ?_, ?_, ?_⟩ <;> rw [hx]
+  · norm_num
+  · norm_num
+  · rw [lt_div_iff₀ (by norm_num)]
+    dyadic_interval [prec := 22]
+
+/-- At `ccs = 1` the 63-bit fixed-point conversion and hence the computed product are zero.
+At `x = 0` the exact product is one, violating the error bound. -/
 theorem not_expm_p63_error_unrestricted :
     ¬ ∀ (x ccs : FPR), 0 ≤ toReal x → toReal x ≤ 694 / 1000 →
       |(((FPR.expm_p63 x ccs).toNat : ℕ) : ℝ) / (2 : ℝ) ^ 63 -
