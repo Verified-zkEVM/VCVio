@@ -160,7 +160,7 @@ theorem sampledEvalDistMap_eq_sum [Fintype Ω]
     sampledEvalDistMap R I x ρ f =
       (Fintype.card Ω : ℝ≥0∞)⁻¹ • ∑ ω, (R ω).evalDistMap I x ρ (f ω) := by
   refine Measure.ext fun s hs ↦ ?_
-  rw [sampledEvalDistMap_apply _ _ _ _ _ hs, Measure.smul_apply, Measure.coe_finsetSum,
+  rw [sampledEvalDistMap_apply _ _ _ _ _ hs, smul_apply, FunLike.coe_sum,
     Finset.sum_apply, smul_eq_mul, Finset.mul_sum]
 
 /-- The distribution of a measurable set of leaves averages, over the sampled values, its measure
@@ -180,7 +180,7 @@ theorem sampledEvalDist_eq_sum [Fintype Ω]
     (I : L.Interp) (x : QuantumComp L spec W A) (ρ : SubState A) :
     sampledEvalDist R I x ρ = (Fintype.card Ω : ℝ≥0∞)⁻¹ • ∑ ω, (R ω).evalDist I x ρ := by
   refine Measure.ext fun s hs ↦ ?_
-  rw [sampledEvalDist_apply _ _ _ _ hs, Measure.smul_apply, Measure.coe_finsetSum, Finset.sum_apply,
+  rw [sampledEvalDist_apply _ _ _ _ hs, smul_apply, FunLike.coe_sum, Finset.sum_apply,
     smul_eq_mul, Finset.mul_sum]
 
 /-- When every run is lossless and every initial substate has trace `c`, the distribution has total
@@ -268,7 +268,7 @@ theorem sampledEvalDistMap₂_eq_sum [Fintype Ω]
     sampledEvalDistMap₂ R I x ρ f =
       (Fintype.card Ω : ℝ≥0∞)⁻¹ • ∑ ω, (R ω).evalDist₂ I (x.map (f ω)) ρ := by
   refine Measure.ext fun s hs ↦ ?_
-  rw [sampledEvalDistMap₂_apply _ _ _ _ _ hs, Measure.smul_apply, Measure.coe_finsetSum,
+  rw [sampledEvalDistMap₂_apply _ _ _ _ _ hs, smul_apply, FunLike.coe_sum,
     Finset.sum_apply, smul_eq_mul, Finset.mul_sum]
 
 /-- The distribution of a measurable set of values averages, over the sampled values, its measure
@@ -287,7 +287,7 @@ theorem sampledEvalDist₂_eq_sum [Fintype Ω]
     (x : QuantumComp₂ L spec A B α) (ρ : SubState A) :
     sampledEvalDist₂ R I x ρ = (Fintype.card Ω : ℝ≥0∞)⁻¹ • ∑ ω, (R ω).evalDist₂ I x ρ := by
   refine Measure.ext fun s hs ↦ ?_
-  rw [sampledEvalDist₂_apply _ _ _ _ hs, Measure.smul_apply, Measure.coe_finsetSum,
+  rw [sampledEvalDist₂_apply _ _ _ _ hs, smul_apply, FunLike.coe_sum,
     Finset.sum_apply,
     smul_eq_mul, Finset.mul_sum]
 
@@ -348,7 +348,7 @@ theorem sum_tsum_guess {ι : Type*} (w : ι → ℝ≥0∞) (x : ι → X) (y : 
       congr 2
       by_cases h : y i = H (x i) <;> simp [h]
   simp only [← ENNReal.tsum_mul_left]
-  rw [← Summable.tsum_finsetSum fun _ _ ↦ ENNReal.summable]
+  rw [← Summable.tsum_finsetSum fun _ _ ↦ CompleteLattice.summable]
   simp only [hterm]
   rw [ENNReal.tsum_mul_right, div_eq_mul_inv]
 
@@ -365,7 +365,7 @@ theorem sum_outcomeMeasure_map_guess {M N : Type*} [Fintype M] [Fintype N]
       ∑' a, ENNReal.ofReal (P.branch a ρ.matrix).trace.re *
         Set.indicator {True} 1 (y a = H (x a)) := fun H ↦ by
     rw [DSubInstrument.outcomeMeasure_map, Measure.sum_apply _ (MeasurableSet.singleton True)]
-    simp only [Measure.smul_apply, Measure.dirac_apply' _ (MeasurableSet.singleton True),
+    simp only [smul_apply, Measure.dirac_apply' _ (MeasurableSet.singleton True),
       smul_eq_mul]
   simp only [hmeas]
   rw [sum_tsum_guess, DSubInstrument.trace_re_total_apply,

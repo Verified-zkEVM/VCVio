@@ -6,6 +6,7 @@ Authors: Alexander Hicks
 
 module
 
+public import Batteries.Data.List.Lemmas
 public import Mathlib.Data.List.Forall2
 
 /-!
@@ -22,33 +23,10 @@ namespace List
 
 variable {α β : Type*}
 
-/-- In the `Option` monad, `l.mapM f` returns `some l'` exactly when `f` sends the entries of `l`
-to the matching entries of `l'`. -/
-theorem mapM_eq_some_iff_forall₂ {f : α → Option β} :
-    ∀ {l : List α} {l' : List β}, l.mapM f = some l' ↔ Forall₂ (fun a b ↦ f a = some b) l l'
-  | [], l' => by cases l' <;> simp
-  | a :: l, l' => by
-    rw [mapM_cons]
-    cases l' with
-    | nil =>
-      simp only [forall₂_nil_right_iff, reduceCtorEq, iff_false]
-      cases f a <;> cases l.mapM f <;> simp
-    | cons b l' =>
-      rw [forall₂_cons, ← mapM_eq_some_iff_forall₂ (l := l)]
-      cases f a <;> cases l.mapM f <;> simp
-
 /-- `f` sends the entries of `l` to the matching entries of `vs` exactly when `l.map f` is
 `vs.map some`. -/
 theorem forall₂_apply_eq_some_iff {f : α → Option β} {l : List α} {vs : List β} :
     Forall₂ (fun a b ↦ f a = some b) l vs ↔ l.map f = vs.map some := by
   rw [← forall₂_eq_eq_eq, forall₂_map_left_iff, forall₂_map_right_iff]
-
-/-- In the `Option` monad, `l.mapM f` succeeds exactly when `f` succeeds at every entry of `l`. -/
-theorem isSome_mapM_iff {f : α → Option β} :
-    ∀ {l : List α}, (l.mapM f).isSome ↔ ∀ a ∈ l, (f a).isSome
-  | [] => by simp
-  | a :: l => by
-    rw [mapM_cons, forall_mem_cons, ← isSome_mapM_iff (l := l)]
-    cases f a <;> cases l.mapM f <;> simp
 
 end List

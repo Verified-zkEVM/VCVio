@@ -152,6 +152,8 @@ theorem simulateQ_verifyInternalM_signInternalM_withPublicHash
 
 /-! ## Pure deterministic interpretations -/
 
+/-- The deterministic interpretation of `keygenInternalM` (FIPS 205 Algorithm 18), with
+the public hashes computed by the functions in `prims`. -/
 def keygenInternal (vp : ValidatedParams) (prims : Primitives vp.params)
     (skSeed : prims.SkSeed) (skPrf : prims.SkPrf) (pkSeed : prims.PkSeed) :
     PublicKeyCore prims.core × SecretKeyCore prims.core :=
@@ -160,6 +162,8 @@ def keygenInternal (vp : ValidatedParams) (prims : Primitives vp.params)
       OracleComp (publicHashSpec prims.core)
         (PublicKeyCore prims.core × SecretKeyCore prims.core))
 
+/-- The deterministic interpretation of `signInternalM` (FIPS 205 Algorithm 19), with the
+public hashes computed by the functions in `prims`. -/
 def signInternal (vp : ValidatedParams) (prims : Primitives vp.params)
     (msg : List Byte) (sk : SecretKeyCore prims.core) (addrnd : prims.Y) :
     SignatureCore vp prims.core :=
@@ -167,6 +171,8 @@ def signInternal (vp : ValidatedParams) (prims : Primitives vp.params)
     (signInternalM vp prims.core msg sk addrnd :
       OracleComp (publicHashSpec prims.core) (SignatureCore vp prims.core))
 
+/-- The deterministic interpretation of `verifyInternalM` (FIPS 205 Algorithm 20), with
+the public hashes computed by the functions in `prims`. -/
 def verifyInternal (vp : ValidatedParams) (prims : Primitives vp.params)
     [DecidableEq prims.Y]
     (msg : List Byte) (sig : SignatureCore vp prims.core) (pk : PublicKeyCore prims.core) : Bool :=

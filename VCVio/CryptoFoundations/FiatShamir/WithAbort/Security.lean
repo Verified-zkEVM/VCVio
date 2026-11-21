@@ -256,12 +256,12 @@ theorem euf_cma_to_nma_of_good_hvzk
               (simSignBody M maxAttempts sim x.1 x.2) x.1)}[y = true] +
             Pr{let y ← hr.gen}[y = x] * ENNReal.ofReal (perKeyLoss qS qH ε p_abort ζ_zk) +
             Pr{let y ← hr.gen}[y = x] * (if ¬ Good x.1 x.2 then 1 else 0)) :=
-          ENNReal.tsum_le_tsum hpt
+          tsum_le_tsum hpt
       _ = (∑' x, Pr{let y ← hr.gen}[y = x] * Pr{let y ← (hybridExpAtKey ids hr M maxAttempts adv
               (simSignBody M maxAttempts sim x.1 x.2) x.1)}[y = true]) +
             (∑' x, Pr{let y ← hr.gen}[y = x] * ENNReal.ofReal (perKeyLoss qS qH ε p_abort ζ_zk)) +
             (∑' x, Pr{let y ← hr.gen}[y = x] * (if ¬ Good x.1 x.2 then 1 else 0)) := by
-          rw [ENNReal.tsum_add, ENNReal.tsum_add]
+          rw [tsum_add, tsum_add]
       _ ≤ (∑' x, Pr{let y ← hr.gen}[y = x] * Pr{let y ← (hybridExpAtKey ids hr M maxAttempts adv
               (simSignBody M maxAttempts sim x.1 x.2) x.1)}[y = true]) +
             ENNReal.ofReal (perKeyLoss qS qH ε p_abort ζ_zk) + ENNReal.ofReal δ := by

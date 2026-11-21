@@ -52,7 +52,7 @@ open Security CacheReplay Extraction CanonicalGraph VerifierProbes
     (address : Address) : Digest :=
   @Hashing.tweakable Id Id.instMonad (CacheReplay.replayQuery cache) publicSeed
     (Extraction.Fors.rootAddress address)
-    (digestArrayBytes (@Extraction.Fors.canonicalRoots (CacheReplay.replayQuery cache)
+    (digestArrayBytes (Extraction.Fors.canonicalRoots (CacheReplay.replayQuery cache)
       secretSeed publicSeed address))
 
 /-- The canonical-graph FORS key a digest selects. -/
@@ -101,8 +101,8 @@ theorem cases_of_win_charged (adversary : Adversary)
       result.1.1.forgery.message.frame = some message ∧
         Signature.fromBytes? result.1.1.forgery.signature = some parsed ∧
           (StructuralTerm.DeviatingCollision walk.1.1.2.2
-              (@value (CacheReplay.replayQuery result.2) walk.1.1.1 walk.1.1.2.2) result ∨
-            @FaultCharge.WotsResidue (CacheReplay.replayQuery result.2) walk.1.1.1 walk.1.1.2.2
+              (value (CacheReplay.replayQuery result.2) walk.1.1.1 walk.1.1.2.2) result ∨
+            FaultCharge.WotsResidue (CacheReplay.replayQuery result.2) walk.1.1.1 walk.1.1.2.2
                 layers parsed.hypertree 0
                 (MessageDigest.treeIndex (digestOf result.2
                   (generatedKey walk.1.1.1 walk.1.1.2.1 walk.1.1.2.2 result.2)

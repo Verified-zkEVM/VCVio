@@ -89,11 +89,11 @@ canonical input of a node whose staked cell no signature has made available. -/
   ∃ (message : Bytes) (parsed : Signature),
     x.1.2.1.forgery.message.frame = some message ∧
       Signature.fromBytes? x.1.2.1.forgery.signature = some parsed ∧
-        ∃ candidate ∈ @ClaimedProbes.claimedCandidatesOf (replayQuery x.2) x.1.1.1.2.2 x.2
+        ∃ candidate ∈ ClaimedProbes.claimedCandidatesOf (replayQuery x.2) x.1.1.1.2.2 x.2
             (keyOf x) message parsed,
           SensitiveQuery.Sensitive (GraphStakes.stakes x.1.1.1.2.2)
             (GraphStakes.unavailableAt
-              (@GraphStakes.honestRevealed (replayQuery x.2) x.1.1.1.1 x.1.1.1.2.2)
+              (GraphStakes.honestRevealed (replayQuery x.2) x.1.1.1.1 x.1.1.1.2.2)
               (ServedLog.disclosedByLog (keyOf x)))
             x.1.1.2 (resultOf x) candidate
 
@@ -180,9 +180,6 @@ class. -/
 The two branches produce candidates of the two shapes the record is built from, so reaching
 `InputBad` from either is a membership statement about one list. -/
 
-variable [HasQuery HashSpec Id]
-
-omit [HasQuery HashSpec Id] in
 /-- **A claimed WOTS value is an entry of the record.** -/
 theorem mem_claimedCandidates_wots (publicSeed : Digest) (forsKey : ForsKey)
     (indices : SLHDSA.SHAKE128s.Fors.Indices) (signature : Signature)
@@ -195,7 +192,6 @@ theorem mem_claimedCandidates_wots (publicSeed : Digest) (forsKey : ForsKey)
   refine List.mem_append_right _ (List.mem_flatMap.mpr ⟨layer, List.mem_finRange layer, ?_⟩)
   exact List.mem_map.mpr ⟨chain, List.mem_finRange chain, rfl⟩
 
-omit [HasQuery HashSpec Id] in
 /-- **A claimed FORS secret is an entry of the record.** -/
 theorem mem_claimedCandidates_fors (publicSeed : Digest) (forsKey : ForsKey)
     (indices : SLHDSA.SHAKE128s.Fors.Indices) (signature : Signature)
@@ -214,7 +210,6 @@ it there: the message digest is the verifier's first call, so `CacheReplay.queri
 reaches it in one step and `cached_of_queriesUnder` turns that into the entry. What the entry
 holds is then what the replayed verifier reads, which is `digestOf`. -/
 
-omit [HasQuery HashSpec Id] in
 /-- **The verifier consults the forgery's message input.** -/
 theorem queriesUnder_verify_message (cache : QueryCache HashSpec) (pk : PublicKey)
     (request : Message) (signature : Bytes) (message : Bytes) (parsed : Signature)
@@ -228,7 +223,6 @@ theorem queriesUnder_verify_message (cache : QueryCache HashSpec) (pk : PublicKe
 attribute [local irreducible] WarmedGame.afterSeeds Scheme.verify Scheme.keygenInternal
   Scheme.sign Security.signingOracle Security.countQueries
 
-omit [HasQuery HashSpec Id] in
 /-- **The forgery's message digest is in the run's own cache**, holding the value the replayed
 verifier reads. -/
 theorem cached_digest (adversary : Adversary)
@@ -263,7 +257,6 @@ theorem cached_digest (adversary : Adversary)
     (Hashing.messageInput parsed.randomizer
       (generatedKey walk.1.1.1 walk.1.1.2.1 walk.1.1.2.2 result.2) message) answer hanswer).symm
 
-omit [HasQuery HashSpec Id] in
 /-- **The canonical branch forks across both halves.** Each of the fourteen positions the
 forgery's digest selects is either undisclosed, which makes the secret it claims a sensitive
 entry of the record, or disclosed; and if all fourteen are disclosed then either the forgery's
@@ -312,7 +305,7 @@ theorem cases_of_canonical (adversary : Adversary)
       rw [hcanonical.2.1, @ForsDispatch.sign_apply (replayQuery result.2)]
       rfl
     rcases SplitRouted.signed_or_sensitive_of_secrets walk.1.1.1
-        walk.1.1.2.2 (@GraphStakes.honestRevealed (replayQuery result.2) walk.1.1.1 walk.1.1.2.2)
+        walk.1.1.2.2 (GraphStakes.honestRevealed (replayQuery result.2) walk.1.1.1 walk.1.1.2.2)
         (ServedLog.disclosedByLog
           (generatedKey walk.1.1.1 walk.1.1.2.1 walk.1.1.2.2 result.2))
         result result.2 walk.1.2
@@ -326,7 +319,6 @@ theorem cases_of_canonical (adversary : Adversary)
     · exact Or.inr (Or.inl ⟨message, parsed, hframe, hparsed, _,
         mem_claimedCandidates_fors _ _ _ _ _ _ tree, hsensitive⟩)
 
-omit [HasQuery HashSpec Id] in
 /-- **A win is the answer side, the input side, or the signer's own signature.** -/
 theorem cases_of_win_routed (adversary : Adversary)
     {walk : ((Digest × Digest × Digest) × Cells) × QueryCache HashSpec}
@@ -356,7 +348,6 @@ theorem cases_of_win_routed (adversary : Adversary)
     exact ⟨_, mem_claimedCandidates_wots _ _ _ _ _ _ layer chain, hsensitive⟩
   · exact Or.inr (Or.inr ⟨message, parsed, hframe, hparsed, hcanonical⟩)
 
-omit [HasQuery HashSpec Id] in
 /-- **A win is the answer side, the input side, or a replay.** In the third case the
 forgery is the signer's own signature and the only digest disclosing its positions is the one
 the forgery itself reads, so the randomiser it carries is the signer's, which strong freshness

@@ -110,6 +110,41 @@ theorem evalDist_bind_apply_le_of_forall_notMem_eq_zero {α β : Type} [Measurab
 
 namespace AnswerTape
 
+/-! ## Coordinatewise conditions of an assignment -/
+
+section Assign
+
+variable {α : Type} {q : ℕ}
+
+/-- The coordinatewise conditions of an assignment `p`: coordinate `j` must satisfy every
+condition whose role `p` places at `j`. -/
+def piOfAssign {k : ℕ} (p : Fin k → Fin q) (S : Fin k → Set α) : Fin q → Set α :=
+  fun j => ⋂ i ∈ ({i | p i = j} : Set (Fin k)), S i
+
+/-- The event that every role's coordinate satisfies that role's condition is the
+coordinatewise event of `piOfAssign`. -/
+theorem setOf_forall_mem_eq_univPi {k : ℕ} (p : Fin k → Fin q) (S : Fin k → Set α) :
+    {v : Fin q → α | ∀ i, v (p i) ∈ S i} = Set.univ.pi (piOfAssign p S) := by
+  ext v
+  simp only [Set.mem_ofPred_eq, Set.mem_univ_pi, piOfAssign, Set.mem_iInter]
+  exact ⟨fun h j i hi => hi ▸ h i, fun h i => h (p i) i rfl⟩
+
+/-- A coordinate satisfies its coordinatewise condition exactly when it satisfies every
+condition the assignment places there. -/
+theorem mem_piOfAssign {k : ℕ} {p : Fin k → Fin q} {S : Fin k → Set α} {j : Fin q} {x : α} :
+    x ∈ piOfAssign p S j ↔ ∀ i, p i = j → x ∈ S i := by
+  simp [piOfAssign]
+
+/-- At a coordinate that an injective assignment uses, the coordinatewise condition is exactly
+the condition of the single role placed there. -/
+theorem piOfAssign_apply_of_injective {k : ℕ} {p : Fin k → Fin q} (hp : Function.Injective p)
+    (S : Fin k → Set α) (i : Fin k) : piOfAssign p S (p i) = S i := by
+  have h : ({i' | p i' = p i} : Set (Fin k)) = {i} := by
+    ext i'; exact ⟨fun h => hp h, fun h => by simp_all⟩
+  rw [piOfAssign, h, Set.biInter_singleton]
+
+end Assign
+
 /-! ## The tape draw -/
 
 /-- `q` independent uniform draws from `α`, collected as a tuple. -/
@@ -142,36 +177,6 @@ theorem evalDist_answerTape :
 theorem evalDist_answerTape_univPi (S : Fin q → Set α) :
     𝒟[answerTape α q] (Set.univ.pi S) = ∏ i, 𝒟[($ᵗ α : ProbComp α)] (S i) := by
   rw [evalDist_answerTape, Measure.pi_pi]
-
-/-- The coordinatewise conditions of an assignment `p`: coordinate `j` must satisfy every
-condition whose role `p` places at `j`. -/
-def piOfAssign {k : ℕ} (p : Fin k → Fin q) (S : Fin k → Set α) : Fin q → Set α :=
-  fun j => ⋂ i ∈ ({i | p i = j} : Set (Fin k)), S i
-
-omit [SampleableType α] [MeasurableSpace α] in
-/-- The event that every role's coordinate satisfies that role's condition is the
-coordinatewise event of `piOfAssign`. -/
-theorem setOf_forall_mem_eq_univPi {k : ℕ} (p : Fin k → Fin q) (S : Fin k → Set α) :
-    {v : Fin q → α | ∀ i, v (p i) ∈ S i} = Set.univ.pi (piOfAssign p S) := by
-  ext v
-  simp only [Set.mem_ofPred_eq, Set.mem_univ_pi, piOfAssign, Set.mem_iInter]
-  exact ⟨fun h j i hi => hi ▸ h i, fun h i => h (p i) i rfl⟩
-
-omit [SampleableType α] [MeasurableSpace α] in
-/-- A coordinate satisfies its coordinatewise condition exactly when it satisfies every
-condition the assignment places there. -/
-theorem mem_piOfAssign {k : ℕ} {p : Fin k → Fin q} {S : Fin k → Set α} {j : Fin q} {x : α} :
-    x ∈ piOfAssign p S j ↔ ∀ i, p i = j → x ∈ S i := by
-  simp [piOfAssign]
-
-omit [SampleableType α] [MeasurableSpace α] in
-/-- At a coordinate that an injective assignment uses, the coordinatewise condition is exactly
-the condition of the single role placed there. -/
-theorem piOfAssign_apply_of_injective {k : ℕ} {p : Fin k → Fin q} (hp : Function.Injective p)
-    (S : Fin k → Set α) (i : Fin k) : piOfAssign p S (p i) = S i := by
-  have h : ({i' | p i' = p i} : Set (Fin k)) = {i} := by
-    ext i'; exact ⟨fun h => hp h, fun h => by simp_all⟩
-  rw [piOfAssign, h, Set.biInter_singleton]
 
 /-- **The product bound at an arbitrary assignment.** The bound is a product over the
 coordinates the assignment uses, of the mass of the *conjunction* of the conditions placed

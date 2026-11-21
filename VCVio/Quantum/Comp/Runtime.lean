@@ -444,7 +444,7 @@ theorem evalDistMap_apply {γ : Type*} [MeasurableSpace γ] (x : QuantumComp L s
     (ρ : SubState A) (f : (Σ u, X u) → γ) {s : Set γ} (hs : MeasurableSet s) :
     R.evalDistMap I x ρ f s =
       ∑' p, ENNReal.ofReal (R.jointPost I x ρ p).matrix.trace.re * s.indicator 1 (f p) := by
-  simp only [evalDistMap, Measure.sum_apply _ hs, Measure.smul_apply,
+  simp only [evalDistMap, Measure.sum_apply _ hs, smul_apply,
     Measure.dirac_apply' _ hs, smul_eq_mul]
 
 /-- Observing the leaf itself gives the outcome distribution. -/

@@ -332,6 +332,23 @@ independent of a secret:
 Name each one with a definition (`cmaReduction`, `hvzkSimulator`,
 `unlinkToMultiplePRFReduction`) and state the bound for that definition.
 
+The same reasoning applies to hypotheses. A premise `∀ adv, Adv adv ≤ ε` that ranges over an
+adversary type holds only when `ε` is at least what exhaustive search achieves, so a theorem that
+assumes it says nothing at the parameters it is meant for. Query budgets do not change this,
+because they do not bound local computation: an adversary that searches a PRF key computed outside
+the oracle fits every budget. Assume the bound for the named distinguisher instead, as in
+`hε : prfAdvantage prf (hidingDistinguisher … adv) ≤ ε` for the adversary at hand, and state the
+conclusion for that adversary.
+
+The exception is security that is statistical in the pure random oracle model: the oracle is
+sampled when the experiment runs, the adversary's only access to the secrets is through oracle
+queries (and its own coins), and its oracle queries are bounded. Merkle-tree commitments are the
+standard case: Chiesa–Yogev (*Building Cryptographic Proofs from Hash Functions*, Version 1.2) work
+in this model, with adversaries computationally unbounded and query-bounded. There a bound over
+every query-bounded adversary is meaningful, as in
+[`VCVio/CryptoFoundations/VectorCommitment/Hiding.lean`](../../VCVio/CryptoFoundations/VectorCommitment/Hiding.lean).
+A computational assumption still requires the named reduction.
+
 A named reduction also makes the next steps possible. Its query count or cost can be proved as
 a separate lemma about the same definition. The asymptotic lemmas in
 [`VCVio/CryptoFoundations/Asymptotics/Security.lean`](../../VCVio/CryptoFoundations/Asymptotics/Security.lean),

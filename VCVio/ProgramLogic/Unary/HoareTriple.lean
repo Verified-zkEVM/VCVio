@@ -120,7 +120,7 @@ theorem triple_iff_le_wp
     (pre : ℝ≥0∞) (oa : OracleComp spec α) (post : α → ℝ≥0∞) :
     Triple pre oa post ↔
       pre ≤ wp oa post :=
-  Std.WP.Triple.iff (epost := Lean.Order.bot)
+  Std.WP.Triple.iff (eposts := Lean.Order.bot)
 
 /-- Construct a quantitative triple from an expectation inequality. -/
 theorem triple_ofLE

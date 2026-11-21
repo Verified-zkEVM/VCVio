@@ -7,7 +7,9 @@ Authors: Devon Tuma
 module
 
 public import VCVio.EvalDist.ProbabilityNotation
-public import VCVio.EvalDist.Lossless
+public import PolyFun.Control.Monad.Measure.Lossless
+public import Mathlib.MeasureTheory.Measure.ProbabilityMeasure
+public import VCVio.EvalDist.Defs.Measure.Core
 public import Mathlib.MeasureTheory.Integral.Lebesgue.Countable
 public import Mathlib.Data.Fintype.Sets
 
@@ -90,7 +92,7 @@ theorem measurable_evalDist_bind_ite {ρ : Type*} {α β : Type}
     Measurable fun r ↦ 𝒟[mx r >>= fun x ↦ if p r x then yes r else no r] := by
   simp_rw [evalDist_bind_ite, prEvent_not_eq_apply_false, prEvent_eq_evalDist_map]
   refine Measure.measurable_of_measurable_coe _ fun s hs ↦ ?_
-  simp only [Measure.add_apply, Measure.smul_apply, smul_eq_mul]
+  simp only [add_apply, smul_apply, smul_eq_mul]
   exact (((Measure.measurable_coe (measurableSet_singleton True)).comp hobs).mul
     ((Measure.measurable_coe hs).comp hyes)).add
     (((Measure.measurable_coe (measurableSet_singleton False)).comp hobs).mul
@@ -105,7 +107,7 @@ theorem evalDist.isProbabilityMeasure_bind_ite {α β : Type} [MeasurableSpace �
     IsProbabilityMeasure 𝒟[mx >>= fun x ↦ if p x then yes else no] := by
   constructor
   rw [evalDist_bind_ite]
-  simp only [Measure.add_apply, Measure.smul_apply, smul_eq_mul, measure_univ, mul_one]
+  simp only [add_apply, smul_apply, smul_eq_mul, measure_univ, mul_one]
   exact (prEvent_add_prEvent_not mx p).trans (measure_univ)
 
 /-- The event probability of a conditional continuation is the weighted sum of its two branch
@@ -118,7 +120,7 @@ theorem prEvent_bind_ite {α β : Type} (mx : m α) (p : α → Prop) [Decidable
   rw [prEvent_def, map_bind]
   simp_rw [apply_ite (Functor.map q)]
   rw [evalDist_bind_ite]
-  simp only [Measure.add_apply, Measure.smul_apply, smul_eq_mul]
+  simp only [add_apply, smul_apply, smul_eq_mul]
   rfl
 
 /-- A continuation event that is constant on an observed condition and zero otherwise factors
@@ -139,5 +141,5 @@ theorem prEvent_bind_eq_mul_of_ite {α β γ : Type}
           split_ifs <;> simp), id_map]
     _ = _ := by
       rw [prEvent_def, evalDist_bind_ite]
-      simp only [Measure.add_apply, Measure.smul_apply, smul_eq_mul, ← prEvent_def]
+      simp only [add_apply, smul_apply, smul_eq_mul, ← prEvent_def]
       simp

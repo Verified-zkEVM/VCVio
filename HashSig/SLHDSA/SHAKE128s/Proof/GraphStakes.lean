@@ -169,27 +169,29 @@ what lets the WOTS clause be read off the walk rather than off the signing log. 
 
 section HonestDigit
 
-variable [HasQuery HashSpec Id]
+variable {hash : HasQuery HashSpec Id}
 
 /-- The message the honest key at `key` signs. -/
-@[expose] def honestMessage (secretSeed publicSeed : Digest) (key : WotsKey) : Digest :=
+@[expose] def honestMessage (hash : HasQuery HashSpec Id)
+    (secretSeed publicSeed : Digest) (key : WotsKey) : Digest :=
   match key.tree.layer.val with
-  | 0 => value secretSeed publicSeed (.structural (.forsRoots ⟨key.tree.tree, key.leaf⟩))
-  | layer + 1 => Extraction.HypertreeChain.honestNode secretSeed publicSeed layer
+  | 0 => value hash secretSeed publicSeed (.structural (.forsRoots ⟨key.tree.tree, key.leaf⟩))
+  | layer + 1 => Extraction.HypertreeChain.honestNode hash secretSeed publicSeed layer
       (key.tree.tree.val * 2 ^ subtreeHeight + key.leaf.val)
 
 /-- The digit that message encodes on a chain: the position the signature on this key
 discloses. -/
 @[expose]
-def honestRevealed (secretSeed publicSeed : Digest) (key : WotsKey) (chain : Fin chains) : Nat :=
-  (Checksum.encode (honestMessage secretSeed publicSeed key) chain).val
+def honestRevealed (hash : HasQuery HashSpec Id)
+    (secretSeed publicSeed : Digest) (key : WotsKey) (chain : Fin chains) : Nat :=
+  (Checksum.encode (honestMessage hash secretSeed publicSeed key) chain).val
 
 /-- A revealed digit never exceeds `w - 1`, which is the only thing the rate needs of it. -/
 theorem honestRevealed_le (secretSeed publicSeed : Digest) :
     ∀ (key : WotsKey) (chain : Fin chains),
-      honestRevealed secretSeed publicSeed key chain ≤ w - 1 := by
+      honestRevealed hash secretSeed publicSeed key chain ≤ w - 1 := by
   intro key chain
-  have := (Checksum.encode (honestMessage secretSeed publicSeed key) chain).isLt
+  have := (Checksum.encode (honestMessage hash secretSeed publicSeed key) chain).isLt
   simp only [honestRevealed, w, winternitzBits] at this ⊢
   omega
 
@@ -256,7 +258,7 @@ theorem forsSecret_signed_or_not_obtainable (cache : QueryCache HashSpec)
         secretSeed publicSeed key.address (Extraction.Fors.leafIndex indices tree))
     (tree : Fin forsTrees) :
     (signature tree).secret =
-        @value (CacheReplay.replayQuery cache) secretSeed publicSeed
+        value (CacheReplay.replayQuery cache) secretSeed publicSeed
           (.structural (.forsPrf key (forsIndex indices tree))) ∧
       (forsIndex indices tree ∈ signedAt state key ∨
         ¬ Obtainable graph (fun other => ¬ unavailableAt revealed signedAt state other)

@@ -121,16 +121,47 @@ theorem lintegral_resource_le_add_of_expectedCount (so : QueryImpl spec (StateT 
 
 section Hit
 
-variable {Y : Type} [Fintype Y] [DecidableEq Y] [SampleableType Y] [Inhabited Y]
+variable {Y : Type} [Fintype Y]
 
 /-- The hit state: `none` once two consumed values coincide, otherwise `some (k, P)` with `k`
 designated slots not yet consumed and `P` the consumed values not yet hit. -/
 abbrev HitState (Y : Type) := Option (ℕ × Finset Y)
 
+/-- The hit potential at remaining budget `n`: `(n / |Y|) ^ (k + |P|)`, and `0` once two
+consumed values coincide. -/
+noncomputable def hitPot (n : ℕ) : HitState Y → ℝ≥0∞
+  | none => 0
+  | some (k, P) => ((n : ℝ≥0∞) * (Fintype.card Y : ℝ≥0∞)⁻¹) ^ (k + P.card)
+
+theorem hitPot_mono (s : HitState Y) : Monotone fun n => hitPot n s := by
+  intro a b hab
+  rcases s with _ | ⟨k, P⟩
+  · simp [hitPot]
+  · simp only [hitPot]
+    gcongr
+
+variable [DecidableEq Y]
+
 /-- Consumption of the next designated slot with the value `y`. -/
 def consume (y : Y) : HitState Y → HitState Y
   | none => none
   | some (k, P) => if k = 0 then some (k, P) else if y ∈ P then none else some (k - 1, insert y P)
+
+theorem hitPot_consume (n : ℕ) (y : Y) (s : HitState Y) :
+    hitPot n (consume y s) ≤ hitPot n s := by
+  rcases s with _ | ⟨k, P⟩
+  · simp [consume, hitPot]
+  · simp only [consume]
+    split_ifs with hk hy
+    · exact le_rfl
+    · simp [hitPot]
+    · simp only [hitPot]
+      rw [Finset.card_insert_of_notMem hy]
+      apply le_of_eq
+      congr 1
+      omega
+
+variable [SampleableType Y] [Inhabited Y]
 
 /-- The hit oracle: `none` is a fresh draw, which hits the consumed value it equals; `some none`
 is a cached derivation, which draws nothing; `some (some y)` consumes a slot with the value `y`.
@@ -145,35 +176,6 @@ def hitCharged : Option (Option Y) → Prop := fun t => t = none ∨ t = some no
 
 instance : DecidablePred (hitCharged (Y := Y)) := fun t =>
   inferInstanceAs (Decidable (t = none ∨ t = some none))
-
-/-- The hit potential at remaining budget `n`: `(n / |Y|) ^ (k + |P|)`, and `0` once two
-consumed values coincide. -/
-noncomputable def hitPot (n : ℕ) : HitState Y → ℝ≥0∞
-  | none => 0
-  | some (k, P) => ((n : ℝ≥0∞) * (Fintype.card Y : ℝ≥0∞)⁻¹) ^ (k + P.card)
-
-omit [DecidableEq Y] [SampleableType Y] [Inhabited Y] in
-theorem hitPot_mono (s : HitState Y) : Monotone fun n => hitPot n s := by
-  intro a b hab
-  rcases s with _ | ⟨k, P⟩
-  · simp [hitPot]
-  · simp only [hitPot]
-    gcongr
-
-omit [SampleableType Y] [Inhabited Y] in
-theorem hitPot_consume (n : ℕ) (y : Y) (s : HitState Y) :
-    hitPot n (consume y s) ≤ hitPot n s := by
-  rcases s with _ | ⟨k, P⟩
-  · simp [consume, hitPot]
-  · simp only [consume]
-    split_ifs with hk hy
-    · exact le_rfl
-    · simp [hitPot]
-    · simp only [hitPot]
-      rw [Finset.card_insert_of_notMem hy]
-      apply le_of_eq
-      congr 1
-      omega
 
 theorem hitPot_step (t : Option (Option Y)) (s : HitState Y) (n : ℕ) :
     ∫⁻ r, r ∂𝒟[(fun z => hitPot n z.2) <$> (hitImpl t).run s] ≤
