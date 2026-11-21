@@ -12,6 +12,7 @@ public import VCVio.OracleComp.SimSemantics.StateT.UntilBad
 public import VCVio.OracleComp.SimSemantics.StateT.StateProjection
 public import VCVio.OracleComp.SimSemantics.Measure
 public import VCVio.OracleComp.QueryTracking.QueryBound.Hazard
+public import VCVio.OracleComp.QueryTracking.ListCache
 public import VCVio.OracleComp.Constructions.SampleableType.Measure
 public import ToMathlib.Data.ENNReal.Gauss
 
@@ -133,21 +134,6 @@ theorem prfRealExperiment_prfReduction (prf : PRFScheme K R M) (leak : M → Λ)
 
 variable [DecidableEq R] [SampleableType M]
 
-/-- The log `(r, F(r))` of a lazily sampled random function, read as a random-oracle cache: the
-value at `r` is the most recent logged value at `r`. -/
-@[expose] def logCache (log : List (R × M)) : (R →ₒ M).QueryCache :=
-  QueryCache.ofFn fun r => log.lookup r
-
-omit [SampleableType R] [AddCommGroup M] [SampleableType M] in
-/-- Logging the pair `(r, y)` caches `y` at `r`. -/
-lemma logCache_cons (r : R) (y : M) (log : List (R × M)) :
-    logCache ((r, y) :: log) = (logCache log).cacheQuery r y := by
-  ext r'
-  by_cases h : r' = r
-  · subst h
-    simp [logCache, List.lookup]
-  · simp [logCache, List.lookup, beq_false_of_ne h, h]
-
 /-- The value of the random function at `r`: the logged value, or a fresh uniform sample. -/
 @[expose] def rfAnswer (log : List (R × M)) (r : R) : ProbComp M :=
   match log.lookup r with
@@ -182,8 +168,9 @@ theorem prfIdealExperiment_prfReduction (prf : PRFScheme K R M) (leak : M → Λ
     rw [← OracleComp.liftComp_eq_liftM, simulateQ_prfIdealQueryImpl_liftComp]
     simp [map_eq_bind_pure_comp]
   unfold prfIdealExperiment prfReduction
-  rw [← QueryImpl.simulateQ_compose, show (∅ : (R →ₒ M).QueryCache) = logCache [] by ext; rfl]
-  refine (OracleComp.run'_simulateQ_eq_of_query_map_eq (rfImpl leak b) _ logCache
+  rw [← QueryImpl.simulateQ_compose, ← QueryImpl.ListCache.decode_nil]
+  refine (OracleComp.run'_simulateQ_eq_of_query_map_eq (rfImpl leak b) _
+    QueryImpl.ListCache.decode
     (fun t log => ?_) adversary []).symm
   rcases t with n | ⟨m₀, m₁⟩
   · simp [rfImpl, reductionImpl, prfIdealQueryImpl, OracleSpec.romImpl_eq_passthrough_add,
@@ -196,22 +183,22 @@ theorem prfIdealExperiment_prfReduction (prf : PRFScheme K R M) (leak : M → Λ
       simp only [StateT.run_monadLift, StateT.run_get, StateT.run_set, StateT.run_pure,
         bind_assoc, pure_bind, map_bind, bind_map_left, map_pure]
       refine bind_congr fun r => ?_
-      simp only [logCache, QueryCache.ofFn_apply]
+      simp only [QueryImpl.ListCache.decode, QueryCache.ofFn_apply]
       cases hr : log.lookup r with
       | none =>
         simp only [rfAnswer, hr, bind_pure_comp, monadLift_self, Functor.map_map]
         refine congrArg (· <$> ($ᵗ M : ProbComp M)) (funext fun y => ?_)
-        simp only [Prod.map, id, logCache_cons]
+        simp only [Prod.map, id, QueryImpl.ListCache.decode_cons]
         rfl
       | some y =>
         simp only [rfAnswer, hr, pure_bind, monadLift_self, Prod.map, id]
         congr 2
-        rw [logCache_cons]
+        rw [QueryImpl.ListCache.decode_cons]
         ext r'
         by_cases h' : r' = r
         · subst h'
-          simp [logCache, hr]
-        · simp [h', logCache]
+          simp [QueryImpl.ListCache.decode, hr]
+        · simp [h', QueryImpl.ListCache.decode]
     · simp [rfImpl, reductionImpl, h]
 
 /-! ## The fresh game and the nonce-repetition event -/
@@ -503,8 +490,9 @@ theorem boolDist_rfImpl_freshImpl_le [Fintype R] (leak : M → Λ) (b : Bool)
 
 /-- **CPA security from a pseudorandom function**, for multiple encryptions. Against an adversary
 with at most `q` left-or-right queries, the CPA advantage against `scheme prf` is at most the PRF
-advantages of the two distinguishers `prfReduction prf leak adversary b` plus the probability
-`q (q - 1) / |R|` that two encryptions share their randomness, counted once for each hidden bit. -/
+advantages of the two distinguishers `prfReduction prf leak adversary b` plus `q (q - 1) / |R|`:
+for each hidden bit, the bound `q (q - 1) / (2 |R|)` on the probability that two encryptions share
+their randomness. -/
 theorem IND_CPA_Advantage_le [Fintype R] (prf : PRFScheme K R M) (leak : M → Λ)
     (adversary : (scheme prf).IND_CPA_Adversary) {q : ℕ}
     (hq : adversary.MakesAtMostQueries q) :
