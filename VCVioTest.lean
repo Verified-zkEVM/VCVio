@@ -7,6 +7,7 @@ public import VCVioTest.Algorithms.Hash
 public import VCVioTest.AnswerTapeAdaptedUnion
 public import VCVioTest.Asymptotics.Negligible
 public import VCVioTest.CachedPointsBound
+public import VCVioTest.CompensatedState
 public import VCVioTest.ComplementaryChecksum
 public import VCVioTest.Computability
 public import VCVioTest.CryptoFoundations.BR93Measure
