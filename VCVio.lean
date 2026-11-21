@@ -541,6 +541,7 @@ public import VCVio.OracleComp.SimSemantics.StateT.EqDistTriple
 public import VCVio.OracleComp.SimSemantics.StateT.EqDistTriple.Simulate
 public import VCVio.OracleComp.SimSemantics.StateT.Measure
 public import VCVio.OracleComp.SimSemantics.StateT.PreservesInv
+public import VCVio.OracleComp.SimSemantics.StateT.RestrictedProjection
 public import VCVio.OracleComp.SimSemantics.StateT.StateProjection
 public import VCVio.OracleComp.SimSemantics.StateT.StateSeparating
 public import VCVio.OracleComp.SimSemantics.StateT.UntilBad
