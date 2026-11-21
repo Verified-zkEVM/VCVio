@@ -28,31 +28,6 @@ open SLHDSA.SHAKE128s.Bridge.SharedExperiment.Guarded
 open scoped SLHDSA.SHAKE128s.Bridge.SharedExperiment.SampleSpaces
 namespace SLHDSA.SHAKE128s.Bridge.SharedExperiment.GuardedFill
 
-private theorem prEvent_extend_pair_le {α β γ : Type} (source : ProbComp α)
-    (fill : α → ProbComp β) (secret : ProbComp γ)
-    (hit : α × β × γ → Prop) (paid : α → Prop)
-    (covers : ∀ b ∈ support source, ∀ st ∈ support (fill b), ∀ sk ∈ support secret,
-      hit (b, st, sk) → paid b) :
-    let run : ProbComp (α × β × γ) := do
-      let b ← source
-      let st ← fill b
-      let sk ← secret
-      pure (b, st, sk)
-    Pr{let r ← run}[hit r] ≤ Pr{let b ← source}[paid b] := by
-  intro run
-  apply (prEvent_mono_of_support run hit (fun r => paid r.1) ?_).trans_eq
-  · have projected : Prod.fst <$> run =ᵈ source := by
-      simp only [run, map_bind, map_pure]
-      conv_rhs => rw [← id_map source, map_eq_bind_pure_comp]
-      apply EvalDistEq.bind_right
-      intro b
-      exact (OracleComp.EvalDistEq.bind_const _ _).trans (OracleComp.EvalDistEq.bind_const _ _)
-    simpa only [prEvent_map] using projected.prEvent_eq paid
-  · intro r mem
-    simp only [run, mem_support_bind_iff, support_pure, Set.mem_singleton_iff] at mem
-    obtain ⟨b, hb, st, hst, sk, hs, rfl⟩ := mem
-    exact covers b hb st hst sk hs
-
 private theorem residual_le_of_block {s : FIPS205.core.PkSeed}
     {adv : Game.Adversary FIPS205.Answer PK} {caps : Nat × Nat}
     {fallback : (input : LabCommon.Domain) → LabCommon.Range input} {L R : Nat}
@@ -69,10 +44,12 @@ private theorem residual_le_of_block {s : FIPS205.core.PkSeed}
   have marg := (eraseTapes_tapedFill s adv true caps fallback L R).prEvent_eq event
   rw [prEvent_map] at marg
   rw [← marg]
-  apply prEvent_extend_pair_le _ (fun b : Block => RelabelState.endFill b.2.2.1.1.2.1)
-    ($ᵗ Secret) (fun r => event (eraseTapes r)) paid
-  intro b hb st hs secret _
-  exact covers b hb st hs secret
+  apply (prEvent_mono_of_support _ _ (fun r => paid r.1) ?_).trans_eq
+  · simpa only [prEvent_map] using (fst_tapedFill s adv true caps fallback L R).prEvent_eq paid
+  · intro r mem
+    simp only [tapedFill, mem_support_bind_iff, support_pure, Set.mem_singleton_iff] at mem
+    obtain ⟨b, hb, st, hst, secret, _, rfl⟩ := mem
+    exact covers b hb st hst secret
 
 private theorem block_covers_unpaid (q : Nat) (hq : 2 * q < 2 ^ 128)
     (s : FIPS205.core.PkSeed) (adv : Game.Adversary FIPS205.Answer PK)

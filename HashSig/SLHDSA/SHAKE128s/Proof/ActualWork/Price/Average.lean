@@ -96,15 +96,8 @@ theorem native_block_weak_average (adv : Game.Adversary FIPS205.Answer PK)
     (fun r => IsWeakKey FIPS205.params r.1.1.1.1.1.1.1)
   dsimp only
   rw [← h, prEvent_map]
-  let blocks := NoticingTape.blockRunOf (Native.nativeRun s adv reserve caps (fb s)) L R
-  have forget : (fun r : BlockFill => r.1) <$>
-      tapedFill s adv reserve caps (fb s) L R =ᵈ blocks := by
-    simp only [tapedFill, map_bind, map_pure]
-    rw [← bind_pure blocks]
-    apply EvalDistEq.bind_right
-    intro block
-    exact (OracleComp.EvalDistEq.bind_const _ _).trans (OracleComp.EvalDistEq.bind_const _ _)
-  simpa only [prEvent_map, weak, eraseTapes] using (forget.prEvent_eq weak).symm.le
+  simpa only [prEvent_map, weak, eraseTapes] using
+    ((fst_tapedFill s adv reserve caps (fb s) L R).prEvent_eq weak).symm.le
 
 /-- The unit left by the strict cap pays 34 full weak-key address masses. -/
 theorem reserve_pays_weak (q : Nat) (hq : 1 ≤ q) :

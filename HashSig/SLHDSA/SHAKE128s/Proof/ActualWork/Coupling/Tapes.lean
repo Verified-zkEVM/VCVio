@@ -28,6 +28,19 @@ namespace SLHDSA.SHAKE128s.Bridge.SharedExperiment.GuardedFill
   let secret ← ($ᵗ Secret : ProbComp Secret)
   pure (block, filled, secret)
 
+/-- Retaining the complete tape block after the graph fill and final secret draw preserves its
+joint distribution, including the terminal output, cache and paid counters. -/
+theorem fst_tapedFill (s : FIPS205.core.PkSeed)
+    (adv : Game.Adversary FIPS205.Answer PK) (reserve : Bool) (caps : Nat × Nat)
+    (fallback : (input : LabCommon.Domain) → LabCommon.Range input) (L R : Nat) :
+    Prod.fst <$> tapedFill s adv reserve caps fallback L R =ᵈ
+      NoticingTape.blockRunOf (Native.nativeRun s adv reserve caps fallback) L R := by
+  simp only [tapedFill, map_bind, map_pure]
+  conv_rhs => rw [← id_map (NoticingTape.blockRunOf _ L R), map_eq_bind_pure_comp]
+  apply EvalDistEq.bind_right
+  intro block
+  exact (OracleComp.EvalDistEq.bind_const _ _).trans (OracleComp.EvalDistEq.bind_const _ _)
+
 /-- Forget both padded tapes and the prefix-use witness, retaining the complete guarded value
 and deferred/final graph caches together with the final private draw. -/
 def eraseTapes (r : (((List HashOutput × List HashOutput) × Native.NativeTerminal) ×
