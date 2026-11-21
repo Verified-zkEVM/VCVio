@@ -281,4 +281,5 @@ public import VCVioTest.Unpredictability
 public import VCVioTest.UntilBadBind
 public import VCVioTest.VCGenAmbiguity
 public import VCVioTest.WeightedCap
+public import VCVioTest.WeightedCapDomination
 public import VCVioTest.WriterCostStateT
