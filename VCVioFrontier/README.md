@@ -13,7 +13,8 @@ From a separate checkout for the nested package, run the worked example from the
 cd VCVioFrontier && lake exe cache get && lake build VCVioFrontierTest.Examples.OneTimePad
 ```
 
-The first equality in the worked example can also be evaluated in a scratch Lean file.
+To print the first result, save the snippet below to a scratch file and run
+`lake env lean /path/to/PadReview.lean` from the nested package.
 [Open the Lean example](VCVioFrontierTest/Examples/OneTimePad.lean)
 
 ```lean
@@ -37,19 +38,22 @@ ciphertext distributions, including at width zero.
 
 1. PolyFun models the local functions as scoped terms. The pair of variables is
    `(msg, key)`. Encryption evaluates `key xor msg` and the full round trip evaluates
-   `key xor (key xor msg)`. In PolyFunFrontier, Samuel Schlesinger’s `polytime` tactic from cslib-frontier proves the
-   bound for each primitive word operation. `wordTerm_polyTime` gives the bound for the entire term. [Scoped word terms](https://github.com/dtumad/PolyFun/blob/7c69cdbf24a1865bc7544496ef6d3b9fa746c2a3/PolyFunFrontier/PolyFunFrontier/IPFunctor/Scoped/PolyTime.lean)
+   `key xor (key xor msg)`. In PolyFunFrontier, Samuel Schlesinger’s `polytime` tactic from
+   cslib-frontier proves the primitive word-operation bound. `wordTerm_polyTime` gives the bound
+   for the entire term. [Scoped word terms](https://github.com/dtumad/PolyFun/blob/7c69cdbf24a1865bc7544496ef6d3b9fa746c2a3/PolyFunFrontier/PolyFunFrontier/IPFunctor/Scoped/PolyTime.lean)
 2. PolyFunFrontier combines these local steps with the fair-bit handler. It noncomputably
    chooses a finite-control probabilistic multi-tape machine whose output law agrees with the handler on encoded
    inputs. Its polynomial clock bounds every supported run on every input word.
    The explicit key sampler has the required output law at clock `n + 1` on unary input `n`.
    The encryption machine has its own polynomial clock.
    [Pad machines and correctness](VCVioFrontier/Examples/OneTimePad/Machine.lean)
-3. VCVio’s `encryptWord_eq` identifies the word program with its one-time-pad security
-   experiment. `MachineRealization.output_measure` identifies the machine output measure
-   with VCVio’s evaluation of the handled tree. Perfect secrecy then applies to the machine
-   that has the halting proof. [Measure bridge](VCVioFrontier/OracleComp/Measure.lean) ·
-   [Machine output law](VCVioFrontier/OracleComp/Realization.lean)
+3. `encryptWord_eq` identifies the tree with VCVio’s encryption experiment. The pad’s
+   perfect-secrecy theorem, `oneTimePad.denote_coinOneTimePad_cipherGivenMsg_eq_uniform`,
+   proves its ciphertext is uniform for every message. `encryptWord_law` transports this
+   distribution to words. `WordMachine.output_law` identifies it with the output measure
+   of the same machine that has the halting proof.
+   [Original uniform-ciphertext proof](../Examples/OneTimePad/ComputationalComplexity.lean) ·
+   [Machine and handler measure](VCVioFrontier/OracleComp/Realization.lean)
 
 ## Build
 
