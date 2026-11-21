@@ -7,6 +7,7 @@ public import VCVioTest.Algorithms.Hash
 public import VCVioTest.AnswerTapeAdaptedUnion
 public import VCVioTest.Asymptotics.Negligible
 public import VCVioTest.CachedPointsBound
+public import VCVioTest.CompensatedState
 public import VCVioTest.ComplementaryChecksum
 public import VCVioTest.Computability
 public import VCVioTest.CryptoFoundations.BR93Measure
@@ -222,6 +223,7 @@ public import VCVioTest.RandomOracleOrdinaryWord
 public import VCVioTest.RandomOraclePairedDerivations
 public import VCVioTest.RandomOraclePairedGraphReadback
 public import VCVioTest.RandomOraclePairedValue
+public import VCVioTest.RandomOraclePartnerCompensation
 public import VCVioTest.RandomOracleReadSet
 public import VCVioTest.RandomOracleRedirect
 public import VCVioTest.RandomOracleRegisteredCost
@@ -231,6 +233,7 @@ public import VCVioTest.RandomOracleResidualTables
 public import VCVioTest.RandomOracleRouting
 public import VCVioTest.RandomOracleScanPartners
 public import VCVioTest.RandomOracleSettled
+public import VCVioTest.RandomOracleStoppedPartner
 public import VCVioTest.RandomOracleTouchRead
 public import VCVioTest.RandomOracleUnaryEdge
 public import VCVioTest.RandomOracleUndisclosed
