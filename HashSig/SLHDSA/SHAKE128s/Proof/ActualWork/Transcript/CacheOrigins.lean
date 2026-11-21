@@ -8,6 +8,7 @@ module
 
 public import HashSig.SLHDSA.SHAKE128s.Proof.ActualWork.Coupling.Guarded
 public import HashSig.SLHDSA.Security.ByteClash
+import HashSig.SLHDSA.Security.SecretTraces
 public import HashSig.SLHDSA.Security.NativeCounts
 public import HashSig.SLHDSA.Security.NativeRelative
 public import HashSig.SLHDSA.SHAKE128s.Bridge.SharedExperiment.Joint
@@ -457,60 +458,17 @@ theorem lab_verify_inputs
     AllQueriesSatisfy
       ((labScheme FIPS205.core (fun pk => pure pk.pkSeed) s).verify key msg sig)
       (NativeProvenanceInput s key paid) := by
-  let sourceInput : (publicHashSpec FIPS205.core).Domain → Prop
-    | .thash seed _ _ => seed = s
-    | .hmsg R seed pkRoot message =>
-      R = sig.randomness ∧ seed = s ∧ pkRoot = root ∧ message = msg
-  have hsource : AllQueriesSatisfy
-      (GeneralScheme.verifyInternalM FIPS205.params FIPS205.core msg sig
-        (⟨s, root⟩ : PK) : OracleComp (publicHashSpec FIPS205.core) Bool) sourceInput := by
-    refine GeneralScheme.verifyInternalM_pred
-      (Q := fun oa => AllQueriesSatisfy oa sourceInput)
-      (fun _ => allQueriesSatisfy_pure _ _)
-      (fun _ _ => allQueriesSatisfy_bind) FIPS205.core msg sig (⟨s, root⟩ : PK) ?_ ?_
-    · intro address _ values
-      exact (allQueriesSatisfy_query_iff _ _).2 rfl
-    · exact (allQueriesSatisfy_query_iff _ _).2 ⟨rfl, rfl, rfl, rfl⟩
-  have hledger := verifyInternalM_queriesWithinConstructionTargets FIPS205.core
-    msg sig (⟨s, root⟩ : PK)
-  have hledgerAQS : AllQueriesSatisfy
-      (GeneralScheme.verifyInternalM FIPS205.params FIPS205.core msg sig
-        (⟨s, root⟩ : PK) : OracleComp (publicHashSpec FIPS205.core) Bool)
-      (ConstructionQueryReachable FIPS205.params FIPS205.core) :=
-    (allQueriesSatisfy_def _ _).2
-      ((queriesWithinConstructionTargets_iff_isQueryBound FIPS205.core _).1 hledger)
-  have hjoint := hledgerAQS.and hsource
-  let liftPublic := HasQuery.QueryHom.ofSimulateQ
-    (spec := publicHashSpec FIPS205.core) (m := OracleComp Lab)
   change AllQueriesSatisfy
-    (GeneralScheme.verifyInternalM FIPS205.params FIPS205.core msg sig
-      (⟨s, root⟩ : PK) : OracleComp Lab Bool)
-    (NativeProvenanceInput s (⟨s, root⟩ : PK) paid)
-  rw [← GeneralScheme.verifyInternalM_natural FIPS205.params FIPS205.core liftPublic]
-  change AllQueriesSatisfy
-    (simulateQ (HasQuery.toQueryImpl (spec := publicHashSpec FIPS205.core)
-      (m := OracleComp Lab))
-      (GeneralScheme.verifyInternalM FIPS205.params FIPS205.core msg sig (⟨s, root⟩ : PK)))
-    (NativeProvenanceInput s (⟨s, root⟩ : PK) paid)
-  refine hjoint.simulateQ ?_
-  intro input hi
-  change AllQueriesSatisfy
-    (query (spec := Lab) (.inl (.inl (.inr (.inl input)))))
-    (NativeProvenanceInput s (⟨s, root⟩ : PK) paid)
-  apply (allQueriesSatisfy_query_iff _ _).2
-  cases input with
-  | thash seed key values =>
-    have hseed : seed = s := hi.2
-    subst seed
-    have hmem := (mem_encodedConstructionAddresses_iff FIPS205.core key).1
-      ((constructionQueryReachable_thash_iff FIPS205.core s key values).1 hi.1)
-    obtain ⟨address, haddress, hkey⟩ := hmem
-    have hhonest : IsHonestKey FIPS205.params FIPS205.core key :=
-      ⟨address, .inl haddress, hkey⟩
-    exact Or.inl (shakeRoute_encode_thash key values hhonest)
-  | hmsg R seed pkRoot message =>
-    rcases hi.2 with ⟨_, hseed, hroot, _⟩
-    exact Or.inr ⟨R, message, by rw [hseed, hroot]⟩
+    (GeneralScheme.verifyInternalM FIPS205.params FIPS205.core msg sig (⟨s, root⟩ : PK) :
+      OracleComp Lab Bool) _
+  refine verifyInternalM_pred_of_ledger (m := OracleComp Lab)
+    (Q := fun p => AllQueriesSatisfy p (NativeProvenanceInput s (⟨s, root⟩ : PK) paid))
+    (fun _ => allQueriesSatisfy_pure _ _) (fun _ _ => allQueriesSatisfy_bind)
+    FIPS205.core msg sig (⟨s, root⟩ : PK) ?_ ?_
+  · intro a ha xs
+    apply (allQueriesSatisfy_query_iff _ _).2
+    exact Or.inl (shakeRoute_encode_thash _ _ ⟨a, Or.inl ha, rfl⟩)
+  · exact (allQueriesSatisfy_query_iff _ _).2 (Or.inr ⟨sig.randomness, msg, rfl⟩)
 
 end SLHDSA.SHAKE128s.Bridge.SharedExperiment.Native
 

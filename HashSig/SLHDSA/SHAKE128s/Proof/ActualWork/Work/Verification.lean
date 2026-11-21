@@ -8,6 +8,7 @@ module
 
 public import HashSig.SLHDSA.SHAKE128s.Bridge.SharedExperiment.Pure
 public import HashSig.SLHDSA.Security.NativeCounts
+import HashSig.SLHDSA.Security.SecretTraces
 import all HashSig.SLHDSA.Security.NativeCounts
 import all VCVio.OracleComp.QueryTracking.RandomOracle.ClassIndexedTape.Position
 import VCVio.OracleComp.SimSemantics.StateT.StateSeparating
@@ -238,46 +239,6 @@ private theorem execute_bind {α β : Type}
 private noncomputable abbrev markedLab (input : Lab.Domain) :=
   simulateQ commonProjection (SigningView.Events.phaseImpl A Message .verification (.inl input))
 
-private theorem typed_offsets (s : FIPS205.core.PkSeed) (root : FIPS205.core.Y)
-    (caps : Nat × Nat) (fallback : (input : LabCommon.Domain) → LabCommon.Range input)
-    (message : List Byte) (sig : GeneralScheme.SignatureCore FIPS205.params FIPS205.core) :
-    ∀ before result, result ∈ support (execute s caps fallback
-      (simulateQ markedLab
-        ((labScheme FIPS205.core (fun pk => pure pk.pkSeed) s).verify
-          ⟨s, root⟩ message sig)) before) →
-      offsets (¬IsWeakKey FIPS205.params (⟨s, root⟩ : PK)) before (world result) := by
-  let Q {α : Type} (action : OracleComp Lab α) := ∀ (before : World) (out : Result α),
-    out ∈ support (execute s caps fallback (simulateQ markedLab action) before) →
-      offsets (¬IsWeakKey FIPS205.params (⟨s, root⟩ : PK)) before (world out)
-  change Q (GeneralScheme.verifyInternalM FIPS205.params FIPS205.core message sig (⟨s, root⟩ : PK))
-  refine GeneralScheme.verifyInternalM_pred (m := OracleComp Lab) (Q := @Q) ?_ ?_
-    FIPS205.core message sig (⟨s, root⟩ : PK) ?_ ?_
-  · intro α x before out member
-    simp only [simulateQ_pure, execute, StateT.run_pure, support_pure,
-      Set.mem_singleton_iff] at member
-    subst out
-    exact offsets_refl _ _
-  · intro α β first rest hf hr before out member
-    rw [simulateQ_bind, execute_bind, mem_support_bind_iff] at member
-    obtain ⟨mid, hm, hn⟩ := member
-    exact offsets_trans (hf before mid hm) (hr _ (world mid) out hn)
-  · intro address _ values before out member
-    apply point_offsets s root (.thash s (FIPS205.core.adrsToKey address) values) trivial
-      caps fallback before out
-    change out ∈ support (execute s caps fallback (simulateQ markedLab
-      (liftM (Lab.query (.inl (.inl (.inr (.inl
-        (.thash s (FIPS205.core.adrsToKey address) values)))))))) before) at member
-    rw [simulateQ_spec_query] at member
-    exact member
-  · intro before out member
-    apply point_offsets s root (.hmsg sig.randomness s root message) ⟨rfl, rfl⟩
-      caps fallback before out
-    change out ∈ support (execute s caps fallback (simulateQ markedLab
-      (liftM (Lab.query (.inl (.inl (.inr (.inl
-        (.hmsg sig.randomness s root message)))))))) before) at member
-    rw [simulateQ_spec_query] at member
-    exact member
-
 /-- The marked external verifier on one request and a proposed wire signature. -/
 noncomputable abbrev verifySource (s : FIPS205.core.PkSeed) (key : PK)
     (request : Message) (wire : List Byte) : OracleComp LabCommon Bool :=
@@ -307,6 +268,38 @@ private theorem verifySource_eq (s : FIPS205.core.PkSeed) (key : PK)
       funext input
       simp only [QueryImpl.apply_compose, simulateQ_spec_query, markedLab]
 
+/-- A property closed under sequencing holds for the marked wire verifier when honest
+construction-address hashes and message hashes at the retained public key preserve it. -/
+private theorem verifySource_preserves (s : FIPS205.core.PkSeed) (root : FIPS205.core.Y)
+    (request : Message) (wire : List Byte)
+    (P : {α : Type} → OracleComp LabCommon α → Prop)
+    (hpure : ∀ {α : Type} (x : α), P (pure x))
+    (hbind : ∀ {α β : Type} {p : OracleComp LabCommon α} {f : α → OracleComp LabCommon β},
+      P p → (∀ x, P (f x)) → P (p >>= f))
+    (hthash : ∀ a ∈ constructionAddresses FIPS205.params, ∀ xs,
+      P (markedPoint (.thash s (FIPS205.core.adrsToKey a) xs)))
+    (hhmsg : ∀ r msg, P (markedPoint (.hmsg r s root msg))) :
+    P (verifySource s ⟨s, root⟩ request wire) := by
+  rw [verifySource_eq]
+  split
+  next message sig _ _ =>
+    let Q {α : Type} (p : OracleComp Lab α) := P (simulateQ markedLab p)
+    change Q (GeneralScheme.verifyInternalM FIPS205.params FIPS205.core message sig (⟨s, root⟩ : PK))
+    refine verifyInternalM_pred_of_ledger (m := OracleComp Lab) (Q := @Q) ?_ ?_
+      FIPS205.core message sig (⟨s, root⟩ : PK) ?_ ?_
+    · intro α x
+      simpa only [Q, simulateQ_pure] using hpure x
+    · intro α β p f hp hf
+      simpa only [Q, simulateQ_bind] using hbind hp hf
+    · intro address honest values
+      change P (simulateQ markedLab (liftM (Lab.query (.inl (.inl (.inr (.inl
+        (.thash s (FIPS205.core.adrsToKey address) values))))))))
+      simpa only [simulateQ_spec_query] using hthash address honest values
+    · change P (simulateQ markedLab (liftM (Lab.query (.inl (.inl (.inr (.inl
+        (.hmsg sig.randomness s root message))))))))
+      simpa only [simulateQ_spec_query] using hhmsg sig.randomness message
+  next => exact hpure false
+
 /-- Wire or framing rejection returns false with every state preserved. -/
 theorem verify_rejected (s : FIPS205.core.PkSeed) (key : PK) (request : Message) (wire : List Byte)
     (invalid : (External.encodePureMessage request.context request.message).toOption = none ∨
@@ -331,13 +324,20 @@ theorem marked_verify_count_offsets (s : FIPS205.core.PkSeed) (root : FIPS205.co
     (member : result ∈ support (execute s caps fallback
       (verifySource s ⟨s, root⟩ request wire) before)) :
     offsets (¬IsWeakKey FIPS205.params (⟨s, root⟩ : PK)) before (world result) := by
-  rw [verifySource_eq] at member
-  split at member
-  · exact typed_offsets s root caps fallback _ _ before result member
-  · simp only [execute, simulateQ_pure, StateT.run_pure, support_pure,
-      Set.mem_singleton_iff] at member
-    subst result
-    exact offsets_refl _ _
+  let P {α : Type} (p : OracleComp LabCommon α) := ∀ st (out : Result α),
+    out ∈ support (execute s caps fallback p st) →
+      offsets (¬IsWeakKey FIPS205.params (⟨s, root⟩ : PK)) st (world out)
+  refine verifySource_preserves s root request wire (@P) ?_ ?_
+    (fun a _ xs => point_offsets s root (.thash s (FIPS205.core.adrsToKey a) xs) trivial caps fallback)
+    (fun r msg => point_offsets s root (.hmsg r s root msg) ⟨rfl, rfl⟩ caps fallback)
+    before result member
+  · intro α x st out mem
+    simp only [execute, simulateQ_pure, StateT.run_pure, support_pure, Set.mem_singleton_iff] at mem
+    exact mem ▸ offsets_refl _ _
+  · intro α β p f hp hf st out mem
+    rw [execute_bind, mem_support_bind_iff] at mem
+    obtain ⟨mid, hm, hz⟩ := mem
+    exact offsets_trans (hp st mid hm) (hf _ (world mid) out hz)
 
 end VerificationOffsets
 end SLHDSA.SHAKE128s.Bridge.SharedExperiment

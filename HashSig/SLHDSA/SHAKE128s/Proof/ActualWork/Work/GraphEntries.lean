@@ -9,7 +9,6 @@ module
 public import HashSig.SLHDSA.SHAKE128s.Proof.ActualWork.Coupling.Guarded
 public import HashSig.SLHDSA.SHAKE128s.Proof.ActualWork.Work.Verification
 import all HashSig.SLHDSA.SHAKE128s.Proof.ActualWork.Work.Verification
-import HashSig.SLHDSA.Security.SecretTraces
 import all HashSig.SLHDSA.SHAKE128s.Bridge.SharedExperiment.Joint
 import VCVio.OracleComp.SimSemantics.StateT.StateSeparating
 public import HashSig.SLHDSA.Security.LabBudget
@@ -441,38 +440,17 @@ theorem verify_graph_reserve (s : FIPS205.core.PkSeed) (root : FIPS205.core.Y)
     (st : State) (prior : good s st) (out : Bool × State)
     (mem : out ∈ support ((simulateQ (engine s caps fallback)
       (VerificationOffsets.verifySource s ⟨s, root⟩ request wire)).run st)) : good s out.2 := by
-  rw [VerificationOffsets.verifySource_eq] at mem
-  split at mem
-  next message sig hMessage hSig =>
-    let mark := VerificationOffsets.markedLab
-    let Q {α : Type} (p : OracleComp Lab α) := Safe s caps fallback (simulateQ mark p)
-    have valid : Q (GeneralScheme.verifyInternalM FIPS205.params FIPS205.core message sig
-        (⟨s, root⟩ : PK)) := by
-      refine verifyInternalM_pred_of_ledger (m := OracleComp Lab) (Q := @Q) ?_ ?_
-        FIPS205.core message sig (⟨s, root⟩ : PK) ?_ ?_
-      · intro α x
-        simpa only [Q, simulateQ_pure] using (safe_pure (s := s) (caps := caps) (fb := fallback) x)
-      · intro α β p next hp hn
-        simpa only [Q, simulateQ_bind] using safe_bind hp hn
-      · intro addr haddr values before old z hz
-        let q := PublicHashQuery.thash s (FIPS205.core.adrsToKey addr) values
-        have honest : IsHonestKey FIPS205.params FIPS205.core (FIPS205.core.adrsToKey addr) :=
-          ⟨addr, Or.inl haddr, rfl⟩
-        apply verify_point_graph_reserve s root q (Or.inl (shakeRoute_encode_thash _ _ honest))
-          caps fallback before old z
-        change z ∈ support ((simulateQ (engine s caps fallback) (simulateQ mark
-          (liftM (Lab.query (.inl (.inl (.inr (.inl q)))))))).run before) at hz
-        rwa [simulateQ_spec_query] at hz
-      · intro before old z hz
-        let q : (publicHashSpec FIPS205.core).Domain := .hmsg sig.randomness s root message
-        apply verify_point_graph_reserve s root q (Or.inr ⟨_, _, rfl⟩) caps fallback before old z
-        change z ∈ support ((simulateQ (engine s caps fallback) (simulateQ mark
-          (liftM (Lab.query (.inl (.inl (.inr (.inl q)))))))).run before) at hz
-        rwa [simulateQ_spec_query] at hz
-    exact valid st prior out mem
-  next =>
-    simp only [simulateQ_pure, StateT.run_pure, support_pure, Set.mem_singleton_iff] at mem
-    exact mem ▸ prior
+  refine VerificationOffsets.verifySource_preserves s root request wire
+    (fun action => Safe s caps fallback action) (fun x => safe_pure x)
+    (fun first next => safe_bind first next) ?_ ?_ st prior out mem
+  · intro address allowed values
+    have honest : IsHonestKey FIPS205.params FIPS205.core (FIPS205.core.adrsToKey address) :=
+      ⟨address, Or.inl allowed, rfl⟩
+    exact verify_point_graph_reserve s root (.thash s (FIPS205.core.adrsToKey address) values)
+      (Or.inl (shakeRoute_encode_thash _ _ honest)) caps fallback
+  · intro randomness message
+    exact verify_point_graph_reserve s root (.hmsg randomness s root message)
+      (Or.inr ⟨randomness, message, rfl⟩) caps fallback
 
 private theorem safe_query {s caps fb} (i : LabCommon.Domain)
     (admitted : ∀ st : State, good s st → ∀ v ∈ support ((routed s i).run st.1),
