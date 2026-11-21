@@ -336,6 +336,82 @@ private def isProbabilityOne (e : Expr) : MetaM Bool := do
     return true
   return e.isAppOfArity ``OracleComp.ProgramLogic.propInd 1 && (e.getArg! 0).isConstOf ``True
 
+/-- Run core `vcgen` through `stx` on the main goal, whose program is `comp`. Fails, restoring
+`saved`, when `vcgen` throws or makes no progress: when `comp` is still in a remaining goal, or
+a loop is left to an invariant, which VCVio's loop steps find in context. -/
+private def runCoreVCGenFrom (saved : Tactic.SavedState) (stx : Syntax) (comp : Expr) :
+    TacticM Bool := do
+  try
+    withOptions (fun o => o.setBool `experimental.vcgen true) (evalTactic stx)
+  catch _ =>
+    saved.restore
+    return false
+  for g in ← getGoals do
+    let ty ← instantiateMVars (← g.getType)
+    if (ty.find? (· == comp)).isSome || ty.isAppOf ``Std.WP.Invariant then
+      saved.restore
+      return false
+  return true
+
+/-- The program of a core triple in the necessary reading of oracle computations: a triple
+whose `WP` instance is `OracleComp.Necessary.instWP` or PolyFun's demonic reading
+`MonadAttach.toWPMonadDemonic`, possibly under core's transformer layers. -/
+private def necessaryTripleComp? (target : Expr) : Option Expr := do
+  let target := target.consumeMData
+  guard <| target.isAppOfArity ``Std.WP.Triple 11
+  let inst := target.getArg! 7
+  guard <| (inst.find? fun e =>
+    e.isConstOf ``OracleComp.Necessary.instWP || e.isConstOf ``MonadAttach.toWPMonadDemonic).isSome
+  some (target.getArg! 6)
+
+/-- The program of a support statement `∀ x ∈ support oa, post x`. -/
+private def supportForallComp? (target : Expr) : Option Expr := do
+  let .forallE _ _ (.forallE _ mem _ _) _ := target.consumeMData | none
+  let mem := mem.consumeMData
+  guard <| mem.isAppOfArity ``Membership.mem 5 && mem.getArg! 4 == .bvar 0
+  let supp := (mem.getArg! 3).consumeMData
+  guard <| supp.isAppOfArity ``MonadAttach.support 4
+  let oa := supp.getArg! 3
+  guard !oa.hasLooseBVars
+  some oa
+
+/-- Hand a core triple read by `OracleComp.Necessary.instWP` or PolyFun's demonic reading to
+core `vcgen`. A support statement `∀ x ∈ support oa, post x` becomes the triple
+`⦃ True ⦄ oa ⦃ post ⦄` by `OracleComp.Necessary.triple_true_iff_forall_support`. Core uses
+the `@[spec]` rules of `VCVio.ProgramLogic.Unary.WP.NecessarySpecs`, a draw or query returning
+any value, and with the triples in the local context. The weakest precondition of an opaque
+sub-program is read back as a support statement (`OracleComp.Necessary.wp_iff_forall_support`),
+and the verification conditions that `simp_all` closes are closed. Fails, restoring the state,
+when core makes no progress. -/
+private def tryCoreVCGenNecessary : TacticM Bool := withMainContext do
+  let target ← instantiateMVars (← getMainTarget)
+  let saved ← saveState
+  let comp ← match necessaryTripleComp? target, supportForallComp? target with
+    | some comp, _ => pure comp
+    | none, some oa =>
+        unless ← tryEvalTacticSyntax (← `(tactic|
+            refine (OracleComp.Necessary.triple_true_iff_forall_support _ _).mp ?_)) do
+          return false
+        pure oa
+    | none, none => return false
+  unless ← runCoreVCGenFrom saved (← `(tactic| vcgen (errorOnMissingSpec := false))) comp do
+    return false
+  let mut readBack := #[]
+  for g in ← getGoals do
+    setGoals [g]
+    -- An opaque sub-program without a rule is left as its weakest precondition, which is read
+    -- back as a support statement for the next pass.
+    discard <| tryEvalTacticSyntax (← `(tactic|
+      simp only [binderNameHint, OracleComp.Necessary.wp_iff_forall_support]))
+    let vc ← getMainGoal
+    let s ← saveState
+    unless ← tryEvalTacticSyntax (← `(tactic| (simp_all; done))) do
+      s.restore
+      setGoals [vc]
+    readBack := readBack ++ (← getGoals)
+  setGoals readBack.toList
+  return true
+
 /-- Hand a quantitative triple to core `vcgen` with the `@[spec]` rules of
 `VCVio.ProgramLogic.Unary.WP.LowerSpecs`. Core steps through the program structure (binds,
 conditionals, matchers, transformer layers) and leaves its verification conditions, which are
@@ -343,8 +419,7 @@ read back from core's order to `≤`. A triple with precondition `1` uses the po
 which descend through every draw; other triples use the exact rules, whose verification
 conditions keep the averages of the draws for VCVio's `wp` steps. Fails, restoring the state,
 when core makes no progress: when the computation of the triple is still in the goal. -/
-def tryCoreVCGen : TacticM Bool := withMainContext do
-  unless vcvio.vcgen.core.get (← getOptions) do return false
+private def tryCoreVCGenLower : TacticM Bool := withMainContext do
   let target ← instantiateMVars (← getMainTarget)
   let some (pre, comp, _) := tripleGoalParts? target | return false
   unless (← instantiateMVars (← inferType pre)).isConstOf ``ENNReal do return false
@@ -354,19 +429,8 @@ def tryCoreVCGen : TacticM Bool := withMainContext do
           vcgen (errorOnMissingSpec := false))
     else
       `(tactic| vcgen (errorOnMissingSpec := false))
-  let saved ← saveState
-  try
-    withOptions (fun o => o.setBool `experimental.vcgen true) (evalTactic stx)
-  catch _ =>
-    saved.restore
-    return false
+  unless ← runCoreVCGenFrom (← saveState) stx comp do return false
   let goals ← getGoals
-  for g in goals do
-    let ty ← instantiateMVars (← g.getType)
-    -- No progress, or a loop left to an invariant that VCVio's loop steps find in context.
-    if (ty.find? (· == comp)).isSome || ty.isAppOf ``Std.WP.Invariant then
-      saved.restore
-      return false
   let mut readBack := #[]
   for g in goals do
     setGoals [g]
@@ -387,6 +451,15 @@ def tryCoreVCGen : TacticM Bool := withMainContext do
     readBack := readBack ++ (← getGoals)
   setGoals readBack.toList
   return true
+
+/-- Hand the main goal to core `vcgen` in its existing oracle interpretation. Use the
+necessary reading for a core triple in that reading or a support statement
+`∀ x ∈ support oa, post x` (`tryCoreVCGenNecessary`), and the lower reading for a triple whose
+precondition is in `ℝ≥0∞` (`tryCoreVCGenLower`). Fails, restoring the state, when core makes no
+progress. `set_option vcvio.vcgen.core false` switches it off. -/
+def tryCoreVCGen : TacticM Bool := do
+  unless vcvio.vcgen.core.get (← getOptions) do return false
+  tryCoreVCGenNecessary <||> tryCoreVCGenLower
 
 /-- One step of VCGen on a `Triple` goal. Returns `true` if any progress was made. -/
 def runVCGenStep : TacticM Bool := do
