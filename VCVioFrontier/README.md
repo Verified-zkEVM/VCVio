@@ -40,7 +40,7 @@ ciphertext distributions, including at width zero.
    `(msg, key)`. Encryption evaluates `key xor msg` and the full round trip evaluates
    `key xor (key xor msg)`. In PolyFunFrontier, Samuel Schlesinger’s `polytime` tactic from
    cslib-frontier proves the primitive word-operation bound. `wordTerm_polyTime` gives the bound
-   for the entire term. [Scoped word terms](https://github.com/dtumad/PolyFun/blob/01547e783a20b7c3acee3137acf96d6c7fabbb7b/PolyFunFrontier/PolyFunFrontier/IPFunctor/Scoped/PolyTime.lean)
+   for the entire term. [Scoped word terms](https://github.com/Verified-zkEVM/PolyFun/blob/01547e783a20b7c3acee3137acf96d6c7fabbb7b/PolyFunFrontier/PolyFunFrontier/IPFunctor/Scoped/PolyTime.lean)
 2. PolyFunFrontier combines these local steps with the fair-bit handler. It noncomputably
    chooses a finite-control probabilistic multi-tape machine whose output law agrees with the handler on encoded
    inputs. Its polynomial clock bounds every supported run on every input word.

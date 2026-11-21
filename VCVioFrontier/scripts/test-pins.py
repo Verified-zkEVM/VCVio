@@ -71,6 +71,15 @@ class FrontierPins(unittest.TestCase):
                 with self.assertRaisesRegex(SystemExit, "PolyFunFrontier"):
                     PINS["check"](self.package)
 
+        # Agreement between the nested lakefile and lockfile still requires the canonical remote.
+        upstream = "https://github.com/Verified-zkEVM/PolyFun"
+        other = "https://example.org/PolyFun"
+        config = self.package / "lakefile.toml"
+        config.write_text(config.read_text().replace(upstream, other))
+        lock.write_text(original.replace(upstream, other))
+        with self.assertRaisesRegex(SystemExit, "canonical PolyFun repository"):
+            PINS["check"](self.package)
+
 
 if __name__ == "__main__":
     unittest.main()

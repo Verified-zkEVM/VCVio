@@ -57,17 +57,13 @@ def check(root=ROOT):
     if ours.get("PolyFun") != ours.get("PolyFunFrontier"):
         errors.append("PolyFun and its nested package must come from the same commit")
 
-    # The fork carries the review series until the pair of packages lands upstream.
-    upstream = "https://github.com/Verified-zkEVM/PolyFun"
-    polyfun_url = declared.get("PolyFun", {}).get("git")
-    if polyfun_url not in (upstream, "https://github.com/dtumad/PolyFun"):
-        errors.append("unexpected PolyFun repository")
+    polyfun_url = "https://github.com/Verified-zkEVM/PolyFun"
     for name, subdir in (("PolyFun", None), ("PolyFunFrontier", "PolyFunFrontier")):
         expected = polyfun_url if subdir is None else {"url": polyfun_url, "subDir": subdir}
         entry = locked.get(name, {})
         if (declared.get(name, {}).get("git") != expected or entry.get("type") != "git"
                 or entry.get("url") != polyfun_url or entry.get("subDir") != subdir):
-            errors.append(f"{name} must resolve from the shared PolyFun repository at {subdir or '.'}")
+            errors.append(f"{name} must resolve from the canonical PolyFun repository at {subdir or '.'}")
 
     packages = root / manifest["packagesDir"]
     toolchain = (root / "lean-toolchain").read_text().strip()

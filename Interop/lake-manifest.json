@@ -119,7 +119,7 @@
    "inputRev": "5ecbeec205ce3e9e4a5b7cb900c181884856ba19",
    "inherited": true,
    "configFile": "lakefile.toml"},
-  {"url": "https://github.com/dtumad/PolyFun",
+  {"url": "https://github.com/Verified-zkEVM/PolyFun",
    "type": "git",
    "subDir": null,
    "scope": "",

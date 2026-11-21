@@ -16,12 +16,12 @@ path = ".."
 # Resolve both nested imports from one PolyFun revision on Frontier’s toolchain.
 [[require]]
 name = "PolyFunFrontier"
-git = { url = "https://github.com/dtumad/PolyFun", subDir = "PolyFunFrontier" }
+git = { url = "https://github.com/Verified-zkEVM/PolyFun", subDir = "PolyFunFrontier" }
 rev = "01547e783a20b7c3acee3137acf96d6c7fabbb7b"
 
 [[require]]
 name = "PolyFun"
-git = "https://github.com/dtumad/PolyFun"
+git = "https://github.com/Verified-zkEVM/PolyFun"
 rev = "01547e783a20b7c3acee3137acf96d6c7fabbb7b"
 
 # Lake resolves direct dependencies in reverse order. Use Frontier's complete toolchain.

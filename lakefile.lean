@@ -76,7 +76,7 @@ requirement authoritative over their inherited pins and makes
 `lake update --keep-toolchain` idempotent.
 -/
 require PolyFun from git
-  "https://github.com/dtumad/PolyFun" @
+  "https://github.com/Verified-zkEVM/PolyFun" @
   "01547e783a20b7c3acee3137acf96d6c7fabbb7b"
 
 /-
