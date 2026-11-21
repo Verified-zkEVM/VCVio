@@ -216,6 +216,7 @@ public import VCVioTest.RandomOracleJointPotential
 public import VCVioTest.RandomOracleMixedQueries
 public import VCVioTest.RandomOraclePairedGraphReadback
 public import VCVioTest.RandomOraclePairedValue
+public import VCVioTest.RandomOraclePartnerCompensation
 public import VCVioTest.RandomOracleReadSet
 public import VCVioTest.RandomOracleRedirect
 public import VCVioTest.RandomOracleRegisteredCost
