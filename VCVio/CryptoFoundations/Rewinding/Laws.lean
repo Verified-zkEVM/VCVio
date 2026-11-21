@@ -30,6 +30,7 @@ theorem grows_run {α : Type} (oa : OracleComp spec α) (w : P.World) (c : P.Cur
     w ≤ z.2.1 := by
   induction oa using OracleComp.inductionOn generalizing w c with
   | pure a =>
+    simp only [simulateQ_pure, StateT.run_pure, support_pure, Set.mem_singleton_iff] at hz
     simpa only [simulateQ_pure, StateT.run_pure, support_pure, Set.mem_singleton_iff] using
       hz ▸ (show w ≤ w from le_rfl)
   | query_bind q k ih =>
