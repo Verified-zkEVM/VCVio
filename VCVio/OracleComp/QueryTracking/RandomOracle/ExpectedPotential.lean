@@ -54,6 +54,34 @@ private theorem run_lower (so : QueryImpl spec (StateT σ ProbComp)) (f : σ →
     rw [simulateQ_query_bind, StateT.run_bind, tsum_prEvent_bind_mul]
     exact (step t s).trans (tsum_le_tsum fun z => mul_le_mul_of_nonneg_left (ih z.1 z.2) zero_le)
 
+/-- A charge paid on every supported response covers its conditional first-hit probability. -/
+theorem expected_credit_of_increments (so : QueryImpl spec (StateT σ ProbComp))
+    (P : σ → Prop) (Φ : σ → ℝ≥0∞)
+    (mono : ∀ t s z, z ∈ support ((so t).run s) → Φ s ≤ Φ z.2)
+    (step : ∀ t s, ¬P s → ∃ w,
+      Pr{let z ← (so t).run s}[P z.2] ≤ w ∧
+        ∀ z ∈ support ((so t).run s), w + Φ s ≤ Φ z.2)
+    (oa : OracleComp spec α) (s : σ) [DecidablePred P] :
+    Φ s + (if P s then 0 else 1) ≤ ∑' z, Pr{let u ← (simulateQ so oa).run s}[u = z] *
+      (Φ z.2 + if P z.2 then 0 else 1) := by
+  classical
+  let f (u : σ) := Φ u + if P u then 0 else 1
+  apply run_lower so f
+  intro t u
+  by_cases bad : P u
+  · simp only [f, bad, ite_true, add_zero]
+    exact lower_mean _ _ _ fun z hz => (mono t u z hz).trans le_self_add
+  obtain ⟨w, hit, fee⟩ := step t u bad
+  let m := (so t).run u
+  have mass := prEvent_add_prEvent_not_eq_prEvent_true m (fun z => P z.2)
+  rw [prEvent_true_eq_one] at mass
+  change f u ≤ ∑' z, Pr{let v ← m}[v = z] * (Φ z.2 + if P z.2 then 0 else 1)
+  rw [mean_credit]
+  calc
+    f u = Φ u + 1 := by simp [f, bad]
+    _ = (Pr{let z ← m}[P z.2] + Φ u) + Pr{let z ← m}[¬P z.2] := by rw [← mass]; ac_rfl
+    _ ≤ _ := add_le_add ((add_le_add hit le_rfl).trans (lower_mean m _ (w + Φ u) fee)) le_rfl
+
 /-- Potential together with the credit for a clean state has nondecreasing expectation. -/
 theorem IsPotentialStep.expected_credit {so : QueryImpl spec (StateT σ ProbComp)}
     {P : σ → Prop} {Φ : σ → ℝ≥0∞} (h : IsPotentialStep so P Φ)
@@ -61,32 +89,15 @@ theorem IsPotentialStep.expected_credit {so : QueryImpl spec (StateT σ ProbComp
     Φ s + (if P s then 0 else 1) ≤ ∑' z, Pr{let u ← (simulateQ so oa).run s}[u = z] *
       (Φ z.2 + if P z.2 then 0 else 1) := by
   classical
-  let f (s : σ) := Φ s + if P s then 0 else 1
-  have localLaw (t : spec.Domain) (u : σ) :
-      f u ≤ ∑' z, Pr{let v ← (so t).run u}[v = z] * f z.2 := by
-    by_cases bad : P u
-    · simp only [f, bad, ite_true, add_zero]
-      exact lower_mean _ _ _ fun z hz => (h.mono t u z hz).trans (le_self_add)
-    rcases h.step t u bad with ⟨a, v, det, safe⟩ | ⟨draw, upd, w, sampled, rate, fee⟩
-    · have mono := h.mono t u (a, v) (by simp [det])
-      simpa [det, f, bad, safe] using add_le_add_left mono 1
-    · let m := (so t).run u
-      have hit : Pr{let z ← m}[P z.2] ≤ w := by simpa [m, sampled] using rate
-      have paid : w + Φ u ≤ ∑' z, Pr{let v ← m}[v = z] * Φ z.2 := by
-        apply lower_mean
-        intro z hz
-        rw [show m = _ from sampled, support_map] at hz
-        obtain ⟨a, _, rfl⟩ := hz
-        exact fee a
-      change f u ≤ ∑' z, Pr{let v ← m}[v = z] * (Φ z.2 + if P z.2 then 0 else 1)
-      rw [mean_credit]
-      have mass := prEvent_add_prEvent_not_eq_prEvent_true m (fun z => P z.2)
-      rw [prEvent_true_eq_one] at mass
-      calc
-        f u = Φ u + 1 := by simp [f, bad]
-        _ = (Pr{let z ← m}[P z.2] + Φ u) + Pr{let z ← m}[¬P z.2] := by rw [← mass]; ac_rfl
-        _ ≤ _ := add_le_add ((add_le_add hit le_rfl).trans paid) le_rfl
-  exact run_lower so f localLaw oa s
+  refine expected_credit_of_increments so P Φ h.mono (fun t u bad => ?_) oa s
+  rcases h.step t u bad with ⟨a, v, det, safe⟩ | ⟨draw, upd, w, sampled, rate, fee⟩
+  · refine ⟨0, ?_, fun z hz => (zero_add (Φ u)).trans_le (h.mono t u z hz)⟩
+    simp [det, safe]
+  · refine ⟨w, by simpa [sampled] using rate, ?_⟩
+    intro z hz
+    rw [sampled, support_map] at hz
+    obtain ⟨a, _, rfl⟩ := hz
+    exact fee a
 
 /-- A terminal clean-state credit of at least one bounds the hit by the expected charge. -/
 theorem prEvent_le_expected_of_credit {γ : Type} (m : ProbComp γ) (P : γ → Prop)
