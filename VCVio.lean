@@ -437,6 +437,7 @@ public import VCVio.OracleComp.QueryTracking.Iter
 public import VCVio.OracleComp.QueryTracking.ListCache
 public import VCVio.OracleComp.QueryTracking.LoggingOracle.Core
 public import VCVio.OracleComp.QueryTracking.LoggingOracle.History
+public import VCVio.OracleComp.QueryTracking.LoggingOracle.Relabel
 public import VCVio.OracleComp.QueryTracking.MeasuredProgram
 public import VCVio.OracleComp.QueryTracking.MeasuredProgram.Composition
 public import VCVio.OracleComp.QueryTracking.ObservationOracle
@@ -656,6 +657,8 @@ public import VCVio.Quantum.VC.Proof.OnlineSecurity
 public import VCVio.Quantum.VC.Proof.Repeatability
 public import VCVio.Quantum.VC.Tuples
 public import VCVio.Quantum.VC.Unitaries
+public import VCVio.Schemes.HashAndMac
+public import VCVio.Schemes.HashAndSign
 public import VCVio.Schemes.KEMDEM
 public import VCVio.Schemes.KEMDEM.Measure
 public import VCVio.Schemes.MacFromPRF

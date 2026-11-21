@@ -124,6 +124,7 @@ public import VCVioTest.OracleComp.MeasuredProgram
 public import VCVioTest.OracleComp.PreservesInv
 public import VCVioTest.OracleComp.Query
 public import VCVioTest.OracleComp.QueryAndHandlerLaws
+public import VCVioTest.OracleComp.QueryLogRelabel
 public import VCVioTest.OracleComp.QueryTracking.QueryLog
 public import VCVioTest.OracleComp.SchwartzZippel
 public import VCVioTest.OracleComp.SecurityFamily
