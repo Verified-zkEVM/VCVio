@@ -8,7 +8,8 @@ module
 
 public import HashSig.SLHDSA.SHAKE128s.Statement.Theorems.SmallBudget
 public import HashSig.SLHDSA.Security.WeakKeyBound
-import HashSig.SLHDSA.SHAKE128s.Proof.ActualWork.Security
+import HashSig.SLHDSA.SHAKE128s.Proof.ActualWork.Price.Reserve
+import HashSig.SLHDSA.SHAKE128s.Proof.ActualWork.Settlement.Probability
 import all HashSig.SLHDSA.SHAKE128s.Bridge.SharedExperiment.Observation
 
 /-!
@@ -96,9 +97,20 @@ theorem jointWorkBound_le (q : Nat) : jointWorkBound q ≤ (q : ℝ≥0∞) / (2
       (ENNReal.div_self (by positivity) (by finiteness)).symm
     _ ≤ (q : ℝ≥0∞) / (2 ^ 127) := by gcongr
 
+/-- The piecewise forgery bound implies the linear work bound at every natural budget. -/
+theorem Bridge.SharedExperiment.Physical.actual_joint_work_le
+    (adv : Game.Adversary FIPS205.Answer (PublicKeyCore FIPS205.core))
+    (q : Nat)
+    (hlimit : Game.WithinSigningLimit FIPS205.scheme adv)
+    (hbound : (Game.securityGame FIPS205.scheme).HasQueryBound () Game.adversaryWork adv q) :
+    (Game.securityGame FIPS205.scheme).advantage () adv ≤
+      (q : ℝ≥0∞) / ((2 ^ 127 : Nat) : ℝ≥0∞) := by
+  simpa only [Nat.cast_pow, Nat.cast_ofNat] using
+    (slhDsa_sufCma_le adv q hlimit hbound).trans (jointWorkBound_le q)
+
 /-- Deterministic FIPS 205 SHAKE-128s has 127 bits of strong unforgeability under the joint
 budget for signing attempts, direct attacker queries and verification. -/
 theorem slhDsa_sufCma_127 : Game.HasSecurityBits FIPS205.scheme Game.adversaryWork 127 :=
-  fips_joint_127
+  fun q _ adv life cap => actual_joint_work_le adv q life cap
 
 end SLHDSA.SHAKE128s

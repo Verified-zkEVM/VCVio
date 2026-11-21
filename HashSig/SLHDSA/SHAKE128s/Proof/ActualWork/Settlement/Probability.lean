@@ -11,6 +11,7 @@ import all HashSig.SLHDSA.SHAKE128s.Proof.ActualWork.Coverage.ExpectedCredit
 public import HashSig.SLHDSA.SHAKE128s.Proof.ActualWork.Settlement.Coverage
 public import HashSig.SLHDSA.SHAKE128s.Proof.ActualWork.Work.TapeLengths
 public import HashSig.SLHDSA.SHAKE128s.Proof.ActualWork.Price.Average
+import HashSig.SLHDSA.SHAKE128s.Proof.ActualWork.Price.ForgeryBound
 import all HashSig.SLHDSA.SHAKE128s.Proof.ActualWork.Settlement.Coverage
 import all HashSig.SLHDSA.SHAKE128s.Proof.ActualWork.Coupling.Tapes
 import all HashSig.SLHDSA.SHAKE128s.Proof.ActualWork.Coupling.Guarded
@@ -112,3 +113,27 @@ theorem uncharged_probability_le_actualCoverage (q : Nat) (hq : 2 * q < 2 ^ 128)
     (block_covers_unpaid q hq s adv fallback)
 
 end SLHDSA.SHAKE128s.Bridge.SharedExperiment.GuardedFill
+
+namespace SLHDSA.SHAKE128s.Bridge.SharedExperiment.Physical
+
+/-- Below the trivial range, the native charge retains the unused fraction of one
+hash-budget unit after both weak-key payments. -/
+theorem actual_joint_work_le_reserve
+    (adv : Game.Adversary FIPS205.Answer (PublicKeyCore FIPS205.core))
+    (q : Nat) (small : 2 * q < 2 ^ 128)
+    (hlimit : Game.WithinSigningLimit FIPS205.scheme adv)
+    (hbound : (Game.securityGame FIPS205.scheme).HasQueryBound () Game.adversaryWork adv q) :
+    (Game.securityGame FIPS205.scheme).advantage () adv ≤
+      ((32 * q - 1 : Nat) : ℝ≥0∞) / ((16 * 2 ^ 128 : Nat) : ℝ≥0∞) + 34 * weakMass := by
+  classical
+  let fallback (s : Seed) : LabFallback := fun
+    | .inl (.inl (.inl native)) => Guarded.deriveFallback s (.inl (.inl native))
+    | .inl (.inl (.inr (.inl _))) => ()
+    | .inl (.inl (.inr (.inr _))) => Vector.replicate _ 0
+    | .inl (.inr raw) => Guarded.deriveFallback s (.inl (.inr raw))
+    | .inr ev => Guarded.deriveFallback s (.inr ev)
+  apply strict_bound_of_residual_covered adv q small hlimit hbound fallback
+  intro seed
+  exact GuardedFill.uncharged_probability_le_actualCoverage q small seed adv (fallback seed)
+
+end SLHDSA.SHAKE128s.Bridge.SharedExperiment.Physical
