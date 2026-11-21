@@ -71,6 +71,10 @@ build boundaries and the staged consolidation.
 - `ToMathlib/`: local Mathlib-facing utilities and lemmas intended to remain below the framework layer.
 - `Extern/`: native FFI surface — the `@[extern]` bindings (SHA-3/SHAKE, ML-KEM, ML-DSA, Falcon) and the FFI-backed concrete instances that reach them. No proof library may import it; the backing `extern_lib`s become empty stubs when `third_party/` submodules are absent.
 - `LatticeCrypto/`: lattice-specific algebra, hardness assumptions, scheme definitions, security theorems, and concrete implementations.
+- `HashSig/GXMSS/`: generalized XMSS construction, per-key and joint correctness,
+  interval-first conditional security bounds, and shared-response PRF derivation.
+  See [the GXMSS reading guide](docs/reading/gxmss.md) for native reduction terms,
+  sampling premises, query budgets and ordinary public-import applications.
 - `HashSig/`: hash-based signatures — SLH-DSA (SPHINCS+, FIPS 205) proof-level specs,
   component-level FIPS conformance results, and an SUF-CMA bound (strong unforgeability, which
   gives EUF-CMA at the same bound) in the classical random-oracle model with three oracles (the
