@@ -1,0 +1,4100 @@
+{
+  "schema_version": 1,
+  "status": "Completed: source implementation and documentation, full integration checks, all eight actual PR cuts, exact-head hosted CI and reviewed PR-body publication/readback validated. Separate follow-up items remain as recorded in the disposition ledger.",
+  "review_baseline": "67ca1cdff44a38757999d34152412e78a52c1d5e",
+  "frozen_source": {
+    "manifest_sha256": "ff062e3b1816c349edd05397125e7f42cde57c417213e91895c5567829813634",
+    "Lean_source_scope_sha256": "09e2c4b4320eef5bed923254e407fb1bfffcf1ebbe52c3b4dbee37a6a3499e98",
+    "changed_Lean_paths": 32
+  },
+  "historical_validation": {
+    "scope": "Compatibility between the audited Lean 4.36 port and polished integration, before this review response. The historical records remain unchanged.",
+    "audited_port": "ed4e0a4fc73738de9e03cf50abde672fdd413a40",
+    "polished_integration": "67ca1cdff44a38757999d34152412e78a52c1d5e",
+    "contracts": 1290,
+    "production_modules": 64,
+    "raw_type_changes": 0,
+    "captured_definition_body_changes": 0,
+    "reducibility_changes": 0,
+    "reference_sha256": "2e45c22a3bf8f48789e7bf8b6812b0331de6fe74ab2bcfea4e429b13327aeac4"
+  },
+  "integration_checks": {
+    "build": {
+      "status": "passed",
+      "log_sha256": "e5aea5f932b13ef09a81661457e9f1f7052b612a23d33a6194f64d0883cafbd0",
+      "jobs": 11250,
+      "scope": "Six production libraries, all feature regression modules, Smoke and the quantum Oracle regression.",
+      "reproduction_command": [
+        "lake",
+        "build",
+        "ToMathlib",
+        "VCVio",
+        "LatticeCrypto",
+        "Extern",
+        "HashSig",
+        "Examples",
+        "VCVioTest.Quantum.AdaptiveProgramming",
+        "VCVioTest.Quantum.ChargeWeight",
+        "VCVioTest.Quantum.ClassicalRandomized",
+        "VCVioTest.Quantum.DropEmptyBatches",
+        "VCVioTest.Quantum.MaskedChain",
+        "VCVioTest.Quantum.MaskedChainRootBounds",
+        "VCVioTest.Quantum.NumberedQueries",
+        "VCVioTest.Quantum.OracleEncoding",
+        "VCVioTest.Quantum.Parallel",
+        "VCVioTest.Quantum.ParallelBridges",
+        "VCVioTest.Quantum.ParallelPlantedPreimage",
+        "VCVioTest.Quantum.ParallelPreimage",
+        "VCVioTest.Quantum.ParallelSearch",
+        "VCVioTest.Quantum.ParallelSecurity",
+        "VCVioTest.Quantum.PointerChainCoupling",
+        "VCVioTest.Quantum.PointerChainEncoding",
+        "VCVioTest.Quantum.PointerChainFrontier",
+        "VCVioTest.Quantum.PointerChainPreprocessing",
+        "VCVioTest.Quantum.PointerChainProgramming",
+        "VCVioTest.Quantum.PointerChainRankBounds",
+        "VCVioTest.Quantum.PointerChainRankSchedule",
+        "VCVioTest.Quantum.QueryBoundedPreprocessing",
+        "VCVioTest.Quantum.Sequentialize",
+        "VCVioTest.Quantum.SubState",
+        "VCVioTest.Quantum.TimeLockPuzzle",
+        "VCVioTest.Smoke",
+        "VCVioTest.Quantum.Oracle"
+      ]
+    },
+    "default-tests": {
+      "status": "passed",
+      "log_sha256": "4d2bc50e7853b7217bc1027562f855f97ac817bd0be7c539ae97fb20e1d14350",
+      "default_executables": 34,
+      "exact_CSV_check": "passed",
+      "scope": "Default lake test, including the three test libraries and the independent CSV checker. Optional external FFI tests are separate.",
+      "reproduction_command": [
+        "lake",
+        "test"
+      ]
+    },
+    "production-axioms": {
+      "status": "passed",
+      "log_sha256": "fc00a45c16647c16714dd14b3ce2ff1f7481f43f5c201be564b1ed4925de37ed",
+      "declarations": 33318,
+      "modules": 1396,
+      "roots": [
+        "VCVio",
+        "ToMathlib",
+        "Extern",
+        "LatticeCrypto",
+        "HashSig",
+        "Examples"
+      ],
+      "sorry_taint": 0,
+      "nonstandard_axiom_taint": 0,
+      "reproduction_command": [
+        "lake",
+        "exe",
+        "axiomsweep",
+        "--check",
+        "--out",
+        "validation-output/production-axioms.json"
+      ]
+    },
+    "production-inits": {
+      "status": "passed",
+      "log_sha256": "57b2bc7b8247487b6fb34c816afb3abae385d8ad745709fef1abed6938873768",
+      "constants": 49928,
+      "modules": 1396,
+      "blind_spots": 0,
+      "baseline_flags": 7,
+      "new_flags": 0,
+      "reproduction_command": [
+        "lake",
+        "exe",
+        "initsweep",
+        "--check",
+        "--out",
+        "validation-output/production-inits.json"
+      ]
+    },
+    "test-inits": {
+      "status": "passed",
+      "log_sha256": "bd7e3ba67284cd3d26effe7e6e00f94eeb92e72d5e26328948ad9d6b784578a7",
+      "constants": 6121,
+      "modules": 310,
+      "roots": [
+        "VCVioTest",
+        "LatticeCryptoTest"
+      ],
+      "blind_spots": 0,
+      "baseline_flags": 2,
+      "new_flags": 0,
+      "scope_note": "HashSigTest has no umbrella root and is not included in this initializer-root check.",
+      "reproduction_command": [
+        "lake",
+        "exe",
+        "initsweep",
+        "--check",
+        "--root",
+        "VCVioTest",
+        "--root",
+        "LatticeCryptoTest",
+        "--out",
+        "validation-output/test-inits.json"
+      ]
+    },
+    "lint": {
+      "status": "passed",
+      "log_sha256": "06c7e7192dc74e33122fd464b3ad2d051a6d621e649ae26dad7ad8894ed8a85f",
+      "exact_baseline_entries": 127,
+      "by_linter": {
+        "defsWithUnderscore": 108,
+        "unusedArguments": 19
+      },
+      "baseline_changed": false,
+      "reproduction_command": [
+        "lake",
+        "lint"
+      ]
+    },
+    "static-docs": {
+      "status": "passed",
+      "log_sha256": "c979e59a734e41a93053cbe675a569a32714124359d201982a2bf6cece54148b",
+      "reproduction_command": [
+        "uv",
+        "run",
+        "--no-project",
+        "--python",
+        "3.12",
+        "python",
+        "scripts/check-agent-docs.py"
+      ]
+    },
+    "retired-doc-names": {
+      "status": "passed",
+      "log_sha256": "6a5fd700c4636db1069562cbe5de0271bfbc68cbf5d4dbb97c97a08e9057d544",
+      "reproduction_command": [
+        "uv",
+        "run",
+        "--no-project",
+        "--python",
+        "3.12",
+        "python",
+        "scripts/check-doc-names.py"
+      ]
+    },
+    "resolved-doc-names": {
+      "status": "passed",
+      "log_sha256": "9e12f8dd0cf5f0b70bcae0ee39f6143b9e14e37c77c4d807d797d6791d318497",
+      "tokens": 1566,
+      "resolved": 1550,
+      "existing_allowlisted": 16,
+      "documents": 18,
+      "allowlist_changed": false
+    },
+    "comment-fences": {
+      "status": "passed",
+      "log_sha256": "8b51dc2b6a027f793b7cd89b4e4dc8474431151ed0baf1965818241c395a8ca1",
+      "Lean_sources": 1854
+    },
+    "imports": {
+      "status": "passed",
+      "log_sha256": "1fe77bab9bc7de243d2381d862f2e3dc5d1859e130ba06724ddea558f8fde483"
+    },
+    "expose-boundary": {
+      "status": "passed",
+      "log_sha256": "71157a34ba199f769eaa65e9e68169148774e3569984b809301f9275f046fa37"
+    },
+    "polyfun-boundary": {
+      "status": "passed",
+      "log_sha256": "537cc7babf9ffc9397d0258e7f52a9ff0f50887893d39928357a6a70292f2d12"
+    },
+    "extern-isolation": {
+      "status": "passed",
+      "log_sha256": "6617bc504cee92e0018c393d3225a67a5a97fb6b044b81bb14440414078c4dc4"
+    },
+    "interop-isolation": {
+      "status": "passed",
+      "log_sha256": "6617bc504cee92e0018c393d3225a67a5a97fb6b044b81bb14440414078c4dc4"
+    },
+    "driver_report_sha256": "60d4931d161e05666233f163031ddea2ebab04377ec92abbbc9d80628f44a172",
+    "independent_review_sha256": "e9f71d4b8af146d71d8d9b6d148b04d255764babd623e21da35b2527bac4dc98"
+  },
+  "targeted_headline_axioms": {
+    "status": "passed in targeted implementation checks",
+    "allowed_axioms": [
+      "propext",
+      "Classical.choice",
+      "Quot.sound"
+    ],
+    "scope": "Named new and retained proof endpoints, separate from the complete production sweep. This does not assert a fresh complete test-library axiom sweep."
+  },
+  "current_contracts": {
+    "canonical_capture": {
+      "records": 1361,
+      "record_modules": 65,
+      "sha256": "773a4cd4163697ed4ed3f44b6d12b856ffe45cb076818e3625a64cd3a026c7a6",
+      "scope_note": "Coverage is measured from declaration records; the inspector selectedModules metadata field is not the capture scope."
+    },
+    "comparison_at_historical_64_module_scope": {
+      "before": 1290,
+      "after": 1324,
+      "shared": 1289,
+      "missing_in_filtered_scope": 1,
+      "added": 35,
+      "raw_type_changes": 5,
+      "captured_definition_body_changes": 3,
+      "reducibility_changes": 0,
+      "raw_comparator_exit_code": 1,
+      "independent_delta_review": "passed",
+      "all_original_names_present_in_65_module_capture": true
+    },
+    "changed_types": [
+      "ProbabilityTheory.uniform_hit_sum_le",
+      "Quantum.MaskedChain.real_le_maskFirst_add_collision",
+      "Quantum.MaskedChain.real_le_patched_add_collision",
+      "Quantum.MaskedChain.recoveryAdvantage_le_of_patched_bound",
+      "Quantum.MaskedChain.recoveryBound_eq_patchedRecoveryBound_add_collision"
+    ],
+    "changed_definition_bodies": [
+      "Quantum.MaskedChain.recoveryBound",
+      "Quantum.MaskedChain.rootPreprocessedRecoveryBound",
+      "Quantum.MaskedChain.rootRecoveryBound"
+    ],
+    "approved_delta_scope": "Seven masked-chain deltas change only the collision count to the programmed input prefix. uniform_hit_sum_le accepts a decision procedure for the complete hit event; its mathematical event and conclusion are unchanged. All other old semantic contracts and all 28 priority headlines are raw-identical.",
+    "generated_equation_attribution": {
+      "name": "Quantum.QuantumComp₂.queryBind.eq_1",
+      "before_module": "VCVio.Quantum.Oracle.ClassicalParallel",
+      "after_module": "VCVio.Quantum.Comp.TotalQueryBound",
+      "semantic_fields_equal": true,
+      "meaning": "An unchanged inherited equation is first consumed in the earlier core module. It is not removed or renamed.",
+      "raw_semantic_field_digests": {
+        "kind": {
+          "equal": true,
+          "before_sha256": "24b71a0957f0fde8aa10800bae2037c92a6acf1b50610f9e3b2018f366128c3b",
+          "after_sha256": "24b71a0957f0fde8aa10800bae2037c92a6acf1b50610f9e3b2018f366128c3b"
+        },
+        "levelParameters": {
+          "equal": true,
+          "before_sha256": "88e76935db2273496ac064d6784d7c2de52afddd3fd717403ce2b35f2767c45a",
+          "after_sha256": "88e76935db2273496ac064d6784d7c2de52afddd3fd717403ce2b35f2767c45a"
+        },
+        "type": {
+          "equal": true,
+          "before_sha256": "940384c319ca9c67b3f9bcfd9ad9743f75ce03cc2223d1c597da15e1ac8a7f5c",
+          "after_sha256": "940384c319ca9c67b3f9bcfd9ad9743f75ce03cc2223d1c597da15e1ac8a7f5c"
+        },
+        "reducibility": {
+          "equal": true,
+          "before_sha256": "aaf8dcd3b908e46899468e6f8bca193fe5a9bc8c7dd8d1bce031f1dbb4c44ff9",
+          "after_sha256": "aaf8dcd3b908e46899468e6f8bca193fe5a9bc8c7dd8d1bce031f1dbb4c44ff9"
+        },
+        "value": {
+          "equal": true,
+          "before_sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+          "after_sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
+        }
+      }
+    },
+    "extra_core_capture_scope": {
+      "module": "VCVio.Quantum.Comp.TotalQueryBound",
+      "records": 37,
+      "preexisting_core_declarations": 32,
+      "new_public_helpers_and_generated_simp_companions": 4,
+      "unchanged_generated_equation_from_historical_scope": 1
+    },
+    "delta_review_sha256": "afc46e32737205721084d91719153a3a58ce19cfd1d394618381886d3664de4d",
+    "final_historical_scope_recapture": {
+      "status": "passed independent exact comparison",
+      "records": 1324,
+      "modules": 64,
+      "capture_sha256": "0cd709de09ed47e07f161007a547cb55ff8dd36be91ca69be99c16785ecee969",
+      "raw_comparison_sha256": "ac12419c560e3bc0d67205741298af09120a53c10580d1e7983cf47ea0bfd428",
+      "canonical_filtered_raw_fields_compared": 1324,
+      "raw_semantic_differences_from_canonical65_filtered": 0,
+      "raw_module_attribution_differences_from_canonical65_filtered": 0,
+      "independent_review_sha256": "e9f71d4b8af146d71d8d9b6d148b04d255764babd623e21da35b2527bac4dc98"
+    },
+    "approved_added_names_historical64": [
+      "PointerChainPuzzle.LeanSeal.evalDist_quantumWindowDerive",
+      "PointerChainPuzzle.LeanSeal.evalDist_quantumWindowDerive_genWith",
+      "PointerChainPuzzle.LeanSeal.isOnlineQueryBound_simulateQ_windowRoundImpl",
+      "PointerChainPuzzle.LeanSeal.isPointBound_quantumWindowDerive",
+      "PointerChainPuzzle.LeanSeal.isPointBound_quantumWindowScheme_solve",
+      "PointerChainPuzzle.LeanSeal.isTotalQueryBound_quantumWindowDerive",
+      "PointerChainPuzzle.LeanSeal.isTotalQueryBound_quantumWindowScheme_solve",
+      "PointerChainPuzzle.LeanSeal.qromDelaySecure_quantumWindowScheme_min_width_points",
+      "PointerChainPuzzle.LeanSeal.quantumWindowDerive",
+      "PointerChainPuzzle.LeanSeal.quantumWindowDerive.eq_1",
+      "Quantum.MaskedChain.oracleMasks_patch_of_input_injective",
+      "Quantum.MaskedChain.uniform_input_collision_le",
+      "Quantum.ParallelQROMBits.mono",
+      "Quantum.QComp.isPointBound_act_bind_iff",
+      "Quantum.QComp.isPointBound_act_bind_iff._simp_1",
+      "Quantum.QuantumComp.IsWidthBound.dropEmptyBatches",
+      "Quantum.QuantumComp₂.isPointBound_query_bind_iff",
+      "Quantum.QuantumComp₂.isPointBound_query_bind_iff._simp_1",
+      "Quantum.parallelQROMBits_plantedPreimage_127",
+      "Quantum.parallelQROMBits_plantedPreimage_128",
+      "Quantum.parallelQROMBits_plantedPreimage_of_density_le",
+      "Quantum.parallelQROMBound.eq_1",
+      "Quantum.parallelQROMBound_antitone",
+      "Quantum.qromBatchEvalDistMap",
+      "Quantum.qromBatchEvalDistMap.eq_1",
+      "Quantum.qromBatchEvalDistMap_eq_sum",
+      "Quantum.qromBatchEvalDistMap_le_of_sequential_bound",
+      "Quantum.qromBatchEvalDistMap₂",
+      "Quantum.qromBatchEvalDistMap₂.eq_1",
+      "Quantum.qromBatchEvalDistMap₂_eq_sum",
+      "Quantum.qromBatchEvalDist₂",
+      "Quantum.qromBatchEvalDist₂.eq_1",
+      "Quantum.qromBatchEvalDist₂_eq_sum",
+      "Quantum.rpow_inv_two_sum_mul_evalDistMap_parallel_le_of_isPointBound",
+      "Quantum.rpow_inv_two_sum_mul_evalDistMap_parallel_le_of_queryWeight_eq"
+    ],
+    "approved_missing_names_historical64": [
+      "Quantum.QuantumComp₂.queryBind.eq_1"
+    ]
+  },
+  "per_PR_validation": {
+    "status": "passed",
+    "scope": "Each exact staged PR tree independently validated before its normal local commit; standalone production build plus owned regression targets, docs/light gates, current-canonical raw semantic comparison and headline axioms. Fresh hosted full checks recorded separately.",
+    "prs": [
+      {
+        "pr": 1188,
+        "url": "https://github.com/Verified-zkEVM/VCVio/pull/1188",
+        "layer": "pr1",
+        "commit": "a2061ed0a57b15269d6aaea5c5f35042be3fea8a",
+        "commit_url": "https://github.com/Verified-zkEVM/VCVio/commit/a2061ed0a57b15269d6aaea5c5f35042be3fea8a",
+        "tree": "b69b781919e2a62cd38ea7aecd4719c26f1bcb0e",
+        "base_branch": "main",
+        "parents": [
+          "87980cad20a6c1138255f51983b3a686dbd7a265"
+        ],
+        "independent_readiness_sha256": "05c49cb6e7dc3703dceca42d7415a4473644b9503f7a5d7a5be98ea9e39f670a",
+        "local_validation_sha256": "9d4f4f8f642168723f98428e65caebcfc9e1508b72808dce8fdd1e14e41f09da",
+        "contract_validation_sha256": "8717c1cb2135fcf3be5250af75d24119300648e61b176a9d25b93fc10cbb1d42",
+        "build_targets": [
+          "VCVio.Quantum.Comp.Parallel",
+          "VCVio.Quantum.Comp.RoundBound",
+          "VCVio.Quantum.Comp.Sequentialize",
+          "VCVio.Quantum.Foundations.Parallel",
+          "VCVio.Quantum.Oracle.Classical",
+          "VCVio.Quantum.Oracle.ClassicalParallel",
+          "VCVio.Quantum.Oracle.ClassicalRandomized",
+          "VCVio.Quantum.Oracle.Compressed.Parallel",
+          "VCVio.Quantum.Oracle.Parallel",
+          "VCVio.Quantum.Oracle.Sequentialize",
+          "VCVio.Quantum.Comp.TotalQueryBound",
+          "VCVioTest.Quantum.Parallel",
+          "VCVioTest.Quantum.Sequentialize",
+          "VCVioTest.Quantum.ParallelBridges",
+          "VCVioTest.Quantum.ClassicalRandomized",
+          "VCVio",
+          "VCVioTest.Smoke",
+          "VCVioTest.Quantum.Oracle",
+          "docnames"
+        ],
+        "owned_test_modules": [
+          "VCVioTest.Quantum.Parallel",
+          "VCVioTest.Quantum.Sequentialize",
+          "VCVioTest.Quantum.ParallelBridges",
+          "VCVioTest.Quantum.ClassicalRandomized"
+        ],
+        "contract_modules": [
+          "VCVio.Quantum.Comp.Parallel",
+          "VCVio.Quantum.Comp.RoundBound",
+          "VCVio.Quantum.Comp.Sequentialize",
+          "VCVio.Quantum.Foundations.Parallel",
+          "VCVio.Quantum.Oracle.Classical",
+          "VCVio.Quantum.Oracle.ClassicalParallel",
+          "VCVio.Quantum.Oracle.ClassicalRandomized",
+          "VCVio.Quantum.Oracle.Compressed.Parallel",
+          "VCVio.Quantum.Oracle.Parallel",
+          "VCVio.Quantum.Oracle.Sequentialize",
+          "VCVio.Quantum.Comp.TotalQueryBound"
+        ],
+        "contracts": {
+          "status": "passed",
+          "canonical_count": 1361,
+          "expected_module_count": 293,
+          "actual_count": 293,
+          "compared_by_name_count": 293,
+          "modules": [
+            "VCVio.Quantum.Comp.Parallel",
+            "VCVio.Quantum.Comp.RoundBound",
+            "VCVio.Quantum.Comp.Sequentialize",
+            "VCVio.Quantum.Foundations.Parallel",
+            "VCVio.Quantum.Oracle.Classical",
+            "VCVio.Quantum.Oracle.ClassicalParallel",
+            "VCVio.Quantum.Oracle.ClassicalRandomized",
+            "VCVio.Quantum.Oracle.Compressed.Parallel",
+            "VCVio.Quantum.Oracle.Parallel",
+            "VCVio.Quantum.Oracle.Sequentialize",
+            "VCVio.Quantum.Comp.TotalQueryBound"
+          ],
+          "semantic_fields": [
+            "kind",
+            "levelParameters",
+            "type",
+            "reducibility",
+            "value"
+          ],
+          "missing": [],
+          "unknown": [],
+          "raw_differences": [],
+          "attribution_extras_preserved_and_compared": [],
+          "unapproved_extras": [],
+          "inspector_sha_equal": true,
+          "toolchain_and_manifest_equal": true,
+          "normalization": "none"
+        },
+        "headline_axioms": {
+          "names": [
+            "Quantum.QuantumRuntime.evalDist_batch_eq_of_simulation",
+            "Quantum.QuantumRuntime.run_sequentialize",
+            "Quantum.qromBatchEvalDistMap_le_of_sequential_bound"
+          ],
+          "count": 3,
+          "nonstandard": []
+        },
+        "focused_documents": [
+          "docs/quantum/README.md",
+          "docs/quantum/guide/README.md",
+          "docs/quantum/guide/4-programs-and-runtimes.md",
+          "docs/quantum/guide/5-qrom.md",
+          "docs/quantum/reference/classical-quantum.md",
+          "docs/quantum/reference/literature.md"
+        ],
+        "retired_prose_scope": {
+          "scope": "Full repository default retired-prose scan"
+        },
+        "source_index_pins_and_READMEs_preserved": true
+      },
+      {
+        "pr": 1190,
+        "url": "https://github.com/Verified-zkEVM/VCVio/pull/1190",
+        "layer": "pr2",
+        "commit": "fd1804d6a30f934cac3554000f8687edf4f213b7",
+        "commit_url": "https://github.com/Verified-zkEVM/VCVio/commit/fd1804d6a30f934cac3554000f8687edf4f213b7",
+        "tree": "d72a1faca30cff34754c2e9eb5c56dcc4ddd8aff",
+        "base_branch": "feat/parallel-qrom-01-model",
+        "parents": [
+          "da222f3d3f1c99f1158eb8252a3a60faa4594f1e",
+          "a2061ed0a57b15269d6aaea5c5f35042be3fea8a"
+        ],
+        "independent_readiness_sha256": "7ec1982461a670b11cde4a62b9b01b84aa61227b4285fef54ad813700ec0e5f7",
+        "local_validation_sha256": "b9bc5baa35287fa12f5b05dd55d09b20f4736c9747d5eedaf9d5ccd279020d3d",
+        "contract_validation_sha256": "b9bc5baa35287fa12f5b05dd55d09b20f4736c9747d5eedaf9d5ccd279020d3d",
+        "build_targets": [
+          "ToMathlib.MeasureTheory.Measure.UniformTable.Bounds",
+          "ToMathlib.MeasureTheory.Measure.UniformTable.Target",
+          "VCVio.Quantum.Comp.ChargeWeight",
+          "VCVio.Quantum.Comp.HybridBudget",
+          "VCVio.Quantum.Comp.Runtime",
+          "VCVio.Quantum.Foundations.Hybrid",
+          "VCVio.Quantum.Oracle.ParallelFinding",
+          "VCVio.Quantum.Oracle.ParallelHybrid",
+          "VCVio.Quantum.Oracle.ParallelPreimage",
+          "VCVio.Quantum.Oracle.ParallelReprogramming",
+          "VCVio.Quantum.Oracle.ParallelSearch",
+          "VCVioTest.Quantum.ChargeWeight",
+          "VCVioTest.Quantum.ParallelSearch",
+          "VCVioTest.Quantum.ParallelPreimage",
+          "VCVio",
+          "VCVioTest.Smoke",
+          "VCVioTest.Quantum.Oracle",
+          "docnames"
+        ],
+        "owned_test_modules": [
+          "VCVioTest.Quantum.ChargeWeight",
+          "VCVioTest.Quantum.ParallelSearch",
+          "VCVioTest.Quantum.ParallelPreimage"
+        ],
+        "contract_modules": [
+          "ToMathlib.MeasureTheory.Measure.UniformTable.Bounds",
+          "ToMathlib.MeasureTheory.Measure.UniformTable.Target",
+          "VCVio.Quantum.Comp.ChargeWeight",
+          "VCVio.Quantum.Comp.HybridBudget",
+          "VCVio.Quantum.Comp.Runtime",
+          "VCVio.Quantum.Foundations.Hybrid",
+          "VCVio.Quantum.Oracle.ParallelFinding",
+          "VCVio.Quantum.Oracle.ParallelHybrid",
+          "VCVio.Quantum.Oracle.ParallelPreimage",
+          "VCVio.Quantum.Oracle.ParallelReprogramming",
+          "VCVio.Quantum.Oracle.ParallelSearch"
+        ],
+        "contracts": {
+          "status": "passed",
+          "canonical_count": 1361,
+          "expected_module_count": 173,
+          "actual_count": 173,
+          "compared_by_name_count": 173,
+          "modules": [
+            "ToMathlib.MeasureTheory.Measure.UniformTable.Bounds",
+            "ToMathlib.MeasureTheory.Measure.UniformTable.Target",
+            "VCVio.Quantum.Comp.ChargeWeight",
+            "VCVio.Quantum.Comp.HybridBudget",
+            "VCVio.Quantum.Comp.Runtime",
+            "VCVio.Quantum.Foundations.Hybrid",
+            "VCVio.Quantum.Oracle.ParallelFinding",
+            "VCVio.Quantum.Oracle.ParallelHybrid",
+            "VCVio.Quantum.Oracle.ParallelPreimage",
+            "VCVio.Quantum.Oracle.ParallelReprogramming",
+            "VCVio.Quantum.Oracle.ParallelSearch"
+          ],
+          "semantic_fields": [
+            "kind",
+            "levelParameters",
+            "type",
+            "reducibility",
+            "value"
+          ],
+          "missing": [],
+          "unknown": [],
+          "raw_differences": [],
+          "attribution_extras_preserved_and_compared": [],
+          "unapproved_extras": [],
+          "inspector_sha_equal": true,
+          "toolchain_and_manifest_equal": true,
+          "normalization": "none"
+        },
+        "headline_axioms": {
+          "names": [
+            "ProbabilityTheory.uniform_hit_sum_le",
+            "Quantum.markedSearchAdvantage_le",
+            "Quantum.markedSearchAdvantage_le_of_isPointBound",
+            "Quantum.preimageSearchAdvantage_le",
+            "Quantum.preimageSearchAdvantage_le_of_isPointBound",
+            "Quantum.rpow_inv_two_sum_mul_evalDistMap_parallel_le_of_queryWeight_eq"
+          ],
+          "count": 6,
+          "nonstandard": []
+        },
+        "focused_documents": [
+          "docs/quantum/README.md",
+          "docs/quantum/guide/README.md",
+          "docs/quantum/guide/4-programs-and-runtimes.md",
+          "docs/quantum/guide/5-qrom.md",
+          "docs/quantum/reference/classical-quantum.md",
+          "docs/quantum/reference/literature.md"
+        ],
+        "retired_prose_scope": {
+          "scope": "Reviewed candidate Lean/Markdown files plus existing stage quantum docs and indexes",
+          "files": [
+            "ToMathlib/MeasureTheory/Measure/UniformTable/Bounds.lean",
+            "VCVio/Quantum/Comp/Parallel.lean",
+            "VCVio/Quantum/Comp/RoundBound.lean",
+            "VCVio/Quantum/Comp/Sequentialize.lean",
+            "VCVio/Quantum/Comp/TotalQueryBound.lean",
+            "VCVio/Quantum/Oracle/ClassicalParallel.lean",
+            "VCVio/Quantum/Oracle/ClassicalRandomized.lean",
+            "VCVio/Quantum/Oracle/Parallel.lean",
+            "VCVio/Quantum/Oracle/ParallelFinding.lean",
+            "VCVio/Quantum/Oracle/Sequentialize.lean",
+            "VCVioTest/Quantum/ParallelSearch.lean",
+            "VCVioTest/Quantum/Sequentialize.lean",
+            "docs/design/quantum-layer.md",
+            "docs/quantum/README.md",
+            "docs/quantum/guide/4-programs-and-runtimes.md",
+            "docs/quantum/guide/5-qrom.md",
+            "docs/quantum/guide/README.md",
+            "docs/quantum/reference/classical-quantum.md",
+            "docs/quantum/reference/literature.md"
+          ],
+          "whole_repository_local_scan": false,
+          "baseline_coverage": "Full canonical integration scan and fresh hosted full scan on each eventual exact PR head"
+        },
+        "source_index_pins_and_READMEs_preserved": true
+      },
+      {
+        "pr": 1191,
+        "url": "https://github.com/Verified-zkEVM/VCVio/pull/1191",
+        "layer": "pr3",
+        "commit": "2d52cea6200c38788414cb5a097bac774f814d71",
+        "commit_url": "https://github.com/Verified-zkEVM/VCVio/commit/2d52cea6200c38788414cb5a097bac774f814d71",
+        "tree": "4e7637e14c713e6171591e8d4e3ca5635ea93f05",
+        "base_branch": "feat/parallel-qrom-02-search",
+        "parents": [
+          "4f32e015328775585ccf3d635c87201908aa8050",
+          "fd1804d6a30f934cac3554000f8687edf4f213b7"
+        ],
+        "independent_readiness_sha256": "c96cd45b8ebc2784f6430510bc9903350430c2edd2086abc6fa73df5c8bef754",
+        "local_validation_sha256": "696e248a4b5ed6600409645649136bce3e03e4ab1aba29ad3a84f5c195e271a7",
+        "contract_validation_sha256": "696e248a4b5ed6600409645649136bce3e03e4ab1aba29ad3a84f5c195e271a7",
+        "build_targets": [
+          "VCVio.CryptoFoundations.TimeLockPuzzle.Quantum",
+          "VCVio.CryptoFoundations.TimeLockPuzzle.QuantumClassical",
+          "VCVio.Quantum.Comp.DropEmptyBatches",
+          "VCVio.Quantum.Comp.Finisher",
+          "VCVio.Quantum.Comp.Homogeneous",
+          "VCVio.Quantum.Comp.NumberedHybrid",
+          "VCVio.Quantum.Comp.NumberedQueries",
+          "VCVio.Quantum.Foundations.Observation",
+          "VCVio.Quantum.Foundations.PrivateUnit",
+          "VCVio.Quantum.Foundations.SubState",
+          "VCVio.Quantum.Oracle.LocalExecution",
+          "VCVio.Quantum.Oracle.ParallelFinisher",
+          "VCVio.Quantum.Oracle.ParallelSchedule",
+          "VCVioTest.Quantum.NumberedQueries",
+          "VCVioTest.Quantum.DropEmptyBatches",
+          "VCVioTest.Quantum.SubState",
+          "VCVioTest.Quantum.TimeLockPuzzle",
+          "VCVio",
+          "VCVioTest.Smoke",
+          "VCVioTest.Quantum.Oracle",
+          "docnames"
+        ],
+        "owned_test_modules": [
+          "VCVioTest.Quantum.NumberedQueries",
+          "VCVioTest.Quantum.DropEmptyBatches",
+          "VCVioTest.Quantum.SubState",
+          "VCVioTest.Quantum.TimeLockPuzzle"
+        ],
+        "contract_modules": [
+          "VCVio.CryptoFoundations.TimeLockPuzzle.Quantum",
+          "VCVio.CryptoFoundations.TimeLockPuzzle.QuantumClassical",
+          "VCVio.Quantum.Comp.DropEmptyBatches",
+          "VCVio.Quantum.Comp.Finisher",
+          "VCVio.Quantum.Comp.Homogeneous",
+          "VCVio.Quantum.Comp.NumberedHybrid",
+          "VCVio.Quantum.Comp.NumberedQueries",
+          "VCVio.Quantum.Foundations.Observation",
+          "VCVio.Quantum.Foundations.PrivateUnit",
+          "VCVio.Quantum.Foundations.SubState",
+          "VCVio.Quantum.Oracle.LocalExecution",
+          "VCVio.Quantum.Oracle.ParallelFinisher",
+          "VCVio.Quantum.Oracle.ParallelSchedule"
+        ],
+        "contracts": {
+          "status": "passed",
+          "canonical_count": 1361,
+          "expected_module_count": 213,
+          "actual_count": 213,
+          "compared_by_name_count": 213,
+          "modules": [
+            "VCVio.CryptoFoundations.TimeLockPuzzle.Quantum",
+            "VCVio.CryptoFoundations.TimeLockPuzzle.QuantumClassical",
+            "VCVio.Quantum.Comp.DropEmptyBatches",
+            "VCVio.Quantum.Comp.Finisher",
+            "VCVio.Quantum.Comp.Homogeneous",
+            "VCVio.Quantum.Comp.NumberedHybrid",
+            "VCVio.Quantum.Comp.NumberedQueries",
+            "VCVio.Quantum.Foundations.Observation",
+            "VCVio.Quantum.Foundations.PrivateUnit",
+            "VCVio.Quantum.Foundations.SubState",
+            "VCVio.Quantum.Oracle.LocalExecution",
+            "VCVio.Quantum.Oracle.ParallelFinisher",
+            "VCVio.Quantum.Oracle.ParallelSchedule"
+          ],
+          "semantic_fields": [
+            "kind",
+            "levelParameters",
+            "type",
+            "reducibility",
+            "value"
+          ],
+          "missing": [],
+          "unknown": [],
+          "raw_differences": [],
+          "attribution_extras_preserved_and_compared": [],
+          "unapproved_extras": [],
+          "inspector_sha_equal": true,
+          "toolchain_and_manifest_equal": true,
+          "normalization": "none"
+        },
+        "headline_axioms": {
+          "names": [
+            "Quantum.TimeLockPuzzle.qromDelayAdvantage",
+            "Quantum.rpow_inv_two_sum_mul_evalDistMap_bind_parallel_le"
+          ],
+          "count": 2,
+          "nonstandard": []
+        },
+        "focused_documents": [
+          "docs/quantum/README.md",
+          "docs/quantum/guide/README.md",
+          "docs/quantum/guide/4-programs-and-runtimes.md",
+          "docs/quantum/guide/5-qrom.md",
+          "docs/quantum/guide/7-time-lock-puzzles.md",
+          "docs/quantum/reference/classical-quantum.md",
+          "docs/quantum/reference/literature.md"
+        ],
+        "retired_prose_scope": {
+          "scope": "Reviewed candidate Lean/Markdown files plus existing stage quantum docs and indexes",
+          "files": [
+            "ToMathlib/MeasureTheory/Measure/UniformTable/Bounds.lean",
+            "VCVio/CryptoFoundations/TimeLockPuzzle/Quantum.lean",
+            "VCVio/Quantum/Comp/DropEmptyBatches.lean",
+            "VCVio/Quantum/Comp/Parallel.lean",
+            "VCVio/Quantum/Comp/RoundBound.lean",
+            "VCVio/Quantum/Comp/Sequentialize.lean",
+            "VCVio/Quantum/Comp/TotalQueryBound.lean",
+            "VCVio/Quantum/Oracle/ClassicalParallel.lean",
+            "VCVio/Quantum/Oracle/ClassicalRandomized.lean",
+            "VCVio/Quantum/Oracle/Parallel.lean",
+            "VCVio/Quantum/Oracle/ParallelFinding.lean",
+            "VCVio/Quantum/Oracle/ParallelFinisher.lean",
+            "VCVio/Quantum/Oracle/Sequentialize.lean",
+            "VCVioTest/Quantum/DropEmptyBatches.lean",
+            "VCVioTest/Quantum/ParallelSearch.lean",
+            "VCVioTest/Quantum/Sequentialize.lean",
+            "docs/design/quantum-layer.md",
+            "docs/quantum/README.md",
+            "docs/quantum/guide/4-programs-and-runtimes.md",
+            "docs/quantum/guide/5-qrom.md",
+            "docs/quantum/guide/7-time-lock-puzzles.md",
+            "docs/quantum/guide/README.md",
+            "docs/quantum/reference/classical-quantum.md",
+            "docs/quantum/reference/literature.md"
+          ],
+          "whole_repository_local_scan": false,
+          "baseline_coverage": "Full canonical integration scan and fresh hosted full scan on each eventual exact PR head"
+        },
+        "source_index_pins_and_READMEs_preserved": true
+      },
+      {
+        "pr": 1192,
+        "url": "https://github.com/Verified-zkEVM/VCVio/pull/1192",
+        "layer": "pr2-followup",
+        "commit": "c9aac29cd8b9ad752fcc29b65a64992c62c6eebd",
+        "commit_url": "https://github.com/Verified-zkEVM/VCVio/commit/c9aac29cd8b9ad752fcc29b65a64992c62c6eebd",
+        "tree": "a60bc1fb8339c87d0f6f0db5dd2e56b31b41845a",
+        "base_branch": "feat/parallel-qrom-02-search",
+        "parents": [
+          "a5cf615d11b3998b3621f26d3c93c2d1c2375c2c",
+          "fd1804d6a30f934cac3554000f8687edf4f213b7"
+        ],
+        "independent_readiness_sha256": "ca93267f28ca6c567c4839d33103419b67761f02687432b1c933290c02a0bcc2",
+        "local_validation_sha256": "af6b38e3df1d0e31ef33e9ee9257a6f78b6fec7d8229699a8c2320955331f01c",
+        "contract_validation_sha256": "af6b38e3df1d0e31ef33e9ee9257a6f78b6fec7d8229699a8c2320955331f01c",
+        "build_targets": [
+          "ToMathlib.MeasureTheory.Measure.UniformTable.PlantedTarget",
+          "VCVio.Quantum.Oracle.ParallelPlantedPreimage",
+          "VCVio.Quantum.Oracle.ParallelSecurity",
+          "VCVioTest.Quantum.ParallelPlantedPreimage",
+          "VCVioTest.Quantum.ParallelSecurity",
+          "VCVio",
+          "VCVioTest.Smoke",
+          "VCVioTest.Quantum.Oracle",
+          "docnames"
+        ],
+        "owned_test_modules": [
+          "VCVioTest.Quantum.ParallelPlantedPreimage",
+          "VCVioTest.Quantum.ParallelSecurity"
+        ],
+        "contract_modules": [
+          "ToMathlib.MeasureTheory.Measure.UniformTable.PlantedTarget",
+          "VCVio.Quantum.Oracle.ParallelPlantedPreimage",
+          "VCVio.Quantum.Oracle.ParallelSecurity"
+        ],
+        "contracts": {
+          "status": "passed",
+          "canonical_count": 1361,
+          "expected_module_count": 52,
+          "actual_count": 52,
+          "compared_by_name_count": 52,
+          "modules": [
+            "ToMathlib.MeasureTheory.Measure.UniformTable.PlantedTarget",
+            "VCVio.Quantum.Oracle.ParallelPlantedPreimage",
+            "VCVio.Quantum.Oracle.ParallelSecurity"
+          ],
+          "semantic_fields": [
+            "kind",
+            "levelParameters",
+            "type",
+            "reducibility",
+            "value"
+          ],
+          "missing": [],
+          "unknown": [],
+          "raw_differences": [],
+          "attribution_extras_preserved_and_compared": [],
+          "unapproved_extras": [],
+          "inspector_sha_equal": true,
+          "toolchain_and_manifest_equal": true,
+          "normalization": "none"
+        },
+        "headline_axioms": {
+          "names": [
+            "Quantum.ParallelQROMBits",
+            "Quantum.parallelQROMBits_markedSearch",
+            "Quantum.parallelQROMBits_plantedPreimage",
+            "Quantum.parallelQROMBits_plantedPreimage_127",
+            "Quantum.parallelQROMBits_plantedPreimage_128",
+            "Quantum.parallelQROMBits_preimageSearch",
+            "Quantum.plantedPreimageAdvantage_le",
+            "Quantum.plantedPreimageAdvantage_le_of_isPointBound"
+          ],
+          "count": 8,
+          "nonstandard": []
+        },
+        "focused_documents": [
+          "docs/quantum/README.md",
+          "docs/quantum/guide/README.md",
+          "docs/quantum/guide/4-programs-and-runtimes.md",
+          "docs/quantum/guide/5-qrom.md",
+          "docs/quantum/reference/classical-quantum.md",
+          "docs/quantum/reference/literature.md"
+        ],
+        "retired_prose_scope": {
+          "scope": "Reviewed candidate Lean/Markdown files plus existing stage quantum docs and indexes",
+          "files": [
+            "ToMathlib/MeasureTheory/Measure/UniformTable/Bounds.lean",
+            "VCVio/Quantum/Comp/Parallel.lean",
+            "VCVio/Quantum/Comp/RoundBound.lean",
+            "VCVio/Quantum/Comp/Sequentialize.lean",
+            "VCVio/Quantum/Comp/TotalQueryBound.lean",
+            "VCVio/Quantum/Oracle/ClassicalParallel.lean",
+            "VCVio/Quantum/Oracle/ClassicalRandomized.lean",
+            "VCVio/Quantum/Oracle/Parallel.lean",
+            "VCVio/Quantum/Oracle/ParallelFinding.lean",
+            "VCVio/Quantum/Oracle/ParallelPlantedPreimage.lean",
+            "VCVio/Quantum/Oracle/ParallelSecurity.lean",
+            "VCVio/Quantum/Oracle/Sequentialize.lean",
+            "VCVioTest/Quantum/ParallelSearch.lean",
+            "VCVioTest/Quantum/ParallelSecurity.lean",
+            "VCVioTest/Quantum/Sequentialize.lean",
+            "docs/design/quantum-layer.md",
+            "docs/quantum/README.md",
+            "docs/quantum/guide/4-programs-and-runtimes.md",
+            "docs/quantum/guide/5-qrom.md",
+            "docs/quantum/guide/README.md",
+            "docs/quantum/reference/classical-quantum.md",
+            "docs/quantum/reference/literature.md"
+          ],
+          "whole_repository_local_scan": false,
+          "baseline_coverage": "Full canonical integration scan and fresh hosted full scan on each eventual exact PR head"
+        },
+        "source_index_pins_and_READMEs_preserved": true
+      },
+      {
+        "pr": 1193,
+        "url": "https://github.com/Verified-zkEVM/VCVio/pull/1193",
+        "layer": "pr4",
+        "commit": "52a13f5bad63979d09396a519d003033710bcf64",
+        "commit_url": "https://github.com/Verified-zkEVM/VCVio/commit/52a13f5bad63979d09396a519d003033710bcf64",
+        "tree": "7af0085f5f01a27b4a7d366b5f6a5de963410e96",
+        "base_branch": "feat/parallel-qrom-03-experiments",
+        "parents": [
+          "ec82dd3a9a30c7d05eb4b8d0c2700e799f522768",
+          "2d52cea6200c38788414cb5a097bac774f814d71"
+        ],
+        "independent_readiness_sha256": "f324a01914bd515244cd8a96e7196796620ffe983e430a114cd87d62f45a6d85",
+        "local_validation_sha256": "8f8fc240490edd1727e213e9e0abae5f672f09e52a14bd474bf03d7bc1b77a3a",
+        "contract_validation_sha256": "8f8fc240490edd1727e213e9e0abae5f672f09e52a14bd474bf03d7bc1b77a3a",
+        "build_targets": [
+          "VCVio.Quantum.Oracle.MaskedChain.Bounds",
+          "VCVio.Quantum.Oracle.MaskedChain.Coupling",
+          "VCVio.Quantum.Oracle.MaskedChain.Homogeneous",
+          "VCVio.Quantum.Oracle.MaskedChain.Hybrid",
+          "VCVio.Quantum.Oracle.MaskedChain.Model",
+          "VCVio.Quantum.Oracle.MaskedChain.Preprocessing",
+          "VCVio.Quantum.Oracle.MaskedChain.Preprocessing.DropEmpty",
+          "VCVio.Quantum.Oracle.MaskedChain.Preprocessing.Model",
+          "VCVio.Quantum.Oracle.MaskedChain.RootBounds",
+          "VCVio.Schemes.MaskedChainPuzzle",
+          "VCVio.Schemes.MaskedChainPuzzle.Preprocessing",
+          "VCVioTest.Quantum.MaskedChain",
+          "VCVioTest.Quantum.QueryBoundedPreprocessing",
+          "VCVioTest.Quantum.MaskedChainRootBounds",
+          "VCVio",
+          "VCVioTest.Smoke",
+          "VCVioTest.Quantum.Oracle",
+          "docnames"
+        ],
+        "owned_test_modules": [
+          "VCVioTest.Quantum.MaskedChain",
+          "VCVioTest.Quantum.QueryBoundedPreprocessing",
+          "VCVioTest.Quantum.MaskedChainRootBounds"
+        ],
+        "contract_modules": [
+          "VCVio.Quantum.Oracle.MaskedChain.Bounds",
+          "VCVio.Quantum.Oracle.MaskedChain.Coupling",
+          "VCVio.Quantum.Oracle.MaskedChain.Homogeneous",
+          "VCVio.Quantum.Oracle.MaskedChain.Hybrid",
+          "VCVio.Quantum.Oracle.MaskedChain.Model",
+          "VCVio.Quantum.Oracle.MaskedChain.Preprocessing",
+          "VCVio.Quantum.Oracle.MaskedChain.Preprocessing.DropEmpty",
+          "VCVio.Quantum.Oracle.MaskedChain.Preprocessing.Model",
+          "VCVio.Quantum.Oracle.MaskedChain.RootBounds",
+          "VCVio.Schemes.MaskedChainPuzzle",
+          "VCVio.Schemes.MaskedChainPuzzle.Preprocessing"
+        ],
+        "contracts": {
+          "status": "passed",
+          "canonical_count": 1361,
+          "expected_module_count": 177,
+          "actual_count": 177,
+          "compared_by_name_count": 177,
+          "modules": [
+            "VCVio.Quantum.Oracle.MaskedChain.Bounds",
+            "VCVio.Quantum.Oracle.MaskedChain.Coupling",
+            "VCVio.Quantum.Oracle.MaskedChain.Homogeneous",
+            "VCVio.Quantum.Oracle.MaskedChain.Hybrid",
+            "VCVio.Quantum.Oracle.MaskedChain.Model",
+            "VCVio.Quantum.Oracle.MaskedChain.Preprocessing",
+            "VCVio.Quantum.Oracle.MaskedChain.Preprocessing.DropEmpty",
+            "VCVio.Quantum.Oracle.MaskedChain.Preprocessing.Model",
+            "VCVio.Quantum.Oracle.MaskedChain.RootBounds",
+            "VCVio.Schemes.MaskedChainPuzzle",
+            "VCVio.Schemes.MaskedChainPuzzle.Preprocessing"
+          ],
+          "semantic_fields": [
+            "kind",
+            "levelParameters",
+            "type",
+            "reducibility",
+            "value"
+          ],
+          "missing": [],
+          "unknown": [],
+          "raw_differences": [],
+          "attribution_extras_preserved_and_compared": [],
+          "unapproved_extras": [],
+          "inspector_sha_equal": true,
+          "toolchain_and_manifest_equal": true,
+          "normalization": "none"
+        },
+        "headline_axioms": {
+          "names": [
+            "MaskedChainPuzzle.qromDelayAdvantage_le",
+            "MaskedChainPuzzle.qromDelayAdvantage_le_of_preprocessing",
+            "MaskedChainPuzzle.qromDelayAdvantage_le_of_preprocessing_min",
+            "MaskedChainPuzzle.qromDelayAdvantage_le_of_preprocessing_points",
+            "MaskedChainPuzzle.qromDelayAdvantage_le_of_preprocessing_root",
+            "MaskedChainPuzzle.qromDelayAdvantage_le_root",
+            "MaskedChainPuzzle.qromDelaySecure",
+            "MaskedChainPuzzle.qromDelaySecure_points",
+            "MaskedChainPuzzle.qromDelaySecure_root"
+          ],
+          "count": 9,
+          "nonstandard": []
+        },
+        "focused_documents": [
+          "docs/quantum/README.md",
+          "docs/quantum/guide/README.md",
+          "docs/quantum/guide/4-programs-and-runtimes.md",
+          "docs/quantum/guide/5-qrom.md",
+          "docs/quantum/guide/7-time-lock-puzzles.md",
+          "docs/quantum/reference/classical-quantum.md",
+          "docs/quantum/reference/literature.md"
+        ],
+        "retired_prose_scope": {
+          "scope": "Reviewed candidate Lean/Markdown files plus existing stage quantum docs and indexes",
+          "files": [
+            "ToMathlib/MeasureTheory/Measure/UniformTable/Bounds.lean",
+            "VCVio/CryptoFoundations/TimeLockPuzzle/Quantum.lean",
+            "VCVio/Quantum/Comp/DropEmptyBatches.lean",
+            "VCVio/Quantum/Comp/Parallel.lean",
+            "VCVio/Quantum/Comp/RoundBound.lean",
+            "VCVio/Quantum/Comp/Sequentialize.lean",
+            "VCVio/Quantum/Comp/TotalQueryBound.lean",
+            "VCVio/Quantum/Oracle/ClassicalParallel.lean",
+            "VCVio/Quantum/Oracle/ClassicalRandomized.lean",
+            "VCVio/Quantum/Oracle/MaskedChain/Bounds.lean",
+            "VCVio/Quantum/Oracle/MaskedChain/Coupling.lean",
+            "VCVio/Quantum/Oracle/MaskedChain/Homogeneous.lean",
+            "VCVio/Quantum/Oracle/MaskedChain/Hybrid.lean",
+            "VCVio/Quantum/Oracle/MaskedChain/Preprocessing.lean",
+            "VCVio/Quantum/Oracle/MaskedChain/RootBounds.lean",
+            "VCVio/Quantum/Oracle/Parallel.lean",
+            "VCVio/Quantum/Oracle/ParallelFinding.lean",
+            "VCVio/Quantum/Oracle/ParallelFinisher.lean",
+            "VCVio/Quantum/Oracle/Sequentialize.lean",
+            "VCVioTest/Quantum/DropEmptyBatches.lean",
+            "VCVioTest/Quantum/MaskedChain.lean",
+            "VCVioTest/Quantum/MaskedChainRootBounds.lean",
+            "VCVioTest/Quantum/ParallelSearch.lean",
+            "VCVioTest/Quantum/Sequentialize.lean",
+            "docs/design/quantum-layer.md",
+            "docs/quantum/README.md",
+            "docs/quantum/guide/4-programs-and-runtimes.md",
+            "docs/quantum/guide/5-qrom.md",
+            "docs/quantum/guide/7-time-lock-puzzles.md",
+            "docs/quantum/guide/README.md",
+            "docs/quantum/reference/classical-quantum.md",
+            "docs/quantum/reference/literature.md"
+          ],
+          "whole_repository_local_scan": false,
+          "baseline_coverage": "Full canonical integration scan and fresh hosted full scan on each eventual exact PR head"
+        },
+        "source_index_pins_and_READMEs_preserved": true
+      },
+      {
+        "pr": 1194,
+        "url": "https://github.com/Verified-zkEVM/VCVio/pull/1194",
+        "layer": "pr5",
+        "commit": "1e75842f27642d08375176e40add583cd03f0e30",
+        "commit_url": "https://github.com/Verified-zkEVM/VCVio/commit/1e75842f27642d08375176e40add583cd03f0e30",
+        "tree": "a92f646efd0cc04d842e6de9ac3f23d50f595a11",
+        "base_branch": "feat/parallel-qrom-03-experiments",
+        "parents": [
+          "e6080de4efd8ad4fe273d649b97c4327471889a6",
+          "2d52cea6200c38788414cb5a097bac774f814d71"
+        ],
+        "independent_readiness_sha256": "629dc8157d4b26bc663e877adf06265fa75514245afb93fc49d50279e1ab953e",
+        "local_validation_sha256": "959ede22601885474bbb05b8f8c20be782525daf868a36bb7bd55d0e7aeb8f98",
+        "contract_validation_sha256": "959ede22601885474bbb05b8f8c20be782525daf868a36bb7bd55d0e7aeb8f98",
+        "build_targets": [
+          "ToMathlib.Data.ByteArray.Bounded",
+          "ToMathlib.MeasureTheory.Measure.UniformTable.Encoding",
+          "VCVio.Quantum.Oracle.Encoding",
+          "VCVio.Schemes.PointerChainPuzzle.Basic",
+          "VCVio.Schemes.PointerChainPuzzle.QuantumEncoding",
+          "VCVioTest.Quantum.OracleEncoding",
+          "VCVioTest.Quantum.PointerChainEncoding",
+          "VCVio",
+          "VCVioTest.Smoke",
+          "VCVioTest.Quantum.Oracle",
+          "docnames"
+        ],
+        "owned_test_modules": [
+          "VCVioTest.Quantum.OracleEncoding",
+          "VCVioTest.Quantum.PointerChainEncoding"
+        ],
+        "contract_modules": [
+          "ToMathlib.Data.ByteArray.Bounded",
+          "ToMathlib.MeasureTheory.Measure.UniformTable.Encoding",
+          "VCVio.Quantum.Oracle.Encoding",
+          "VCVio.Schemes.PointerChainPuzzle.Basic",
+          "VCVio.Schemes.PointerChainPuzzle.QuantumEncoding"
+        ],
+        "contracts": {
+          "status": "passed",
+          "canonical_count": 1361,
+          "expected_module_count": 287,
+          "actual_count": 287,
+          "compared_by_name_count": 287,
+          "modules": [
+            "ToMathlib.Data.ByteArray.Bounded",
+            "ToMathlib.MeasureTheory.Measure.UniformTable.Encoding",
+            "VCVio.Quantum.Oracle.Encoding",
+            "VCVio.Schemes.PointerChainPuzzle.Basic",
+            "VCVio.Schemes.PointerChainPuzzle.QuantumEncoding"
+          ],
+          "semantic_fields": [
+            "kind",
+            "levelParameters",
+            "type",
+            "reducibility",
+            "value"
+          ],
+          "missing": [],
+          "unknown": [],
+          "raw_differences": [],
+          "attribution_extras_preserved_and_compared": [],
+          "unapproved_extras": [],
+          "inspector_sha_equal": true,
+          "toolchain_and_manifest_equal": true,
+          "normalization": "none"
+        },
+        "headline_axioms": {
+          "names": [
+            "PointerChainPuzzle.LeanSeal.evalDist_quantumWindowDerive_genWith",
+            "PointerChainPuzzle.LeanSeal.evalDist_quantumWindowScheme_solve",
+            "PointerChainPuzzle.LeanSeal.isTotalQueryBound_quantumWindowDerive"
+          ],
+          "count": 3,
+          "nonstandard": []
+        },
+        "focused_documents": [
+          "docs/quantum/README.md",
+          "docs/quantum/guide/README.md",
+          "docs/quantum/guide/4-programs-and-runtimes.md",
+          "docs/quantum/guide/5-qrom.md",
+          "docs/quantum/guide/7-time-lock-puzzles.md",
+          "docs/quantum/reference/classical-quantum.md",
+          "docs/quantum/reference/literature.md"
+        ],
+        "retired_prose_scope": {
+          "scope": "Reviewed candidate Lean/Markdown files plus existing stage quantum docs and indexes",
+          "files": [
+            "ToMathlib/MeasureTheory/Measure/UniformTable/Bounds.lean",
+            "VCVio/CryptoFoundations/TimeLockPuzzle/Quantum.lean",
+            "VCVio/Quantum/Comp/DropEmptyBatches.lean",
+            "VCVio/Quantum/Comp/Parallel.lean",
+            "VCVio/Quantum/Comp/RoundBound.lean",
+            "VCVio/Quantum/Comp/Sequentialize.lean",
+            "VCVio/Quantum/Comp/TotalQueryBound.lean",
+            "VCVio/Quantum/Oracle/ClassicalParallel.lean",
+            "VCVio/Quantum/Oracle/ClassicalRandomized.lean",
+            "VCVio/Quantum/Oracle/Parallel.lean",
+            "VCVio/Quantum/Oracle/ParallelFinding.lean",
+            "VCVio/Quantum/Oracle/ParallelFinisher.lean",
+            "VCVio/Quantum/Oracle/Sequentialize.lean",
+            "VCVio/Schemes/PointerChainPuzzle/QuantumEncoding.lean",
+            "VCVioTest/Quantum/DropEmptyBatches.lean",
+            "VCVioTest/Quantum/ParallelSearch.lean",
+            "VCVioTest/Quantum/PointerChainEncoding.lean",
+            "VCVioTest/Quantum/Sequentialize.lean",
+            "docs/design/quantum-layer.md",
+            "docs/quantum/README.md",
+            "docs/quantum/guide/4-programs-and-runtimes.md",
+            "docs/quantum/guide/5-qrom.md",
+            "docs/quantum/guide/7-time-lock-puzzles.md",
+            "docs/quantum/guide/README.md",
+            "docs/quantum/reference/classical-quantum.md",
+            "docs/quantum/reference/literature.md"
+          ],
+          "whole_repository_local_scan": false,
+          "baseline_coverage": "Full canonical integration scan and fresh hosted full scan on each eventual exact PR head"
+        },
+        "source_index_pins_and_READMEs_preserved": true
+      },
+      {
+        "pr": 1195,
+        "url": "https://github.com/Verified-zkEVM/VCVio/pull/1195",
+        "layer": "pr6",
+        "commit": "a134b9fa3a187bca2eb97a38ac5a88abe0ef4611",
+        "commit_url": "https://github.com/Verified-zkEVM/VCVio/commit/a134b9fa3a187bca2eb97a38ac5a88abe0ef4611",
+        "tree": "4ab9ebc6958757d2cf4dd8ea0ab6e8c05a99feb8",
+        "base_branch": "feat/parallel-qrom-05-encoding",
+        "parents": [
+          "ab02a9279fc24d3111fb60fa766e4726f9bc94a9",
+          "1e75842f27642d08375176e40add583cd03f0e30"
+        ],
+        "independent_readiness_sha256": "303c8bb2d544d56944c49998f07d9f806b7f7f9f3b9be1ad74eea985684043c3",
+        "local_validation_sha256": "c7a70178164b03f5fbb405f7d3690cda3716f8e8fa2e6def2b235b0346ea4e9c",
+        "contract_validation_sha256": "c7a70178164b03f5fbb405f7d3690cda3716f8e8fa2e6def2b235b0346ea4e9c",
+        "build_targets": [
+          "ToMathlib.MeasureTheory.Measure.UniformTable.Adaptive",
+          "VCVio.Schemes.PointerChainPuzzle.QuantumCoupling",
+          "VCVio.Schemes.PointerChainPuzzle.QuantumCoupling.Programming",
+          "VCVio.Schemes.PointerChainPuzzle.QuantumCoupling.Scheme",
+          "VCVio.Schemes.PointerChainPuzzle.RankFrontier",
+          "VCVioTest.Quantum.AdaptiveProgramming",
+          "VCVioTest.Quantum.PointerChainFrontier",
+          "VCVioTest.Quantum.PointerChainProgramming",
+          "VCVioTest.Quantum.PointerChainCoupling",
+          "VCVio",
+          "VCVioTest.Smoke",
+          "VCVioTest.Quantum.Oracle",
+          "docnames"
+        ],
+        "owned_test_modules": [
+          "VCVioTest.Quantum.AdaptiveProgramming",
+          "VCVioTest.Quantum.PointerChainFrontier",
+          "VCVioTest.Quantum.PointerChainProgramming",
+          "VCVioTest.Quantum.PointerChainCoupling"
+        ],
+        "contract_modules": [
+          "ToMathlib.MeasureTheory.Measure.UniformTable.Adaptive",
+          "VCVio.Schemes.PointerChainPuzzle.QuantumCoupling",
+          "VCVio.Schemes.PointerChainPuzzle.QuantumCoupling.Programming",
+          "VCVio.Schemes.PointerChainPuzzle.QuantumCoupling.Scheme",
+          "VCVio.Schemes.PointerChainPuzzle.RankFrontier"
+        ],
+        "contracts": {
+          "status": "passed",
+          "canonical_count": 1361,
+          "expected_module_count": 99,
+          "actual_count": 100,
+          "compared_by_name_count": 100,
+          "modules": [
+            "ToMathlib.MeasureTheory.Measure.UniformTable.Adaptive",
+            "VCVio.Schemes.PointerChainPuzzle.QuantumCoupling",
+            "VCVio.Schemes.PointerChainPuzzle.QuantumCoupling.Programming",
+            "VCVio.Schemes.PointerChainPuzzle.QuantumCoupling.Scheme",
+            "VCVio.Schemes.PointerChainPuzzle.RankFrontier"
+          ],
+          "semantic_fields": [
+            "kind",
+            "levelParameters",
+            "type",
+            "reducibility",
+            "value"
+          ],
+          "missing": [],
+          "unknown": [],
+          "raw_differences": [],
+          "attribution_extras_preserved_and_compared": [
+            {
+              "name": "Quantum.TimeLockPuzzle.qromDelayAdvantage.eq_1",
+              "canonical_module": "VCVio.Schemes.MaskedChainPuzzle",
+              "actual_module": "VCVio.Schemes.PointerChainPuzzle.QuantumCoupling.Scheme",
+              "all_raw_semantic_fields_equal": true
+            }
+          ],
+          "unapproved_extras": [],
+          "inspector_sha_equal": true,
+          "toolchain_and_manifest_equal": true,
+          "normalization": "none"
+        },
+        "headline_axioms": {
+          "names": [
+            "PointerChainPuzzle.LeanSeal.qromDelayAdvantage_quantumWindowScheme_le_min_programmed",
+            "PointerChainPuzzle.LeanSeal.uniformOn_pathInputCollision_le"
+          ],
+          "count": 2,
+          "nonstandard": []
+        },
+        "focused_documents": [
+          "docs/quantum/README.md",
+          "docs/quantum/guide/README.md",
+          "docs/quantum/guide/4-programs-and-runtimes.md",
+          "docs/quantum/guide/5-qrom.md",
+          "docs/quantum/guide/7-time-lock-puzzles.md",
+          "docs/quantum/reference/classical-quantum.md",
+          "docs/quantum/reference/literature.md"
+        ],
+        "retired_prose_scope": {
+          "scope": "Reviewed candidate Lean/Markdown files plus existing stage quantum docs and indexes",
+          "files": [
+            "ToMathlib/MeasureTheory/Measure/UniformTable/Bounds.lean",
+            "VCVio/CryptoFoundations/TimeLockPuzzle/Quantum.lean",
+            "VCVio/Quantum/Comp/DropEmptyBatches.lean",
+            "VCVio/Quantum/Comp/Parallel.lean",
+            "VCVio/Quantum/Comp/RoundBound.lean",
+            "VCVio/Quantum/Comp/Sequentialize.lean",
+            "VCVio/Quantum/Comp/TotalQueryBound.lean",
+            "VCVio/Quantum/Oracle/ClassicalParallel.lean",
+            "VCVio/Quantum/Oracle/ClassicalRandomized.lean",
+            "VCVio/Quantum/Oracle/Parallel.lean",
+            "VCVio/Quantum/Oracle/ParallelFinding.lean",
+            "VCVio/Quantum/Oracle/ParallelFinisher.lean",
+            "VCVio/Quantum/Oracle/Sequentialize.lean",
+            "VCVio/Schemes/PointerChainPuzzle/QuantumCoupling/Scheme.lean",
+            "VCVio/Schemes/PointerChainPuzzle/QuantumEncoding.lean",
+            "VCVioTest/Quantum/DropEmptyBatches.lean",
+            "VCVioTest/Quantum/ParallelSearch.lean",
+            "VCVioTest/Quantum/PointerChainEncoding.lean",
+            "VCVioTest/Quantum/Sequentialize.lean",
+            "docs/design/quantum-layer.md",
+            "docs/quantum/README.md",
+            "docs/quantum/guide/4-programs-and-runtimes.md",
+            "docs/quantum/guide/5-qrom.md",
+            "docs/quantum/guide/7-time-lock-puzzles.md",
+            "docs/quantum/guide/README.md",
+            "docs/quantum/reference/classical-quantum.md",
+            "docs/quantum/reference/literature.md"
+          ],
+          "whole_repository_local_scan": false,
+          "baseline_coverage": "Full canonical integration scan and fresh hosted full scan on each eventual exact PR head"
+        },
+        "source_index_pins_and_READMEs_preserved": true
+      },
+      {
+        "pr": 1196,
+        "url": "https://github.com/Verified-zkEVM/VCVio/pull/1196",
+        "layer": "pr7",
+        "commit": "3a41224dd35ae3ae2c752b420b117d53347b8936",
+        "commit_url": "https://github.com/Verified-zkEVM/VCVio/commit/3a41224dd35ae3ae2c752b420b117d53347b8936",
+        "tree": "8a44bce85cc1ec42a54cdfac0508a472d85ce38d",
+        "base_branch": "feat/parallel-qrom-06-coupling",
+        "parents": [
+          "23f13af581c2f315e2f97df9663a16b572a9af15",
+          "a134b9fa3a187bca2eb97a38ac5a88abe0ef4611"
+        ],
+        "independent_readiness_sha256": "9661ad9f7ddaf2252b2c385866d5e0c8e6665bf759267290cbd7667b74186d36",
+        "local_validation_sha256": "131c3cc8d558321d5a37fb729254ef120eb84989e68ac1ff8c56a4ce1b302e24",
+        "contract_validation_sha256": "131c3cc8d558321d5a37fb729254ef120eb84989e68ac1ff8c56a4ce1b302e24",
+        "build_targets": [
+          "VCVio.Schemes.PointerChainPuzzle.QuantumCoupling.Incidence",
+          "VCVio.Schemes.PointerChainPuzzle.QuantumCoupling.Preprocessing",
+          "VCVio.Schemes.PointerChainPuzzle.QuantumCoupling.PreprocessingIncidence",
+          "VCVio.Schemes.PointerChainPuzzle.QuantumCoupling.RankBounds",
+          "VCVio.Schemes.PointerChainPuzzle.QuantumCoupling.RankHybrid",
+          "VCVio.Schemes.PointerChainPuzzle.QuantumCoupling.RankSchedule",
+          "VCVioTest.Quantum.PointerChainRankSchedule",
+          "VCVioTest.Quantum.PointerChainRankBounds",
+          "VCVioTest.Quantum.PointerChainPreprocessing",
+          "VCVio",
+          "VCVioTest.Smoke",
+          "VCVioTest.Quantum.Oracle",
+          "docnames"
+        ],
+        "owned_test_modules": [
+          "VCVioTest.Quantum.PointerChainRankSchedule",
+          "VCVioTest.Quantum.PointerChainRankBounds",
+          "VCVioTest.Quantum.PointerChainPreprocessing"
+        ],
+        "contract_modules": [
+          "VCVio.Schemes.PointerChainPuzzle.QuantumCoupling.Incidence",
+          "VCVio.Schemes.PointerChainPuzzle.QuantumCoupling.Preprocessing",
+          "VCVio.Schemes.PointerChainPuzzle.QuantumCoupling.PreprocessingIncidence",
+          "VCVio.Schemes.PointerChainPuzzle.QuantumCoupling.RankBounds",
+          "VCVio.Schemes.PointerChainPuzzle.QuantumCoupling.RankHybrid",
+          "VCVio.Schemes.PointerChainPuzzle.QuantumCoupling.RankSchedule"
+        ],
+        "contracts": {
+          "status": "passed",
+          "canonical_count": 1361,
+          "expected_module_count": 67,
+          "actual_count": 67,
+          "compared_by_name_count": 67,
+          "modules": [
+            "VCVio.Schemes.PointerChainPuzzle.QuantumCoupling.Incidence",
+            "VCVio.Schemes.PointerChainPuzzle.QuantumCoupling.Preprocessing",
+            "VCVio.Schemes.PointerChainPuzzle.QuantumCoupling.PreprocessingIncidence",
+            "VCVio.Schemes.PointerChainPuzzle.QuantumCoupling.RankBounds",
+            "VCVio.Schemes.PointerChainPuzzle.QuantumCoupling.RankHybrid",
+            "VCVio.Schemes.PointerChainPuzzle.QuantumCoupling.RankSchedule"
+          ],
+          "semantic_fields": [
+            "kind",
+            "levelParameters",
+            "type",
+            "reducibility",
+            "value"
+          ],
+          "missing": [],
+          "unknown": [],
+          "raw_differences": [],
+          "attribution_extras_preserved_and_compared": [],
+          "unapproved_extras": [],
+          "inspector_sha_equal": true,
+          "toolchain_and_manifest_equal": true,
+          "normalization": "none"
+        },
+        "headline_axioms": {
+          "names": [
+            "PointerChainPuzzle.LeanSeal.averageRankHybridSuccess_zero_le",
+            "PointerChainPuzzle.LeanSeal.averageRankHybridSuccess_zero_le_mul_mass",
+            "PointerChainPuzzle.LeanSeal.qromDelayAdvantage_quantumWindowScheme_le_of_preprocessing",
+            "PointerChainPuzzle.LeanSeal.qromDelaySecure_quantumWindowScheme",
+            "PointerChainPuzzle.LeanSeal.qromDelaySecure_quantumWindowScheme_min_width_points",
+            "PointerChainPuzzle.LeanSeal.rankHybridSuccess_zero",
+            "PointerChainPuzzle.LeanSeal.sqrt_averageRankHybridSuccess_le_succ",
+            "PointerChainPuzzle.LeanSeal.sqrt_averageRankHybridSuccess_zero_le",
+            "PointerChainPuzzle.LeanSeal.sqrt_sum_rankHybridSuccess_resample_le",
+            "PointerChainPuzzle.LeanSeal.sum_programmedRecovery_le_mul_mass"
+          ],
+          "count": 10,
+          "nonstandard": []
+        },
+        "focused_documents": [
+          "docs/quantum/README.md",
+          "docs/quantum/guide/README.md",
+          "docs/quantum/guide/4-programs-and-runtimes.md",
+          "docs/quantum/guide/5-qrom.md",
+          "docs/quantum/guide/7-time-lock-puzzles.md",
+          "docs/quantum/reference/classical-quantum.md",
+          "docs/quantum/reference/literature.md"
+        ],
+        "retired_prose_scope": {
+          "scope": "Reviewed candidate Lean/Markdown files plus existing stage quantum docs and indexes",
+          "files": [
+            "ToMathlib/MeasureTheory/Measure/UniformTable/Bounds.lean",
+            "VCVio/CryptoFoundations/TimeLockPuzzle/Quantum.lean",
+            "VCVio/Quantum/Comp/DropEmptyBatches.lean",
+            "VCVio/Quantum/Comp/Parallel.lean",
+            "VCVio/Quantum/Comp/RoundBound.lean",
+            "VCVio/Quantum/Comp/Sequentialize.lean",
+            "VCVio/Quantum/Comp/TotalQueryBound.lean",
+            "VCVio/Quantum/Oracle/ClassicalParallel.lean",
+            "VCVio/Quantum/Oracle/ClassicalRandomized.lean",
+            "VCVio/Quantum/Oracle/Parallel.lean",
+            "VCVio/Quantum/Oracle/ParallelFinding.lean",
+            "VCVio/Quantum/Oracle/ParallelFinisher.lean",
+            "VCVio/Quantum/Oracle/Sequentialize.lean",
+            "VCVio/Schemes/PointerChainPuzzle/QuantumCoupling/Preprocessing.lean",
+            "VCVio/Schemes/PointerChainPuzzle/QuantumCoupling/Scheme.lean",
+            "VCVio/Schemes/PointerChainPuzzle/QuantumEncoding.lean",
+            "VCVioTest/Quantum/DropEmptyBatches.lean",
+            "VCVioTest/Quantum/ParallelSearch.lean",
+            "VCVioTest/Quantum/PointerChainEncoding.lean",
+            "VCVioTest/Quantum/PointerChainPreprocessing.lean",
+            "VCVioTest/Quantum/Sequentialize.lean",
+            "docs/design/quantum-layer.md",
+            "docs/quantum/README.md",
+            "docs/quantum/guide/4-programs-and-runtimes.md",
+            "docs/quantum/guide/5-qrom.md",
+            "docs/quantum/guide/7-time-lock-puzzles.md",
+            "docs/quantum/guide/README.md",
+            "docs/quantum/reference/classical-quantum.md",
+            "docs/quantum/reference/literature.md"
+          ],
+          "whole_repository_local_scan": false,
+          "baseline_coverage": "Full canonical integration scan and fresh hosted full scan on each eventual exact PR head"
+        },
+        "source_index_pins_and_READMEs_preserved": true
+      }
+    ]
+  },
+  "hosted_CI": {
+    "status": "passed",
+    "snapshot_started_at": "2026-11-21T00:28:04.724528+00:00",
+    "snapshot_finished_at": "2026-11-21T00:28:33.416154+00:00",
+    "actual_rollup_entries": 81,
+    "distinct_PR_check_types": 72,
+    "required_check_names": [
+      "Build Project",
+      "Check Agent Documentation",
+      "Check Interop TCB Isolation",
+      "Check Library File Imports",
+      "Downstream Consumer Build (no submodules)",
+      "Interop Bridges",
+      "Lint",
+      "Lint Style",
+      "summarize"
+    ],
+    "prs": [
+      {
+        "number": 1188,
+        "expected_head": "a2061ed0a57b15269d6aaea5c5f35042be3fea8a",
+        "actual_head": "a2061ed0a57b15269d6aaea5c5f35042be3fea8a",
+        "exact_head": true,
+        "expected_base": "main",
+        "actual_base": "main",
+        "exact_base": true,
+        "exact_branch": true,
+        "stable_capture": true,
+        "open": true,
+        "actual_rollup_entries": 9,
+        "distinct_check_names": [
+          "Build Project",
+          "Check Agent Documentation",
+          "Check Interop TCB Isolation",
+          "Check Library File Imports",
+          "Downstream Consumer Build (no submodules)",
+          "Interop Bridges",
+          "Lint",
+          "Lint Style",
+          "summarize"
+        ],
+        "missing_names": [],
+        "unexpected_names": [],
+        "duplicate_names": {},
+        "counts": {
+          "success": 9,
+          "active": 0,
+          "failure": 0,
+          "cancelled": 0,
+          "non_success": 0,
+          "unknown": 0
+        },
+        "entries": [
+          {
+            "name": "Check Agent Documentation",
+            "kind": "CheckRun",
+            "status": "COMPLETED",
+            "conclusion": "SUCCESS",
+            "category": "success",
+            "workflow": "Agent Docs",
+            "run_id": 44826468027,
+            "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826468027/job/136600228906"
+          },
+          {
+            "name": "Check Interop TCB Isolation",
+            "kind": "CheckRun",
+            "status": "COMPLETED",
+            "conclusion": "SUCCESS",
+            "category": "success",
+            "workflow": "Interop TCB Isolation",
+            "run_id": 44826468115,
+            "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826468115/job/136600229348"
+          },
+          {
+            "name": "Check Library File Imports",
+            "kind": "CheckRun",
+            "status": "COMPLETED",
+            "conclusion": "SUCCESS",
+            "category": "success",
+            "workflow": "Lean Action CI",
+            "run_id": 44826468009,
+            "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826468009/job/136600229487"
+          },
+          {
+            "name": "Lint Style",
+            "kind": "CheckRun",
+            "status": "COMPLETED",
+            "conclusion": "SUCCESS",
+            "category": "success",
+            "workflow": "Lint Style",
+            "run_id": 44826468026,
+            "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826468026/job/136600228867"
+          },
+          {
+            "name": "summarize",
+            "kind": "CheckRun",
+            "status": "COMPLETED",
+            "conclusion": "SUCCESS",
+            "category": "success",
+            "workflow": "PR Summary",
+            "run_id": 44826465025,
+            "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826465025/job/136600222816"
+          },
+          {
+            "name": "Interop Bridges",
+            "kind": "CheckRun",
+            "status": "COMPLETED",
+            "conclusion": "SUCCESS",
+            "category": "success",
+            "workflow": "Lean Action CI",
+            "run_id": 44826468009,
+            "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826468009/job/136600229623"
+          },
+          {
+            "name": "Downstream Consumer Build (no submodules)",
+            "kind": "CheckRun",
+            "status": "COMPLETED",
+            "conclusion": "SUCCESS",
+            "category": "success",
+            "workflow": "Lean Action CI",
+            "run_id": 44826468009,
+            "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826468009/job/136600230438"
+          },
+          {
+            "name": "Build Project",
+            "kind": "CheckRun",
+            "status": "COMPLETED",
+            "conclusion": "SUCCESS",
+            "category": "success",
+            "workflow": "Lean Action CI",
+            "run_id": 44826468009,
+            "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826468009/job/136600229192"
+          },
+          {
+            "name": "Lint",
+            "kind": "CheckRun",
+            "status": "COMPLETED",
+            "conclusion": "SUCCESS",
+            "category": "success",
+            "workflow": "Lean Action CI",
+            "run_id": 44826468009,
+            "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826468009/job/136600229934"
+          }
+        ],
+        "workflow_run_ids": [
+          44826465025,
+          44826468009,
+          44826468026,
+          44826468027,
+          44826468115
+        ],
+        "status": "PASS",
+        "policy": "Every actual entry must succeed; a successful duplicate clears no cancellation/failure."
+      },
+      {
+        "number": 1190,
+        "expected_head": "fd1804d6a30f934cac3554000f8687edf4f213b7",
+        "actual_head": "fd1804d6a30f934cac3554000f8687edf4f213b7",
+        "exact_head": true,
+        "expected_base": "feat/parallel-qrom-01-model",
+        "actual_base": "feat/parallel-qrom-01-model",
+        "exact_base": true,
+        "exact_branch": true,
+        "stable_capture": true,
+        "open": true,
+        "actual_rollup_entries": 9,
+        "distinct_check_names": [
+          "Build Project",
+          "Check Agent Documentation",
+          "Check Interop TCB Isolation",
+          "Check Library File Imports",
+          "Downstream Consumer Build (no submodules)",
+          "Interop Bridges",
+          "Lint",
+          "Lint Style",
+          "summarize"
+        ],
+        "missing_names": [],
+        "unexpected_names": [],
+        "duplicate_names": {},
+        "counts": {
+          "success": 9,
+          "active": 0,
+          "failure": 0,
+          "cancelled": 0,
+          "non_success": 0,
+          "unknown": 0
+        },
+        "entries": [
+          {
+            "name": "Check Agent Documentation",
+            "kind": "CheckRun",
+            "status": "COMPLETED",
+            "conclusion": "SUCCESS",
+            "category": "success",
+            "workflow": "Agent Docs",
+            "run_id": 44826471162,
+            "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826471162/job/136600238650"
+          },
+          {
+            "name": "Check Interop TCB Isolation",
+            "kind": "CheckRun",
+            "status": "COMPLETED",
+            "conclusion": "SUCCESS",
+            "category": "success",
+            "workflow": "Interop TCB Isolation",
+            "run_id": 44826471142,
+            "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826471142/job/136600238960"
+          },
+          {
+            "name": "Check Library File Imports",
+            "kind": "CheckRun",
+            "status": "COMPLETED",
+            "conclusion": "SUCCESS",
+            "category": "success",
+            "workflow": "Lean Action CI",
+            "run_id": 44826471166,
+            "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826471166/job/136600239704"
+          },
+          {
+            "name": "Lint Style",
+            "kind": "CheckRun",
+            "status": "COMPLETED",
+            "conclusion": "SUCCESS",
+            "category": "success",
+            "workflow": "Lint Style",
+            "run_id": 44826471181,
+            "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826471181/job/136600239351"
+          },
+          {
+            "name": "summarize",
+            "kind": "CheckRun",
+            "status": "COMPLETED",
+            "conclusion": "SUCCESS",
+            "category": "success",
+            "workflow": "PR Summary",
+            "run_id": 44826465268,
+            "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826465268/job/136600223916"
+          },
+          {
+            "name": "Interop Bridges",
+            "kind": "CheckRun",
+            "status": "COMPLETED",
+            "conclusion": "SUCCESS",
+            "category": "success",
+            "workflow": "Lean Action CI",
+            "run_id": 44826471166,
+            "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826471166/job/136600239498"
+          },
+          {
+            "name": "Downstream Consumer Build (no submodules)",
+            "kind": "CheckRun",
+            "status": "COMPLETED",
+            "conclusion": "SUCCESS",
+            "category": "success",
+            "workflow": "Lean Action CI",
+            "run_id": 44826471166,
+            "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826471166/job/136600239703"
+          },
+          {
+            "name": "Build Project",
+            "kind": "CheckRun",
+            "status": "COMPLETED",
+            "conclusion": "SUCCESS",
+            "category": "success",
+            "workflow": "Lean Action CI",
+            "run_id": 44826471166,
+            "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826471166/job/136600239634"
+          },
+          {
+            "name": "Lint",
+            "kind": "CheckRun",
+            "status": "COMPLETED",
+            "conclusion": "SUCCESS",
+            "category": "success",
+            "workflow": "Lean Action CI",
+            "run_id": 44826471166,
+            "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826471166/job/136600239120"
+          }
+        ],
+        "workflow_run_ids": [
+          44826465268,
+          44826471142,
+          44826471162,
+          44826471166,
+          44826471181
+        ],
+        "status": "PASS",
+        "policy": "Every actual entry must succeed; a successful duplicate clears no cancellation/failure."
+      },
+      {
+        "number": 1192,
+        "expected_head": "c9aac29cd8b9ad752fcc29b65a64992c62c6eebd",
+        "actual_head": "c9aac29cd8b9ad752fcc29b65a64992c62c6eebd",
+        "exact_head": true,
+        "expected_base": "feat/parallel-qrom-02-search",
+        "actual_base": "feat/parallel-qrom-02-search",
+        "exact_base": true,
+        "exact_branch": true,
+        "stable_capture": true,
+        "open": true,
+        "actual_rollup_entries": 9,
+        "distinct_check_names": [
+          "Build Project",
+          "Check Agent Documentation",
+          "Check Interop TCB Isolation",
+          "Check Library File Imports",
+          "Downstream Consumer Build (no submodules)",
+          "Interop Bridges",
+          "Lint",
+          "Lint Style",
+          "summarize"
+        ],
+        "missing_names": [],
+        "unexpected_names": [],
+        "duplicate_names": {},
+        "counts": {
+          "success": 9,
+          "active": 0,
+          "failure": 0,
+          "cancelled": 0,
+          "non_success": 0,
+          "unknown": 0
+        },
+        "entries": [
+          {
+            "name": "Check Agent Documentation",
+            "kind": "CheckRun",
+            "status": "COMPLETED",
+            "conclusion": "SUCCESS",
+            "category": "success",
+            "workflow": "Agent Docs",
+            "run_id": 44826470247,
+            "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826470247/job/136600236051"
+          },
+          {
+            "name": "Check Interop TCB Isolation",
+            "kind": "CheckRun",
+            "status": "COMPLETED",
+            "conclusion": "SUCCESS",
+            "category": "success",
+            "workflow": "Interop TCB Isolation",
+            "run_id": 44826470201,
+            "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826470201/job/136600235586"
+          },
+          {
+            "name": "Check Library File Imports",
+            "kind": "CheckRun",
+            "status": "COMPLETED",
+            "conclusion": "SUCCESS",
+            "category": "success",
+            "workflow": "Lean Action CI",
+            "run_id": 44826470182,
+            "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826470182/job/136600236195"
+          },
+          {
+            "name": "Lint Style",
+            "kind": "CheckRun",
+            "status": "COMPLETED",
+            "conclusion": "SUCCESS",
+            "category": "success",
+            "workflow": "Lint Style",
+            "run_id": 44826470192,
+            "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826470192/job/136600236056"
+          },
+          {
+            "name": "summarize",
+            "kind": "CheckRun",
+            "status": "COMPLETED",
+            "conclusion": "SUCCESS",
+            "category": "success",
+            "workflow": "PR Summary",
+            "run_id": 44826466633,
+            "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826466633/job/136600228648"
+          },
+          {
+            "name": "Interop Bridges",
+            "kind": "CheckRun",
+            "status": "COMPLETED",
+            "conclusion": "SUCCESS",
+            "category": "success",
+            "workflow": "Lean Action CI",
+            "run_id": 44826470182,
+            "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826470182/job/136600236206"
+          },
+          {
+            "name": "Downstream Consumer Build (no submodules)",
+            "kind": "CheckRun",
+            "status": "COMPLETED",
+            "conclusion": "SUCCESS",
+            "category": "success",
+            "workflow": "Lean Action CI",
+            "run_id": 44826470182,
+            "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826470182/job/136600235865"
+          },
+          {
+            "name": "Build Project",
+            "kind": "CheckRun",
+            "status": "COMPLETED",
+            "conclusion": "SUCCESS",
+            "category": "success",
+            "workflow": "Lean Action CI",
+            "run_id": 44826470182,
+            "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826470182/job/136600236563"
+          },
+          {
+            "name": "Lint",
+            "kind": "CheckRun",
+            "status": "COMPLETED",
+            "conclusion": "SUCCESS",
+            "category": "success",
+            "workflow": "Lean Action CI",
+            "run_id": 44826470182,
+            "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826470182/job/136600237012"
+          }
+        ],
+        "workflow_run_ids": [
+          44826466633,
+          44826470182,
+          44826470192,
+          44826470201,
+          44826470247
+        ],
+        "status": "PASS",
+        "policy": "Every actual entry must succeed; a successful duplicate clears no cancellation/failure."
+      },
+      {
+        "number": 1191,
+        "expected_head": "2d52cea6200c38788414cb5a097bac774f814d71",
+        "actual_head": "2d52cea6200c38788414cb5a097bac774f814d71",
+        "exact_head": true,
+        "expected_base": "feat/parallel-qrom-02-search",
+        "actual_base": "feat/parallel-qrom-02-search",
+        "exact_base": true,
+        "exact_branch": true,
+        "stable_capture": true,
+        "open": true,
+        "actual_rollup_entries": 9,
+        "distinct_check_names": [
+          "Build Project",
+          "Check Agent Documentation",
+          "Check Interop TCB Isolation",
+          "Check Library File Imports",
+          "Downstream Consumer Build (no submodules)",
+          "Interop Bridges",
+          "Lint",
+          "Lint Style",
+          "summarize"
+        ],
+        "missing_names": [],
+        "unexpected_names": [],
+        "duplicate_names": {},
+        "counts": {
+          "success": 9,
+          "active": 0,
+          "failure": 0,
+          "cancelled": 0,
+          "non_success": 0,
+          "unknown": 0
+        },
+        "entries": [
+          {
+            "name": "Check Agent Documentation",
+            "kind": "CheckRun",
+            "status": "COMPLETED",
+            "conclusion": "SUCCESS",
+            "category": "success",
+            "workflow": "Agent Docs",
+            "run_id": 44826473654,
+            "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826473654/job/136600245961"
+          },
+          {
+            "name": "Check Interop TCB Isolation",
+            "kind": "CheckRun",
+            "status": "COMPLETED",
+            "conclusion": "SUCCESS",
+            "category": "success",
+            "workflow": "Interop TCB Isolation",
+            "run_id": 44826473611,
+            "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826473611/job/136600246440"
+          },
+          {
+            "name": "Check Library File Imports",
+            "kind": "CheckRun",
+            "status": "COMPLETED",
+            "conclusion": "SUCCESS",
+            "category": "success",
+            "workflow": "Lean Action CI",
+            "run_id": 44826473553,
+            "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826473553/job/136600246384"
+          },
+          {
+            "name": "Lint Style",
+            "kind": "CheckRun",
+            "status": "COMPLETED",
+            "conclusion": "SUCCESS",
+            "category": "success",
+            "workflow": "Lint Style",
+            "run_id": 44826473607,
+            "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826473607/job/136600246768"
+          },
+          {
+            "name": "summarize",
+            "kind": "CheckRun",
+            "status": "COMPLETED",
+            "conclusion": "SUCCESS",
+            "category": "success",
+            "workflow": "PR Summary",
+            "run_id": 44826467463,
+            "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826467463/job/136600232172"
+          },
+          {
+            "name": "Interop Bridges",
+            "kind": "CheckRun",
+            "status": "COMPLETED",
+            "conclusion": "SUCCESS",
+            "category": "success",
+            "workflow": "Lean Action CI",
+            "run_id": 44826473553,
+            "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826473553/job/136600246547"
+          },
+          {
+            "name": "Downstream Consumer Build (no submodules)",
+            "kind": "CheckRun",
+            "status": "COMPLETED",
+            "conclusion": "SUCCESS",
+            "category": "success",
+            "workflow": "Lean Action CI",
+            "run_id": 44826473553,
+            "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826473553/job/136600246518"
+          },
+          {
+            "name": "Build Project",
+            "kind": "CheckRun",
+            "status": "COMPLETED",
+            "conclusion": "SUCCESS",
+            "category": "success",
+            "workflow": "Lean Action CI",
+            "run_id": 44826473553,
+            "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826473553/job/136600246439"
+          },
+          {
+            "name": "Lint",
+            "kind": "CheckRun",
+            "status": "COMPLETED",
+            "conclusion": "SUCCESS",
+            "category": "success",
+            "workflow": "Lean Action CI",
+            "run_id": 44826473553,
+            "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826473553/job/136600246036"
+          }
+        ],
+        "workflow_run_ids": [
+          44826467463,
+          44826473553,
+          44826473607,
+          44826473611,
+          44826473654
+        ],
+        "status": "PASS",
+        "policy": "Every actual entry must succeed; a successful duplicate clears no cancellation/failure."
+      },
+      {
+        "number": 1193,
+        "expected_head": "52a13f5bad63979d09396a519d003033710bcf64",
+        "actual_head": "52a13f5bad63979d09396a519d003033710bcf64",
+        "exact_head": true,
+        "expected_base": "feat/parallel-qrom-03-experiments",
+        "actual_base": "feat/parallel-qrom-03-experiments",
+        "exact_base": true,
+        "exact_branch": true,
+        "stable_capture": true,
+        "open": true,
+        "actual_rollup_entries": 9,
+        "distinct_check_names": [
+          "Build Project",
+          "Check Agent Documentation",
+          "Check Interop TCB Isolation",
+          "Check Library File Imports",
+          "Downstream Consumer Build (no submodules)",
+          "Interop Bridges",
+          "Lint",
+          "Lint Style",
+          "summarize"
+        ],
+        "missing_names": [],
+        "unexpected_names": [],
+        "duplicate_names": {},
+        "counts": {
+          "success": 9,
+          "active": 0,
+          "failure": 0,
+          "cancelled": 0,
+          "non_success": 0,
+          "unknown": 0
+        },
+        "entries": [
+          {
+            "name": "Check Agent Documentation",
+            "kind": "CheckRun",
+            "status": "COMPLETED",
+            "conclusion": "SUCCESS",
+            "category": "success",
+            "workflow": "Agent Docs",
+            "run_id": 44826472069,
+            "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826472069/job/136600241543"
+          },
+          {
+            "name": "Check Interop TCB Isolation",
+            "kind": "CheckRun",
+            "status": "COMPLETED",
+            "conclusion": "SUCCESS",
+            "category": "success",
+            "workflow": "Interop TCB Isolation",
+            "run_id": 44826471878,
+            "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826471878/job/136600241063"
+          },
+          {
+            "name": "Check Library File Imports",
+            "kind": "CheckRun",
+            "status": "COMPLETED",
+            "conclusion": "SUCCESS",
+            "category": "success",
+            "workflow": "Lean Action CI",
+            "run_id": 44826472274,
+            "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826472274/job/136600242882"
+          },
+          {
+            "name": "Lint Style",
+            "kind": "CheckRun",
+            "status": "COMPLETED",
+            "conclusion": "SUCCESS",
+            "category": "success",
+            "workflow": "Lint Style",
+            "run_id": 44826471881,
+            "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826471881/job/136600241073"
+          },
+          {
+            "name": "summarize",
+            "kind": "CheckRun",
+            "status": "COMPLETED",
+            "conclusion": "SUCCESS",
+            "category": "success",
+            "workflow": "PR Summary",
+            "run_id": 44826465378,
+            "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826465378/job/136600228797"
+          },
+          {
+            "name": "Interop Bridges",
+            "kind": "CheckRun",
+            "status": "COMPLETED",
+            "conclusion": "SUCCESS",
+            "category": "success",
+            "workflow": "Lean Action CI",
+            "run_id": 44826472274,
+            "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826472274/job/136600242679"
+          },
+          {
+            "name": "Downstream Consumer Build (no submodules)",
+            "kind": "CheckRun",
+            "status": "COMPLETED",
+            "conclusion": "SUCCESS",
+            "category": "success",
+            "workflow": "Lean Action CI",
+            "run_id": 44826472274,
+            "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826472274/job/136600242608"
+          },
+          {
+            "name": "Build Project",
+            "kind": "CheckRun",
+            "status": "COMPLETED",
+            "conclusion": "SUCCESS",
+            "category": "success",
+            "workflow": "Lean Action CI",
+            "run_id": 44826472274,
+            "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826472274/job/136600242747"
+          },
+          {
+            "name": "Lint",
+            "kind": "CheckRun",
+            "status": "COMPLETED",
+            "conclusion": "SUCCESS",
+            "category": "success",
+            "workflow": "Lean Action CI",
+            "run_id": 44826472274,
+            "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826472274/job/136600242401"
+          }
+        ],
+        "workflow_run_ids": [
+          44826465378,
+          44826471878,
+          44826471881,
+          44826472069,
+          44826472274
+        ],
+        "status": "PASS",
+        "policy": "Every actual entry must succeed; a successful duplicate clears no cancellation/failure."
+      },
+      {
+        "number": 1194,
+        "expected_head": "1e75842f27642d08375176e40add583cd03f0e30",
+        "actual_head": "1e75842f27642d08375176e40add583cd03f0e30",
+        "exact_head": true,
+        "expected_base": "feat/parallel-qrom-03-experiments",
+        "actual_base": "feat/parallel-qrom-03-experiments",
+        "exact_base": true,
+        "exact_branch": true,
+        "stable_capture": true,
+        "open": true,
+        "actual_rollup_entries": 9,
+        "distinct_check_names": [
+          "Build Project",
+          "Check Agent Documentation",
+          "Check Interop TCB Isolation",
+          "Check Library File Imports",
+          "Downstream Consumer Build (no submodules)",
+          "Interop Bridges",
+          "Lint",
+          "Lint Style",
+          "summarize"
+        ],
+        "missing_names": [],
+        "unexpected_names": [],
+        "duplicate_names": {},
+        "counts": {
+          "success": 9,
+          "active": 0,
+          "failure": 0,
+          "cancelled": 0,
+          "non_success": 0,
+          "unknown": 0
+        },
+        "entries": [
+          {
+            "name": "Check Agent Documentation",
+            "kind": "CheckRun",
+            "status": "COMPLETED",
+            "conclusion": "SUCCESS",
+            "category": "success",
+            "workflow": "Agent Docs",
+            "run_id": 44826471145,
+            "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826471145/job/136600238418"
+          },
+          {
+            "name": "Check Interop TCB Isolation",
+            "kind": "CheckRun",
+            "status": "COMPLETED",
+            "conclusion": "SUCCESS",
+            "category": "success",
+            "workflow": "Interop TCB Isolation",
+            "run_id": 44826471121,
+            "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826471121/job/136600238773"
+          },
+          {
+            "name": "Check Library File Imports",
+            "kind": "CheckRun",
+            "status": "COMPLETED",
+            "conclusion": "SUCCESS",
+            "category": "success",
+            "workflow": "Lean Action CI",
+            "run_id": 44826471285,
+            "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826471285/job/136600240680"
+          },
+          {
+            "name": "Lint Style",
+            "kind": "CheckRun",
+            "status": "COMPLETED",
+            "conclusion": "SUCCESS",
+            "category": "success",
+            "workflow": "Lint Style",
+            "run_id": 44826471198,
+            "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826471198/job/136600239456"
+          },
+          {
+            "name": "summarize",
+            "kind": "CheckRun",
+            "status": "COMPLETED",
+            "conclusion": "SUCCESS",
+            "category": "success",
+            "workflow": "PR Summary",
+            "run_id": 44826466271,
+            "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826466271/job/136600228437"
+          },
+          {
+            "name": "Interop Bridges",
+            "kind": "CheckRun",
+            "status": "COMPLETED",
+            "conclusion": "SUCCESS",
+            "category": "success",
+            "workflow": "Lean Action CI",
+            "run_id": 44826471285,
+            "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826471285/job/136600241137"
+          },
+          {
+            "name": "Downstream Consumer Build (no submodules)",
+            "kind": "CheckRun",
+            "status": "COMPLETED",
+            "conclusion": "SUCCESS",
+            "category": "success",
+            "workflow": "Lean Action CI",
+            "run_id": 44826471285,
+            "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826471285/job/136600240882"
+          },
+          {
+            "name": "Build Project",
+            "kind": "CheckRun",
+            "status": "COMPLETED",
+            "conclusion": "SUCCESS",
+            "category": "success",
+            "workflow": "Lean Action CI",
+            "run_id": 44826471285,
+            "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826471285/job/136600241244"
+          },
+          {
+            "name": "Lint",
+            "kind": "CheckRun",
+            "status": "COMPLETED",
+            "conclusion": "SUCCESS",
+            "category": "success",
+            "workflow": "Lean Action CI",
+            "run_id": 44826471285,
+            "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826471285/job/136600241064"
+          }
+        ],
+        "workflow_run_ids": [
+          44826466271,
+          44826471121,
+          44826471145,
+          44826471198,
+          44826471285
+        ],
+        "status": "PASS",
+        "policy": "Every actual entry must succeed; a successful duplicate clears no cancellation/failure."
+      },
+      {
+        "number": 1195,
+        "expected_head": "a134b9fa3a187bca2eb97a38ac5a88abe0ef4611",
+        "actual_head": "a134b9fa3a187bca2eb97a38ac5a88abe0ef4611",
+        "exact_head": true,
+        "expected_base": "feat/parallel-qrom-05-encoding",
+        "actual_base": "feat/parallel-qrom-05-encoding",
+        "exact_base": true,
+        "exact_branch": true,
+        "stable_capture": true,
+        "open": true,
+        "actual_rollup_entries": 9,
+        "distinct_check_names": [
+          "Build Project",
+          "Check Agent Documentation",
+          "Check Interop TCB Isolation",
+          "Check Library File Imports",
+          "Downstream Consumer Build (no submodules)",
+          "Interop Bridges",
+          "Lint",
+          "Lint Style",
+          "summarize"
+        ],
+        "missing_names": [],
+        "unexpected_names": [],
+        "duplicate_names": {},
+        "counts": {
+          "success": 9,
+          "active": 0,
+          "failure": 0,
+          "cancelled": 0,
+          "non_success": 0,
+          "unknown": 0
+        },
+        "entries": [
+          {
+            "name": "Check Agent Documentation",
+            "kind": "CheckRun",
+            "status": "COMPLETED",
+            "conclusion": "SUCCESS",
+            "category": "success",
+            "workflow": "Agent Docs",
+            "run_id": 44826470471,
+            "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826470471/job/136600236665"
+          },
+          {
+            "name": "Check Interop TCB Isolation",
+            "kind": "CheckRun",
+            "status": "COMPLETED",
+            "conclusion": "SUCCESS",
+            "category": "success",
+            "workflow": "Interop TCB Isolation",
+            "run_id": 44826470473,
+            "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826470473/job/136600237162"
+          },
+          {
+            "name": "Check Library File Imports",
+            "kind": "CheckRun",
+            "status": "COMPLETED",
+            "conclusion": "SUCCESS",
+            "category": "success",
+            "workflow": "Lean Action CI",
+            "run_id": 44826470279,
+            "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826470279/job/136600236689"
+          },
+          {
+            "name": "Lint Style",
+            "kind": "CheckRun",
+            "status": "COMPLETED",
+            "conclusion": "SUCCESS",
+            "category": "success",
+            "workflow": "Lint Style",
+            "run_id": 44826470381,
+            "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826470381/job/136600237033"
+          },
+          {
+            "name": "summarize",
+            "kind": "CheckRun",
+            "status": "COMPLETED",
+            "conclusion": "SUCCESS",
+            "category": "success",
+            "workflow": "PR Summary",
+            "run_id": 44826465107,
+            "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826465107/job/136600224101"
+          },
+          {
+            "name": "Interop Bridges",
+            "kind": "CheckRun",
+            "status": "COMPLETED",
+            "conclusion": "SUCCESS",
+            "category": "success",
+            "workflow": "Lean Action CI",
+            "run_id": 44826470279,
+            "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826470279/job/136600236751"
+          },
+          {
+            "name": "Downstream Consumer Build (no submodules)",
+            "kind": "CheckRun",
+            "status": "COMPLETED",
+            "conclusion": "SUCCESS",
+            "category": "success",
+            "workflow": "Lean Action CI",
+            "run_id": 44826470279,
+            "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826470279/job/136600236606"
+          },
+          {
+            "name": "Build Project",
+            "kind": "CheckRun",
+            "status": "COMPLETED",
+            "conclusion": "SUCCESS",
+            "category": "success",
+            "workflow": "Lean Action CI",
+            "run_id": 44826470279,
+            "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826470279/job/136600236762"
+          },
+          {
+            "name": "Lint",
+            "kind": "CheckRun",
+            "status": "COMPLETED",
+            "conclusion": "SUCCESS",
+            "category": "success",
+            "workflow": "Lean Action CI",
+            "run_id": 44826470279,
+            "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826470279/job/136600236239"
+          }
+        ],
+        "workflow_run_ids": [
+          44826465107,
+          44826470279,
+          44826470381,
+          44826470471,
+          44826470473
+        ],
+        "status": "PASS",
+        "policy": "Every actual entry must succeed; a successful duplicate clears no cancellation/failure."
+      },
+      {
+        "number": 1196,
+        "expected_head": "3a41224dd35ae3ae2c752b420b117d53347b8936",
+        "actual_head": "3a41224dd35ae3ae2c752b420b117d53347b8936",
+        "exact_head": true,
+        "expected_base": "feat/parallel-qrom-06-coupling",
+        "actual_base": "feat/parallel-qrom-06-coupling",
+        "exact_base": true,
+        "exact_branch": true,
+        "stable_capture": true,
+        "open": true,
+        "actual_rollup_entries": 18,
+        "distinct_check_names": [
+          "Build Project",
+          "Check Agent Documentation",
+          "Check Interop TCB Isolation",
+          "Check Library File Imports",
+          "Downstream Consumer Build (no submodules)",
+          "Interop Bridges",
+          "Lint",
+          "Lint Style",
+          "summarize"
+        ],
+        "missing_names": [],
+        "unexpected_names": [],
+        "duplicate_names": {
+          "Build Project": 2,
+          "Check Agent Documentation": 2,
+          "Check Interop TCB Isolation": 2,
+          "Check Library File Imports": 2,
+          "Downstream Consumer Build (no submodules)": 2,
+          "Interop Bridges": 2,
+          "Lint": 2,
+          "Lint Style": 2,
+          "summarize": 2
+        },
+        "counts": {
+          "success": 18,
+          "active": 0,
+          "failure": 0,
+          "cancelled": 0,
+          "non_success": 0,
+          "unknown": 0
+        },
+        "entries": [
+          {
+            "name": "Check Agent Documentation",
+            "kind": "CheckRun",
+            "status": "COMPLETED",
+            "conclusion": "SUCCESS",
+            "category": "success",
+            "workflow": "Agent Docs",
+            "run_id": 44826472506,
+            "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826472506/job/136600242481"
+          },
+          {
+            "name": "Check Agent Documentation",
+            "kind": "CheckRun",
+            "status": "COMPLETED",
+            "conclusion": "SUCCESS",
+            "category": "success",
+            "workflow": "Agent Docs",
+            "run_id": 44826473049,
+            "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826473049/job/136600243958"
+          },
+          {
+            "name": "Check Interop TCB Isolation",
+            "kind": "CheckRun",
+            "status": "COMPLETED",
+            "conclusion": "SUCCESS",
+            "category": "success",
+            "workflow": "Interop TCB Isolation",
+            "run_id": 44826472259,
+            "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826472259/job/136603509316"
+          },
+          {
+            "name": "Check Interop TCB Isolation",
+            "kind": "CheckRun",
+            "status": "COMPLETED",
+            "conclusion": "SUCCESS",
+            "category": "success",
+            "workflow": "Interop TCB Isolation",
+            "run_id": 44826473028,
+            "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826473028/job/136600251621"
+          },
+          {
+            "name": "Check Library File Imports",
+            "kind": "CheckRun",
+            "status": "COMPLETED",
+            "conclusion": "SUCCESS",
+            "category": "success",
+            "workflow": "Lean Action CI",
+            "run_id": 44826472251,
+            "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826472251/job/136647274689"
+          },
+          {
+            "name": "Check Library File Imports",
+            "kind": "CheckRun",
+            "status": "COMPLETED",
+            "conclusion": "SUCCESS",
+            "category": "success",
+            "workflow": "Lean Action CI",
+            "run_id": 44826473021,
+            "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826473021/job/136600251708"
+          },
+          {
+            "name": "Lint Style",
+            "kind": "CheckRun",
+            "status": "COMPLETED",
+            "conclusion": "SUCCESS",
+            "category": "success",
+            "workflow": "Lint Style",
+            "run_id": 44826472280,
+            "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826472280/job/136602641298"
+          },
+          {
+            "name": "Lint Style",
+            "kind": "CheckRun",
+            "status": "COMPLETED",
+            "conclusion": "SUCCESS",
+            "category": "success",
+            "workflow": "Lint Style",
+            "run_id": 44826473110,
+            "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826473110/job/136600249950"
+          },
+          {
+            "name": "summarize",
+            "kind": "CheckRun",
+            "status": "COMPLETED",
+            "conclusion": "SUCCESS",
+            "category": "success",
+            "workflow": "PR Summary",
+            "run_id": 44826466288,
+            "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826466288/job/136600238555"
+          },
+          {
+            "name": "summarize",
+            "kind": "CheckRun",
+            "status": "COMPLETED",
+            "conclusion": "SUCCESS",
+            "category": "success",
+            "workflow": "PR Summary",
+            "run_id": 44826466363,
+            "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826466363/job/136602665482"
+          },
+          {
+            "name": "Interop Bridges",
+            "kind": "CheckRun",
+            "status": "COMPLETED",
+            "conclusion": "SUCCESS",
+            "category": "success",
+            "workflow": "Lean Action CI",
+            "run_id": 44826472251,
+            "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826472251/job/136647274240"
+          },
+          {
+            "name": "Interop Bridges",
+            "kind": "CheckRun",
+            "status": "COMPLETED",
+            "conclusion": "SUCCESS",
+            "category": "success",
+            "workflow": "Lean Action CI",
+            "run_id": 44826473021,
+            "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826473021/job/136600252236"
+          },
+          {
+            "name": "Downstream Consumer Build (no submodules)",
+            "kind": "CheckRun",
+            "status": "COMPLETED",
+            "conclusion": "SUCCESS",
+            "category": "success",
+            "workflow": "Lean Action CI",
+            "run_id": 44826472251,
+            "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826472251/job/136647274700"
+          },
+          {
+            "name": "Downstream Consumer Build (no submodules)",
+            "kind": "CheckRun",
+            "status": "COMPLETED",
+            "conclusion": "SUCCESS",
+            "category": "success",
+            "workflow": "Lean Action CI",
+            "run_id": 44826473021,
+            "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826473021/job/136600252380"
+          },
+          {
+            "name": "Build Project",
+            "kind": "CheckRun",
+            "status": "COMPLETED",
+            "conclusion": "SUCCESS",
+            "category": "success",
+            "workflow": "Lean Action CI",
+            "run_id": 44826472251,
+            "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826472251/job/136647274497"
+          },
+          {
+            "name": "Build Project",
+            "kind": "CheckRun",
+            "status": "COMPLETED",
+            "conclusion": "SUCCESS",
+            "category": "success",
+            "workflow": "Lean Action CI",
+            "run_id": 44826473021,
+            "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826473021/job/136600252350"
+          },
+          {
+            "name": "Lint",
+            "kind": "CheckRun",
+            "status": "COMPLETED",
+            "conclusion": "SUCCESS",
+            "category": "success",
+            "workflow": "Lean Action CI",
+            "run_id": 44826472251,
+            "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826472251/job/136647274638"
+          },
+          {
+            "name": "Lint",
+            "kind": "CheckRun",
+            "status": "COMPLETED",
+            "conclusion": "SUCCESS",
+            "category": "success",
+            "workflow": "Lean Action CI",
+            "run_id": 44826473021,
+            "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826473021/job/136600252359"
+          }
+        ],
+        "workflow_run_ids": [
+          44826466288,
+          44826466363,
+          44826472251,
+          44826472259,
+          44826472280,
+          44826472506,
+          44826473021,
+          44826473028,
+          44826473049,
+          44826473110
+        ],
+        "status": "PASS",
+        "policy": "Every actual entry must succeed; a successful duplicate clears no cancellation/failure."
+      }
+    ],
+    "scope": "All actual entries, including duplicate runs, succeeded. Counts of entries and check types are distinct; a successful duplicate does not clear a failure or cancellation."
+  },
+  "publication": {
+    "status": "passed",
+    "source_commit": "575a39ffd1c5baf20862b54a420abdf913341118",
+    "source_url": "https://github.com/Verified-zkEVM/VCVio/commit/575a39ffd1c5baf20862b54a420abdf913341118",
+    "body_manifest_sha256": "e9c9cf2545422208d27663ae8ca5eabd669bc21984d541ce399cac18ad321b91",
+    "body_publication_sha256": "9c2e490090528fe9028c3298613fda5f073b5801822b4f41fba2aa3d5b503bfd",
+    "patch_and_separate_GET_readback_exact": true,
+    "prs": [
+      {
+        "number": 1188,
+        "head": "a2061ed0a57b15269d6aaea5c5f35042be3fea8a",
+        "base": "main",
+        "body_sha256": "d13cc64b1867f437e3dc80cfc1a3387f6abc6990bfd7956b16726e33d035cf39",
+        "patch_and_separate_readback_exact": true,
+        "url": "https://github.com/Verified-zkEVM/VCVio/pull/1188"
+      },
+      {
+        "number": 1190,
+        "head": "fd1804d6a30f934cac3554000f8687edf4f213b7",
+        "base": "feat/parallel-qrom-01-model",
+        "body_sha256": "9027c6ed074366cef03ea31c751637c7663706179057941470748426dce265f6",
+        "patch_and_separate_readback_exact": true,
+        "url": "https://github.com/Verified-zkEVM/VCVio/pull/1190"
+      },
+      {
+        "number": 1192,
+        "head": "c9aac29cd8b9ad752fcc29b65a64992c62c6eebd",
+        "base": "feat/parallel-qrom-02-search",
+        "body_sha256": "9535f2f21aa9de94363eb3f974b8bb1b2d0fbf70c4edd0c2b60a00264795b5d5",
+        "patch_and_separate_readback_exact": true,
+        "url": "https://github.com/Verified-zkEVM/VCVio/pull/1192"
+      },
+      {
+        "number": 1191,
+        "head": "2d52cea6200c38788414cb5a097bac774f814d71",
+        "base": "feat/parallel-qrom-02-search",
+        "body_sha256": "f7c5dd6334a72ad02bff80c93833fc0502cbd32ab07f13a4750bfc8ad046123a",
+        "patch_and_separate_readback_exact": true,
+        "url": "https://github.com/Verified-zkEVM/VCVio/pull/1191"
+      },
+      {
+        "number": 1193,
+        "head": "52a13f5bad63979d09396a519d003033710bcf64",
+        "base": "feat/parallel-qrom-03-experiments",
+        "body_sha256": "528af5600de40bc711d2dce0a4e0f2571066158d02c79ff86e399b72fb36b592",
+        "patch_and_separate_readback_exact": true,
+        "url": "https://github.com/Verified-zkEVM/VCVio/pull/1193"
+      },
+      {
+        "number": 1194,
+        "head": "1e75842f27642d08375176e40add583cd03f0e30",
+        "base": "feat/parallel-qrom-03-experiments",
+        "body_sha256": "50d889e327545b49567e6f3189cbd5e8b0971be0d90227dae76c0370a2e371d9",
+        "patch_and_separate_readback_exact": true,
+        "url": "https://github.com/Verified-zkEVM/VCVio/pull/1194"
+      },
+      {
+        "number": 1195,
+        "head": "a134b9fa3a187bca2eb97a38ac5a88abe0ef4611",
+        "base": "feat/parallel-qrom-05-encoding",
+        "body_sha256": "06f01b35d2d81a96e75bcbcc466ef6f4af4e178b4ccb830fa9db232f4a389c42",
+        "patch_and_separate_readback_exact": true,
+        "url": "https://github.com/Verified-zkEVM/VCVio/pull/1195"
+      },
+      {
+        "number": 1196,
+        "head": "3a41224dd35ae3ae2c752b420b117d53347b8936",
+        "base": "feat/parallel-qrom-06-coupling",
+        "body_sha256": "7aee46ad6d99f9f9e208308dce4a935cd533c029a9307cae01997d864ffe1bcb",
+        "patch_and_separate_readback_exact": true,
+        "url": "https://github.com/Verified-zkEVM/VCVio/pull/1196"
+      }
+    ],
+    "post_body_hosted_CI": {
+      "status": "passed",
+      "snapshot_started_at": "2026-11-21T00:32:18.209849+00:00",
+      "snapshot_finished_at": "2026-11-21T00:32:59.328124+00:00",
+      "actual_rollup_entries": 81,
+      "distinct_PR_check_types": 72,
+      "required_check_names": [
+        "Build Project",
+        "Check Agent Documentation",
+        "Check Interop TCB Isolation",
+        "Check Library File Imports",
+        "Downstream Consumer Build (no submodules)",
+        "Interop Bridges",
+        "Lint",
+        "Lint Style",
+        "summarize"
+      ],
+      "prs": [
+        {
+          "number": 1188,
+          "expected_head": "a2061ed0a57b15269d6aaea5c5f35042be3fea8a",
+          "actual_head": "a2061ed0a57b15269d6aaea5c5f35042be3fea8a",
+          "exact_head": true,
+          "expected_base": "main",
+          "actual_base": "main",
+          "exact_base": true,
+          "exact_branch": true,
+          "stable_capture": true,
+          "open": true,
+          "actual_rollup_entries": 9,
+          "distinct_check_names": [
+            "Build Project",
+            "Check Agent Documentation",
+            "Check Interop TCB Isolation",
+            "Check Library File Imports",
+            "Downstream Consumer Build (no submodules)",
+            "Interop Bridges",
+            "Lint",
+            "Lint Style",
+            "summarize"
+          ],
+          "missing_names": [],
+          "unexpected_names": [],
+          "duplicate_names": {},
+          "counts": {
+            "success": 9,
+            "active": 0,
+            "failure": 0,
+            "cancelled": 0,
+            "non_success": 0,
+            "unknown": 0
+          },
+          "entries": [
+            {
+              "name": "Check Agent Documentation",
+              "kind": "CheckRun",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS",
+              "category": "success",
+              "workflow": "Agent Docs",
+              "run_id": 44826468027,
+              "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826468027/job/136600228906"
+            },
+            {
+              "name": "Check Interop TCB Isolation",
+              "kind": "CheckRun",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS",
+              "category": "success",
+              "workflow": "Interop TCB Isolation",
+              "run_id": 44826468115,
+              "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826468115/job/136600229348"
+            },
+            {
+              "name": "Check Library File Imports",
+              "kind": "CheckRun",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS",
+              "category": "success",
+              "workflow": "Lean Action CI",
+              "run_id": 44826468009,
+              "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826468009/job/136600229487"
+            },
+            {
+              "name": "Lint Style",
+              "kind": "CheckRun",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS",
+              "category": "success",
+              "workflow": "Lint Style",
+              "run_id": 44826468026,
+              "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826468026/job/136600228867"
+            },
+            {
+              "name": "summarize",
+              "kind": "CheckRun",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS",
+              "category": "success",
+              "workflow": "PR Summary",
+              "run_id": 44826465025,
+              "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826465025/job/136600222816"
+            },
+            {
+              "name": "Interop Bridges",
+              "kind": "CheckRun",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS",
+              "category": "success",
+              "workflow": "Lean Action CI",
+              "run_id": 44826468009,
+              "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826468009/job/136600229623"
+            },
+            {
+              "name": "Downstream Consumer Build (no submodules)",
+              "kind": "CheckRun",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS",
+              "category": "success",
+              "workflow": "Lean Action CI",
+              "run_id": 44826468009,
+              "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826468009/job/136600230438"
+            },
+            {
+              "name": "Build Project",
+              "kind": "CheckRun",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS",
+              "category": "success",
+              "workflow": "Lean Action CI",
+              "run_id": 44826468009,
+              "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826468009/job/136600229192"
+            },
+            {
+              "name": "Lint",
+              "kind": "CheckRun",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS",
+              "category": "success",
+              "workflow": "Lean Action CI",
+              "run_id": 44826468009,
+              "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826468009/job/136600229934"
+            }
+          ],
+          "workflow_run_ids": [
+            44826465025,
+            44826468009,
+            44826468026,
+            44826468027,
+            44826468115
+          ],
+          "status": "PASS",
+          "policy": "Every actual entry must succeed; a successful duplicate clears no cancellation/failure."
+        },
+        {
+          "number": 1190,
+          "expected_head": "fd1804d6a30f934cac3554000f8687edf4f213b7",
+          "actual_head": "fd1804d6a30f934cac3554000f8687edf4f213b7",
+          "exact_head": true,
+          "expected_base": "feat/parallel-qrom-01-model",
+          "actual_base": "feat/parallel-qrom-01-model",
+          "exact_base": true,
+          "exact_branch": true,
+          "stable_capture": true,
+          "open": true,
+          "actual_rollup_entries": 9,
+          "distinct_check_names": [
+            "Build Project",
+            "Check Agent Documentation",
+            "Check Interop TCB Isolation",
+            "Check Library File Imports",
+            "Downstream Consumer Build (no submodules)",
+            "Interop Bridges",
+            "Lint",
+            "Lint Style",
+            "summarize"
+          ],
+          "missing_names": [],
+          "unexpected_names": [],
+          "duplicate_names": {},
+          "counts": {
+            "success": 9,
+            "active": 0,
+            "failure": 0,
+            "cancelled": 0,
+            "non_success": 0,
+            "unknown": 0
+          },
+          "entries": [
+            {
+              "name": "Check Agent Documentation",
+              "kind": "CheckRun",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS",
+              "category": "success",
+              "workflow": "Agent Docs",
+              "run_id": 44826471162,
+              "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826471162/job/136600238650"
+            },
+            {
+              "name": "Check Interop TCB Isolation",
+              "kind": "CheckRun",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS",
+              "category": "success",
+              "workflow": "Interop TCB Isolation",
+              "run_id": 44826471142,
+              "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826471142/job/136600238960"
+            },
+            {
+              "name": "Check Library File Imports",
+              "kind": "CheckRun",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS",
+              "category": "success",
+              "workflow": "Lean Action CI",
+              "run_id": 44826471166,
+              "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826471166/job/136600239704"
+            },
+            {
+              "name": "Lint Style",
+              "kind": "CheckRun",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS",
+              "category": "success",
+              "workflow": "Lint Style",
+              "run_id": 44826471181,
+              "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826471181/job/136600239351"
+            },
+            {
+              "name": "summarize",
+              "kind": "CheckRun",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS",
+              "category": "success",
+              "workflow": "PR Summary",
+              "run_id": 44826465268,
+              "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826465268/job/136600223916"
+            },
+            {
+              "name": "Interop Bridges",
+              "kind": "CheckRun",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS",
+              "category": "success",
+              "workflow": "Lean Action CI",
+              "run_id": 44826471166,
+              "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826471166/job/136600239498"
+            },
+            {
+              "name": "Downstream Consumer Build (no submodules)",
+              "kind": "CheckRun",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS",
+              "category": "success",
+              "workflow": "Lean Action CI",
+              "run_id": 44826471166,
+              "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826471166/job/136600239703"
+            },
+            {
+              "name": "Build Project",
+              "kind": "CheckRun",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS",
+              "category": "success",
+              "workflow": "Lean Action CI",
+              "run_id": 44826471166,
+              "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826471166/job/136600239634"
+            },
+            {
+              "name": "Lint",
+              "kind": "CheckRun",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS",
+              "category": "success",
+              "workflow": "Lean Action CI",
+              "run_id": 44826471166,
+              "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826471166/job/136600239120"
+            }
+          ],
+          "workflow_run_ids": [
+            44826465268,
+            44826471142,
+            44826471162,
+            44826471166,
+            44826471181
+          ],
+          "status": "PASS",
+          "policy": "Every actual entry must succeed; a successful duplicate clears no cancellation/failure."
+        },
+        {
+          "number": 1192,
+          "expected_head": "c9aac29cd8b9ad752fcc29b65a64992c62c6eebd",
+          "actual_head": "c9aac29cd8b9ad752fcc29b65a64992c62c6eebd",
+          "exact_head": true,
+          "expected_base": "feat/parallel-qrom-02-search",
+          "actual_base": "feat/parallel-qrom-02-search",
+          "exact_base": true,
+          "exact_branch": true,
+          "stable_capture": true,
+          "open": true,
+          "actual_rollup_entries": 9,
+          "distinct_check_names": [
+            "Build Project",
+            "Check Agent Documentation",
+            "Check Interop TCB Isolation",
+            "Check Library File Imports",
+            "Downstream Consumer Build (no submodules)",
+            "Interop Bridges",
+            "Lint",
+            "Lint Style",
+            "summarize"
+          ],
+          "missing_names": [],
+          "unexpected_names": [],
+          "duplicate_names": {},
+          "counts": {
+            "success": 9,
+            "active": 0,
+            "failure": 0,
+            "cancelled": 0,
+            "non_success": 0,
+            "unknown": 0
+          },
+          "entries": [
+            {
+              "name": "Check Agent Documentation",
+              "kind": "CheckRun",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS",
+              "category": "success",
+              "workflow": "Agent Docs",
+              "run_id": 44826470247,
+              "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826470247/job/136600236051"
+            },
+            {
+              "name": "Check Interop TCB Isolation",
+              "kind": "CheckRun",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS",
+              "category": "success",
+              "workflow": "Interop TCB Isolation",
+              "run_id": 44826470201,
+              "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826470201/job/136600235586"
+            },
+            {
+              "name": "Check Library File Imports",
+              "kind": "CheckRun",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS",
+              "category": "success",
+              "workflow": "Lean Action CI",
+              "run_id": 44826470182,
+              "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826470182/job/136600236195"
+            },
+            {
+              "name": "Lint Style",
+              "kind": "CheckRun",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS",
+              "category": "success",
+              "workflow": "Lint Style",
+              "run_id": 44826470192,
+              "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826470192/job/136600236056"
+            },
+            {
+              "name": "summarize",
+              "kind": "CheckRun",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS",
+              "category": "success",
+              "workflow": "PR Summary",
+              "run_id": 44826466633,
+              "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826466633/job/136600228648"
+            },
+            {
+              "name": "Interop Bridges",
+              "kind": "CheckRun",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS",
+              "category": "success",
+              "workflow": "Lean Action CI",
+              "run_id": 44826470182,
+              "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826470182/job/136600236206"
+            },
+            {
+              "name": "Downstream Consumer Build (no submodules)",
+              "kind": "CheckRun",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS",
+              "category": "success",
+              "workflow": "Lean Action CI",
+              "run_id": 44826470182,
+              "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826470182/job/136600235865"
+            },
+            {
+              "name": "Build Project",
+              "kind": "CheckRun",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS",
+              "category": "success",
+              "workflow": "Lean Action CI",
+              "run_id": 44826470182,
+              "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826470182/job/136600236563"
+            },
+            {
+              "name": "Lint",
+              "kind": "CheckRun",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS",
+              "category": "success",
+              "workflow": "Lean Action CI",
+              "run_id": 44826470182,
+              "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826470182/job/136600237012"
+            }
+          ],
+          "workflow_run_ids": [
+            44826466633,
+            44826470182,
+            44826470192,
+            44826470201,
+            44826470247
+          ],
+          "status": "PASS",
+          "policy": "Every actual entry must succeed; a successful duplicate clears no cancellation/failure."
+        },
+        {
+          "number": 1191,
+          "expected_head": "2d52cea6200c38788414cb5a097bac774f814d71",
+          "actual_head": "2d52cea6200c38788414cb5a097bac774f814d71",
+          "exact_head": true,
+          "expected_base": "feat/parallel-qrom-02-search",
+          "actual_base": "feat/parallel-qrom-02-search",
+          "exact_base": true,
+          "exact_branch": true,
+          "stable_capture": true,
+          "open": true,
+          "actual_rollup_entries": 9,
+          "distinct_check_names": [
+            "Build Project",
+            "Check Agent Documentation",
+            "Check Interop TCB Isolation",
+            "Check Library File Imports",
+            "Downstream Consumer Build (no submodules)",
+            "Interop Bridges",
+            "Lint",
+            "Lint Style",
+            "summarize"
+          ],
+          "missing_names": [],
+          "unexpected_names": [],
+          "duplicate_names": {},
+          "counts": {
+            "success": 9,
+            "active": 0,
+            "failure": 0,
+            "cancelled": 0,
+            "non_success": 0,
+            "unknown": 0
+          },
+          "entries": [
+            {
+              "name": "Check Agent Documentation",
+              "kind": "CheckRun",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS",
+              "category": "success",
+              "workflow": "Agent Docs",
+              "run_id": 44826473654,
+              "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826473654/job/136600245961"
+            },
+            {
+              "name": "Check Interop TCB Isolation",
+              "kind": "CheckRun",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS",
+              "category": "success",
+              "workflow": "Interop TCB Isolation",
+              "run_id": 44826473611,
+              "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826473611/job/136600246440"
+            },
+            {
+              "name": "Check Library File Imports",
+              "kind": "CheckRun",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS",
+              "category": "success",
+              "workflow": "Lean Action CI",
+              "run_id": 44826473553,
+              "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826473553/job/136600246384"
+            },
+            {
+              "name": "Lint Style",
+              "kind": "CheckRun",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS",
+              "category": "success",
+              "workflow": "Lint Style",
+              "run_id": 44826473607,
+              "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826473607/job/136600246768"
+            },
+            {
+              "name": "summarize",
+              "kind": "CheckRun",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS",
+              "category": "success",
+              "workflow": "PR Summary",
+              "run_id": 44826467463,
+              "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826467463/job/136600232172"
+            },
+            {
+              "name": "Interop Bridges",
+              "kind": "CheckRun",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS",
+              "category": "success",
+              "workflow": "Lean Action CI",
+              "run_id": 44826473553,
+              "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826473553/job/136600246547"
+            },
+            {
+              "name": "Downstream Consumer Build (no submodules)",
+              "kind": "CheckRun",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS",
+              "category": "success",
+              "workflow": "Lean Action CI",
+              "run_id": 44826473553,
+              "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826473553/job/136600246518"
+            },
+            {
+              "name": "Build Project",
+              "kind": "CheckRun",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS",
+              "category": "success",
+              "workflow": "Lean Action CI",
+              "run_id": 44826473553,
+              "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826473553/job/136600246439"
+            },
+            {
+              "name": "Lint",
+              "kind": "CheckRun",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS",
+              "category": "success",
+              "workflow": "Lean Action CI",
+              "run_id": 44826473553,
+              "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826473553/job/136600246036"
+            }
+          ],
+          "workflow_run_ids": [
+            44826467463,
+            44826473553,
+            44826473607,
+            44826473611,
+            44826473654
+          ],
+          "status": "PASS",
+          "policy": "Every actual entry must succeed; a successful duplicate clears no cancellation/failure."
+        },
+        {
+          "number": 1193,
+          "expected_head": "52a13f5bad63979d09396a519d003033710bcf64",
+          "actual_head": "52a13f5bad63979d09396a519d003033710bcf64",
+          "exact_head": true,
+          "expected_base": "feat/parallel-qrom-03-experiments",
+          "actual_base": "feat/parallel-qrom-03-experiments",
+          "exact_base": true,
+          "exact_branch": true,
+          "stable_capture": true,
+          "open": true,
+          "actual_rollup_entries": 9,
+          "distinct_check_names": [
+            "Build Project",
+            "Check Agent Documentation",
+            "Check Interop TCB Isolation",
+            "Check Library File Imports",
+            "Downstream Consumer Build (no submodules)",
+            "Interop Bridges",
+            "Lint",
+            "Lint Style",
+            "summarize"
+          ],
+          "missing_names": [],
+          "unexpected_names": [],
+          "duplicate_names": {},
+          "counts": {
+            "success": 9,
+            "active": 0,
+            "failure": 0,
+            "cancelled": 0,
+            "non_success": 0,
+            "unknown": 0
+          },
+          "entries": [
+            {
+              "name": "Check Agent Documentation",
+              "kind": "CheckRun",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS",
+              "category": "success",
+              "workflow": "Agent Docs",
+              "run_id": 44826472069,
+              "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826472069/job/136600241543"
+            },
+            {
+              "name": "Check Interop TCB Isolation",
+              "kind": "CheckRun",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS",
+              "category": "success",
+              "workflow": "Interop TCB Isolation",
+              "run_id": 44826471878,
+              "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826471878/job/136600241063"
+            },
+            {
+              "name": "Check Library File Imports",
+              "kind": "CheckRun",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS",
+              "category": "success",
+              "workflow": "Lean Action CI",
+              "run_id": 44826472274,
+              "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826472274/job/136600242882"
+            },
+            {
+              "name": "Lint Style",
+              "kind": "CheckRun",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS",
+              "category": "success",
+              "workflow": "Lint Style",
+              "run_id": 44826471881,
+              "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826471881/job/136600241073"
+            },
+            {
+              "name": "summarize",
+              "kind": "CheckRun",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS",
+              "category": "success",
+              "workflow": "PR Summary",
+              "run_id": 44826465378,
+              "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826465378/job/136600228797"
+            },
+            {
+              "name": "Interop Bridges",
+              "kind": "CheckRun",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS",
+              "category": "success",
+              "workflow": "Lean Action CI",
+              "run_id": 44826472274,
+              "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826472274/job/136600242679"
+            },
+            {
+              "name": "Downstream Consumer Build (no submodules)",
+              "kind": "CheckRun",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS",
+              "category": "success",
+              "workflow": "Lean Action CI",
+              "run_id": 44826472274,
+              "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826472274/job/136600242608"
+            },
+            {
+              "name": "Build Project",
+              "kind": "CheckRun",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS",
+              "category": "success",
+              "workflow": "Lean Action CI",
+              "run_id": 44826472274,
+              "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826472274/job/136600242747"
+            },
+            {
+              "name": "Lint",
+              "kind": "CheckRun",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS",
+              "category": "success",
+              "workflow": "Lean Action CI",
+              "run_id": 44826472274,
+              "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826472274/job/136600242401"
+            }
+          ],
+          "workflow_run_ids": [
+            44826465378,
+            44826471878,
+            44826471881,
+            44826472069,
+            44826472274
+          ],
+          "status": "PASS",
+          "policy": "Every actual entry must succeed; a successful duplicate clears no cancellation/failure."
+        },
+        {
+          "number": 1194,
+          "expected_head": "1e75842f27642d08375176e40add583cd03f0e30",
+          "actual_head": "1e75842f27642d08375176e40add583cd03f0e30",
+          "exact_head": true,
+          "expected_base": "feat/parallel-qrom-03-experiments",
+          "actual_base": "feat/parallel-qrom-03-experiments",
+          "exact_base": true,
+          "exact_branch": true,
+          "stable_capture": true,
+          "open": true,
+          "actual_rollup_entries": 9,
+          "distinct_check_names": [
+            "Build Project",
+            "Check Agent Documentation",
+            "Check Interop TCB Isolation",
+            "Check Library File Imports",
+            "Downstream Consumer Build (no submodules)",
+            "Interop Bridges",
+            "Lint",
+            "Lint Style",
+            "summarize"
+          ],
+          "missing_names": [],
+          "unexpected_names": [],
+          "duplicate_names": {},
+          "counts": {
+            "success": 9,
+            "active": 0,
+            "failure": 0,
+            "cancelled": 0,
+            "non_success": 0,
+            "unknown": 0
+          },
+          "entries": [
+            {
+              "name": "Check Agent Documentation",
+              "kind": "CheckRun",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS",
+              "category": "success",
+              "workflow": "Agent Docs",
+              "run_id": 44826471145,
+              "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826471145/job/136600238418"
+            },
+            {
+              "name": "Check Interop TCB Isolation",
+              "kind": "CheckRun",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS",
+              "category": "success",
+              "workflow": "Interop TCB Isolation",
+              "run_id": 44826471121,
+              "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826471121/job/136600238773"
+            },
+            {
+              "name": "Check Library File Imports",
+              "kind": "CheckRun",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS",
+              "category": "success",
+              "workflow": "Lean Action CI",
+              "run_id": 44826471285,
+              "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826471285/job/136600240680"
+            },
+            {
+              "name": "Lint Style",
+              "kind": "CheckRun",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS",
+              "category": "success",
+              "workflow": "Lint Style",
+              "run_id": 44826471198,
+              "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826471198/job/136600239456"
+            },
+            {
+              "name": "summarize",
+              "kind": "CheckRun",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS",
+              "category": "success",
+              "workflow": "PR Summary",
+              "run_id": 44826466271,
+              "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826466271/job/136600228437"
+            },
+            {
+              "name": "Interop Bridges",
+              "kind": "CheckRun",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS",
+              "category": "success",
+              "workflow": "Lean Action CI",
+              "run_id": 44826471285,
+              "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826471285/job/136600241137"
+            },
+            {
+              "name": "Downstream Consumer Build (no submodules)",
+              "kind": "CheckRun",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS",
+              "category": "success",
+              "workflow": "Lean Action CI",
+              "run_id": 44826471285,
+              "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826471285/job/136600240882"
+            },
+            {
+              "name": "Build Project",
+              "kind": "CheckRun",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS",
+              "category": "success",
+              "workflow": "Lean Action CI",
+              "run_id": 44826471285,
+              "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826471285/job/136600241244"
+            },
+            {
+              "name": "Lint",
+              "kind": "CheckRun",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS",
+              "category": "success",
+              "workflow": "Lean Action CI",
+              "run_id": 44826471285,
+              "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826471285/job/136600241064"
+            }
+          ],
+          "workflow_run_ids": [
+            44826466271,
+            44826471121,
+            44826471145,
+            44826471198,
+            44826471285
+          ],
+          "status": "PASS",
+          "policy": "Every actual entry must succeed; a successful duplicate clears no cancellation/failure."
+        },
+        {
+          "number": 1195,
+          "expected_head": "a134b9fa3a187bca2eb97a38ac5a88abe0ef4611",
+          "actual_head": "a134b9fa3a187bca2eb97a38ac5a88abe0ef4611",
+          "exact_head": true,
+          "expected_base": "feat/parallel-qrom-05-encoding",
+          "actual_base": "feat/parallel-qrom-05-encoding",
+          "exact_base": true,
+          "exact_branch": true,
+          "stable_capture": true,
+          "open": true,
+          "actual_rollup_entries": 9,
+          "distinct_check_names": [
+            "Build Project",
+            "Check Agent Documentation",
+            "Check Interop TCB Isolation",
+            "Check Library File Imports",
+            "Downstream Consumer Build (no submodules)",
+            "Interop Bridges",
+            "Lint",
+            "Lint Style",
+            "summarize"
+          ],
+          "missing_names": [],
+          "unexpected_names": [],
+          "duplicate_names": {},
+          "counts": {
+            "success": 9,
+            "active": 0,
+            "failure": 0,
+            "cancelled": 0,
+            "non_success": 0,
+            "unknown": 0
+          },
+          "entries": [
+            {
+              "name": "Check Agent Documentation",
+              "kind": "CheckRun",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS",
+              "category": "success",
+              "workflow": "Agent Docs",
+              "run_id": 44826470471,
+              "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826470471/job/136600236665"
+            },
+            {
+              "name": "Check Interop TCB Isolation",
+              "kind": "CheckRun",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS",
+              "category": "success",
+              "workflow": "Interop TCB Isolation",
+              "run_id": 44826470473,
+              "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826470473/job/136600237162"
+            },
+            {
+              "name": "Check Library File Imports",
+              "kind": "CheckRun",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS",
+              "category": "success",
+              "workflow": "Lean Action CI",
+              "run_id": 44826470279,
+              "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826470279/job/136600236689"
+            },
+            {
+              "name": "Lint Style",
+              "kind": "CheckRun",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS",
+              "category": "success",
+              "workflow": "Lint Style",
+              "run_id": 44826470381,
+              "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826470381/job/136600237033"
+            },
+            {
+              "name": "summarize",
+              "kind": "CheckRun",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS",
+              "category": "success",
+              "workflow": "PR Summary",
+              "run_id": 44826465107,
+              "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826465107/job/136600224101"
+            },
+            {
+              "name": "Interop Bridges",
+              "kind": "CheckRun",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS",
+              "category": "success",
+              "workflow": "Lean Action CI",
+              "run_id": 44826470279,
+              "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826470279/job/136600236751"
+            },
+            {
+              "name": "Downstream Consumer Build (no submodules)",
+              "kind": "CheckRun",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS",
+              "category": "success",
+              "workflow": "Lean Action CI",
+              "run_id": 44826470279,
+              "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826470279/job/136600236606"
+            },
+            {
+              "name": "Build Project",
+              "kind": "CheckRun",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS",
+              "category": "success",
+              "workflow": "Lean Action CI",
+              "run_id": 44826470279,
+              "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826470279/job/136600236762"
+            },
+            {
+              "name": "Lint",
+              "kind": "CheckRun",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS",
+              "category": "success",
+              "workflow": "Lean Action CI",
+              "run_id": 44826470279,
+              "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826470279/job/136600236239"
+            }
+          ],
+          "workflow_run_ids": [
+            44826465107,
+            44826470279,
+            44826470381,
+            44826470471,
+            44826470473
+          ],
+          "status": "PASS",
+          "policy": "Every actual entry must succeed; a successful duplicate clears no cancellation/failure."
+        },
+        {
+          "number": 1196,
+          "expected_head": "3a41224dd35ae3ae2c752b420b117d53347b8936",
+          "actual_head": "3a41224dd35ae3ae2c752b420b117d53347b8936",
+          "exact_head": true,
+          "expected_base": "feat/parallel-qrom-06-coupling",
+          "actual_base": "feat/parallel-qrom-06-coupling",
+          "exact_base": true,
+          "exact_branch": true,
+          "stable_capture": true,
+          "open": true,
+          "actual_rollup_entries": 18,
+          "distinct_check_names": [
+            "Build Project",
+            "Check Agent Documentation",
+            "Check Interop TCB Isolation",
+            "Check Library File Imports",
+            "Downstream Consumer Build (no submodules)",
+            "Interop Bridges",
+            "Lint",
+            "Lint Style",
+            "summarize"
+          ],
+          "missing_names": [],
+          "unexpected_names": [],
+          "duplicate_names": {
+            "Build Project": 2,
+            "Check Agent Documentation": 2,
+            "Check Interop TCB Isolation": 2,
+            "Check Library File Imports": 2,
+            "Downstream Consumer Build (no submodules)": 2,
+            "Interop Bridges": 2,
+            "Lint": 2,
+            "Lint Style": 2,
+            "summarize": 2
+          },
+          "counts": {
+            "success": 18,
+            "active": 0,
+            "failure": 0,
+            "cancelled": 0,
+            "non_success": 0,
+            "unknown": 0
+          },
+          "entries": [
+            {
+              "name": "Check Agent Documentation",
+              "kind": "CheckRun",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS",
+              "category": "success",
+              "workflow": "Agent Docs",
+              "run_id": 44826472506,
+              "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826472506/job/136600242481"
+            },
+            {
+              "name": "Check Agent Documentation",
+              "kind": "CheckRun",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS",
+              "category": "success",
+              "workflow": "Agent Docs",
+              "run_id": 44826473049,
+              "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826473049/job/136600243958"
+            },
+            {
+              "name": "Check Interop TCB Isolation",
+              "kind": "CheckRun",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS",
+              "category": "success",
+              "workflow": "Interop TCB Isolation",
+              "run_id": 44826472259,
+              "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826472259/job/136603509316"
+            },
+            {
+              "name": "Check Interop TCB Isolation",
+              "kind": "CheckRun",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS",
+              "category": "success",
+              "workflow": "Interop TCB Isolation",
+              "run_id": 44826473028,
+              "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826473028/job/136600251621"
+            },
+            {
+              "name": "Check Library File Imports",
+              "kind": "CheckRun",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS",
+              "category": "success",
+              "workflow": "Lean Action CI",
+              "run_id": 44826472251,
+              "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826472251/job/136647274689"
+            },
+            {
+              "name": "Check Library File Imports",
+              "kind": "CheckRun",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS",
+              "category": "success",
+              "workflow": "Lean Action CI",
+              "run_id": 44826473021,
+              "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826473021/job/136600251708"
+            },
+            {
+              "name": "Lint Style",
+              "kind": "CheckRun",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS",
+              "category": "success",
+              "workflow": "Lint Style",
+              "run_id": 44826472280,
+              "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826472280/job/136602641298"
+            },
+            {
+              "name": "Lint Style",
+              "kind": "CheckRun",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS",
+              "category": "success",
+              "workflow": "Lint Style",
+              "run_id": 44826473110,
+              "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826473110/job/136600249950"
+            },
+            {
+              "name": "summarize",
+              "kind": "CheckRun",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS",
+              "category": "success",
+              "workflow": "PR Summary",
+              "run_id": 44826466288,
+              "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826466288/job/136600238555"
+            },
+            {
+              "name": "summarize",
+              "kind": "CheckRun",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS",
+              "category": "success",
+              "workflow": "PR Summary",
+              "run_id": 44826466363,
+              "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826466363/job/136602665482"
+            },
+            {
+              "name": "Interop Bridges",
+              "kind": "CheckRun",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS",
+              "category": "success",
+              "workflow": "Lean Action CI",
+              "run_id": 44826472251,
+              "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826472251/job/136647274240"
+            },
+            {
+              "name": "Interop Bridges",
+              "kind": "CheckRun",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS",
+              "category": "success",
+              "workflow": "Lean Action CI",
+              "run_id": 44826473021,
+              "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826473021/job/136600252236"
+            },
+            {
+              "name": "Downstream Consumer Build (no submodules)",
+              "kind": "CheckRun",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS",
+              "category": "success",
+              "workflow": "Lean Action CI",
+              "run_id": 44826472251,
+              "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826472251/job/136647274700"
+            },
+            {
+              "name": "Downstream Consumer Build (no submodules)",
+              "kind": "CheckRun",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS",
+              "category": "success",
+              "workflow": "Lean Action CI",
+              "run_id": 44826473021,
+              "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826473021/job/136600252380"
+            },
+            {
+              "name": "Build Project",
+              "kind": "CheckRun",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS",
+              "category": "success",
+              "workflow": "Lean Action CI",
+              "run_id": 44826472251,
+              "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826472251/job/136647274497"
+            },
+            {
+              "name": "Build Project",
+              "kind": "CheckRun",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS",
+              "category": "success",
+              "workflow": "Lean Action CI",
+              "run_id": 44826473021,
+              "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826473021/job/136600252350"
+            },
+            {
+              "name": "Lint",
+              "kind": "CheckRun",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS",
+              "category": "success",
+              "workflow": "Lean Action CI",
+              "run_id": 44826472251,
+              "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826472251/job/136647274638"
+            },
+            {
+              "name": "Lint",
+              "kind": "CheckRun",
+              "status": "COMPLETED",
+              "conclusion": "SUCCESS",
+              "category": "success",
+              "workflow": "Lean Action CI",
+              "run_id": 44826473021,
+              "url": "https://github.com/Verified-zkEVM/VCVio/actions/runs/44826473021/job/136600252359"
+            }
+          ],
+          "workflow_run_ids": [
+            44826466288,
+            44826466363,
+            44826472251,
+            44826472259,
+            44826472280,
+            44826472506,
+            44826473021,
+            44826473028,
+            44826473049,
+            44826473110
+          ],
+          "status": "PASS",
+          "policy": "Every actual entry must succeed; a successful duplicate clears no cancellation/failure."
+        }
+      ],
+      "scope": "All actual entries, including duplicate runs, succeeded. Counts of entries and check types are distinct; a successful duplicate does not clear a failure or cancellation."
+    }
+  },
+  "reproduction": {
+    "guide": "docs/design/parallel-qrom-review-response.md",
+    "scope": "Use the public Git revisions, committed capture tools and module inventory described there. Write fresh outputs. Historical files and baselines must not be overwritten."
+  },
+  "source_commit": "575a39ffd1c5baf20862b54a420abdf913341118",
+  "source_commit_note": "The integration checks ran on the exact frozen source bytes before this source-only commit was created. The source commit adds no validation JSON and has the reviewed baseline as its parent.",
+  "contract_modules": {
+    "historical_64": [
+      "ToMathlib.Data.ByteArray.Bounded",
+      "ToMathlib.MeasureTheory.Measure.UniformTable.Adaptive",
+      "ToMathlib.MeasureTheory.Measure.UniformTable.Bounds",
+      "ToMathlib.MeasureTheory.Measure.UniformTable.Encoding",
+      "ToMathlib.MeasureTheory.Measure.UniformTable.PlantedTarget",
+      "ToMathlib.MeasureTheory.Measure.UniformTable.Target",
+      "VCVio.CryptoFoundations.TimeLockPuzzle.Quantum",
+      "VCVio.CryptoFoundations.TimeLockPuzzle.QuantumClassical",
+      "VCVio.Quantum.Comp.ChargeWeight",
+      "VCVio.Quantum.Comp.DropEmptyBatches",
+      "VCVio.Quantum.Comp.Finisher",
+      "VCVio.Quantum.Comp.Homogeneous",
+      "VCVio.Quantum.Comp.HybridBudget",
+      "VCVio.Quantum.Comp.NumberedHybrid",
+      "VCVio.Quantum.Comp.NumberedQueries",
+      "VCVio.Quantum.Comp.Parallel",
+      "VCVio.Quantum.Comp.RoundBound",
+      "VCVio.Quantum.Comp.Runtime",
+      "VCVio.Quantum.Comp.Sequentialize",
+      "VCVio.Quantum.Foundations.Hybrid",
+      "VCVio.Quantum.Foundations.Observation",
+      "VCVio.Quantum.Foundations.Parallel",
+      "VCVio.Quantum.Foundations.PrivateUnit",
+      "VCVio.Quantum.Foundations.SubState",
+      "VCVio.Quantum.Oracle.Classical",
+      "VCVio.Quantum.Oracle.ClassicalParallel",
+      "VCVio.Quantum.Oracle.ClassicalRandomized",
+      "VCVio.Quantum.Oracle.Compressed.Parallel",
+      "VCVio.Quantum.Oracle.Encoding",
+      "VCVio.Quantum.Oracle.LocalExecution",
+      "VCVio.Quantum.Oracle.MaskedChain.Bounds",
+      "VCVio.Quantum.Oracle.MaskedChain.Coupling",
+      "VCVio.Quantum.Oracle.MaskedChain.Homogeneous",
+      "VCVio.Quantum.Oracle.MaskedChain.Hybrid",
+      "VCVio.Quantum.Oracle.MaskedChain.Model",
+      "VCVio.Quantum.Oracle.MaskedChain.Preprocessing",
+      "VCVio.Quantum.Oracle.MaskedChain.Preprocessing.DropEmpty",
+      "VCVio.Quantum.Oracle.MaskedChain.Preprocessing.Model",
+      "VCVio.Quantum.Oracle.MaskedChain.RootBounds",
+      "VCVio.Quantum.Oracle.Parallel",
+      "VCVio.Quantum.Oracle.ParallelFinding",
+      "VCVio.Quantum.Oracle.ParallelFinisher",
+      "VCVio.Quantum.Oracle.ParallelHybrid",
+      "VCVio.Quantum.Oracle.ParallelPlantedPreimage",
+      "VCVio.Quantum.Oracle.ParallelPreimage",
+      "VCVio.Quantum.Oracle.ParallelReprogramming",
+      "VCVio.Quantum.Oracle.ParallelSchedule",
+      "VCVio.Quantum.Oracle.ParallelSearch",
+      "VCVio.Quantum.Oracle.ParallelSecurity",
+      "VCVio.Quantum.Oracle.Sequentialize",
+      "VCVio.Schemes.MaskedChainPuzzle",
+      "VCVio.Schemes.MaskedChainPuzzle.Preprocessing",
+      "VCVio.Schemes.PointerChainPuzzle.Basic",
+      "VCVio.Schemes.PointerChainPuzzle.QuantumCoupling",
+      "VCVio.Schemes.PointerChainPuzzle.QuantumCoupling.Incidence",
+      "VCVio.Schemes.PointerChainPuzzle.QuantumCoupling.Preprocessing",
+      "VCVio.Schemes.PointerChainPuzzle.QuantumCoupling.PreprocessingIncidence",
+      "VCVio.Schemes.PointerChainPuzzle.QuantumCoupling.Programming",
+      "VCVio.Schemes.PointerChainPuzzle.QuantumCoupling.RankBounds",
+      "VCVio.Schemes.PointerChainPuzzle.QuantumCoupling.RankHybrid",
+      "VCVio.Schemes.PointerChainPuzzle.QuantumCoupling.RankSchedule",
+      "VCVio.Schemes.PointerChainPuzzle.QuantumCoupling.Scheme",
+      "VCVio.Schemes.PointerChainPuzzle.QuantumEncoding",
+      "VCVio.Schemes.PointerChainPuzzle.RankFrontier"
+    ],
+    "current_65": [
+      "ToMathlib.Data.ByteArray.Bounded",
+      "ToMathlib.MeasureTheory.Measure.UniformTable.Adaptive",
+      "ToMathlib.MeasureTheory.Measure.UniformTable.Bounds",
+      "ToMathlib.MeasureTheory.Measure.UniformTable.Encoding",
+      "ToMathlib.MeasureTheory.Measure.UniformTable.PlantedTarget",
+      "ToMathlib.MeasureTheory.Measure.UniformTable.Target",
+      "VCVio.CryptoFoundations.TimeLockPuzzle.Quantum",
+      "VCVio.CryptoFoundations.TimeLockPuzzle.QuantumClassical",
+      "VCVio.Quantum.Comp.ChargeWeight",
+      "VCVio.Quantum.Comp.DropEmptyBatches",
+      "VCVio.Quantum.Comp.Finisher",
+      "VCVio.Quantum.Comp.Homogeneous",
+      "VCVio.Quantum.Comp.HybridBudget",
+      "VCVio.Quantum.Comp.NumberedHybrid",
+      "VCVio.Quantum.Comp.NumberedQueries",
+      "VCVio.Quantum.Comp.Parallel",
+      "VCVio.Quantum.Comp.RoundBound",
+      "VCVio.Quantum.Comp.Runtime",
+      "VCVio.Quantum.Comp.Sequentialize",
+      "VCVio.Quantum.Comp.TotalQueryBound",
+      "VCVio.Quantum.Foundations.Hybrid",
+      "VCVio.Quantum.Foundations.Observation",
+      "VCVio.Quantum.Foundations.Parallel",
+      "VCVio.Quantum.Foundations.PrivateUnit",
+      "VCVio.Quantum.Foundations.SubState",
+      "VCVio.Quantum.Oracle.Classical",
+      "VCVio.Quantum.Oracle.ClassicalParallel",
+      "VCVio.Quantum.Oracle.ClassicalRandomized",
+      "VCVio.Quantum.Oracle.Compressed.Parallel",
+      "VCVio.Quantum.Oracle.Encoding",
+      "VCVio.Quantum.Oracle.LocalExecution",
+      "VCVio.Quantum.Oracle.MaskedChain.Bounds",
+      "VCVio.Quantum.Oracle.MaskedChain.Coupling",
+      "VCVio.Quantum.Oracle.MaskedChain.Homogeneous",
+      "VCVio.Quantum.Oracle.MaskedChain.Hybrid",
+      "VCVio.Quantum.Oracle.MaskedChain.Model",
+      "VCVio.Quantum.Oracle.MaskedChain.Preprocessing",
+      "VCVio.Quantum.Oracle.MaskedChain.Preprocessing.DropEmpty",
+      "VCVio.Quantum.Oracle.MaskedChain.Preprocessing.Model",
+      "VCVio.Quantum.Oracle.MaskedChain.RootBounds",
+      "VCVio.Quantum.Oracle.Parallel",
+      "VCVio.Quantum.Oracle.ParallelFinding",
+      "VCVio.Quantum.Oracle.ParallelFinisher",
+      "VCVio.Quantum.Oracle.ParallelHybrid",
+      "VCVio.Quantum.Oracle.ParallelPlantedPreimage",
+      "VCVio.Quantum.Oracle.ParallelPreimage",
+      "VCVio.Quantum.Oracle.ParallelReprogramming",
+      "VCVio.Quantum.Oracle.ParallelSchedule",
+      "VCVio.Quantum.Oracle.ParallelSearch",
+      "VCVio.Quantum.Oracle.ParallelSecurity",
+      "VCVio.Quantum.Oracle.Sequentialize",
+      "VCVio.Schemes.MaskedChainPuzzle",
+      "VCVio.Schemes.MaskedChainPuzzle.Preprocessing",
+      "VCVio.Schemes.PointerChainPuzzle.Basic",
+      "VCVio.Schemes.PointerChainPuzzle.QuantumCoupling",
+      "VCVio.Schemes.PointerChainPuzzle.QuantumCoupling.Incidence",
+      "VCVio.Schemes.PointerChainPuzzle.QuantumCoupling.Preprocessing",
+      "VCVio.Schemes.PointerChainPuzzle.QuantumCoupling.PreprocessingIncidence",
+      "VCVio.Schemes.PointerChainPuzzle.QuantumCoupling.Programming",
+      "VCVio.Schemes.PointerChainPuzzle.QuantumCoupling.RankBounds",
+      "VCVio.Schemes.PointerChainPuzzle.QuantumCoupling.RankHybrid",
+      "VCVio.Schemes.PointerChainPuzzle.QuantumCoupling.RankSchedule",
+      "VCVio.Schemes.PointerChainPuzzle.QuantumCoupling.Scheme",
+      "VCVio.Schemes.PointerChainPuzzle.QuantumEncoding",
+      "VCVio.Schemes.PointerChainPuzzle.RankFrontier"
+    ]
+  },
+  "current_reproduction": {
+    "setup": "Start from an isolated checkout at the published revision containing this validation record. Install Git, uv and the pinned Lean toolchain. Create validation-output; use new filenames and preserve old captures.",
+    "record_path": "docs/design/parallel-qrom-review-response-validation.json",
+    "baseline_commit": "67ca1cdff44a38757999d34152412e78a52c1d5e",
+    "source_commit_field": "source_commit",
+    "inventory_extraction_python": "import json\nfrom pathlib import Path\nrecord = json.loads(Path(\"docs/design/parallel-qrom-review-response-validation.json\").read_text())\nassert record[\"source_commit\"], \"Use the finalized record with its actual source commit\"\nout = Path(\"validation-output\")\nout.mkdir(exist_ok=True)\nfor label, count in [(\"historical_64\", 64), (\"current_65\", 65)]:\n    modules = record[\"contract_modules\"][label]\n    assert len(modules) == count\n    (out / (label + \".txt\")).write_text(\"\\n\".join(modules) + \"\\n\")\n(out / \"source-commit.txt\").write_text(record[\"source_commit\"] + \"\\n\")",
+    "build_and_capture_shell": "QROM_OUTPUT_DIR=\"$(pwd)/validation-output\"\nQROM_SOURCE_REV=\"$(cat validation-output/source-commit.txt)\"\ngit worktree add --detach ../qrom-reviewed-source \"$QROM_SOURCE_REV\"\ngit worktree add --detach ../qrom-review-baseline 67ca1cdff44a38757999d34152412e78a52c1d5e\nQROM_SOURCE_DIR=\"$(cd ../qrom-reviewed-source && pwd)\"\nQROM_BASELINE_DIR=\"$(cd ../qrom-review-baseline && pwd)\"\n(cd \"$QROM_BASELINE_DIR\" && lake exe cache get && lake build VCVio)\n(cd \"$QROM_SOURCE_DIR\" && lake exe cache get && lake build VCVio)\nuv run --no-project --python 3.12 python \"$QROM_SOURCE_DIR/scripts/check-quantum-port-contracts.py\" capture \\\n  \"$QROM_BASELINE_DIR\" \"$QROM_OUTPUT_DIR/reproduced-baseline-64.json\" \\\n  --root VCVio --modules-file \"$QROM_OUTPUT_DIR/historical_64.txt\"\nuv run --no-project --python 3.12 python \"$QROM_SOURCE_DIR/scripts/check-quantum-port-contracts.py\" capture \\\n  \"$QROM_SOURCE_DIR\" \"$QROM_OUTPUT_DIR/reproduced-current-64.json\" \\\n  --root VCVio --modules-file \"$QROM_OUTPUT_DIR/historical_64.txt\"\nuv run --no-project --python 3.12 python \"$QROM_SOURCE_DIR/scripts/check-quantum-port-contracts.py\" capture \\\n  \"$QROM_SOURCE_DIR\" \"$QROM_OUTPUT_DIR/reproduced-current-65.json\" \\\n  --root VCVio --modules-file \"$QROM_OUTPUT_DIR/current_65.txt\"\nuv run --no-project --python 3.12 python \"$QROM_SOURCE_DIR/scripts/check-quantum-port-contracts.py\" compare \\\n  \"$QROM_OUTPUT_DIR/reproduced-baseline-64.json\" \"$QROM_OUTPUT_DIR/reproduced-current-64.json\" \\\n  --modules \"$QROM_OUTPUT_DIR/historical_64.txt\" --out \"$QROM_OUTPUT_DIR/reproduced-comparison.json\"",
+    "expected_compare_exit_code": 1,
+    "expected_named_delta": "The five changed types, three changed definition bodies,35 added names and one missing-in-filtered-scope name are listed in current_contracts. No other difference is accepted. The missing inherited equation must be present with unchanged semantic fields in the current65capture.",
+    "verification": "Compare all captured records by exact name and raw kind, universe parameters, type, definition value and reducibility. Keep the nonzero raw comparison as evidence; do not normalize names, drop declarations or rewrite the historical reference.",
+    "capture_digest_note": "Fresh local JSON bytes may differ in provenance paths and commits. Recorded digests identify the reviewed artifacts; acceptance depends on reproducing the stated source scope and exact named semantic deltas."
+  },
+  "final_evidence_sha256": {
+    "validation_draft": "40aa566e0d2ab831501ddf3050e437a829ad41a2f26f8603bf3073e755371a66",
+    "dispositions_draft": "166939ff8791c557995690948600fe876d6b9672b29ea0aeffef5d302d623b41",
+    "integration_report": "60d4931d161e05666233f163031ddea2ebab04377ec92abbbc9d80628f44a172",
+    "integration_independent": "e9f71d4b8af146d71d8d9b6d148b04d255764babd623e21da35b2527bac4dc98",
+    "state": "6b92b453ba497ad3ae57337ae3e3c86e9f4049ac658b410024806aafcdc7c264",
+    "approved_body_manifest": "7b26c337a7dc853b758875dbea0d766f4a78c1cb4992e7b350ad2da9f3f7510f",
+    "source_union": "86fd1e190f9f8d7489c24c8f5a5256301c4b226ab21ea86f6422b39157b8705e",
+    "source_union_approval": "e6ceed08219f0f6e1b1d4fc5ef77e6cbcd0d07181c4e1064dbd20f8442891c58",
+    "historical_hosted_fixture": "83999191e7724e90bbd454436cf2b46d8f88e0869e0ecfe0e8f49c8175f096ca",
+    "hosted_final": "e4e880c74ab4d7041792feea7dd7ff1466bf5197ab9fe85010ab7c4f56c6e971",
+    "post_body_hosted": "078fc406830976ae6d1e26162c944ac8a87f7fad3e4e7bc7f51284415839b024",
+    "body_manifest": "e9c9cf2545422208d27663ae8ca5eabd669bc21984d541ce399cac18ad321b91",
+    "body_publication": "9c2e490090528fe9028c3298613fda5f073b5801822b4f41fba2aa3d5b503bfd",
+    "per_cut_independent_readiness": {
+      "pr1": "05c49cb6e7dc3703dceca42d7415a4473644b9503f7a5d7a5be98ea9e39f670a",
+      "pr2": "7ec1982461a670b11cde4a62b9b01b84aa61227b4285fef54ad813700ec0e5f7",
+      "pr3": "c96cd45b8ebc2784f6430510bc9903350430c2edd2086abc6fa73df5c8bef754",
+      "pr2-followup": "ca93267f28ca6c567c4839d33103419b67761f02687432b1c933290c02a0bcc2",
+      "pr4": "f324a01914bd515244cd8a96e7196796620ffe983e430a114cd87d62f45a6d85",
+      "pr5": "629dc8157d4b26bc663e877adf06265fa75514245afb93fc49d50279e1ab953e",
+      "pr6": "303c8bb2d544d56944c49998f07d9f806b7f7f9f3b9be1ad74eea985684043c3",
+      "pr7": "9661ad9f7ddaf2252b2c385866d5e0c8e6665bf759267290cbd7667b74186d36"
+    }
+  },
+  "source_union": {
+    "status": "passed",
+    "library_and_test_Lean_paths": 90,
+    "all_provider_bytes_exact": true,
+    "union_sha256": "86fd1e190f9f8d7489c24c8f5a5256301c4b226ab21ea86f6422b39157b8705e",
+    "independent_approval_sha256": "e6ceed08219f0f6e1b1d4fc5ef77e6cbcd0d07181c4e1064dbd20f8442891c58",
+    "scope": "Read-only exact source-byte union of the three reviewed end branches. No PR or integration merge is performed, no staged documentation contribution is replaced, and all actual per-cut builds/CI remain separate gates."
+  }
+}

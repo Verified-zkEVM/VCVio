@@ -1,0 +1,1168 @@
+{
+  "schema_version": 2,
+  "status": "Completed review response: all 65 findings retain their explicit implementation, documentation, retention or separate follow-up disposition.",
+  "review_date": "2026-11-20",
+  "audited_baseline": "67ca1cdff44a38757999d34152412e78a52c1d5e",
+  "scope": "Response to the two independent reviews of PRs #1188 and #1190–#1196. All findings have an explicit action or follow-up. Historical validation records remain immutable.",
+  "findings_count": 65,
+  "findings": [
+    {
+      "id": "1188-M1",
+      "finding": "M1 (minor): rounds cannot mix base ports. Should be documented. A multi-port security bound would lose a factor |P| in depth",
+      "disposition": "implemented",
+      "action": "The batch specification and guide state that each round queries one base port. Several additive oracles can be encoded as one port on a sum input domain.",
+      "references": [
+        "VCVio/Quantum/Oracle/Parallel.lean",
+        "VCVio/Quantum/Oracle/Sequentialize.lean",
+        "VCVio/Quantum/Comp/RoundBound.lean",
+        "docs/quantum/guide/4-programs-and-runtimes.md"
+      ],
+      "pr": 1188,
+      "url": "https://github.com/Verified-zkEVM/VCVio/pull/1188"
+    },
+    {
+      "id": "1188-M2",
+      "finding": "M2 (minor): no packaged \"sequential bound ⇒ parallel bound\" theorem; the PR body says \"transfers sequential bounds\"",
+      "disposition": "implemented",
+      "action": "qromBatchEvalDistMap_le_of_sequential_bound packages transfer of a sequential LocalSig.instruments probability bound at Q queries to a parallel program with point bound Q. The observation may depend jointly on the sampled function and leaf. Gate-set or local-cost restrictions still need a separate transport.",
+      "references": [
+        "VCVio/Quantum/Oracle/Parallel.lean",
+        "VCVio/Quantum/Oracle/Sequentialize.lean",
+        "VCVio/Quantum/Comp/RoundBound.lean",
+        "docs/quantum/guide/4-programs-and-runtimes.md"
+      ],
+      "pr": 1188,
+      "url": "https://github.com/Verified-zkEVM/VCVio/pull/1188"
+    },
+    {
+      "id": "1188-M3",
+      "finding": "M3 (minor): the parallel QROM has an incomplete law API (`qromBatchEvalDist` only)",
+      "disposition": "implemented",
+      "action": "Added qromBatchEvalDistMap, qromBatchEvalDist₂ and qromBatchEvalDistMap₂, with their sum-over-one-function laws. Existing runtime semantics and observation headlines are preserved.",
+      "references": [
+        "VCVio/Quantum/Oracle/Parallel.lean",
+        "VCVio/Quantum/Oracle/Sequentialize.lean",
+        "VCVio/Quantum/Comp/RoundBound.lean",
+        "docs/quantum/guide/4-programs-and-runtimes.md"
+      ],
+      "pr": 1188,
+      "url": "https://github.com/Verified-zkEVM/VCVio/pull/1188"
+    },
+    {
+      "id": "1188-M4",
+      "finding": "M4 (minor): general-purpose budget lemmas are private in a leaf module",
+      "disposition": "implemented",
+      "action": "Moved the four act/query-bind budget iff lemmas from private leaf declarations to public, universe-polymorphic APIs in Comp/TotalQueryBound.lean and Comp/RoundBound.lean, with intrinsic docstrings.",
+      "references": [
+        "VCVio/Quantum/Oracle/Parallel.lean",
+        "VCVio/Quantum/Oracle/Sequentialize.lean",
+        "VCVio/Quantum/Comp/RoundBound.lean",
+        "docs/quantum/guide/4-programs-and-runtimes.md",
+        "VCVio/Quantum/Comp/TotalQueryBound.lean",
+        "VCVio/Quantum/Oracle/ClassicalParallel.lean"
+      ],
+      "pr": 1188,
+      "url": "https://github.com/Verified-zkEVM/VCVio/pull/1188"
+    },
+    {
+      "id": "1188-N1",
+      "finding": "N1 (nit): the checklist says public APIs have docstrings, but four do not",
+      "disposition": "implemented",
+      "action": "Added intrinsic docstrings to the pure and query-bind embedding equalities in ClassicalParallel.lean and ClassicalRandomized.lean.",
+      "references": [
+        "VCVio/Quantum/Oracle/Parallel.lean",
+        "VCVio/Quantum/Oracle/Sequentialize.lean",
+        "VCVio/Quantum/Comp/RoundBound.lean",
+        "docs/quantum/guide/4-programs-and-runtimes.md",
+        "VCVio/Quantum/Oracle/ClassicalRandomized.lean"
+      ],
+      "pr": 1188,
+      "url": "https://github.com/Verified-zkEVM/VCVio/pull/1188"
+    },
+    {
+      "id": "1188-N2",
+      "finding": "N2 (nit): dead API in the staged foundations file",
+      "disposition": "retained",
+      "action": "Retain Subsystem.pi and the append/add laws as generic foundations APIs staged for upstreaming. Their statements are useful independently of the current application; no claim that the delay proof consumes every lemma is made.",
+      "references": [
+        "VCVio/Quantum/Oracle/Parallel.lean",
+        "VCVio/Quantum/Oracle/Sequentialize.lean",
+        "VCVio/Quantum/Comp/RoundBound.lean",
+        "docs/quantum/guide/4-programs-and-runtimes.md"
+      ],
+      "pr": 1188,
+      "url": "https://github.com/Verified-zkEVM/VCVio/pull/1188"
+    },
+    {
+      "id": "1188-N3",
+      "finding": "N3 (nit): declarations go into a dependency's namespaces",
+      "disposition": "follow_up",
+      "action": "Coordinate staged declarations with QuantumFoundations before a dependency bump. Renaming the existing public API solely to reserve future names is outside this response; the upstream namespace risk is documented.",
+      "references": [
+        "VCVio/Quantum/Oracle/Parallel.lean",
+        "VCVio/Quantum/Oracle/Sequentialize.lean",
+        "VCVio/Quantum/Comp/RoundBound.lean",
+        "docs/quantum/guide/4-programs-and-runtimes.md"
+      ],
+      "pr": 1188,
+      "url": "https://github.com/Verified-zkEVM/VCVio/pull/1188"
+    },
+    {
+      "id": "1188-N4",
+      "finding": "N4 (nit): a misleading docstring phrase",
+      "disposition": "implemented",
+      "action": "The sequentialization module comment now describes private memory along every adaptive branch and across successive rounds, without implying execution between alternative branches.",
+      "references": [
+        "VCVio/Quantum/Oracle/Parallel.lean",
+        "VCVio/Quantum/Oracle/Sequentialize.lean",
+        "VCVio/Quantum/Comp/RoundBound.lean",
+        "docs/quantum/guide/4-programs-and-runtimes.md"
+      ],
+      "pr": 1188,
+      "url": "https://github.com/Verified-zkEVM/VCVio/pull/1188"
+    },
+    {
+      "id": "1188-N5",
+      "finding": "N5 (nit): a planning label leaks into the design doc",
+      "disposition": "documented",
+      "action": "Removed the unexplained M2a planning label and stated the concrete transport result and its local-signature scope.",
+      "references": [
+        "VCVio/Quantum/Oracle/Parallel.lean",
+        "VCVio/Quantum/Oracle/Sequentialize.lean",
+        "VCVio/Quantum/Comp/RoundBound.lean",
+        "docs/quantum/guide/4-programs-and-runtimes.md"
+      ],
+      "pr": 1188,
+      "url": "https://github.com/Verified-zkEVM/VCVio/pull/1188"
+    },
+    {
+      "id": "1188-N6",
+      "finding": "N6 (nit): redundant instance hypothesis (follows existing precedent)",
+      "disposition": "retained",
+      "action": "Retain the harmless SampleableType assumptions matching the existing classical-QROM bridge on main. They do not weaken uniform sampling or the theorem; removing redundant premises is a separate signature cleanup.",
+      "references": [
+        "VCVio/Quantum/Oracle/Parallel.lean",
+        "VCVio/Quantum/Oracle/Sequentialize.lean",
+        "VCVio/Quantum/Comp/RoundBound.lean",
+        "docs/quantum/guide/4-programs-and-runtimes.md"
+      ],
+      "pr": 1188,
+      "url": "https://github.com/Verified-zkEVM/VCVio/pull/1188"
+    },
+    {
+      "id": "1188-N7",
+      "finding": "N7 (nit): `IsTotalQueryBound` means \"rounds\" on batch specs",
+      "disposition": "retained",
+      "action": "IsTotalQueryBound counts calls generically and therefore counts rounds on a batch signature. The guide states this explicitly; a synonymous IsRoundBound abbreviation is optional.",
+      "references": [
+        "VCVio/Quantum/Oracle/Parallel.lean",
+        "VCVio/Quantum/Oracle/Sequentialize.lean",
+        "VCVio/Quantum/Comp/RoundBound.lean",
+        "docs/quantum/guide/4-programs-and-runtimes.md"
+      ],
+      "pr": 1188,
+      "url": "https://github.com/Verified-zkEVM/VCVio/pull/1188"
+    },
+    {
+      "id": "1188-N8",
+      "finding": "N8 (nit): PR body process claims cannot be checked from the PR",
+      "disposition": "documented",
+      "action": "The published bodies replace machine-local process metrics with concrete validation commands. The public response gives reproducible historical contract-capture commands from published commits. Final body publication and exact readback are recorded in the validation record.",
+      "references": [
+        "VCVio/Quantum/Oracle/Parallel.lean",
+        "VCVio/Quantum/Oracle/Sequentialize.lean",
+        "VCVio/Quantum/Comp/RoundBound.lean",
+        "docs/quantum/guide/4-programs-and-runtimes.md"
+      ],
+      "pr": 1188,
+      "url": "https://github.com/Verified-zkEVM/VCVio/pull/1188"
+    },
+    {
+      "id": "1190-F1",
+      "finding": "F1 (minor): dead lemmas that no part of the 8-PR stack uses",
+      "disposition": "documented",
+      "action": "Keep the correct HybridBudget and singleton estimates as additional generic API. The guide identifies ChargeWeight and Foundations.Hybrid as the actual search proof path.",
+      "references": [
+        "VCVio/Quantum/Oracle/ParallelFinding.lean",
+        "VCVio/Quantum/Comp/HybridBudget.lean",
+        "VCVioTest/Quantum/ParallelSearch.lean",
+        "docs/quantum/guide/5-qrom.md"
+      ],
+      "pr": 1190,
+      "url": "https://github.com/Verified-zkEVM/VCVio/pull/1190"
+    },
+    {
+      "id": "1190-F2",
+      "finding": "F2 (minor): the hybrid-aggregation core is hard-wired to membership events and is copied verbatim in child #1191",
+      "disposition": "implemented",
+      "action": "Extracted the weighted arbitrary-event root comparison into ParallelFinding. The challenge-dependent form requires reference query-weight equality to a common bounded prefix; the fixed-program corollary is a specialization. Existing membership and ParallelFinisher theorems share this aggregation without changing their public statements.",
+      "references": [
+        "VCVio/Quantum/Oracle/ParallelFinding.lean",
+        "VCVio/Quantum/Comp/HybridBudget.lean",
+        "VCVioTest/Quantum/ParallelSearch.lean",
+        "docs/quantum/guide/5-qrom.md",
+        "VCVio/Quantum/Oracle/ParallelFinisher.lean"
+      ],
+      "pr": 1190,
+      "url": "https://github.com/Verified-zkEVM/VCVio/pull/1190"
+    },
+    {
+      "id": "1190-F3",
+      "finding": "F3 (nit): `[Nonempty X]` on the marked-search theorems is unnecessary and inconsistent with the preimage theorems",
+      "disposition": "retained",
+      "action": "Retain the nonempty marked-search domain as the premise of a genuine uniformly sampled hidden-mark experiment. An empty-domain zero-measure generalization is not required by an advertised result.",
+      "references": [
+        "VCVio/Quantum/Oracle/ParallelFinding.lean",
+        "VCVio/Quantum/Comp/HybridBudget.lean",
+        "VCVioTest/Quantum/ParallelSearch.lean",
+        "docs/quantum/guide/5-qrom.md"
+      ],
+      "pr": 1190,
+      "url": "https://github.com/Verified-zkEVM/VCVio/pull/1190"
+    },
+    {
+      "id": "1190-F4",
+      "finding": "F4 (nit): test docstring does not match its statement",
+      "disposition": "implemented",
+      "action": "The adaptivePoints_budgets docstring now states that the program uses exactly two rounds; the adjacent theorem separately states the point budget.",
+      "references": [
+        "VCVio/Quantum/Oracle/ParallelFinding.lean",
+        "VCVio/Quantum/Comp/HybridBudget.lean",
+        "VCVioTest/Quantum/ParallelSearch.lean",
+        "docs/quantum/guide/5-qrom.md"
+      ],
+      "pr": 1190,
+      "url": "https://github.com/Verified-zkEVM/VCVio/pull/1190"
+    },
+    {
+      "id": "1190-F5",
+      "finding": "F5 (nit): ToMathlib naming and decidability style",
+      "disposition": "partly_implemented",
+      "action": "uniform_hit_sum_le now accepts a caller-selected DecidablePred for the complete hit event. Generic and optimized concrete callers are tested without new mathematical premises. Broad public theorem or namespace renaming remains a separate compatibility-conscious API cleanup.",
+      "references": [
+        "VCVio/Quantum/Oracle/ParallelFinding.lean",
+        "VCVio/Quantum/Comp/HybridBudget.lean",
+        "VCVioTest/Quantum/ParallelSearch.lean",
+        "docs/quantum/guide/5-qrom.md",
+        "ToMathlib/MeasureTheory/Measure/UniformTable/Bounds.lean"
+      ],
+      "pr": 1190,
+      "url": "https://github.com/Verified-zkEVM/VCVio/pull/1190"
+    },
+    {
+      "id": "1190-F6",
+      "finding": "F6 (nit): docs formatting",
+      "disposition": "documented",
+      "action": "Improved wrapping in the modified guide/design paragraphs. The two README files already have no non-table prose lines over 100 characters at the reviewed baseline. Valid existing mixed display-math delimiters are retained rather than reformatted globally.",
+      "references": [
+        "VCVio/Quantum/Oracle/ParallelFinding.lean",
+        "VCVio/Quantum/Comp/HybridBudget.lean",
+        "VCVioTest/Quantum/ParallelSearch.lean",
+        "docs/quantum/guide/5-qrom.md"
+      ],
+      "pr": 1190,
+      "url": "https://github.com/Verified-zkEVM/VCVio/pull/1190"
+    },
+    {
+      "id": "1190-F7",
+      "finding": "F7 (nit, optional): no uniform-target corollary",
+      "disposition": "follow_up",
+      "action": "A uniform independent-target corollary follows by averaging the fixed-target theorem. Current statements and documentation explicitly promise the fixed-target result, so this remains optional convenience API.",
+      "references": [
+        "VCVio/Quantum/Oracle/ParallelFinding.lean",
+        "VCVio/Quantum/Comp/HybridBudget.lean",
+        "VCVioTest/Quantum/ParallelSearch.lean",
+        "docs/quantum/guide/5-qrom.md"
+      ],
+      "pr": 1190,
+      "url": "https://github.com/Verified-zkEVM/VCVio/pull/1190"
+    },
+    {
+      "id": "1191-F1",
+      "finding": "F1 (minor). No classical adversaries embed in the quantum experiment, and nothing links the quantum notion to the classical `DelaySecure`",
+      "disposition": "follow_up",
+      "action": "A classical two-phase adversary adapter, advantage equality and Qpre-to-(Qpre,Qpre) budget transport remain separate bridge work. The guide and body drafts explicitly state that the current bridge embeds honest generators.",
+      "references": [
+        "VCVio/CryptoFoundations/TimeLockPuzzle/Quantum.lean",
+        "VCVio/CryptoFoundations/TimeLockPuzzle/QuantumClassical.lean",
+        "VCVio/Quantum/Comp/DropEmptyBatches.lean",
+        "VCVio/Quantum/Oracle/MaskedChain/Preprocessing/DropEmpty.lean",
+        "docs/quantum/guide/7-time-lock-puzzles.md"
+      ],
+      "pr": 1191,
+      "url": "https://github.com/Verified-zkEVM/VCVio/pull/1191"
+    },
+    {
+      "id": "1191-F2",
+      "finding": "F2 (minor). The quantum puzzle has no correctness notion and no solver round budget; `solve` is never constrained",
+      "disposition": "follow_up",
+      "action": "Generic quantum Correct and IsSolveQueryBound predicates and their classical transports remain separate interface work. The applications prove honest fixed-oracle laws and resource bounds directly; the security predicate alone does not assert solvability.",
+      "references": [
+        "VCVio/CryptoFoundations/TimeLockPuzzle/Quantum.lean",
+        "VCVio/CryptoFoundations/TimeLockPuzzle/QuantumClassical.lean",
+        "VCVio/Quantum/Comp/DropEmptyBatches.lean",
+        "VCVio/Quantum/Oracle/MaskedChain/Preprocessing/DropEmpty.lean",
+        "docs/quantum/guide/7-time-lock-puzzles.md"
+      ],
+      "pr": 1191,
+      "url": "https://github.com/Verified-zkEVM/VCVio/pull/1191"
+    },
+    {
+      "id": "1191-F3",
+      "finding": "F3 (minor). `DropEmptyBatches` is never used in production, the corollary it motivates is missing, and width preservation is absent",
+      "disposition": "partly_implemented",
+      "action": "Added IsWidthBound.dropEmptyBatches. The claim of no production use is false for the full stack: MaskedChain/Preprocessing/DropEmpty.lean already uses erasure for the effective preprocessing round bound min rpre Qpre. A generic two-phase point-only adversary adapter is separate work.",
+      "references": [
+        "VCVio/CryptoFoundations/TimeLockPuzzle/Quantum.lean",
+        "VCVio/CryptoFoundations/TimeLockPuzzle/QuantumClassical.lean",
+        "VCVio/Quantum/Comp/DropEmptyBatches.lean",
+        "VCVio/Quantum/Oracle/MaskedChain/Preprocessing/DropEmpty.lean",
+        "docs/quantum/guide/7-time-lock-puzzles.md"
+      ],
+      "pr": 1191,
+      "url": "https://github.com/Verified-zkEVM/VCVio/pull/1191"
+    },
+    {
+      "id": "1191-F4",
+      "finding": "F4 (nit). No simp/bridge lemma for `toQuantum = ofClassicalGenerator …`",
+      "disposition": "follow_up",
+      "action": "The convenience equality toQuantum_eq_ofClassicalGenerator is not added. Its two definitions are definitionally equal, but the named rfl bridge remains explicit follow-up rather than an implemented item.",
+      "references": [
+        "VCVio/CryptoFoundations/TimeLockPuzzle/Quantum.lean",
+        "VCVio/CryptoFoundations/TimeLockPuzzle/QuantumClassical.lean",
+        "VCVio/Quantum/Comp/DropEmptyBatches.lean",
+        "VCVio/Quantum/Oracle/MaskedChain/Preprocessing/DropEmpty.lean",
+        "docs/quantum/guide/7-time-lock-puzzles.md"
+      ],
+      "pr": 1191,
+      "url": "https://github.com/Verified-zkEVM/VCVio/pull/1191"
+    },
+    {
+      "id": "1191-F5",
+      "finding": "F5 (nit). Bool and Prop observations are mixed across sibling corollaries",
+      "disposition": "retained",
+      "action": "Retain the existing Prop-valued and Bool-valued observation forms. Both denote the correct event; uniform convenience forms can be added without rewriting established headline statements and downstream uses.",
+      "references": [
+        "VCVio/CryptoFoundations/TimeLockPuzzle/Quantum.lean",
+        "VCVio/CryptoFoundations/TimeLockPuzzle/QuantumClassical.lean",
+        "VCVio/Quantum/Comp/DropEmptyBatches.lean",
+        "VCVio/Quantum/Oracle/MaskedChain/Preprocessing/DropEmpty.lean",
+        "docs/quantum/guide/7-time-lock-puzzles.md"
+      ],
+      "pr": 1191,
+      "url": "https://github.com/Verified-zkEVM/VCVio/pull/1191"
+    },
+    {
+      "id": "1191-F6",
+      "finding": "F6 (nit). References: ACHLM is not cited although it is the nearest quantum definition",
+      "disposition": "implemented",
+      "action": "Added the public Afshar et al. ePrint 2023/932 reference to the Quantum module comment, citing Definitions 2.6 and 5.2 and Theorem 5.3. The text explicitly distinguishes this library’s additional query-bounded preprocessing phase. The guide, design and literature account carry the same distinction.",
+      "references": [
+        "VCVio/CryptoFoundations/TimeLockPuzzle/Quantum.lean",
+        "VCVio/CryptoFoundations/TimeLockPuzzle/QuantumClassical.lean",
+        "VCVio/Quantum/Comp/DropEmptyBatches.lean",
+        "VCVio/Quantum/Oracle/MaskedChain/Preprocessing/DropEmpty.lean",
+        "docs/quantum/guide/7-time-lock-puzzles.md"
+      ],
+      "pr": 1191,
+      "url": "https://github.com/Verified-zkEVM/VCVio/pull/1191"
+    },
+    {
+      "id": "1191-F7",
+      "finding": "F7 (nit). Docs hygiene",
+      "disposition": "documented",
+      "action": "Sections 14 and 15 exist in the combined integration reference and the masked-chain branch. Their absence from the experiment-only and pointer-only slices reflects sibling scope. The actual per-cut heading inventory is preserved rather than copying sibling application sections.",
+      "references": [
+        "VCVio/CryptoFoundations/TimeLockPuzzle/Quantum.lean",
+        "VCVio/CryptoFoundations/TimeLockPuzzle/QuantumClassical.lean",
+        "VCVio/Quantum/Comp/DropEmptyBatches.lean",
+        "VCVio/Quantum/Oracle/MaskedChain/Preprocessing/DropEmpty.lean",
+        "docs/quantum/guide/7-time-lock-puzzles.md"
+      ],
+      "pr": 1191,
+      "url": "https://github.com/Verified-zkEVM/VCVio/pull/1191"
+    },
+    {
+      "id": "1191-F8",
+      "finding": "F8 (nit). The PR body's verification section cannot be checked by a reviewer",
+      "disposition": "documented",
+      "action": "The published bodies use concrete validation commands and identify empty-round erasure as infrastructure consumed by the masked-chain application. Final publication and new-head checks are separate gates.",
+      "references": [
+        "VCVio/CryptoFoundations/TimeLockPuzzle/Quantum.lean",
+        "VCVio/CryptoFoundations/TimeLockPuzzle/QuantumClassical.lean",
+        "VCVio/Quantum/Comp/DropEmptyBatches.lean",
+        "VCVio/Quantum/Oracle/MaskedChain/Preprocessing/DropEmpty.lean",
+        "docs/quantum/guide/7-time-lock-puzzles.md"
+      ],
+      "pr": 1191,
+      "url": "https://github.com/Verified-zkEVM/VCVio/pull/1191"
+    },
+    {
+      "id": "1192-F1",
+      "finding": "F1 (minor) — \"127 / 128 whole bits\" is asserted but never stated in Lean; no bits-monotonicity lemma",
+      "disposition": "implemented",
+      "action": "Added ParallelQROMBits monotonicity, a planted-density certificate helper, named _127 and _128 whole-bit certificates for the actual planted-preimage game, and concrete regressions using its syntactic resource predicates.",
+      "references": [
+        "VCVio/Quantum/Oracle/ParallelSecurity.lean",
+        "VCVio/Quantum/Oracle/ParallelPlantedPreimage.lean",
+        "VCVioTest/Quantum/ParallelSecurity.lean",
+        "docs/quantum/reference/literature.md"
+      ],
+      "pr": 1192,
+      "url": "https://github.com/Verified-zkEVM/VCVio/pull/1192"
+    },
+    {
+      "id": "1192-F2",
+      "finding": "F2 (minor) — Repository docs cite a private local path as the primary reference",
+      "disposition": "implemented",
+      "action": "The literature page states the complete normalization and planted coupling with public supporting references. Lean module comments refer to that self-contained account rather than requiring a private PDF.",
+      "references": [
+        "VCVio/Quantum/Oracle/ParallelSecurity.lean",
+        "VCVio/Quantum/Oracle/ParallelPlantedPreimage.lean",
+        "VCVioTest/Quantum/ParallelSecurity.lean",
+        "docs/quantum/reference/literature.md"
+      ],
+      "pr": 1192,
+      "url": "https://github.com/Verified-zkEVM/VCVio/pull/1192"
+    },
+    {
+      "id": "1192-F3",
+      "finding": "F3 (nit) — Out-of-scope informal Appendix B argument in `literature.md`",
+      "disposition": "documented",
+      "action": "Removed the informal Appendix B collision-proof repair from the literature page. Collision bounds are explicitly a separate unformalized CFHL track and are not premises of the inversion certificates.",
+      "references": [
+        "VCVio/Quantum/Oracle/ParallelSecurity.lean",
+        "VCVio/Quantum/Oracle/ParallelPlantedPreimage.lean",
+        "VCVioTest/Quantum/ParallelSecurity.lean",
+        "docs/quantum/reference/literature.md"
+      ],
+      "pr": 1192,
+      "url": "https://github.com/Verified-zkEVM/VCVio/pull/1192"
+    },
+    {
+      "id": "1192-F4",
+      "finding": "F4 (nit) — Generic `ParallelQROMBits` is vacuous for an empty resource model; no non-vacuity regression for the planted corollary",
+      "disposition": "implemented",
+      "action": "Added a planted-game one-bit refutation using the actual zero-query advantage 2/3 and real syntactic budgets. The generic security-bit predicate remains intentionally relative to the named game’s admissibility condition.",
+      "references": [
+        "VCVio/Quantum/Oracle/ParallelSecurity.lean",
+        "VCVio/Quantum/Oracle/ParallelPlantedPreimage.lean",
+        "VCVioTest/Quantum/ParallelSecurity.lean",
+        "docs/quantum/reference/literature.md"
+      ],
+      "pr": 1192,
+      "url": "https://github.com/Verified-zkEVM/VCVio/pull/1192"
+    },
+    {
+      "id": "1192-F5",
+      "finding": "F5 (nit) — Style",
+      "disposition": "implemented",
+      "action": "Removed the extra blank line in ParallelPlantedPreimage.lean while updating its reference comment.",
+      "references": [
+        "VCVio/Quantum/Oracle/ParallelSecurity.lean",
+        "VCVio/Quantum/Oracle/ParallelPlantedPreimage.lean",
+        "VCVioTest/Quantum/ParallelSecurity.lean",
+        "docs/quantum/reference/literature.md"
+      ],
+      "pr": 1192,
+      "url": "https://github.com/Verified-zkEVM/VCVio/pull/1192"
+    },
+    {
+      "id": "1193-F1",
+      "finding": "F1 (minor): the event-error API is dominated by the root API, about 250 duplicated lines",
+      "disposition": "follow_up",
+      "action": "Retain the compatible event-error family. RootBounds imports Homogeneous, which imports Bounds and supplies shared hybrid lemmas. Deriving the older family through root theorems requires an acyclic split of shared definitions and lemmas, rather than a local few-line replacement.",
+      "references": [
+        "VCVio/Quantum/Oracle/MaskedChain/Coupling.lean",
+        "VCVio/Quantum/Oracle/MaskedChain/RootBounds.lean",
+        "VCVio/Quantum/Oracle/MaskedChain/Bounds.lean",
+        "VCVioTest/Quantum/MaskedChainRootBounds.lean",
+        "docs/quantum/guide/5-qrom.md"
+      ],
+      "pr": 1193,
+      "url": "https://github.com/Verified-zkEVM/VCVio/pull/1193"
+    },
+    {
+      "id": "1193-F2",
+      "finding": "F2 (minor): the online bound is in terms of chain length, not the adversary's actual rounds",
+      "disposition": "follow_up",
+      "action": "The online bound remains parameterized by chain length q. A smaller actual adversary round cap is admitted through monotonicity, but a sharper cutoff r≤q needs a new terminal freshness lemma and propagated API.",
+      "references": [
+        "VCVio/Quantum/Oracle/MaskedChain/Coupling.lean",
+        "VCVio/Quantum/Oracle/MaskedChain/RootBounds.lean",
+        "VCVio/Quantum/Oracle/MaskedChain/Bounds.lean",
+        "VCVioTest/Quantum/MaskedChainRootBounds.lean",
+        "docs/quantum/guide/5-qrom.md"
+      ],
+      "pr": 1193,
+      "url": "https://github.com/Verified-zkEVM/VCVio/pull/1193"
+    },
+    {
+      "id": "1193-F3",
+      "finding": "F3 (nit): the collision term charges all q+2 vertices; only the q+1 inputs matter",
+      "disposition": "implemented",
+      "action": "The coupling needs injectivity only of the programmed input prefix. Its allowance is choose(q+1,2)/N, with the endpoint excluded. Root, event, conditional and preprocessing formulas and regressions propagate this strengthening; without preprocessing, zero rounds recover the exact 1/N bound.",
+      "references": [
+        "VCVio/Quantum/Oracle/MaskedChain/Coupling.lean",
+        "VCVio/Quantum/Oracle/MaskedChain/RootBounds.lean",
+        "VCVio/Quantum/Oracle/MaskedChain/Bounds.lean",
+        "VCVioTest/Quantum/MaskedChainRootBounds.lean",
+        "docs/quantum/guide/5-qrom.md"
+      ],
+      "pr": 1193,
+      "url": "https://github.com/Verified-zkEVM/VCVio/pull/1193"
+    },
+    {
+      "id": "1193-F4",
+      "finding": "F4 (nit): literature framing undersells that Afshar's proof is already endpoint-only",
+      "disposition": "documented",
+      "action": "The literature and guides state that Afshar Lemma 5.5 already bounds the endpoint event. The comparison concerns root-error accumulation, not a novel endpoint adaptation or a best-known bound.",
+      "references": [
+        "VCVio/Quantum/Oracle/MaskedChain/Coupling.lean",
+        "VCVio/Quantum/Oracle/MaskedChain/RootBounds.lean",
+        "VCVio/Quantum/Oracle/MaskedChain/Bounds.lean",
+        "VCVioTest/Quantum/MaskedChainRootBounds.lean",
+        "docs/quantum/guide/5-qrom.md"
+      ],
+      "pr": 1193,
+      "url": "https://github.com/Verified-zkEVM/VCVio/pull/1193"
+    },
+    {
+      "id": "1193-F5",
+      "finding": "F5 (nit): no regression shows the round threshold is sharp",
+      "disposition": "partly_implemented",
+      "action": "Added an honest two-round QComp budget-and-correctness regression for a two-link chain. A full OnlineAdversary-packaged advantage-one witness and general threshold-optimality theorem remain separate; they are not claimed by this regression.",
+      "references": [
+        "VCVio/Quantum/Oracle/MaskedChain/Coupling.lean",
+        "VCVio/Quantum/Oracle/MaskedChain/RootBounds.lean",
+        "VCVio/Quantum/Oracle/MaskedChain/Bounds.lean",
+        "VCVioTest/Quantum/MaskedChainRootBounds.lean",
+        "docs/quantum/guide/5-qrom.md"
+      ],
+      "pr": 1193,
+      "url": "https://github.com/Verified-zkEVM/VCVio/pull/1193"
+    },
+    {
+      "id": "1193-F6",
+      "finding": "F6 (nit): style",
+      "disposition": "partly_implemented",
+      "action": "Cleaned local spacing in Bounds.lean and Hybrid.lean. Duplicated private helpers remain because factoring the older event family through the root family first requires the dependency split described in 1193-F1.",
+      "references": [
+        "VCVio/Quantum/Oracle/MaskedChain/Coupling.lean",
+        "VCVio/Quantum/Oracle/MaskedChain/RootBounds.lean",
+        "VCVio/Quantum/Oracle/MaskedChain/Bounds.lean",
+        "VCVioTest/Quantum/MaskedChainRootBounds.lean",
+        "docs/quantum/guide/5-qrom.md"
+      ],
+      "pr": 1193,
+      "url": "https://github.com/Verified-zkEVM/VCVio/pull/1193"
+    },
+    {
+      "id": "1194-M1",
+      "finding": "Standalone table splitting and the actual delay-proof dependencies",
+      "disposition": "documented",
+      "action": "Retain table splitting as a standalone reusable encoding law. The guide, design and published bodies lead with quantumWindowScheme, fixed-oracle honest execution and hashInputWindow_injective, and explicitly state that the coupling and rank proof program raw tables directly.",
+      "references": [
+        "VCVio/Schemes/PointerChainPuzzle/QuantumEncoding.lean",
+        "ToMathlib/MeasureTheory/Measure/UniformTable/Encoding.lean",
+        "docs/quantum/guide/7-time-lock-puzzles.md"
+      ],
+      "pr": 1194,
+      "url": "https://github.com/Verified-zkEVM/VCVio/pull/1194"
+    },
+    {
+      "id": "1194-n1",
+      "finding": "Derived Fintype instance on typed pointer-chain points",
+      "disposition": "retained",
+      "action": "Retain the derived Fintype instance supporting the finite Point-indexed table API. It does not alter classical execution semantics; removing it while retaining that API is not justified by the review.",
+      "references": [
+        "VCVio/Schemes/PointerChainPuzzle/QuantumEncoding.lean",
+        "ToMathlib/MeasureTheory/Measure/UniformTable/Encoding.lean",
+        "docs/quantum/guide/7-time-lock-puzzles.md"
+      ],
+      "pr": 1194,
+      "url": "https://github.com/Verified-zkEVM/VCVio/pull/1194"
+    },
+    {
+      "id": "1194-n2",
+      "finding": "Computable enumeration of bounded byte strings",
+      "disposition": "follow_up",
+      "action": "A computable bounded-byte enumeration may help a future executable compiler. The current proof interface requires only finite registers, so its noncomputable Fintype instance is retained.",
+      "references": [
+        "VCVio/Schemes/PointerChainPuzzle/QuantumEncoding.lean",
+        "ToMathlib/MeasureTheory/Measure/UniformTable/Encoding.lean",
+        "docs/quantum/guide/7-time-lock-puzzles.md"
+      ],
+      "pr": 1194,
+      "url": "https://github.com/Verified-zkEVM/VCVio/pull/1194"
+    },
+    {
+      "id": "1194-n3",
+      "finding": "Encoding theorem discovery and reproducible PR verification",
+      "disposition": "documented",
+      "action": "The published body names the actual raw encoding and honest execution declarations, including quantumWindowDerive and its key-receipt laws. Concrete validation commands replace historical process counts.",
+      "references": [
+        "VCVio/Schemes/PointerChainPuzzle/QuantumEncoding.lean",
+        "ToMathlib/MeasureTheory/Measure/UniformTable/Encoding.lean",
+        "docs/quantum/guide/7-time-lock-puzzles.md"
+      ],
+      "pr": 1194,
+      "url": "https://github.com/Verified-zkEVM/VCVio/pull/1194"
+    },
+    {
+      "id": "1195-m1",
+      "finding": "Preprocessing oracle in the programmed game",
+      "disposition": "documented",
+      "action": "The guide, design and published bodies explicitly state that preprocessing sees the completed programmed oracle. Replacing only preprocessing by a base-oracle run is separately charged by #1196.",
+      "references": [
+        "VCVio/Schemes/PointerChainPuzzle/QuantumCoupling/Scheme.lean",
+        "VCVio/Schemes/PointerChainPuzzle/QuantumCoupling/Programming.lean",
+        "VCVio/Schemes/PointerChainPuzzle/RankFrontier.lean",
+        "docs/design/quantum-layer.md"
+      ],
+      "pr": 1195,
+      "url": "https://github.com/Verified-zkEVM/VCVio/pull/1195"
+    },
+    {
+      "id": "1195-m2",
+      "finding": "Numerical form of the 32-byte collision denominator",
+      "disposition": "documented",
+      "action": "Retain the typed cardinal denominator Fintype.card (Bytes 32). The docs explicitly identify it with 2^256. No numeral-form corollary or byte-cardinality API relocation is added.",
+      "references": [
+        "VCVio/Schemes/PointerChainPuzzle/QuantumCoupling/Scheme.lean",
+        "VCVio/Schemes/PointerChainPuzzle/QuantumCoupling/Programming.lean",
+        "VCVio/Schemes/PointerChainPuzzle/RankFrontier.lean",
+        "docs/design/quantum-layer.md"
+      ],
+      "pr": 1195,
+      "url": "https://github.com/Verified-zkEVM/VCVio/pull/1195"
+    },
+    {
+      "id": "1195-m3",
+      "finding": "Rank-security prerequisites allocated to the coupling PR",
+      "disposition": "documented",
+      "action": "Retain rank-frontier and partial-programming laws in the prerequisite layer. The published body identifies them as inputs to #1196 instead of claiming that the #1195 coupling consumes every lemma.",
+      "references": [
+        "VCVio/Schemes/PointerChainPuzzle/QuantumCoupling/Scheme.lean",
+        "VCVio/Schemes/PointerChainPuzzle/QuantumCoupling/Programming.lean",
+        "VCVio/Schemes/PointerChainPuzzle/RankFrontier.lean",
+        "docs/design/quantum-layer.md"
+      ],
+      "pr": 1195,
+      "url": "https://github.com/Verified-zkEVM/VCVio/pull/1195"
+    },
+    {
+      "id": "1195-n1",
+      "finding": "Forward reference to the later preprocessing module",
+      "disposition": "implemented",
+      "action": "Removed the forward module reference from the coupling docstring, leaving an intrinsic description of capped programmed recovery and the oracle serving both phases. The encoding module comment likewise avoids a later module absent at its PR head.",
+      "references": [
+        "VCVio/Schemes/PointerChainPuzzle/QuantumCoupling/Scheme.lean",
+        "VCVio/Schemes/PointerChainPuzzle/QuantumCoupling/Programming.lean",
+        "VCVio/Schemes/PointerChainPuzzle/RankFrontier.lean",
+        "docs/design/quantum-layer.md"
+      ],
+      "pr": 1195,
+      "url": "https://github.com/Verified-zkEVM/VCVio/pull/1195"
+    },
+    {
+      "id": "1195-n2",
+      "finding": "Duplicate blank lines",
+      "disposition": "follow_up",
+      "action": "The reported double blank lines in QuantumCoupling/Programming.lean are unchanged. Their removal is optional style cleanup and is not reported as an implemented fix.",
+      "references": [
+        "VCVio/Schemes/PointerChainPuzzle/QuantumCoupling/Scheme.lean",
+        "VCVio/Schemes/PointerChainPuzzle/QuantumCoupling/Programming.lean",
+        "VCVio/Schemes/PointerChainPuzzle/RankFrontier.lean",
+        "docs/design/quantum-layer.md"
+      ],
+      "pr": 1195,
+      "url": "https://github.com/Verified-zkEVM/VCVio/pull/1195"
+    },
+    {
+      "id": "1195-n3",
+      "finding": "Coupling theorem discovery and PR verification detail",
+      "disposition": "documented",
+      "action": "The published body names qromDelayAdvantage_quantumWindowScheme_le_programmed, its collision allowance and both phases’ programmed-oracle access. Concrete validation commands replace process metrics.",
+      "references": [
+        "VCVio/Schemes/PointerChainPuzzle/QuantumCoupling/Scheme.lean",
+        "VCVio/Schemes/PointerChainPuzzle/QuantumCoupling/Programming.lean",
+        "VCVio/Schemes/PointerChainPuzzle/RankFrontier.lean",
+        "docs/design/quantum-layer.md"
+      ],
+      "pr": 1195,
+      "url": "https://github.com/Verified-zkEVM/VCVio/pull/1195"
+    },
+    {
+      "id": "1196-Minor1",
+      "finding": "Concrete 24-byte-link estimates",
+      "disposition": "documented",
+      "action": "The 24-byte estimates use an explicit width cap of 3.5e12 per round and preprocessing round-point product at most 2^100. A total query budget does not imply width Q/r. The guide provides exact schedules and reproducible arithmetic without claiming a matching truncated-link attack.",
+      "references": [
+        "VCVio/Schemes/PointerChainPuzzle/QuantumCoupling/Preprocessing.lean",
+        "VCVio/Schemes/PointerChainPuzzle/QuantumEncoding.lean",
+        "VCVioTest/Quantum/PointerChainPreprocessing.lean",
+        "VCVioTest/Quantum/PointerChainEncoding.lean",
+        "docs/quantum/guide/7-time-lock-puzzles.md"
+      ],
+      "pr": 1196,
+      "url": "https://github.com/Verified-zkEVM/VCVio/pull/1196"
+    },
+    {
+      "id": "1196-Minor2",
+      "finding": "Afshar citation and exact-puzzle comparison",
+      "disposition": "documented",
+      "action": "The exact-puzzle literature row and design account cite Afshar et al. through public ePrint 2023/932 and distinguish endpoint correctness from root-error bookkeeping.",
+      "references": [
+        "VCVio/Schemes/PointerChainPuzzle/QuantumCoupling/Preprocessing.lean",
+        "VCVio/Schemes/PointerChainPuzzle/QuantumEncoding.lean",
+        "VCVioTest/Quantum/PointerChainPreprocessing.lean",
+        "VCVioTest/Quantum/PointerChainEncoding.lean",
+        "docs/quantum/guide/7-time-lock-puzzles.md"
+      ],
+      "pr": 1196,
+      "url": "https://github.com/Verified-zkEVM/VCVio/pull/1196"
+    },
+    {
+      "id": "1196-Minor3",
+      "finding": "Nontrivial tests and honest key-receipt laws",
+      "disposition": "partly_implemented",
+      "action": "Added nontrivial b=24,n=16,B=86 tests for all step counts. quantumWindowDerive has keyRound round and n*(m+3) point budgets and the generated-key Dirac law at every fixed oracle. Checked solve uses keyRound+1. A full two-phase advantage-one, width-two sharpness witness remains separate.",
+      "references": [
+        "VCVio/Schemes/PointerChainPuzzle/QuantumCoupling/Preprocessing.lean",
+        "VCVio/Schemes/PointerChainPuzzle/QuantumEncoding.lean",
+        "VCVioTest/Quantum/PointerChainPreprocessing.lean",
+        "VCVioTest/Quantum/PointerChainEncoding.lean",
+        "docs/quantum/guide/7-time-lock-puzzles.md"
+      ],
+      "pr": 1196,
+      "url": "https://github.com/Verified-zkEVM/VCVio/pull/1196"
+    },
+    {
+      "id": "1196-Nit4",
+      "finding": "Repeated uniform-average helpers",
+      "disposition": "follow_up",
+      "action": "Retain the short repeated constant-average helper proofs. Factoring them requires a suitable shared API and clean dependency; this response does not add a new lower-level module solely for those few lines.",
+      "references": [
+        "VCVio/Schemes/PointerChainPuzzle/QuantumCoupling/Preprocessing.lean",
+        "VCVio/Schemes/PointerChainPuzzle/QuantumEncoding.lean",
+        "VCVioTest/Quantum/PointerChainPreprocessing.lean",
+        "VCVioTest/Quantum/PointerChainEncoding.lean",
+        "docs/quantum/guide/7-time-lock-puzzles.md"
+      ],
+      "pr": 1196,
+      "url": "https://github.com/Verified-zkEVM/VCVio/pull/1196"
+    },
+    {
+      "id": "1196-Nit5",
+      "finding": "Capstone theorem discovery",
+      "disposition": "documented",
+      "action": "The guide, design and published body identify QuantumCoupling/Preprocessing.lean and its capstone declarations directly. A new facade solely for discovery remains optional.",
+      "references": [
+        "VCVio/Schemes/PointerChainPuzzle/QuantumCoupling/Preprocessing.lean",
+        "VCVio/Schemes/PointerChainPuzzle/QuantumEncoding.lean",
+        "VCVioTest/Quantum/PointerChainPreprocessing.lean",
+        "VCVioTest/Quantum/PointerChainEncoding.lean",
+        "docs/quantum/guide/7-time-lock-puzzles.md"
+      ],
+      "pr": 1196,
+      "url": "https://github.com/Verified-zkEVM/VCVio/pull/1196"
+    },
+    {
+      "id": "1196-Nit6",
+      "finding": "Use of the online point budget",
+      "disposition": "partly_implemented",
+      "action": "Added qromDelaySecure_quantumWindowScheme_min_width_points for the existing adversary class. The stronger online sqrt(rQ) hybrid remains separate because its per-round reference executions differ.",
+      "references": [
+        "VCVio/Schemes/PointerChainPuzzle/QuantumCoupling/Preprocessing.lean",
+        "VCVio/Schemes/PointerChainPuzzle/QuantumEncoding.lean",
+        "VCVioTest/Quantum/PointerChainPreprocessing.lean",
+        "VCVioTest/Quantum/PointerChainEncoding.lean",
+        "docs/quantum/guide/7-time-lock-puzzles.md"
+      ],
+      "pr": 1196,
+      "url": "https://github.com/Verified-zkEVM/VCVio/pull/1196"
+    },
+    {
+      "id": "Trust-F1",
+      "finding": "Pre-existing Quantum.QComp name collision",
+      "disposition": "documented",
+      "action": "Document the pre-existing QuantumFoundations.Instrument / Quantum.QComp import collision. The stack uses completely positive subinstrument modules and avoids the conflicting umbrella. Upstream API/name coordination is separate.",
+      "references": [
+        "VCVio/Quantum/Comp/Basic.lean",
+        "VCVio/Quantum/Oracle/Model.lean",
+        "docs/design/quantum-layer.md"
+      ],
+      "stack_prs": [
+        1188,
+        1190,
+        1192,
+        1191,
+        1193,
+        1194,
+        1195,
+        1196
+      ],
+      "pr_urls": [
+        "https://github.com/Verified-zkEVM/VCVio/pull/1188",
+        "https://github.com/Verified-zkEVM/VCVio/pull/1190",
+        "https://github.com/Verified-zkEVM/VCVio/pull/1192",
+        "https://github.com/Verified-zkEVM/VCVio/pull/1191",
+        "https://github.com/Verified-zkEVM/VCVio/pull/1193",
+        "https://github.com/Verified-zkEVM/VCVio/pull/1194",
+        "https://github.com/Verified-zkEVM/VCVio/pull/1195",
+        "https://github.com/Verified-zkEVM/VCVio/pull/1196"
+      ]
+    },
+    {
+      "id": "Trust-F2",
+      "finding": "Finite, nonempty uniform-sampling premises",
+      "disposition": "retained",
+      "action": "The zero measure for uniformOn an infinite or empty sample type is documented. Every headline experiment uses finite, nonempty sampling. The existing general definitions are retained.",
+      "references": [
+        "VCVio/Quantum/Comp/Basic.lean",
+        "VCVio/Quantum/Oracle/Model.lean",
+        "docs/design/quantum-layer.md"
+      ],
+      "stack_prs": [
+        1188,
+        1190,
+        1192,
+        1191,
+        1193,
+        1194,
+        1195,
+        1196
+      ],
+      "pr_urls": [
+        "https://github.com/Verified-zkEVM/VCVio/pull/1188",
+        "https://github.com/Verified-zkEVM/VCVio/pull/1190",
+        "https://github.com/Verified-zkEVM/VCVio/pull/1192",
+        "https://github.com/Verified-zkEVM/VCVio/pull/1191",
+        "https://github.com/Verified-zkEVM/VCVio/pull/1193",
+        "https://github.com/Verified-zkEVM/VCVio/pull/1194",
+        "https://github.com/Verified-zkEVM/VCVio/pull/1195",
+        "https://github.com/Verified-zkEVM/VCVio/pull/1196"
+      ]
+    },
+    {
+      "id": "Trust-F3",
+      "finding": "Trace nonincrease is distinct from complete positivity",
+      "disposition": "no_change_needed",
+      "action": "IsTNI alone is not positivity. Current adversary instruments bundle complete positivity, and reprogramming finishers require both IsCP and IsTNI. The review found no defect.",
+      "references": [
+        "VCVio/Quantum/Comp/Basic.lean",
+        "VCVio/Quantum/Oracle/Model.lean",
+        "docs/design/quantum-layer.md"
+      ],
+      "stack_prs": [
+        1188,
+        1190,
+        1192,
+        1191,
+        1193,
+        1194,
+        1195,
+        1196
+      ],
+      "pr_urls": [
+        "https://github.com/Verified-zkEVM/VCVio/pull/1188",
+        "https://github.com/Verified-zkEVM/VCVio/pull/1190",
+        "https://github.com/Verified-zkEVM/VCVio/pull/1192",
+        "https://github.com/Verified-zkEVM/VCVio/pull/1191",
+        "https://github.com/Verified-zkEVM/VCVio/pull/1193",
+        "https://github.com/Verified-zkEVM/VCVio/pull/1194",
+        "https://github.com/Verified-zkEVM/VCVio/pull/1195",
+        "https://github.com/Verified-zkEVM/VCVio/pull/1196"
+      ]
+    },
+    {
+      "id": "Trust-F4",
+      "finding": "Review cache and checkout provenance",
+      "disposition": "no_change_needed",
+      "action": "Pinned source revisions and dependency manifests are unchanged. The reported stale alternate/cache path is an operational issue; local integration builds and actual per-head hosted checks are tracked separately.",
+      "references": [
+        "VCVio/Quantum/Comp/Basic.lean",
+        "VCVio/Quantum/Oracle/Model.lean",
+        "docs/design/quantum-layer.md"
+      ],
+      "stack_prs": [
+        1188,
+        1190,
+        1192,
+        1191,
+        1193,
+        1194,
+        1195,
+        1196
+      ],
+      "pr_urls": [
+        "https://github.com/Verified-zkEVM/VCVio/pull/1188",
+        "https://github.com/Verified-zkEVM/VCVio/pull/1190",
+        "https://github.com/Verified-zkEVM/VCVio/pull/1192",
+        "https://github.com/Verified-zkEVM/VCVio/pull/1191",
+        "https://github.com/Verified-zkEVM/VCVio/pull/1193",
+        "https://github.com/Verified-zkEVM/VCVio/pull/1194",
+        "https://github.com/Verified-zkEVM/VCVio/pull/1195",
+        "https://github.com/Verified-zkEVM/VCVio/pull/1196"
+      ]
+    },
+    {
+      "id": "Review2-deadline",
+      "finding": "Scope of the online deadline",
+      "disposition": "documented",
+      "action": "The guide and published bodies state the every-branch syntactic deadline. Counting early successes of a longer-running program requires a separate truncation result.",
+      "references": [
+        "docs/design/parallel-qrom-review-response.md"
+      ],
+      "stack_prs": [
+        1188,
+        1190,
+        1192,
+        1191,
+        1193,
+        1194,
+        1195,
+        1196
+      ],
+      "pr_urls": [
+        "https://github.com/Verified-zkEVM/VCVio/pull/1188",
+        "https://github.com/Verified-zkEVM/VCVio/pull/1190",
+        "https://github.com/Verified-zkEVM/VCVio/pull/1192",
+        "https://github.com/Verified-zkEVM/VCVio/pull/1191",
+        "https://github.com/Verified-zkEVM/VCVio/pull/1193",
+        "https://github.com/Verified-zkEVM/VCVio/pull/1194",
+        "https://github.com/Verified-zkEVM/VCVio/pull/1195",
+        "https://github.com/Verified-zkEVM/VCVio/pull/1196"
+      ]
+    },
+    {
+      "id": "Review2-collision",
+      "finding": "Input-only masked-chain collision event",
+      "disposition": "implemented",
+      "action": "The input-only collision event and choose(q+1,2)/N allowance address the same quantitative issue as 1193-F3.",
+      "references": [
+        "docs/design/parallel-qrom-review-response.md"
+      ],
+      "stack_prs": [
+        1188,
+        1190,
+        1192,
+        1191,
+        1193,
+        1194,
+        1195,
+        1196
+      ],
+      "pr_urls": [
+        "https://github.com/Verified-zkEVM/VCVio/pull/1188",
+        "https://github.com/Verified-zkEVM/VCVio/pull/1190",
+        "https://github.com/Verified-zkEVM/VCVio/pull/1192",
+        "https://github.com/Verified-zkEVM/VCVio/pull/1191",
+        "https://github.com/Verified-zkEVM/VCVio/pull/1193",
+        "https://github.com/Verified-zkEVM/VCVio/pull/1194",
+        "https://github.com/Verified-zkEVM/VCVio/pull/1195",
+        "https://github.com/Verified-zkEVM/VCVio/pull/1196"
+      ]
+    },
+    {
+      "id": "Review2-width",
+      "finding": "Effective online width",
+      "disposition": "implemented",
+      "action": "The same-budget effective-width certificate addresses the quantitative issue in 1196-Nit6.",
+      "references": [
+        "docs/design/parallel-qrom-review-response.md"
+      ],
+      "stack_prs": [
+        1188,
+        1190,
+        1192,
+        1191,
+        1193,
+        1194,
+        1195,
+        1196
+      ],
+      "pr_urls": [
+        "https://github.com/Verified-zkEVM/VCVio/pull/1188",
+        "https://github.com/Verified-zkEVM/VCVio/pull/1190",
+        "https://github.com/Verified-zkEVM/VCVio/pull/1192",
+        "https://github.com/Verified-zkEVM/VCVio/pull/1191",
+        "https://github.com/Verified-zkEVM/VCVio/pull/1193",
+        "https://github.com/Verified-zkEVM/VCVio/pull/1194",
+        "https://github.com/Verified-zkEVM/VCVio/pull/1195",
+        "https://github.com/Verified-zkEVM/VCVio/pull/1196"
+      ]
+    },
+    {
+      "id": "Review2-bits",
+      "finding": "Concrete whole-bit certificates",
+      "disposition": "implemented",
+      "action": "Named concrete certificates for the actual planted-preimage game address the issue in 1192-F1.",
+      "references": [
+        "docs/design/parallel-qrom-review-response.md"
+      ],
+      "stack_prs": [
+        1188,
+        1190,
+        1192,
+        1191,
+        1193,
+        1194,
+        1195,
+        1196
+      ],
+      "pr_urls": [
+        "https://github.com/Verified-zkEVM/VCVio/pull/1188",
+        "https://github.com/Verified-zkEVM/VCVio/pull/1190",
+        "https://github.com/Verified-zkEVM/VCVio/pull/1192",
+        "https://github.com/Verified-zkEVM/VCVio/pull/1191",
+        "https://github.com/Verified-zkEVM/VCVio/pull/1193",
+        "https://github.com/Verified-zkEVM/VCVio/pull/1194",
+        "https://github.com/Verified-zkEVM/VCVio/pull/1195",
+        "https://github.com/Verified-zkEVM/VCVio/pull/1196"
+      ]
+    },
+    {
+      "id": "Review2-integration",
+      "finding": "Sibling documentation and umbrella conflicts",
+      "disposition": "documented",
+      "action": "The public response requires merging both sibling documentation contributions, regenerating umbrellas, checking the application-source union and validating the actual landing tree. Taking one side of an umbrella conflict can drop exports or tests.",
+      "references": [
+        "docs/design/parallel-qrom-review-response.md"
+      ],
+      "stack_prs": [
+        1188,
+        1190,
+        1192,
+        1191,
+        1193,
+        1194,
+        1195,
+        1196
+      ],
+      "pr_urls": [
+        "https://github.com/Verified-zkEVM/VCVio/pull/1188",
+        "https://github.com/Verified-zkEVM/VCVio/pull/1190",
+        "https://github.com/Verified-zkEVM/VCVio/pull/1192",
+        "https://github.com/Verified-zkEVM/VCVio/pull/1191",
+        "https://github.com/Verified-zkEVM/VCVio/pull/1193",
+        "https://github.com/Verified-zkEVM/VCVio/pull/1194",
+        "https://github.com/Verified-zkEVM/VCVio/pull/1195",
+        "https://github.com/Verified-zkEVM/VCVio/pull/1196"
+      ]
+    },
+    {
+      "id": "Review2-artifacts",
+      "finding": "Reproducing the historical contract comparison",
+      "disposition": "documented",
+      "action": "The public response gives exact published baseline and polished revisions, the 64-module inventory and capture/compare commands. Historical JSON remains immutable; original machine-local snapshot bytes are unnecessary for reproduction.",
+      "references": [
+        "docs/design/parallel-qrom-review-response.md"
+      ],
+      "stack_prs": [
+        1188,
+        1190,
+        1192,
+        1191,
+        1193,
+        1194,
+        1195,
+        1196
+      ],
+      "pr_urls": [
+        "https://github.com/Verified-zkEVM/VCVio/pull/1188",
+        "https://github.com/Verified-zkEVM/VCVio/pull/1190",
+        "https://github.com/Verified-zkEVM/VCVio/pull/1192",
+        "https://github.com/Verified-zkEVM/VCVio/pull/1191",
+        "https://github.com/Verified-zkEVM/VCVio/pull/1193",
+        "https://github.com/Verified-zkEVM/VCVio/pull/1194",
+        "https://github.com/Verified-zkEVM/VCVio/pull/1195",
+        "https://github.com/Verified-zkEVM/VCVio/pull/1196"
+      ]
+    },
+    {
+      "id": "Review-summary-Grover",
+      "finding": "Finite-domain Grover calibration",
+      "disposition": "documented",
+      "action": "One Grover iteration succeeds with (3-4/N)^2/N. It approaches 9/N for large N and does not attain 9/N exactly at finite N.",
+      "references": [
+        "docs/design/parallel-qrom-review-response.md"
+      ],
+      "stack_prs": [
+        1188,
+        1190,
+        1192,
+        1191,
+        1193,
+        1194,
+        1195,
+        1196
+      ],
+      "pr_urls": [
+        "https://github.com/Verified-zkEVM/VCVio/pull/1188",
+        "https://github.com/Verified-zkEVM/VCVio/pull/1190",
+        "https://github.com/Verified-zkEVM/VCVio/pull/1192",
+        "https://github.com/Verified-zkEVM/VCVio/pull/1191",
+        "https://github.com/Verified-zkEVM/VCVio/pull/1193",
+        "https://github.com/Verified-zkEVM/VCVio/pull/1194",
+        "https://github.com/Verified-zkEVM/VCVio/pull/1195",
+        "https://github.com/Verified-zkEVM/VCVio/pull/1196"
+      ]
+    }
+  ],
+  "validation_scope": "Full canonical integration checks, eight actual PR-cut builds and independent raw contract checks, all actual hosted check entries at the exact updated heads, reviewed PR-body publication and separate readback, and a post-body exact-head CI snapshot passed. See the companion validation record for separate scopes and hashes.",
+  "disposition_meanings": {
+    "implemented": "The stated API, proof, test or module-comment change is present and covered by the completed targeted implementation checks and source review.",
+    "partly_implemented": "A useful tested part is implemented; the action names the remaining refinement explicitly.",
+    "documented": "Documentation and the reviewed published PR bodies give the exact scope, dependency or interpretation; body publication and exact readback are recorded separately.",
+    "retained": "The existing API or premise is deliberately retained, with its reason stated.",
+    "follow_up": "The stated code/API/refactor is not implemented in this response and remains separate work.",
+    "no_change_needed": "The reported issue is an intended primitive distinction or an operational condition, with no source defect requiring a change."
+  },
+  "disposition_counts": {
+    "documented": 22,
+    "follow_up": 10,
+    "implemented": 18,
+    "no_change_needed": 2,
+    "partly_implemented": 6,
+    "retained": 7
+  },
+  "targeted_validation": {
+    "status": "passed",
+    "scope": "Targeted proof/API builds and axiom checks plus independent mathematical, API and source-scope reviews. These do not certify newly extracted PR heads or their hosted CI.",
+    "whole_integration_build": {
+      "status": "passed",
+      "jobs": 11250
+    },
+    "independent_review_SHA256": {
+      "masked_chain_and_bits": "3f83fbbead7c9629a7e0227a8d46e585642d14581e35b4491e9e2bcdcb467f29",
+      "pointer_honest_laws_and_effective_width": "1024ec579aaa66bcb3930415771bf9e167a65d3a2c5f6b3b027a0de8ae483d79",
+      "generic_API_and_aggregation": "799f5ad1a4f3bbdb51c8b3481926448fc2700be02d296cdfb0ef758800604dc2"
+    },
+    "generic_API_owner_report_SHA256": "57db5069fb9e2abd70d693bd16731789cff9399e78fcd8206738085220af9a76",
+    "frozen_source_manifest_SHA256": "ff062e3b1816c349edd05397125e7f42cde57c417213e91895c5567829813634",
+    "reproduction_note": "The public review-response page gives concrete build, axiom, lint, executable-test and contract-capture commands. Digest fields identify the review evidence; no private filesystem path is required by those commands.",
+    "frozen_Lean_source_scope_SHA256": "09e2c4b4320eef5bed923254e407fb1bfffcf1ebbe52c3b4dbee37a6a3499e98",
+    "generic_API_final_gate_SHA256": "6e80b0008c144f2339b06744cd5c2b15147546002d9ded26589ab9fa492821d9"
+  },
+  "final_validation": {
+    "record": "docs/design/parallel-qrom-review-response-validation.json",
+    "source_commit": "575a39ffd1c5baf20862b54a420abdf913341118",
+    "validated_pr_heads": {
+      "1188": "a2061ed0a57b15269d6aaea5c5f35042be3fea8a",
+      "1190": "fd1804d6a30f934cac3554000f8687edf4f213b7",
+      "1191": "2d52cea6200c38788414cb5a097bac774f814d71",
+      "1192": "c9aac29cd8b9ad752fcc29b65a64992c62c6eebd",
+      "1193": "52a13f5bad63979d09396a519d003033710bcf64",
+      "1194": "1e75842f27642d08375176e40add583cd03f0e30",
+      "1195": "a134b9fa3a187bca2eb97a38ac5a88abe0ef4611",
+      "1196": "3a41224dd35ae3ae2c752b420b117d53347b8936"
+    },
+    "integration_independent_sha256": "e9f71d4b8af146d71d8d9b6d148b04d255764babd623e21da35b2527bac4dc98",
+    "source_union_sha256": "86fd1e190f9f8d7489c24c8f5a5256301c4b226ab21ea86f6422b39157b8705e",
+    "hosted_final_sha256": "e4e880c74ab4d7041792feea7dd7ff1466bf5197ab9fe85010ab7c4f56c6e971",
+    "body_publication_sha256": "9c2e490090528fe9028c3298613fda5f073b5801822b4f41fba2aa3d5b503bfd",
+    "post_body_hosted_sha256": "078fc406830976ae6d1e26162c944ac8a87f7fad3e4e7bc7f51284415839b024"
+  }
+}
