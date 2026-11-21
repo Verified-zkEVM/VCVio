@@ -73,16 +73,10 @@ attempt-count charge `∑_{a≤maxAttempts} p^a`. -/
 lemma geomSum_le {p_abort : ℝ} (hp₀ : 0 ≤ p_abort) (hp : p_abort < 1) (n : ℕ) :
     (∑ a ∈ Finset.range n, ENNReal.ofReal p_abort ^ a)
       ≤ ENNReal.ofReal (1 / (1 - p_abort)) := by
-  have h1p : (0 : ℝ) < 1 - p_abort := by linarith
-  have hg_eq : (∑ a ∈ Finset.range n, ENNReal.ofReal p_abort ^ a)
-      = ENNReal.ofReal (∑ a ∈ Finset.range n, p_abort ^ a) := by
-    rw [ENNReal.ofReal_sum_of_nonneg (fun a _ => pow_nonneg hp₀ a)]
-    exact Finset.sum_congr rfl fun a _ => by rw [← ENNReal.ofReal_pow hp₀]
-  rw [hg_eq]
-  refine ENNReal.ofReal_le_ofReal ?_
-  rw [le_div_iff₀ h1p]
-  have hmul := geom_sum_mul p_abort n
-  nlinarith [pow_nonneg hp₀ n]
+  calc
+    _ ≤ ∑' a : ℕ, ENNReal.ofReal p_abort ^ a := sum_le_tsum _
+    _ = _ := by rw [ENNReal.tsum_geometric, one_div, ENNReal.ofReal_inv_of_pos (sub_pos.mpr hp),
+      ENNReal.ofReal_sub _ hp₀, ENNReal.ofReal_one]
 
 /-- Domination of the membership count by the per-element coincidence count: the number of recorded
 read-commits lying in the drawn list is at most `Σ_{rc ∈ readlist} drawnlist.count rc`, the total
