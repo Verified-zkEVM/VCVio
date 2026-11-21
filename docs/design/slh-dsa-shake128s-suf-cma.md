@@ -33,18 +33,37 @@ theorem slhDsa_sufCma_127 : Game.HasSecurityBits FIPS205.scheme Game.adversaryWo
 
 ## The proof
 
-The proof works directly with the FIPS 205 byte game. It samples the original secret and
-public key material, keeps a single random-oracle cache, and charges signing requests,
-direct adversary hashes, and verification hashes against the same run. A rejected signing
-request still costs one request. The final verifier contributes the number of queries it
-actually executes, including on a losing branch.
+The public game starts with an empty cache for its single byte-string oracle. Each signing
+request carries its own message and context. The log records the request and its optional
+reply, so even an overlong context costs one signing attempt. Freshness checks the pair
+of request and signature. A different valid signature on a previously signed request can
+therefore win. The verifier contributes the hash calls it actually makes on winning and
+losing runs. Invalid framing or an undecodable signature returns false before hashing.
+[External scheme](../../HashSig/SLHDSA/SHAKE128s/Statement/FIPS205.lean) ·
+[Counted game](../../HashSig/SLHDSA/SHAKE128s/Statement/Game.lean)
 
-The construction proof from #766 supplies the structural analysis of a fresh accepted
-forgery. Deferred sampling charges a conflict with a previously fixed hash or a query
-that reveals a hidden value. The remaining winning case requires FORS coverage. The
-finite-tape and load-concentration estimates from #912 bound that event using the
-number of signing attempts and digest blocks consumed in the same run. Averaging those
-charges with the weak-seed probabilities yields the actual-work bound.
+To apply the construction proof from #766 with this budget, the reduction uses a guarded
+execution. An admitted query returns the handler's reply and updated cache and cost. An
+over-budget query, or any later query, receives the fallback and leaves the cache and
+paid count fixed. The accounting proof follows the logged adversary through its direct
+queries and signing callbacks. It follows final verification through the construction's
+address ledger and the message hash at the returned public key. These local steps use
+the calls that actually occur. The public theorem takes the almost-sure joint cap and
+the original signing lifetime.
+[Query guard](../../VCVio/OracleComp/QueryTracking/Enforcement.lean) ·
+[Signing](../../HashSig/SLHDSA/SHAKE128s/Proof/ActualWork/Work/Signing.lean) ·
+[Verification](../../HashSig/SLHDSA/SHAKE128s/Proof/ActualWork/Work/Verification.lean)
+
+For each supported guarded run, `native_whole_reserve` relates the final cache entries,
+signer and forger digest counts, and paid work of that same run. Those quantities bound
+the charge for graph conflicts and hidden-value queries. The remaining fresh forgeries
+require FORS coverage. The estimates from #912 apply to the digest blocks actually
+consumed. Completing the deferred cache and drawing the final secret preserve the joint
+distribution of both tapes and the original terminal result. The proof can therefore
+price coverage and the weak-key event using that result's counters and public key.
+[Terminal accounting](../../HashSig/SLHDSA/SHAKE128s/Proof/ActualWork/Work/Terminal.lean) ·
+[Tape distribution](../../HashSig/SLHDSA/SHAKE128s/Proof/ActualWork/Coupling/Tapes.lean) ·
+[Residual probability](../../HashSig/SLHDSA/SHAKE128s/Proof/ActualWork/Settlement/Probability.lean)
 
 For a budget below 569, accepted verification alone would exceed the budget, so success
 has probability zero. For `569 ≤ q < 2^127`, success is at most
@@ -57,6 +76,15 @@ This is strictly smaller than `q / 2^127`. At and above `2^127`, the unit bound 
 probability gives the stated bit-security inequality. Both the middle-range bound and
 the bit-security theorem assume the signing lifetime. The zero-success result only
 requires the joint work cap.
+
+For a different cost model, `ScalarPolicy.advantage_le_jointWorkBound` gives the
+same piecewise bound at any natural budget `q`. The client proves that each event's
+weight covers its original selected cost, that total weighted cost is at most `q` with
+probability one, and that the signing lifetime holds. The byte-sensitive example charges
+one per signing attempt and one plus the input length per direct adversary or verifier
+hash. Below 569 its separate zero-success theorem needs only the weighted cap.
+[Scalar policy certificates](../../HashSig/SLHDSA/SHAKE128s/Bridge/SharedExperiment/ScalarPolicy/Certificates.lean) ·
+[Byte-sensitive example](../../Examples/SLHDSA/WeightedPolicy/Certificates.lean)
 
 For fixed-context adversaries with separate structural caps on their hash and signing
 queries, `wireStrongAdvantage_le_jointWorkBound` takes the minimum of the parameterized
