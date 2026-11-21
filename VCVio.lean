@@ -461,6 +461,7 @@ public import VCVio.OracleComp.QueryTracking.QueryLogCheck
 public import VCVio.OracleComp.QueryTracking.RandomOracle.AcceptedScan
 public import VCVio.OracleComp.QueryTracking.RandomOracle.AcceptedScan.Compensation
 public import VCVio.OracleComp.QueryTracking.RandomOracle.AcceptedScan.CyclicMass
+public import VCVio.OracleComp.QueryTracking.RandomOracle.AcceptedScan.ForeignKey
 public import VCVio.OracleComp.QueryTracking.RandomOracle.AcceptedScan.NewPartner
 public import VCVio.OracleComp.QueryTracking.RandomOracle.AcceptedScan.Occupied
 public import VCVio.OracleComp.QueryTracking.RandomOracle.AcceptedScan.OccupiedMass
@@ -470,6 +471,7 @@ public import VCVio.OracleComp.QueryTracking.RandomOracle.AcceptedScan.PartnerSe
 public import VCVio.OracleComp.QueryTracking.RandomOracle.AcceptedScan.Partners
 public import VCVio.OracleComp.QueryTracking.RandomOracle.AcceptedScan.Probe
 public import VCVio.OracleComp.QueryTracking.RandomOracle.AcceptedScan.Selection
+public import VCVio.OracleComp.QueryTracking.RandomOracle.AcceptedScan.StoppedPartner
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
 public import VCVio.OracleComp.QueryTracking.RandomOracle.CachePartial
 public import VCVio.OracleComp.QueryTracking.RandomOracle.CachePartial.Cost
@@ -549,6 +551,7 @@ public import VCVio.OracleComp.SimSemantics.SimulateQ.FinMOfFn
 public import VCVio.OracleComp.SimSemantics.SimulateQ.Option
 public import VCVio.OracleComp.SimSemantics.StateT.Basic
 public import VCVio.OracleComp.SimSemantics.StateT.BundledSemantics
+public import VCVio.OracleComp.SimSemantics.StateT.Compensated
 public import VCVio.OracleComp.SimSemantics.StateT.EqDistTriple
 public import VCVio.OracleComp.SimSemantics.StateT.EqDistTriple.Simulate
 public import VCVio.OracleComp.SimSemantics.StateT.Measure
