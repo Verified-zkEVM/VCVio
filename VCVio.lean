@@ -531,6 +531,7 @@ public import VCVio.OracleComp.SimSemantics.SimulateQ.FinMOfFn
 public import VCVio.OracleComp.SimSemantics.SimulateQ.Option
 public import VCVio.OracleComp.SimSemantics.StateT.Basic
 public import VCVio.OracleComp.SimSemantics.StateT.BundledSemantics
+public import VCVio.OracleComp.SimSemantics.StateT.Compensated
 public import VCVio.OracleComp.SimSemantics.StateT.EqDistTriple
 public import VCVio.OracleComp.SimSemantics.StateT.EqDistTriple.Simulate
 public import VCVio.OracleComp.SimSemantics.StateT.Measure
