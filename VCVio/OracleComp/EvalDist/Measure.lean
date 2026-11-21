@@ -516,6 +516,42 @@ theorem prEvent_query_eq_card_div (t : spec.Domain)
 
 end measureSpec
 
+open Classical in
+/-- Finite unreached credit bounds an event by a rate times its reached probability. -/
+theorem prEvent_le_mul_prEvent_of_unreached_credit
+    {ι : Type u} {spec : OracleSpec.{u, 0} ι}
+    [OracleSpec.AnswerMeasure spec] {α : Type}
+    (program : OracleComp spec α) (reach fire : α → Prop)
+    (rate : ℝ≥0∞) (hfinite : rate ≠ ⊤)
+    (hcredit : ∫⁻ value, value ∂𝒟[(fun outcome =>
+      (if fire outcome then (1 : ℝ≥0∞) else 0) +
+        (if ¬reach outcome then rate else 0)) <$> program] ≤ rate) :
+    Pr{let outcome ← program}[fire outcome] ≤
+      rate * Pr{let outcome ← program}[reach outcome] := by
+  let _ : MeasurableSpace α := ⊤
+  have eventIntegral (P : α → Prop) [DecidablePred P] (value : ℝ≥0∞) :
+      ∫⁻ outcome, (if P outcome then value else 0) ∂𝒟[program] =
+        value * Pr{let outcome ← program}[P outcome] := by
+    have indicator_eq : (fun outcome => if P outcome then value else 0) =
+        ({outcome | P outcome} : Set α).indicator (fun _ => value) := by
+      funext outcome
+      by_cases h : P outcome <;> simp [h]
+    rw [indicator_eq, lintegral_indicator_const MeasurableSet.of_discrete,
+      prEvent_eq_evalDist_of_discrete]
+  rw [lintegral_id_evalDist_map,
+    lintegral_add_left Measurable.of_discrete, eventIntegral fire 1] at hcredit
+  have complementIntegral :
+      (∫⁻ outcome, (if ¬reach outcome then rate else 0) ∂𝒟[program]) =
+        rate * Pr{let outcome ← program}[¬reach outcome] := by
+    simpa only using eventIntegral (fun outcome => ¬reach outcome) rate
+  rw [complementIntegral, one_mul] at hcredit
+  have partition : rate * Pr{let outcome ← program}[reach outcome] +
+      rate * Pr{let outcome ← program}[¬reach outcome] = rate := by
+    rw [← mul_add, prEvent_add_prEvent_not_eq_prEvent_true, prEvent_true_eq_one, mul_one]
+  exact (ENNReal.add_le_add_iff_right
+    (ENNReal.mul_ne_top hfinite (prEvent_ne_top _))).mp
+      (hcredit.trans_eq partition.symm)
+
 section uniformAnswerMeasure
 
 variable {ι : Type u} {spec : OracleSpec.{u, 0} ι}

@@ -1,0 +1,76 @@
+{
+  "scope": "Selected direct source-import edges, not a full kernel dependency audit",
+  "edges": [
+    {
+      "path": "HashSig/SLHDSA/Security/CoverageBound.lean",
+      "sha256": "8c041a6ef1dc4bd47f897937c3638f03cd664be44575e82f5d891c10e79ae4fb",
+      "directImports": [
+        "HashSig.SLHDSA.Security.CoverageRun",
+        "HashSig.SLHDSA.Security.JointBound",
+        "VCVio.OracleComp.Constructions.SampleableType.Measure"
+      ]
+    },
+    {
+      "path": "HashSig/SLHDSA/SHAKE128s/Statement/Theorems/StrongUnforgeability.lean",
+      "sha256": "ffb203c9b81a7e18a9b92c89d546f99a927a8e07f5010abbfc263ead37bbc49f",
+      "directImports": [
+        "HashSig.SLHDSA.SHAKE128s.Statement.FIPS205",
+        "HashSig.SLHDSA.SHAKE128s.Bridge.Scheme",
+        "HashSig.SLHDSA.SHAKE128s.Proof.WorkFinal"
+      ]
+    },
+    {
+      "path": "HashSig/SLHDSA/SHAKE128s/Proof/WorkFinal.lean",
+      "sha256": "dd7f092f61dce37b75b751c61116447ec7bced4d5f0c79d02bfb3f5bcd4425af",
+      "directImports": [
+        "HashSig.SLHDSA.SHAKE128s.Proof.ShareJointShared",
+        "HashSig.SLHDSA.SHAKE128s.Proof.ShareFiled",
+        "HashSig.SLHDSA.SHAKE128s.Proof.WorkTarget"
+      ]
+    },
+    {
+      "path": "HashSig/SLHDSA/SHAKE128s/Proof/WorkTarget.lean",
+      "sha256": "e533d09356ccba6d1eae8479a2bb6ac87a8b2bd3d20cbee9930df7f1b65b03fc",
+      "directImports": [
+        "HashSig.SLHDSA.SHAKE128s.Proof.BySourceTarget"
+      ]
+    },
+    {
+      "path": "HashSig/SLHDSA/SHAKE128s/Proof/MainTheorem.lean",
+      "sha256": "168628c1c7ea73f42a42c40ae7fb31c0c7fbed7a8ee886581aaa9ad667c3fab4",
+      "directImports": [
+        "HashSig.SLHDSA.SHAKE128s.Proof.Experiment",
+        "Mathlib.Topology.Instances.ENNReal.Lemmas",
+        "HashSig.SLHDSA.SHAKE128s.Proof.WholeGameStructural",
+        "HashSig.SLHDSA.SHAKE128s.Proof.WarmedGame"
+      ]
+    },
+    {
+      "path": "HashSig/SLHDSA/SHAKE128s/Proof/WarmedGame.lean",
+      "sha256": "bb8e3fac10d149af2203f820bf0087bd160932d2c4ef20c7244145ef1dbab3c6",
+      "directImports": [
+        "HashSig.SLHDSA.SHAKE128s.Proof.Presample",
+        "HashSig.SLHDSA.SHAKE128s.Proof.WholeGameStructural",
+        "HashSig.SLHDSA.SHAKE128s.Proof.Averaging"
+      ]
+    },
+    {
+      "path": "HashSig/SLHDSA/SHAKE128s/Proof/ForsConcentrationSharper.lean",
+      "sha256": "953d8254d14bbb26f24b0c950ce7099bc70d80d78d1f2df1bab08621772e9098",
+      "directImports": [
+        "HashSig.SLHDSA.SHAKE128s.Proof.ForsDisclosureTape",
+        "HashSig.SLHDSA.SHAKE128s.Proof.ForsAdaptiveTargets",
+        "VCVio.OracleComp.QueryTracking.RandomOracle.DeferredSampling"
+      ]
+    },
+    {
+      "path": "HashSig/SLHDSA/SHAKE128s/Proof/ForsConcentration.lean",
+      "sha256": "50393822dff290d66477913435e962795a99c9737d8715951b62fad01153c32f",
+      "directImports": [
+        "HashSig.SLHDSA.SHAKE128s.Proof.ForsConcentrationPoisson",
+        "Mathlib.Probability.Independence.Integration",
+        "Mathlib.Tactic.IntervalCases"
+      ]
+    }
+  ]
+}

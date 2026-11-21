@@ -7,6 +7,7 @@ Authors: Tom Wambsgans
 module
 
 public import HashSig.SLHDSA.SHAKE128s.Proof.ForsConcentrationPoisson
+public import ToMathlib.Probability.Moments.IndependentPowers
 public import Mathlib.Probability.Independence.Integration
 public import Mathlib.Tactic.IntervalCases
 
@@ -42,13 +43,7 @@ lemma independent_integrable_add_power (hi : IndepFun X Y μ) (order : Nat)
     (hX : ∀ k ≤ order, Integrable (fun ω => X ω ^ k) μ)
     (hY : ∀ k ≤ order, Integrable (fun ω => Y ω ^ k) μ) :
     Integrable (fun ω => (X ω + Y ω) ^ order) μ := by
-  simp only [add_pow]
-  apply integrable_finsetSum
-  intro k hk
-  have hk' : k ≤ order := by have := Finset.mem_range.mp hk; omega
-  have hi' : IndepFun (fun ω => X ω ^ k) (fun ω => Y ω ^ (order - k)) μ :=
-    hi.comp (measurable_id.pow_const k) (measurable_id.pow_const (order - k))
-  exact (hi'.integrable_mul (hX k hk') (hY _ (by omega))).mul_const _
+  exact ProbabilityTheory.IndepFun.integrable_add_pow hi order hX hY
 
 /-- Binomial expansion of the `order`-th moment of a sum of two independent variables. -/
 lemma independent_integral_add_power (hi : IndepFun X Y μ) (order : Nat)
@@ -57,43 +52,17 @@ lemma independent_integral_add_power (hi : IndepFun X Y μ) (order : Nat)
     (∫ ω, (X ω + Y ω) ^ order ∂μ) =
       ∑ k ∈ Finset.range (order + 1),
         (∫ ω, X ω ^ k ∂μ) * (∫ ω, Y ω ^ (order - k) ∂μ) * order.choose k := by
-  simp only [add_pow]
-  rw [integral_finsetSum]
-  · apply Finset.sum_congr rfl
-    intro k hk
-    have hk' : k ≤ order := by have := Finset.mem_range.mp hk; omega
-    rw [integral_mul_const]
-    congr 1
-    have hi' : IndepFun (fun ω => X ω ^ k) (fun ω => Y ω ^ (order - k)) μ :=
-      hi.comp (measurable_id.pow_const k) (measurable_id.pow_const (order - k))
-    exact hi'.integral_fun_mul_eq_mul_integral
-      (hX k hk').aestronglyMeasurable (hY _ (by omega)).aestronglyMeasurable
-  · intro k hk
-    have hk' : k ≤ order := by have := Finset.mem_range.mp hk; omega
-    have hi' : IndepFun (fun ω => X ω ^ k) (fun ω => Y ω ^ (order - k)) μ :=
-      hi.comp (measurable_id.pow_const k) (measurable_id.pow_const (order - k))
-    exact (hi'.integrable_mul (hX k hk') (hY _ (by omega))).mul_const _
+  exact ProbabilityTheory.IndepFun.integral_add_pow hi order hX hY
 
 /-- Moments through order six of a sum of `count` independent centered identically distributed
 random variables with moments `m`, as polynomials in `count` (valid also for `count = 0, 1`). -/
 @[expose] def sumMoment (m : Nat → ℝ) (count order : Nat) : ℝ :=
-  let n : ℝ := count
-  match order with
-  | 0 => 1
-  | 1 => 0
-  | 2 => n * m 2
-  | 3 => n * m 3
-  | 4 => n * m 4 + 3 * n * (n - 1) * (m 2) ^ 2
-  | 5 => n * m 5 + 10 * n * (n - 1) * m 3 * m 2
-  | 6 => n * m 6 + 15 * n * (n - 1) * m 4 * m 2 +
-      10 * n * (n - 1) * (m 3) ^ 2 +
-      15 * n * (n - 1) * (n - 2) * (m 2) ^ 3
-  | _ => 0
+  ProbabilityTheory.centeredSumMomentUpToSix m count order
 
 /-- The empty sum has the moments of the constant zero. -/
 lemma sumMoment_zero (m : Nat → ℝ) (order : Nat) (hk : order ≤ 6) :
     sumMoment m 0 order = if order = 0 then 1 else 0 := by
-  interval_cases order <;> norm_num [sumMoment]
+  exact ProbabilityTheory.centeredSumMomentUpToSix_zero m order hk
 
 /-- `sumMoment` satisfies the binomial recurrence for adding one more independent summand. -/
 lemma sumMoment_succ (m : Nat → ℝ) (hm0 : m 0 = 1) (hm1 : m 1 = 0)
@@ -101,8 +70,7 @@ lemma sumMoment_succ (m : Nat → ℝ) (hm0 : m 0 = 1) (hm1 : m 1 = 0)
     sumMoment m (count + 1) order =
       ∑ k ∈ Finset.range (order + 1),
         sumMoment m count k * m (order - k) * order.choose k := by
-  interval_cases order <;>
-    norm_num [sumMoment, Finset.sum_range_succ, hm0, hm1, Nat.choose] <;> ring
+  exact ProbabilityTheory.centeredSumMomentUpToSix_succ m hm0 hm1 count order hk
 
 /-- The moments up to order six of a finite sum of independent variables with common moments
 `m` are given by `sumMoment`, and the corresponding powers of the sum are integrable. -/
@@ -114,33 +82,8 @@ lemma independent_sum_moments {ι : Type*} [IsProbabilityMeasure μ]
     (s : Finset ι) :
     ∀ k, k ≤ 6 → Integrable (fun ω => (∑ i ∈ s, X i ω) ^ k) μ ∧
       (∫ ω, (∑ i ∈ s, X i ω) ^ k ∂μ) = sumMoment m s.card k := by
-  classical
-  induction s using Finset.induction_on with
-  | empty =>
-      intro k hk
-      simp only [Finset.sum_empty, Finset.card_empty, sumMoment_zero m k hk]
-      constructor
-      · exact integrable_const _
-      · by_cases hk0 : k = 0 <;> simp [hk0]
-  | @insert i s his ih =>
-      intro k hk
-      have hsum (ω : Ω) : (∑ j ∈ insert i s, X j ω) =
-          (∑ j ∈ s, X j ω) + X i ω := by
-        simp [his, add_comm]
-      simp_rw [hsum]
-      have hInd : IndepFun (fun ω => ∑ j ∈ s, X j ω) (X i) μ :=
-        by simpa only [← Finset.sum_apply] using hi.indepFun_finsetSum_of_notMem hX his
-      have hLeft : ∀ j ≤ k, Integrable (fun ω => (∑ i ∈ s, X i ω) ^ j) μ :=
-        fun j hj => (ih j (hj.trans hk)).1
-      have hRight : ∀ j ≤ k, Integrable (fun ω => X i ω ^ j) μ :=
-        fun j hj => hInt i j (hj.trans hk)
-      refine ⟨independent_integrable_add_power hInd k hLeft hRight, ?_⟩
-      rw [independent_integral_add_power hInd k hLeft hRight, Finset.card_insert_of_notMem his,
-        sumMoment_succ m hm0 hm1 _ _ hk]
-      apply Finset.sum_congr rfl
-      intro j hj
-      have hj' : j ≤ k := by have := Finset.mem_range.mp hj; omega
-      rw [(ih j (hj'.trans hk)).2, hMom i (k - j) (by omega)]
+  exact ProbabilityTheory.iIndepFun.integrable_pow_finsetSum_and_integral_eq
+    X hi hX m hm0 hm1 hInt hMom s
 
 end IndependentPowers
 
@@ -206,7 +149,7 @@ lemma poisson_sixth_sum_bound :
     exact_mod_cast And.intro hm.2.2.2.2.2.2.1 hm.2.2.2.2.2.2.2.1.le
   have h6 : (centeredMoment 6 : ℝ) ≤ 2 ^ 359 := by
     exact_mod_cast hm.2.2.2.2.2.2.2.2.2.le
-  simp only [sumMoment, Nat.cast_pow, Nat.cast_ofNat]
+  simp only [sumMoment, ProbabilityTheory.centeredSumMomentUpToSix, Nat.cast_pow, Nat.cast_ofNat]
   have hb : (0 : ℝ) ≤ 2 ^ 63 - 2 := by norm_num
   have h23 : 0 ≤ (centeredMoment 2 : ℝ) ^ 3 := pow_nonneg h2.1 3
   calc

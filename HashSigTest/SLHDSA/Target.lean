@@ -28,9 +28,8 @@ statement is not degenerate.
 * **The target is not vacuous at a real parameter set.** At SLH-DSA-128s, with `qh = qs = 2^64`,
   `|Y| = 2^128`, `c = 2` and `r = 1`, the constants at which the target is proved, the right-hand
   side is below one (`securityBound_128s_lt_one`; crudely about `2^-32`).
-* **The verifier count** is `3929` at 128s and `17522` at 256f (`verifyInternalQueryBound_128s`,
-  `verifyInternalQueryBound_256f`), the counts of FIPS 205 Algorithm 20 with full chain
-  completions.
+* **The verifier count** is `3824` at 128s and `17267` at 256f (`verifyInternalQueryBound_128s`,
+  `verifyInternalQueryBound_256f`), upper bounds for FIPS 205 Algorithm 20 using the WOTS+ checksum.
 * **The secrets are oracle answers.** `romScheme_sign_oracle` restates `romScheme_sign` at a
   concrete message: signing queries the `PRF_msg` oracle for the randomizer and draws its secret
   values from `oracleSecret`, the `F` query at the secret-key address applied to `SK.seed`.
@@ -127,14 +126,22 @@ theorem securityBound_qh_zero (p : Params) (card c r qs : ℕ) :
         ((r + 1) * GeneralScheme.verifyInternalQueryBound p : ℕ) * (card : ℝ≥0∞)⁻¹ := by
   simp [securityBound, weightedTargetCoverBound_qw_zero]
 
+/-- The intrinsic verifier allowance across the six FIPS 205 parameter profiles. -/
+theorem verifierCaps_SHAKE :
+    (List.map (fun profile : FipsParameterSet =>
+      GeneralScheme.verifyInternalQueryBound profile.validatedParams.params)
+      [.SLHDSA_SHAKE_128s, .SLHDSA_SHAKE_128f, .SLHDSA_SHAKE_192s, .SLHDSA_SHAKE_192f,
+        .SLHDSA_SHAKE_256s, .SLHDSA_SHAKE_256f]) = [3824, 11541, 5577, 16887, 8324, 17267] := by
+  decide
+
 theorem verifyInternalQueryBound_128s :
     GeneralScheme.verifyInternalQueryBound
-      (FipsParameterSet.SLHDSA_SHA2_128s.validatedParams).params = 3929 := by
+      (FipsParameterSet.SLHDSA_SHA2_128s.validatedParams).params = 3824 := by
   decide
 
 theorem verifyInternalQueryBound_256f :
     GeneralScheme.verifyInternalQueryBound
-      (FipsParameterSet.SLHDSA_SHA2_256f.validatedParams).params = 17522 := by
+      (FipsParameterSet.SLHDSA_SHA2_256f.validatedParams).params = 17267 := by
   decide
 
 /-- Each summand of `targetCoverBound` is at most `qs^r · r^k · 2^(-h r) · 2^(-a k)`. -/
@@ -227,7 +234,7 @@ theorem securityBound_128s_lt_one :
     simp_rw [term_128s, ← Finset.sum_mul, ← Nat.cast_sum]
     gcongr
   have key : ((2 ^ 64 : ℕ) + 1 : ℝ≥0∞) * (((2 ^ 72 : ℕ) : ℝ≥0∞) * ((2 : ℝ≥0∞) ^ 168)⁻¹) +
-      ((2 : ℕ) * ((2 ^ 64 : ℕ) : ℝ≥0∞) + (((1 + 1) * 3929 : ℕ) : ℝ≥0∞)) *
+      ((2 : ℕ) * ((2 ^ 64 : ℕ) : ℝ≥0∞) + (((1 + 1) * 3824 : ℕ) : ℝ≥0∞)) *
         (((2 ^ 128 : ℕ) : ℝ≥0∞))⁻¹ < 1 := by
     rw [← ENNReal.toReal_lt_toReal (by finiteness) ENNReal.one_ne_top]
     rw [ENNReal.toReal_add (by finiteness) (by finiteness)]

@@ -1,7 +1,7 @@
 /-
-Copyright (c) 2026 Alexander Hicks. All rights reserved.
+Copyright (c) 2026 Alexander Hicks, Tom Wambsgans. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Alexander Hicks
+Authors: Alexander Hicks, Tom Wambsgans
 -/
 
 module
@@ -10,6 +10,7 @@ public import VCVio.OracleComp.ProbComp.IndepProductEvents
 public import VCVio.OracleComp.QueryTracking.RandomOracle.EagerTable
 public import VCVio.OracleComp.SimSemantics.StateT.StateProjection
 public import VCVio.EvalDist.ProbabilityBounds
+import VCVio.OracleComp.EvalDist.Sum
 
 /-!
 # The answer tape of a lazy random oracle
@@ -48,9 +49,9 @@ namespace AnswerTape
 
 variable {D R : Type}
 
-section TapeOracle
+section TapeDraw
 
-variable [DecidableEq D] [SampleableType R]
+variable [SampleableType R]
 
 /-! ## The tape draw, as a list -/
 
@@ -76,6 +77,316 @@ theorem tapeList_succ (m : ℕ) :
   refine bind_congr fun u => ?_
   refine bind_congr fun w => ?_
   simp [List.ofFn_succ]
+
+end TapeDraw
+
+/-! ## Independent blocks and causal selected counts
+
+`blockRunOf` samples an arbitrary left block and an independent right IID block, retaining both
+complete blocks beside the entire run result.
+A cell-selection event whose probability is unchanged by overwriting that cell can be charged
+at a supplied fresh-hit rate. Summing the per-cell selections bounds the union by the expected
+full selected count, without imposing a deterministic cap on that count.
+-/
+
+/-- Repeated independent runs of a fixed draw, collected as a list. -/
+noncomputable def iidTapeList {B : Type} (rightDraw : ProbComp B) (length : Nat) :
+    ProbComp (List B) :=
+  List.ofFn <$> ProbComp.sampleIID length rightDraw
+
+/-- Zero independent draws form the empty list. -/
+theorem iidTapeList_zero {B : Type} (rightDraw : ProbComp B) :
+    iidTapeList rightDraw 0 = pure [] := by
+  simp [iidTapeList, ProbComp.sampleIID, Fin.mOfFn]
+
+/-- A successor IID tape consists of one draw followed by the remaining draws. -/
+theorem iidTapeList_succ {B : Type} (rightDraw : ProbComp B) (length : Nat) :
+    iidTapeList rightDraw (length + 1) =
+      (do let value ← rightDraw
+          let rest ← iidTapeList rightDraw length
+          return value :: rest) := by
+  have step : ProbComp.sampleIID (length + 1) rightDraw =
+      (do let value ← rightDraw
+          let rest ← ProbComp.sampleIID length rightDraw
+          return (Fin.cons value rest : Fin (length + 1) → B)) := by
+    simp [ProbComp.sampleIID, Fin.mOfFn]
+  simp only [iidTapeList, step, map_bind, map_pure, bind_map_left]
+  refine bind_congr fun value => ?_
+  refine bind_congr fun rest => ?_
+  simp only [List.ofFn_succ, Fin.cons_zero, Fin.cons_succ]
+
+/-- One independent left block and a right IID tape, retained beside the complete run result. -/
+@[expose] noncomputable def blockRunOf {A B ρ : Type}
+    (leftBlock : ProbComp (List A)) (rightDraw : ProbComp B)
+    (run : List A → List B → ProbComp ρ) (rightLength : Nat) :
+    ProbComp ((List A × List B) × ρ) := do
+  let leftTape ← leftBlock
+  let rightTape ← iidTapeList rightDraw rightLength
+  (fun result => ((leftTape, rightTape), result)) <$> run leftTape rightTape
+
+/-- Supported blocked results are supported runs at their own supported sampled blocks. -/
+theorem mem_support_blockRunOf {A B ρ : Type}
+    (leftBlock : ProbComp (List A)) (rightDraw : ProbComp B)
+    (run : List A → List B → ProbComp ρ) (rightLength : Nat)
+    (outcome : (List A × List B) × ρ)
+    (hmem : outcome ∈ support (blockRunOf leftBlock rightDraw run rightLength)) :
+    outcome.1.1 ∈ support leftBlock ∧
+      outcome.1.2 ∈ support (iidTapeList rightDraw rightLength) ∧
+        outcome.2 ∈ support (run outcome.1.1 outcome.1.2) := by
+  rw [blockRunOf, mem_support_bind_iff] at hmem
+  obtain ⟨leftTape, hleftTape, hrest⟩ := hmem
+  rw [mem_support_bind_iff] at hrest
+  obtain ⟨rightTape, hrightTape, hinner⟩ := hrest
+  rw [support_map] at hinner
+  obtain ⟨result, hresult, hshape⟩ := hinner
+  rw [← hshape]
+  exact ⟨hleftTape, hrightTape, hresult⟩
+
+/-- Redrawing one cell from its fixed law preserves the right IID tape's distribution. -/
+theorem evalDist_iidTapeList_set {B γ : Type} (rightDraw : ProbComp B) :
+    ∀ (length index : Nat), index < length →
+      ∀ (continuation : List B → ProbComp γ),
+        iidTapeList rightDraw length >>= continuation =ᵈ
+          (iidTapeList rightDraw length >>= fun tape =>
+            rightDraw >>= fun value => continuation (tape.set index value)) := by
+  intro length
+  induction length with
+  | zero => intro index hindex; exact absurd hindex (by omega)
+  | succ remaining ih =>
+    intro index hindex continuation
+    cases index with
+    | zero =>
+      simp only [iidTapeList_succ, bind_assoc, pure_bind, List.set_cons_zero]
+      refine (OracleComp.EvalDistEq.bind_bind_swap _ (iidTapeList rightDraw remaining)
+        fun value rest => continuation (value :: rest)).trans ?_
+      exact (OracleComp.EvalDistEq.bind_const rightDraw _).symm
+    | succ smaller =>
+      simp only [iidTapeList_succ, bind_assoc, pure_bind, List.set_cons_succ]
+      refine EvalDistEq.bind_right _ fun head => ?_
+      exact ih smaller (by omega) fun rest => continuation (head :: rest)
+
+/-- Uniform IID draws agree exactly with the canonical uniform answer tape program. -/
+theorem iidTapeList_uniform_eq_tapeList {B : Type} [SampleableType B] (length : Nat) :
+    iidTapeList ($ᵗ B : ProbComp B) length = tapeList B length := by
+  induction length with
+  | zero => rw [iidTapeList_zero, tapeList_zero]
+  | succ length ih => rw [iidTapeList_succ, tapeList_succ, ih]
+
+/-- A cell read back after it was overwritten is the value it was overwritten with. -/
+private theorem eq_of_getElem?_set {B : Type} (tape : List B) (index : Nat) (value other : B)
+    (hread : (tape.set index value)[index]? = some other) : other = value := by
+  by_cases hlt : index < tape.length
+  · rw [List.getElem?_set_self (by simpa using hlt)] at hread
+    exact (Option.some_inj.mp hread).symm
+  · rw [List.getElem?_eq_none (by simpa using Nat.not_lt.mp hlt)] at hread
+    exact absurd hread (by simp)
+
+open scoped Classical in
+/-- A constant conjunct factors out of an event. -/
+private theorem prEvent_const_and {γ : Type} (run : ProbComp γ) (constant : Prop)
+    (event : γ → Prop) :
+    Pr{let value ← run}[constant ∧ event value] =
+      if constant then Pr{let x ← run}[event x] else 0 := by
+  classical
+  by_cases hconstant : constant
+  · rw [ite_eq_left hconstant]
+    exact prEvent_congr run _ _ fun _ => ⟨fun h => h.2, fun h => ⟨hconstant, h⟩⟩
+  · rw [ite_eq_right hconstant]
+    exact prEvent_eq_zero_of_forall_not run _ fun _ h => hconstant h.1
+
+/-- A finite sum and a `tsum` over `ℝ≥0∞` may be exchanged. -/
+private theorem sum_tsum_comm {Index Result : Type} (indices : Finset Index)
+    (summand : Index → Result → ℝ≥0∞) :
+    ∑ index ∈ indices, ∑' result : Result, summand index result =
+      ∑' result : Result, ∑ index ∈ indices, summand index result := by
+  classical
+  refine Finset.induction_on indices ?_ ?_
+  · simp
+  · intro head rest hhead ih
+    rw [Finset.sum_insert hhead, ih, ← tsum_add]
+    refine tsum_congr fun result => ?_
+    rw [Finset.sum_insert hhead]
+
+open scoped Classical in
+/-- A causal selected count charges one target cell at its fresh-hit rate. -/
+theorem prob_selected_hit_le_of_causal {A B ρ : Type}
+    (leftBlock : ProbComp (List A)) (rightDraw : ProbComp B)
+    (run : List A → List B → ProbComp ρ)
+    (len : ρ → Nat)
+    (rightLength index : Nat) (hindex : index < rightLength)
+    (goodBlock : List A → Prop) (hit : List A → B → Prop)
+    (rate : ℝ≥0∞)
+    (hrate : ∀ leftTape, goodBlock leftTape →
+      Pr{let value ← rightDraw}[hit leftTape value] ≤ rate)
+    (hcausal : ∀ (leftTape : List A) (rightTape : List B) (value : B),
+      Pr{let z ← run leftTape (rightTape.set index value)}[index < len z] =
+        Pr{let z ← run leftTape rightTape}[index < len z]) :
+    Pr{let outcome ← blockRunOf leftBlock rightDraw run rightLength}[
+          index < len outcome.2 ∧ goodBlock outcome.1.1 ∧
+          ∃ value, outcome.1.2[index]? = some value ∧ hit outcome.1.1 value] ≤
+      Pr{let outcome ← blockRunOf leftBlock rightDraw run rightLength}[
+          index < len outcome.2] * rate := by
+  classical
+  set target : List A → List B → ℝ≥0∞ := fun leftTape rightTape =>
+    Pr{let result ← run leftTape rightTape}[index < len result] with htarget
+  -- The selection alone, with the blocks forgotten.
+  have hright : Pr{let outcome ← blockRunOf leftBlock rightDraw run rightLength}[
+        index < len outcome.2] =
+      ∑' leftTape, Pr{let x ← leftBlock}[x = leftTape] *
+        ∑' rightTape, Pr{let x ← iidTapeList rightDraw rightLength}[x = rightTape] *
+          target leftTape rightTape := by
+    rw [blockRunOf, OracleComp.prEvent_bind_eq_tsum]
+    refine tsum_congr fun leftTape => congrArg _ ?_
+    rw [OracleComp.prEvent_bind_eq_tsum]
+    refine tsum_congr fun rightTape => congrArg _ ?_
+    rw [prEvent_map]
+  -- The charged event, after one cell of the target block is redrawn.
+  have hleft : Pr{let outcome ← blockRunOf leftBlock rightDraw run rightLength}[
+        index < len outcome.2 ∧ goodBlock outcome.1.1 ∧
+          ∃ value, outcome.1.2[index]? = some value ∧ hit outcome.1.1 value] =
+      ∑' leftTape, Pr{let x ← leftBlock}[x = leftTape] *
+        ∑' rightTape, Pr{let x ← iidTapeList rightDraw rightLength}[x = rightTape] *
+          ∑' value, Pr{let x ← rightDraw}[x = value] *
+            Pr{let result ← run leftTape (rightTape.set index value)}[
+                index < len result ∧ goodBlock leftTape ∧
+                  ∃ other, (rightTape.set index value)[index]? = some other ∧
+                    hit leftTape other] := by
+    rw [blockRunOf]
+    refine ((EvalDistEq.bind_right leftBlock fun leftTape =>
+      evalDist_iidTapeList_set rightDraw rightLength index hindex
+        fun rightTape => (fun result => ((leftTape, rightTape), result)) <$>
+          run leftTape rightTape).prEvent_eq _).trans ?_
+    rw [OracleComp.prEvent_bind_eq_tsum]
+    refine tsum_congr fun leftTape => congrArg _ ?_
+    rw [OracleComp.prEvent_bind_eq_tsum]
+    refine tsum_congr fun rightTape => congrArg _ ?_
+    rw [OracleComp.prEvent_bind_eq_tsum]
+    refine tsum_congr fun value => congrArg _ ?_
+    rw [prEvent_map]
+  rw [hleft, hright, ← ENNReal.tsum_mul_right]
+  refine tsum_le_tsum fun leftTape => ?_
+  rw [mul_assoc, ← ENNReal.tsum_mul_right]
+  refine mul_le_mul' le_rfl (tsum_le_tsum fun rightTape => ?_)
+  rw [mul_assoc]
+  refine mul_le_mul' le_rfl ?_
+  -- The cell's own draw is all that is left to charge.
+  calc ∑' value, Pr{let x ← rightDraw}[x = value] *
+        Pr{let result ← run leftTape (rightTape.set index value)}[
+            index < len result ∧ goodBlock leftTape ∧
+              ∃ other, (rightTape.set index value)[index]? = some other ∧ hit leftTape other]
+      ≤ ∑' value, Pr{let x ← rightDraw}[x = value] *
+          (if goodBlock leftTape ∧ hit leftTape value then target leftTape rightTape else 0) := by
+        refine tsum_le_tsum fun value => mul_le_mul' le_rfl ?_
+        refine le_trans (prEvent_mono _ _ (fun result : ρ =>
+          (goodBlock leftTape ∧ hit leftTape value) ∧
+            index < len result) ?_) ?_
+        · rintro result ⟨hselected, hgood, other, hread, hhit⟩
+          exact ⟨⟨hgood, (eq_of_getElem?_set rightTape index value other hread) ▸ hhit⟩,
+            hselected⟩
+        · rw [prEvent_const_and]
+          by_cases hcase : goodBlock leftTape ∧ hit leftTape value
+          · rw [ite_eq_left hcase, ite_eq_left hcase, htarget]
+            exact le_of_eq (hcausal leftTape rightTape value)
+          · rw [ite_eq_right hcase, ite_eq_right hcase]
+    _ ≤ target leftTape rightTape * rate := by
+        by_cases hgood : goodBlock leftTape
+        · simp only [hgood, true_and]
+          calc ∑' value, Pr{let x ← rightDraw}[x = value] *
+                (if hit leftTape value then target leftTape rightTape else 0)
+              = (∑' value, if hit leftTape value then
+                  Pr{let x ← rightDraw}[x = value] else 0) *
+                  target leftTape rightTape := by
+                rw [← ENNReal.tsum_mul_right]
+                refine tsum_congr fun value => ?_
+                by_cases hhit : hit leftTape value
+                · rw [ite_eq_left hhit, ite_eq_left hhit]
+                · rw [ite_eq_right hhit, ite_eq_right hhit, zero_mul, mul_zero]
+            _ ≤ rate * target leftTape rightTape := by
+                rw [← OracleComp.prEvent_eq_tsum_ite]
+                exact mul_le_mul' (hrate leftTape hgood) le_rfl
+            _ = _ := mul_comm _ _
+        · simp only [hgood, false_and, ↓reduceIte, mul_zero, tsum_zero]
+          exact zero_le
+
+/-- The sum of per-cell selection probabilities is bounded by the expected count. -/
+theorem sum_prob_selected_le_expected_of {A B ρ : Type}
+    (leftBlock : ProbComp (List A)) (rightDraw : ProbComp B)
+    (run : List A → List B → ProbComp ρ)
+    (len : ρ → Nat)
+    (rightLength : Nat) :
+    (∑ index : Fin rightLength,
+        Pr{let outcome ← blockRunOf leftBlock rightDraw run rightLength}[
+          index.val < len outcome.2]) ≤
+      ∑' outcome, Pr{let x ← blockRunOf leftBlock rightDraw run rightLength}[x = outcome] *
+        ((len outcome.2 : Nat) : ℝ≥0∞) := by
+  classical
+  calc ∑ index : Fin rightLength,
+        Pr{let outcome ← blockRunOf leftBlock rightDraw run rightLength}[
+          index.val < len outcome.2]
+      = ∑ index : Fin rightLength, ∑' outcome,
+          (if index.val < len outcome.2 then
+            Pr{let x ← blockRunOf leftBlock rightDraw run rightLength}[x = outcome]
+          else 0) :=
+        Finset.sum_congr rfl fun index _ => OracleComp.prEvent_eq_tsum_ite _ _
+    _ = ∑' outcome, ∑ index : Fin rightLength,
+          (if index.val < len outcome.2 then
+            Pr{let x ← blockRunOf leftBlock rightDraw run rightLength}[x = outcome]
+          else 0) := sum_tsum_comm Finset.univ _
+    _ ≤ ∑' outcome, Pr{let x ← blockRunOf leftBlock rightDraw run rightLength}[x = outcome] *
+          ((len outcome.2 : Nat) : ℝ≥0∞) := by
+        refine tsum_le_tsum fun outcome => ?_
+        rw [Finset.sum_ite, Finset.sum_const, Finset.sum_const_zero, add_zero, nsmul_eq_mul,
+          mul_comm]
+        refine mul_le_mul' le_rfl (Nat.cast_le.mpr ?_)
+        have hinject := Finset.card_le_card_of_injOn (fun index : Fin rightLength => index.val)
+          (s := Finset.univ.filter
+            (fun index : Fin rightLength => index.val < len outcome.2))
+          (t := Finset.range (len outcome.2))
+          (fun index hindex => Finset.mem_range.mpr (by simpa using hindex))
+          (fun left _ right _ hvalue => Fin.val_injective hvalue)
+        simpa using hinject
+
+open scoped Classical in
+/-- The union of selected target hits is bounded by the expected count times the fresh-hit rate. -/
+theorem prob_exists_hit_le_expected_of_causal {A B ρ : Type}
+    (leftBlock : ProbComp (List A)) (rightDraw : ProbComp B)
+    (run : List A → List B → ProbComp ρ)
+    (len : ρ → Nat)
+    (rightLength : Nat)
+    (goodBlock : List A → Prop) (hit : List A → B → Prop)
+    (rate : ℝ≥0∞)
+    (hrate : ∀ leftTape, goodBlock leftTape →
+      Pr{let value ← rightDraw}[hit leftTape value] ≤ rate)
+    (hcausal : ∀ (index : Nat) (leftTape : List A) (rightTape : List B)
+        (value : B),
+      Pr{let z ← run leftTape (rightTape.set index value)}[index < len z] =
+        Pr{let z ← run leftTape rightTape}[index < len z]) :
+    Pr{let outcome ← blockRunOf leftBlock rightDraw run rightLength}[
+            ∃ index : Fin rightLength, index.val < len outcome.2 ∧
+            goodBlock outcome.1.1 ∧
+            ∃ value, outcome.1.2[index.val]? = some value ∧ hit outcome.1.1 value] ≤
+      (∑' outcome, Pr{let x ← blockRunOf leftBlock rightDraw run rightLength}[x = outcome] *
+        ((len outcome.2 : Nat) : ℝ≥0∞)) * rate := by
+  classical
+  refine le_trans (prEvent_mono _ _ (fun outcome => ∃ index ∈ (Finset.univ :
+      Finset (Fin rightLength)), index.val < len outcome.2 ∧
+      goodBlock outcome.1.1 ∧
+      ∃ value, outcome.1.2[index.val]? = some value ∧ hit outcome.1.1 value)
+    fun outcome hhit => by
+      obtain ⟨index, hindex⟩ := hhit
+      exact ⟨index, Finset.mem_univ index, hindex⟩) ?_
+  refine le_trans (prEvent_exists_finset_le _ _ _) ?_
+  refine le_trans (Finset.sum_le_sum fun index _ =>
+    prob_selected_hit_le_of_causal leftBlock rightDraw run len rightLength
+      index.val
+      index.isLt goodBlock hit rate hrate (hcausal index.val)) ?_
+  rw [← Finset.sum_mul]
+  exact mul_le_mul' (sum_prob_selected_le_expected_of leftBlock rightDraw run len
+    rightLength) le_rfl
+
+section TapeOracle
+
+variable [DecidableEq D] [SampleableType R]
 
 /-! ## The tape-consuming lazy oracle -/
 

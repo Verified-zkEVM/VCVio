@@ -33,9 +33,11 @@ charge of the one completed path it picks (`QueryImpl.run_simulateQ_withAddCost_
 
 open OracleSpec
 
+universe v idx
+
 namespace QueryImpl
 
-variable {ι : Type} {spec : OracleSpec ι} {m : Type → Type*}
+variable {ι : Type idx} {spec : OracleSpec.{idx, 0} ι} {m : Type → Type v}
 
 section addCost
 

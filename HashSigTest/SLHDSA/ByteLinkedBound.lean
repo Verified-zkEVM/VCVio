@@ -20,7 +20,7 @@ with a further charge. This file checks it at SLH-DSA-SHAKE-256s, for an adversa
 * **No further event.** The run against the verifying adversary fires a target collision, a
   mixed hidden-value hit, the key clash or coverage with probability at most
   `securityBound (2, 1) (2 ^ 64 + V) (2 ^ 64) + (2 ^ 64 + 1) / |Y|`, and that bound is below one
-  (`rhs_vp256s_lt_one`, with `V = 8444` and `|Y| = 2 ^ 256`).
+  (`rhs_vp256s_lt_one`, with `V = 8324` and `|Y| = 2 ^ 256`).
 * **The hedged form with no further charge.** At every `n = 32` parameter set the hedged bound
   with the trivial charge is
   `securityBound (2, 1) (qh + V) qs + 1 / |Y| + qs · ε · (qh + V + qs + 1) / |Y|`
@@ -95,24 +95,24 @@ theorem rhs_vp256s_lt_one :
         (2 ^ 64 + GeneralScheme.verifyInternalQueryBound vp256s.params) (2 ^ 64) +
       (((2 ^ 64 : ℕ) : ℝ≥0∞) + 1) / Nat.card (shakeCore vp256s).Y < 1 := by
   have hp : vp256s.params.h = 64 ∧ vp256s.params.a = 14 ∧ vp256s.params.k = 22 := by decide
-  have hV : GeneralScheme.verifyInternalQueryBound vp256s.params = 8444 := by decide
+  have hV : GeneralScheme.verifyInternalQueryBound vp256s.params = 8324 := by decide
   rw [securityBound, hp.1, hp.2.1, hp.2.2, hV, natCard_Y_vp256s]
   have hN : (∑ r ∈ Finset.range 23, ((r + 1) * r ^ 22 : ℕ)) < 2 ^ 104 := by decide
-  have hw : ((2 ^ 64 + 8444 : ℕ) : ℝ≥0∞) * (((2 ^ 64 : ℕ) : ℝ≥0∞) / ((2 ^ 256 : ℕ) : ℝ≥0∞)) ≤
+  have hw : ((2 ^ 64 + 8324 : ℕ) : ℝ≥0∞) * (((2 ^ 64 : ℕ) : ℝ≥0∞) / ((2 ^ 256 : ℕ) : ℝ≥0∞)) ≤
       1 := by
     rw [← mul_div_assoc, ← Nat.cast_mul]
     refine ENNReal.div_le_of_le_mul ?_
     rw [one_mul]
-    exact_mod_cast (by norm_num : (2 ^ 64 + 8444) * 2 ^ 64 ≤ 2 ^ 256)
-  have hI : weightedTargetCoverBound 64 14 22 (2 ^ 64) (2 ^ 64 + 8444)
+    exact_mod_cast (by norm_num : (2 ^ 64 + 8324) * 2 ^ 64 ≤ 2 ^ 256)
+  have hI : weightedTargetCoverBound 64 14 22 (2 ^ 64) (2 ^ 64 + 8324)
       (((2 ^ 64 : ℕ) : ℝ≥0∞) / ((2 ^ 256 : ℕ) : ℝ≥0∞)) ≤
         ((2 ^ 104 : ℕ) : ℝ≥0∞) * ((2 : ℝ≥0∞) ^ 308)⁻¹ := by
     refine (weightedTargetCoverBound_le _ _ _ _ _ _ Nat.one_le_two_pow hw).trans ?_
     simp_rw [coverTerm_vp256s, ← Finset.sum_mul, ← Nat.cast_sum]
     gcongr
-  have key : (((2 ^ 64 + 8444 : ℕ) : ℝ≥0∞) + 1) *
+  have key : (((2 ^ 64 + 8324 : ℕ) : ℝ≥0∞) + 1) *
         (((2 ^ 104 : ℕ) : ℝ≥0∞) * ((2 : ℝ≥0∞) ^ 308)⁻¹) +
-      ((2 : ℕ) * ((2 ^ 64 + 8444 : ℕ) : ℝ≥0∞) + (((1 + 1) * 8444 : ℕ) : ℝ≥0∞)) *
+      ((2 : ℕ) * ((2 ^ 64 + 8324 : ℕ) : ℝ≥0∞) + (((1 + 1) * 8324 : ℕ) : ℝ≥0∞)) *
         (((2 ^ 256 : ℕ) : ℝ≥0∞))⁻¹ +
       (((2 ^ 64 : ℕ) : ℝ≥0∞) + 1) / ((2 ^ 256 : ℕ) : ℝ≥0∞) < 1 := by
     rw [show (2 : ℝ≥0∞) ^ 308 = 2 ^ 256 * 2 ^ 52 by rw [← pow_add]]

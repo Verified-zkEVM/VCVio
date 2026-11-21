@@ -150,7 +150,7 @@ example (adv : StrongUnforgeableAdversary (shakeRomScheme vp128s
     1591788895347057694892543 by rw [honestAdrsCount_eq]; decide] at h
 
 /-- SLH-DSA-SHAKE-256f in hedged signing (`opt_rand` uniform) over the uniform public seed, by
-the bound for every `opt_rand` source: `|Y| = 256 ^ 32`, `V = 17522` and
+the bound for every `opt_rand` source: `|Y| = 256 ^ 32`, `V = 17267` and
 `|A_hon| = 16195218117312364562383887 ≈ 2^83.74`, the weak seeds weighted by `min 1 ε`. -/
 example (adv : StrongUnforgeableAdversary (shakeRomScheme vp256f
       (fun _ => $ᵗ (shakeCore vp256f).Y) ($ᵗ (shakeCore vp256f).PkSeed)))
@@ -158,7 +158,7 @@ example (adv : StrongUnforgeableAdversary (shakeRomScheme vp256f
     shakeStrongAdvantage vp256f adv ≤
       securityBound vp256f.params (256 ^ 32) 2 1 qh qs + ((qs : ℝ≥0∞) + 1) / (256 ^ 32 : ℕ) +
         (16195218117312364562383887 : ℕ) / 2 ^ 256 *
-          min 1 (securityBound vp256f.params (256 ^ 32) 2 1 (qh + 17522) qs +
+          min 1 (securityBound vp256f.params (256 ^ 32) 2 1 (qh + 17267) qs +
             2 * ((qs : ℝ≥0∞) + 1) / (256 ^ 32 : ℕ)) := by
   have h := shakeStrongAdvantage_le_securityBound_of_n_eq_32
     (fipsApprovedAddressBounds .SLHDSA_SHAKE_256f).toCanonicalAddressBounds rfl (by decide) adv
@@ -196,12 +196,12 @@ example (optRand : PublicKeyCore (shakeCore vp256s) → ProbComp (shakeCore vp25
   rwa [h1] at h
 
 /-- **A weak seed, bounded.** At SLH-DSA-SHAKE-256s, at the all-zero public seed, the bound at
-every public seed applies, with `V = 8444`, in either signing mode. -/
+every public seed applies, with `V = 8324`, in either signing mode. -/
 example (optRand : PublicKeyCore (shakeCore vp256s) → ProbComp (shakeCore vp256s).Y)
     (adv : StrongUnforgeableAdversary (shakeRomScheme vp256s optRand (pure zeroSeed)))
     {qh qs : ℕ} (hadv : adv.RomQueryBound qh qs) :
     shakeStrongAdvantage vp256s adv ≤
-      securityBound vp256s.params (256 ^ 32) 2 1 (qh + 8444) qs +
+      securityBound vp256s.params (256 ^ 32) 2 1 (qh + 8324) qs +
         2 * ((qs : ℝ≥0∞) + 1) / (256 ^ 32 : ℕ) := by
   have h := shakeStrongAdvantage_pure_le_securityBound_add_validatedParams .SLHDSA_SHAKE_256s rfl
     zeroSeed adv hadv
@@ -224,7 +224,7 @@ theorem not_min_add_le_of_mass_half :
     simpa [ENNReal.div_eq_inv_mul] using ENNReal.half_lt_self (a := 2⁻¹) (by simp) (by simp)
   exact absurd this (not_le.2 h4)
 
-/-- **The averaged bound at SLH-DSA-SHAKE-256s**, at `qh = qs = 2 ^ 64`, with `V = 8444` and
+/-- **The averaged bound at SLH-DSA-SHAKE-256s**, at `qh = qs = 2 ^ 64`, with `V = 8324` and
 `|A_hon| = 19966778066156452796772607 ≈ 2^84.05`, in either signing mode. -/
 theorem shakeStrongAdvantage_le_256s
     {optRand : PublicKeyCore (shakeCore vp256s) → ProbComp (shakeCore vp256s).Y}
@@ -235,7 +235,7 @@ theorem shakeStrongAdvantage_le_256s
       securityBound vp256s.params (256 ^ 32) 2 1 (2 ^ 64) (2 ^ 64) +
           (((2 ^ 64 : ℕ) : ℝ≥0∞) + 1) / (256 ^ 32 : ℕ) +
         (19966778066156452796772607 : ℕ) / 2 ^ 256 *
-          min 1 (securityBound vp256s.params (256 ^ 32) 2 1 (2 ^ 64 + 8444) (2 ^ 64) +
+          min 1 (securityBound vp256s.params (256 ^ 32) 2 1 (2 ^ 64 + 8324) (2 ^ 64) +
             2 * (((2 ^ 64 : ℕ) : ℝ≥0∞) + 1) / (256 ^ 32 : ℕ)) := by
   have h := shakeStrongAdvantage_le_securityBound_of_n_eq_32
     (fipsApprovedAddressBounds .SLHDSA_SHAKE_256s).toCanonicalAddressBounds rfl (by decide) adv
@@ -244,7 +244,7 @@ theorem shakeStrongAdvantage_le_256s
   rwa [LinkedHazardsTest.verifyInternalQueryBound_256s, show honestAdrsCount vp256s =
     19966778066156452796772607 by rw [honestAdrsCount_eq]; decide] at h
 
-/-- **The averaged bound at SLH-DSA-SHAKE-256f**, at `qh = qs = 2 ^ 64`, with `V = 17522` and
+/-- **The averaged bound at SLH-DSA-SHAKE-256f**, at `qh = qs = 2 ^ 64`, with `V = 17267` and
 `|A_hon| = 16195218117312364562383887 ≈ 2^83.74`, in either signing mode. -/
 theorem shakeStrongAdvantage_le_256f
     {optRand : PublicKeyCore (shakeCore vp256f) → ProbComp (shakeCore vp256f).Y}
@@ -255,7 +255,7 @@ theorem shakeStrongAdvantage_le_256f
       securityBound vp256f.params (256 ^ 32) 2 1 (2 ^ 64) (2 ^ 64) +
           (((2 ^ 64 : ℕ) : ℝ≥0∞) + 1) / (256 ^ 32 : ℕ) +
         (16195218117312364562383887 : ℕ) / 2 ^ 256 *
-          min 1 (securityBound vp256f.params (256 ^ 32) 2 1 (2 ^ 64 + 17522) (2 ^ 64) +
+          min 1 (securityBound vp256f.params (256 ^ 32) 2 1 (2 ^ 64 + 17267) (2 ^ 64) +
             2 * (((2 ^ 64 : ℕ) : ℝ≥0∞) + 1) / (256 ^ 32 : ℕ)) := by
   have h := shakeStrongAdvantage_le_securityBound_of_n_eq_32
     (fipsApprovedAddressBounds .SLHDSA_SHAKE_256f).toCanonicalAddressBounds rfl (by decide) adv
@@ -274,7 +274,7 @@ theorem byteRhs_128s_lt_one :
         ((2 ^ 64 : ℝ≥0∞) + 1) / (2 ^ 128 : ℕ) +
         (honestAdrsCount vp128s : ℝ≥0∞) / 2 ^ 256 < 1 := by
   have hp : vp128s.params.h = 63 ∧ vp128s.params.a = 12 ∧ vp128s.params.k = 14 := by decide
-  have hV : GeneralScheme.verifyInternalQueryBound vp128s.params = 3929 := by decide
+  have hV : GeneralScheme.verifyInternalQueryBound vp128s.params = 3824 := by decide
   have hA : honestAdrsCount vp128s = 1591788895347057694892543 := by
     rw [honestAdrsCount_eq]; decide
   rw [securityBound, hp.1, hp.2.1, hp.2.2, hV, hA]
@@ -289,7 +289,7 @@ theorem byteRhs_128s_lt_one :
     simp_rw [term_128s, ← Finset.sum_mul, ← Nat.cast_sum]
     gcongr
   have key : ((2 ^ 64 : ℕ) + 1 : ℝ≥0∞) * (((2 ^ 72 : ℕ) : ℝ≥0∞) * ((2 : ℝ≥0∞) ^ 168)⁻¹) +
-      ((2 : ℕ) * ((2 ^ 64 : ℕ) : ℝ≥0∞) + (((1 + 1) * 3929 : ℕ) : ℝ≥0∞)) *
+      ((2 : ℕ) * ((2 ^ 64 : ℕ) : ℝ≥0∞) + (((1 + 1) * 3824 : ℕ) : ℝ≥0∞)) *
         (((2 ^ 128 : ℕ) : ℝ≥0∞))⁻¹ +
       ((2 ^ 64 : ℝ≥0∞) + 1) / (2 ^ 128 : ℕ) +
       ((1591788895347057694892543 : ℕ) : ℝ≥0∞) / 2 ^ 256 < 1 := by
@@ -330,7 +330,7 @@ theorem byteRhs_256s_lt_one :
   have hI := weightedTargetCoverBound_le_of_le_h (h := 64) (a := 14) (k := 22) le_rfl hw
   have key : ((2 ^ 64 : ℕ) + 1 : ℝ≥0∞) * (((2 ^ 104 : ℕ) : ℝ≥0∞) *
         (((2 : ℝ≥0∞) ^ 14)⁻¹) ^ 22) +
-      ((2 : ℕ) * ((2 ^ 64 : ℕ) : ℝ≥0∞) + (((1 + 1) * 8444 : ℕ) : ℝ≥0∞)) *
+      ((2 : ℕ) * ((2 ^ 64 : ℕ) : ℝ≥0∞) + (((1 + 1) * 8324 : ℕ) : ℝ≥0∞)) *
         (((2 ^ 256 : ℕ) : ℝ≥0∞))⁻¹ +
       (((2 ^ 64 : ℕ) : ℝ≥0∞) + 1) / ((2 ^ 256 : ℕ) : ℝ≥0∞) +
       ((19966778066156452796772607 : ℕ) : ℝ≥0∞) / 2 ^ 256 < 1 := by
@@ -349,7 +349,7 @@ theorem byteRhs_256s_lt_one :
 open LinkedHazardsTest in
 /-- At SLH-DSA-SHAKE-256s with `qh = qs = 2^64`, the bound at every public seed is below one. -/
 theorem everySeedRhs_256s_lt_one :
-    securityBound vp256s.params (2 ^ 256) 2 1 (2 ^ 64 + 8444) (2 ^ 64) +
+    securityBound vp256s.params (2 ^ 256) 2 1 (2 ^ 64 + 8324) (2 ^ 64) +
       2 * (((2 ^ 64 : ℕ) : ℝ≥0∞) + 1) / ((2 ^ 256 : ℕ) : ℝ≥0∞) < 1 := by
   rw [two_mul, ENNReal.add_div, ← add_assoc]
   exact rhs_256s_lt_one
@@ -361,7 +361,7 @@ theorem averagedByteRhs_256s_lt_byteRhs_256s :
     securityBound vp256s.params (2 ^ 256) 2 1 (2 ^ 64) (2 ^ 64) +
           (((2 ^ 64 : ℕ) : ℝ≥0∞) + 1) / ((2 ^ 256 : ℕ) : ℝ≥0∞) +
         (((19966778066156452796772607 : ℕ) : ℝ≥0∞)) / 2 ^ 256 *
-          min 1 (securityBound vp256s.params (2 ^ 256) 2 1 (2 ^ 64 + 8444) (2 ^ 64) +
+          min 1 (securityBound vp256s.params (2 ^ 256) 2 1 (2 ^ 64 + 8324) (2 ^ 64) +
             2 * (((2 ^ 64 : ℕ) : ℝ≥0∞) + 1) / ((2 ^ 256 : ℕ) : ℝ≥0∞)) <
       securityBound vp256s.params (2 ^ 256) 2 1 (2 ^ 64) (2 ^ 64) +
           (((2 ^ 64 : ℕ) : ℝ≥0∞) + 1) / ((2 ^ 256 : ℕ) : ℝ≥0∞) +
@@ -375,7 +375,7 @@ theorem averagedByteRhs_256s_lt_one :
     securityBound vp256s.params (2 ^ 256) 2 1 (2 ^ 64) (2 ^ 64) +
           (((2 ^ 64 : ℕ) : ℝ≥0∞) + 1) / ((2 ^ 256 : ℕ) : ℝ≥0∞) +
         (((19966778066156452796772607 : ℕ) : ℝ≥0∞)) / 2 ^ 256 *
-          min 1 (securityBound vp256s.params (2 ^ 256) 2 1 (2 ^ 64 + 8444) (2 ^ 64) +
+          min 1 (securityBound vp256s.params (2 ^ 256) 2 1 (2 ^ 64 + 8324) (2 ^ 64) +
             2 * (((2 ^ 64 : ℕ) : ℝ≥0∞) + 1) / ((2 ^ 256 : ℕ) : ℝ≥0∞)) < 1 :=
   averagedByteRhs_256s_lt_byteRhs_256s.trans byteRhs_256s_lt_one
 
@@ -406,7 +406,7 @@ theorem byteRhs_256f_lt_one :
   have hI := weightedTargetCoverBound_le_of_le_h (h := 68) (a := 9) (k := 35) (by norm_num) hw
   have key : ((2 ^ 64 : ℕ) + 1 : ℝ≥0∞) * (((2 ^ 186 : ℕ) : ℝ≥0∞) *
         (((2 : ℝ≥0∞) ^ 9)⁻¹) ^ 35) +
-      ((2 : ℕ) * ((2 ^ 64 : ℕ) : ℝ≥0∞) + (((1 + 1) * 17522 : ℕ) : ℝ≥0∞)) *
+      ((2 : ℕ) * ((2 ^ 64 : ℕ) : ℝ≥0∞) + (((1 + 1) * 17267 : ℕ) : ℝ≥0∞)) *
         (((2 ^ 256 : ℕ) : ℝ≥0∞))⁻¹ +
       (((2 ^ 64 : ℕ) : ℝ≥0∞) + 1) / ((2 ^ 256 : ℕ) : ℝ≥0∞) +
       ((16195218117312364562383887 : ℕ) : ℝ≥0∞) / 2 ^ 256 < 1 := by
@@ -425,7 +425,7 @@ theorem byteRhs_256f_lt_one :
 open LinkedHazardsTest in
 /-- At SLH-DSA-SHAKE-256f with `qh = qs = 2^64`, the bound at every public seed is below one. -/
 theorem everySeedRhs_256f_lt_one :
-    securityBound vp256f.params (2 ^ 256) 2 1 (2 ^ 64 + 17522) (2 ^ 64) +
+    securityBound vp256f.params (2 ^ 256) 2 1 (2 ^ 64 + 17267) (2 ^ 64) +
       2 * (((2 ^ 64 : ℕ) : ℝ≥0∞) + 1) / ((2 ^ 256 : ℕ) : ℝ≥0∞) < 1 := by
   rw [two_mul, ENNReal.add_div, ← add_assoc]
   exact rhs_256f_lt_one
@@ -437,7 +437,7 @@ theorem averagedByteRhs_256f_lt_byteRhs_256f :
     securityBound vp256f.params (2 ^ 256) 2 1 (2 ^ 64) (2 ^ 64) +
           (((2 ^ 64 : ℕ) : ℝ≥0∞) + 1) / ((2 ^ 256 : ℕ) : ℝ≥0∞) +
         (((16195218117312364562383887 : ℕ) : ℝ≥0∞)) / 2 ^ 256 *
-          min 1 (securityBound vp256f.params (2 ^ 256) 2 1 (2 ^ 64 + 17522) (2 ^ 64) +
+          min 1 (securityBound vp256f.params (2 ^ 256) 2 1 (2 ^ 64 + 17267) (2 ^ 64) +
             2 * (((2 ^ 64 : ℕ) : ℝ≥0∞) + 1) / ((2 ^ 256 : ℕ) : ℝ≥0∞)) <
       securityBound vp256f.params (2 ^ 256) 2 1 (2 ^ 64) (2 ^ 64) +
           (((2 ^ 64 : ℕ) : ℝ≥0∞) + 1) / ((2 ^ 256 : ℕ) : ℝ≥0∞) +
@@ -451,7 +451,7 @@ theorem averagedByteRhs_256f_lt_one :
     securityBound vp256f.params (2 ^ 256) 2 1 (2 ^ 64) (2 ^ 64) +
           (((2 ^ 64 : ℕ) : ℝ≥0∞) + 1) / ((2 ^ 256 : ℕ) : ℝ≥0∞) +
         (((16195218117312364562383887 : ℕ) : ℝ≥0∞)) / 2 ^ 256 *
-          min 1 (securityBound vp256f.params (2 ^ 256) 2 1 (2 ^ 64 + 17522) (2 ^ 64) +
+          min 1 (securityBound vp256f.params (2 ^ 256) 2 1 (2 ^ 64 + 17267) (2 ^ 64) +
             2 * (((2 ^ 64 : ℕ) : ℝ≥0∞) + 1) / ((2 ^ 256 : ℕ) : ℝ≥0∞)) < 1 :=
   averagedByteRhs_256f_lt_byteRhs_256f.trans byteRhs_256f_lt_one
 

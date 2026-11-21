@@ -6,6 +6,7 @@ Authors: Alexander Hicks
 
 module
 public import HashSig.SLHDSA.SHAKE128s.Statement.Game.QueryBudget
+import HashSig.SLHDSA.SHAKE128s.Bridge.SharedExperiment.Recorded
 
 /-!
 # Complete-game source budgets
@@ -36,8 +37,9 @@ theorem countQueries_query_bind (cost : (World Output).Domain → Counts)
       let answer ← query input
       let result ← countQueries cost (next answer)
       return (result.1, cost input + result.2) := by
-  simp [countQueries, addCostOracle, QueryImpl.withAddCost, WriterT.run_bind,
-    bind_assoc]
+  simp [countQueries, SignatureAlg.SigningView.costed, QueryImpl.withAddCost_apply,
+    AddWriterT.runAdd_bind]
+  rfl
 
 /-- A total syntactic query bound bounds a single-source hash counter on every response path.
 Private samples contribute zero, and all other source coordinates remain zero. -/
@@ -71,7 +73,8 @@ theorem countQueries_single_bounds (kind : QueryKind) (program : OracleComp (Wor
 /-- Erasing all-hash instrumentation recovers the exact original oracle program. -/
 theorem fst_map_countAllHashes (program : OracleComp (World Output) α) :
     Prod.fst <$> countAllHashes program = program := by
-  simp [countAllHashes, Functor.map_map]
+  unfold countAllHashes
+  exact SignatureAlg.SigningView.costed_erases _ _ program
 
 /-- Every supported result of an all-hash-counted program projects to an original result. -/
 theorem mem_support_of_mem_support_countAllHashes (program : OracleComp (World Output) α)
@@ -128,7 +131,7 @@ theorem experimentBySource_bounds (scheme : ExternalScheme Output PK SK)
     result.2 .sign ≤ qs ∧
       (∑ kind ∈ adversaryWork, result.2 kind) ≤ qh + qs + v ∧
       result.1.signed.length = result.2 .sign := by
-  unfold experimentBySource at hresult
+  rw [experimentBySource_eq_countAllHashes] at hresult
   obtain ⟨⟨keys, keygenHashes⟩, _, hresult⟩ := mem_support_bind_peel _ _ hresult
   obtain ⟨⟨outcome, laterHashes⟩, hafter, hresult⟩ := mem_support_bind_peel _ _ hresult
   have heq := eq_of_mem_support_pure _ hresult

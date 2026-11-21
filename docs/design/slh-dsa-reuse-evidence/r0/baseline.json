@@ -1,0 +1,2582 @@
+{
+  "format": 1,
+  "scope": "R0a baseline only; R0b readable equations and P5 recovery are not discharged",
+  "baseCommit": "bf4a94566e817963ff27e4dbc0c6bf2498c923da",
+  "baseTree": "8861bffdff44d6782a506e53cc1b2c45c297414c",
+  "manifestSha256": "68e3e9f60f635be3e88e676b871b3419004f882626da3ab85523cb2b374da8d2",
+  "toolchain": "leanprover/lean4:v4.35.0",
+  "leanVersion": "4.35.0",
+  "dependencyRevisions": {
+    "mathlib": "56a005855ea17e0b0958f73ec801ae140b0a1679",
+    "PolyFun": "ecac686fd8a3b4763d3df2e738c91947bdec40d6",
+    "plausible": "dfa4f38190d07c37e315953e08b90fe2d95b3c24",
+    "LeanSearchClient": "d6b4c7be5be75ec4917c873ac50c756dc1436372",
+    "importGraph": "a41f0e9a4dea23188ea9cc1c41ac9f8bbafe0b93",
+    "proofwidgets": "df72b022e558978a1c50264cfc4d7fec86fa8e04",
+    "aesop": "4a174c490d8707121c4a9290800489f105d85e07",
+    "Qq": "dce0ad79c486cb1fb504af04f953c3466b0c6db8",
+    "batteries": "66e469188fe07963e5cf666c7d4433f45b8131c5",
+    "cslib": "5b56df99362532c46e1175381fbbdd755bd56030",
+    "Cli": "c24fe6078c630e89b489bffe59b3e20ac30d12c8"
+  },
+  "strengthContracts": 77,
+  "semanticGroups": 11,
+  "semanticRoots": 112,
+  "semanticRecords": 1242,
+  "fingerprintEncoding": "SHA256 over UTF-8 canonical JSON (ensure_ascii=false, sorted keys, comma/colon separators); type and body AST metadata are structural, not pretty-printed",
+  "fullRawCaptureSha256": "4d8b273db9d53456376c4c996c8fa28e1a7e4e2312e6bbfa1589feafccc9bcd4",
+  "externalBoundary": [
+    {
+      "module": "Mathlib.MeasureTheory.Measure.MeasureSpaceDef",
+      "name": "AEMeasurable",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.Algebra.Group.Monoid",
+      "name": "AddCommMonoid",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.Algebra.Group.Monoid",
+      "name": "AddMonoid",
+      "package": "mathlib"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "And",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "Append",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "Array",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "BitVec",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "Bool",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "ByteArray",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "Decidable",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "DecidableEq",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "DecidablePred",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Mathlib.MeasureTheory.MeasurableSpace.Defs",
+      "name": "DiscreteMeasurableSpace",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.Basic.ENNReal.Basic",
+      "name": "ENNReal",
+      "package": "mathlib"
+    },
+    {
+      "module": "Init.Core",
+      "name": "EmptyCollection",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "Eq",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Mathlib.Logic.Equiv.Defs",
+      "name": "Equiv",
+      "package": "mathlib"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "Except",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Core",
+      "name": "Exists",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "False",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "Fin",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Mathlib.Data.FinEnum",
+      "name": "FinEnum",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.Basic.Finite.Defs",
+      "name": "Finite",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.Data.Finset.Defs",
+      "name": "Finset",
+      "package": "mathlib"
+    },
+    {
+      "module": "Init.Core",
+      "name": "ForInStep",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "HAdd",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "HEq",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.System.IO",
+      "name": "IO",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Control.Id",
+      "name": "Id",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Core",
+      "name": "Iff",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Core",
+      "name": "LawfulBEq",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Control.Lawful.Basic",
+      "name": "LawfulMonad",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Control.Lawful.MonadLift.Basic",
+      "name": "LawfulMonadLiftT",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "List",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Mathlib.MeasureTheory.MeasurableSpace.Defs",
+      "name": "Measurable",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.MeasureTheory.MeasurableSpace.Defs",
+      "name": "MeasurableSingletonClass",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.MeasureTheory.MeasurableSpace.Defs",
+      "name": "MeasurableSpace",
+      "package": "mathlib"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "Membership",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "Monad",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "PolyFun.Control.Monad.Hom",
+      "name": "MonadHom",
+      "package": "PolyFun"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "MonadLift",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "MonadLiftT",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Mathlib.Algebra.Group.Monoid",
+      "name": "Monoid",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.Algebra.Group.TypeTags.Basic",
+      "name": "Multiplicative",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.Data.Rat.Init",
+      "name": "NNRat",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.Basic.NNReal.Defs",
+      "name": "NNReal",
+      "package": "mathlib"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "Nat",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Core",
+      "name": "Ne",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Data.NeZero",
+      "name": "NeZero",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "Nonempty",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "Not",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "Option",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "Or",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Mathlib.Data.PFunctor.Univariate.Basic",
+      "name": "PFunctor",
+      "package": "mathlib"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "PProd",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "PUnit",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "Prod",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Mathlib.Data.Set.Defs",
+      "name": "Set",
+      "package": "mathlib"
+    },
+    {
+      "module": "Init.Core",
+      "name": "Sigma",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Control.State",
+      "name": "StateM",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Control.State",
+      "name": "StateT",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "String",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Core",
+      "name": "Sum",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "True",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "UInt64",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "UInt8",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "Unit",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Data.Vector.Basic",
+      "name": "Vector",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Mathlib.Control.Monad.Writer",
+      "name": "WriterT",
+      "package": "mathlib"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "absurd",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Tactics",
+      "name": "autoParam",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "dite",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "eq_of_heq",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "id",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "inferInstance",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "instAddNat",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Data.UInt.Basic",
+      "name": "instAndOpUInt64",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Data.String.Defs",
+      "name": "instAppendString",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "instBEqOfDecidableEq",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Core",
+      "name": "instBEqProd",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Mathlib.Data.NNRat.Defs",
+      "name": "instCommSemiringNNRat",
+      "package": "mathlib"
+    },
+    {
+      "module": "Init.Data.UInt.Basic",
+      "name": "instComplementUInt64",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "instDecidableAnd",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "instDecidableEqBitVec",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "instDecidableEqBool",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "instDecidableEqFin",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "instDecidableEqList",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "instDecidableEqNat",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Core",
+      "name": "instDecidableEqSum",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "instDecidableEqUInt8",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Data.Vector.Basic",
+      "name": "instDecidableEqVector",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Core",
+      "name": "instDecidableFalse",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "instDecidableNot",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Core",
+      "name": "instDecidableTrue",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Mathlib.Order.Lattice",
+      "name": "instDistribLatticeOfLinearOrder",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.Algebra.Ring.Defs",
+      "name": "instDistribOfSemiring",
+      "package": "mathlib"
+    },
+    {
+      "module": "Init.Control.Basic",
+      "name": "instForInOfForIn'",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.GetElem",
+      "name": "instGetElem?OfGetElemOfDecidable",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "instHAdd",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "instHAndOfAndOp",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "instHAppendOfAppend",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "instHDiv",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "instHMod",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "instHMul",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "instHOrOfOrOp",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "instHPow",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "instHShiftLeftOfShiftLeft",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "instHShiftRightOfShiftRight",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "instHSub",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "instHXorOfXorOp",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "instInhabitedNat",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "instInhabitedUInt64",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "instInhabitedUInt8",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "instLENat",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "instLTNat",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Mathlib.Data.NNRat.Defs",
+      "name": "instLinearOrderNNRat",
+      "package": "mathlib"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "instMinNat",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.System.IO",
+      "name": "instMonadEIO",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.System.IO",
+      "name": "instMonadExceptOfEIO",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "instMonadExceptOfMonadExceptOf",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "instMonadLiftT",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "instMonadLiftTOfMonadLift",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "instMonadStateOfMonadStateOf",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Control.State",
+      "name": "instMonadStateOfStateTOfMonad",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "instMulNat",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "instNatPowNat",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Data.NeZero",
+      "name": "instNeZeroNatHAdd_1",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "instNonemptyOfInhabited",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Mathlib.Data.Nat.Cast.Defs",
+      "name": "instOfNatAtLeastTwo",
+      "package": "mathlib"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "instOfNatNat",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Data.UInt.Basic",
+      "name": "instOrOpUInt64",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Data.UInt.Basic",
+      "name": "instOrOpUInt8",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "instPowNat",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Data.UInt.Basic",
+      "name": "instShiftLeftUInt64",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Data.UInt.Basic",
+      "name": "instShiftRightUInt64",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "instSubNat",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Data.ToString.Basic",
+      "name": "instToStringString",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Data.UInt.Basic",
+      "name": "instXorOpUInt64",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "ite",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "liftM",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "modify",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "noConfusion_of_Nat",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "optParam",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "rfl",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Mathlib.Algebra.Group.Monoid",
+      "name": "AddCommMonoid.toAddMonoid",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.Data.Nat.Cast.Defs",
+      "name": "AddCommMonoidWithOne.toAddMonoidWithOne",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.Data.Nat.Cast.Defs",
+      "name": "AddMonoidWithOne.toNatCast",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.Data.Nat.Cast.Defs",
+      "name": "AddMonoidWithOne.toOne",
+      "package": "mathlib"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "Applicative.toFunctor",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "Applicative.toPure",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "Applicative.toSeq",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "Array.empty",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.GetElem",
+      "name": "Array.instGetElem?NatLtSize",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Data.Array.Basic",
+      "name": "Array.map",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Data.Array.Basic",
+      "name": "Array.ofFn",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "Array.push",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Data.Array.Basic",
+      "name": "Array.replicate",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Data.Array.Set",
+      "name": "Array.set!",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "Array.size",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "BEq.beq",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "Bind.bind",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Data.BitVec.Basic",
+      "name": "BitVec.extractLsb'",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Data.BitVec.Basic",
+      "name": "BitVec.instHShiftLeftNat",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Data.BitVec.Basic",
+      "name": "BitVec.instInhabited",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Data.BitVec.BasicAux",
+      "name": "BitVec.instOfNat",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Data.BitVec.Basic",
+      "name": "BitVec.instOrOp",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "BitVec.ofNat",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "BitVec.toFin",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "BitVec.toNat",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "Bool.and",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "Bool.false",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Mathlib.MeasureTheory.MeasurableSpace.Instances",
+      "name": "Bool.instMeasurableSpace",
+      "package": "mathlib"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "Bool.not",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "Bool.true",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Mathlib.Order.BoundedOrder.Basic",
+      "name": "BoundedOrder.toOrderTop",
+      "package": "mathlib"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "ByteArray.empty",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Data.ByteArray.Basic",
+      "name": "ByteArray.extract",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Data.ByteArray.Basic",
+      "name": "ByteArray.instAppend",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Data.ByteArray.Basic",
+      "name": "ByteArray.instGetElemNatUInt8LtSize",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "ByteArray.mk",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "ByteArray.size",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Data.ByteArray.Basic",
+      "name": "ByteArray.toList",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Classical",
+      "name": "Classical.propDecidable",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Mathlib.Algebra.Ring.Defs",
+      "name": "CommSemiring.toSemiring",
+      "package": "mathlib"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "Complement.complement",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Mathlib.Order.CompleteLattice.Defs",
+      "name": "CompleteLattice.toBoundedOrder",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.Order.CompleteLattice.Defs",
+      "name": "CompleteLattice.toLattice",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.Basic.FunLike.Basic",
+      "name": "DFunLike.coe",
+      "package": "mathlib"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "Decidable.decide",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "Decidable.isFalse",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "Decidable.isTrue",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Mathlib.Algebra.Ring.Defs",
+      "name": "Distrib.toAdd",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.Algebra.Ring.Defs",
+      "name": "Distrib.toMul",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.Order.Defs.Lattice",
+      "name": "DistribLattice.toLattice",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.Algebra.Group.DivInvMonoid",
+      "name": "DivInvMonoid.toDiv",
+      "package": "mathlib"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "Dvd.dvd",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Mathlib.Basic.ENNReal.Basic",
+      "name": "ENNReal.instAdd",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.Basic.ENNReal.Basic",
+      "name": "ENNReal.instAddCommMonoid",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.Basic.ENNReal.Basic",
+      "name": "ENNReal.instAddCommMonoidWithOne",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.Basic.ENNReal.Basic",
+      "name": "ENNReal.instCommSemiring",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.Basic.ENNReal.Basic",
+      "name": "ENNReal.instDivInvMonoid",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.Basic.ENNReal.Basic",
+      "name": "ENNReal.instInv",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.Basic.ENNReal.Basic",
+      "name": "ENNReal.instLE",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.Basic.ENNReal.Basic",
+      "name": "ENNReal.instMin",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.Basic.ENNReal.Basic",
+      "name": "ENNReal.instOne",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.Basic.ENNReal.Basic",
+      "name": "ENNReal.instZero",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.Basic.ENNReal.Basic",
+      "name": "ENNReal.ofNNReal",
+      "package": "mathlib"
+    },
+    {
+      "module": "Init.Core",
+      "name": "EmptyCollection.emptyCollection",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Core",
+      "name": "EmptyCollection.mk",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "Eq.ndrec",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "Eq.ndrec_symm",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "Eq.refl",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "Eq.symm",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Mathlib.Logic.Equiv.Defs",
+      "name": "Equiv.instEquivLike",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.Logic.Equiv.Defs",
+      "name": "Equiv.mk",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.Logic.Equiv.Prod",
+      "name": "Equiv.prodCongr",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.Logic.Equiv.Defs",
+      "name": "Equiv.refl",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.Logic.Equiv.Defs",
+      "name": "Equiv.symm",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.Logic.Equiv.Defs",
+      "name": "Equiv.trans",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.Basic.FunLike.Equiv",
+      "name": "EquivLike.toFunLike",
+      "package": "mathlib"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "Except.casesOn",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "Except.error",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Control.Except",
+      "name": "Except.instMonad",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Control.Except",
+      "name": "Except.map",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "Except.ok",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Control.Except",
+      "name": "Except.toOption",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "False.elim",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Mathlib.Logic.Equiv.Fin.Basic",
+      "name": "Fin.appendEquiv",
+      "package": "mathlib"
+    },
+    {
+      "module": "Init.Data.Fin.Lemmas",
+      "name": "Fin.cases",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Data.Fin.Basic",
+      "name": "Fin.elim0",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Mathlib.Data.Fintype.Basic",
+      "name": "Fin.fintype",
+      "package": "mathlib"
+    },
+    {
+      "module": "Init.Data.Fin.Basic",
+      "name": "Fin.instOfNat",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "Fin.mk",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Data.Fin.Basic",
+      "name": "Fin.succ",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "Fin.val",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Mathlib.Data.FinEnum",
+      "name": "FinEnum.card",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.Data.FinEnum",
+      "name": "FinEnum.equiv",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.Data.FinEnum",
+      "name": "FinEnum.instBitVec",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.Data.FinEnum",
+      "name": "FinEnum.instUInt8",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.Data.Finset.Card",
+      "name": "Finset.card",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.Data.Finset.Filter",
+      "name": "Finset.filter",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.Data.Finset.Insert",
+      "name": "Finset.instInsert",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.Data.Finset.Insert",
+      "name": "Finset.instSingleton",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.Data.Finset.Range",
+      "name": "Finset.range",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.Algebra.BigOperators.Group.Finset.Defs",
+      "name": "Finset.sum",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.Data.Fintype.Defs",
+      "name": "Finset.univ",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.Data.Fintype.Defs",
+      "name": "Fintype.decidableSurjectiveFintype",
+      "package": "mathlib"
+    },
+    {
+      "module": "Init.Core",
+      "name": "ForIn.forIn",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Core",
+      "name": "ForInStep.yield",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Data.Function",
+      "name": "Function.Injective",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Data.Function",
+      "name": "Function.LeftInverse",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Data.Function",
+      "name": "Function.RightInverse",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Data.Function",
+      "name": "Function.Surjective",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "Function.comp",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Mathlib.Logic.Function.Basic",
+      "name": "Function.update",
+      "package": "mathlib"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "Functor.map",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "GE.ge",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.GetElem",
+      "name": "GetElem.getElem",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.GetElem",
+      "name": "GetElem?.getElem!",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "HAdd.hAdd",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "HAdd.mk",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "HAnd.hAnd",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "HAppend.hAppend",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "HDiv.hDiv",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "HEq.refl",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "HMod.hMod",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "HMul.hMul",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "HOr.hOr",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "HPow.hPow",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "HShiftLeft.hShiftLeft",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "HShiftRight.hShiftRight",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "HSub.hSub",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "HXor.hXor",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.System.IOError",
+      "name": "IO.Error",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.System.IO",
+      "name": "IO.println",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.System.IOError",
+      "name": "IO.userError",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Control.Id",
+      "name": "Id.instMonad",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Control.Id",
+      "name": "Id.instMonadLiftTOfPure",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Control.Id",
+      "name": "Id.run",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Core",
+      "name": "Insert.insert",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "Inv.inv",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "LE.le",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "LT.lt",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Mathlib.Order.Defs.Lattice",
+      "name": "Lattice.toSemilatticeInf",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.Order.Defs.Lattice",
+      "name": "Lattice.toSemilatticeSup",
+      "package": "mathlib"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "Lean.Syntax",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "Lean.mkAtom",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Mathlib.Data.Vector.Defs",
+      "name": "List.Vector",
+      "package": "mathlib"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "List.below",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "List.brecOn",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "List.casesOn",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "List.cons",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Data.List.Basic",
+      "name": "List.decidableBEx",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Data.List.Basic",
+      "name": "List.drop",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Data.List.Basic",
+      "name": "List.filter",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Data.List.FinRange",
+      "name": "List.finRange",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "List.flatMap",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "List.flatten",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "List.foldl",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Data.List.Control",
+      "name": "List.foldlM",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Data.List.Basic",
+      "name": "List.foldr",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Data.List.BasicAux",
+      "name": "List.getD",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Data.List.Basic",
+      "name": "List.instAppend",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Data.List.Basic",
+      "name": "List.instBEq",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "List.instDecidableEqNil",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Data.List.Basic",
+      "name": "List.instDecidableMemOfLawfulBEq",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Data.List.Basic",
+      "name": "List.instEmptyCollection",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Data.List.Basic",
+      "name": "List.instMembership",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "List.length",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "List.map",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "List.nil",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Data.List.OfFn",
+      "name": "List.ofFn",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Batteries.Data.List.Basic",
+      "name": "List.product",
+      "package": "batteries"
+    },
+    {
+      "module": "Init.Data.List.Basic",
+      "name": "List.range",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Data.List.Basic",
+      "name": "List.replicate",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Data.List.Basic",
+      "name": "List.reverse",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Data.List.Basic",
+      "name": "List.sum",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Data.List.Basic",
+      "name": "List.take",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "List.toArray",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "List.toByteArray",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Mathlib.MeasureTheory.MeasurableSpace.Defs",
+      "name": "MeasurableSpace.instCompleteLattice",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.MeasureTheory.Measure.Typeclasses.Probability",
+      "name": "MeasureTheory.IsProbabilityMeasure",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.MeasureTheory.Measure.MeasureSpaceDef",
+      "name": "MeasureTheory.Measure",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.MeasureTheory.Integral.Lebesgue.Basic",
+      "name": "MeasureTheory.lintegral",
+      "package": "mathlib"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "Membership.mem",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "Min.min",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "Monad.toApplicative",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "Monad.toBind",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "PolyFun.Control.Monad.Support",
+      "name": "MonadAttach.support",
+      "package": "PolyFun"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "MonadExcept.throw",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "PolyFun.Control.Monad.Hom",
+      "name": "MonadHom.mk",
+      "package": "PolyFun"
+    },
+    {
+      "module": "PolyFun.Control.Monad.Hom",
+      "name": "MonadHom.ofLift",
+      "package": "PolyFun"
+    },
+    {
+      "module": "PolyFun.Control.Monad.Hom",
+      "name": "MonadHom.toNatHom",
+      "package": "PolyFun"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "MonadLift.mk",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "MonadLift.monadLift",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "MonadState.get",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "MonadState.modifyGet",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Mathlib.Control.Monad.Writer",
+      "name": "MonadWriter.tell",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.Algebra.Group.Monoid",
+      "name": "Monoid.toNPow",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.Algebra.GroupWithZero.Defs",
+      "name": "MulZeroClass.toZero",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.Algebra.Group.TypeTags.Basic",
+      "name": "Multiplicative.monoid",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.Algebra.Group.TypeTags.Basic",
+      "name": "Multiplicative.ofAdd",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.Algebra.Group.TypeTags.Basic",
+      "name": "Multiplicative.toAdd",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.Data.Rat.Init",
+      "name": "NNRat.cast",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.Algebra.Field.Rat",
+      "name": "NNRat.instDiv",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.Algebra.Field.Rat",
+      "name": "NNRat.instInv",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.Basic.NNReal.Defs",
+      "name": "NNReal.instNNRatCast",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.Algebra.Group.Monoid",
+      "name": "NPow.toPow",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.Data.Nat.Init",
+      "name": "Nat.AtLeastTwo",
+      "package": "mathlib"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "Nat.below",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "Nat.brecOn",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Mathlib.SetTheory.Cardinal.Finite",
+      "name": "Nat.card",
+      "package": "mathlib"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "Nat.casesOn",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Data.Cast",
+      "name": "Nat.cast",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Mathlib.Data.Nat.Choose.Basic",
+      "name": "Nat.choose",
+      "package": "mathlib"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "Nat.decLe",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "Nat.decLt",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Mathlib.Data.Nat.Choose.Basic",
+      "name": "Nat.fast_choose",
+      "package": "mathlib"
+    },
+    {
+      "module": "Init.Data.Nat.Bitwise.Basic",
+      "name": "Nat.hasNotBit",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Mathlib.Algebra.Group.Nat.Defs",
+      "name": "Nat.instAddCommMonoid",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.Algebra.Group.Nat.Defs",
+      "name": "Nat.instAddMonoid",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.Data.Nat.Init",
+      "name": "Nat.instAtLeastTwoHAddOfNat",
+      "package": "mathlib"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "Nat.instDiv",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Data.Nat.Div.Basic",
+      "name": "Nat.instDvd",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "Nat.instMod",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Mathlib.Algebra.Group.Nat.Defs",
+      "name": "Nat.instMonoid",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.Algebra.GroupWithZero.Nat",
+      "name": "Nat.instMulZeroClass",
+      "package": "mathlib"
+    },
+    {
+      "module": "Init.Data.Nat.Basic",
+      "name": "Nat.instNeZeroSucc",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Data.Nat.Bitwise.Basic",
+      "name": "Nat.instShiftLeft",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Data.Nat.Bitwise.Basic",
+      "name": "Nat.instShiftRight",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Data.Nat.Bitwise.Basic",
+      "name": "Nat.land",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Mathlib.Data.Nat.Log",
+      "name": "Nat.log",
+      "package": "mathlib"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "Nat.ne_of_beq_eq_false",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Data.Nat.Bitwise.Basic",
+      "name": "Nat.shiftRight",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "Nat.succ",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Data.UInt.BasicAux",
+      "name": "Nat.toUInt64",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Data.Nat.Bitwise.Basic",
+      "name": "Nat.xor",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "Nat.zero",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Data.Nat.Basic",
+      "name": "Nat.zero_lt_one",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "PolyFun.Control.Monad.Hom",
+      "name": "NatHom.mk",
+      "package": "PolyFun"
+    },
+    {
+      "module": "PolyFun.Control.Monad.Hom",
+      "name": "NatHom.toFun",
+      "package": "PolyFun"
+    },
+    {
+      "module": "Init.Data.NeZero",
+      "name": "NeZero.casesOn",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Mathlib.Algebra.Ring.Defs",
+      "name": "NonAssocSemiring.toAddCommMonoidWithOne",
+      "package": "mathlib"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "OfNat.ofNat",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Data.Zero",
+      "name": "One.toOfNat1",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "Option.casesOn",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "Option.ctorIdx",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "Option.getD",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Data.Option.Basic",
+      "name": "Option.instDecidableEq",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Data.Option.Basic",
+      "name": "Option.isSome",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "Option.none",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "Option.rec",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "Option.some",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Mathlib.Order.BoundedOrder.Basic",
+      "name": "OrderTop.toTop",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.Data.PFunctor.Univariate.Basic",
+      "name": "PFunctor.A",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.Data.PFunctor.Univariate.Basic",
+      "name": "PFunctor.B",
+      "package": "mathlib"
+    },
+    {
+      "module": "Cslib.Foundations.Data.PFunctor.Free",
+      "name": "PFunctor.FreeM",
+      "package": "cslib"
+    },
+    {
+      "module": "Mathlib.Data.PFunctor.Univariate.Basic",
+      "name": "PFunctor.Obj",
+      "package": "mathlib"
+    },
+    {
+      "module": "Cslib.Foundations.Data.PFunctor.Basic",
+      "name": "PFunctor.add",
+      "package": "cslib"
+    },
+    {
+      "module": "Mathlib.Data.PFunctor.Univariate.Basic",
+      "name": "PFunctor.mk",
+      "package": "mathlib"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "PProd.mk",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "PUnit.unit",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Mathlib.Order.Defs.PartialOrder",
+      "name": "PartialOrder.toPreorder",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.Algebra.Group.Pi.Basic",
+      "name": "Pi.addCommMonoid",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.Algebra.Group.Pi.Basic",
+      "name": "Pi.addMonoid",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.Algebra.Notation.Pi.Defs",
+      "name": "Pi.instAdd",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.Data.Fintype.Pi",
+      "name": "Pi.instFintype",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.Algebra.Notation.Pi.Basic",
+      "name": "Pi.single",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.Order.Defs.PartialOrder",
+      "name": "Preorder.toLE",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.Probability.UniformOn",
+      "name": "ProbabilityTheory.uniformOn",
+      "package": "mathlib"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "Prod.casesOn",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "Prod.fst",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "Prod.mk",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "Prod.snd",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Mathlib.MeasureTheory.MeasurableSpace.Instances",
+      "name": "Prop.instMeasurableSpace",
+      "package": "mathlib"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "Pure.pure",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Mathlib.Order.Defs.Lattice",
+      "name": "SemilatticeInf.toMin",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.Order.Defs.Lattice",
+      "name": "SemilatticeInf.toPartialOrder",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.Order.Defs.Lattice",
+      "name": "SemilatticeSup.toPartialOrder",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.Algebra.Ring.Defs",
+      "name": "Semiring.toAddCommMonoid",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.Algebra.Ring.Defs",
+      "name": "Semiring.toMonoid",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.Algebra.Ring.Defs",
+      "name": "Semiring.toNonAssocSemiring",
+      "package": "mathlib"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "Seq.seq",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Mathlib.Data.Set.Operations",
+      "name": "Set.InjOn",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.Data.Set.Defs",
+      "name": "Set.instMembership",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.Data.Set.Defs",
+      "name": "Set.instSingletonSet",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.Data.Set.Defs",
+      "name": "Set.ofPred",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.Data.Set.Defs",
+      "name": "Set.univ",
+      "package": "mathlib"
+    },
+    {
+      "module": "Init.Core",
+      "name": "Sigma.casesOn",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Core",
+      "name": "Sigma.fst",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Mathlib.Data.Sigma.Basic",
+      "name": "Sigma.instDecidableEqSigma",
+      "package": "mathlib"
+    },
+    {
+      "module": "Init.Core",
+      "name": "Sigma.mk",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Core",
+      "name": "Sigma.snd",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Core",
+      "name": "Singleton.singleton",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Control.State",
+      "name": "StateT.instMonad",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Control.State",
+      "name": "StateT.instMonadLift",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Control.State",
+      "name": "StateT.run",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Control.State",
+      "name": "StateT.run'",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "Subtype.mk",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Core",
+      "name": "Sum.casesOn",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Core",
+      "name": "Sum.ctorIdx",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Core",
+      "name": "Sum.inl",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Core",
+      "name": "Sum.inr",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Core",
+      "name": "Sum.rec",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Data.ToString.Basic",
+      "name": "ToString.toString",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Mathlib.Order.Notation",
+      "name": "Top.top",
+      "package": "mathlib"
+    },
+    {
+      "module": "Init.Data.UInt.BasicAux",
+      "name": "UInt64.instOfNat",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Data.UInt.BasicAux",
+      "name": "UInt64.toUInt8",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Data.UInt.BasicAux",
+      "name": "UInt8.instOfNat",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "UInt8.ofBitVec",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "UInt8.ofNat",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Data.UInt.BasicAux",
+      "name": "UInt8.toNat",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "Unit.unit",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Data.Vector.Basic",
+      "name": "Vector.cast",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Data.Vector.Basic",
+      "name": "Vector.extract",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Data.Vector.Basic",
+      "name": "Vector.head",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Data.Vector.Basic",
+      "name": "Vector.insertIdx",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Data.Vector.Basic",
+      "name": "Vector.instGetElemNatLt",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Data.Vector.Basic",
+      "name": "Vector.mk",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Data.Vector.Basic",
+      "name": "Vector.ofFn",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Data.Vector.OfFn",
+      "name": "Vector.ofFnM",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Data.Vector.Basic",
+      "name": "Vector.push",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Data.Vector.Basic",
+      "name": "Vector.replicate",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Data.Vector.Basic",
+      "name": "Vector.tail",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Data.Vector.Basic",
+      "name": "Vector.toArray",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Data.Vector.Basic",
+      "name": "Vector.toList",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Mathlib.Control.Monad.Writer",
+      "name": "WriterT.instMonadLiftOfEmptyCollection",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.Control.Monad.Writer",
+      "name": "WriterT.instMonadLiftOfMonoid",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.Control.Monad.Writer",
+      "name": "WriterT.instMonadOfEmptyCollectionOfAppend",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.Control.Monad.Writer",
+      "name": "WriterT.instMonadOfMonoid",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.Control.Monad.Writer",
+      "name": "WriterT.instMonadWriter",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.Control.Monad.Writer",
+      "name": "WriterT.run",
+      "package": "mathlib"
+    },
+    {
+      "module": "Init.Data.Zero",
+      "name": "Zero.toOfNat0",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "Lean.Name.mkStr1",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "Lean.Name.mkStr4",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "Lean.SourceInfo.none",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Prelude",
+      "name": "Lean.Syntax.node",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Mathlib.Data.Vector.Defs",
+      "name": "List.Vector.head",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.Data.Vector.Defs",
+      "name": "List.Vector.tail",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.MeasureTheory.Measure.GiryMonad",
+      "name": "MeasureTheory.Measure.bind",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.MeasureTheory.Measure.Dirac.Def",
+      "name": "MeasureTheory.Measure.dirac",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.MeasureTheory.Measure.MeasureSpaceDef",
+      "name": "MeasureTheory.Measure.instFunLike",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.MeasureTheory.Measure.GiryMonad",
+      "name": "MeasureTheory.Measure.instMeasurableSpace",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.MeasureTheory.Measure.Module",
+      "name": "MeasureTheory.Measure.instZero",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.MeasureTheory.Measure.Map",
+      "name": "MeasureTheory.Measure.map",
+      "package": "mathlib"
+    },
+    {
+      "module": "PolyFun.PFunctor.Bound",
+      "name": "PFunctor.FreeM.IsRollBound",
+      "package": "PolyFun"
+    },
+    {
+      "module": "Cslib.Foundations.Data.PFunctor.Free",
+      "name": "PFunctor.FreeM.below",
+      "package": "cslib"
+    },
+    {
+      "module": "Cslib.Foundations.Data.PFunctor.Free",
+      "name": "PFunctor.FreeM.brecOn",
+      "package": "cslib"
+    },
+    {
+      "module": "Cslib.Foundations.Data.PFunctor.Free",
+      "name": "PFunctor.FreeM.casesOn",
+      "package": "cslib"
+    },
+    {
+      "module": "Cslib.Foundations.Data.PFunctor.Free",
+      "name": "PFunctor.FreeM.instBind",
+      "package": "cslib"
+    },
+    {
+      "module": "Cslib.Foundations.Data.PFunctor.Free",
+      "name": "PFunctor.FreeM.instFunctor",
+      "package": "cslib"
+    },
+    {
+      "module": "Cslib.Foundations.Data.PFunctor.Free",
+      "name": "PFunctor.FreeM.instLawfulMonad",
+      "package": "cslib"
+    },
+    {
+      "module": "Cslib.Foundations.Data.PFunctor.Free",
+      "name": "PFunctor.FreeM.instMonad",
+      "package": "cslib"
+    },
+    {
+      "module": "PolyFun.PFunctor.Free.Support",
+      "name": "PFunctor.FreeM.instMonadAttach",
+      "package": "PolyFun"
+    },
+    {
+      "module": "Cslib.Foundations.Data.PFunctor.Free",
+      "name": "PFunctor.FreeM.instMonadLiftObj",
+      "package": "cslib"
+    },
+    {
+      "module": "Cslib.Foundations.Data.PFunctor.Free",
+      "name": "PFunctor.FreeM.instPure",
+      "package": "cslib"
+    },
+    {
+      "module": "Cslib.Foundations.Data.PFunctor.Free",
+      "name": "PFunctor.FreeM.liftBind",
+      "package": "cslib"
+    },
+    {
+      "module": "Cslib.Foundations.Data.PFunctor.Free",
+      "name": "PFunctor.FreeM.liftM",
+      "package": "cslib"
+    },
+    {
+      "module": "Cslib.Foundations.Data.PFunctor.Free",
+      "name": "PFunctor.FreeM.pure",
+      "package": "cslib"
+    },
+    {
+      "module": "PolyFun.PFunctor.Handler.Instrumentation",
+      "name": "PFunctor.Handler.liftTarget",
+      "package": "PolyFun"
+    },
+    {
+      "module": "PolyFun.PFunctor.Handler.Instrumentation",
+      "name": "PFunctor.Handler.withTraceAppend",
+      "package": "PolyFun"
+    },
+    {
+      "module": "PolyFun.PFunctor.Handler.Instrumentation",
+      "name": "PFunctor.Handler.withTraceBefore",
+      "package": "PolyFun"
+    },
+    {
+      "module": "Mathlib.Data.PFunctor.Univariate.Basic",
+      "name": "PFunctor.Obj.fst",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.Data.PFunctor.Univariate.Basic",
+      "name": "PFunctor.Obj.mk",
+      "package": "mathlib"
+    },
+    {
+      "module": "Mathlib.Data.PFunctor.Univariate.Basic",
+      "name": "PFunctor.Obj.snd",
+      "package": "mathlib"
+    },
+    {
+      "module": "Init.Data.Range.Basic",
+      "name": "Std.Legacy.Range",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Data.Range.Basic",
+      "name": "Std.Legacy.instMembershipNatRange",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Data.Range.Basic",
+      "name": "Std.Legacy.Range.instForIn'NatInferInstanceMembershipOfMonad",
+      "package": "lean-toolchain"
+    },
+    {
+      "module": "Init.Data.Range.Basic",
+      "name": "Std.Legacy.Range.mk",
+      "package": "lean-toolchain"
+    }
+  ],
+  "artifactSha256": {
+    "capture-input.json": "b4c1698aef855ac2c4da4b2308ad232b309bc6b8e0fc6bb0b09a658c58114574",
+    "kernel-types.json": "7fce7eb97ac9f640fcfacd5e65c61c90c513d1096e4f818664ebdbb0851521e2",
+    "semantic-fingerprints.tsv": "70febfb9a47833ebe00b912d39395f3c25cacf707a372e9a2fc0607fda86c73f",
+    "schemas.md": "c5c8d75cdbedca325f81854b86433adfb04901201b869d6e853484ef2f4f6cd3"
+  },
+  "leanVersionOutput": "Lean (version 4.35.0, x86_64-unknown-linux-gnu, commit eb6cafb7290e8bd5f2937522d8d804f58f02bafc, Release)"
+}

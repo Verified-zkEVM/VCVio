@@ -63,7 +63,8 @@ theorem childVals_wotsStep_zero_secretState (hd : core.KeyDiscipline vp)
   childVals_eq_some_of_chain? (e := e) (s := s) hd
     (wotsChainAdrs_setHashAddress_mem_constructionAddresses pos i
       (Nat.sub_pos_of_lt (Nat.one_lt_two_pow vp.valid.lgw_pos.ne')))
-    (simulateQ_oracleSecret_secretState core e pkSeed s pos i x) rfl
+    (simulateQ_oracleSecret_secretState core e pkSeed s pos i x)
+    (chain?_zero core _ pkSeed _ x 0)
 
 /-- At every FIPS 205 parameter set, the first step of a WOTS+ chain whose secret alone is drawn
 has its children drawn at the secret. -/
@@ -105,7 +106,7 @@ theorem childVals_stepKey_zero_chainState :
     (wotsChainAdrs_setHashAddress_mem_constructionAddresses pos i zero_lt_w_sub_one)
     ((simulateQ_toPartialImpl_oracleSecret_merge (Adrs.isSecretKey_wotsSkAdrs _ _)).trans
       ((QueryCache.cacheQuery_of_ne _ _ Sum.inl_ne_inr).trans (QueryCache.cacheQuery_self _ _ _)))
-    rfl
+    (chain?_zero core _ pkSeed _ x 0)
 
 include hd in
 open Classical in
@@ -116,7 +117,7 @@ theorem chain?_one_chainState :
     chain? core ((secretEncoding core e pkSeed).merge s
         ((slhGraph core pkSeed).toSplitCache (chainState core pos i x y))).fst pkSeed
       (wotsChainAdrs (wotsInstanceAdrs pos) i.val) x 0 1 = some y :=
-  (chain?_succ_eq_some_iff core _ pkSeed _ x 0 0).2 ⟨x, rfl,
+  (chain?_succ_eq_some_iff core _ pkSeed _ x 0 0).2 ⟨x, chain?_zero core _ pkSeed _ x 0,
     (merge_fst_thash_of_childVals_eq_some hd.keySeparated
       (childVals_stepKey_zero_chainState core hd e pkSeed s pos i x y)).trans
       (QueryCache.cacheQuery_self _ _ _)⟩

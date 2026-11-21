@@ -342,7 +342,7 @@ private theorem isQueryBoundP_deriveScheme_verify_of {p : (deriveSpec core).Doma
       (isQueryBoundP_pure _ · 0) isQueryBoundP_bind_zero core hf htl hh _ _ _) fun _ =>
       isQueryBoundP_bind_zero _ _ (GeneralHypertree.recoverFromPositionWith_pred
         (IsQueryBoundP · _ 0) (isQueryBoundP_pure _ · 0) isQueryBoundP_bind_zero core hf htl hh
-        _ _ _ _ _ _) fun _ => isQueryBoundP_pure _ _ _
+        _ _ _ _ _) fun _ => isQueryBoundP_pure _ _ _
 
 /-- Verification makes at most one `H_msg` query. -/
 theorem isQueryBoundP_deriveScheme_verify_hmsg (pk : PublicKeyCore core) (msg : List Byte)

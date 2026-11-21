@@ -33,36 +33,52 @@ theorem slhDsa_sufCma_127 : Game.HasSecurityBits FIPS205.scheme Game.adversaryWo
 
 ## The proof
 
-The bound is proved on a direct transcription of SLH-DSA-SHAKE-128s and its game
-(`Statement/Scheme.lean`, `Statement/Security.lean`, digests as bit vectors, answers as 240-bit
-vectors) in `Proof/`, and carried to the library's scheme in `Bridge/`.
+The proof works directly with the FIPS 205 byte game. It samples the original secret and
+public key material, keeps a single random-oracle cache, and charges signing requests,
+direct adversary hashes, and verification hashes against the same run. A rejected signing
+request still costs one request. The final verifier contributes the number of queries it
+actually executes, including on a losing branch.
 
-**On the transcription** (`Proof/WorkFinal.lean`, `hasSecurityBits_work`). The game is first
-rewritten so that the honest hash graph is drawn before the adversary runs (`WarmedGame`,
-`Presample`: the canonical graph of honest inputs is walked in topological order, every query
-fresh, which leaves the outcome's law unchanged). A forgery then either reuses honest cells, which
-forces FORS coverage of a fresh digest (bounded through the load-concentration lemmas `Fors*`),
-or deviates, which forces a query to hit an honest cell or the message-PRF key. The two halves are
-charged on separate ledgers: an answer half at `q / 2 ^ 128 + 2 ^ -126`
-(`BySourceTarget.answerBound`) and a shared half at `(q - 8) / 2 ^ 128` on accepted forgeries
-(`ShareJointShared.hshared`), counted in one game that is blind to both the secret seeds and the
-message-PRF key (`Share*`); `WorkTarget` sums them to `q / 2 ^ 127`. Below 569 counted calls nothing
-wins, since verifying an accepted forgery alone costs that many (`WorkFinal.advantage_eq_zero`).
+The construction proof from #766 supplies the structural analysis of a fresh accepted
+forgery. Deferred sampling charges a conflict with a previously fixed hash or a query
+that reveals a hidden value. The remaining winning case requires FORS coverage. The
+finite-tape and load-concentration estimates from #912 bound that event using the
+number of signing attempts and digest blocks consumed in the same run. Averaging those
+charges with the weak-seed probabilities yields the actual-work bound.
 
-For a fixed deterministic hash, `CanonicalGraph.value hash secretSeed publicSeed` evaluates every
-cell using the supplied `hash : HasQuery HashSpec Id`. The extraction uses the same handler for
-its deterministic component computations. Passing `CacheReplay.replayQuery cache` specializes
-the equations to the answers recorded by a run.
+For a budget below 569, accepted verification alone would exceed the budget, so success
+has probability zero. For `569 ≤ q < 2^127`, success is at most
 
-**The bridge** (`Bridge/`). `Bridge.model` is the transcription as a `Game.ExternalScheme`, whose
-game is the transcription's game by definition (`PaperGame.lean`). `Transfer.lean` proves that
-`HasSecurityBits` transfers along a `SchemeBridge`: a bijection of oracle answers that maps the
-uniform answer to the uniform answer, under which signing and verification agree as programs and
-key generation agrees in law (`hasSecurityBits_of_bridge`). `Encodings.lean` relates the data
-(digests, answers, addresses, framing, digest parsing, WOTS+ digits, signature codecs), and
-`Wots`, `Xmss`, `Fors`, `Hypertree` and `Scheme` prove the program equalities component by
-component, with the same queries in the same order on both sides; `Scheme.schemeBridge` is the
-bridge and `hasSecurityBits_fips205` the transfer.
+```text
+(32q − 1) / (16 · 2^128) + 34 · 1591788895347057694892543 / 2^256.
+```
+
+This is strictly smaller than `q / 2^127`. At and above `2^127`, the unit bound on a
+probability gives the stated bit-security inequality. Both the middle-range bound and
+the bit-security theorem assume the signing lifetime. The zero-success result only
+requires the joint work cap.
+
+For fixed-context adversaries with separate structural caps on their hash and signing
+queries, `wireStrongAdvantage_le_jointWorkBound` takes the minimum of the parameterized
+construction bound and `jointWorkBound (qh + qs + 3824)`. The 3824-call allowance is a
+proved upper bound on verifier work for SHAKE-128s. The companion `wireStrongAdvantage_le`
+gives the same minimum with
+the linear work term `(qh + qs + 3824) / 2^127`.
+[Wire theorem](../../HashSig/SLHDSA/SHAKE128s/Statement/Theorems/WireStrongUnforgeability.lean)
+
+The bit-vector transcription presents the same deterministic algorithms with a different
+representation of answers and keys. The component bridges identify hash queries, framing,
+canonical signature bytes and verification results. Transporting the security result gives
+the transcription's `WorkFinal.hasSecurityBits_work` at its original query accounting.
+[Transcription theorem](../../HashSig/SLHDSA/SHAKE128s/Proof/WorkFinal.lean)
+
+For a paper-model client that erases counts or proves zero success, the entry points are
+`WorkFinal.map_fst_runAll` and `WorkFinal.advantage_eq_zero`. Clients that adapt the
+observation or cost policy can use the shared experiment's count bounds and acceptance
+certificate. The former `WorkFinal.setupBound`, `verifierFiles` and `hsharedFused` were
+specific to the retired coupling and its records. Code that imported those intermediate
+runs needs a new argument for its chosen experiment.
+[Shared certificates](../../HashSig/SLHDSA/SHAKE128s/Bridge/SharedExperiment/Certificates.lean)
 
 ## Scope
 

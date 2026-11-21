@@ -11,11 +11,9 @@ public import HashSig.SLHDSA.SHAKE128s.Proof.Hashing
 /-!
 # The state a signing handler carries
 
-`ServingCarrier` reads a disclosed set off a handler's state, and `ServedDisclosure` states the
-notion the reading obeys. That notion is stated over `CacheAvailability`, which sits above
-`OpenCache`, so the files stating it sit above the handler that has to carry it. The carrier
-type `State` and its operations therefore live here, below all of them, and everything that needs
-the notion stays above.
+The handler stores its random-oracle cache, the frame of the signing request in flight,
+and the digest inputs served so far. `State` and its projections are shared by the
+logging and sampling handlers.
 
 **The framing carries a frame and the served set carries digest inputs**, and the two sorts are
 kept apart deliberately. Indexing the served set by the message would let an adversary pick its

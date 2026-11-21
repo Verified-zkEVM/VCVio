@@ -5,36 +5,14 @@ Authors: Tom Wambsgans
 -/
 
 module
-
-public import HashSig.SLHDSA.SHAKE128s.Proof.TableBlind
+public import VCVio.OracleComp.QueryTracking.RandomOracle.DeferredSampling
 
 /-!
-# Stalling a run once the thing it is charged for can no longer happen
+# Stopping a stateful experiment when a predicate becomes permanent
 
-`TableBlind` lifts blindness from a step to a run, but only against a part of the table fixed
-before the run. That settles the clauses whose unavailable cells are fixed by the walk and not
-the FORS clause, where a cell is unavailable when an earlier probe is made and available when a
-later one is: the run is not blind to such a cell for its whole length, only up to the moment
-the signatures release it.
-
-Indexing the statement by the step at which a probe is made looked circular — the set of cells
-unavailable "at step `k`" is read off the run that is being compared, which is the run whose
-dependence on the table is in question. This file removes the circularity instead of resolving
-it, by **stalling**: fix one cell, and compare against the run that stops once that cell
-becomes available. Three facts then do the work, and none of them needs a set fixed in advance.
-
-* The stalled run never reads that cell at all: before the stall it is unavailable, where the
-  handler reads only available cells; after the stall there is no handler. So
-  `evalDist_stalled_congr` gives blindness for the whole stalled run, from a per-step
-  hypothesis demanded only at **unfrozen** states — which is the hypothesis a handler that
-  reads only available cells actually has.
-* Stalling does not change the event. A probe can only be charged against a cell that is
-  unavailable when the probe is made, and availability only grows, so no charge can arise after
-  the stall. `prEvent_flag_stalled_eq` is that: a run whose flag can no longer change may be
-  stopped without changing the flag's law.
-* So the charge against one cell is the charge against the stalled run, which is blind to it.
-
-What the stall costs is nothing, because the flag is sticky and the frozen tail is silent.
+The stalled handler returns a fixed answer once the state freezes. If later steps would
+preserve a flag or the expected value of an observation, the corresponding probability
+or expectation agrees with the original experiment.
 -/
 
 public section

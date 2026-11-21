@@ -908,17 +908,62 @@ theorem agreeUntilBad_typedImpl_patchedImpl :
         exact clash_mark (.inr hcol) _
     · exact .inl (by simp [hs, hcol])
 
+/-- From empty caches, an event of the output and physical cache of the single oracle is
+bounded by the same event after filling the typed state, or a clash of its pre-fill typed cache. -/
+theorem prEvent_simulateQ_singleImpl_run_le_fill_or_clash {α : Type}
+    (oa : OracleComp (unifSpec + (spec + (D →ₒ M))) α)
+    (P : (α × (D →ₒ M).QueryCache) → Prop) :
+    let typedFilled : ProbComp
+        ((α × (D →ₒ M).QueryCache) ×
+          (spec.QueryCache × (D →ₒ M).QueryCache)) := do
+      let result ← (simulateQ E.typedImpl oa).run (∅, ∅)
+      let physicalCache ← E.fill result.2
+      return ((result.1, physicalCache), result.2)
+    Pr{let result ← (simulateQ E.singleImpl oa).run ∅}[P result] ≤
+      Pr{let result ← typedFilled}[P result.1 ∨ E.Clash result.2.1] := by
+  classical
+  let kernel := fun z : α × (spec.QueryCache × (D →ₒ M).QueryCache) =>
+    (fun physicalCache => (z.1, physicalCache)) <$> E.fill z.2
+  have intertwining := E.intertwinesOn_fill_patchedImpl_singleImpl.evalDist_simulateQ_run
+    E.preservesInv_patchedImpl_stateInv oa (∅, ∅)
+    ⟨by simp, fun _ x hx => by simp at hx⟩ (γ := Bool)
+    (fun value cache => (pure (decide (P (value, cache))) : ProbComp Bool))
+  rw [RandomOracleEncoding.fill_empty, pure_bind] at intertwining
+  have same : Pr{let result ← (simulateQ E.singleImpl oa).run ∅}[P result] =
+      Pr{let observation ← (simulateQ E.patchedImpl oa).run (∅, ∅) >>= kernel}[
+        P observation] := by
+    rw [prEvent_eq_evalDist_decide, prEvent_eq_evalDist_decide]
+    simpa only [kernel, prEvent_norm] using
+      congrFun (congrArg DFunLike.coe intertwining.symm) {true}
+  rw [same]
+  simpa only [kernel, prEvent_norm] using
+    QueryImpl.AgreeUntilBad.prEvent_simulateQ_run_bind_le_or_bad
+    E.agreeUntilBad_typedImpl_patchedImpl E.preservesInv_typedImpl_clash
+    oa (∅, ∅) kernel P
+
 /-- **An encoded random oracle until a clash.** Run from empty caches, an event of the output of
 a computation against the single random oracle is at most the same event, or a clash of the final
 typed cache, against independent typed random oracles with raw inputs routed. -/
 theorem prEvent_simulateQ_singleImpl_run_le {α : Type}
     (oa : OracleComp (unifSpec + (spec + (D →ₒ M))) α) (P : α → Prop) :
     Pr{let z ← (simulateQ E.singleImpl oa).run ∅}[P z.1] ≤
-      Pr{let z ← (simulateQ E.typedImpl oa).run (∅, ∅)}[P z.1 ∨ E.Clash z.2.1] :=
-  (E.intertwinesOn_fill_patchedImpl_singleImpl).prEvent_simulateQ_run_le_or_bad
-    E.preservesInv_patchedImpl_stateInv E.agreeUntilBad_typedImpl_patchedImpl
-    E.preservesInv_typedImpl_clash oa (∅, ∅)
-    ⟨by simp, fun _ x hx ↦ by simp at hx⟩ ∅ fill_empty P
+      Pr{let z ← (simulateQ E.typedImpl oa).run (∅, ∅)}[P z.1 ∨ E.Clash z.2.1] := by
+  classical
+  let typed := (simulateQ E.typedImpl oa).run (∅, ∅)
+  let completed := do
+    let result ← typed
+    let physicalCache ← E.fill result.2
+    return ((result.1, physicalCache), result.2)
+  have erase : Pr{let z ← completed}[P z.1.1 ∨ E.Clash z.2.1] =
+      Pr{let z ← typed}[P z.1 ∨ E.Clash z.2.1] := by
+    rw [prEvent_eq_evalDist_decide, prEvent_eq_evalDist_decide]
+    have distribution : 𝒟[typed >>= fun z ↦ E.fill z.2 >>= fun _ ↦
+        (pure (decide (P z.1 ∨ E.Clash z.2.1)) : ProbComp Bool)] =
+        𝒟[typed >>= fun z ↦ (pure (decide (P z.1 ∨ E.Clash z.2.1)) : ProbComp Bool)] :=
+      evalDist_bind_congr_of_support _ _ _ fun z _ ↦ OracleComp.evalDist_bind_const _ _
+    simpa only [completed, prEvent_norm] using
+      congrFun (congrArg DFunLike.coe distribution) {true}
+  exact (E.prEvent_simulateQ_singleImpl_run_le_fill_or_clash oa (fun z ↦ P z.1)).trans_eq erase
 
 /-- **An encoded random oracle until a clash, in the random oracle model.** Run from empty
 caches, an event of the output of the encoding of a computation in the random oracle model of the

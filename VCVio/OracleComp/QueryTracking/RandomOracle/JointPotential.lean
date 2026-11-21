@@ -49,6 +49,11 @@ same budget. Conflicts and target collisions at node keys are charged to the joi
 
 ## Main statements
 
+- `CanonicalGraph.prEvent_deferredFillDraw_add_initial_potential_le_expected_output_charge`
+  bounds the terminal hazard and initial potential by the expected charge. The program output
+  can determine which fresh draws count as a hit and how much they cost.
+  `CanonicalGraph.prEvent_deferredFillDraw_add_initial_potential_le_expected_charge`
+  specializes this bound to a charge determined by the public cache.
 - `CanonicalGraph.IsCharged.prEvent_deferredFillDraw_and_le`,
   `CanonicalGraph.IsCharged.prEvent_deferredFillDraw_le_of_budget`: a charged hazard `P` with
   `Φ ≤ U` and a hazard `H` of the draw charged `c` fire, over the three phases, with probability
@@ -633,5 +638,153 @@ theorem prEvent_deferredFillDraw_le_of_budget {S α : Type} (ms : ProbComp S)
 end ThreePhase
 
 end NodeKeys
+
+end CanonicalGraph
+
+namespace CanonicalGraph
+
+/-- The program output and public cache determine the charge for a hazard of the fresh draw.
+The bound averages this charge over the deferred run, before the end fill and draw. -/
+theorem prEvent_deferredFillDraw_add_initial_potential_le_expected_output_charge
+    {ι X K R S α : Type} {pub : OracleSpec.{0, 0} ι}
+    [DecidableEq ι] [DecidableEq X] [DecidableEq K]
+    [SampleableType R] [∀ t : pub.Domain, SampleableType (pub.Range t)]
+    (G : CanonicalGraph pub X K R)
+    (bad : RelabelState pub X K R → Prop)
+    (potential : RelabelState pub X K R → ℝ≥0∞)
+    (charged : G.IsCharged bad potential) (initiallyGood : ¬bad (∅, ∅))
+    (upper : pub.QueryCache → ℝ≥0∞)
+    (potentialBound : ∀ state, potential state ≤ upper state.1)
+    (seeds : ProbComp S)
+    (hazard : α → S → RelabelState pub X K R → Prop)
+    (hazardCharge : α → pub.QueryCache → ℝ≥0∞)
+    (hazardRate : ∀ output state,
+      Pr{let secret ← seeds}[hazard output secret state] ≤ hazardCharge output state.1)
+    (program : OracleComp (pub.withLabels X K R) α) :
+    Pr{let result ← G.deferredFillDraw seeds program}[
+      bad result.2.1 ∨ hazard result.1.1 result.2.2 result.2.1] + potential (∅, ∅) ≤
+      ∫⁻ charge, charge ∂𝒟[(fun result =>
+        upper result.2.1.1 + hazardCharge result.1 result.2.1.1) <$>
+          (simulateQ G.deferredImpl program).run ((∅, ∅), [])] := by
+  classical
+  let Run := α × (RelabelState pub X K R × List (X ⊕ K))
+  let _ : MeasurableSpace Run := ⊤
+  let _ : MeasurableSpace (RelabelState pub X K R) := ⊤
+  let run := (simulateQ G.deferredImpl program).run ((∅, ∅), [])
+  let terminal (z : Run) : ProbComp (RelabelState pub X K R × S) := do
+    let state ← RelabelState.endFill z.2
+    let secret ← seeds
+    return (state, secret)
+  let p (z : Run) := Pr{let y ← terminal z}[bad y.1 ∨ hazard z.1 y.2 y.1]
+  let phi (z : Run) := potential z.2.1
+  let budget (z : Run) := upper z.2.1.1 + hazardCharge z.1 z.2.1.1
+  let fired (z : Run) : ℝ≥0∞ := if bad z.2.1 then 1 else 0
+  have oneStep (z : Run) : p z + phi z ≤ fired z + budget z := by
+    have draw : p z ≤ Pr{let state ← RelabelState.endFill z.2}[bad state] +
+        hazardCharge z.1 z.2.1.1 := by
+      have key := prEvent_bind_le_prEvent_add_of_support (RelabelState.endFill z.2)
+        (fun state => (fun secret => (state, secret)) <$> seeds) bad
+        (fun y => bad y.1 ∨ hazard z.1 y.2 y.1) (ε := hazardCharge z.1 z.2.1.1)
+        (fun state hs hb => by
+          rw [prEvent_map]
+          simpa only [hb, false_or, RelabelState.fst_eq_of_mem_support_endFill hs]
+            using hazardRate z.1 state)
+      simpa only [p, terminal, bind_pure_comp] using key
+    by_cases hb : bad z.2.1
+    · simpa only [fired, hb, ↓reduceIte, budget, phi] using
+        add_le_add (prEvent_le_one ((fun y => bad y.1 ∨ hazard z.1 y.2 y.1) <$> terminal z))
+          ((potentialBound z.2.1).trans le_self_add)
+    · have fillCharge := prEvent_run_add_initial_potential_le_expected_final
+        RelabelState.cellImpl bad potential charged.isPotentialStep_cellImpl
+        (((X ⊕ K) →ₒ R).queryAll z.2.2) z.2.1 hb
+      have fillUpper : (∫⁻ value, value ∂𝒟[potential <$>
+          RelabelState.endFill z.2]) ≤ upper z.2.1.1 := by
+        rw [lintegral_id_evalDist_map]
+        calc
+          _ ≤ ∫⁻ _state, upper z.2.1.1 ∂𝒟[RelabelState.endFill z.2] := by
+            apply lintegral_mono_ae
+            exact evalDist.ae_of_forall_mem_support _ _ MeasurableSet.of_discrete
+              (fun state hs => (potentialBound state).trans_eq
+                (congrArg upper (RelabelState.fst_eq_of_mem_support_endFill hs)))
+          _ = _ := by rw [lintegral_const, measure_univ, mul_one]
+      have filled : Pr{let state ← RelabelState.endFill z.2}[bad state] +
+          potential z.2.1 ≤ upper z.2.1.1 := by
+        apply le_trans _ fillUpper
+        simpa only [RelabelState.endFill_eq_simulateQ_cellImpl, prEvent_map,
+          lintegral_id_evalDist_map, Functor.map_map] using fillCharge
+      simp only [fired, hb, ↓reduceIte, zero_add]
+      calc
+        p z + phi z ≤ (Pr{let state ← RelabelState.endFill z.2}[bad state] +
+            hazardCharge z.1 z.2.1.1) + potential z.2.1 := add_le_add draw le_rfl
+        _ = (Pr{let state ← RelabelState.endFill z.2}[bad state] + potential z.2.1) +
+            hazardCharge z.1 z.2.1.1 := by ac_rfl
+        _ ≤ budget z := add_le_add filled le_rfl
+  have initial : (∫⁻ z, fired z ∂𝒟[run]) + potential (∅, ∅) ≤
+      ∫⁻ z, phi z ∂𝒟[run] := by
+    have key := prEvent_run_add_initial_potential_le_expected_final G.deferredImpl
+      (fun state => bad state.1) (fun state => potential state.1)
+      charged.isPotentialStep_deferredImpl program ((∅, ∅), []) initiallyGood
+    have indicator : (∫⁻ z, fired z ∂𝒟[run]) = Pr{let z ← run}[bad z.2.1] := by
+      change (∫⁻ z, ({z : Run | bad z.2.1} : Set Run).indicator (fun _ => 1) z ∂𝒟[run]) = _
+      rw [lintegral_indicator_const MeasurableSet.of_discrete, one_mul,
+        prEvent_eq_evalDist_of_discrete]
+    rw [indicator]
+    simpa only [lintegral_id_evalDist_map] using key
+  have integratedOneStep : (∫⁻ z, p z ∂𝒟[run]) + (∫⁻ z, phi z ∂𝒟[run]) ≤
+      (∫⁻ z, fired z ∂𝒟[run]) + ∫⁻ z, budget z ∂𝒟[run] := by
+    rw [← lintegral_add_left Measurable.of_discrete,
+      ← lintegral_add_left Measurable.of_discrete]
+    exact lintegral_mono oneStep
+  have integrated : ((∫⁻ z, p z ∂𝒟[run]) + potential (∅, ∅)) +
+      (∫⁻ z, phi z ∂𝒟[run]) ≤
+      (∫⁻ z, phi z ∂𝒟[run]) + ∫⁻ z, budget z ∂𝒟[run] := by
+    calc
+      _ = ((∫⁻ z, p z ∂𝒟[run]) + (∫⁻ z, phi z ∂𝒟[run])) +
+          potential (∅, ∅) := by ac_rfl
+      _ ≤ ((∫⁻ z, fired z ∂𝒟[run]) + ∫⁻ z, budget z ∂𝒟[run]) +
+          potential (∅, ∅) := add_le_add integratedOneStep le_rfl
+      _ = ((∫⁻ z, fired z ∂𝒟[run]) + potential (∅, ∅)) +
+          ∫⁻ z, budget z ∂𝒟[run] := by ac_rfl
+      _ ≤ _ := add_le_add initial le_rfl
+  have bound : (∫⁻ z, p z ∂𝒟[run]) + potential (∅, ∅) ≤
+      ∫⁻ z, budget z ∂𝒟[run] := by
+    by_cases ht : (∫⁻ z, budget z ∂𝒟[run]) = ⊤
+    · rw [ht]; exact le_top
+    · have hp : (∫⁻ z, phi z ∂𝒟[run]) ≠ ⊤ :=
+        ne_top_of_le_ne_top ht (lintegral_mono fun z =>
+          (potentialBound z.2.1).trans le_self_add)
+      apply ENNReal.le_of_add_le_add_right hp
+      exact integrated.trans_eq (add_comm _ _)
+  have result := (add_le_add
+    (prEvent_bind_bind_eq_lintegral_of_discrete run terminal
+      (fun z y => bad y.1 ∨ hazard z.1 y.2 y.1)).le
+    (show potential (∅, ∅) ≤ potential (∅, ∅) from le_rfl)).trans bound
+  simpa only [CanonicalGraph.deferredFillDraw, run, terminal, bind_assoc,
+    prEvent_norm, lintegral_id_evalDist_map] using result
+
+/-- Expected public charge funds the terminal union and its initial potential. -/
+theorem prEvent_deferredFillDraw_add_initial_potential_le_expected_charge
+    {ι X K R S α : Type} {pub : OracleSpec.{0, 0} ι}
+    [DecidableEq ι] [DecidableEq X] [DecidableEq K]
+    [SampleableType R] [∀ t : pub.Domain, SampleableType (pub.Range t)]
+    (G : CanonicalGraph pub X K R)
+    (bad : RelabelState pub X K R → Prop)
+    (potential : RelabelState pub X K R → ℝ≥0∞)
+    (charged : G.IsCharged bad potential) (initiallyGood : ¬bad (∅, ∅))
+    (upper : pub.QueryCache → ℝ≥0∞)
+    (potentialBound : ∀ state, potential state ≤ upper state.1)
+    (seeds : ProbComp S)
+    (hazard : S → RelabelState pub X K R → Prop)
+    (hazardCharge : pub.QueryCache → ℝ≥0∞)
+    (hazardRate : ∀ state, Pr{let secret ← seeds}[hazard secret state] ≤ hazardCharge state.1)
+    (program : OracleComp (pub.withLabels X K R) α) :
+    Pr{let result ← G.deferredFillDraw seeds program}[
+      bad result.2.1 ∨ hazard result.2.2 result.2.1] + potential (∅, ∅) ≤
+      ∫⁻ charge, charge ∂𝒟[(fun result =>
+        upper result.2.1.1 + hazardCharge result.2.1.1) <$>
+          (simulateQ G.deferredImpl program).run ((∅, ∅), [])] := by
+  exact prEvent_deferredFillDraw_add_initial_potential_le_expected_output_charge
+    G bad potential charged initiallyGood upper potentialBound seeds
+    (fun _ => hazard) (fun _ => hazardCharge) (fun _ => hazardRate) program
 
 end CanonicalGraph

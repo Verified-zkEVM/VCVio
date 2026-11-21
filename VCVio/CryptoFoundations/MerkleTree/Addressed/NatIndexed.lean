@@ -8,6 +8,7 @@ module
 public import VCVio.CryptoFoundations.MerkleTree.Addressed.Basic
 public import ToMathlib.Data.IndexedBinaryTree.Perfect
 public import ToMathlib.Data.IndexedBinaryTree.Equiv
+import Mathlib.Data.Nat.Bitwise
 
 /-!
 # Perfect Merkle trees with heap-style natural-number addressing
@@ -99,6 +100,46 @@ theorem merkleRoot_succ (leaf : ℕ → Y) (nodeHash : ℕ → ℕ → Y → Y �
 
 /-- Flip the least-significant bit of a heap-style node index. -/
 def sibling (i : ℕ) : ℕ := if i % 2 = 0 then i + 1 else i - 1
+
+/-- Flipping the low bit is exclusive-or with one. -/
+theorem sibling_eq_xor (index : ℕ) : sibling index = Nat.xor index 1 := by
+  unfold sibling
+  split_ifs with h
+  · exact (Nat.xor_one_of_even (Nat.even_iff.mpr h)).symm
+  · exact (Nat.xor_one_of_odd (Nat.odd_iff.mpr (by omega))).symm
+
+/-- Ancestor division separates an integral tree offset from the local leaf index. -/
+theorem ancestor_add_tree_offset {H j : ℕ} (hj : j ≤ H) (tree leaf : ℕ) :
+    (tree * 2 ^ H + leaf) / 2 ^ j = tree * 2 ^ (H - j) + leaf / 2 ^ j := by
+  have hfactor : tree * 2 ^ H = tree * 2 ^ (H - j) * 2 ^ j := by
+    rw [mul_assoc, ← pow_add, Nat.sub_add_cancel hj]
+  rw [hfactor, add_comm, Nat.add_mul_div_right _ _ (by positivity), add_comm]
+
+/-- Below a tree root, taking a sibling commutes with its integral tree offset. -/
+theorem sibling_add_tree_offset {H j : ℕ} (hj : j < H) (tree leaf : ℕ) :
+    sibling ((tree * 2 ^ H + leaf) / 2 ^ j) =
+      tree * 2 ^ (H - j) + sibling (leaf / 2 ^ j) := by
+  rw [ancestor_add_tree_offset hj.le]
+  have hpow : 2 ^ (H - j) = 2 * 2 ^ (H - j - 1) := by
+    rw [← pow_succ']; congr 1; omega
+  have heven : tree * 2 ^ (H - j) % 2 = 0 := by simp [hpow, Nat.mul_mod]
+  have hmod : (tree * 2 ^ (H - j) + leaf / 2 ^ j) % 2 = leaf / 2 ^ j % 2 := by
+    simp [Nat.add_mod, heven]
+  unfold sibling
+  rw [hmod]
+  generalize tree * 2 ^ (H - j) = offset at *
+  generalize leaf / 2 ^ j = value at *
+  split_ifs <;> omega
+
+/-- Below a height-`H` root, adding an integral tree offset leaves ancestor parity unchanged. -/
+theorem ancestor_mod_two_add_tree_offset {H j : ℕ} (hj : j < H) (tree leaf : ℕ) :
+    (tree * 2 ^ H + leaf) / 2 ^ j % 2 = leaf / 2 ^ j % 2 := by
+  rw [ancestor_add_tree_offset hj.le]
+  have hpow : 2 ^ (H - j) = 2 * 2 ^ (H - j - 1) := by
+    rw [← pow_succ']; congr 1; omega
+  rw [hpow, show tree * (2 * 2 ^ (H - j - 1)) =
+    2 * (tree * 2 ^ (H - j - 1)) by ring]
+  omega
 
 /-- A node and its sibling share their parent. -/
 theorem sibling_div_two (i : ℕ) : sibling i / 2 = i / 2 := by

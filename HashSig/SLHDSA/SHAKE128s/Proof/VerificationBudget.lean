@@ -58,16 +58,17 @@ theorem countQueries_bind (cost : OracleWorld.Domain → Counts)
       let left ← countQueries cost first
       let right ← countQueries cost (next left.1)
       return (right.1, left.2 + right.2)) := by
-  simp [countQueries, WriterT.run_bind, bind_assoc,
-    map_eq_bind_pure_comp]
+  simp only [countQueries, Game.countQueries, SignatureAlg.SigningView.costed_bind,
+    AddWriterT.runAdd_bind, map_eq_bind_pure_comp]
+  rfl
 
 /-- A single query is charged its cost. -/
 theorem countQueries_query (cost : OracleWorld.Domain → Counts) (input : OracleWorld.Domain) :
     countQueries cost (liftM (OracleWorld.query input)) = (do
       let output ← liftM (OracleWorld.query input)
       return (output, cost input)) := by
-  simp [countQueries, addCostOracle, QueryImpl.withAddCost, QueryImpl.withCost,
-    map_eq_bind_pure_comp]
+  simp [countQueries, Game.countQueries, SignatureAlg.SigningView.costed_query,
+    AddWriterT.runAdd_bind, map_eq_bind_pure_comp]
 
 /-- The unit-cost count of a pure computation is zero. -/
 theorem counted_pure (value : α) :
@@ -136,14 +137,16 @@ theorem verification_accepted_count_bounds (pk : PublicKey) (request : Message) 
     569 ≤ result.2 .verification ∧ result.2 .verification ≤ 3824 := by
   cases hframe : request.frame with
   | none =>
-    simp only [Scheme.verify, hframe, countQueries_pure, simulateQ_pure,
+    simp only [Scheme.verify, SignatureAlg.SigningView.Encoding.verify, hframe,
+      countQueries_pure, simulateQ_pure,
       StateT.run'_eq, StateT.run_pure, map_pure, support_pure, Set.mem_singleton_iff] at hresult
     subst result
     contradiction
   | some message =>
     cases hparse : Signature.fromBytes? wire with
     | none =>
-      simp only [Scheme.verify, hframe, hparse, countQueries_pure, simulateQ_pure,
+      simp only [Scheme.verify, SignatureAlg.SigningView.Encoding.verify, hframe, hparse,
+        countQueries_pure, simulateQ_pure,
         StateT.run'_eq, StateT.run_pure, map_pure, support_pure, Set.mem_singleton_iff] at hresult
       subst result
       contradiction
@@ -160,7 +163,8 @@ private theorem accepted_work_after_keygen (adversary : Adversary)
   unfold RandomOracleModel.run at houtcome
   rw [simulateQ_bind, StateT.run'_bind', mem_support_bind_iff] at houtcome
   obtain ⟨⟨⟨sk, pk⟩, keygenCache⟩, _hkeygen, hafterKeygen⟩ := houtcome
-  dsimp only [afterKeygen] at hafterKeygen
+  dsimp only at hafterKeygen
+  rw [Security.afterKeygen, Game.afterKeygen_eq_runPhase] at hafterKeygen
   rw [simulateQ_bind, StateT.run'_bind', mem_support_bind_iff] at hafterKeygen
   obtain ⟨⟨⟨⟨forgery, adversaryCounts⟩, signed⟩, adversaryCache⟩, _hadversary, hafterAdversary⟩ :=
     hafterKeygen
@@ -180,7 +184,7 @@ private theorem accepted_work_after_keygen (adversary : Adversary)
   have hbound := (verification_accepted_count_bounds pk forgery.message forgery.signature
     adversaryCache (verified, verifierCounts) hverifier' haccept).1
   change 569 ≤ verifierCounts .verification at hbound
-  change 569 ≤ (Multiplicative.toAdd adversaryCounts + verifierCounts).work
+  change 569 ≤ (adversaryCounts + verifierCounts).work
   simp only [Counts.work, Pi.add_apply]
   omega
 
@@ -188,7 +192,44 @@ private theorem accepted_work_after_keygen (adversary : Adversary)
 theorem accepted_outcome_work (adversary : Adversary) (outcome : Outcome)
     (houtcome : outcome ∈ support (Security.run adversary)) (haccept : outcome.verified = true) :
     569 ≤ outcome.counts.work := by
-  exact accepted_work_after_keygen adversary Scheme.keygen (Security.run adversary) rfl
+  exact accepted_work_after_keygen adversary Scheme.keygen (Security.run adversary)
+    (congrArg RandomOracleModel.run (Security.experiment_eq_keygen_bind adversary))
     outcome houtcome haccept
+
+/-- The complete count observation on an accepting forgery covers the verification floor. -/
+theorem accepted_observation_work (adv : Adversary)
+    (observed : SignatureAlg.SigningView.Observation Message Bytes (Option Bytes)
+      Game.Counted.SourceCounts)
+    (mem : observed ∈ support (RandomOracleModel.run
+      (Game.Counted.canonicalExperiment externalScheme adv))) (accept : observed.verified = true) :
+    569 ≤ observed.cost .hash + observed.cost .verifier := by
+  apply accepted_outcome_work adv (Game.Counted.legacyOutcome observed) _ accept
+  simpa only [Security.run, Security.experiment, RandomOracleModel.run, simulateQ_map,
+    StateT.run'_map', support_map] using
+    (Set.mem_image_of_mem Game.Counted.legacyOutcome mem)
+
+/-- Fewer than 569 actual signing, adversarial hash and verification calls exclude a forgery. -/
+theorem advantage_eq_zero (adv : Adversary) (q : Nat) (hq : q < 569)
+    (cap : (Game.securityGame externalScheme).HasQueryBound () Game.adversaryWork adv q) :
+    (Game.securityGame externalScheme).advantage () adv = 0 := by
+  let observe := fun x : SignatureAlg.SigningView.Observation Message Bytes (Option Bytes)
+      Game.Counted.SourceCounts => (decide (Game.Wins (Game.Counted.legacyOutcome x)), x.cost)
+  have experiment : (Game.securityGame externalScheme).experiment () adv = observe <$>
+      RandomOracleModel.run (Game.Counted.canonicalExperiment externalScheme adv) := by
+    simp only [Game.securityGame, Game.runBySource, Game.experimentBySource, RandomOracleModel.run,
+      simulateQ_map, StateT.run'_map', Functor.map_map]
+    congr 1
+    funext x
+    exact Prod.ext rfl (Game.Counted.legacyObservation_counts x)
+  apply prEvent_eq_zero_of_forall_mem_support
+  intro result mem win
+  have bound := (OracleComp.prEvent_eq_one_iff _ _).mp cap result mem
+  rw [experiment, support_map] at mem
+  obtain ⟨observed, hs, rfl⟩ := mem
+  have wins : Game.Wins (Game.Counted.legacyOutcome observed) := by simpa [observe] using win
+  have min := accepted_observation_work adv observed hs wins.1
+  have max : observed.cost .sign + (observed.cost .hash + observed.cost .verifier) ≤ q := by
+    simpa [observe, Game.adversaryWork] using bound
+  omega
 
 end SLHDSA.SHAKE128s.VerificationBudget

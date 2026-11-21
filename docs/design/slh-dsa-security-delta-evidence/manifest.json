@@ -1,0 +1,107 @@
+{
+  "status": "BOUNDED_PROTOTYPE_PASS_PENDING_INDEPENDENT_REVIEW",
+  "sourceBase": "b63fede77cfcf9e23fda94c28e951e4520fdeb91",
+  "mainComparison": "cc6ae6cc39c1cca024d292262f90880b551fb2b3",
+  "compiler": "Lean 4.35.0, eb6cafb7290e8bd5f2937522d8d804f58f02bafc",
+  "proofLimits": "compiler defaults, j4",
+  "artifactPolicy": "Read accepted b63 library/package oleans; wrote all compiler outputs only to external fresh output directory",
+  "replayOutput": "/tmp/slhdsa-security-delta-pilot-20261102/final-checks-05",
+  "selectedAxiomClaims": 10,
+  "allowedAxioms": [
+    "propext",
+    "Classical.choice",
+    "Quot.sound"
+  ],
+  "warnings": 0,
+  "errors": 0,
+  "sorryAx": false,
+  "modules": [
+    {
+      "module": "StructuralRecovery",
+      "exit": 0,
+      "seconds": 1.417718084063381,
+      "sourceSHA256": "8d6c249d47b72e91ee08cc94870981a912d892c9819da1106a7c5ad261351278",
+      "oleanSHA256": "459ce0c70f4e04cf2652eb2c71c4fb87618d53d752493eb7ffc0165b126a2c39",
+      "logSHA256": "e729862ebad0fedf60f02ef810667876fee4b19b0b566174789254922f14867b"
+    },
+    {
+      "module": "EligibleComparison",
+      "exit": 0,
+      "seconds": 1.3172783650225028,
+      "sourceSHA256": "86e7a5bfb204be2fdd21f867b11c6a41a2e8c51293bb4faa366448e2fc2a244d",
+      "oleanSHA256": "6322d5c7528c5d04614be688c1dc0c76fbe25cfec50be234dae16e7fdc68a29d",
+      "logSHA256": "ade26603f0485ea8cd31ac716c11e64e54f68319848ef77e0de804507c39cdb8"
+    },
+    {
+      "module": "OperationalRecovery",
+      "exit": 0,
+      "seconds": 4.8272124719806015,
+      "sourceSHA256": "e97dcd900adbb392c2e57e46d94fdc84202e9278f207a40a4cf5473596ab85b5",
+      "oleanSHA256": "c54858db2e068476c0e4592d2dd2c01ccbbf6723d56dc5eb839a6e130cbcb79f",
+      "logSHA256": "7767d02ed62add2f7db947ebe321d5ac46413fa61329066a08f83d144333207e"
+    }
+  ],
+  "hashSigImportClosure": {
+    "StructuralRecovery": {
+      "hashSigSourceImportModules": 94,
+      "excludedProbabilityRoutesPresent": []
+    },
+    "EligibleComparison": {
+      "hashSigSourceImportModules": 114,
+      "excludedProbabilityRoutesPresent": []
+    },
+    "OperationalRecovery": {
+      "hashSigSourceImportModules": 70,
+      "excludedProbabilityRoutesPresent": []
+    }
+  },
+  "rootIndependentArithmeticSHA256": "f0c6782f2a526b719f11c333c0896af0facb37d447a46a8bad3efcff20db0dbc",
+  "independentSourceArithmeticAuditSHA256": "efb0127771b42507b5800ca13034f9eef43c96b6233824a35b70fae2fe773b10",
+  "full127RecoveryProved": false,
+  "global3824VerifierCapProved": false,
+  "probabilityMethodIndependenceProved": false,
+  "failedPreparatoryAttempts": {
+    "01": "coverage-side-condition and ENNReal arithmetic normalization",
+    "02": "explicit argument of targetCoverBound_zero",
+    "05": "Bytes namespace and structural pure-query bound elaboration"
+  },
+  "retainedPreparatoryWarnings": {
+    "07": "ambiguous open Security; fixed by fully qualified namespace before final replay"
+  },
+  "metadataCorrection": "Early compile04 input JSON inherited a StructuralRecovery argv label; actual frozen runner compiled OperationalRecovery. Final replay results serialize actual argv correctly. Earlier packets remain unchanged.",
+  "ordinaryArtifactsOnly": true,
+  "canonicalSourceCacheOrIndexWrites": false,
+  "commitAuthorized": false,
+  "files": {
+    "EligibleComparison.lean": "86e7a5bfb204be2fdd21f867b11c6a41a2e8c51293bb4faa366448e2fc2a244d",
+    "OperationalRecovery.lean": "e97dcd900adbb392c2e57e46d94fdc84202e9278f207a40a4cf5473596ab85b5",
+    "StructuralRecovery.lean": "8d6c249d47b72e91ee08cc94870981a912d892c9819da1106a7c5ad261351278",
+    "checks.log": "c4419f5e4712ed7620b7c9869970d65a7956a25505d7aedc73a2a0960eeaac9f",
+    "compare_bounds.py": "374424c9d844a96250b8cca5fa655077602bfebd44570ab002afc14211f5a755",
+    "replay.py": "ae6fe9b4ceac343b2cf240f6652308af161288d53059dd2acc1b205ee2139f4a"
+  },
+  "actualResultsSHA256": "d0f53a1eace15fc489bcee0d515ec4331cc3c966149db1b9564e7ef6bfc1b2bd",
+  "actualContextSHA256": "a14865ed9358cb018f5cd90af6c467b2a293c9a68be3add0b952336943040db9",
+  "sourceCheckoutHead": "b63fede77cfcf9e23fda94c28e951e4520fdeb91",
+  "artifactManifestSHA256": "08de459b1889ead9e9b4ea9af537411791b487d5f2981be22e118af1f3362d95",
+  "lockedDependencies": {
+    "mathlib": "56a005855ea17e0b0958f73ec801ae140b0a1679",
+    "QuantumFoundations": "901aaab7967ceecd2240d0b38bbde7cf3e2c14ac",
+    "PolyFun": "4181c82238142d9b73403fbf4c4b13e1a801e400",
+    "plausible": "dfa4f38190d07c37e315953e08b90fe2d95b3c24",
+    "LeanSearchClient": "d6b4c7be5be75ec4917c873ac50c756dc1436372",
+    "importGraph": "a41f0e9a4dea23188ea9cc1c41ac9f8bbafe0b93",
+    "proofwidgets": "df72b022e558978a1c50264cfc4d7fec86fa8e04",
+    "aesop": "4a174c490d8707121c4a9290800489f105d85e07",
+    "Qq": "dce0ad79c486cb1fb504af04f953c3466b0c6db8",
+    "batteries": "66e469188fe07963e5cf666c7d4433f45b8131c5",
+    "cslib": "5b56df99362532c46e1175381fbbdd755bd56030",
+    "Cli": "c24fe6078c630e89b489bffe59b3e20ac30d12c8"
+  },
+  "artifactAndAllDependenciesCleanBeforeAfter": true,
+  "readOnlyGitEnvironment": {
+    "GIT_OPTIONAL_LOCKS": "0"
+  },
+  "amendments": "Clarify narrower wire-only preservation versus full variable-context endpoint; disable optional Git locks for read-only commands. Lean sources unchanged.",
+  "bundledCompilerLogFormatting": "Trailing whitespace and excess EOF blank lines normalized; per-module compiler-log hashes refer to unchanged raw external outputs."
+}

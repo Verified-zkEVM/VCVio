@@ -7,6 +7,9 @@ Authors: Alexander Hicks
 module
 
 public import HashSig.SLHDSA.Security.ByteRouter
+public import HashSig.SLHDSA.Security.LabScheme
+public import VCVio.OracleComp.QueryTracking.RandomOracle.Defer
+import VCVio.OracleComp.QueryTracking.RandomOracle.ReadSet
 import HashSig.SLHDSA.Security.AddressKeys
 import VCVio.CryptoFoundations.MerkleTree.Addressed.NatIndexed.QueryBound
 
@@ -186,11 +189,9 @@ private theorem allQueriesSatisfy_thash {k : core.AdrsKey} (pkSeed : core.PkSeed
     (xs : List core.Y) (h : core.adrsToKey a ≠ k) :
     (liftM ((publicHashSpec core).query (.thash pkSeed (core.adrsToKey a) xs)) :
       OracleComp (publicHashSpec core) core.Y).AllQueriesSatisfy
-        fun t => ¬∃ s ys, t = .thash s k ys := by
-  rw [allQueriesSatisfy_query_iff]
-  rintro ⟨s, ys, hq⟩
-  injection hq with _ hk
-  exact h hk
+        fun t => ∃ a xs,
+          t = .thash pkSeed (core.adrsToKey a) xs ∧ core.adrsToKey a ≠ k := by
+  exact (allQueriesSatisfy_query_iff _ _).2 ⟨a, xs, rfl, h⟩
 
 /-- An XMSS subtree of height `z < h'` at the oracle-backed provider makes no tweakable-hash query
 at the key `k` when `k` is the key of no address of type `WOTS_HASH`, `WOTS_PK` or `WOTS_PRF` and
@@ -203,29 +204,40 @@ private theorem allQueriesSatisfy_xmssNodeWithSecret_not_thash (e : core.SkSeed 
     (xmssNodeWithSecret core (PublicHash.f core pkSeed) (PublicHash.tl core pkSeed)
       (PublicHash.h core pkSeed) (oracleSecret core e pkSeed skSeed) base z t :
         OracleComp (publicHashSpec core) core.Y).AllQueriesSatisfy
-      fun t => ¬∃ s ys, t = .thash s k ys := by
+      fun t => ∃ a xs,
+          t = .thash pkSeed (core.adrsToKey a) xs ∧ core.adrsToKey a ≠ k := by
   have hb : ∀ {α β : Type} (oa : OracleComp (publicHashSpec core) α)
       (ob : α → OracleComp (publicHashSpec core) β),
-      oa.AllQueriesSatisfy (fun t => ¬∃ s ys, t = .thash s k ys) →
-      (∀ x, (ob x).AllQueriesSatisfy (fun t => ¬∃ s ys, t = .thash s k ys)) →
-      (oa >>= ob).AllQueriesSatisfy (fun t => ¬∃ s ys, t = .thash s k ys) :=
+      oa.AllQueriesSatisfy (fun t => ∃ a xs,
+        t = .thash pkSeed (core.adrsToKey a) xs ∧ core.adrsToKey a ≠ k) →
+      (∀ x, (ob x).AllQueriesSatisfy (fun t => ∃ a xs,
+          t = .thash pkSeed (core.adrsToKey a) xs ∧ core.adrsToKey a ≠ k)) →
+      (oa >>= ob).AllQueriesSatisfy (fun t => ∃ a xs,
+          t = .thash pkSeed (core.adrsToKey a) xs ∧ core.adrsToKey a ≠ k) :=
     fun _ _ h₁ h₂ => allQueriesSatisfy_bind h₁ h₂
   have hp : ∀ {α : Type} (x : α), (pure x : OracleComp (publicHashSpec core) α).AllQueriesSatisfy
-      (fun t => ¬∃ s ys, t = .thash s k ys) := fun x => allQueriesSatisfy_pure x _
+      (fun t => ∃ a xs,
+          t = .thash pkSeed (core.adrsToKey a) xs ∧ core.adrsToKey a ≠ k) :=
+    fun x => allQueriesSatisfy_pure x _
   refine PerfectMerkleTree.merkleRootM_pred_of_subtree
     (fun {α} (oa : OracleComp (publicHashSpec core) α) =>
-      oa.AllQueriesSatisfy (fun t => ¬∃ s ys, t = .thash s k ys)) hb _ _ z t (fun i _ => ?_)
+      oa.AllQueriesSatisfy (fun t => ∃ a xs,
+        t = .thash pkSeed (core.adrsToKey a) xs ∧ core.adrsToKey a ≠ k)) hb _ _ z t (fun i _ => ?_)
     fun h i _ hh _ l r => allQueriesSatisfy_thash (a := xmssNodeAdrs base h i) pkSeed [l, r]
       (hkey _ (Or.inr (Or.inr (Or.inr ⟨rfl, show h < vp.params.hp by omega⟩))))
+  rw [xmssLeafWithSecret, wotsPkGenWithSecret_eq, wotsPkGenTopsWithSecret_eq]
   refine hb _ _ (Vector.ofFnM_pred
     (fun {α} (oa : OracleComp (publicHashSpec core) α) =>
-      oa.AllQueriesSatisfy (fun t => ¬∃ s ys, t = .thash s k ys)) hp hb _ fun j => ?_) fun tops =>
+      oa.AllQueriesSatisfy (fun t => ∃ a xs,
+        t = .thash pkSeed (core.adrsToKey a) xs ∧ core.adrsToKey a ≠ k)) hp hb _ fun j => ?_)
+    fun tops =>
     allQueriesSatisfy_thash (a := wotsPkAdrs (wotsLeafAdrs base i)) pkSeed _
       (hkey _ (Or.inr (Or.inl (by rw [wotsPkAdrs_eq]))))
   refine hb _ _ (allQueriesSatisfy_thash (a := wotsSkAdrs (wotsLeafAdrs base i) j.val) pkSeed _
     (hkey _ (Or.inr (Or.inr (Or.inl (by rw [wotsSkAdrs_eq])))))) fun x => ?_
   exact chainWith_pred (fun {α} (oa : OracleComp (publicHashSpec core) α) =>
-      oa.AllQueriesSatisfy (fun t => ¬∃ s ys, t = .thash s k ys)) hp hb x 0 _ fun jj _ y =>
+      oa.AllQueriesSatisfy (fun t => ∃ a xs,
+        t = .thash pkSeed (core.adrsToKey a) xs ∧ core.adrsToKey a ≠ k)) hp hb x 0 _ fun jj _ y =>
     allQueriesSatisfy_thash pkSeed [y] (hkey _ (Or.inl (by rw [wotsChainAdrs_setHashAddress_eq])))
 
 variable (vp core) in
@@ -236,6 +248,111 @@ height `h'`. -/
   ∀ a : Adrs, (a.type = 0 ∨ a.type = 1 ∨ a.type = 5 ∨ a.type = 2 ∧ a.word2 < vp.params.hp) →
     core.adrsToKey a ≠
       core.adrsToKey (xmssNodeAdrs (GeneralHypertree.layerAdrs (vp.params.d - 1) 0) vp.params.hp 0)
+
+/-! ### Deferred label key generation -/
+
+section DeferredRoot
+
+variable (core)
+
+private abbrev rootAddress : Adrs :=
+  xmssNodeAdrs (GeneralHypertree.layerAdrs (vp.params.d - 1) 0) vp.params.hp 0
+
+private theorem rootAddress_mem : rootAddress (vp := vp) ∈ constructionAddresses vp := by
+  rw [rootAddress, ← LayerTreeCoord.top_toAdrs_layerAdrs]
+  exact xmssNodeAdrs_mem_constructionAddresses _ vp.valid.hp_pos le_rfl (by simp)
+
+private def rootLabel : NodeKey core :=
+  ⟨core.adrsToKey (rootAddress (vp := vp)), rootAddress (vp := vp), rootAddress_mem, rfl⟩
+
+private def belowRoot : Set (DeriveQuery core ⊕ NodeKey core) :=
+  {cell | match cell with
+    | .inl _ => True
+    | .inr label => label.1 ≠ core.adrsToKey (rootAddress (vp := vp))}
+
+variable [SampleableType core.Y]
+
+private theorem readsWithin_labNode (s : core.PkSeed) {a : Adrs}
+    (hne : core.adrsToKey a ≠ core.adrsToKey (rootAddress (vp := vp))) :
+    AllQueriesSatisfy (labNode core a) ((slhGraph core s).ReadsWithin (belowRoot core)) := by
+  apply (slhGraph core s).allQueriesSatisfy_readsWithin_readCell
+  intro cell hcell
+  obtain ⟨label, _, hkey, rfl⟩ := (childCell_inr_eq_some_iff core).1 hcell
+  change label.1 ≠ core.adrsToKey (rootAddress (vp := vp))
+  exact hkey ▸ hne
+
+private theorem readsWithin_labChain_top (s : core.PkSeed) (hkey : core.RootKeySeparated vp)
+    (adrs : Adrs) (i : Nat) :
+    AllQueriesSatisfy (labChain core adrs i (vp.params.w - 1))
+      ((slhGraph core s).ReadsWithin (belowRoot core)) := by
+  have hw : vp.params.w - 1 = vp.params.w - 2 + 1 := by
+    have : 2 ≤ vp.params.w := Nat.one_lt_two_pow vp.valid.lgw_pos.ne'
+    omega
+  rw [labChain, hw]
+  apply (slhGraph core s).allQueriesSatisfy_readsWithin_touchRead
+  intro cell hcell
+  obtain ⟨label, _, hlabel, rfl⟩ := (childCell_inr_eq_some_iff core).1 hcell
+  change label.1 ≠ core.adrsToKey (rootAddress (vp := vp))
+  rw [← hlabel]
+  exact hkey _ (Or.inl (by simp only [wotsChainAdrs_setHashAddress_eq]))
+
+/-- Proper XMSS subtrees read no label at the final-root key. -/
+private theorem readsWithin_labXmssNode_below_root (s : core.PkSeed)
+    (hkey : core.RootKeySeparated vp) (base : Adrs) {z : Nat}
+    (hz : z < vp.params.hp) (t : Nat) :
+    AllQueriesSatisfy (labXmssNode core base z t)
+      ((slhGraph core s).ReadsWithin (belowRoot core)) := by
+  let Q := fun {α : Type} (oa : OracleComp (labSpec core) α) =>
+    AllQueriesSatisfy oa ((slhGraph core s).ReadsWithin (belowRoot core))
+  refine PerfectMerkleTree.merkleRootM_pred_of_subtree Q
+    (fun _ _ => allQueriesSatisfy_bind) _ _ z t (fun i _ => ?_)
+    (fun h i _ hh _ _ _ => ?_)
+  · exact allQueriesSatisfy_bind
+      (allQueriesSatisfy_ofFnM _ (fun _ => readsWithin_labChain_top core s hkey _ _))
+      (fun _ => readsWithin_labNode core s
+        (hkey _ (Or.inr (Or.inl (by rw [wotsPkAdrs_eq])))))
+  · exact readsWithin_labNode core s
+      (hkey _ (Or.inr (Or.inr (Or.inr ⟨rfl, show h < vp.params.hp by omega⟩))))
+
+variable [DecidableEq core.Y] [SampleableType (Bytes vp.params.m)]
+  [DecidableEq core.PkSeed] [DecidableEq core.AdrsKey] [DecidableEq core.SkPrf]
+
+/-- Cold deferred LAB key generation returns a uniform public-root marginal. -/
+theorem evalDist_deferred_labKeygen_eq_uniform (s : core.PkSeed)
+    (hkey : core.RootKeySeparated vp) :
+    Prod.fst <$> ((simulateQ (slhGraph core s).deferredImpl (labKeygen core)).run
+      ((∅, ∅), [])) =ᵈ ($ᵗ core.Y : ProbComp core.Y) := by
+  obtain ⟨hp', hhp⟩ : ∃ hp', vp.params.hp = hp' + 1 :=
+    ⟨_, (Nat.succ_pred_eq_of_pos vp.valid.hp_pos).symm⟩
+  let base := GeneralHypertree.layerAdrs (vp.params.d - 1) 0
+  let preRoot : OracleComp (labSpec core) (core.Y × core.Y) := do
+    let left ← labXmssNode core base hp' 0
+    let right ← labXmssNode core base hp' 1
+    pure (left, right)
+  have hdecomp : labKeygen core = (preRoot >>= fun _ =>
+      labNode core (rootAddress (vp := vp))) := by
+    simp only [preRoot, bind_assoc, pure_bind, labKeygen, labXmssNode, rootAddress, hhp]
+    rfl
+  have hpre : AllQueriesSatisfy preRoot
+      ((slhGraph core s).ReadsWithin (belowRoot core)) :=
+    allQueriesSatisfy_bind (readsWithin_labXmssNode_below_root core s hkey base (by omega) 0)
+      fun _ => allQueriesSatisfy_bind
+        (readsWithin_labXmssNode_below_root core s hkey base (by omega) 1)
+        fun _ => allQueriesSatisfy_pure _ _
+  rw [hdecomp, simulateQ_bind, StateT.run_bind, map_bind]
+  refine (EvalDistEq.bind_congr_of_support _ (fun result hresult => ?_)).trans
+    (EvalDistEq.bind_const _ ($ᵗ core.Y : ProbComp core.Y))
+  have hnone : result.2.1.2 (.inr (rootLabel core)) = none := by
+    simpa only [QueryCache.empty_apply] using
+      (slhGraph core s).cell_eq_of_mem_support_simulateQ_deferredImpl hpre hresult
+        (c := .inr (rootLabel core)) (by simp [belowRoot, rootLabel])
+  rw [labNode_of_mem core rootAddress_mem, readCell, simulateQ_HasQuery_query,
+    CanonicalGraph.deferredImpl_run_read,
+    RelabelState.drawCell_run_of_cell_eq_none (by simpa only [rootLabel] using hnone)]
+  simp only [Functor.map_map, id_map']
+  exact EvalDistEq.rfl
+
+end DeferredRoot
 
 variable [SampleableType core.Y] [SampleableType (Bytes vp.params.m)] [DecidableEq core.PkSeed]
   [DecidableEq core.AdrsKey] [DecidableEq core.SkPrf] [DecidableEq core.Y]
@@ -271,11 +388,16 @@ theorem prEvent_run_keygenInternalWithSecretM_le
   have hpre : (do let l ← M 0; let r ← M 1; pure (l, r) :
       OracleComp (publicHashSpec core) (core.Y × core.Y)).AllQueriesSatisfy
         fun t => ¬∃ s ys, t = .thash s k ys :=
-    allQueriesSatisfy_bind
+    (allQueriesSatisfy_bind
       (allQueriesSatisfy_xmssNodeWithSecret_not_thash e pkSeed skSeed hkey base (by omega) 0)
       fun _ => allQueriesSatisfy_bind
         (allQueriesSatisfy_xmssNodeWithSecret_not_thash e pkSeed skSeed hkey base (by omega) 1)
-        fun _ => allQueriesSatisfy_pure _ _
+        fun _ => allQueriesSatisfy_pure _ _).mono fun t ht => by
+          obtain ⟨a, xs, same, hne⟩ := ht
+          rintro ⟨seed, inputs, eq⟩
+          have both := same.symm.trans eq
+          injection both with _ hk
+          exact hne hk
   rw [hK, simulateQ_bind, simulateQ_bind, StateT.run_bind]
   refine prEvent_bind_le_of_forall_le_of_support _ _ _ fun z hz => ?_
   have hnone := snd_apply_inl_eq_none_of_mem_support_run_romImpl
@@ -541,5 +663,224 @@ theorem prEvent_romSchemeRun_isWeakKey_eq_zero_of_n_eq_32 (hb : CanonicalAddress
     (weakKeyMass_eq_zero_of_n_eq_32 hn h).le) bot_le
 
 end Bound
+
+
+/-! ## Encoded key-generation source interfaces -/
+
+/-- Raw preRoot traffic retains its tweakable-hash address and excludes the final root family. -/
+private theorem keygen_encoded_prefix :
+  ∀ (vp : ValidatedParams), CanonicalAddressBounds vp.params →
+    ∀ (pkSeed : (shakeCore vp).PkSeed) (skSeed : (shakeCore vp).SkSeed),
+      let core := shakeCore vp
+      let base := GeneralHypertree.layerAdrs (vp.params.d - 1) 0
+      let rootKey := core.adrsToKey (xmssNodeAdrs base vp.params.hp 0)
+      let subtree := fun t =>
+        (xmssNodeWithSecret core (PublicHash.f core pkSeed) (PublicHash.tl core pkSeed)
+          (PublicHash.h core pkSeed) (oracleSecret core (Equiv.refl _) pkSeed skSeed)
+          base (vp.params.hp - 1) t : OracleComp (publicHashSpec core) core.Y)
+      let preRoot := (do
+        let left ← subtree 0
+        let right ← subtree 1
+        pure (left, right) : OracleComp (publicHashSpec core) (core.Y × core.Y))
+      let rawPrefix := simulateQ (encImpl vp) (liftPub preRoot)
+      let rawKeygen := simulateQ (encImpl vp)
+        (GeneralScheme.keygenInternalWithSecretM core
+          (oracleSecret core (Equiv.refl _) pkSeed skSeed) pkSeed :
+          OracleComp (unifSpec + hashSpec core) core.Y)
+      rawKeygen = (do
+        let children ← rawPrefix
+        prefixBytes vp.params.n <$> liftM ((unifSpec + shakeSpec vp).query (.inr
+          (encode vp (.inl (.thash pkSeed rootKey [children.1, children.2])))))) ∧
+      AllQueriesSatisfy rawPrefix (fun input => match input with
+        | .inl _ => True
+        | .inr raw => ∃ (address : Adrs) (inputs : List core.Y),
+            raw = encode vp (.inl (.thash pkSeed (core.adrsToKey address) inputs)) ∧
+              core.adrsToKey address ≠ rootKey) ∧
+      ∀ z ∈ support ((simulateQ (shakeSpec vp).romImpl rawPrefix).run ∅),
+        ∀ children : core.Y × core.Y,
+          z.2 (encode vp (.inl (.thash pkSeed rootKey [children.1, children.2]))) = none := by
+  intro vp hb pkSeed skSeed
+  let core := shakeCore vp
+  let e : core.SkSeed ≃ core.Y := Equiv.refl _
+  let base := GeneralHypertree.layerAdrs (vp.params.d - 1) 0
+  let rootKey := core.adrsToKey (xmssNodeAdrs base vp.params.hp 0)
+  let subtree := fun t =>
+    (xmssNodeWithSecret core (PublicHash.f core pkSeed) (PublicHash.tl core pkSeed)
+      (PublicHash.h core pkSeed) (oracleSecret core e pkSeed skSeed)
+      base (vp.params.hp - 1) t : OracleComp (publicHashSpec core) core.Y)
+  let preRoot := (do
+    let left ← subtree 0
+    let right ← subtree 1
+    pure (left, right) : OracleComp (publicHashSpec core) (core.Y × core.Y))
+  let rawPrefix := simulateQ (encImpl vp) (liftPub preRoot)
+  have hp : 0 < vp.params.hp := vp.valid.hp_pos
+  have decomp :
+      (GeneralScheme.keygenInternalWithSecretM core
+        (oracleSecret core e pkSeed skSeed) pkSeed :
+        OracleComp (publicHashSpec core) core.Y) =
+      (preRoot >>= fun children => liftM ((publicHashSpec core).query
+        (.thash pkSeed rootKey [children.1, children.2]))) := by
+    obtain ⟨height, hheight⟩ : ∃ height, vp.params.hp = height + 1 :=
+      ⟨vp.params.hp - 1, by omega⟩
+    simp only [GeneralScheme.keygenInternalWithSecretM, GeneralHypertree.rootWithSecretM,
+      GeneralHypertree.rootWithSecret, xmssRootWithSecret]
+    simp only [preRoot, subtree, rootKey, base, hheight, Nat.add_sub_cancel,
+      xmssNodeWithSecret, PerfectMerkleTree.merkleRootM, bind_assoc, pure_bind]
+    simp only [xmssNodeHashWith, PublicHash.h]
+    refine bind_congr fun left => ?_
+    refine bind_congr fun right => ?_
+    exact congrArg (fun z => (liftM ((publicHashSpec core).query (.thash pkSeed
+      (core.adrsToKey (xmssNodeAdrs (GeneralHypertree.layerAdrs (vp.params.d - 1) 0) z 0))
+      [left, right])) : OracleComp (publicHashSpec core) core.Y)) hheight.symm
+  have typed : AllQueriesSatisfy preRoot (fun t => ∃ a xs,
+      t = .thash pkSeed (core.adrsToKey a) xs ∧ core.adrsToKey a ≠ rootKey) :=
+    allQueriesSatisfy_bind
+      (allQueriesSatisfy_xmssNodeWithSecret_not_thash e pkSeed skSeed
+        (rootKeySeparated_shakeCore hb) base (by omega) 0)
+      fun _ => allQueriesSatisfy_bind
+        (allQueriesSatisfy_xmssNodeWithSecret_not_thash e pkSeed skSeed
+          (rootKeySeparated_shakeCore hb) base (by omega) 1)
+        fun _ => allQueriesSatisfy_pure _ _
+  have encoded : AllQueriesSatisfy rawPrefix (fun input => match input with
+      | .inl _ => True
+      | .inr raw => ∃ (address : Adrs) (inputs : List core.Y),
+          raw = encode vp (.inl (.thash pkSeed (core.adrsToKey address) inputs)) ∧
+            core.adrsToKey address ≠ rootKey) := by
+    dsimp only [rawPrefix, liftPub]
+    rw [← QueryImpl.simulateQ_compose]
+    apply typed.simulateQ
+    rintro t ⟨address, inputs, rfl, hne⟩
+    change AllQueriesSatisfy (prefixBytes vp.params.n <$>
+      (liftM ((unifSpec + shakeSpec vp).query (.inr
+        (encode vp (.inl (.thash pkSeed (core.adrsToKey address) inputs))))))) _
+    simp only [allQueriesSatisfy_def, isQueryBound_map_iff, isQueryBound_query_iff]
+    exact ⟨address, inputs, rfl, hne⟩
+  refine ⟨?_, encoded, ?_⟩
+  · have lifted := keygenInternalWithSecretM_oracleSecret_eq_ofSimulateQ
+      (core := core) (m := OracleComp (unifSpec + hashSpec core))
+      e pkSeed skSeed
+    change (GeneralScheme.keygenInternalWithSecretM core
+      (oracleSecret core e pkSeed skSeed) pkSeed :
+      OracleComp (unifSpec + hashSpec core) core.Y) = liftPub _ at lifted
+    have encodedLift := congrArg (simulateQ (encImpl vp)) lifted
+    have encodedDecomp := congrArg
+      (fun program => simulateQ (encImpl vp) (liftPub program)) decomp
+    exact encodedLift.trans (encodedDecomp.trans (by
+      change simulateQ (encImpl vp) (liftPub (preRoot >>= fun children =>
+          liftM ((publicHashSpec core).query (.thash pkSeed rootKey
+            [children.1, children.2])))) = (do
+        let children ← rawPrefix
+        prefixBytes vp.params.n <$> liftM ((unifSpec + shakeSpec vp).query (.inr
+          (encode vp (.inl (.thash pkSeed rootKey [children.1, children.2]))))))
+      rw [liftPub, simulateQ_bind, simulateQ_bind]
+      apply bind_congr
+      intro children
+      rw [← QueryImpl.simulateQ_compose]
+      have step := simulateQ_spec_query
+        (encImpl vp ∘ₛ (HasQuery.toQueryImpl (spec := publicHashSpec core)
+          (m := OracleComp (unifSpec + hashSpec core))))
+        (.thash pkSeed rootKey [children.1, children.2])
+      exact step.trans rfl))
+  · intro z hz children
+    cases hc : z.2 (encode vp (.inl (.thash pkSeed rootKey [children.1, children.2]))) with
+    | none => rfl
+    | some answer =>
+      have provenance := forall_isSome_of_mem_support_run_simulateQ_romImpl
+        (P := fun raw => ∃ (address : Adrs) (inputs : List core.Y),
+          raw = encode vp (.inl (.thash pkSeed (core.adrsToKey address) inputs)) ∧
+            core.adrsToKey address ≠ rootKey)
+        (oa := rawPrefix)
+        (encoded.mono (fun input h => by cases input <;> exact h))
+        (by intro q h; simp at h) hz
+        (encode vp (.inl (.thash pkSeed rootKey [children.1, children.2])))
+        (Option.isSome_iff_exists.mpr ⟨answer, hc⟩)
+      obtain ⟨address, inputs, same, hne⟩ := provenance
+      exact (hne (((encode_thash_inj (vp := vp)).mp same).2.1).symm).elim
+
+/-- A supported encoded preRoot leaves every final-root input fresh and its whole answer cached. -/
+private theorem keygen_encoded_fresh_root :
+  ∀ (vp : ValidatedParams), CanonicalAddressBounds vp.params →
+    vp.params.n ≤ vp.params.m →
+    ∀ (pkSeed : (shakeCore vp).PkSeed) (skSeed : (shakeCore vp).SkSeed),
+      let core := shakeCore vp
+      let base := GeneralHypertree.layerAdrs (vp.params.d - 1) 0
+      let rootKey := core.adrsToKey (xmssNodeAdrs base vp.params.hp 0)
+      let subtree := fun t =>
+        (xmssNodeWithSecret core (PublicHash.f core pkSeed) (PublicHash.tl core pkSeed)
+          (PublicHash.h core pkSeed) (oracleSecret core (Equiv.refl _) pkSeed skSeed)
+          base (vp.params.hp - 1) t : OracleComp (publicHashSpec core) core.Y)
+      let preRoot := (do
+        let left ← subtree 0
+        let right ← subtree 1
+        pure (left, right) : OracleComp (publicHashSpec core) (core.Y × core.Y))
+      let rawPrefix := simulateQ (encImpl vp) (liftPub preRoot)
+      let rawKeygen := simulateQ (encImpl vp)
+        (GeneralScheme.keygenInternalWithSecretM core
+          (oracleSecret core (Equiv.refl _) pkSeed skSeed) pkSeed :
+          OracleComp (unifSpec + hashSpec core) core.Y)
+      (∀ z ∈ support ((simulateQ (shakeSpec vp).romImpl rawPrefix).run ∅),
+        ∀ children : core.Y × core.Y,
+          let input := encode vp (.inl (.thash pkSeed rootKey [children.1, children.2]))
+          ((shakeSpec vp).randomOracle input).run z.2 =ᵈ
+            (do
+              let answer ← $ᵗ (Bytes vp.params.m)
+              pure (answer, z.2.cacheQuery input answer) :
+              ProbComp (Bytes vp.params.m × (shakeSpec vp).QueryCache))) ∧
+      Prod.fst <$> ((simulateQ (shakeSpec vp).romImpl rawKeygen).run ∅) =ᵈ
+        ($ᵗ core.Y : ProbComp core.Y) := by
+  intro vp hb hn pkSeed skSeed
+  let core := shakeCore vp
+  let e : core.SkSeed ≃ core.Y := Equiv.refl _
+  let base := GeneralHypertree.layerAdrs (vp.params.d - 1) 0
+  let rootKey := core.adrsToKey (xmssNodeAdrs base vp.params.hp 0)
+  let subtree := fun t =>
+    (xmssNodeWithSecret core (PublicHash.f core pkSeed) (PublicHash.tl core pkSeed)
+      (PublicHash.h core pkSeed) (oracleSecret core e pkSeed skSeed)
+      base (vp.params.hp - 1) t : OracleComp (publicHashSpec core) core.Y)
+  let preRoot := (do let left ← subtree 0; let right ← subtree 1; pure (left, right) :
+    OracleComp (publicHashSpec core) (core.Y × core.Y))
+  let rawPrefix := simulateQ (encImpl vp) (liftPub preRoot)
+  let rawKeygen := simulateQ (encImpl vp) (GeneralScheme.keygenInternalWithSecretM core
+    (oracleSecret core e pkSeed skSeed) pkSeed : OracleComp (unifSpec + hashSpec core) core.Y)
+  obtain ⟨decomp, _, absence⟩ := keygen_encoded_prefix vp hb pkSeed skSeed
+  change rawKeygen = (do
+    let children ← rawPrefix
+    prefixBytes vp.params.n <$> liftM ((unifSpec + shakeSpec vp).query (.inr
+      (encode vp (.inl (.thash pkSeed rootKey [children.1, children.2])))))) at decomp
+  have fresh : ∀ z ∈ support ((simulateQ (shakeSpec vp).romImpl rawPrefix).run ∅),
+      ∀ children : core.Y × core.Y,
+        let input := encode vp (.inl (.thash pkSeed rootKey [children.1, children.2]))
+        ((shakeSpec vp).randomOracle input).run z.2 =ᵈ (do
+          let answer ← $ᵗ (Bytes vp.params.m)
+          pure (answer, z.2.cacheQuery input answer)) := by
+    intro z hz children
+    dsimp only
+    rw [randomOracle.run_eq, absence z hz children]
+  refine ⟨fresh, ?_⟩
+  change Prod.fst <$> ((simulateQ (shakeSpec vp).romImpl rawKeygen).run ∅) =ᵈ
+    ($ᵗ core.Y : ProbComp core.Y)
+  have uniform : (prefixBytes vp.params.n <$> ($ᵗ (Bytes vp.params.m) : ProbComp _)) =ᵈ
+      ($ᵗ (Bytes vp.params.n) : ProbComp _) := by
+    apply evalDistEq_iff_forall_prEvent_eq_output.mpr
+    intro y
+    rw [prEvent_map, prEvent_uniformSample_prefixBytes_eq hn,
+      SampleableType.prEvent_uniformSample_eq_singleton_natCard]
+  rw [decomp, simulateQ_bind, StateT.run_bind, map_bind]
+  have replace := OracleComp.EvalDistEq.bind_congr_of_support
+    ((simulateQ (shakeSpec vp).romImpl rawPrefix).run ∅)
+    (f := fun z => Prod.fst <$> ((simulateQ (shakeSpec vp).romImpl
+      (prefixBytes vp.params.n <$> liftM ((unifSpec + shakeSpec vp).query (.inr
+        (encode vp (.inl (.thash pkSeed rootKey [z.1.1, z.1.2]))))))).run z.2))
+    (g := fun _ => ($ᵗ (Bytes vp.params.n) : ProbComp _)) fun z hz => by
+      have served : (fun answer => prefixBytes vp.params.n answer.1) <$>
+          (((shakeSpec vp).randomOracle (encode vp (.inl (.thash pkSeed rootKey
+            [z.1.1, z.1.2])))).run z.2) =ᵈ
+          (prefixBytes vp.params.n <$> ($ᵗ (Bytes vp.params.m) : ProbComp _)) := by
+        simpa only [map_bind, map_pure, bind_pure_comp, Functor.map_map, Function.comp_def] using
+          (fresh z hz z.1).map (fun answer => prefixBytes vp.params.n answer.1)
+      simpa only [simulateQ_map, simulateQ_spec_query, StateT.run_map,
+        OracleSpec.romImpl_apply_inr, Functor.map_map, Function.comp_def] using
+          served.trans uniform
+  exact replace.trans (OracleComp.EvalDistEq.bind_const _ _)
 
 end SLHDSA.Security

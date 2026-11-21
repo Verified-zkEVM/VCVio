@@ -99,6 +99,33 @@ theorem climbM_pred_of_last (Q : m Y → Prop)
 
 variable [LawfulMonad m]
 
+/-- Recovery along an indexed family is the ordered left fold over its levels. -/
+theorem climbM_ofFn (nodeHash : ℕ → ℕ → Y → Y → m Y) (idx : ℕ) (node : Y)
+    {z : ℕ} (g : Fin z → Y) :
+    climbM nodeHash idx node (List.ofFn g) =
+      (List.finRange z).foldlM (fun value j =>
+        if idx / 2 ^ j.val % 2 = 0 then
+          nodeHash (j.val + 1) (idx / 2 ^ (j.val + 1)) value (g j)
+        else nodeHash (j.val + 1) (idx / 2 ^ (j.val + 1)) (g j) value) node := by
+  induction z with
+  | zero => simp
+  | succ z ih =>
+    rw [List.ofFn_succ_last, climbM_concat, ih, List.finRange_succ_last,
+      List.foldlM_append, List.foldlM_map]
+    simp
+
+/-- Recovery along a vector is the ordered left fold over its entries. -/
+theorem climbM_toList (nodeHash : ℕ → ℕ → Y → Y → m Y) (idx : ℕ) (node : Y)
+    {z : ℕ} (values : Vector Y z) :
+    climbM nodeHash idx node values.toList =
+      (List.finRange z).foldlM (fun value j =>
+        if idx / 2 ^ j.val % 2 = 0 then
+          nodeHash (j.val + 1) (idx / 2 ^ (j.val + 1)) value values[j]
+        else nodeHash (j.val + 1) (idx / 2 ^ (j.val + 1)) values[j] value) node := by
+  rw [← climbM_ofFn]
+  congr 1
+  apply List.ext_getElem <;> simp
+
 /-- A climb along a single sibling is one hash at height `1`, index `idx / 2`, with inputs
 ordered by the parity of `idx`. -/
 theorem climbM_singleton (nodeHash : ℕ → ℕ → Y → Y → m Y) (idx : ℕ) (node a : Y) :
