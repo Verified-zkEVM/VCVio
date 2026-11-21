@@ -15,46 +15,34 @@ public import VCVio.OracleComp.QueryTracking.RandomOracle.Simulation
 
 A position-binding adversary outputs one commitment together with two openings, each a partial
 vector of claimed values and a proof. It wins when both openings are accepted and they
-conflict: some position is defined in both with different values (cf. Chiesa and Yogev,
-*Building Cryptographic Proofs from Hash Functions*, Lemma 18.4.1, stated there for Merkle trees).
+conflict (`PartialVec.Conflict`): some position is defined in both with different values (cf.
+Chiesa–Yogev, *Building Cryptographic Proofs from Hash Functions*, Version 1.2, Lemma 18.4.1,
+stated there for Merkle trees).
 
 The advantage is stated in the random oracle model: the experiment runs against the lazily
 sampled random oracle `ProbCompRuntime.rom (X →ₒ Y)`, shared by the adversary and `Check`.
 
 ## Main definitions
 
-* `PartialVec.Conflict`: two partial vectors disagree at a position both define.
 * `VectorCommitment.PositionBindingAdversary`, `VectorCommitment.positionBindingExperiment` and
   `VectorCommitment.positionBindingAdvantage`.
 * `VectorCommitment.PositionBindingAdversary.MakesAtMostQueries`: an oracle-query budget for the
   adversary.
+
+## Main results
+
+* `VectorCommitment.positionBindingAdvantage_def`: the position-binding advantage is the
+  probability that the experiment accepts.
+
+## References
+
+* [Chiesa–Yogev, *Building Cryptographic Proofs from Hash Functions*, Version 1.2,
+  Lemma 18.4.1](https://github.com/hash-based-snargs-book/hash-based-snargs-book/blob/305fa3d9d19ee6dba135de64b3156d1760df8426/snargs-book.tex#L12981-L13005).
 -/
 
 public section
 
-open OracleComp OracleSpec MeasureTheory
-
-universe u
-
-namespace PartialVec
-
-variable {ℓ : ℕ} {Msg : Type u}
-
-/-- Two partial vectors conflict when some position is defined in both with different values. -/
-@[expose]
-def Conflict (a b : PartialVec ℓ Msg) : Prop :=
-  ∃ q x y, a q = some x ∧ b q = some y ∧ x ≠ y
-
-/-- Conflict is decidable: it is a finite disjunction. -/
-instance [DecidableEq Msg] (a b : PartialVec ℓ Msg) : Decidable (Conflict a b) :=
-  decidable_of_iff (∃ q, ∃ x ∈ a q, ∃ y ∈ b q, x ≠ y) (by simp [Conflict])
-
-/-- A partial vector never conflicts with itself. -/
-theorem not_conflict_self (a : PartialVec ℓ Msg) : ¬ Conflict a a := by
-  rintro ⟨q, x, y, hx, hy, hxy⟩
-  exact hxy (Option.some_injective _ (hx.symm.trans hy))
-
-end PartialVec
+open OracleComp OracleSpec
 
 namespace VectorCommitment
 
@@ -82,17 +70,25 @@ def positionBindingExperiment [DecidableEq Msg] (vc : VectorCommitment X Y Msg C
 
 /-- The position-binding advantage: the probability that `positionBindingExperiment` accepts,
 against the lazily sampled random oracle. -/
-@[expose]
 noncomputable def positionBindingAdvantage [DecidableEq X] [SampleableType Y] [DecidableEq Msg]
     (vc : VectorCommitment X Y Msg Cm Td Pf ℓ)
     (adversary : PositionBindingAdversary X Y Msg Cm Pf ℓ) : ENNReal :=
   (ProbCompRuntime.rom (X →ₒ Y)).evalDist (vc.positionBindingExperiment adversary) {true}
 
-/-- A position-binding adversary `MakesAtMostQueries q` when it makes at most `q` queries to the
+/-- The position-binding advantage is the probability that `positionBindingExperiment` returns
+`true` against the lazily sampled random oracle. -/
+theorem positionBindingAdvantage_def [DecidableEq X] [SampleableType Y] [DecidableEq Msg]
+    (vc : VectorCommitment X Y Msg Cm Td Pf ℓ)
+    (adversary : PositionBindingAdversary X Y Msg Cm Pf ℓ) :
+    vc.positionBindingAdvantage adversary =
+      (ProbCompRuntime.rom (X →ₒ Y)).evalDist (vc.positionBindingExperiment adversary) {true} := by
+  rw [positionBindingAdvantage]
+
+/-- A position-binding adversary `MakesAtMostQueries t` when it makes at most `t` queries to the
 oracle on every path. Coins are free. -/
 @[expose]
 def PositionBindingAdversary.MakesAtMostQueries
-    (adversary : PositionBindingAdversary X Y Msg Cm Pf ℓ) (q : ℕ) : Prop :=
-  IsQueryBoundP adversary (· matches .inr _) q
+    (adversary : PositionBindingAdversary X Y Msg Cm Pf ℓ) (t : ℕ) : Prop :=
+  IsQueryBoundP adversary (· matches .inr _) t
 
 end VectorCommitment

@@ -186,7 +186,7 @@ theorem isCoupling_maximalCoupling [IsProbabilityMeasure μ] [IsProbabilityMeasu
   constructor
   · ext s hs
     rw [Measure.fst_apply hs, apply_eq_sum_indicator_of_compl_eq_zero hμ s, maximalCoupling]
-    simp only [Measure.add_apply, Measure.coe_finsetSum, Finset.sum_apply, Measure.smul_apply,
+    simp only [add_apply, FunLike.coe_sum, Finset.sum_apply, smul_apply,
       smul_eq_mul, Measure.dirac_apply' _ (measurable_fst hs)]
     rw [← Finset.sum_add_distrib]
     refine Finset.sum_congr rfl fun a ha => ?_
@@ -199,7 +199,7 @@ theorem isCoupling_maximalCoupling [IsProbabilityMeasure μ] [IsProbabilityMeasu
     · simp [Set.indicator, has]
   · ext s hs
     rw [Measure.snd_apply hs, apply_eq_sum_indicator_of_compl_eq_zero hν s, maximalCoupling]
-    simp only [Measure.add_apply, Measure.coe_finsetSum, Finset.sum_apply, Measure.smul_apply,
+    simp only [add_apply, FunLike.coe_sum, Finset.sum_apply, smul_apply,
       smul_eq_mul, Measure.dirac_apply' _ (measurable_snd hs)]
     rw [Finset.sum_comm (s := F) (t := F), ← Finset.sum_add_distrib]
     refine Finset.sum_congr rfl fun b hb => ?_
@@ -213,9 +213,9 @@ theorem isCoupling_maximalCoupling [IsProbabilityMeasure μ] [IsProbabilityMeasu
 /-- The maximal coupling puts at least the overlap on each diagonal point of the set. -/
 theorem min_le_maximalCoupling_apply_diag {a : α} (ha : a ∈ F) :
     min (μ {a}) (ν {a}) ≤ maximalCoupling F μ ν {(a, a)} := by
-  rw [maximalCoupling, Measure.add_apply]
+  rw [maximalCoupling, add_apply]
   refine le_add_right ?_
-  simp only [Measure.coe_finsetSum, Finset.sum_apply, Measure.smul_apply, smul_eq_mul]
+  simp only [FunLike.coe_sum, Finset.sum_apply, smul_apply, smul_eq_mul]
   refine le_trans ?_ (Finset.single_le_sum (fun _ _ => zero_le) ha)
   simp
 

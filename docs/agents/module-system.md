@@ -71,11 +71,10 @@ beside the constructions it interprets, under the names VCVio uses:
   measurable structures of `Option`, `Except` and `Prop`, couplings, and
   `uniformOn`.
 
-VCVio's former modules of these declarations are deprecated re-exports of
-their PolyFun homes. A re-export also imports the modules that its importers
-received through it and the PolyFun module does not provide, such as the
-notation hosts, so the deprecation warning lists every module to import. New
-code imports the PolyFun module. Oracle conventions,
+Import the PolyFun and ToCslib modules directly. For VCVio's notation, import
+`VCVio.EvalDist.Defs.Measure.Core` for `𝒟[…]`, `VCVio.EvalDist.ProbabilityNotation`
+for event probabilities, and `VCVio.EvalDist.EvalDistEq` for equality in distribution.
+Oracle conventions,
 sampling, the notation and everything security-facing stay in VCVio. The
 `OracleSpec.AnswerMeasure` name is a definitional abbreviation of
 `PFunctor.AnswerMeasure` on `spec.toPFunctor` with the discrete σ-algebra on

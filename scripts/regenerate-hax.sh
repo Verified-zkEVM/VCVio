@@ -5,6 +5,7 @@
 # `Interop.Hax.<Name>.Extraction.*` beside it, and its proofs are `Interop/Hax/<Name>/Verification.lean`.
 # The extracted modules are committed, so building `Interop/` needs no Rust toolchain.
 #
+#   scripts/regenerate-hax.sh --print-pin  print the checked hax commit for installing cargo-hax
 #   scripts/regenerate-hax.sh          regenerate in place
 #   scripts/regenerate-hax.sh --check  extract into a temporary copy and fail if the committed
 #                                      modules differ (CI's `hax-extraction` job)
@@ -15,7 +16,7 @@
 # external definitions seed `FunsExternal.lean` and `TypesExternal.lean` when those are absent (none
 # of the examples has external definitions) and are then removed.
 #
-# Requires `cargo-hax` at the hax release that `Interop/lakefile.toml` requires.
+# Reading the pin needs Python 3.11 or later (tomllib). Extraction also needs cargo-hax at that pin.
 set -euo pipefail
 
 root="$(git rev-parse --show-toplevel)"
@@ -24,20 +25,28 @@ cd "$root"
 check=0
 case "${1:-}" in
   --check) check=1 ;;
-  "") ;;
-  *) echo "usage: $0 [--check]" >&2; exit 2 ;;
+  ""|--print-pin) ;;
+  *) echo "usage: $0 [--check | --print-pin]" >&2; exit 2 ;;
 esac
 
-# The hax release `Interop/lakefile.toml` requires (the only full-commit `rev` there).
-pin="$(sed -n 's/^rev = "\([0-9a-f]\{40\}\)"$/\1/p' Interop/lakefile.toml)"
-if [[ -z "$pin" || "$(wc -l <<<"$pin")" -ne 1 ]]; then
-  echo "regenerate-hax: cannot find the hax rev in Interop/lakefile.toml" >&2
-  exit 1
-fi
-# The Rust side's `hax-lib` must be the same release.
-if ! grep -q "^hax-lib = .*rev = \"$pin\"" Interop/Hax/Cargo.toml; then
-  echo "regenerate-hax: Interop/Hax/Cargo.toml must pin hax-lib to $pin, the rev in Interop/lakefile.toml." >&2
-  exit 1
+pin="$(python3 - <<'PYTHON'
+import re
+import tomllib
+from pathlib import Path
+
+lake = tomllib.loads(Path("Interop/lakefile.toml").read_text())
+pins = [item.get("rev", "") for item in lake["require"] if item["name"] == "hax"]
+if len(pins) != 1 or not re.fullmatch(r"[0-9a-f]{40}", pins[0]):
+    raise SystemExit("regenerate-hax: expected one full commit for hax in Interop/lakefile.toml")
+cargo = tomllib.loads(Path("Interop/Hax/Cargo.toml").read_text())
+if cargo["workspace"]["dependencies"]["hax-lib"]["rev"] != pins[0]:
+    raise SystemExit(f"regenerate-hax: Interop/Hax/Cargo.toml must pin hax-lib to {pins[0]}")
+print(pins[0])
+PYTHON
+)"
+if [[ "${1:-}" == --print-pin ]]; then
+  echo "$pin"
+  exit 0
 fi
 have="$(cargo hax --version 2>/dev/null | sed -n 's/^commit=\([0-9a-f]*\)$/\1/p')"
 if [[ "$have" != "$pin" ]]; then

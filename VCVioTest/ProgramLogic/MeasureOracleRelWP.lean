@@ -6,7 +6,9 @@ Authors: Devon Tuma
 
 module
 
+public import VCVio.ProgramLogic.Relational.FromUnary
 public import VCVio.ProgramLogic.Relational.Quantitative
+public import VCVio.ProgramLogic.Relational.WP.Qualitative
 public import VCVio.OracleComp.ProbComp.Basic
 
 /-!
@@ -40,6 +42,23 @@ example (mx my : ProbComp ℝ) (f g : ℝ → ProbComp ℝ) (R : ℝ → ℝ →
     (h : MAlgRelOrdered.RelWP mx my fun a b ↦ MAlgRelOrdered.RelWP (f a) (g b) R) :
     MAlgRelOrdered.RelWP (mx >>= f) (my >>= g) R :=
   MAlgRelOrdered.relWP_bind_le mx my f g R h
+
+/-- Sequential coupling works for countable answer spaces and arbitrary real-valued outputs. -/
+example {ι : Type} {spec : OracleSpec ι} [AnswerMeasure spec] [∀ t, Countable (spec.Range t)]
+    (mx my : OracleComp spec ℝ) (f g : ℝ → OracleComp spec ℝ) (R : ℝ → ℝ → Prop)
+    (h : CouplingPost mx my fun a b ↦ CouplingPost (f a) (g b) R) :
+    CouplingPost (mx >>= f) (my >>= g) R :=
+  h.bind
+
+open scoped OracleComp.Necessary OracleComp.Rel.Qualitative in
+/-- Two unary support guarantees give a qualitative triple over countable oracle answers. -/
+example {ι₁ ι₂ α β : Type} {spec₁ : OracleSpec ι₁} {spec₂ : OracleSpec ι₂}
+    [AnswerMeasure spec₁] [AnswerMeasure spec₂]
+    [∀ t, Countable (spec₁.Range t)] [∀ t, Countable (spec₂.Range t)]
+    (mx : OracleComp spec₁ α) (my : OracleComp spec₂ β) (P : α → Prop) (Q : β → Prop)
+    (hx : Std.WP.wp mx P Lean.Order.bot) (hy : Std.WP.wp my Q Lean.Order.bot) :
+    VCVio.ProgramLogic.RelTriple True mx my (fun a b ↦ P a ∧ Q b) Lean.Order.bot Lean.Order.bot :=
+  (OracleComp.Rel.Qualitative.relTriple_iff_relTriple_basic mx my _).2 (relTriple_prod_of_wp hx hy)
 
 /-- Equality couplings of real-valued computations identify every event probability. -/
 example (mx my : ProbComp ℝ) (h : RelTriple mx my (EqRel ℝ)) (p : ℝ → Prop) :

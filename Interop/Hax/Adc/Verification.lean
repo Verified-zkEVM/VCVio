@@ -61,7 +61,6 @@ namespace Interop.Hax.Examples.Adc
 def adcPost (a b carry_in : U32) (r : U32 × U32) : Prop :=
   r.2.val ≤ 1 ∧ a.val + b.val + carry_in.val = r.1.val + r.2.val * 2 ^ 32
 
-set_option mvcgen.warning false in
 set_option hax_mvcgen.warnings false in
 /-- hax's proof obligation for `adc_u32`, by hax's own proof: the extracted contract holds. -/
 theorem adc_u32_spec (a b carry_in : U32) : adc_u32.spec a b carry_in := by

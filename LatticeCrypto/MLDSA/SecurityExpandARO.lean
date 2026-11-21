@@ -75,7 +75,7 @@ namespace MLDSA
 
 section VerifyWithMatrix
 
-variable (p : Params) (prims : Primitives p) [nttOps : NTTRingOps] [DecidableEq prims.High]
+variable (p : Params) (prims : Primitives p) (nttOps : NTTRingOps) [DecidableEq prims.High]
 
 /-- The ML-DSA identification verifier at an explicitly supplied public matrix `aHat`
 (FIPS 204 Algorithm 8, lines 8–13): check `‖z‖∞ < γ₁ − β`, recover
@@ -87,7 +87,7 @@ def verifyWithMatrix (aHat : TqMatrix p.k p.l) (pk : PublicKey p prims)
     (w1 : Commitment p prims) (cTilde : CommitHashBytes p) : Response p prims → Bool
   | (z, h) =>
     let c := prims.sampleInBall cTilde
-    let wApprox := computeWApprox p prims aHat c z pk.t1
+    let wApprox := computeWApprox p prims nttOps aHat c z pk.t1
     let w1' := prims.useHintVec h wApprox
     decide (polyVecNorm z < p.gamma1 - p.beta) &&
     decide (w1' = w1) &&
@@ -97,8 +97,8 @@ def verifyWithMatrix (aHat : TqMatrix p.k p.l) (pk : PublicKey p prims)
 `verifyWithMatrix` at `ExpandA(pk.ρ)`. -/
 theorem identificationScheme_verify_eq_verifyWithMatrix [NeZero p.gamma1] (pk : PublicKey p prims)
     (w1 : Commitment p prims) (cTilde : CommitHashBytes p) (zh : Response p prims) :
-    (identificationScheme p prims).verify pk w1 cTilde zh =
-      verifyWithMatrix p prims (prims.expandA pk.rho) pk w1 cTilde zh := by
+    (identificationScheme p prims nttOps).verify pk w1 cTilde zh =
+      verifyWithMatrix p prims nttOps (prims.expandA pk.rho) pk w1 cTilde zh := by
   rcases zh with ⟨z, h⟩
   rfl
 
@@ -107,9 +107,9 @@ operations of `identificationScheme`), so it too is `verifyWithMatrix` at `Expan
 theorem identificationSchemeShort_verify_eq_verifyWithMatrix [NeZero p.gamma1]
     (pk : PublicKey p prims)
     (w1 : Commitment p prims) (cTilde : CommitHashBytes p) (zh : Response p prims) :
-    (identificationSchemeShort p prims).verify pk w1 cTilde zh =
-      verifyWithMatrix p prims (prims.expandA pk.rho) pk w1 cTilde zh :=
-  identificationScheme_verify_eq_verifyWithMatrix p prims pk w1 cTilde zh
+    (identificationSchemeShort p prims nttOps).verify pk w1 cTilde zh =
+      verifyWithMatrix p prims nttOps (prims.expandA pk.rho) pk w1 cTilde zh :=
+  identificationScheme_verify_eq_verifyWithMatrix p prims nttOps pk w1 cTilde zh
 
 end VerifyWithMatrix
 
@@ -244,7 +244,7 @@ private lemma simulateToProbComp_liftM_bind [DecidableEq prims.High] [DecidableE
   simp only [simulateToProbComp, roImpl, simulateQ_bind]
   exact roSim.run'_liftM_bind _ oa _ ∅
 
-variable [nttOps : NTTRingOps]
+variable (nttOps : NTTRingOps)
 
 /-! ### The honest algorithms at the oracle -/
 
@@ -265,7 +265,7 @@ the `η`-bounded box — and form `t = expandA(ρ) · s₁ + s₂`. `keygenShort
 /-- The short key generator evaluates `ExpandA` exactly once, at the sampled seed: it is
 `keygenShortWith` at `prims.expandA`. -/
 theorem keygenShort_eq_keygenShortWith :
-    keygenShort p prims = keygenShortWith p prims prims.expandA := rfl
+    keygenShort p prims nttOps = keygenShortWith p prims nttOps prims.expandA := rfl
 
 /-- The idealized short key generator with `ExpandA` an oracle: `keygenShortWith` with the
 matrix obtained by querying `ExpandA` at the sampled seed `ρ`. -/
@@ -294,8 +294,8 @@ def tableImpl (f : Bytes 32 → TqMatrix p.k p.l) :
 /-- With `ExpandA` answered by the table `f`, the oracle key generator is the short key
 generator at `f`. -/
 theorem simulateQ_tableImpl_keygenShortRO (f : Bytes 32 → TqMatrix p.k p.l) :
-    simulateQ (tableImpl p prims (M := M) f) (keygenShortRO p prims (M := M)) =
-      liftM (keygenShortWith p prims f) := by
+    simulateQ (tableImpl p prims (M := M) f) (keygenShortRO p prims nttOps (M := M)) =
+      liftM (keygenShortWith p prims nttOps f) := by
   simp [keygenShortRO, keygenShortWith, tableImpl, QueryImpl.simulateQ_add_liftM_left]
   rfl
 
@@ -303,8 +303,8 @@ theorem simulateQ_tableImpl_keygenShortRO (f : Bytes 32 → TqMatrix p.k p.l) :
 scheme's own `prims.expandA` turns the oracle key generator into `keygenShort`, the key
 generator of the short-model security statements. -/
 theorem simulateQ_tableImpl_expandA_keygenShortRO :
-    simulateQ (tableImpl p prims (M := M) prims.expandA) (keygenShortRO p prims (M := M)) =
-      liftM (keygenShort p prims) := by
+    simulateQ (tableImpl p prims (M := M) prims.expandA) (keygenShortRO p prims nttOps (M := M)) =
+      liftM (keygenShort p prims nttOps) := by
   rw [simulateQ_tableImpl_keygenShortRO, keygenShort_eq_keygenShortWith]
 
 variable [DecidableEq prims.High]
@@ -320,7 +320,7 @@ def verifyRO (pk : PublicKey p prims) (msg : M)
   | some (w', z) => do
     let c ← HasQuery.query (spec := HashSpec p prims M) (msg, w')
     let aHat ← HasQuery.query (spec := ExpandASpec p) pk.rho
-    pure (verifyWithMatrix p prims aHat pk w' c z)
+    pure (verifyWithMatrix p prims nttOps aHat pk w' c z)
 
 /-- Fiat-Shamir-with-aborts verification at an explicit matrix `aHat`, in the two-oracle world of
 the signature: the challenge is queried from `H` and `verifyWithMatrix` decides. At
@@ -333,37 +333,37 @@ def verifyAtMatrix (aHat : TqMatrix p.k p.l) (pk : PublicKey p prims) (msg : M)
   | none => pure false
   | some (w', z) => do
     let c ← HasQuery.query (spec := HashSpec p prims M) (msg, w')
-    pure (verifyWithMatrix p prims aHat pk w' c z)
+    pure (verifyWithMatrix p prims nttOps aHat pk w' c z)
 
 /-- At the honest matrix `ExpandA(pk.ρ)`, `verifyAtMatrix` is the verification algorithm of the
 short-model ML-DSA signature `FiatShamirWithAbort (identificationSchemeShort …)`. -/
 theorem verifyAtMatrix_expandA [NeZero p.gamma1]
-    (hr : GenerableRelation (PublicKey p prims) (SecretKey p) (validKeyPairShort p prims))
+    (hr : GenerableRelation (PublicKey p prims) (SecretKey p) (validKeyPairShort p prims nttOps))
     (maxAttempts : ℕ) (pk : PublicKey p prims) (msg : M)
     (σ : Option (Commitment p prims × Response p prims)) :
-    verifyAtMatrix p prims (prims.expandA pk.rho) pk msg σ =
+    verifyAtMatrix p prims nttOps (prims.expandA pk.rho) pk msg σ =
       (FiatShamirWithAbort (m := OracleComp (unifSpec + HashSpec p prims M))
-        (identificationSchemeShort p prims) hr M maxAttempts).verify pk msg σ := by
+        (identificationSchemeShort p prims nttOps) hr M maxAttempts).verify pk msg σ := by
   rcases σ with _ | ⟨w', z, h⟩ <;> rfl
 
 /-- With `ExpandA` answered by the table `f`, the oracle verifier is verification at the matrix
 `f pk.ρ`. -/
 theorem simulateQ_tableImpl_verifyRO (f : Bytes 32 → TqMatrix p.k p.l) (pk : PublicKey p prims)
     (msg : M) (σ : Option (Commitment p prims × Response p prims)) :
-    simulateQ (tableImpl p prims (M := M) f) (verifyRO p prims pk msg σ) =
-      verifyAtMatrix p prims (f pk.rho) pk msg σ := by
+    simulateQ (tableImpl p prims (M := M) f) (verifyRO p prims nttOps pk msg σ) =
+      verifyAtMatrix p prims nttOps (f pk.rho) pk msg σ := by
   rcases σ with _ | ⟨w', z⟩ <;> simp [verifyRO, verifyAtMatrix, tableImpl]
 
 /-- **The oracle model degenerates to the scheme.** Answering `ExpandA` queries from the
 scheme's own `prims.expandA` turns the oracle verifier into the verification algorithm of the
 short-model ML-DSA signature. -/
 theorem simulateQ_tableImpl_expandA_verifyRO [NeZero p.gamma1]
-    (hr : GenerableRelation (PublicKey p prims) (SecretKey p) (validKeyPairShort p prims))
+    (hr : GenerableRelation (PublicKey p prims) (SecretKey p) (validKeyPairShort p prims nttOps))
     (maxAttempts : ℕ) (pk : PublicKey p prims) (msg : M)
     (σ : Option (Commitment p prims × Response p prims)) :
-    simulateQ (tableImpl p prims (M := M) prims.expandA) (verifyRO p prims pk msg σ) =
+    simulateQ (tableImpl p prims (M := M) prims.expandA) (verifyRO p prims nttOps pk msg σ) =
       (FiatShamirWithAbort (m := OracleComp (unifSpec + HashSpec p prims M))
-        (identificationSchemeShort p prims) hr M maxAttempts).verify pk msg σ := by
+        (identificationSchemeShort p prims nttOps) hr M maxAttempts).verify pk msg σ := by
   rw [simulateQ_tableImpl_verifyRO, verifyAtMatrix_expandA]
 
 /-- Under a cache that already holds `pk.ρ ↦ aHat`, the oracle verifier is verification at
@@ -371,8 +371,8 @@ theorem simulateQ_tableImpl_expandA_verifyRO [NeZero p.gamma1]
 private lemma withExpandACache_verifyRO_of_cached (pk : PublicKey p prims) (msg : M)
     (σ : Option (Commitment p prims × Response p prims)) {c : (ExpandASpec p).QueryCache}
     {aHat : TqMatrix p.k p.l} (hc : c pk.rho = some aHat) :
-    withExpandACache p prims c (verifyRO p prims pk msg σ) =
-      verifyAtMatrix p prims aHat pk msg σ := by
+    withExpandACache p prims c (verifyRO p prims nttOps pk msg σ) =
+      verifyAtMatrix p prims nttOps aHat pk msg σ := by
   rcases σ with _ | ⟨w', z⟩
   · simp [withExpandACache, verifyRO, verifyAtMatrix]
   · simp only [withExpandACache, verifyRO, verifyAtMatrix, StateT.run'_eq,
@@ -391,16 +391,16 @@ def romNmaExperiment [DecidableEq M]
     (main : PublicKey p prims → OracleComp (RomSpec p prims M)
       (M × Option (Commitment p prims × Response p prims))) : ProbComp Bool :=
   simulateToProbComp p prims (M := M) (withExpandACache p prims ∅ (do
-    let (pk, _) ← keygenShortRO p prims (M := M)
+    let (pk, _) ← keygenShortRO p prims nttOps (M := M)
     let (msg, σ) ← main pk
-    verifyRO p prims pk msg σ))
+    verifyRO p prims nttOps pk msg σ))
 
 /-- The EUF-NMA advantage in the `ExpandA` random-oracle model: the `true`-probability of
 `romNmaExperiment`. -/
 noncomputable def romNmaAdvantage [DecidableEq M]
     (main : PublicKey p prims → OracleComp (RomSpec p prims M)
       (M × Option (Commitment p prims × Response p prims))) : ℝ≥0∞ :=
-  𝒟[romNmaExperiment p prims main] {true}
+  𝒟[romNmaExperiment p prims nttOps main] {true}
 
 /-! ### The reductions -/
 
@@ -413,13 +413,13 @@ signature's runtime, and outputs the validity bit. -/
 def distinguisherBRom [DecidableEq M]
     (main : PublicKey p prims → OracleComp (RomSpec p prims M)
       (M × Option (Commitment p prims × Response p prims))) :
-    LearningWithErrors.Adversary (mldsaMatrixMLWE p) :=
+    LearningWithErrors.Adversary (mldsaMatrixMLWE p nttOps) :=
   fun (challenge : TqMatrix p.k p.l × RqVec p.k) => do
     let rho ← $ᵗ (Bytes 32)
     let pk : PublicKey p prims := ⟨rho, (prims.power2RoundVec challenge.2).1⟩
     simulateToProbComp p prims (M := M) (do
       let (msg, σ) ← withExpandACache p prims (programmedAt p rho challenge.1) (main pk)
-      verifyAtMatrix p prims challenge.1 pk msg σ)
+      verifyAtMatrix p prims nttOps challenge.1 pk msg σ)
 
 /-- **The uniform-matrix tailored SelfTargetMSIS problem.** The parameters are a uniform matrix
 `Â` and a public key `pk = (ρ, Power2Round(t).1)` with uniform `ρ` and uniform `t` — the
@@ -440,15 +440,17 @@ def mldsaSTMSISMatrix (M : Type) :
     let rho ← $ᵗ (Bytes 32)
     return (aHat, ⟨rho, (prims.power2RoundVec t).1⟩)
   isValid := fun aHat pk hashInput cTilde (z, h) =>
-    let w' := prims.useHintVec h (computeWApprox p prims aHat (prims.sampleInBall cTilde) z pk.t1)
-    decide (hashInput.2 = w') && verifyWithMatrix p prims aHat pk w' cTilde (z, h)
+    let w' := prims.useHintVec h
+        (computeWApprox p prims nttOps aHat (prims.sampleInBall cTilde) z pk.t1)
+    decide (hashInput.2 = w') && verifyWithMatrix p prims nttOps aHat pk w' cTilde (z, h)
 
 /-- At the honest matrix `ExpandA(pk.ρ)`, the seed-based tailored problem and the uniform-matrix
 tailored problem accept the same solutions. -/
 theorem mldsaSTMSISShort_isValid_expandA_eq_matrix [NeZero p.gamma1] (pk : PublicKey p prims)
     (hashInput : M × Commitment p prims) (cTilde : CommitHashBytes p) (zh : Response p prims) :
-    (mldsaSTMSISShort p prims M).isValid (prims.expandA pk.rho) pk hashInput cTilde zh =
-      (mldsaSTMSISMatrix p prims M).isValid (prims.expandA pk.rho) pk hashInput cTilde zh := by
+    (mldsaSTMSISShort p prims nttOps M).isValid (prims.expandA pk.rho) pk hashInput cTilde zh =
+      (mldsaSTMSISMatrix p prims nttOps M).isValid (prims.expandA pk.rho) pk hashInput cTilde
+        zh := by
   rcases zh with ⟨z, h⟩
   rfl
 
@@ -461,8 +463,8 @@ def extractorCRom [NeZero p.gamma1]
     [Inhabited (Commitment p prims)] [Inhabited (Response p prims)]
     (main : PublicKey p prims → OracleComp (RomSpec p prims M)
       (M × Option (Commitment p prims × Response p prims))) :
-    SelfTargetMSIS.Adversary (mldsaSTMSISMatrix p prims M) :=
-  ⟨fun params => (extractorC p prims (fun pk =>
+    SelfTargetMSIS.Adversary (mldsaSTMSISMatrix p prims nttOps M) :=
+  ⟨fun params => (extractorC p prims nttOps (fun pk =>
     withExpandACache p prims (programmedAt p pk.rho params.1) (main pk))).run params⟩
 
 /-! ### The hops -/
@@ -478,23 +480,23 @@ private lemma evalDistEq_verifyRO_eq_verifyAtMatrix [DecidableEq M]
     simulateToProbComp p prims (M := M) (withExpandACache p prims
         (programmedAt p pk.rho aHat) (do
           let (msg, σ) ← main pk
-          verifyRO p prims pk msg σ)) =ᵈ
+          verifyRO p prims nttOps pk msg σ)) =ᵈ
       simulateToProbComp p prims (M := M) (do
           let (msg, σ) ← withExpandACache p prims (programmedAt p pk.rho aHat) (main pk)
-          verifyAtMatrix p prims aHat pk msg σ) := by
+          verifyAtMatrix p prims nttOps aHat pk msg σ) := by
   -- Both sides bind over the forger's run from the programmed cache; compare per reachable
   -- forgery-and-cache pair.
   have hsplit : withExpandACache p prims (programmedAt p pk.rho aHat) (do
         let (msg, σ) ← main pk
-        verifyRO p prims pk msg σ) =
+        verifyRO p prims nttOps pk msg σ) =
       (simulateQ (expandARoImpl p prims (M := M)) (main pk)).run (programmedAt p pk.rho aHat) >>=
-        fun z => withExpandACache p prims z.2 (verifyRO p prims pk z.1.1 z.1.2) := by
+        fun z => withExpandACache p prims z.2 (verifyRO p prims nttOps pk z.1.1 z.1.2) := by
     simp only [withExpandACache, simulateQ_bind, StateT.run'_eq, StateT.run_bind, map_bind]
   have hsplit' : (do
         let (msg, σ) ← withExpandACache p prims (programmedAt p pk.rho aHat) (main pk)
-        verifyAtMatrix p prims aHat pk msg σ) =
+        verifyAtMatrix p prims nttOps aHat pk msg σ) =
       (simulateQ (expandARoImpl p prims (M := M)) (main pk)).run (programmedAt p pk.rho aHat) >>=
-        fun z => verifyAtMatrix p prims aHat pk z.1.1 z.1.2 := by
+        fun z => verifyAtMatrix p prims nttOps aHat pk z.1.1 z.1.2 := by
     simp only [withExpandACache, StateT.run'_eq, map_eq_bind_pure_comp, bind_assoc, pure_bind,
       Function.comp_def]
   rw [hsplit, hsplit']
@@ -509,7 +511,7 @@ private lemma evalDistEq_verifyRO_eq_verifyAtMatrix [DecidableEq M]
   have hc : w.1.2 pk.rho = some aHat :=
     le_of_mem_support_expandARoImpl_run p prims (main pk) _ w.1 hw1
       (programmedAt_self p pk.rho aHat)
-  rw [withExpandACache_verifyRO_of_cached p prims pk w.1.1.1 w.1.1.2 hc]
+  rw [withExpandACache_verifyRO_of_cached p prims nttOps pk w.1.1.1 w.1.1.2 hc]
 
 /-- **The ROM game is the real MLWE branch.** The `ExpandA` random-oracle EUF-NMA game equals
 the real branch of the uniform-matrix Module-LWE game against `distinguisherBRom`, exactly: the
@@ -520,13 +522,13 @@ verification at `Â` (`evalDistEq_verifyRO_eq_verifyAtMatrix`). -/
 theorem romNmaAdvantage_eq_realExperiment [DecidableEq M]
     (main : PublicKey p prims → OracleComp (RomSpec p prims M)
       (M × Option (Commitment p prims × Response p prims))) :
-    romNmaAdvantage p prims main =
-      𝒟[LearningWithErrors.realExperiment (mldsaMatrixMLWE p)
-        (distinguisherBRom p prims main)] {true} := by
+    romNmaAdvantage p prims nttOps main =
+      𝒟[LearningWithErrors.realExperiment (mldsaMatrixMLWE p nttOps)
+        (distinguisherBRom p prims nttOps main)] {true} := by
   -- The honest key generation under the simulator: four samplers pass through, and the single
   -- `ExpandA` query at the fresh seed draws the matrix and programs the cache at `ρ`.
   have hkey : ∀ K : PublicKey p prims × SecretKey p → OracleComp (RomSpec p prims M) Bool,
-      withExpandACache p prims ∅ (keygenShortRO p prims (M := M) >>= K) = (do
+      withExpandACache p prims ∅ (keygenShortRO p prims nttOps (M := M) >>= K) = (do
         let key ← (liftM ($ᵗ (Bytes 32)) : OracleComp (unifSpec + HashSpec p prims M) _)
         let rho ← (liftM ($ᵗ (Bytes 32)) : OracleComp (unifSpec + HashSpec p prims M) _)
         let s1 ← (liftM (sampleShortVec p.l p.eta) : OracleComp (unifSpec + HashSpec p prims M) _)
@@ -556,7 +558,7 @@ theorem romNmaAdvantage_eq_realExperiment [DecidableEq M]
   rw [OracleComp.evalDist_bind_bind_swap ($ᵗ (Bytes 32)) ($ᵗ (TqMatrix p.k p.l))]
   refine evalDist_bind_congr _ _ _ fun aHat => ?_
   refine evalDist_bind_congr _ _ _ fun rho => ?_
-  exact (evalDistEq_verifyRO_eq_verifyAtMatrix p prims main
+  exact (evalDistEq_verifyRO_eq_verifyAtMatrix p prims nttOps main
     ⟨rho, (prims.power2RoundVec (aHat * s1 + s2)).1⟩ aHat).evalDist_eq
 
 /-- **Per-key STMSIS read-back comparison at an explicit matrix.** For a fixed public key `pk`
@@ -576,18 +578,19 @@ private theorem stmsis_tail_le_matrix [DecidableEq M] [NeZero p.gamma1]
     (pk : PublicKey p prims) :
     𝒟[simulateToProbComp p prims (M := M) (do
         let (msg, σ) ← main pk
-        verifyAtMatrix p prims aHat pk msg σ)] {true} ≤
+        verifyAtMatrix p prims nttOps aHat pk msg σ)] {true} ≤
       𝒟[do
         let ((hashInput, response), cache) ←
           (simulateQ (roImpl p prims (M := M))
-            ((extractorC p prims main).run (aHat, pk))).run ∅
+            ((extractorC p prims nttOps main).run (aHat, pk))).run ∅
         match cache hashInput with
         | some hashOutput =>
-            pure ((mldsaSTMSISMatrix p prims M).isValid aHat pk hashInput hashOutput response)
+            pure ((mldsaSTMSISMatrix p prims nttOps M).isValid aHat pk hashInput hashOutput
+              response)
         | none => pure false] {true} :=
-  stmsis_tail_le_of_verify_imp_valid p prims aHat pk main
-    (verifyAtMatrix p prims aHat pk) (verifyWithMatrix p prims aHat pk)
-    ((mldsaSTMSISMatrix p prims M).isValid aHat pk)
+  stmsis_tail_le_of_verify_imp_valid p prims nttOps aHat pk main
+    (verifyAtMatrix p prims nttOps aHat pk) (verifyWithMatrix p prims nttOps aHat pk)
+    ((mldsaSTMSISMatrix p prims nttOps M).isValid aHat pk)
     (fun _ => rfl) (fun _ _ _ => rfl)
     (fun msg w' c ⟨z, h⟩ hverify => by
       simp only [mldsaSTMSISMatrix, verifyWithMatrix] at hverify ⊢
@@ -603,9 +606,9 @@ theorem randomExperiment_le_stmsis_rom [DecidableEq M] [NeZero p.gamma1]
     [Inhabited (Commitment p prims)] [Inhabited (Response p prims)]
     (main : PublicKey p prims → OracleComp (RomSpec p prims M)
       (M × Option (Commitment p prims × Response p prims))) :
-    𝒟[LearningWithErrors.randomExperiment (mldsaMatrixMLWE p)
-        (distinguisherBRom p prims main)] {true} ≤
-      SelfTargetMSIS.advantage (extractorCRom p prims main) := by
+    𝒟[LearningWithErrors.randomExperiment (mldsaMatrixMLWE p nttOps)
+        (distinguisherBRom p prims nttOps main)] {true} ≤
+      SelfTargetMSIS.advantage (extractorCRom p prims nttOps main) := by
   classical
   rw [SelfTargetMSIS.advantage, SelfTargetMSIS.experiment]
   simp only [LearningWithErrors.randomExperiment, LearningWithErrors.uniformDistr,
@@ -616,7 +619,7 @@ theorem randomExperiment_le_stmsis_rom [DecidableEq M] [NeZero p.gamma1]
     (measurableSet_singleton true) fun t _ => ?_
   refine OracleComp.evalDist_bind_apply_mono_of_support (spec := unifSpec) _ _ _
     (measurableSet_singleton true) fun rho _ => ?_
-  convert stmsis_tail_le_matrix p prims aHat
+  convert stmsis_tail_le_matrix p prims nttOps aHat
     (fun pk => withExpandACache p prims (programmedAt p pk.rho aHat) (main pk))
     ⟨rho, (prims.power2RoundVec t).1⟩ using 2
   rw [roImpl, OracleSpec.romImpl, unifFwdImpl]
@@ -646,15 +649,16 @@ theorem nma_security_rom [DecidableEq M] [NeZero p.gamma1]
     [Inhabited (Commitment p prims)] [Inhabited (Response p prims)]
     (main : PublicKey p prims → OracleComp (RomSpec p prims M)
       (M × Option (Commitment p prims × Response p prims))) :
-    romNmaAdvantage p prims main ≤
-      LearningWithErrors.advantage (mldsaMatrixMLWE p) (distinguisherBRom p prims main) +
-        SelfTargetMSIS.advantage (extractorCRom p prims main) := by
+    romNmaAdvantage p prims nttOps main ≤
+      LearningWithErrors.advantage (mldsaMatrixMLWE p nttOps)
+        (distinguisherBRom p prims nttOps main) +
+        SelfTargetMSIS.advantage (extractorCRom p prims nttOps main) := by
   rw [romNmaAdvantage_eq_realExperiment, NoisyLearning.advantage_eq_boolDist]
   refine (MeasureTheory.Measure.apply_true_le_add_boolDist _
-    𝒟[LearningWithErrors.randomExperiment (mldsaMatrixMLWE p)
-      (distinguisherBRom p prims main)]).trans ?_
+    𝒟[LearningWithErrors.randomExperiment (mldsaMatrixMLWE p nttOps)
+      (distinguisherBRom p prims nttOps main)]).trans ?_
   rw [add_comm]
-  exact add_le_add le_rfl (randomExperiment_le_stmsis_rom p prims main)
+  exact add_le_add le_rfl (randomExperiment_le_stmsis_rom p prims nttOps main)
 
 end ExpandAOracle
 

@@ -57,7 +57,7 @@ open LatticeCrypto TransformOps
 
 namespace MLDSA
 
-variable (p : Params) (prims : Primitives p) [nttOps : NTTRingOps]
+variable (p : Params) (prims : Primitives p) (nttOps : NTTRingOps)
 
 /-- The semantic public key: the public seed `ρ` and the power-2 rounded key vector `t₁`. -/
 structure PublicKey where
@@ -133,19 +133,20 @@ def keyGenFromSeed (seed : Bytes 32) : PublicKey p prims × SecretKey p :=
   let sk : SecretKey p := ⟨rho, key, tr, s1, s2, t0⟩
   (pk, sk)
 
-open Classical in
 /-- A key pair is valid when it is honestly generated: there is a seed `ξ` such that
 `keyGenFromSeed ξ = (pk, sk)`. This captures the full key-generation relationship
 (`t = A·s₁ + s₂`, `(t₁, t₀) = Power2Round(t)`, `s₁, s₂` bounded by `η`), which is what the
 completeness and signing-correctness proofs require. The predicate is decidable because the
 seed space `Bytes 32` is finite. -/
 noncomputable def validKeyPair (pk : PublicKey p prims) (sk : SecretKey p) : Bool :=
-  decide (∃ seed : Bytes 32, keyGenFromSeed p prims seed = (pk, sk))
+  @decide _ <| Classical.propDecidable (∃ seed : Bytes 32,
+    keyGenFromSeed p prims nttOps seed = (pk, sk))
 
 @[simp] theorem validKeyPair_eq_true_iff (pk : PublicKey p prims) (sk : SecretKey p) :
-    validKeyPair p prims pk sk = true ↔
-      ∃ seed : Bytes 32, keyGenFromSeed p prims seed = (pk, sk) := by
-  simp [validKeyPair]
+    validKeyPair p prims nttOps pk sk = true ↔
+      ∃ seed : Bytes 32, keyGenFromSeed p prims nttOps seed = (pk, sk) := by
+  unfold validKeyPair
+  exact @decide_eq_true_iff _ (Classical.propDecidable _)
 
 /-! ### Short-secret idealized key validity
 
@@ -175,7 +176,7 @@ noncomputable def validKeyPairShort (pk : PublicKey p prims) (sk : SecretKey p) 
       PublicKey p prims × SecretKey p) = (pk, sk))
 
 @[simp] theorem validKeyPairShort_eq_true_iff (pk : PublicKey p prims) (sk : SecretKey p) :
-    validKeyPairShort p prims pk sk = true ↔
+    validKeyPairShort p prims nttOps pk sk = true ↔
       ∃ (rho key : Bytes 32) (s1 : RqVec p.l) (s2 : RqVec p.k),
         polyVecBounded s1 p.eta ∧ polyVecBounded s2 p.eta ∧
         ((⟨rho, (prims.power2RoundVec (prims.expandA rho * s1 + s2)).1⟩,
@@ -205,7 +206,7 @@ def identificationScheme
       (PublicKey p prims) (SecretKey p)
       (Commitment p prims) (SigningState p)
       (CommitHashBytes p) (Response p prims)
-      (validKeyPair p prims) where
+      (validKeyPair p prims nttOps) where
   commit := fun pk _sk => do
     let aHat := prims.expandA pk.rho
     let y ← sampleMaskVec p.l p.gamma1
@@ -230,7 +231,7 @@ def identificationScheme
   verify := fun pk w1 cTilde (z, h) =>
     let c := prims.sampleInBall cTilde
     let aHat := prims.expandA pk.rho
-    let wApprox := computeWApprox p prims aHat c z pk.t1
+    let wApprox := computeWApprox p prims nttOps aHat c z pk.t1
     let w1' := prims.useHintVec h wApprox
     decide (polyVecNorm z < p.gamma1 - p.beta) &&
     decide (w1' = w1) &&
@@ -248,10 +249,10 @@ def identificationSchemeShort
       (PublicKey p prims) (SecretKey p)
       (Commitment p prims) (SigningState p)
       (CommitHashBytes p) (Response p prims)
-      (validKeyPairShort p prims) :=
-  ⟨(identificationScheme p prims).commit,
-    (identificationScheme p prims).respond,
-    (identificationScheme p prims).verify⟩
+      (validKeyPairShort p prims nttOps) :=
+  ⟨(identificationScheme p prims nttOps).commit,
+    (identificationScheme p prims nttOps).respond,
+    (identificationScheme p prims nttOps).verify⟩
 
 /-! ### The statement with `t₀` public
 
@@ -276,11 +277,11 @@ structure FullPublicKey where
 /-- Key validity with `t₀` public: the public key and the secret key form a generated pair, and
 the published `t₀` is the secret key's. -/
 noncomputable def validFullKeyPair (fpk : FullPublicKey p prims) (sk : SecretKey p) : Bool :=
-  validKeyPair p prims fpk.pk sk && decide (fpk.t0 = sk.t0)
+  validKeyPair p prims nttOps fpk.pk sk && decide (fpk.t0 = sk.t0)
 
 @[simp] theorem validFullKeyPair_eq_true_iff (fpk : FullPublicKey p prims) (sk : SecretKey p) :
-    validFullKeyPair p prims fpk sk = true ↔
-      validKeyPair p prims fpk.pk sk = true ∧ fpk.t0 = sk.t0 := by
+    validFullKeyPair p prims nttOps fpk sk = true ↔
+      validKeyPair p prims nttOps fpk.pk sk = true ∧ fpk.t0 = sk.t0 := by
   simp [validFullKeyPair]
 
 /-- The ML-DSA identification scheme with `t₀` in the statement. Commit, respond and verify are
@@ -292,17 +293,17 @@ def identificationSchemeFull
       (FullPublicKey p prims) (SecretKey p)
       (Commitment p prims) (SigningState p)
       (CommitHashBytes p) (Response p prims)
-      (validFullKeyPair p prims) :=
-  ⟨fun fpk => (identificationScheme p prims).commit fpk.pk,
-    fun fpk => (identificationScheme p prims).respond fpk.pk,
-    fun fpk => (identificationScheme p prims).verify fpk.pk⟩
+      (validFullKeyPair p prims nttOps) :=
+  ⟨fun fpk => (identificationScheme p prims nttOps).commit fpk.pk,
+    fun fpk => (identificationScheme p prims nttOps).respond fpk.pk,
+    fun fpk => (identificationScheme p prims nttOps).verify fpk.pk⟩
 
 /-! ### Key Generation Algebraic Properties -/
 
 /-- Keys generated by `keyGenFromSeed` satisfy `validKeyPair`. -/
 theorem keyGenFromSeed_validKeyPair (seed : Bytes 32) :
-    let (pk, sk) := keyGenFromSeed p prims seed
-    validKeyPair p prims pk sk = true := by
+    let (pk, sk) := keyGenFromSeed p prims nttOps seed
+    validKeyPair p prims nttOps pk sk = true := by
   simp only [validKeyPair_eq_true_iff]
   exact ⟨seed, rfl⟩
 
@@ -315,9 +316,9 @@ and NTT linearity. -/
 theorem keyGenFromSeed_wApprox_eq {pk : PublicKey p prims} {sk : SecretKey p}
     (h_laws : Primitives.Laws prims nttOps)
     (seed : Bytes 32)
-    (hkeygen : keyGenFromSeed p prims seed = (pk, sk)) :
+    (hkeygen : keyGenFromSeed p prims nttOps seed = (pk, sk)) :
     ∀ (c : Rq) (y : RqVec p.l),
-      computeWApprox p prims (prims.expandA pk.rho) c (y + c • sk.s1) pk.t1 =
+      computeWApprox p prims nttOps (prims.expandA pk.rho) c (y + c • sk.s1) pk.t1 =
       (prims.expandA pk.rho) * y - c • sk.s2 + c • sk.t0 := by
   intro c y
   have := h_laws.transform

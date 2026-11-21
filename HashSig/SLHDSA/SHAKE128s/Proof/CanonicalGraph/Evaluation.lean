@@ -26,11 +26,12 @@ open OracleComp OracleSpec
 
 namespace SLHDSA.SHAKE128s.CanonicalGraph
 
-variable [HasQuery HashSpec Id]
+variable {hash : HasQuery HashSpec Id}
 
 /-- The value the SLH-DSA algorithms compute at a structural node, for fixed seeds and a fixed
 hash function. -/
-@[expose] def structuralValue (secretSeed publicSeed : Digest) : StructuralNode → Digest
+@[expose] def structuralValue (hash : HasQuery HashSpec Id)
+    (secretSeed publicSeed : Digest) : StructuralNode → Digest
   | .wotsPrf key chain => Hashing.derive (m := Id) publicSeed secretSeed
       (Wots.secretAddress key.address chain)
   | .wotsHash key chain step =>
@@ -52,11 +53,10 @@ hash function. -/
 
 /-- The actual evaluation of the canonical graph: the secret seed at its node and the computed
 value at every structural node. -/
-@[expose] def value (secretSeed publicSeed : Digest) : Cells
+@[expose] def value (hash : HasQuery HashSpec Id) (secretSeed publicSeed : Digest) : Cells
   | .secretSeed => secretSeed
-  | .structural node => structuralValue secretSeed publicSeed node
+  | .structural node => structuralValue hash secretSeed publicSeed node
 
-omit [HasQuery HashSpec Id] in
 /-- The child encoding of a list of children given by a function is the corresponding digest
 array encoding. -/
 theorem childBytes_ofFn {size : Nat} (cells : Cells) (children : Fin size → Node) :
@@ -67,7 +67,7 @@ theorem childBytes_ofFn {size : Nat} (cells : Cells) (children : Fin size → No
 theorem value_merkleNode (secretSeed publicSeed : Digest) (tree : Tree)
     (height : Nat) (hheight : height ≤ subtreeHeight)
     (index : Fin (2 ^ (subtreeHeight - height))) :
-    value secretSeed publicSeed (.structural (merkleNode tree height hheight index)) =
+    value hash secretSeed publicSeed (.structural (merkleNode tree height hheight index)) =
       Merkle.node (m := Id) secretSeed publicSeed tree.address height index.val := by
   unfold merkleNode
   split
@@ -82,7 +82,7 @@ theorem value_merkleNode (secretSeed publicSeed : Digest) (tree : Tree)
 theorem value_merkleChild (secretSeed publicSeed : Digest) (tree : Tree)
     (height : Fin subtreeHeight)
     (index : Fin (2 ^ (subtreeHeight - (height.val + 1)))) (side : Fin 2) :
-    value secretSeed publicSeed (.structural (merkleChild tree height index side)) =
+    value hash secretSeed publicSeed (.structural (merkleChild tree height index side)) =
       Merkle.node (m := Id) secretSeed publicSeed tree.address height.val
         (2 * index.val + side.val) :=
   value_merkleNode _ _ _ _ _ _
@@ -97,11 +97,12 @@ private theorem chain_one (publicSeed : Digest) (address : Address) (start : Nat
 
 /-- Each structural value is the hash of the node's canonical input under the evaluation. -/
 theorem structuralValue_equation (secretSeed publicSeed : Digest) (parent : StructuralNode) :
-    structuralValue secretSeed publicSeed parent =
+    structuralValue hash secretSeed publicSeed parent =
       Hashing.shortHash (m := Id)
-        (canonicalInput publicSeed (value secretSeed publicSeed) parent) := by
-  change @Eq (Id Digest) (structuralValue secretSeed publicSeed parent)
-    (Hashing.shortHash (m := Id) (canonicalInput publicSeed (value secretSeed publicSeed) parent))
+        (canonicalInput publicSeed (value hash secretSeed publicSeed) parent) := by
+  change @Eq (Id Digest) (structuralValue hash secretSeed publicSeed parent)
+    (Hashing.shortHash (m := Id)
+      (canonicalInput publicSeed (value hash secretSeed publicSeed) parent))
   cases parent with
   | wotsPrf key chain | forsPrf key index => rfl
   | wotsHash key chain step =>
@@ -147,9 +148,9 @@ theorem structuralValue_equation (secretSeed publicSeed : Digest) (parent : Stru
 
 /-- The evaluation at each structural node is the hash of its canonical input. -/
 theorem value_equation (secretSeed publicSeed : Digest) (parent : StructuralNode) :
-    value secretSeed publicSeed (.structural parent) =
+    value hash secretSeed publicSeed (.structural parent) =
       Hashing.shortHash (m := Id)
-        (canonicalInput publicSeed (value secretSeed publicSeed) parent) :=
+        (canonicalInput publicSeed (value hash secretSeed publicSeed) parent) :=
   structuralValue_equation _ _ _
 
 /-- A cell table satisfying these concrete hash equations is the actual algorithm evaluation. -/
@@ -157,7 +158,7 @@ theorem value_unique (secretSeed publicSeed : Digest) (cells : Cells)
     (hseed : cells .secretSeed = secretSeed)
     (hparents : ∀ parent, Hashing.shortHash (m := Id)
       (canonicalInput publicSeed cells parent) = cells (.structural parent)) :
-    value secretSeed publicSeed = cells := by
+    value hash secretSeed publicSeed = cells := by
   funext node
   induction node using (measure Node.rank).wf.induction with
   | h node ih =>
@@ -165,7 +166,8 @@ theorem value_unique (secretSeed publicSeed : Digest) (cells : Cells)
       | secretSeed => exact hseed.symm
       | structural parent =>
           rw [value_equation]
-          have hinput := canonicalInput_congr publicSeed (value secretSeed publicSeed) cells parent
+          have hinput := canonicalInput_congr publicSeed
+            (value hash secretSeed publicSeed) cells parent
             (fun child hchild => ih child (parent.child_rank_lt child hchild))
           rw [hinput, hparents]
 

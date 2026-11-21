@@ -63,8 +63,10 @@ decryption is not `some msg`. -/
 private lemma measure_guess_eq_le_add {M : Type} [MeasurableSpace (M × M × Option M)]
     (μ : Measure (M × M × Option M)) :
     μ {x | x.1 = x.2.1} ≤ μ {x | x.2.2 = some x.1} + μ {x | x.2.2 ≠ some x.2.1} := by
-  refine (measure_mono fun (x : M × M × Option M) (hx : x.1 = x.2.1) => ?_).trans
-    (measure_union_le _ _)
+  refine le_trans ?_ (measure_union_le (μ := μ) _ _)
+  apply measure_mono
+  intro x hx
+  change x.1 = x.2.1 at hx
   by_cases hd : x.2.2 = some x.2.1
   · exact Or.inl (show x.2.2 = some x.1 by rw [hd, hx])
   · exact Or.inr hd
@@ -74,8 +76,10 @@ is not `some msg`. -/
 private lemma measure_dec_eq_le_add {M : Type} [MeasurableSpace (M × M × Option M)]
     (μ : Measure (M × M × Option M)) :
     μ {x | x.2.2 = some x.1} ≤ μ {x | x.1 = x.2.1} + μ {x | x.2.2 ≠ some x.2.1} := by
-  refine (measure_mono fun (x : M × M × Option M) (hx : x.2.2 = some x.1) => ?_).trans
-    (measure_union_le _ _)
+  refine le_trans ?_ (measure_union_le (μ := μ) _ _)
+  apply measure_mono
+  intro x hx
+  change x.2.2 = some x.1 at hx
   by_cases hd : x.2.2 = some x.2.1
   · exact Or.inl (show x.1 = x.2.1 from Option.some_injective _ (hx.symm.trans hd))
   · exact Or.inr hd

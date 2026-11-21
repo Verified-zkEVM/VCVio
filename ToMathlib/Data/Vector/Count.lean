@@ -26,32 +26,15 @@ lemma _root_.Vector.card_eq_countP {n : ℕ}
     (xs : Vector α n) (p : α → Prop) [DecidablePred p] :
     ({i : Fin n | p xs[↑i]} : Finset (Fin n)).card =
       xs.countP (fun a => decide (p a)) := by
-  rcases xs with ⟨as, hs⟩
-  calc
-    ({i : Fin n | p as[↑i]} : Finset (Fin n)).card =
-        ({i : Fin as.size | p as[↑i]} : Finset (Fin as.size)).card := by
-          refine Finset.card_nbij (i := Fin.cast hs.symm) ?hi ?hinj ?hsurj
-          · intro i hi
-            simp at hi ⊢
-            simpa [Fin.cast_val_eq_self] using hi
-          · intro i hi j hj hij
-            exact Fin.cast_injective hs.symm hij
-          · intro j hj
-            refine ⟨Fin.cast hs j, ?_, ?_⟩
-            · simp at hj ⊢
-              simpa [Fin.cast_cast] using hj
-            · simp
-    _ = as.countP (fun a => decide (p a)) := Array.card_eq_countP as p
-    _ = (Vector.mk as hs).countP (fun a => decide (p a)) := by simp [Vector.countP_mk]
+  simpa only [← Vector.toList_ofFn, Vector.ofFn_getElem, Vector.countP_toList,
+    Fin.getElem_fin, decide_eq_true_eq] using
+    (List.countP_ofFn (fun i : Fin n => xs[i.val]) (fun a => decide (p a))).symm
 
 lemma _root_.Vector.card_eq_count [DecidableEq α] {n : ℕ}
     (xs : Vector α n) (x : α) :
     ({i : Fin n | x = xs[↑i]} : Finset (Fin n)).card = xs.count x := by
-  rw [Vector.count_eq_countP]
-  have hbeq : (fun y : α => y == x) = fun y => decide (x = y) := by
-    funext y
-    simp [beq_eq_decide, eq_comm]
-  rw [hbeq]
-  simpa using (Vector.card_eq_countP xs (p := fun y => x = y))
+  simpa only [← Vector.toList_ofFn, Vector.ofFn_getElem, Vector.count_toList,
+    Fin.getElem_fin, eq_comm] using
+    (List.count_ofFn (fun i : Fin n => xs[i.val]) x).symm
 
 end VectorCounting

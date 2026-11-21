@@ -141,11 +141,95 @@ Used in:
 
 Alessandro Chiesa and Eylon Yogev.
 *Building Cryptographic Proofs from Hash Functions*.
-2024.
+Version 1.2, 2024.
 Public book: <https://snargsbook.org/>
+Pinned source (commit 305fa3d9):
+<https://github.com/hash-based-snargs-book/hash-based-snargs-book/blob/305fa3d9d19ee6dba135de64b3156d1760df8426/snargs-book.tex>
 
 Used in:
+- `VCVio/CryptoFoundations/MerkleTree/Extractability.lean`
+- `VCVio/CryptoFoundations/MerkleTree/Inductive/Batch/Defs.lean`
+- `VCVio/CryptoFoundations/VectorCommitment/Basic.lean`
+- `VCVio/CryptoFoundations/VectorCommitment/Hiding.lean`
+- `VCVio/CryptoFoundations/VectorCommitment/PositionBinding.lean`
 - `VCVio/EvalDist/DiscreteTVDist.lean`
+- `docs/agents/crypto.md`
+
+### CDHZ25
+
+Alessandro Chiesa, Zijing Di, Zihan Hu, and Yuxi Zheng.
+*How to Prove Post-Quantum Security for Succinct Non-Interactive Reductions*.
+Cryptology ePrint Archive, Paper 2025/2166, 2025.
+Revision of March 2, 2026.
+Preprint: <https://eprint.iacr.org/2025/2166>
+
+Used in:
+- `VCVio/CryptoFoundations/MerkleTree/Instability.lean`
+- `VCVio/CryptoFoundations/MerkleTree/Salted/Commutativity.lean`
+- `VCVio/CryptoFoundations/MerkleTree/Salted/Conditions.lean`
+- `VCVio/CryptoFoundations/MerkleTree/Salted/Defs.lean`
+- `VCVio/CryptoFoundations/MerkleTree/Salted/Extract.lean`
+- `VCVio/CryptoFoundations/MerkleTree/Salted/Extraction.lean`
+- `VCVio/CryptoFoundations/MerkleTree/Salted/HalfPreimage.lean`
+- `VCVio/CryptoFoundations/MerkleTree/Salted/Instability.lean`
+- `VCVio/CryptoFoundations/VectorCommitment/Basic.lean`
+- `VCVio/CryptoFoundations/VectorCommitment/Completeness.lean`
+- `VCVio/CryptoFoundations/VectorCommitment/NonadaptiveCheck.lean`
+- `VCVio/OracleComp/QueryTracking/Instability/Basic.lean`
+- `VCVio/OracleComp/QueryTracking/Instability/Collision.lean`
+- `VCVio/OracleComp/QueryTracking/QueryLogCheck.lean`
+- `VCVio/Quantum/Comp/Combinators.lean`
+- `VCVio/Quantum/Comp/Hybrid.lean`
+- `VCVio/Quantum/Comp/HybridIndex.lean`
+- `VCVio/Quantum/Comp/HybridMeasure.lean`
+- `VCVio/Quantum/Comp/HybridProjected.lean`
+- `VCVio/Quantum/Comp/Potential.lean`
+- `VCVio/Quantum/Comp/QueryMass.lean`
+- `VCVio/Quantum/Oracle/Classical.lean`
+- `VCVio/Quantum/Oracle/ClassicalCalls.lean`
+- `VCVio/Quantum/Oracle/ClassicalRepeatability.lean`
+- `VCVio/Quantum/Oracle/Compressed/Basic.lean`
+- `VCVio/Quantum/Oracle/Compressed/BinaryPartition.lean`
+- `VCVio/Quantum/Oracle/Compressed/Collision.lean`
+- `VCVio/Quantum/Oracle/Compressed/CollisionBlocks.lean`
+- `VCVio/Quantum/Oracle/Compressed/CollisionPotential.lean`
+- `VCVio/Quantum/Oracle/Compressed/CollisionRuntime.lean`
+- `VCVio/Quantum/Oracle/Compressed/CommutatorBound.lean`
+- `VCVio/Quantum/Oracle/Compressed/CommutatorSharp.lean`
+- `VCVio/Quantum/Oracle/Compressed/Consistency.lean`
+- `VCVio/Quantum/Oracle/Compressed/Equivalence.lean`
+- `VCVio/Quantum/Oracle/Compressed/Instability.lean`
+- `VCVio/Quantum/Oracle/Compressed/LocalPotential.lean`
+- `VCVio/Quantum/Oracle/Compressed/Measurement.lean`
+- `VCVio/Quantum/Oracle/Compressed/Phase.lean`
+- `VCVio/Quantum/Oracle/Compressed/ProjectorEvent.lean`
+- `VCVio/Quantum/Oracle/Compressed/Size.lean`
+- `VCVio/Quantum/Oracle/Compressed/Truncation.lean`
+- `VCVio/Quantum/Oracle/Emulated.lean`
+- `VCVio/Quantum/Oracle/EmulatedTensor.lean`
+- `VCVio/Quantum/VC/Compressed.lean`
+- `VCVio/Quantum/VC/Conditions.lean`
+- `VCVio/Quantum/VC/Emulated.lean`
+- `VCVio/Quantum/VC/Merkle/MultiExtractable.lean`
+- `VCVio/Quantum/VC/Merkle/Online.lean`
+- `VCVio/Quantum/VC/MultiExtractable.lean`
+- `VCVio/Quantum/VC/MultiExtractor.lean`
+- `VCVio/Quantum/VC/Proof/Commutativity.lean`
+- `VCVio/Quantum/VC/Proof/Extraction.lean`
+- `VCVio/Quantum/VC/Proof/Offline.lean`
+- `VCVio/Quantum/VC/Proof/Online.lean`
+- `VCVio/Quantum/VC/Proof/OnlineSecurity.lean`
+- `VCVio/Quantum/VC/Proof/Repeatability.lean`
+- `VCVio/Quantum/VC/Tuples.lean`
+- `VCVio/Quantum/VC/Unitaries.lean`
+- `VCVioTest/Quantum/Compressed.lean`
+- `VCVioTest/Quantum/Hybrid.lean`
+- `VCVioTest/Quantum/InstabilityBound.lean`
+- `VCVioTest/Quantum/MultiExtractableModule.lean`
+- `VCVioTest/Quantum/VCCompressed.lean`
+- `VCVioTest/Quantum/VCProof.lean`
+- `VCVioTest/Quantum/VectorCommitmentQuantum.lean`
+- `VCVioTest/SaltedMerkle.lean`
 
 ### HHK17
 

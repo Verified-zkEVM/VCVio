@@ -83,18 +83,18 @@ theorem fourierMatrix_mul_conjTranspose : fourierMatrix Y * (fourierMatrix Y)ᴴ
   have hN : (Fintype.card Y : ℂ) ≠ 0 := Nat.cast_ne_zero.mpr Fintype.card_ne_zero
   ext χ ψ
   have hsum : ∑ y, χ y * conj (ψ y) = if χ = ψ then (Fintype.card Y : ℂ) else 0 := by
-    simp_rw [← AddChar.map_neg_eq_conj, ← AddChar.inv_apply, ← AddChar.mul_apply]
+    simp_rw [← AddChar.map_neg_eq_conj, ← AddChar.inv_apply, ← mul_apply]
     rw [AddChar.sum_eq_ite]
     congr 1
     exact propext ⟨fun h ↦ mul_inv_eq_one.mp h, fun h ↦ mul_inv_eq_one.mpr h⟩
-  simp only [mul_apply, conjTranspose_apply, fourierMatrix_apply, star_mul', star_cellAmp,
+  simp only [Matrix.mul_apply, conjTranspose_apply, fourierMatrix_apply, star_mul', star_cellAmp,
     RCLike.star_def]
   calc ∑ y, cellAmp Y * χ y * (cellAmp Y * conj (ψ y))
       = cellAmp Y * cellAmp Y * ∑ y, χ y * conj (ψ y) := by
         rw [Finset.mul_sum]
         exact Finset.sum_congr rfl fun y _ ↦ by ring
     _ = (1 : Matrix (AddChar Y ℂ) (AddChar Y ℂ) ℂ) χ ψ := by
-        rw [hsum, cellAmp_mul_self, one_apply]
+        rw [hsum, cellAmp_mul_self, Matrix.one_apply]
         split_ifs <;> simp [hN]
 
 /-- The columns of the Fourier transform are orthonormal: the characters separate the points of
@@ -109,14 +109,14 @@ theorem conjTranspose_fourierMatrix_mul [DecidableEq Y] :
     rw [AddChar.sum_apply_eq_ite]
     congr 1
     exact propext ⟨fun h ↦ (neg_add_eq_zero.mp h), fun h ↦ neg_add_eq_zero.mpr h⟩
-  simp only [mul_apply, conjTranspose_apply, fourierMatrix_apply, star_mul', star_cellAmp,
+  simp only [Matrix.mul_apply, conjTranspose_apply, fourierMatrix_apply, star_mul', star_cellAmp,
     RCLike.star_def]
   calc ∑ χ : AddChar Y ℂ, cellAmp Y * conj (χ y) * (cellAmp Y * χ y')
       = cellAmp Y * cellAmp Y * ∑ χ : AddChar Y ℂ, conj (χ y) * χ y' := by
         rw [Finset.mul_sum]
         exact Finset.sum_congr rfl fun χ _ ↦ by ring
     _ = (1 : Matrix Y Y ℂ) y y' := by
-        rw [hsum, cellAmp_mul_self, one_apply]
+        rw [hsum, cellAmp_mul_self, Matrix.one_apply]
         split_ifs <;> simp [hN]
 
 variable {Y}
@@ -156,7 +156,7 @@ theorem queryFourier_apply (x' : X) (χ : AddChar Y ℂ) (D' : Database X Y) (x 
     (D : Database X Y) :
     queryFourier X Y ((x', χ), D') ((x, y), D) =
       if x' = x ∧ D' = D then cellAmp Y * χ y else 0 := by
-  simp only [queryFourier, kroneckerMap_apply, one_apply, fourierMatrix_apply]
+  simp only [queryFourier, kroneckerMap_apply, Matrix.one_apply, fourierMatrix_apply]
   split_ifs <;> simp_all
 
 theorem queryFourier_mul_conjTranspose : queryFourier X Y * (queryFourier X Y)ᴴ = 1 := by
@@ -233,7 +233,7 @@ noncomputable def phaseCell (χ : AddChar Y ℂ) : Matrix (Option Y) (Option Y) 
 
 theorem phaseCell_apply (χ : AddChar Y ℂ) (a' a : Option Y) :
     phaseCell Y χ a' a = ∑ b, cellCompress Y a' b * χ (b.getD 0) * cellCompress Y b a := by
-  rw [phaseCell, mul_apply]
+  rw [phaseCell, Matrix.mul_apply]
   simp_rw [mul_diagonal]
 
 /-- For the trivial character the phase cell is the identity. -/
@@ -309,7 +309,8 @@ theorem sizeProjector_eq_one_kronecker (t : ℕ) :
     sizeProjector X Y t = (1 : Matrix (X × Y) (X × Y) ℂ) ⊗ₖ
       diagonal (fun D : Database X Y ↦ if D.size ≤ t then 1 else 0) := by
   ext ⟨m, D⟩ ⟨m', D'⟩
-  simp only [sizeProjector, diagonal_apply, kroneckerMap_apply, one_apply, Prod.mk.injEq]
+  simp only [sizeProjector, diagonal_apply, kroneckerMap_apply, Matrix.one_apply,
+    Prod.mk.injEq]
   split_ifs <;> simp_all
 
 variable [AddCommGroup Y]
@@ -327,7 +328,8 @@ theorem phaseSizeProjector_eq_one_kronecker (t : ℕ) :
     phaseSizeProjector X Y t = (1 : Matrix (X × AddChar Y ℂ) (X × AddChar Y ℂ) ℂ) ⊗ₖ
       diagonal (fun D : Database X Y ↦ if D.size ≤ t then 1 else 0) := by
   ext ⟨m, D⟩ ⟨m', D'⟩
-  simp only [phaseSizeProjector, diagonal_apply, kroneckerMap_apply, one_apply, Prod.mk.injEq]
+  simp only [phaseSizeProjector, diagonal_apply, kroneckerMap_apply, Matrix.one_apply,
+    Prod.mk.injEq]
   split_ifs <;> simp_all
 
 end sizeProjector
@@ -380,7 +382,7 @@ theorem phaseOracle_apply (x' : X) (χ' : AddChar Y ℂ) (D' : Database X Y) (x 
         (cellCompress Y (D' j) z * cellCompress Y z (D j))) = if D' j = D j then 1 else 0 := by
       intro j hj
       simp only [Finset.ne_of_mem_erase hj, ↓reduceIte, one_mul]
-      rw [← mul_apply, cellCompress_mul_self, one_apply]
+      rw [← Matrix.mul_apply, cellCompress_mul_self, Matrix.one_apply]
     simp only [true_and, ↓reduceIte]
     rw [hsum, key, ← Finset.mul_prod_erase _ _ (Finset.mem_univ x'), Finset.prod_congr rfl hprod,
       Finset.prod_boole]

@@ -14,7 +14,7 @@ public import VCVio.OracleComp.SimSemantics.Append
 
 A vector commitment to messages `m : Fin ℓ → Msg` relative to one classical oracle `X →ₒ Y`
 (Chiesa, Di, Hu and Zheng, *How to Prove Post-Quantum Security for Succinct Non-Interactive
-Reductions*, ePrint 2025/2166, §3.5, Def 3.5 and Def 3.7) consists of three algorithms:
+Reductions*, ePrint 2025/2166, §3.5, pp. 26–27) consists of three algorithms:
 
 * `Commit^f(m) → (cm, td)` samples coins and queries the oracle;
 * `Open(Q, td) → pf` is oracle-free and may sample coins;
@@ -27,13 +27,16 @@ Reductions*, ePrint 2025/2166, §3.5, Def 3.5 and Def 3.7) consists of three alg
 
 The pair `(Q, ans)` with `ans ∈ Σ^Q` is one partial vector `ans : Fin ℓ → Option Msg` with
 `Q = dom ans`; the same type holds the extracted messages `m ∈ (Σ ∪ {⊥})^ℓ` of §7
-(ePrint 2025/2166, p. 49).
+(ePrint 2025/2166, p. 49). The paper's `Dom(m)` (§3, p. 22) and `m[Q] = ans` (Def 7.3, p. 51) are
+`PartialVec.dom` and `PartialVec.Agrees`.
 
-Security properties live beside this file: `Completeness`, `NonadaptiveCheck`, `PositionBinding`,
-`Hiding` and `RomCompleteness`. They use two oracle models. Completeness is relative to an
+The modules beside this file state completeness (`Completeness`, `RomCompleteness`) and the
+security properties position binding (`PositionBinding`) and hiding (`Hiding`) of a scheme, and
+`NonadaptiveCheck` records a structural property of `Check`: it rechecks a query log computed
+without the oracle. The properties use two oracle models. Completeness is relative to an
 arbitrary distribution `D` on oracle functions, following ePrint 2025/2166 (`completenessProb`).
 Position binding and hiding are stated in the random oracle model, against the lazily sampled
-random oracle `ProbCompRuntime.rom (X →ₒ Y)`, as in Chiesa and Yogev, Chapter 18.
+random oracle `ProbCompRuntime.rom (X →ₒ Y)`, as in Chiesa–Yogev, Version 1.2, Chapter 18.
 `RomCompleteness` transfers completeness against every fixed function to that oracle.
 
 ## Universes
@@ -47,9 +50,19 @@ universe-polymorphic.
 
 ## Main definitions
 
-* `PartialVec ℓ Msg`, with `PartialVec.dom`, `PartialVec.Agrees` and `PartialVec.restrict`.
+* `PartialVec ℓ Msg`, with `PartialVec.dom`, `PartialVec.Agrees`, `PartialVec.Conflict` and
+  `PartialVec.restrict`.
 * `VectorCommitment X Y Msg Cm Td Pf ℓ` and `VectorCommitment.fixedOracleImpl`.
 * `DetVectorCommitment X Y Msg Cm Td Pf ℓ` and `DetVectorCommitment.toVectorCommitment`.
+
+## References
+
+* [Chiesa, Di, Hu and Zheng, *How to Prove Post-Quantum Security for Succinct Non-Interactive
+  Reductions*, ePrint 2025/2166](https://eprint.iacr.org/2025/2166), §3 (`Dom`, p. 22), §3.5
+  (vector commitments and Def 3.7, pp. 26–27), §7 (extracted messages, p. 49; `Dom(m)` and `m[Q]`
+  in Def 7.3, pp. 50–51), §8 (deterministic schemes, Thm 8.4 condition 1, p. 53).
+* [Chiesa–Yogev, *Building Cryptographic Proofs from Hash Functions*, Version 1.2, Chapter 18,
+  Merkle commitment scheme](https://github.com/hash-based-snargs-book/hash-based-snargs-book/blob/305fa3d9d19ee6dba135de64b3156d1760df8426/snargs-book.tex#L12395-L14597).
 -/
 
 public section
@@ -60,16 +73,16 @@ universe u v uX uM
 
 /-! ## Partial vectors -/
 
-/-- A partial vector of length `ℓ`. It encodes the pair `(Q, ans)` of ePrint 2025/2166,
-Def 3.5 (p. 26), as one function with `Q = dom ans`, and an extracted message
-`m ∈ (Σ ∪ {⊥})^ℓ` (p. 49), where `none` is `⊥`. -/
+/-- A partial vector of length `ℓ`: a value at each position of its domain `dom`, and `none`
+elsewhere. It holds a set of opened positions together with their values, and an extracted
+message whose undetermined positions are `none`. -/
 abbrev PartialVec (ℓ : ℕ) (Msg : Type u) := Fin ℓ → Option Msg
 
 namespace PartialVec
 
 variable {ℓ : ℕ} {Msg : Type u}
 
-/-- The positions at which a partial vector is defined (`Dom(m)`, p. 51). -/
+/-- The positions at which a partial vector is defined. -/
 @[expose]
 def dom (v : PartialVec ℓ Msg) : Finset (Fin ℓ) :=
   Finset.univ.filter fun q ↦ (v q).isSome
@@ -79,7 +92,7 @@ def dom (v : PartialVec ℓ Msg) : Finset (Fin ℓ) :=
 theorem mem_dom {v : PartialVec ℓ Msg} {q : Fin ℓ} : q ∈ v.dom ↔ (v q).isSome := by
   simp [dom]
 
-/-- `m[Q] = ans` with `Q = dom ans` (p. 51): `m` agrees with `ans` wherever `ans` is defined. -/
+/-- `m[Q] = ans` with `Q = dom ans`: `m` agrees with `ans` wherever `ans` is defined. -/
 @[expose]
 def Agrees (m ans : PartialVec ℓ Msg) : Prop :=
   ∀ q a, ans q = some a → m q = some a
@@ -87,6 +100,30 @@ def Agrees (m ans : PartialVec ℓ Msg) : Prop :=
 /-- Agreement is decidable: it is a finite conjunction. -/
 instance [DecidableEq Msg] (m ans : PartialVec ℓ Msg) : Decidable (Agrees m ans) :=
   decidable_of_iff (∀ q, ∀ a ∈ ans q, m q = some a) (by simp [Agrees])
+
+/-- Two partial vectors conflict when some position is defined in both with different values. -/
+@[expose]
+def Conflict (a b : PartialVec ℓ Msg) : Prop :=
+  ∃ q x y, a q = some x ∧ b q = some y ∧ x ≠ y
+
+/-- Conflict is decidable: it is a finite disjunction. -/
+instance [DecidableEq Msg] (a b : PartialVec ℓ Msg) : Decidable (Conflict a b) :=
+  decidable_of_iff (∃ q, ∃ x ∈ a q, ∃ y ∈ b q, x ≠ y) (by simp [Conflict])
+
+/-- Conflict is symmetric. -/
+theorem Conflict.symm {a b : PartialVec ℓ Msg} (h : Conflict a b) : Conflict b a :=
+  let ⟨q, x, y, hx, hy, hxy⟩ := h
+  ⟨q, y, x, hy, hx, hxy.symm⟩
+
+/-- Conflict is symmetric. -/
+theorem conflict_comm {a b : PartialVec ℓ Msg} : Conflict a b ↔ Conflict b a :=
+  ⟨Conflict.symm, Conflict.symm⟩
+
+/-- A partial vector never conflicts with itself. -/
+@[simp]
+theorem not_conflict_self (a : PartialVec ℓ Msg) : ¬ Conflict a a := by
+  rintro ⟨q, x, y, hx, hy, hxy⟩
+  exact hxy (Option.some_injective _ (hx.symm.trans hy))
 
 /-- The restriction `m[Q]` of a total vector to the positions `Q`. -/
 @[expose]
@@ -113,8 +150,8 @@ end PartialVec
 
 /-! ## Vector commitments -/
 
-/-- A vector commitment to messages `Fin ℓ → Msg` in the model of one oracle `X →ₒ Y`
-(ePrint 2025/2166, Def 3.5, pp. 26–27), in its general form.
+/-- A vector commitment to messages `Fin ℓ → Msg` in the model of one oracle `X →ₒ Y`, in its
+general form.
 
 `commit` and `check` sample coins with `unifSpec` and query the oracle; `opening` is oracle-free
 and samples coins. A scheme with a deterministic `Open` and a coin-free `Check` is a
@@ -163,10 +200,8 @@ end VectorCommitment
 
 /-! ## Deterministic vector commitments -/
 
-/-- A vector commitment with a deterministic `Open` and a coin-free `Check`
-(ePrint 2025/2166, Def 3.5, pp. 26–27, specialized). `Commit` still samples coins. Every scheme of
-§8 has this form, and Thm 8.4 condition 1 (p. 53) asks for a deterministic `Check`.
-`toVectorCommitment` embeds it into the general form. -/
+/-- A vector commitment with a deterministic `Open` and a coin-free `Check`. `Commit` still
+samples coins. `toVectorCommitment` embeds it into the general form. -/
 structure DetVectorCommitment (X : Type uX) (Y : Type) (Msg : Type uM) (Cm Td Pf : Type)
     (ℓ : ℕ) where
   /-- `Commit^f(m) → (cm, td)`. -/

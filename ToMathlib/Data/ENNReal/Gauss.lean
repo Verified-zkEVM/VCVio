@@ -50,7 +50,7 @@ lemma one_sub_one_sub_mul_one_sub {x y : ℝ≥0∞} (hx : x ≤ 1) (hy : y ≤ 
     ENNReal.toReal_sub_of_le, ENNReal.toReal_sub_of_le, ENNReal.toReal_add, ENNReal.toReal_mul]
   · simp
     linarith
-  all_goals try aesop
+  all_goals aesop
 
 /-- The complement of a sum of two failure probabilities is at most the product of their
 complements. Neither side needs `x, y ≤ 1`: once `x + y ≥ 1` the left side is zero. -/

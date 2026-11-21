@@ -387,16 +387,16 @@ theorem sum_range_queryWeight_le_potential (x : QuantumComp L spec X A) (N : ℕ
   | pure _ _ => simp
   | primBind B o k ih =>
     simp only [queryWeight_primBind]
-    rw [← Summable.tsum_finsetSum (fun _ _ ↦ ENNReal.summable),
-      ← Summable.tsum_finsetSum (fun _ _ ↦ ENNReal.summable)]
+    rw [← Summable.tsum_finsetSum (fun _ _ ↦ CompleteLattice.summable),
+      ← Summable.tsum_finsetSum (fun _ _ ↦ CompleteLattice.summable)]
     calc ∑' b, ∑ j ∈ Finset.range N, R.queryWeight I (w j) (k b) (((I o).frame R.D).branch b ρ) j
         ≤ ∑' b, (potential (K 0) (((I o).frame R.D).branch b ρ) +
             ∑ j ∈ Finset.range N, R.queryWeight I (c j) (k b)
               (((I o).frame R.D).branch b ρ) j) :=
-          ENNReal.tsum_le_tsum fun b ↦
+          tsum_le_tsum fun b ↦
             ih b N K w c h (((I o).frame R.D).posSemidef_branch_apply b hρ)
       _ ≤ _ := by
-          rw [ENNReal.tsum_add]
+          rw [tsum_add]
           gcongr
           exact tsum_potential_frame_le (K 0) (I o) hρ
   | queryBind B i E ℓ k ih =>
@@ -405,8 +405,8 @@ theorem sum_range_queryWeight_le_potential (x : QuantumComp L spec X A) (N : ℕ
     | succ N =>
       rw [Finset.sum_range_succ', Finset.sum_range_succ']
       simp only [queryWeight_queryBind_succ, queryWeight_queryBind_zero]
-      rw [← Summable.tsum_finsetSum (fun _ _ ↦ ENNReal.summable),
-        ← Summable.tsum_finsetSum (fun _ _ ↦ ENNReal.summable)]
+      rw [← Summable.tsum_finsetSum (fun _ _ ↦ CompleteLattice.summable),
+        ← Summable.tsum_finsetSum (fun _ _ ↦ CompleteLattice.summable)]
       have hσ := posSemidef_callInput ℓ hρ
       have h0 := h 0 (Nat.succ_pos N) i _ hσ
       have hk : ∀ r, ∑ j ∈ Finset.range N, R.queryWeight I (w (j + 1)) (k r)
@@ -428,7 +428,7 @@ theorem sum_range_queryWeight_le_potential (x : QuantumComp L spec X A) (N : ℕ
               ∑' r, potential (K 1) ((R.step i).branch r (callInput ℓ R.D ρ))) +
             ∑' r, ∑ j ∈ Finset.range N, R.queryWeight I (c (j + 1)) (k r)
               ((R.queryStep i E ℓ).branch r ρ) j := by
-            rw [ENNReal.tsum_add]
+            rw [tsum_add]
             ring
         _ ≤ (potential (K 0) (callInput ℓ R.D ρ) + c 0 i (callInput ℓ R.D ρ)) +
             ∑' r, ∑ j ∈ Finset.range N, R.queryWeight I (c (j + 1)) (k r)
@@ -446,11 +446,11 @@ theorem queryWeight_add (w w' : ∀ i, Matrix (spec.In i × R.D) (spec.In i × R
   induction x using QuantumComp.inductionOn generalizing j with
   | pure _ _ => simp
   | primBind _ o k ih =>
-    simp only [queryWeight_primBind, ih, ENNReal.tsum_add]
+    simp only [queryWeight_primBind, ih, tsum_add]
   | queryBind _ i E ℓ k ih =>
     cases j with
     | zero => rfl
-    | succ j => simp only [queryWeight_queryBind_succ, ih, ENNReal.tsum_add]
+    | succ j => simp only [queryWeight_queryBind_succ, ih, tsum_add]
 
 /-! ## The conditions from Loewner inequalities -/
 
@@ -558,7 +558,7 @@ theorem eventWeight_pinch_eq_zero (x : QuantumComp L spec X A)
       MatrixMap.amplifyLeft_conj, ← MatrixMap.conj_mul, ← MatrixMap.conj_mul]
     exact congrArg _ (mul_pinch (one_kronecker_proj hQ hQQ).2 (one_kronecker_proj hQ hQQ).2
       (U i r)).symm
-  refine ENNReal.tsum_eq_zero.mpr fun p ↦ ?_
+  refine tsum_eq_zero_iff.mpr fun p ↦ ?_
   have hp := LinearMap.congr_fun (simulation I (R₁ := QuantumRuntime.mk D σ₀ (pinchStep hU hQ hQQ))
     (R₂ := QuantumRuntime.mk D σ₀ (pinchStep hU hQ hQQ)) h x p) ρ
   simp only [LinearMap.comp_apply, MatrixMap.amplifyLeft_conj, hρQ, map_zero] at hp
@@ -720,7 +720,7 @@ theorem eventWeight_le_of_potential (x : QuantumComp L spec X A)
 theorem eventWeight_le_trace (R : QuantumRuntime spec) {Q : Matrix R.D R.D ℂ} (hQ : Qᴴ = Q)
     (hQQ : Q * Q = Q) (x : QuantumComp L spec X A) {ρ : Matrix (A × R.D) (A × R.D) ℂ}
     (hρ : ρ.PosSemidef) : R.eventWeight I Q x ρ ≤ ENNReal.ofReal ρ.trace.re := by
-  refine (ENNReal.tsum_le_tsum fun p ↦ ENNReal.ofReal_le_ofReal ?_).trans
+  refine (tsum_le_tsum fun p ↦ ENNReal.ofReal_le_ofReal ?_).trans
     ((R.run I x).isCPTNIFamily.tsum_ofReal_trace_re_le hρ)
   obtain ⟨h1, h2⟩ := one_kronecker_proj (n := p.1) hQ hQQ
   have hM := (R.run I x).posSemidef_branch_apply p hρ

@@ -46,15 +46,18 @@ then `q²/(2N)` under `q ≥ 4L(d+1)`. The proof first obtains
 and discards the first branch using `q ≥ 4L+1`. Version 1.1 states that hypothesis; Version 1.2's
 displayed lemma omits it while retaining the proof step. Its fixed-realized-prefix argument also
 needs a stopping-time justification when the commit phase stops adaptively. The finite-maximum
-theorem here supplies that justification and keeps the two-endpoint maximum unconditionally.
+theorem here supplies that justification and keeps the two-endpoint maximum unconditionally;
+`extractability_rom_bound_coarse` is the counterpart of the maximum before the proof's final case
+split.
 
 For this raw-leaf model, under `q ≥ 2T+1 = 4L-1`, the coarse bound is
 
 `choose(q,2)/|Y| + T·d/|Y|`.
 
 This is no weaker than the source after aligning models: the source hashes salted leaves and counts
-`d+1` checker calls, while this verifier makes `d` internal-node calls. The quadratic corollary also
-assumes `2T·d ≤ q`; the source condition `q ≥ 4L(d+1)` implies both hypotheses.
+`d+1` checker calls, while this verifier makes `d` internal-node calls. The quadratic corollary
+`extractability_rom_bound_quadratic` also assumes `2T·d ≤ q`; the source condition `q ≥ 4L(d+1)`
+implies both hypotheses, so the pair is weaker than that single condition.
 
 The theorem supports arbitrary full binary skeletons but only one opening and deterministic
 `OracleComp` adversaries. Batch extraction, randomized adversaries, total-extractor/runtime claims,
@@ -663,8 +666,8 @@ private lemma extractabilityROMErrorNumerator_le_coarse (s : Skeleton) (qb : ℕ
       _ ≤ max (targetCount * qb) (qb.choose 2) + targetCount * s.depth :=
         Nat.add_le_add_right (le_max_left _ _) _
 
-/-- Unconditional two-endpoint relaxation of the unrelaxed finite maximum. This is the direct
-counterpart of the maximum appearing before the final case split in the source proof. -/
+/-- Unconditional two-endpoint relaxation of the unrelaxed finite maximum of
+`extractability_rom_bound`. -/
 theorem extractability_rom_bound_coarse [DecidableEq Query]
     [Fintype Y]
     [UniformAnswerMeasure (Query →ₒ Y)]
@@ -702,9 +705,9 @@ theorem extractability_rom_bound_birthday_dominates [DecidableEq Query]
   simpa only [targetCount, max_eq_right hdominates] using
     extractability_rom_bound_coarse model addressKey 𝒜 qb h
 
-/-- Textbook-shaped quadratic corollary. Besides birthday dominance, it suffices that
-`2·T·depth ≤ qb`; these two explicit conditions are weaker than the convenient single
-condition used in the Chiesa–Yogev presentation. -/
+/-- Quadratic corollary of `extractability_rom_bound_birthday_dominates`: besides birthday
+dominance (`hdominance`), the bound `qb² / (2|Y|)` needs only `2·T·depth ≤ qb` (`hdepth`), where
+`T = 2·leafCount - 1`. -/
 theorem extractability_rom_bound_quadratic [DecidableEq Query]
     [Fintype Y]
     [UniformAnswerMeasure (Query →ₒ Y)]

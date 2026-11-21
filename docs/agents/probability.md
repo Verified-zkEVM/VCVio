@@ -23,10 +23,8 @@ couplings, the relational program logic, uniform measures and the expectation al
 `PolyFun.PFunctor.Free.Measure` and `PolyFun/PFunctor/Free/Measure/`, and the lemmas about
 Mathlib's types are staged in PolyFun's `ToCslib/MeasureTheory/` and `ToCslib/Probability/`.
 VCVio adds the notation (`𝒟[·]`, `Pr{…}[…]`, `=ᵈ`), uniform sampling, oracle answer measures and
-the `OracleComp` instances. The VCVio modules that held the moved declarations are deprecated
-re-exports; import the modules their deprecation warning lists instead: the PolyFun module and,
-where the old module provided them, notation hosts such as `VCVio.EvalDist.Defs.Measure.Core` and
-other VCVio modules.
+the `OracleComp` instances. Import the PolyFun module for the semantics and the VCVio notation host for the
+notation. The [migration guide](probability-migration.md#measure-imports-on-lean-v436) gives the import paths.
 
 PolyFun states its instances on free programs at every result universe. A restatement for a
 reducible alias pins the result universe at the alias, as `OracleComp/EvalDist/AnswerMeasure.lean`

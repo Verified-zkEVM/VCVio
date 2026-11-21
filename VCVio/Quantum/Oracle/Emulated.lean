@@ -150,7 +150,7 @@ theorem totalWeight_primBind (o : L.Op A)
     R.totalWeight I w (QuantumComp.primBind o k) ρ =
       ∑' b, R.totalWeight I w (k b) (((I o).frame R.D).branch b ρ) := by
   simp only [totalWeight, queryWeight_primBind]
-  exact ENNReal.tsum_comm
+  exact tsum_comm
 
 /-- A call followed by a continuation adds the weight of the call's input to the weight of the
 continuations. -/
@@ -159,9 +159,9 @@ theorem totalWeight_queryBind (i : spec.Port) (E : QReg) (ℓ : A ≃ spec.In i 
     (ρ : Matrix (A × R.D) (A × R.D) ℂ) :
     R.totalWeight I w (QuantumComp.queryBind i E ℓ k) ρ =
       w i (callInput ℓ R.D ρ) + ∑' r, R.totalWeight I w (k r) ((R.queryStep i E ℓ).branch r ρ) := by
-  rw [totalWeight, tsum_eq_zero_add' ENNReal.summable, queryWeight_queryBind_zero]
+  rw [totalWeight, tsum_eq_zero_add' CompleteLattice.summable, queryWeight_queryBind_zero]
   simp only [queryWeight_queryBind_succ, totalWeight]
-  rw [ENNReal.tsum_comm]
+  rw [tsum_comm]
 
 open Classical in
 /-- The total query mass is the summed weight of the trace on one port. -/
@@ -184,7 +184,7 @@ theorem totalWeight_tsum_state (hΦ : ∀ i, (Φ i).IsCP) (x : QuantumComp L spe
   refine (tsum_congr fun j ↦ R.queryWeight_tsum_state I
     (w := fun i σ ↦ ENNReal.ofReal (Φ i σ).trace.re)
     (fun i _g hg hgpos ↦ (hΦ i).ofReal_trace_re_tsum hg hgpos) x hf hpos j).trans ?_
-  exact ENNReal.tsum_comm
+  exact tsum_comm
 
 /-- **Summed weights add under sequencing.** For a weight given by the trace of completely
 positive maps, the summed weight of `x.bind k` is the summed weight of `x` plus, for every leaf
@@ -202,16 +202,16 @@ theorem totalWeight_bind (hΦ : ∀ i, (Φ i).IsCP) (x : QuantumComp L spec X A)
     rw [QuantumComp.pure_bind, totalWeight_pure, zero_add, run_pure,
       tsum_eq_single (⟨_, y⟩ : Σ u, X u) fun p hp ↦ by
         rw [DSubInstrument.branch_ret_of_ne _ hp, LinearMap.zero_apply, totalWeight,
-          ENNReal.tsum_eq_zero]
+          tsum_eq_zero_iff]
         exact fun j ↦ R.queryWeight_zero I (fun i ↦ by simp) _ j,
       DSubInstrument.branch_ret_self, LinearMap.id_apply]
   | primBind _ o k' ih =>
     have hb := fun b ↦ ((I o).frame R.D).posSemidef_branch_apply b hρ
     rw [QuantumComp.primBind_bind, totalWeight_primBind, totalWeight_primBind, run_primBind]
     simp only [fun b ↦ ih b (hb b), DSubInstrument.branch_bind_apply]
-    rw [ENNReal.tsum_add]
+    rw [tsum_add]
     congr 1
-    rw [ENNReal.tsum_comm]
+    rw [tsum_comm]
     refine tsum_congr fun p ↦ (R.totalWeight_tsum_state I hΦ _
       ((((I o).frame R.D).isCPTNIFamily.comp_eval
         (fun b ↦ (R.run I (k' b)).isCPTNIFamily) p).summable_apply ρ)
@@ -225,7 +225,7 @@ theorem totalWeight_bind (hΦ : ∀ i, (Φ i).IsCP) (x : QuantumComp L spec X A)
           ((R.run I (QuantumComp.queryBind i' E ℓ k')).branch p ρ) =
         ∑' r, ∑' p, R.totalWeight I (fun i σ ↦ ENNReal.ofReal (Φ i σ).trace.re) (k p.1 p.2)
           ((R.run I (k' r)).branch p ((R.queryStep i' E ℓ).branch r ρ)) := by
-      rw [ENNReal.tsum_comm]
+      rw [tsum_comm]
       refine tsum_congr fun p ↦ ?_
       rw [hrun p]
       exact R.totalWeight_tsum_state I hΦ _
@@ -233,7 +233,7 @@ theorem totalWeight_bind (hΦ : ∀ i, (Φ i).IsCP) (x : QuantumComp L spec X A)
           (fun r ↦ (R.run I (k' r)).isCPTNIFamily) p).summable_apply ρ)
         (fun r ↦ (R.run I (k' r)).posSemidef_branch_apply p (hb r))
     rw [QuantumComp.queryBind_bind, htail, totalWeight_queryBind, totalWeight_queryBind, add_assoc,
-      ← ENNReal.tsum_add]
+      ← tsum_add]
     simp only [fun r ↦ ih r (hb r)]
 
 end cp

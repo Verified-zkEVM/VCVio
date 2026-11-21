@@ -40,8 +40,9 @@ theorem wp_mono_of_support (mx : OracleComp spec α) {f g : α → ENNReal}
 
 /-- Constant assertions on lossless oracle programs evaluate to that constant. -/
 @[simp]
-theorem wp_const_of_oracle (mx : OracleComp spec α) (c : ENNReal) :
-    wp mx (fun _ ↦ c) Lean.Order.bot = c := by
+theorem wp_const_of_oracle (mx : OracleComp spec α) (c : ENNReal)
+    (epost : EStack⟨⟩ := Lean.Order.bot) : wp mx (fun _ ↦ c) epost = c := by
+  change wp mx (fun _ ↦ c) Lean.Order.bot = c
   rw [wp_eq_lintegral_map]
   simp
 

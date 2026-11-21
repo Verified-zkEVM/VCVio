@@ -87,7 +87,7 @@ private theorem frame_database {A D R : Type*} [DecidableEq A] [DecidableEq R]
       (1 : Matrix A A ℂ) ⊗ₖ (P ⊗ₖ (1 : Matrix R R ℂ)) := by
   ext ⟨a, d, r⟩ ⟨a', d', r'⟩
   simp only [liftBlocks, submatrix_apply, blockDiagonal_apply, kroneckerMap_apply,
-    Equiv.prodAssoc_symm_apply, one_apply]
+    Equiv.prodAssoc_symm_apply, Matrix.one_apply]
   split_ifs <;> simp_all
 
 private theorem diagonalIdle_bounds {A S : Type*} [Fintype A] [Fintype S]
@@ -366,7 +366,7 @@ theorem ordinaryRecordUnitary_blocks (i : Fin k) :
   change onFactor (splitAt (X × Y) (Database X Y) i) (compressedOracle X Y)
       (xy', d') (xy, d) * (1 : Matrix R R ℂ) r' r =
     onFactor (recordSplit i) (compressedOracle X Y) (xy', (d', r')) (xy, (d, r))
-  rw [onFactor_apply, onFactor_apply, one_apply]
+  rw [onFactor_apply, onFactor_apply, Matrix.one_apply]
   simp only [splitAt_apply, recordSplit_apply, Prod.mk.injEq]
   split_ifs <;> simp_all
 
@@ -583,7 +583,7 @@ theorem withRecord_record_preserves_databases
   change recordUnitary (S := Fin k → Database X Y) V a b ≠ 0 at h
   rw [recordUnitary, cellControlled, labelControlled_apply] at h
   simp only [onFactor, Matrix.reindex_apply, submatrix_apply, Equiv.symm_symm,
-    kroneckerMap_apply, one_apply] at h
+    kroneckerMap_apply, Matrix.one_apply] at h
   split_ifs at h with he
   · exact congrArg (fun z ↦ z.2.1) he
   · exact False.elim (h (mul_zero _))

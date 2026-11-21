@@ -208,7 +208,7 @@ open scoped Matrix.Norms.L2Operator
 weights of the blocks. -/
 private theorem tsum_tsum_mul_comm {ι K : Type*} (a : ι → K → ℝ≥0∞) (b : K → ℝ≥0∞) :
     ∑' r, ∑' k, a r k * b k = ∑' k, (∑' r, a r k) * b k := by
-  rw [ENNReal.tsum_comm]
+  rw [tsum_comm]
   simp only [ENNReal.tsum_mul_right]
 
 /-- **Kraus weights block by block.** For an operator family `F` respecting a coherent index,
@@ -221,7 +221,7 @@ theorem krausWeight_le_tsum_index {D : QReg} (hB : IsCoherentIndex B B')
     krausWeight F i σ ≤ ∑' k, (∑' r, ENNReal.ofReal (‖F i r * (B i k ⊗ₖ (1 : Matrix D D ℂ))‖ ^ 2)) *
       ENNReal.ofReal (MatrixMap.conj (B i k ⊗ₖ (1 : Matrix D D ℂ)) σ).trace.re := by
   rw [krausWeight, ← tsum_tsum_mul_comm]
-  refine ENNReal.tsum_le_tsum fun r ↦ ?_
+  refine tsum_le_tsum fun r ↦ ?_
   rw [tsum_fintype]
   exact MatrixMap.ofReal_trace_conj_le_sum_of_blocks (F i r) (hB.sum_kronecker_one i)
     (hB.kronecker_one_mul_self i) (fun a b hab ↦ hB.conjTranspose_kronecker_one_mul_of_ne i hab)
@@ -290,7 +290,7 @@ theorem rpow_inv_two_tsum_trace_conj_run_le_indexMass
           (‖(U c.1 r - W c.1 r) * (B c.1 c.2 ⊗ₖ (1 : Matrix D D ℂ))‖ ^ 2)) *
             (QuantumRuntime.mk D σ₀ s₀).indexMassAt I B x ρ c j) ^ (2⁻¹ : ℝ) :=
   (rpow_inv_two_tsum_trace_conj_run_le I σ₀ σ₁ hU hW x O hO hρ).trans <| add_le_add le_rfl <|
-    ENNReal.tsum_le_tsum fun j ↦ ENNReal.rpow_le_rpow
+    tsum_le_tsum fun j ↦ ENNReal.rpow_le_rpow
       ((QuantumRuntime.mk D σ₀ s₀).queryWeight_krausWeight_le_tsum_mul_indexMassAt I hB hUW x hρ
         j) (by norm_num)
 
@@ -309,7 +309,7 @@ theorem rpow_inv_two_outcomeLawWith_le_indexMass
             (QuantumRuntime.mk D σ₀ s₀).indexMassAt I B x (ρ.matrix ⊗ₖ σ₀.matrix) c j) ^
           (2⁻¹ : ℝ) :=
   (rpow_inv_two_outcomeLawWith_le I σ₀ hU hW x ρ f hs).trans <| add_le_add le_rfl <|
-    ENNReal.tsum_le_tsum fun j ↦ ENNReal.rpow_le_rpow
+    tsum_le_tsum fun j ↦ ENNReal.rpow_le_rpow
       ((QuantumRuntime.mk D σ₀ s₀).queryWeight_krausWeight_le_tsum_mul_indexMassAt I hB hUW x
         (ρ.prod σ₀).posSemidef j) (by norm_num)
 
@@ -373,7 +373,7 @@ private theorem tsum_rpow_queryWeight_lemmaKraus_le_indexMass (hPV : P * V = V *
           (‖projDiff P V U W c.1 r * (B c.1 c.2 ⊗ₖ (1 : Matrix D D ℂ))‖ ^ 2)) *
             (QuantumRuntime.mk D σ₀ s₀).indexMassAt I B x (ρ.matrix ⊗ₖ σ₀.matrix) c j) ^
           (2⁻¹ : ℝ) :=
-  ENNReal.tsum_le_tsum fun j ↦ ENNReal.rpow_le_rpow
+  tsum_le_tsum fun j ↦ ENNReal.rpow_le_rpow
     (((QuantumRuntime.mk D σ₀ s₀).queryWeight_krausWeight_le_tsum_mul_indexMassAt I hB hK x
       (ρ := ρ.matrix ⊗ₖ σ₀.matrix) (ρ.prod σ₀).posSemidef j).trans_eq
         (by simp only [l2_opNorm_lemmaKraus_mul_kronecker_one hV hPV])) (by norm_num)
