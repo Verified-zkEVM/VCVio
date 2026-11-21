@@ -479,6 +479,7 @@ public import VCVio.OracleComp.QueryTracking.RandomOracle.HiddenSeed
 public import VCVio.OracleComp.QueryTracking.RandomOracle.HiddenSeed.CacheExtension
 public import VCVio.OracleComp.QueryTracking.RandomOracle.HiddenSeedCollapse
 public import VCVio.OracleComp.QueryTracking.RandomOracle.InitialCacheExpectedQuery
+public import VCVio.OracleComp.QueryTracking.RandomOracle.IterateCollision
 public import VCVio.OracleComp.QueryTracking.RandomOracle.JointPotential
 public import VCVio.OracleComp.QueryTracking.RandomOracle.LoggedRun
 public import VCVio.OracleComp.QueryTracking.RandomOracle.ProbeEps

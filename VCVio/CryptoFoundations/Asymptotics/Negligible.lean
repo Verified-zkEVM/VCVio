@@ -7,7 +7,9 @@ Authors: Devon Tuma
 module
 public import Mathlib.Algebra.Polynomial.Eval.Degree
 public import Mathlib.Analysis.Asymptotics.SuperpolynomialDecay
+public import Mathlib.Analysis.SpecialFunctions.Pow.NNReal
 public import Mathlib.Order.Filter.AtTopBot.Archimedean
+import Mathlib.Analysis.SpecificLimits.Normed
 
 /-!
 # Negligible Functions
@@ -17,11 +19,13 @@ as this is usually the situation for cryptographic reductions.
 
 ## Main Results
 
-- `negligible_zero`, `negligible_of_zero`: The zero function is negligible.
+- `negligible_zero`, `negligible_of_zero`: The zero function is negligible;
+  `negligible_const_iff`, `not_negligible_one`: no other constant is.
 - `negligible_of_le`, `negligible_of_eventuallyLE`: Monotonicity — (eventually) bounded by
   negligible is negligible.
-- `negligible_add`, `negligible_sum`: Finite sums of negligible functions are negligible;
-  `negligible_ofReal_add`, `negligible_ofReal_sum` are the same through `ENNReal.ofReal`.
+- `negligible_add`, `negligible_sum`, `negligible_list_sum`: Finite sums of negligible functions
+  are negligible; `negligible_ofReal_add`, `negligible_ofReal_sum` are the same through
+  `ENNReal.ofReal`.
 - `negligible_const_mul`, `negligible_pow_mul`, `negligible_polynomial_mul`: Polynomial factors
   are absorbed.
 - `negligible_natMul_of_poly_bound`, `negligible_ofReal_natDiv_of_poly_bound`: Polynomially
@@ -29,6 +33,8 @@ as this is usually the situation for cryptographic reductions.
 - `negligible_iff_superpolynomialDecay_toReal`, `negligible_ofReal_iff`: The bridge to Mathlib's
   real-valued `SuperpolynomialDecay`, through which `negligible_iff_isBigO_toReal` and
   `negligible_iff_isLittleO_toReal` give the `O`/`o` characterizations.
+- `negligible_pow_of_lt_one`, `negligible_two_rpow_neg_mul`: Geometric decay, such as `2 ^ (-c n)`
+  for `c > 0`, is negligible.
 -/
 
 @[expose] public section
@@ -46,6 +52,17 @@ lemma negligible_zero : negligible 0 := superpolynomialDecay_zero _ _
 
 lemma negligible_of_zero {f : ℕ → ℝ≥0∞} (hf : ∀ n, f n = 0) : negligible f :=
   funext hf ▸ negligible_zero
+
+/-- A constant function is negligible exactly when the constant is `0`. -/
+theorem negligible_const_iff {c : ℝ≥0∞} : negligible (fun _ : ℕ => c) ↔ c = 0 := by
+  refine ⟨fun h => ?_, fun h => negligible_of_zero fun _ => h⟩
+  have h0 := h 0
+  simp only [pow_zero, one_mul] at h0
+  exact tendsto_nhds_unique tendsto_const_nhds h0
+
+/-- The constant `1` is not negligible. -/
+theorem not_negligible_one : ¬ negligible fun _ : ℕ => (1 : ℝ≥0∞) :=
+  fun h => one_ne_zero (negligible_const_iff.1 h)
 
 /-- Negligibility is monotone under eventual domination: if `f ≤ g` for all large `n` and `g` is
 negligible, then `f` is. This is Mathlib's `SuperpolynomialDecay.trans_eventuallyLE` with `f`
@@ -104,6 +121,16 @@ theorem negligible_sum {ι : Type*} {s : Finset ι} {f : ι → ℕ → ℝ≥0�
     exact negligible_add
       (h _ (Finset.mem_insert_self _ _))
       (ih fun i hi => h i (Finset.mem_insert_of_mem hi))
+
+/-- A sum over a list of negligible functions is negligible. -/
+theorem negligible_list_sum {ι : Type*} {L : List ι} {f : ι → ℕ → ℝ≥0∞}
+    (h : ∀ i ∈ L, negligible (f i)) :
+    negligible (fun n => (L.map fun i => f i n).sum) := by
+  induction L with
+  | nil => exact negligible_zero
+  | cons a L ih =>
+    simp only [List.map_cons, List.sum_cons]
+    exact negligible_add (h a List.mem_cons_self) (ih fun i hi => h i (List.mem_cons_of_mem _ hi))
 
 /-- If `f` is negligible, then `fun n => (↑n)^d * f n` is negligible for any fixed `d`.
 Absorbs polynomial powers of the parameter into the superpolynomial decay. -/
@@ -183,3 +210,21 @@ theorem negligible_iff_isLittleO_toReal {f : ℕ → ℝ≥0∞} (hf : ∀ n, f 
     negligible f ↔ ∀ z : ℤ, (fun n => (f n).toReal) =o[atTop] fun n : ℕ => (n : ℝ) ^ z :=
   (negligible_iff_superpolynomialDecay_toReal hf).trans
     (superpolynomialDecay_iff_isLittleO _ tendsto_natCast_atTop_atTop)
+
+/-- A geometric sequence with ratio below `1` is negligible. -/
+theorem negligible_pow_of_lt_one {a : ℝ≥0∞} (ha : a < 1) : negligible fun n => a ^ n := by
+  have ha' : a ≠ ⊤ := ha.ne_top
+  rw [negligible_iff_superpolynomialDecay_toReal fun n => ENNReal.pow_ne_top ha']
+  intro k
+  have hr : |a.toReal| < 1 := by
+    rw [abs_of_nonneg ENNReal.toReal_nonneg]
+    exact ENNReal.toReal_lt_of_lt_ofReal (by simpa using ha)
+  simpa only [ENNReal.toReal_pow] using tendsto_pow_const_mul_const_pow_of_abs_lt_one k hr
+
+/-- `2 ^ (-c n)` is negligible for `c > 0`. -/
+theorem negligible_two_rpow_neg_mul {c : ℝ} (hc : 0 < c) :
+    negligible fun n : ℕ => (2 : ℝ≥0∞) ^ (-(c * n)) := by
+  have h := negligible_pow_of_lt_one (ENNReal.rpow_lt_one_of_one_lt_of_neg (x := 2)
+    one_lt_two (neg_lt_zero.2 hc))
+  refine negligible_of_le (fun n => le_of_eq ?_) h
+  rw [← ENNReal.rpow_natCast, ← ENNReal.rpow_mul, neg_mul]
