@@ -18,6 +18,7 @@ public import VCVio.OracleComp.EvalDist.Measure
 public import VCVio.OracleComp.QueryTracking.LoggingOracle.Core
 public import HashSig.SLHDSA.Security.NativeRelative
 public import HashSig.SLHDSA.SHAKE128s.Bridge.SharedExperiment.Pure
+import all HashSig.SLHDSA.SHAKE128s.Proof.ActualWork.Work.Signing
 import HashSig.SLHDSA.SHAKE128s.Proof.ActualWork.Transcript.Program
 import VCVio.OracleComp.SimSemantics.StateT.StateProjection
 import VCVio.OracleComp.EvalDist.Sum
@@ -117,25 +118,16 @@ private theorem lab_verify_salted
     AllQueriesSatisfy
       ((labScheme FIPS205.core (fun key => pure key.pkSeed) seed).verify pk message signature)
       (Salted pk.pkSeed) := by
-  let publicProgram :=
-    (GeneralScheme.verifyInternalM FIPS205.params FIPS205.core message signature pk :
-      OracleComp (publicHashSpec FIPS205.core) Bool)
-  have hpublic : AllQueriesSatisfy publicProgram (fun _ => True) :=
-    allQueriesSatisfy_of_forall (fun _ => trivial) publicProgram
-  let liftPublic := HasQuery.QueryHom.ofSimulateQ
-    (spec := publicHashSpec FIPS205.core) (m := OracleComp Lab)
   change AllQueriesSatisfy
     (GeneralScheme.verifyInternalM FIPS205.params FIPS205.core message signature pk :
       OracleComp Lab Bool) (Salted pk.pkSeed)
-  rw [← GeneralScheme.verifyInternalM_natural FIPS205.params FIPS205.core liftPublic]
-  change AllQueriesSatisfy
-    (simulateQ (HasQuery.toQueryImpl (spec := publicHashSpec FIPS205.core)
-      (m := OracleComp Lab)) publicProgram) (Salted pk.pkSeed)
-  refine hpublic.simulateQ ?_
-  intro input _
-  change AllQueriesSatisfy
-    (query (spec := Lab) (.inl (.inl (.inr (.inl input))))) (Salted pk.pkSeed)
-  exact (allQueriesSatisfy_query_iff _ _).2 trivial
+  refine GeneralScheme.verifyInternalM_pred (m := OracleComp Lab)
+    (Q := fun p => AllQueriesSatisfy p (Salted pk.pkSeed))
+    (fun _ => allQueriesSatisfy_pure _ _) (fun _ _ => allQueriesSatisfy_bind)
+    FIPS205.core message signature pk ?_ ?_
+  · intro _ _ _
+    exact (allQueriesSatisfy_query_iff _ _).2 trivial
+  · exact (allQueriesSatisfy_query_iff _ _).2 trivial
 
 private theorem projected_sign_salted
     (seed : FIPS205.core.PkSeed) (pk sk : PK) (request : Message) :
@@ -209,98 +201,18 @@ private theorem projected_client_salted
       (simulateQ commonProjection
         (marked.runWithSigningOracle pk sk
           (SigningView.Events.mainWithEvents (commonMain adv) pk))) (SaltedCommon pk.pkSeed) := by
-  classical
   dsimp only
-  let Marked := SigningView.Events.Spec A Message
-  let marked := SigningView.Events.viewWithEvents (commonView true seed)
-  let AmbientAllowed : A.Domain → Prop := Sum.elim (Salted pk.pkSeed) (fun _ => True)
-  let MarkedAllowed : Marked.Domain → Prop := Sum.elim AmbientAllowed (fun _ => True)
-  have common_allowed : AllQueriesSatisfy (commonMain adv pk)
-      (Sum.elim AmbientAllowed (fun _ => True)) := by
-    unfold commonMain
-    refine (allQueriesSatisfy_of_forall (fun _ => True.intro)
-      (Game.Counted.externalMain adv pk)).simulateQ ?_
-    rintro ((sample | bytes) | request) _
-    · change AllQueriesSatisfy
-        (liftM ((A + Sign).query (.inl (.inl (.inl (.inl (.inl sample)))))) :
-          OracleComp (A + Sign) _) _
-      exact (allQueriesSatisfy_query_iff (spec := A + Sign) _ _).2 trivial
-    · change AllQueriesSatisfy
-        (liftM ((A + Sign).query (.inl (.inr bytes))) : OracleComp (A + Sign) _) _
-      exact (allQueriesSatisfy_query_iff (spec := A + Sign) _ _).2 trivial
-    · change AllQueriesSatisfy
-        (liftM ((A + Sign).query (.inr request)) : OracleComp (A + Sign) _) _
-      exact (allQueriesSatisfy_query_iff (spec := A + Sign) _ _).2 trivial
-  have main_allowed : AllQueriesSatisfy
-      (SigningView.Events.mainWithEvents (commonMain adv) pk)
-      (Sum.elim MarkedAllowed (fun _ => True)) := by
-    unfold SigningView.Events.mainWithEvents
-    refine common_allowed.simulateQ ?_
-    rintro (ambient | request) hi
-    · simp only [QueryImpl.add, SigningView.Events.phaseImpl,
-        QueryImpl.preInsert_apply, SigningView.Events.emit, simulateQ_bind, simulateQ_spec_query]
-      change AllQueriesSatisfy
-        (do
-          let _ ← (liftM ((Marked + Sign).query
-            (.inl (.inr (.ambient .adversary ambient)))) : OracleComp (Marked + Sign) PUnit)
-          (liftM ((Marked + Sign).query (.inl (.inl ambient))) :
-            OracleComp (Marked + Sign) _)) _
-      exact allQueriesSatisfy_bind
-        ((allQueriesSatisfy_query_iff (spec := Marked + Sign) _ _).2 trivial)
-        (fun _ => (allQueriesSatisfy_query_iff (spec := Marked + Sign) _ _).2 hi)
-    · change AllQueriesSatisfy
-        (liftM ((Marked + Sign).query (.inr request)) : OracleComp (Marked + Sign) _) _
-      exact (allQueriesSatisfy_query_iff (spec := Marked + Sign) _ _).2 trivial
-  have project_allowed (input : Marked.Domain) (hi : MarkedAllowed input) :
-      AllQueriesSatisfy (commonProjection input) (SaltedCommon pk.pkSeed) := by
-    rcases input with ambient | event
-    · exact (allQueriesSatisfy_query_iff (spec := LabCommon) _ _).2 hi
-    · cases hevent : commonEvent event with
-      | none =>
-        simpa only [commonProjection, QueryImpl.add, hevent] using
-          (allQueriesSatisfy_pure (spec := LabCommon) PUnit.unit (SaltedCommon pk.pkSeed))
-      | some rawEvent =>
-        simp only [commonProjection, QueryImpl.add, hevent]
-        exact (allQueriesSatisfy_query_iff (spec := LabCommon) _ _).2 trivial
-  let ClientAllowed : (LabCommon + Sign).Domain → Prop :=
-    Sum.elim (SaltedCommon pk.pkSeed) (fun _ => True)
-  let mapped := marked.map (simulateQ' commonProjection)
-  let client := simulateQ (SigningView.mapClient commonProjection)
-    (SigningView.Events.mainWithEvents (commonMain adv) pk)
-  have hclient : AllQueriesSatisfy client ClientAllowed := by
-    refine main_allowed.simulateQ ?_
-    rintro (input | request) hi
-    · simp only [SigningView.mapClient, QueryImpl.add]
-      refine (project_allowed input hi).simulateQ ?_
-      intro native hn
-      exact (allQueriesSatisfy_query_iff (spec := LabCommon + Sign) _ _).2 hn
-    · exact (allQueriesSatisfy_query_iff (spec := LabCommon + Sign) _ _).2 trivial
-  let service : QueryImpl (LabCommon + Sign)
-      (WriterT (QueryLog Sign) (OracleComp LabCommon)) :=
-    QueryImpl.add
-      ((QueryImpl.id' LabCommon).liftTarget
-        (WriterT (QueryLog Sign) (OracleComp LabCommon)))
-      (mapped.signingOracle pk sk)
-  have hbound := (isQueryBoundP_zero_iff client ClientAllowed).2 hclient
-  have hrun : IsQueryBoundP (simulateQ service client).run
-      (fun input => ¬SaltedCommon pk.pkSeed input) 0 := by
-    refine hbound.simulateQ_run_writerT_of_step ?_ ?_
-    · rintro (input | request) hbad
-      · simp [service, QueryImpl.add, isQueryBoundP_query_iff]
-      · exact (hbad trivial).elim
-    · rintro (input | request) hgood
-      · have hi : SaltedCommon pk.pkSeed input := not_not.mp hgood
-        simp [service, QueryImpl.add, isQueryBoundP_query_iff, hi]
-      · apply (isQueryBoundP_zero_iff _ (SaltedCommon pk.pkSeed)).2
-        change AllQueriesSatisfy ((mapped.signingOracle pk sk request).run) (SaltedCommon pk.pkSeed)
-        rw [SigningView.signingOracle, QueryImpl.run_withLogging_apply]
-        refine allQueriesSatisfy_bind ?_ (fun _ => allQueriesSatisfy_pure _ _)
-        simpa only [mapped, SigningView.map, simulateQ'_apply] using
-          projected_callback_salted seed pk sk request
-  rw [SigningView.simulateQ_runWithSigningOracle]
-  apply (isQueryBoundP_zero_iff _ (SaltedCommon pk.pkSeed)).1
-  simpa only [SigningView.runWithSigningOracle, service, QueryImpl.add_eq_hAdd,
-    QueryImpl.passthrough_add, mapped, marked, client] using hrun
+  rw [SigningCounts.actual_client_eq]
+  refine SigningCounts.clientHandler_preserves
+    (fun p => AllQueriesSatisfy p (SaltedCommon pk.pkSeed))
+    (fun _ => allQueriesSatisfy_pure _ _) (fun hp hf => allQueriesSatisfy_bind hp hf)
+    ?_ (projected_callback_salted seed pk sk) _
+  rintro (n | raw) <;>
+    simp only [SigningCounts.clientAmbient, SigningView.Events.phaseImpl,
+      QueryImpl.preInsert_apply, SigningView.Events.emit, simulateQ_bind,
+      simulateQ_spec_query, commonProjection, commonEvent, Guarded.sourceInput, QueryImpl.add] <;>
+    exact allQueriesSatisfy_bind ((allQueriesSatisfy_query_iff _ _).2 trivial)
+      (fun _ => (allQueriesSatisfy_query_iff _ _).2 trivial)
 
 private theorem marked_rejecting_postkeygen_good_queries
     (seed : FIPS205.core.PkSeed) (pk sk : PK)
