@@ -78,6 +78,31 @@ theorem ordinary_warm (b : L) (off : OrdinaryAt G b) (st : DeferredState L H X K
   rw [ordinary_run G e b off st]
   simp [low, high]
 
+/-- Every operation except the physical public call at this input retains both of its public rows.
+This includes reads and touches of canonical graph cells. -/
+theorem mixed_rows_away (b : L) (t : (Mixed L F X K H).Domain) (st : DeferredState L H X K)
+    (away : t ≠ .inl (.inr b)) {z}
+    (hz : z ∈ support ((simulateQ G.deferredImpl (expand e t)).run st)) :
+    z.2.1.1 (.inl b) = st.1.1 (.inl b) ∧ z.2.1.1 (.inr b) = st.1.1 (.inr b) := by
+  rcases t with (coin | a) | op
+  · simp only [expand, RandomOraclePairedValue.readHalves, simulateQ_spec_query, liftPublic,
+      simulateQ_HasQuery_query, G.deferredImpl_run_inl, CanonicalGraph.relabelImpl_run_unif,
+      Functor.map_map, support_map] at hz
+    obtain ⟨_, _, rfl⟩ := hz
+    exact ⟨rfl, rfl⟩
+  · have different : b ≠ a := fun h => away (h ▸ rfl)
+    simp only [expand, RandomOraclePairedValue.readHalves, simulateQ_bind, simulateQ_pure,
+      simulateQ_spec_query, liftPublic, simulateQ_HasQuery_query, StateT.run_bind,
+      StateT.run_pure, mem_support_bind_iff, mem_support_pure_iff] at hz
+    obtain ⟨lo, hl, hi, hh, rfl⟩ := hz
+    have left := public_frame G _ _ hl
+    have right := public_frame G _ _ hh
+    rw [right _ Sum.inl_ne_inr, right _ (by simpa using different),
+      left _ (by simpa using different), left _ Sum.inr_ne_inl]
+    exact ⟨rfl, rfl⟩
+  · change z ∈ support ((simulateQ G.deferredImpl (internalRead op)).run st) at hz
+    simp only [internal_frame G op st hz, and_self]
+
 /-- Ordinary halves are present together at this input; other rows may be partial. -/
 @[expose] def occupiedTogether (b : L) (s : DeferredState L H X K) : Prop :=
   (s.1.1 (.inl b)).isSome = (s.1.1 (.inr b)).isSome
