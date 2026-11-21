@@ -24,7 +24,7 @@ namespace Derivations
 
 variable {A L X F H : Type} (aux : OracleSpec A) (e : F ≃ H × H)
 
-/-- The oracle gives public words at `L`, auxiliary replies, and private derivations at `X`. -/
+/-- Draw uniform samples, query public words or the auxiliary oracle, or derive a private word at `X`. -/
 abbrev World (L X V : Type) := ((L →ₒ V) + aux).withDerivations X V
 
 /-- The state stores both public tables and the private derivation table. -/
