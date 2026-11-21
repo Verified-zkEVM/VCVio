@@ -13,7 +13,8 @@ import VCVio.OracleComp.EvalDist.Measure
 /-!
 # Checks of the structural rules
 
-Small derivations, one or two rules each, and what `Derivation.sound` gives for them:
+Small derivations, one or two rules each; `Valid.all_inst` and `Valid.box_ff_of_hyp` read two of
+them through `Derivation.sound`:
 
 * `Derivation.hyp`: G.Axiom and G.Weak.
 * `Derivation.allInst`, `Valid.all_inst`: G.L-∀̃, G.Cut and G.Axiom instantiate a global universal.
@@ -21,10 +22,11 @@ Small derivations, one or two rules each, and what `Derivation.sound` gives for 
 * `Derivation.boxRoundTrip`: L.ByGlob, then G.ByLoc.
 * `Valid.box_all_eq_self`: L.R-∀ gives `[∀ x. x = x]` from the local validity of `x = x`.
 
-Two checks show that a rule's premise is needed, for a declaration with no `large` base type:
-`[false]` follows from the hypothesis `[false]` (`Valid.box_ff_of_hyp`) but not from no hypothesis
-(`Valid.not_box_ff`), and `[∀ (x : bool). x = true]` is not valid (`Valid.not_box_all_eq_tt`),
-since the local quantifier ranges over the whole carrier.
+Two checks show that premises are needed, for a declaration with no `large` base type. `[false]`
+follows from the hypothesis `[false]` (`Valid.box_ff_of_hyp`) but not from no hypothesis
+(`Valid.not_box_ff`), so G.Axiom reads its hypotheses. `[∀ (x : bool). x = true]` is not valid
+(`Valid.not_box_all_eq_tt`), since the local quantifier ranges over the whole carrier, so L.R-∀
+needs its premise, here the local validity of `x = true`.
 -/
 
 public section
