@@ -61,6 +61,23 @@ writer result. `WriterT ω Option` loses the log on `none`; `OptionT (WriterT ω
 a log together with `none`. `VCVioTest/ModuleAPI/Counting.lean` checks both orders, repeated
 labels, unchanged answers, and the ordinary function monoid.
 
+## Runs with fixed answers
+
+`evalWithAnswerFn ans oa` answers every query with a fixed `ans : QueryImpl spec Id`, and
+[`RunLog.lean`](../../VCVio/OracleComp/QueryTracking/RunLog.lean) records the path it follows:
+`OracleComp.runLog ans oa` lists the queries of that run, oldest first, with their answers, and
+`evalWithAnswerFn_withQueryLog` identifies it with `withQueryLog` answered by `ans`. The log of a
+bind concatenates the logs, the log of `simulateQ impl oa` concatenates the handler's logs
+(`runLog_simulateQ`), answer functions that agree at every logged query give the same run and the
+same log, and `length_filterMap_runLog_le` bounds the logged queries that a predicate-targeted
+query bound counts. `tableQueryLog` in `RandomOracle/FreshQuery.lean` is `runLog` against a
+complete answer table.
+
+A program whose queries all satisfy `P` does not read a cache outside `P`: from two caches that
+agree on `P`, `QueryImpl.fst_map_run_simulateQ_withCaching_eq_of_allQueriesSatisfy` returns the
+same results, and so does
+`OracleSpec.fst_map_run_simulateQ_romImpl_eq_of_allQueriesSatisfy` in the random oracle model.
+
 ## Main Files
 
 | File | Role |
@@ -70,6 +87,7 @@ labels, unchanged answers, and the ordinary function monoid.
 | `VCVio/OracleComp/QueryTracking/CostModel.lean` | `OracleComp`-specific facade over the generic semantics |
 | `VCVio/OracleComp/QueryTracking/CostModel/Simulation.lean` | Weighted cost bounds for actual oracle-query substitution |
 | `VCVio/OracleComp/QueryTracking/DeterminedCost.lean` | Deterministic executions and singleton-response complete-path costs |
+| `VCVio/OracleComp/QueryTracking/RunLog.lean` | The query log of a run with fixed answers |
 | `VCVio/OracleComp/QueryTracking/MeasuredProgram.lean` | Named deterministic instruction programs, realization and declared budgets |
 | `VCVio/OracleComp/QueryTracking/MeasuredProgram/Composition.lean` | Sequential programs retaining both instruction traces and adding budgets |
 | `VCVio/OracleComp/QueryTracking/AdaptivePrefix.lean` | Shared-ROM stopping-time bounds for an adaptive prefix followed by a transcript-dependent suffix |
