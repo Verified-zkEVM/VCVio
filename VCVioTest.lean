@@ -131,6 +131,7 @@ public import VCVioTest.OracleComp.SimulateQ
 public import VCVioTest.OracleComp.SpecInstanceSearch
 public import VCVioTest.OracleComp.SpecInstanceSearchLibrary
 public import VCVioTest.OracleComp.Sum
+public import VCVioTest.OracleComp.SupportKernel
 public import VCVioTest.OracleComp.SupportMeasure
 public import VCVioTest.OracleComp.SupportRefinement
 public import VCVioTest.OracleComp.UniformAnswerMeasure
