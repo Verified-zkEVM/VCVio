@@ -54,12 +54,12 @@ private theorem run_lower (so : QueryImpl spec (StateT σ ProbComp)) (f : σ →
     rw [simulateQ_query_bind, StateT.run_bind, tsum_prEvent_bind_mul]
     exact (step t s).trans (tsum_le_tsum fun z => mul_le_mul_of_nonneg_left (ih z.1 z.2) zero_le)
 
-/-- The probability of a terminal hit is at most the expected final potential from a clean start. -/
-theorem IsPotentialStep.prEvent_le_expected {so : QueryImpl spec (StateT σ ProbComp)}
+/-- Potential together with the credit for a clean state has nondecreasing expectation. -/
+theorem IsPotentialStep.expected_credit {so : QueryImpl spec (StateT σ ProbComp)}
     {P : σ → Prop} {Φ : σ → ℝ≥0∞} (h : IsPotentialStep so P Φ)
-    (oa : OracleComp spec α) (s : σ) (clean : ¬ P s) :
-    Pr{let z ← (simulateQ so oa).run s}[P z.2] ≤
-      ∑' z, Pr{let u ← (simulateQ so oa).run s}[u = z] * Φ z.2 := by
+    (oa : OracleComp spec α) (s : σ) [DecidablePred P] :
+    Φ s + (if P s then 0 else 1) ≤ ∑' z, Pr{let u ← (simulateQ so oa).run s}[u = z] *
+      (Φ z.2 + if P z.2 then 0 else 1) := by
   classical
   let f (s : σ) := Φ s + if P s then 0 else 1
   have localLaw (t : spec.Domain) (u : σ) :
@@ -86,13 +86,27 @@ theorem IsPotentialStep.prEvent_le_expected {so : QueryImpl spec (StateT σ Prob
         f u = Φ u + 1 := by simp [f, bad]
         _ = (Pr{let z ← m}[P z.2] + Φ u) + Pr{let z ← m}[¬P z.2] := by rw [← mass]; ac_rfl
         _ ≤ _ := add_le_add ((add_le_add hit le_rfl).trans paid) le_rfl
-  have credit := run_lower so f localLaw oa s
-  let m := (simulateQ so oa).run s
-  change f s ≤ ∑' z, Pr{let u ← m}[u = z] * (Φ z.2 + if P z.2 then 0 else 1) at credit
+  exact run_lower so f localLaw oa s
+
+/-- A terminal clean-state credit of at least one bounds the hit by the expected charge. -/
+theorem prEvent_le_expected_of_credit {γ : Type} (m : ProbComp γ) (P : γ → Prop)
+    (Φ : γ → ℝ≥0∞) [DecidablePred P]
+    (credit : 1 ≤ ∑' z, Pr{let u ← m}[u = z] * (Φ z + if P z then 0 else 1)) :
+    Pr{let z ← m}[P z] ≤ ∑' z, Pr{let u ← m}[u = z] * Φ z := by
   rw [mean_credit] at credit
-  refine ENNReal.le_of_add_le_add_right (a := Pr{let z ← m}[¬P z.2])
+  refine ENNReal.le_of_add_le_add_right (a := Pr{let z ← m}[¬P z])
     (ne_top_of_le_ne_top ENNReal.one_ne_top (prEvent_le_one _)) ?_
   rw [prEvent_add_prEvent_not_eq_prEvent_true, prEvent_true_eq_one]
-  exact (by simp [f, clean] : 1 ≤ f s).trans credit
+  exact credit
+
+/-- The probability of a terminal hit is at most the expected final potential from a clean start. -/
+theorem IsPotentialStep.prEvent_le_expected {so : QueryImpl spec (StateT σ ProbComp)}
+    {P : σ → Prop} {Φ : σ → ℝ≥0∞} (h : IsPotentialStep so P Φ)
+    (oa : OracleComp spec α) (s : σ) (clean : ¬ P s) :
+    Pr{let z ← (simulateQ so oa).run s}[P z.2] ≤
+      ∑' z, Pr{let u ← (simulateQ so oa).run s}[u = z] * Φ z.2 := by
+  classical
+  apply prEvent_le_expected_of_credit
+  exact (by simp [clean] : 1 ≤ Φ s + (if P s then 0 else 1)).trans (h.expected_credit oa s)
 
 end OracleComp
