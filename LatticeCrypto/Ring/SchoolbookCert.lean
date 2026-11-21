@@ -255,54 +255,43 @@ noncomputable def vectorNegacyclicSemantics (Coeff : Type*) [CommRing Coeff]
 /-- The vector-backed negacyclic ring carrier is a `CommRing`.
 
 Each ring axiom is lifted from `NegacyclicQuotient` (a `CommRing`) via the injective
-homomorphism `quotientOf = NegacyclicQuotient.ofBackend`. -/
+homomorphism `quotientOf = NegacyclicQuotient.ofBackend` (`Function.Injective.commRing`).
+For `n = 0` the carrier is a subsingleton and the axioms are lifted from `Unit`. -/
 noncomputable instance vectorNegacyclicRing_instCommRing (Coeff : Type*) [CommRing Coeff]
     (n : Nat) : CommRing (vectorNegacyclicRing Coeff n).Poly := by
   cases n with
   | zero =>
-    haveI hss : Subsingleton (vectorNegacyclicRing Coeff 0).Poly :=
-      ⟨fun a b => PolyBackend.ext_coeff fun i => i.elim0⟩
-    exact { mul := (vectorNegacyclicRing Coeff 0).mul
-            one := (vectorNegacyclicRing Coeff 0).one
-            mul_assoc a b c:= hss.elim _ _
-            one_mul a := hss.elim _ _
-            mul_one a := hss.elim _ _
-            mul_comm a b := hss.elim _ _
-            left_distrib a b c:= hss.elim _ _
-            right_distrib a b c:= hss.elim _ _
-            zero_mul a := hss.elim _ _
-            mul_zero a := hss.elim _ _
-            npow k _ := if k = 0 then (vectorNegacyclicRing Coeff 0).one else 0
-            npow_zero _ := rfl
-            npow_succ k a := hss.elim _ _
-            natCast _ := 0
-            natCast_zero := rfl
-            natCast_succ k := hss.elim _ _
-            intCast _ := 0
-            intCast_ofNat k := hss.elim _ _
-            intCast_negSucc k := hss.elim _ _ }
+    letI : Pow (vectorNegacyclicRing Coeff 0).Poly ℕ := ⟨fun _ k => if k = 0 then 1 else 0⟩
+    letI : NatCast (vectorNegacyclicRing Coeff 0).Poly := ⟨fun _ => 0⟩
+    letI : IntCast (vectorNegacyclicRing Coeff 0).Poly := ⟨fun _ => 0⟩
+    exact Function.Injective.commRing (fun _ => ())
+      (fun _ _ _ => PolyBackend.ext_coeff fun i => i.elim0) rfl rfl (fun _ _ => rfl)
+      (fun _ _ => rfl) (fun _ => rfl) (fun _ _ => rfl) (fun _ _ => rfl) (fun _ _ => rfl)
+      (fun _ _ => rfl) (fun _ => rfl) (fun _ => rfl)
   | succ m =>
     let vRing := vectorNegacyclicRing Coeff (m + 1)
     let vs := vectorNegacyclicSemantics Coeff (Nat.succ_pos m)
-    have lift : ∀ a b : vRing.Poly, vs.quotientOf a = vs.quotientOf b → a = b :=
-      NegacyclicQuotient.ofBackend_injective (vectorBackend Coeff (m + 1))
-    have hmul : ∀ a b : vRing.Poly,
-        vs.quotientOf (a * b) = vs.quotientOf a * vs.quotientOf b := fun a b =>
-      vs.mul_sound a b
+    letI : Pow vRing.Poly ℕ := ⟨fun x k => npowRec k x⟩
+    letI : NatCast vRing.Poly := ⟨Nat.unaryCast⟩
+    letI : IntCast vRing.Poly := ⟨Int.castDef⟩
     have hone : vs.quotientOf 1 = 1 := vs.one_sound
-    have hadd : ∀ a b : vRing.Poly,
-        vs.quotientOf (a + b) = vs.quotientOf a + vs.quotientOf b := fun a b =>
-      vs.add_sound a b
-    have hzero : vs.quotientOf 0 = 0 := vs.zero_sound
-    exact { mul := vRing.mul
-            one := vRing.one
-            mul_assoc a b c := lift _ _ (by simp only [hmul]; ring)
-            one_mul a := lift _ _ (by simp only [hmul, hone]; ring)
-            mul_one a := lift _ _ (by simp only [hmul, hone]; ring)
-            mul_comm a b := lift _ _ (by simp only [hmul]; ring)
-            left_distrib a b c := lift _ _ (by simp only [hmul, hadd]; ring)
-            right_distrib a b c := lift _ _ (by simp only [hmul, hadd]; ring)
-            zero_mul a := lift _ _ (by simp only [hmul, hzero]; ring)
-            mul_zero a := lift _ _ (by simp only [hmul, hzero]; ring) }
+    have hadd : ∀ a b : vRing.Poly, vs.quotientOf (a + b) = vs.quotientOf a + vs.quotientOf b :=
+      vs.add_sound
+    have hmul : ∀ a b : vRing.Poly, vs.quotientOf (a * b) = vs.quotientOf a * vs.quotientOf b :=
+      vs.mul_sound
+    have hneg : ∀ a : vRing.Poly, vs.quotientOf (-a) = -vs.quotientOf a := vs.neg_sound
+    let F := AddMonoidHom.mk' vs.quotientOf hadd
+    have hnpow (x : vRing.Poly) (k : ℕ) : vs.quotientOf (x ^ k) = vs.quotientOf x ^ k := by
+      induction k with
+      | zero => exact hone
+      | succ k ih => exact (hmul (x ^ k) x).trans (by rw [ih, pow_succ])
+    have hnat (k : ℕ) : vs.quotientOf k = k := by
+      induction k with
+      | zero => exact vs.zero_sound.trans Nat.cast_zero.symm
+      | succ k ih => exact (hadd (k : vRing.Poly) 1).trans (by rw [ih, hone, Nat.cast_succ])
+    exact Function.Injective.commRing vs.quotientOf (NegacyclicQuotient.ofBackend_injective _)
+      vs.zero_sound hone hadd hmul hneg vs.sub_sound (map_nsmul F) (map_zsmul F) hnpow hnat fun
+        | (k : ℕ) => (hnat k).trans (Int.cast_natCast k).symm
+        | .negSucc k => (hneg _).trans (by rw [hnat, Int.cast_negSucc])
 
 end LatticeCrypto
