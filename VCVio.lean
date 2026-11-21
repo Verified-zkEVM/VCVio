@@ -459,6 +459,14 @@ public import VCVio.OracleComp.QueryTracking.QueryCost
 public import VCVio.OracleComp.QueryTracking.QueryLog
 public import VCVio.OracleComp.QueryTracking.QueryLogCheck
 public import VCVio.OracleComp.QueryTracking.RandomOracle.AcceptedScan
+public import VCVio.OracleComp.QueryTracking.RandomOracle.AcceptedScan.CyclicMass
+public import VCVio.OracleComp.QueryTracking.RandomOracle.AcceptedScan.NewPartner
+public import VCVio.OracleComp.QueryTracking.RandomOracle.AcceptedScan.Occupied
+public import VCVio.OracleComp.QueryTracking.RandomOracle.AcceptedScan.PartnerProbe
+public import VCVio.OracleComp.QueryTracking.RandomOracle.AcceptedScan.PartnerSet
+public import VCVio.OracleComp.QueryTracking.RandomOracle.AcceptedScan.Partners
+public import VCVio.OracleComp.QueryTracking.RandomOracle.AcceptedScan.Probe
+public import VCVio.OracleComp.QueryTracking.RandomOracle.AcceptedScan.Selection
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
 public import VCVio.OracleComp.QueryTracking.RandomOracle.CachePartial
 public import VCVio.OracleComp.QueryTracking.RandomOracle.CachePartial.Cost
@@ -475,6 +483,8 @@ public import VCVio.OracleComp.QueryTracking.RandomOracle.Encoded
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Encoded.Batch
 public import VCVio.OracleComp.QueryTracking.RandomOracle.ExpectedFreshQuery
 public import VCVio.OracleComp.QueryTracking.RandomOracle.ExpectedFreshQueryInfinite
+public import VCVio.OracleComp.QueryTracking.RandomOracle.ExpectedGraph
+public import VCVio.OracleComp.QueryTracking.RandomOracle.ExpectedPotential
 public import VCVio.OracleComp.QueryTracking.RandomOracle.FinMOfFn
 public import VCVio.OracleComp.QueryTracking.RandomOracle.FiniteSupport
 public import VCVio.OracleComp.QueryTracking.RandomOracle.FreshAnswer
@@ -488,8 +498,12 @@ public import VCVio.OracleComp.QueryTracking.RandomOracle.HiddenSeedCollapse
 public import VCVio.OracleComp.QueryTracking.RandomOracle.InitialCacheExpectedQuery
 public import VCVio.OracleComp.QueryTracking.RandomOracle.JointPotential
 public import VCVio.OracleComp.QueryTracking.RandomOracle.JointPotential.EagerSubgraph
+public import VCVio.OracleComp.QueryTracking.RandomOracle.JointPotential.EagerSubgraph.Run
 public import VCVio.OracleComp.QueryTracking.RandomOracle.JointPotential.Subgraph
 public import VCVio.OracleComp.QueryTracking.RandomOracle.LoggedRun
+public import VCVio.OracleComp.QueryTracking.RandomOracle.MarkedReplies
+public import VCVio.OracleComp.QueryTracking.RandomOracle.MarkedReplies.Cost
+public import VCVio.OracleComp.QueryTracking.RandomOracle.MarkedReplies.Registration
 public import VCVio.OracleComp.QueryTracking.RandomOracle.PairedValue
 public import VCVio.OracleComp.QueryTracking.RandomOracle.PairedValue.Derivations
 public import VCVio.OracleComp.QueryTracking.RandomOracle.PairedValue.GraphCost

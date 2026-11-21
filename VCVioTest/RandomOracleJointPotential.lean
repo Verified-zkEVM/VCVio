@@ -5,7 +5,7 @@ Authors: Alexander Hicks
 -/
 
 module
-public import VCVio.OracleComp.QueryTracking.RandomOracle.JointPotential
+public import VCVio.OracleComp.QueryTracking.RandomOracle.ExpectedGraph
 import VCVio.OracleComp.Constructions.SampleableType.Measure
 
 /-!
@@ -270,5 +270,26 @@ example :
   · rw [Nat.card_eq_fintype_card, Fintype.card_fin, Nat.cast_ofNat]
   · rw [ENNReal.div_lt_iff (by norm_num) (by norm_num)]
     norm_num
+
+/-- The expected-price bound includes both pending labels after one public query. -/
+theorem expected_forgerFirst [Inhabited R] [DecidableEq R] [SampleableType R] (g : R) :
+    Pr{let z ← (G R).deferredFillDraw (pure ()) (forgerFirst g)}[
+      (G R).Conflict z.2.1 ∨ (nk R).TCHazard z.2.1] ≤ 2 / Nat.card R := by
+  apply ((nk R).isCharged.prEvent_deferredFillDraw_le_expected
+    (not_or.mpr ⟨(G R).not_conflict_empty, CanonicalGraph.NodeKeys.not_tcHazard_empty⟩)
+    (fun C => 2 * (((nk R).keyEntries C).encard : ℝ≥0∞) / Nat.card R)
+    (nk R).potential_le_two_mul (forgerFirst g)).trans
+  rw [deferredImpl_run_forgerFirst, tsum_prEvent_map_mul]
+  have upper (a : R) := ENat.toENNReal_le.2 (encard_keyEntries_le g a)
+  have mass := tsum_prEvent_mul_of_const_on_support ($ᵗ R)
+    (f := fun _ => (2 : ℝ≥0∞) / Nat.card R) (fun _ _ => rfl)
+  rw [← mass]
+  apply tsum_le_tsum
+  intro a
+  apply mul_le_mul_of_nonneg_left _ zero_le
+  have bound := (upper a).trans_eq ENat.toENNReal_one
+  calc
+    _ ≤ (2 : ℝ≥0∞) * 1 / Nat.card R := by gcongr
+    _ = _ := by rw [mul_one]
 
 end JointPotentialToy
