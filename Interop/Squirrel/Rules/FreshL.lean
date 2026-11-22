@@ -58,40 +58,13 @@ variable {B : Type} {D : Decl B} {M : Model D} {τs : List (Ty B)} {a b β : Ty 
 
 /-! ## Swapping a bit block of the attacker tape with a coordinate of the honest tape -/
 
-/-- The attacker tape with the bits `[o, o + L)` replaced by `c`. -/
-private def setBlock {η : ℕ} (o : ℕ) (ρa : M.TapeA η) {L : ℕ} (c : Fin L → Bool) : M.TapeA η :=
-  fun j => if h : o ≤ j.1 ∧ j.1 - o < L then c ⟨j.1 - o, h.2⟩ else ρa j
-
-private theorem readBit_setBlock_of_lt {η o : ℕ} (ρa : M.TapeA η) {L : ℕ} (c : Fin L → Bool)
-    {i : ℕ} (hi : i < o) : M.readBit (setBlock o ρa c) i = M.readBit ρa i := by
-  unfold Model.readBit setBlock
-  dsimp only
-  split_ifs <;> first | rfl | omega
-
 private theorem coinAt_setBlock {η : ℕ} (τ : Ty B) (o : ℕ) (ρa : M.TapeA η) (c : M.Coin η τ)
-    (h : o + M.coinLen η τ ≤ M.lenA η) : M.coinAt τ (setBlock o ρa c) o = c := by
-  funext j
-  unfold Model.coinAt Model.readBit setBlock
-  dsimp only
-  split_ifs with h₁ h₂
-  · exact congrArg c (Fin.ext (Nat.add_sub_cancel_left ..))
-  · exact absurd ⟨Nat.le_add_right _ _, by simp⟩ h₂
-  · omega
-
-private theorem setBlock_setBlock {η o L : ℕ} (ρa : M.TapeA η) (c c' : Fin L → Bool) :
-    setBlock o (setBlock o ρa c) c' = setBlock o ρa c' := by
-  funext j
-  unfold setBlock
-  split_ifs <;> rfl
+    (h : o + M.coinLen η τ ≤ M.lenA η) : M.coinAt τ (M.setBlock o ρa c) o = c :=
+  M.bitsAt_setBlock o ρa c h
 
 private theorem setBlock_coinAt {η : ℕ} (τ : Ty B) (o : ℕ) (ρa : M.TapeA η) :
-    setBlock o ρa (M.coinAt τ ρa o) = ρa := by
-  funext j
-  unfold setBlock Model.coinAt
-  split_ifs with h
-  · rw [Nat.add_sub_cancel' h.1]
-    simp [Model.readBit]
-  · rfl
+    M.setBlock o ρa (M.coinAt τ ρa o) = ρa :=
+  M.setBlock_bitsAt o ρa _
 
 /-! ## FreshL at one security parameter -/
 
@@ -110,14 +83,14 @@ theorem deduceAdv_freshL_eq (n : D.Name a b) (i : D.Fn a) (p : Polynomial ℕ) (
   classical
   let k := M.nameSlot n i η
   let σf : M.Tape η → M.Tape η := fun ρ =>
-    (setBlock (p.eval η) ρ.1 (ρ.2 k), Function.update ρ.2 k (M.coinAt b ρ.1 (p.eval η)))
+    (M.setBlock (p.eval η) ρ.1 (ρ.2 k), Function.update ρ.2 k (M.coinAt b ρ.1 (p.eval η)))
   have hσ : Function.Involutive σf := fun ρ => by
-    simp only [σf, Function.update_self, coinAt_setBlock b _ _ _ hη, setBlock_setBlock,
+    simp only [σf, Function.update_self, coinAt_setBlock b _ _ _ hη, Model.setBlock_setBlock,
       setBlock_coinAt, Function.update_idem, Function.update_eq_self]
   refine (SampleableType.prEvent_uniformSample_equiv (Function.Involutive.toPerm σf hσ)
     _).symm.trans (prEvent_congr _ _ _ fun ρ => ?_)
-  have hagree : ∀ j < p.eval η, M.readBit (setBlock (p.eval η) ρ.1 (ρ.2 k)) j =
-      M.readBit ρ.1 j := fun j hj => readBit_setBlock_of_lt _ _ hj
+  have hagree : ∀ j < p.eval η, M.readBit (M.setBlock (p.eval η) ρ.1 (ρ.2 k)) j =
+      M.readBit ρ.1 j := fun j hj => M.readBit_setBlock_of_lt _ _ hj
   have hupd : ∀ k', k' ≠ M.nameSlot n i η →
       Function.update ρ.2 k (M.coinAt b ρ.1 (p.eval η)) k' = ρ.2 k' :=
     fun k' hk' => Function.update_of_ne hk' _ _
@@ -128,8 +101,8 @@ theorem deduceAdv_freshL_eq (n : D.Name a b) (i : D.Fn a) (p : Polynomial ℕ) (
     Ty.appVals (g.eval η ρ.1) (Env.append (u η ρ) (Env.cons (M.sample η b (ρ.2 k)) Env.empty)) =
       v η ρ
   rw [AdvMachine.appVals_eval_freshL, hu', hv']
-  change Ty.appVals (g.eval η (setBlock (p.eval η) ρ.1 (ρ.2 k))) (Env.append (u η ρ)
-      (Env.cons (M.sample η b (M.coinAt b (setBlock (p.eval η) ρ.1 (ρ.2 k)) (p.eval η)))
+  change Ty.appVals (g.eval η (M.setBlock (p.eval η) ρ.1 (ρ.2 k))) (Env.append (u η ρ)
+      (Env.cons (M.sample η b (M.coinAt b (M.setBlock (p.eval η) ρ.1 (ρ.2 k)) (p.eval η)))
         Env.empty)) = v η ρ ↔ _
   rw [coinAt_setBlock b _ _ _ hη, AdvMachine.eval_eq_of_readsBelow hg hagree]
 

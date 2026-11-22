@@ -33,11 +33,12 @@ path = "../.."
 name = "InteropSquirrel"
 roots = [
   "Interop.Squirrel.Syntax", "Interop.Squirrel.Model", "Interop.Squirrel.RandomVariable",
-  "Interop.Squirrel.Machine", "Interop.Squirrel.Indist", "Interop.Squirrel.Global",
-  "Interop.Squirrel.Avoids", "Interop.Squirrel.Rules.Local", "Interop.Squirrel.Rules.Equiv",
-  "Interop.Squirrel.Rules.Rename", "Interop.Squirrel.Rules.Enc", "Interop.Squirrel.Secrecy",
-  "Interop.Squirrel.Rules.Secrecy", "Interop.Squirrel.Rules.Deduce", "Interop.Squirrel.Rules.Fresh",
-  "Interop.Squirrel.TapeBounds", "Interop.Squirrel.Rules.FreshL", "Interop.Squirrel.Derivation",
+  "Interop.Squirrel.Machine", "Interop.Squirrel.Guess", "Interop.Squirrel.Indist",
+  "Interop.Squirrel.Global", "Interop.Squirrel.Avoids", "Interop.Squirrel.Rules.Local",
+  "Interop.Squirrel.Rules.Equiv", "Interop.Squirrel.Rules.Rename", "Interop.Squirrel.Rules.Enc",
+  "Interop.Squirrel.Secrecy", "Interop.Squirrel.Rules.Secrecy", "Interop.Squirrel.Rules.Deduce",
+  "Interop.Squirrel.Rules.Fresh", "Interop.Squirrel.TapeBounds", "Interop.Squirrel.Rules.FreshL",
+  "Interop.Squirrel.Derivation",
 ]
 
 # Satisfiability checks, countermodels, bound checks and worked derivations; `lake test` builds

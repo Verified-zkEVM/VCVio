@@ -423,7 +423,13 @@ randomness", from bits of the attacker tape that nothing else reads. Two constru
 `Machine.shift off A` runs `A` with every tape read moved `off η` bits along, a handler of the tape
 interface; and `Machine.sampler b` reads the first `coinLen η b` bits of the tape and runs the
 model's sampler for names of type `b` on them, as a name does on its bit block of the honest tape
-(LICS23 §II-B.2, p. 6). -/
+(LICS23 §II-B.2, p. 6).
+
+The proofs of FreshL and of the guessing bound exchange such a block of the attacker tape with
+other bits: `Model.bitsAt ρa n k` reads the `k` bits from bit `n` on, and `Model.setBlock o ρa c`
+overwrites the bits from bit `o` on with `c`. Reading back what was written gives it
+(`Model.bitsAt_setBlock`), and writing back what was read gives the tape (`Model.setBlock_bitsAt`),
+so the exchange is an involution. -/
 
 /-- The attacker tape read from bit `n` on: bit `i` of `M.shiftTape n ρa` is bit `n + i` of
 `ρa`. -/
@@ -444,6 +450,50 @@ theorem Model.readBit_shiftTape (n : ℕ) (ρa : M.TapeA η) (i : ℕ) :
 theorem Model.coinAt_shiftTape (τ : Ty B) (n m : ℕ) (ρa : M.TapeA η) :
     M.coinAt τ (M.shiftTape n ρa) m = M.coinAt τ ρa (n + m) :=
   funext fun j => (M.readBit_shiftTape n ρa (m + j)).trans (congrArg _ (Nat.add_assoc _ _ _).symm)
+
+/-- The `k` bits of the attacker tape from bit `n` on. The bit block of a name is the case
+`k = coinLen η τ` (`Model.coinAt`). -/
+@[expose] def Model.bitsAt (M : Model D) {η : ℕ} (ρa : M.TapeA η) (n k : ℕ) : Fin k → Bool :=
+  fun j => M.readBit ρa (n + j)
+
+/-- The attacker tape with the bits `[o, o + L)` replaced by `c`. -/
+@[expose] def Model.setBlock (M : Model D) {η : ℕ} (o : ℕ) (ρa : M.TapeA η) {L : ℕ}
+    (c : Fin L → Bool) : M.TapeA η :=
+  fun j => if h : o ≤ j.1 ∧ j.1 - o < L then c ⟨j.1 - o, h.2⟩ else ρa j
+
+/-- Overwriting a block leaves the bits below it. -/
+theorem Model.readBit_setBlock_of_lt {o : ℕ} (ρa : M.TapeA η) {L : ℕ} (c : Fin L → Bool)
+    {i : ℕ} (hi : i < o) : M.readBit (M.setBlock o ρa c) i = M.readBit ρa i := by
+  unfold Model.readBit Model.setBlock
+  dsimp only
+  split_ifs <;> first | rfl | omega
+
+/-- A block that fits on the tape reads back as what was written. -/
+theorem Model.bitsAt_setBlock (o : ℕ) (ρa : M.TapeA η) {L : ℕ} (c : Fin L → Bool)
+    (h : o + L ≤ M.lenA η) : M.bitsAt (M.setBlock o ρa c) o L = c := by
+  funext j
+  unfold Model.bitsAt Model.readBit Model.setBlock
+  dsimp only
+  split_ifs with h₁ h₂
+  · exact congrArg c (Fin.ext (Nat.add_sub_cancel_left ..))
+  · exact absurd ⟨Nat.le_add_right _ _, by simp⟩ h₂
+  · omega
+
+theorem Model.setBlock_setBlock {o L : ℕ} (ρa : M.TapeA η) (c c' : Fin L → Bool) :
+    M.setBlock o (M.setBlock o ρa c) c' = M.setBlock o ρa c' := by
+  funext j
+  unfold Model.setBlock
+  split_ifs <;> rfl
+
+/-- Writing back the block that was read gives the tape. -/
+theorem Model.setBlock_bitsAt (o : ℕ) (ρa : M.TapeA η) (L : ℕ) :
+    M.setBlock o ρa (M.bitsAt ρa o L) = ρa := by
+  funext j
+  unfold Model.setBlock Model.bitsAt
+  split_ifs with h
+  · rw [Nat.add_sub_cancel' h.1]
+    simp [Model.readBit]
+  · rfl
 
 namespace Machine
 
@@ -493,9 +543,9 @@ theorem run_shift (off : ℕ → ℕ) (A : Machine M τs β) (e : Vals M η τs)
   · exact (M.readBit_shiftTape _ _ _).symm
   · rfl
 
-private theorem evalWithAnswerFn_readBits (e : Vals M η τs) :
-    ∀ n k : ℕ,
-      evalWithAnswerFn (M.answer ρa e) (readBits n k) = fun j : Fin k => M.readBit ρa (n + j)
+/-- Reading `k` bits from bit `n` on returns those bits of the tape. -/
+theorem evalWithAnswerFn_readBits (e : Vals M η τs) :
+    ∀ n k : ℕ, evalWithAnswerFn (M.answer ρa e) (readBits n k) = M.bitsAt ρa n k
   | _, 0 => funext fun j => j.elim0
   | n, k + 1 => by
     simp only [readBits, evalWithAnswerFn_bind, evalWithAnswerFn_read,
@@ -503,7 +553,7 @@ private theorem evalWithAnswerFn_readBits (e : Vals M η τs) :
     funext j
     refine Fin.cases ?_ (fun j => ?_) j
     · rfl
-    · simp only [Fin.cons_succ, Fin.val_succ]
+    · simp only [Fin.cons_succ, Fin.val_succ, Model.bitsAt]
       congr 1
       omega
 
@@ -819,7 +869,8 @@ theorem ReadsBelow.shift {A : Machine M τs β} (hA : A.ReadsBelow bd) (off : �
     · exact (allQueriesSatisfy_query_iff _ _).2 (Nat.add_lt_add_left ht (off η))
     · exact allQueriesSatisfy_ask _ _
 
-private theorem allQueriesSatisfy_readBits :
+/-- Reading `k` bits from bit `n` on reads below `n + k`. -/
+theorem allQueriesSatisfy_readBits :
     ∀ n k : ℕ, (readBits (M := M) (η := η) (τs := τs) n k).AllQueriesSatisfy (M.tapeBelow (n + k))
   | _, 0 => allQueriesSatisfy_pure _ _
   | n, k + 1 => allQueriesSatisfy_bind
@@ -896,7 +947,8 @@ theorem isQueryBoundP_fetch (y : ScopedVar τs a) (ha : a.IsGround) :
   rw [fetch, isQueryBoundP_map_iff]
   exact isQueryBoundP_ask _
 
-private theorem isQueryBoundP_readBits :
+/-- Reading bits of the tape makes no input query. -/
+theorem isQueryBoundP_readBits :
     ∀ n k : ℕ, (readBits (M := M) (η := η) (τs := τs) n k).IsQueryBoundP
       (fun t => t.isRight = true) 0
   | _, 0 => by rw [readBits]; simp
