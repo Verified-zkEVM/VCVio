@@ -38,7 +38,7 @@ uniform, so the experiment here samples the key with `encAlg.keygen`.
 
 ## Main statements
 
-* `SymmEncAlg.IND_CPA_Advantage_probComp`: in `ProbComp`, the advantage is the distance between
+* `SymmEncAlg.IND_CPA_Advantage_eq_boolDist`: in `ProbComp`, the advantage is the distance between
   the probabilities that the two fixed-bit experiments output `true`.
 -/
 
@@ -83,7 +83,7 @@ return whether the adversary guessed it. -/
 /-- The left-or-right CPA advantage: the Boolean bias of the game,
 `|Pr[b' = b] - Pr[b' ≠ b]|`. When the game never fails this is twice Katz–Lindell's
 `|Pr[PrivK = 1] - 1/2|`, and in `ProbComp` it equals the distance between the two fixed-bit
-experiments (`IND_CPA_Advantage_probComp`). -/
+experiments (`IND_CPA_Advantage_eq_boolDist`). -/
 @[expose] noncomputable def IND_CPA_Advantage (encAlg : SymmEncAlg (OracleComp spec) M K C)
     (runtime : ProbCompRuntime (OracleComp spec)) (leak : M → Λ)
     (adversary : encAlg.IND_CPA_Adversary) : ℝ≥0∞ :=
@@ -91,7 +91,7 @@ experiments (`IND_CPA_Advantage_probComp`). -/
 
 /-- In `ProbComp`, the CPA advantage is the distance between the probabilities that the
 experiments at the two hidden bits output `true`. -/
-theorem IND_CPA_Advantage_probComp (encAlg : SymmEncAlg ProbComp M K C) (leak : M → Λ)
+theorem IND_CPA_Advantage_eq_boolDist (encAlg : SymmEncAlg ProbComp M K C) (leak : M → Λ)
     (adversary : encAlg.IND_CPA_Adversary) :
     encAlg.IND_CPA_Advantage ProbCompRuntime.probComp leak adversary =
       𝒟[encAlg.IND_CPA_Experiment leak adversary true].boolDist
