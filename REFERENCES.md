@@ -252,6 +252,14 @@ In *Proceedings of the 2014 ACM SIGSAC Conference on Computer and Communications
 PDF: <https://www.lsv.ens-paris-saclay.fr/Publis/PAPERS/PDF/BC-ccs14.pdf>
 
 Used in:
+- `Interop/Squirrel/Indist.lean`
+- `Interop/Squirrel/Rules/Equiv.lean`
+- `Interop/Squirrel/Rules/Rename.lean`
+- `Interop/Squirrel/Rules/Enc.lean`
+- `Interop/Squirrel/Derivation.lean`
+- `Interop/Squirrel/Test/TwoTimePad.lean`
+- `Interop/Squirrel/Test/CaseStudy.lean`
+- `Interop/Squirrel/Test/WorkedEnc.lean`
 - `Interop/Squirrel/README.md`
 - `docs/design/interop-squirrel.md`
 
@@ -263,6 +271,7 @@ In *2021 IEEE Symposium on Security and Privacy* (S&P 2021).
 Long version: <https://adrienkoutsos.fr/papers/metabc_long.pdf>
 
 Used in:
+- `Interop/Squirrel/Test/TwoTimePad.lean`
 - `Interop/Squirrel/README.md`
 - `docs/design/interop-squirrel.md`
 
@@ -283,7 +292,12 @@ Used in:
 - `Interop/Squirrel/Indist.lean`
 - `Interop/Squirrel/Global.lean`
 - `Interop/Squirrel/Rules/Local.lean`
+- `Interop/Squirrel/Rules/Equiv.lean`
+- `Interop/Squirrel/Rules/Rename.lean`
+- `Interop/Squirrel/Rules/Enc.lean`
 - `Interop/Squirrel/Derivation.lean`
+- `Interop/Squirrel/Test/TwoTimePad.lean`
+- `Interop/Squirrel/Test/CaseStudy.lean`
 - `Interop/Squirrel/README.md`
 - `docs/design/interop-squirrel.md`
 
@@ -297,6 +311,7 @@ Long version: <https://adrienkoutsos.fr/papers/concrete-long.pdf>
 Used in:
 - `Interop/Squirrel/Model.lean`
 - `Interop/Squirrel/Global.lean`
+- `Interop/Squirrel/Derivation.lean`
 - `Interop/Squirrel/README.md`
 - `docs/design/interop-squirrel.md`
 
@@ -310,6 +325,7 @@ ePrint: <https://eprint.iacr.org/2026/1912> (the authors' PDF of 2026-09-07 was 
 Used in:
 - `Interop/Squirrel/Model.lean`
 - `Interop/Squirrel/Global.lean`
+- `Interop/Squirrel/Derivation.lean`
 - `Interop/Squirrel/README.md`
 - `docs/design/interop-squirrel.md`
 

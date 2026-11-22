@@ -43,5 +43,7 @@ roots = [
 name = "InteropSquirrelTest"
 roots = [
   "Interop.Squirrel.Test.Validity", "Interop.Squirrel.Test.Bounds",
-  "Interop.Squirrel.Test.Structural",
+  "Interop.Squirrel.Test.Structural", "Interop.Squirrel.Test.Constructions",
+  "Interop.Squirrel.Test.TwoTimePad", "Interop.Squirrel.Test.CaseStudy",
+  "Interop.Squirrel.Test.EncExamples", "Interop.Squirrel.Test.WorkedEnc",
 ]
