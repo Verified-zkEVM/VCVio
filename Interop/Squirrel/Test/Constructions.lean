@@ -30,10 +30,15 @@ and constants, what it computes (its `run` lemma at that machine), and its membe
   moving the read of `Machine.readZero` one bit along;
 * the sampler of names of a type with polynomial bit blocks (`Machine.sampler`,
   `AdvClass.sampler_mem`) is admitted;
+* `Machine.guessInput` (`Machine.guess`, `AdvClass.guess_mem`) guesses, with no drawn bits, the
+  argument of the only oracle query of `Machine.appInput`, its Boolean input, with the default
+  `false`: it returns that input, not the default;
 * `AdvClass.readBound_mem` gives `Machine.readOne` a polynomial read bound, which is at least `2`
   wherever the attacker tape has two bits: `Machine.readOne` meets the read bound `2`, and on such
   a tape not `1`, so the shift moves the bound as well as the reads
-  (`Machine.ReadsBelow.shift`).
+  (`Machine.ReadsBelow.shift`);
+* `AdvClass.queryBound_mem` gives `Machine.branchInput` a polynomial query bound, which is at
+  least `1` at every `η`, since a branch queries its condition.
 
 `Machine.app` makes two input queries per query (`Machine.QueryBound.app`), so `Machine.appInput`
 meets the bound `2`. A branch makes one query before its branches (`Machine.QueryBound.branch`):
@@ -107,12 +112,17 @@ theorem queryBound_branchInput : (branchInput : Machine M _ _).QueryBound fun _ 
   ((queryBound_const (q := fun _ => 0) true).branch (queryBound_const (q := fun _ => 0) false)).mono
     fun _ => le_rfl
 
-/-- The bound `1` is tight: a branch queries its condition. -/
+/-- Any query bound of a branch is at least `1`: a branch queries its condition. -/
+theorem one_le_of_queryBound_branchInput {q : ℕ → ℕ}
+    (h : (branchInput : Machine M _ _).QueryBound q) (η : ℕ) : 1 ≤ q η := by
+  have hη := h η
+  rw [branchInput, branch, ask, isQueryBoundP_query_bind_iff] at hη
+  exact hη.1.resolve_left (not_not.2 rfl)
+
+/-- The bound `1` is tight. -/
 theorem not_queryBound_branchInput_zero :
-    ¬ (branchInput : Machine M _ _).QueryBound fun _ => 0 := fun h => by
-  have h0 := h 0
-  rw [branchInput, branch, ask, isQueryBoundP_query_bind_iff] at h0
-  exact absurd (h0.1.resolve_left (not_not.2 rfl)) (lt_irrefl 0)
+    ¬ (branchInput : Machine M _ _).QueryBound fun _ => 0 :=
+  fun h => absurd (one_le_of_queryBound_branchInput h 0) (by norm_num)
 
 /-- Whether two Boolean inputs are equal. -/
 @[expose] def eqInput : Machine M [.bool, .bool] .bool := eqTest Ty.isGround_bool
@@ -158,6 +168,42 @@ tape has two bits. -/
 theorem not_readsBelow_readOne_one (hM : ∀ η, 2 ≤ M.lenA η) :
     ¬ (readOne : Machine M [] .bool).ReadsBelow fun _ => 1 :=
   fun h => absurd (two_le_of_readsBelow_readOne h (hM 0)) (by norm_num)
+
+/-- The guess, with no drawn bits, of the argument of the oracle query of `Machine.appInput`; the
+default is `false`. -/
+@[expose] noncomputable def guessInput : Machine M [.arrow .bool .bool, .bool] .bool :=
+  appInput.guess (fun η => (0 : Polynomial ℕ).eval η)
+    (fun η => Nat.clog 2 ((1 : Polynomial ℕ).eval η)) Ty.isGround_bool (const false)
+
+/-- `Machine.appInput` queries its oracle once, at its Boolean input. -/
+private theorem firstArgs_runLog_appInput (e : Vals M η [.arrow .bool .bool, .bool]) :
+    M.firstArgs (runLog (M.answer ρa e) ((appInput : Machine M _ _) η)) =
+      [Env.cons (e _ (.succ .zero)) Env.empty] := by
+  have h : (appInput : Machine M [.arrow .bool .bool, .bool] .bool) η =
+      Ty.ofRes Ty.isGround_bool <$> (do
+        let x ← fetch (M := M) (η := η) (τs := [.arrow .bool .bool, .bool]) (.succ .zero)
+          Ty.isGround_bool
+        ask ⟨.arrow .bool .bool, .zero, Env.cons x Env.empty⟩) := by
+    simp only [appInput, app, handle, input, fetch, ask, simulateQ_map, simulateQ_spec_query]
+    rfl
+  rw [h]
+  erw [runLog_map, runLog_bind, fetch, runLog_map, ask, runLog_query, ask, runLog_query]
+  rfl
+
+/-- The guess returns the argument of the oracle query, the Boolean input, not the default. -/
+theorem run_guessInput (e : Vals M η [.arrow .bool .bool, .bool]) :
+    (guessInput : Machine M _ _).run η ρa e = e _ (.succ .zero) := by
+  refine (run_guess _ _ Ty.isGround_bool appInput (const false) e).trans ?_
+  rw [firstArgs_runLog_appInput]
+  have hj : (bitsEquiv (Nat.clog 2 ((1 : Polynomial ℕ).eval η))
+      (M.bitsAt ρa ((0 : Polynomial ℕ).eval η) (Nat.clog 2 ((1 : Polynomial ℕ).eval η))) : ℕ) =
+        0 := by
+    have := (bitsEquiv _ (M.bitsAt ρa ((0 : Polynomial ℕ).eval η)
+      (Nat.clog 2 ((1 : Polynomial ℕ).eval η)))).isLt
+    simp only [Polynomial.eval_one, Nat.clog_one_right, pow_zero] at this
+    omega
+  rw [hj]
+  rfl
 
 /-- A constant makes no query and reads nothing of the tape. -/
 theorem queryBound_const_zero (c : Bool) :
@@ -212,6 +258,18 @@ theorem all_mem_readOne : (all M).mem Machine.readOne := by
 theorem all_mem_sampler {b : Ty B} (hb : b.order ≤ 1) (hc : M.PolyCoins b) :
     (all M).mem (Machine.sampler b hb) :=
   (all M).sampler_mem hb hc
+
+/-- `AdvClass.all` meets `guess_mem` at `Machine.guessInput`. -/
+theorem all_mem_guessInput : (all M).mem Machine.guessInput :=
+  (all M).guess_mem 0 1 Ty.isGround_bool all_mem_appInput ((all M).const_mem false)
+
+/-- `AdvClass.all` meets `queryBound_mem` at `Machine.branchInput`: its query bound is a
+polynomial, which is at least `1` at every `η`. -/
+theorem all_queryBound_branchInput :
+    ∃ p : Polynomial ℕ, (Machine.branchInput : Machine M _ _).QueryBound (fun η => p.eval η) ∧
+      ∀ η, 1 ≤ p.eval η :=
+  let ⟨p, hp⟩ := (all M).queryBound_mem all_mem_branchInput
+  ⟨p, hp, Machine.one_le_of_queryBound_branchInput hp⟩
 
 /-- `AdvClass.all` meets `readBound_mem` at `Machine.readOne`: its read bound is a polynomial,
 which is at least `2` wherever the tape has two bits. -/
