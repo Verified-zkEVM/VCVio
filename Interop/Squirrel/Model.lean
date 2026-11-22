@@ -48,7 +48,9 @@ polynomial time is not a restriction here.
 `Ty.appVals` applies a curried function of a tuple (`Ty.arrows`) to a vector of values, and
 `Ty.curryVals` is its inverse: the logic has no product types, so attacker functions of tuples are
 curried. `Ty.apply` and `Ty.curry` do the same for the argument spine `Ty.args` of a type, with
-result `Ty.res`: this is how a machine queries an input of order at most one.
+result `Ty.res`: this is how a machine queries an input of order at most one. The arguments of
+`τ₁ → … → τₙ → ρ` split into those of the tuple and those of `ρ` (`Ty.splitArgs`), which is how a
+machine answers a query to an attacker function of a tuple (`Ty.apply_curryVals_curry`).
 
 ## References
 
@@ -264,6 +266,32 @@ variable {carrier : B → ℕ → Set (List Bool)} {η : ℕ}
   | .bool, _, _ => rfl
   | .base _, _, _ => rfl
   | .arrow _ _, h, _ => h.elim
+
+/-- The arguments of `τ₁ → … → τₙ → ρ`, split into those of the tuple and those of `ρ`. -/
+@[expose] def Ty.splitArgs {ρ : Ty B} : (as : List (Ty B)) →
+    Env (Ty.Value carrier η) (Ty.arrows as ρ).args →
+      Env (Ty.Value carrier η) as × Env (Ty.Value carrier η) ρ.args
+  | [], q => (Env.empty, q)
+  | _ :: as, q =>
+    let r := Ty.splitArgs as fun _ x => q _ (.succ x)
+    (Env.cons (q _ .zero) r.1, r.2)
+
+/-- `τ₁ → … → τₙ → ρ` and `ρ` have the same result type. -/
+@[expose] def Ty.resArrows {ρ : Ty B} : (as : List (Ty B)) → ρ.res.Value carrier η →
+    (Ty.arrows as ρ).res.Value carrier η
+  | [], v => v
+  | _ :: as, v => Ty.resArrows as v
+
+/-- Applying a curried function of the tuple `as` and of `ρ`'s arguments to the arguments of
+`τ₁ → … → τₙ → ρ` applies it to the two parts of the split. -/
+theorem Ty.apply_curryVals_curry {ρ : Ty B} : ∀ (as : List (Ty B))
+    (F : Env (Ty.Value carrier η) as → Env (Ty.Value carrier η) ρ.args → ρ.res.Value carrier η)
+    (q : Env (Ty.Value carrier η) (Ty.arrows as ρ).args),
+    Ty.apply (Ty.curryVals (β := ρ) fun a => Ty.curry (F a)) q =
+      Ty.resArrows as (F (Ty.splitArgs as q).1 (Ty.splitArgs as q).2)
+  | [], F, q => Ty.apply_curry (F Env.empty) q
+  | _ :: as, F, q =>
+    Ty.apply_curryVals_curry as (fun a => F (Env.cons (q _ .zero) a)) fun _ x => q _ (.succ x)
 
 end Spine
 

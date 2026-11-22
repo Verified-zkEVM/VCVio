@@ -33,7 +33,8 @@ name = "InteropSquirrel"
 roots = [
   "Interop.Squirrel.Syntax", "Interop.Squirrel.Model", "Interop.Squirrel.RandomVariable",
   "Interop.Squirrel.Machine", "Interop.Squirrel.Indist", "Interop.Squirrel.Global",
-  "Interop.Squirrel.Rules.Local", "Interop.Squirrel.Derivation",
+  "Interop.Squirrel.Avoids", "Interop.Squirrel.Rules.Local", "Interop.Squirrel.Rules.Equiv",
+  "Interop.Squirrel.Rules.Rename", "Interop.Squirrel.Rules.Enc", "Interop.Squirrel.Derivation",
 ]
 
 # Satisfiability checks, countermodels, bound checks and worked derivations; `lake test` builds

@@ -59,6 +59,14 @@ inductive Ty (B : Type) where
   /-- Functions, interpreted as full function spaces. -/
   | arrow (dom cod : Ty B)
 
+-- Equality of types is decidable. The decision procedure is exposed, so that `decide` evaluates
+-- it in other modules.
+@[expose] public section
+
+deriving instance DecidableEq for Ty
+
+end
+
 /-- Labels restricting the interpretation of a base type (LICS23 §II-B.1, App. A). -/
 inductive Label where
   /-- The carrier is finite at every security parameter. -/

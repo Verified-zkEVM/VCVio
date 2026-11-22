@@ -42,6 +42,8 @@ every formula of `Θ` holds. A local sequent `Θ; Γl ⊢ φ` is `Θ ⊢ [∧Γl
   `Valid.byGlob` (L.ByGlob) and `Valid.byLoc` (G.ByLoc).
 * `eval_denote_fullInterp`: local terms inside global formulas, which substitution does not keep
   in the image of `Term.inl`, still mean their pointwise reading at each `(η, ρ)`.
+* `FTerm.denote_substOne_apply`: a term with one free variable, closed by a closed term, means
+  the open term read at the closed term's value (`FTerm.evalAt`).
 
 ## References
 
@@ -399,6 +401,25 @@ theorem Form.holds_equiv {τs : List (Ty B)} {u v : Vec D Γ τs} {h : Ty.Indist
   Iff.rfl
 
 end Reading
+
+/-- A term with one free variable, read at `(η, ρ)` with the value `x` for the variable. -/
+@[expose] noncomputable def FTerm.evalAt (M : Model D) (η : ℕ) (ρ : M.Tape η) {σ τ : Ty B}
+    (t : FTerm D [.loc σ] τ) (x : σ.Value M.carrier η) : τ.Value M.carrier η :=
+  t.denote (Interpretation.sum (interp M η ρ) (ptGlobal M η)) (Env.cons x Env.empty)
+
+/-- A term with one free variable, closed by substituting a closed term, means at `(η, ρ)` the
+open term read at the closed term's value there: `Term.denote_substOne` and locality. -/
+theorem FTerm.denote_substOne_apply (M : Model D) (C : AdvClass M) {σ τ : Ty B}
+    (t : FTerm D [.loc σ] τ) (s : FTerm D [] σ) (env : Env (Kind.Value M) []) (η : ℕ)
+    (ρ : M.Tape η) :
+    (t.substOne s).denote (fullInterp M C) env η ρ =
+      FTerm.evalAt M η ρ t (s.denote (fullInterp M C) env η ρ) := by
+  rw [Term.denote_substOne]
+  refine (eval_denote_fullInterp M C η ρ t _).trans
+    (congrArg _ (funext fun _ => funext fun x => ?_))
+  cases x with
+  | zero => rfl
+  | succ x => exact nomatch x
 
 /-- Validity of the global sequent `Θ ⊢ F` in the context `Γ` (LICS23 §III), over the models
 respecting the labels and the restriction `R`, against the adversaries `C M`. -/

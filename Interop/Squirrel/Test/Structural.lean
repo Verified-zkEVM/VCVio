@@ -35,36 +35,37 @@ namespace Interop.Squirrel
 
 open IPFunctor IPFunctor.ScopedSignature
 
-variable {B : Type} {D : Decl B} {Γ : List (Kind B)}
+variable {B : Type} {D : Decl B} {enc : EncInstance D → Prop} {Γ : List (Kind B)}
 
 /-- G.Axiom and G.Weak: a hypothesis is derivable from any list holding it. -/
-def Derivation.hyp (F G : Form D Γ) : Derivation D [G, F] F :=
+def Derivation.hyp (F G : Form D Γ) : Derivation D enc [G, F] F :=
   .weaken (Θ := [F]) (.ax List.mem_cons_self) (by simp)
 
 /-- G.L-∀̃, G.Cut and G.Axiom: from the hypothesis `∀̃ x. G`, conclude `G{x ↦ t}`. -/
 def Derivation.allInst {τ : Ty B} (G : Form D (.loc τ :: Γ)) (t : FTerm D Γ τ) :
-    Derivation D [.all τ G] (G.substOne t) :=
+    Derivation D enc [.all τ G] (G.substOne t) :=
   .allLeft t (.ax List.mem_cons_self)
 
 /-- A valid global universal may be instantiated by any local term: G.Cut, G.L-∀̃, G.Axiom. -/
 theorem Valid.all_inst {R : Model D → Prop} {C : ∀ M : Model D, AdvClass M}
     {Θ : List (Form D Γ)} {τ : Ty B} {G : Form D (.loc τ :: Γ)} (t : FTerm D Γ τ)
     (h : Valid R C Θ (.all τ G)) : Valid R C Θ (G.substOne t) :=
-  h.cut (((Derivation.allInst G t).sound R C).weaken (by simp))
+  h.cut (((Derivation.allInst (enc := fun _ => False) G t).sound R C fun _ h => h.elim).weaken
+    (by simp))
 
 /-- G.R-∀̃: a hypothesis holds under a global quantifier over a variable it does not mention. -/
 def Derivation.allVacuous (F : Form D Γ) (τ : Ty B) :
-    Derivation D [F] (.all τ (F.weaken (.loc τ))) :=
+    Derivation D enc [F] (.all τ (F.weaken (.loc τ))) :=
   .allRight (.ax List.mem_cons_self)
 
 /-- L.ByGlob, then G.ByLoc: `[φ]` gives `[∧[] ⇒ φ]`, and that gives `[φ]` back. -/
-def Derivation.boxRoundTrip (φ : FTerm D Γ .bool) : Derivation D [.box φ] (.box φ) :=
+def Derivation.boxRoundTrip (φ : FTerm D Γ .bool) : Derivation D enc [.box φ] (.box φ) :=
   .byLoc (.byGlob [] (.ax List.mem_cons_self))
 
 /-- G.Axiom: `[false]` follows from the hypothesis `[false]`, in every model. -/
 theorem Valid.box_ff_of_hyp (R : Model D → Prop) (C : ∀ M : Model D, AdvClass M) :
     Valid R C (Γ := []) [.box .ff] (.box .ff) :=
-  (Derivation.ax List.mem_cons_self).sound R C
+  (Derivation.ax (enc := fun _ => False) List.mem_cons_self).sound R C fun _ h => h.elim
 
 /-- L.R-∀ (with G.ByLoc): `[∀ x. x = x]`, from the local validity of `x = x` for a free `x`. -/
 theorem Valid.box_all_eq_self (R : Model D → Prop) (C : ∀ M : Model D, AdvClass M) (τ : Ty B) :
