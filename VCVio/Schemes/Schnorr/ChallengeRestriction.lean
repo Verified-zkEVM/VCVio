@@ -44,7 +44,7 @@ variable [SampleableType G] [DecidableEq G]
 /-- Schnorr's original algorithms, with challenges encoded in the scalar field. -/
 @[expose]
 def restrictedSigma (g : G) (encode : C → F) :
-    SigmaProtocol G F G F C F (fun pk sk => decide (sk • g = pk)) ProbComp :=
+    SigmaProtocol ProbComp G F G F C F (fun pk sk => decide (sk • g = pk)) :=
   (sigma F G g).restrictChallenges encode
 
 @[simp] theorem restrictedSigma_id (g : G) :

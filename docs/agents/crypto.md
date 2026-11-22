@@ -71,17 +71,15 @@ and the
 ### Challenge-verify protocols and sigma protocols (`ChallengeVerifyProtocol`, `SigmaProtocol`)
 
 ```lean
-structure ChallengeVerifyProtocol
-    (Stmt Wit Commit PrvState Chal Resp : Type) (rel : Stmt → Wit → Bool)
-    (m : Type → Type) where
+structure ChallengeVerifyProtocol (m : Type → Type u)
+    (Stmt Wit Commit PrvState Chal Resp : Type) (rel : Stmt → Wit → Bool) where
   commit (stmt : Stmt) (wit : Wit) : m (Commit × PrvState)
   respond (stmt : Stmt) (wit : Wit) (prvState : PrvState) (chal : Chal) : m Resp
   verify (stmt : Stmt) (commit : Commit) (chal : Chal) (resp : Resp) : Bool
 
-structure SigmaProtocol
+structure SigmaProtocol (m : Type → Type u)
     (Stmt Wit Commit PrvState Chal Resp : Type) (rel : Stmt → Wit → Bool)
-    (m : Type → Type)
-    extends ChallengeVerifyProtocol Stmt Wit Commit PrvState Chal Resp rel m where
+    extends ChallengeVerifyProtocol m Stmt Wit Commit PrvState Chal Resp rel where
   sim (stmt : Stmt) : m Commit
   extract (chal₁ : Chal) (resp₁ : Resp) (chal₂ : Chal) (resp₂ : Resp) : m Wit
 ```
@@ -96,10 +94,11 @@ only randomness is uniform sampling, while a general `m` lets the prover query o
 Probability-bearing properties (`PerfectlyComplete`, `HVZK`, `PerfectHVZK`,
 `simCommitPredictability`, `simChalUniformGivenCommit`) are stated against the measure semantics
 `[EvalDistSemantics m]`: `𝒟[…]` events, `measureETVDist` on the discrete transcript σ-algebra,
-`=ᵈ` and `Pr{…}[…]`. Lemmas about them add `[LawfulEvalDistSemantics m]`, under which a protocol
-run's denotation decomposes along its binds (`perfectHVZK_iff_hvzk_zero`). The support-bearing
-`SpeciallySound` uses `[MonadAttach m]`. The Fiat-Shamir and Fischlin developments instantiate
-`m := ProbComp`, where the definitions are the ordinary `ProbComp` statements and need no bridge.
+`=ᵈ` and `Pr{…}[…]`. Lemmas about them add `[LawfulEvalDistSemantics m]` where they need it;
+`perfectHVZK_iff_hvzk_zero`, with `[LawfulMonad m]`, uses it to read `=ᵈ` as equal measures. The
+support-bearing `SpeciallySound` uses `[MonadAttach m]`. The Fiat-Shamir and Fischlin
+developments instantiate `m := ProbComp`, where the definitions are the ordinary `ProbComp`
+statements and need no bridge.
 Caveat for oracle-querying provers: the measure semantics of `OracleComp spec` draws a fresh
 independent answer per query, so a shared random oracle (equal inputs must get equal answers)
 must be interpreted through the caching layer (`OracleSpec.cachingOracle` /
@@ -130,11 +129,13 @@ structure IdenSchemeWithAbort
 ```
 
 The key difference from `SigmaProtocol` is that `respond` returns `Option Resp` (abort on `none`).
-Used by ML-DSA and the Fiat-Shamir with Aborts transform.
+Unlike `ChallengeVerifyProtocol`, it is stated over `ProbComp` only. Used by ML-DSA and the
+Fiat-Shamir with Aborts transform.
 
 ### Key difference: monad-parametric algorithm surfaces
 
-- `SymmEncAlg`, `AsymmEncAlg`, and `SignatureAlg` are plain structures over an abstract monad `m`.
+- `SymmEncAlg`, `AsymmEncAlg`, `SignatureAlg`, `ChallengeVerifyProtocol` and `SigmaProtocol` are
+  plain structures over an abstract monad `m`, taken as their first argument.
 - Instantiate them with `ProbComp`, `OracleComp spec`, `OptionT (OracleComp spec)`, or another monad at the security surface that needs those effects.
 - Probability and failure semantics are supplied by the surrounding experiment or semantic class, not by parent classes on the algorithm structure.
 

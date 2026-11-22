@@ -54,7 +54,7 @@ a prover that queries oracles of its own is admissible here. The results below a
 `mσ := ProbComp`. -/
 def FiatShamir
     {m : Type → Type v} [Monad m] {mσ : Type → Type}
-    (sigmaAlg : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel mσ)
+    (sigmaAlg : SigmaProtocol mσ Stmt Wit Commit PrvState Chal Resp rel)
     (hr : GenerableRelation Stmt Wit rel) (M : Type)
     [MonadLiftT ProbComp m] [MonadLiftT mσ m] [HasQuery (M × Commit →ₒ Chal) m] :
     SignatureAlg m
@@ -76,7 +76,7 @@ variable {Stmt Wit Commit PrvState Chal Resp : Type} {rel : Stmt → Wit → Boo
 /-- The Fiat-Shamir signature scheme in the random oracle model: the transform instantiated in
 `OracleComp (unifSpec + (M × Commit →ₒ Chal))`, whose hash queries `runtime M` answers with a
 lazily sampled random oracle. -/
-abbrev inROM (sigmaAlg : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel ProbComp)
+abbrev inROM (sigmaAlg : SigmaProtocol ProbComp Stmt Wit Commit PrvState Chal Resp rel)
     (hr : GenerableRelation Stmt Wit rel) (M : Type) :
     SignatureAlg (OracleComp (unifSpec + (M × Commit →ₒ Chal)))
       (M := M) (PK := Stmt) (SK := Wit) (S := Commit × Resp) :=
@@ -153,7 +153,7 @@ end semantics
 
 section naturality
 
-variable (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel ProbComp)
+variable (σ : SigmaProtocol ProbComp Stmt Wit Commit PrvState Chal Resp rel)
   (hr : GenerableRelation Stmt Wit rel) (M : Type)
 
 variable {m : Type → Type u} [Monad m]
@@ -191,7 +191,7 @@ end naturality
 
 section costAccounting
 
-variable (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel ProbComp)
+variable (σ : SigmaProtocol ProbComp Stmt Wit Commit PrvState Chal Resp rel)
   (hr : GenerableRelation Stmt Wit rel) (M : Type)
 
 variable {m : Type → Type u} [Monad m] [LawfulMonad m]
@@ -353,7 +353,7 @@ end costAccounting
 
 section correctness
 
-variable (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel ProbComp)
+variable (σ : SigmaProtocol ProbComp Stmt Wit Commit PrvState Chal Resp rel)
   (hr : GenerableRelation Stmt Wit rel) (M : Type)
 
 open scoped Classical in

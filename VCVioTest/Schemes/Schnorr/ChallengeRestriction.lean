@@ -26,7 +26,7 @@ namespace SigmaChallengeRestrictionTest
 /-- An unsatisfiable relation with a verifier that accepts its only original challenge. -/
 @[expose]
 def vacuousSigma :
-    SigmaProtocol Unit Unit Unit Unit Unit Unit (fun _ _ => false) ProbComp where
+    SigmaProtocol ProbComp Unit Unit Unit Unit Unit Unit (fun _ _ => false) where
   commit _ _ := pure ((), ())
   respond _ _ _ _ := pure ()
   verify _ _ _ _ := true

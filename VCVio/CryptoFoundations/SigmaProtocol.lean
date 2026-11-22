@@ -10,7 +10,6 @@ public import VCVio.OracleComp.Constructions.SampleableType.Measure
 public import VCVio.EvalDist.MeasureTVDist.Basic
 public import VCVio.EvalDist.EvalDistEq
 public import VCVio.CryptoFoundations.IdenSchemeWithAbort
-import VCVio.OracleComp.EvalDist.Measure
 
 /-!
 # Challenge-Verify Protocols and Sigma Protocols
@@ -57,6 +56,7 @@ transcript `realTranscript`, and with it `HVZK` and `PerfectHVZK`, draws the cha
 
 ## Type Parameters
 
+- `m`: the monad in which the participants' computations live
 - `Stmt`: statement (public key)
 - `Wit`: witness (secret key)
 - `Commit`: public commitment
@@ -64,7 +64,6 @@ transcript `realTranscript`, and with it `HVZK` and `PerfectHVZK`, draws the cha
 - `Chal`: verifier challenge (drawn uniformly)
 - `Resp`: prover response
 - `rel`: the relation proven by the protocol
-- `m`: the monad in which the participants' computations live
 
 ## Coercion to `IdenSchemeWithAbort`
 
@@ -99,9 +98,8 @@ inputs must receive equal answers — must first be interpreted through the cach
 
 This is the interaction alone. A Σ-protocol additionally carries a witness extractor; see
 `SigmaProtocol`, which extends this structure. -/
-structure ChallengeVerifyProtocol
-    (Stmt Wit Commit PrvState Chal Resp : Type) (rel : Stmt → Wit → Bool)
-    (m : Type → Type) where
+structure ChallengeVerifyProtocol (m : Type → Type u)
+    (Stmt Wit Commit PrvState Chal Resp : Type) (rel : Stmt → Wit → Bool) where
   /-- Generate a commitment to prove knowledge of a valid witness. -/
   commit (stmt : Stmt) (wit : Wit) : m (Commit × PrvState)
   /-- Given a previous private state, respond to the challenge. -/
@@ -117,10 +115,9 @@ The extractor is bundled as data rather than existentially quantified so that co
 it — the Fischlin transform and the Fiat-Shamir Σ-layer both do. Consumers that need neither it
 nor `sim` should take a `ChallengeVerifyProtocol` instead; every `SigmaProtocol` provides one
 through its parent projection. -/
-structure SigmaProtocol
+structure SigmaProtocol (m : Type → Type u)
     (Stmt Wit Commit PrvState Chal Resp : Type) (rel : Stmt → Wit → Bool)
-    (m : Type → Type)
-    extends ChallengeVerifyProtocol Stmt Wit Commit PrvState Chal Resp rel m where
+    extends ChallengeVerifyProtocol m Stmt Wit Commit PrvState Chal Resp rel where
   /-- Simulate public commitment generation while only knowing the statement. -/
   sim (stmt : Stmt) : m Commit
   /-- Extract a witness to the statement from two accepting transcripts. -/
@@ -128,7 +125,7 @@ structure SigmaProtocol
 
 namespace ChallengeVerifyProtocol
 
-variable {m : Type → Type} {Stmt Wit Commit PrvState Chal Resp : Type} {rel : Stmt → Wit → Bool}
+variable {m : Type → Type u} {Stmt Wit Commit PrvState Chal Resp : Type} {rel : Stmt → Wit → Bool}
 
 section complete
 
@@ -141,7 +138,7 @@ no sampling structure on `m`, and is the shape that consumers such as the Fischl
 At `m := ProbComp` the equivalence with the sampled form is
 `perfectlyComplete_iff_evalDist_uniform_challenge_eq_one`. -/
 def PerfectlyComplete [Monad m] [EvalDistSemantics m]
-    (σ : ChallengeVerifyProtocol Stmt Wit Commit PrvState Chal Resp rel m) : Prop :=
+    (σ : ChallengeVerifyProtocol m Stmt Wit Commit PrvState Chal Resp rel) : Prop :=
   ∀ x w, rel x w = true → ∀ ω,
     𝒟[do
       let (pc, sc) ← σ.commit x w
@@ -151,7 +148,7 @@ def PerfectlyComplete [Monad m] [EvalDistSemantics m]
 /-- Sampled-challenge form of `PerfectlyComplete` at `m := ProbComp`: the honest run that draws
 its challenge uniformly accepts with probability `1`. -/
 theorem PerfectlyComplete.evalDist_uniform_challenge_eq_one [SampleableType Chal]
-    {σ : ChallengeVerifyProtocol Stmt Wit Commit PrvState Chal Resp rel ProbComp}
+    {σ : ChallengeVerifyProtocol ProbComp Stmt Wit Commit PrvState Chal Resp rel}
     (hc : σ.PerfectlyComplete) {x : Stmt} {w : Wit} (h : rel x w = true) :
     𝒟[do
       let (pc, sc) ← σ.commit x w
@@ -172,7 +169,7 @@ probability `1` on every individual challenge, since the uniform draw can return
 Together with the forward direction this gives
 `perfectlyComplete_iff_evalDist_uniform_challenge_eq_one`. -/
 theorem perfectlyComplete_of_evalDist_uniform_challenge_eq_one [SampleableType Chal]
-    {σ : ChallengeVerifyProtocol Stmt Wit Commit PrvState Chal Resp rel ProbComp}
+    {σ : ChallengeVerifyProtocol ProbComp Stmt Wit Commit PrvState Chal Resp rel}
     (hc : ∀ x w, rel x w = true →
       𝒟[do
         let (pc, sc) ← σ.commit x w
@@ -192,7 +189,7 @@ theorem perfectlyComplete_of_evalDist_uniform_challenge_eq_one [SampleableType C
 /-- At `m := ProbComp`, the pointwise-challenge form `PerfectlyComplete` is equivalent to the
 sampled form that draws the challenge uniformly and asks for acceptance probability `1`. -/
 theorem perfectlyComplete_iff_evalDist_uniform_challenge_eq_one [SampleableType Chal]
-    (σ : ChallengeVerifyProtocol Stmt Wit Commit PrvState Chal Resp rel ProbComp) :
+    (σ : ChallengeVerifyProtocol ProbComp Stmt Wit Commit PrvState Chal Resp rel) :
     σ.PerfectlyComplete ↔ ∀ x w, rel x w = true →
       𝒟[do
         let (pc, sc) ← σ.commit x w
@@ -208,27 +205,27 @@ end ChallengeVerifyProtocol
 
 namespace SigmaProtocol
 
-variable {m : Type → Type} [MonadAttach m]
+variable {m : Type → Type u} [MonadAttach m]
   {Stmt Wit Commit PrvState Chal Resp : Type} {rel : Stmt → Wit → Bool}
 
 section speciallySound
 
 /-- Special soundness at a particular statement: given two accepting transcripts with the same
 commitment but different challenges, every witness the extractor can return is valid. -/
-def SpeciallySoundAt (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel m)
+def SpeciallySoundAt (σ : SigmaProtocol m Stmt Wit Commit PrvState Chal Resp rel)
     (x : Stmt) : Prop :=
   ∀ pc ω₁ ω₂ p₁ p₂, ω₁ ≠ ω₂ →
     σ.verify x pc ω₁ p₁ = true → σ.verify x pc ω₂ p₂ = true →
     ∀ w ∈ support (σ.extract ω₁ p₁ ω₂ p₂), rel x w = true
 
 /-- A Σ-protocol is specially sound if `SpeciallySoundAt` holds for all statements. -/
-def SpeciallySound (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel m) : Prop :=
+def SpeciallySound (σ : SigmaProtocol m Stmt Wit Commit PrvState Chal Resp rel) : Prop :=
   ∀ x, SpeciallySoundAt σ x
 
 /-- Special soundness immediately validates any witness returned by the Σ-protocol extractor from
 two accepting transcripts with the same statement and commitment and with distinct challenges. -/
 theorem extract_sound_of_speciallySoundAt
-    (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel m) {x : Stmt}
+    (σ : SigmaProtocol m Stmt Wit Commit PrvState Chal Resp rel) {x : Stmt}
     (hss : σ.SpeciallySoundAt x)
     {pc : Commit} {ω₁ ω₂ : Chal} {p₁ p₂ : Resp} (hω : ω₁ ≠ ω₂)
     (hv₁ : σ.verify x pc ω₁ p₁ = true) (hv₂ : σ.verify x pc ω₂ p₂ = true)
@@ -242,7 +239,7 @@ end SigmaProtocol
 
 namespace ChallengeVerifyProtocol
 
-variable {m : Type → Type} {Stmt Wit Commit PrvState Chal Resp : Type} {rel : Stmt → Wit → Bool}
+variable {m : Type → Type u} {Stmt Wit Commit PrvState Chal Resp : Type} {rel : Stmt → Wit → Bool}
 
 section hvzk
 
@@ -256,7 +253,7 @@ variable [SampleableType Chal] [MonadLiftT ProbComp m]
 
 /-- The honest prover's transcript distribution, with the verifier's challenge drawn uniformly
 and lifted into the participants' monad. -/
-def realTranscript (σ : ChallengeVerifyProtocol Stmt Wit Commit PrvState Chal Resp rel m)
+def realTranscript (σ : ChallengeVerifyProtocol m Stmt Wit Commit PrvState Chal Resp rel)
     (x : Stmt) (w : Wit) :
     m (Commit × Chal × Resp) := do
   let (pc, sc) ← σ.commit x w
@@ -267,7 +264,7 @@ def realTranscript (σ : ChallengeVerifyProtocol Stmt Wit Commit PrvState Chal R
 /-- At `m := ProbComp` the lifted challenge draw is the plain uniform sample, so `realTranscript`
 is the ordinary Σ-protocol transcript distribution. -/
 theorem realTranscript_probComp
-    (σ : ChallengeVerifyProtocol Stmt Wit Commit PrvState Chal Resp rel ProbComp)
+    (σ : ChallengeVerifyProtocol ProbComp Stmt Wit Commit PrvState Chal Resp rel)
     (x : Stmt) (w : Wit) :
     σ.realTranscript x w = do
       let (pc, sc) ← σ.commit x w
@@ -286,7 +283,7 @@ The simulated transcript is produced by `simTranscript` given only the statement
 Note: the `sim` field of `SigmaProtocol` only produces a public commitment. For HVZK we need
 a full transcript simulator `Stmt → m (Commit × Chal × Resp)`. We parameterize by this
 simulator, which also keeps the property available on a bare `ChallengeVerifyProtocol`. -/
-def HVZK (σ : ChallengeVerifyProtocol Stmt Wit Commit PrvState Chal Resp rel m)
+def HVZK (σ : ChallengeVerifyProtocol m Stmt Wit Commit PrvState Chal Resp rel)
     (simTranscript : Stmt → m (Commit × Chal × Resp)) (ζ_zk : ℝ≥0∞) : Prop :=
   ∀ x w, rel x w = true →
     letI : MeasurableSpace (Commit × Chal × Resp) := ⊤
@@ -294,14 +291,14 @@ def HVZK (σ : ChallengeVerifyProtocol Stmt Wit Commit PrvState Chal Resp rel m)
 
 /-- Exact honest-verifier zero-knowledge: the real transcript is equal in distribution to the
 simulated one. -/
-def PerfectHVZK (σ : ChallengeVerifyProtocol Stmt Wit Commit PrvState Chal Resp rel m)
+def PerfectHVZK (σ : ChallengeVerifyProtocol m Stmt Wit Commit PrvState Chal Resp rel)
     (simTranscript : Stmt → m (Commit × Chal × Resp)) : Prop :=
   ∀ x w, rel x w = true → σ.realTranscript x w =ᵈ simTranscript x
 
 /-- The perfect HVZK property is equivalent to the approximate HVZK property with `ζ_zk = 0`. -/
 @[grind =]
 theorem perfectHVZK_iff_hvzk_zero [LawfulMonad m] [LawfulEvalDistSemantics m]
-    (σ : ChallengeVerifyProtocol Stmt Wit Commit PrvState Chal Resp rel m)
+    (σ : ChallengeVerifyProtocol m Stmt Wit Commit PrvState Chal Resp rel)
     (simTranscript : Stmt → m (Commit × Chal × Resp)) :
     σ.PerfectHVZK simTranscript ↔ σ.HVZK simTranscript 0 := by
   simp only [PerfectHVZK, HVZK, evalDistEq_iff_evalDist_eq, nonpos_iff_eq_zero,
@@ -323,7 +320,7 @@ The `_σ : ChallengeVerifyProtocol …` argument is dummy (the predicate only de
 `simTranscript` and `β`); it is present to enable field-notation usage like
 `σ.simCommitPredictability simTranscript β`. -/
 def simCommitPredictability
-    (_σ : ChallengeVerifyProtocol Stmt Wit Commit PrvState Chal Resp rel m)
+    (_σ : ChallengeVerifyProtocol m Stmt Wit Commit PrvState Chal Resp rel)
     (simTranscript : Stmt → m (Commit × Chal × Resp)) (β : ℝ≥0∞) : Prop :=
   ∀ x : Stmt, ∀ c₀ : Commit, Pr{let t ← simTranscript x}[t.1 = c₀] ≤ β
 
@@ -350,7 +347,7 @@ satisfy this when `pk` admits a witness (the proof uses a witness-indexed biject
 response variable); for statements outside the relation's image, the simulator's joint may
 have any structure. -/
 def simChalUniformGivenCommit [Fintype Chal]
-    (_σ : ChallengeVerifyProtocol Stmt Wit Commit PrvState Chal Resp rel m)
+    (_σ : ChallengeVerifyProtocol m Stmt Wit Commit PrvState Chal Resp rel)
     (simTranscript : Stmt → m (Commit × Chal × Resp)) : Prop :=
   ∀ (pk : Stmt) (sk : Wit), rel pk sk = true →
     ∀ (c₀ : Commit) (ch₀ : Chal),
@@ -365,7 +362,7 @@ section uniqueResponses
 there is at most one valid response. This property is required by the Fischlin transform
 and holds for most common Σ-protocols (Schnorr, Guillou-Quisquater, etc.). -/
 def UniqueResponses
-    (σ : ChallengeVerifyProtocol Stmt Wit Commit PrvState Chal Resp rel m) : Prop :=
+    (σ : ChallengeVerifyProtocol m Stmt Wit Commit PrvState Chal Resp rel) : Prop :=
   ∀ x pc ω p₁ p₂,
     σ.verify x pc ω p₁ = true → σ.verify x pc ω p₂ = true → p₁ = p₂
 
@@ -376,13 +373,13 @@ section toIdenSchemeWithAbort
 /-- Every `ProbComp`-valued `ChallengeVerifyProtocol` can be viewed as a non-aborting
 `IdenSchemeWithAbort` by wrapping the response in `some`. -/
 def toIdenSchemeWithAbort
-    (σ : ChallengeVerifyProtocol Stmt Wit Commit PrvState Chal Resp rel ProbComp) :
+    (σ : ChallengeVerifyProtocol ProbComp Stmt Wit Commit PrvState Chal Resp rel) :
     IdenSchemeWithAbort Stmt Wit Commit PrvState Chal Resp rel where
   commit := σ.commit
   respond := fun stmt wit prvState chal => some <$> σ.respond stmt wit prvState chal
   verify := σ.verify
 
-instance : Coe (ChallengeVerifyProtocol Stmt Wit Commit PrvState Chal Resp rel ProbComp)
+instance : Coe (ChallengeVerifyProtocol ProbComp Stmt Wit Commit PrvState Chal Resp rel)
     (IdenSchemeWithAbort Stmt Wit Commit PrvState Chal Resp rel) :=
   ⟨toIdenSchemeWithAbort⟩
 
