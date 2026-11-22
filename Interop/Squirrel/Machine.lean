@@ -491,7 +491,7 @@ theorem run_shift (off : ℕ → ℕ) (A : Machine M τs β) (e : Vals M η τs)
   · exact (M.readBit_shiftTape _ _ _).symm
   · rfl
 
-theorem evalWithAnswerFn_readBits (e : Vals M η τs) :
+private theorem evalWithAnswerFn_readBits (e : Vals M η τs) :
     ∀ n k : ℕ,
       evalWithAnswerFn (M.answer ρa e) (readBits n k) = fun j : Fin k => M.readBit ρa (n + j)
   | _, 0 => funext fun j => j.elim0
@@ -505,7 +505,7 @@ theorem evalWithAnswerFn_readBits (e : Vals M η τs) :
       congr 1
       omega
 
-theorem evalWithAnswerFn_fetchVals (e : Vals M η τs) :
+private theorem evalWithAnswerFn_fetchVals (e : Vals M η τs) :
     ∀ {Ξ : List (Ty B)} (r : Renaming Ξ τs) (h : ∀ τ ∈ Ξ, τ.IsGround),
       evalWithAnswerFn (M.answer ρa e) (fetchVals r h) = Env.rename r e
   | [], _, _ => (Env.eq_empty _).symm
@@ -589,7 +589,7 @@ theorem run_adv {τs₀ : List (Ty B)} (A : Machine M (Ty.arrows τs₀ β :: τ
   simp only [run_rename, Env.rename_append, Env.rename_appendLeft_append]
   rfl
 
-theorem rename_argsFirst {τs₀ Γ : List (Ty B)} {ρ : Ty B} (q : Vals M η ρ.args)
+private theorem rename_argsFirst {τs₀ Γ : List (Ty B)} {ρ : Ty B} (q : Vals M η ρ.args)
     (e : Vals M η τs₀) (e' : Vals M η Γ) :
     Env.rename (argsFirst τs₀ ρ Γ) (Env.append q (Env.append e e')) = Env.append e q := by
   rw [argsFirst, Env.rename_append_renaming]
@@ -598,8 +598,8 @@ theorem rename_argsFirst {τs₀ Γ : List (Ty B)} {ρ : Ty B} (q : Vals M η ρ
     exact (Env.append_weakenMany _ _ _).trans (Env.append_appendLeft e e' x)
   · exact Env.rename_appendLeft_append q _
 
-theorem rename_lastFirst {τs₀ Γ : List (Ty B)} (y : b.Value M.carrier η) (e : Vals M η τs₀)
-    (e' : Vals M η Γ) :
+private theorem rename_lastFirst {τs₀ Γ : List (Ty B)} (y : b.Value M.carrier η)
+    (e : Vals M η τs₀) (e' : Vals M η Γ) :
     Env.rename (lastFirst τs₀ b Γ) (Env.cons y (Env.append e e')) =
       Env.append (Env.append e (Env.cons y Env.empty)) e' := by
   rw [lastFirst, Env.rename_append_renaming, Env.rename_append_renaming]
@@ -817,7 +817,7 @@ theorem ReadsBelow.shift {A : Machine M τs β} (hA : A.ReadsBelow bd) (off : �
     · exact (allQueriesSatisfy_query_iff _ _).2 (Nat.add_lt_add_left ht (off η))
     · exact allQueriesSatisfy_ask _ _
 
-theorem allQueriesSatisfy_readBits :
+private theorem allQueriesSatisfy_readBits :
     ∀ n k : ℕ, (readBits (M := M) (η := η) (τs := τs) n k).AllQueriesSatisfy (M.tapeBelow (n + k))
   | _, 0 => allQueriesSatisfy_pure _ _
   | n, k + 1 => allQueriesSatisfy_bind
@@ -825,8 +825,9 @@ theorem allQueriesSatisfy_readBits :
     allQueriesSatisfy_bind ((allQueriesSatisfy_readBits (n + 1) k).mono
       (Model.tapeBelow_mono (by omega))) fun _ => allQueriesSatisfy_pure _ _
 
-theorem allQueriesSatisfy_fetchVals (n : ℕ) : ∀ {Ξ : List (Ty B)} (r : Renaming Ξ τs)
-    (h : ∀ τ ∈ Ξ, τ.IsGround), (fetchVals (M := M) (η := η) r h).AllQueriesSatisfy (M.tapeBelow n)
+private theorem allQueriesSatisfy_fetchVals (n : ℕ) :
+    ∀ {Ξ : List (Ty B)} (r : Renaming Ξ τs) (h : ∀ τ ∈ Ξ, τ.IsGround),
+      (fetchVals (M := M) (η := η) r h).AllQueriesSatisfy (M.tapeBelow n)
   | [], _, _ => allQueriesSatisfy_pure _ _
   | _ :: _, _, _ => allQueriesSatisfy_bind (allQueriesSatisfy_fetch _ _ _) fun _ =>
     allQueriesSatisfy_bind (allQueriesSatisfy_fetchVals n _ _) fun _ => allQueriesSatisfy_pure _ _
@@ -893,7 +894,7 @@ theorem isQueryBoundP_fetch (y : ScopedVar τs a) (ha : a.IsGround) :
   rw [fetch, isQueryBoundP_map_iff]
   exact isQueryBoundP_ask _
 
-theorem isQueryBoundP_readBits :
+private theorem isQueryBoundP_readBits :
     ∀ n k : ℕ, (readBits (M := M) (η := η) (τs := τs) n k).IsQueryBoundP
       (fun t => t.isRight = true) 0
   | _, 0 => by rw [readBits]; simp
@@ -903,7 +904,7 @@ theorem isQueryBoundP_readBits :
       isQueryBoundP_bind_le (m := 0) (isQueryBoundP_readBits (n + 1) k) (fun _ _ => by simp)
         (by omega)) (by omega)
 
-theorem isQueryBoundP_fetchVals : ∀ {Ξ : List (Ty B)} (r : Renaming Ξ τs)
+private theorem isQueryBoundP_fetchVals : ∀ {Ξ : List (Ty B)} (r : Renaming Ξ τs)
     (h : ∀ τ ∈ Ξ, τ.IsGround),
     (fetchVals (M := M) (η := η) r h).IsQueryBoundP (fun t => t.isRight = true) Ξ.length
   | [], _, _ => by rw [fetchVals]; simp
