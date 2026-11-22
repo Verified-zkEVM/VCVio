@@ -20,9 +20,11 @@ them, not the tool's implementation of them.
 
 Status. The sub-project holds the syntax, the models, local terms as random variables, machines
 with read and query bounds, the class of admitted machines, global formulas and their validity.
-The structural rules of [LICS23, Fig. 7] are proved sound, each as a lemma about validity and as a
-constructor of derivations (section 8). The rules about `∼` and `adv`, the cryptographic rules and
-the secrecy judgments are not formalized here.
+Proved sound, each as a lemma about validity and as a constructor of derivations (section 8): the
+structural rules of [LICS23, Fig. 7]; the rules about `∼` that need no cryptographic assumption,
+from [BC14, Fig. 2] and [LICS23], among them the case split; name renaming; and
+[BC14]'s encryption axiom EncCCA1 without decryption, from one-time IND-CPA. The rules about `adv`
+and deduction, the other cryptographic rules and the secrecy judgments are not formalized here.
 
 ## 2. Syntax and models
 
@@ -79,6 +81,20 @@ program rather than a function of its inputs so that a construction on machines 
 transformation, a handler applied by `simulateQ`, which a class of polynomial-time machines can
 certify from the machine's program.
 
+**Constructions.** Every construction on machines is a handler for the input interface of one
+machine into the interface of another (`Handler`), applied by `Machine.handle`: relabelling the
+inputs along a renaming (`Machine.rename`), answering an input of type `b` by querying an input of
+type `a → b` at the value of a Boolean or base input (`Machine.app`), answering an input by an
+honest symbol (`Machine.fn`), and answering the first input by running another machine on the
+query's arguments and the remaining inputs (`Machine.subst`). A machine may also branch on a
+Boolean input (`Machine.branch`) or return a constant (`Machine.const`). Each construction has a
+`run` lemma, proved from what its handler evaluates to (`Handler.EvalsTo`), and keeps read and
+query bounds; a handler multiplies a query bound by the number of queries its answers make. The
+reductions of the rules (`Machine.ite`, `Machine.guard`, `Machine.adv`) are built from these. A
+cryptographic reduction runs a machine as a program inside its own oracle computations
+(`Machine.simulate`); answered from values, the run is the machine's run at those values
+(`Machine.simulate_ofVals`).
+
 Two bounds describe a machine without a model of time. `Machine.ReadsBelow A b` says that every
 tape read of `A`, on every path, is below `b η` (VCVio's `AllQueriesSatisfy`); then `A`'s run
 depends on the tape only through those bits (`Machine.ReadsBelow.run_eq`). `Machine.QueryBound A q`
@@ -89,9 +105,10 @@ case for each.
 
 ## 4. The class of machines
 
-`AdvClass M` is a predicate on the machines of a model, and the semantics of `adv` and `∼`
-quantifies over its members: `C.Adv X` says that an admitted machine computes `X` everywhere, and
-`C.Indist u v` that every admitted machine has negligible advantage between `u` and `v`. The class
+`AdvClass M` is a predicate on the machines of a model, with closure fields, and the semantics of
+`adv` and `∼` quantifies over its members: `C.Adv X` says that an admitted machine computes `X`
+everywhere, and `C.Indist u v` that every admitted machine has negligible advantage between `u`
+and `v`. The class
 stands for LICS23's polynomial-time machines, but polynomial time is not imposed: the class is a
 parameter of validity (L14). `AdvClass.all` admits every machine with polynomial read and query
 bounds; it is the class of the satisfiability checks and countermodels.
@@ -101,12 +118,25 @@ against its premises needs the class to admit those reductions. Such a rule adds
 `AdvClass`, which names the program construction it admits and the property of a class of
 polynomial-time machines that gives it, and comes with that construction and its run lemma.
 `AdvClass.all` meets every field, so a rule's hypotheses can be shown jointly satisfiable against
-it. A bound becomes a field only when a rule uses it on every admitted machine.
+it. A bound becomes a field only when a rule uses it on every admitted machine. No field admits an
+`η`-indexed constant: the values a field supplies are Booleans, the model's honest symbols and the
+arguments of a machine's own queries.
 
-The structural rules need no field, so `AdvClass` has only membership. Two pieces are present
-without a field. The input projection `Machine.input` is a member of `AdvClass.all`, which the
-check `Valid.not_equiv_tt_ff` uses; the read and query bounds define `AdvClass.all` and are checked
-on their own.
+| Field | Construction | Rules | Polynomial-time counterpart |
+|---|---|---|---|
+| `rename_mem` | `Machine.rename` | Perm, Restr, Dup; with the fields below, FA-Adv, If and the case split | a handler forwarding each query along the renaming, one query per query |
+| `subst_mem` | `Machine.subst` | FA-Adv | VCVio's handler closure with a certificate for the handler, sequenced by `IsOraclePPTBy.bind`; answers are Boolean or base values |
+| `app_mem` | `Machine.app` | FA-App | a handler making two queries per query |
+| `fn_mem` | `Machine.fn` | FA-Fn, and through it [BC14]'s FA | a pure polynomial-time function of the query, since honest symbols are interpreted by polynomial-time functions |
+| `branch_mem` | `Machine.branch` | If, the case split, If1 | one query, then either machine |
+| `const_mem` | `Machine.const` | the case split, If1 | a constant |
+
+The structural rules, name renaming and the encryption rule need no field: renaming gives every
+machine advantage zero, and the encryption rule states its assumption for the reduction of each
+admitted machine. Two pieces are present without a field. The input projection `Machine.input` is
+a member of `AdvClass.all`, which the checks use; the read and query bounds define `AdvClass.all`
+and are checked on their own. `Interop/Squirrel/Test/Constructions.lean` checks each field of
+`AdvClass.all` at a machine built by its construction.
 
 ## 5. Validity
 
@@ -149,6 +179,26 @@ The structural rules need no reduction. Their proofs are about hypotheses and su
 Proposition 2]: the variable of the premise is instantiated by a random variable that picks, at
 each parameter and tape, a counterexample when one exists.
 
+The rules about `∼` follow the pattern with factor one. FA, If, Restr, Perm and Dup each name one
+reduction whose advantage against the premise equals the attacker's against the conclusion at
+every `η` (`advantage_app`, `advantage_rename`, …). The case split names two, `Machine.guard true`
+and `Machine.guard false`, which return `false` when the condition fails; the attacker's advantage
+is at most the sum of theirs at every `η` (`advantage_cons_cond_le`, L7). Name renaming is a
+permutation of the honest tape's coordinates, under which the uniform tape is invariant, so every
+machine has advantage zero (L16). The encryption rule's reduction `EncSymbols.encReduction` draws
+both tapes itself and runs the attacker's machine on the public key, the challenge and the
+context; at every `η` its one-time IND-CPA advantage equals the attacker's advantage (L17).
+
+**Freshness.** The honest tape has one coin per name and index, and a name reads only the coins
+of its own slots, so freshness of names is syntactic. `FTerm.AvoidsNames N t` says that no head of
+`t`, in the sense of PolyFun's `Term.heads`, is the constructor of a name in `N`. It is a fold over
+the term, decidable for a decidable `N`, so `decide` checks it on concrete terms; and PolyFun's
+`Term.denote_update_eq` gives that such a term ignores every coordinate of the honest tape that
+belongs to a name in `N` (`FTerm.denote_update_eq_of_avoidsNames`), with no induction over terms.
+The encryption rule's side conditions are of this kind (L22). Not using a name at all is stronger
+than not reading the coordinate a given occurrence reads; no rule here needs the weaker, semantic
+form.
+
 ## 7. Derivations as data
 
 `Derivation D Θ F` is an inductive type with one constructor per rule, indexed by the context, the
@@ -157,6 +207,15 @@ hypotheses and the conclusion; local sequents are unfolded to the global sequent
 for every model restriction and every class of machines. Derivations are data: Lean functions can
 build them, for example by recursion on a protocol's trace, and the kernel checks them. A rule with
 a semantic side condition takes it as a premise of its constructor.
+
+The encryption rule is a constructor at the instances that a parameter `enc` admits
+(`Derivation D enc Θ F`). Its syntactic side conditions (`EncInstance.Syntactic`: distinct key and
+coin names, which the messages and the context do not use) are a premise of the constructor, which
+`decide` discharges on concrete instances; `Derivation.sound` takes the semantic hypotheses of each
+admitted instance (`EncInstance.Holds`: equal message lengths in every admitted model, and one-time
+IND-CPA for the reductions of the admitted machines). With `enc` empty, derivations use the other
+rules only. [BC14]'s If1 is a constructor although the case split proves it: deriving it would
+rewrite `if c' then z else z` to `z`, and the fragment has no rule proving that local equality.
 
 ## 8. Rules
 
@@ -170,10 +229,37 @@ a semantic side condition takes it as a premise of its constructor.
 | L.ByGlob | [LICS23, Fig. 7] | `Valid.byGlob` | `Derivation.byGlob` |
 | G.ByLoc | [LICS23, Fig. 7] | `Valid.byLoc` | `Derivation.byLoc` |
 | L.R-∀ | [LICS23, Fig. 7, Proposition 2] | `Valid.local_all` | `Derivation.localAll` |
+| Refl, Sym, Trans | [BC14, Fig. 2] | `Valid.equiv_refl`, `Valid.equiv_symm`, `Valid.equiv_trans` | `Derivation.equivRefl`, `Derivation.equivSymm`, `Derivation.equivTrans` |
+| G.Equiv:FA-App | [LICS23] | `Valid.equiv_app` | `Derivation.equivApp` |
+| FA-Fn | [LICS23] | `Valid.equiv_fn` | `Derivation.equivFn` |
+| G.Equiv:FA-Adv | [LICS23] | `Valid.equiv_adv` | `Derivation.equivAdv` |
+| FA, for an honest symbol | [BC14, Fig. 2] | `Valid.equiv_fa` | `Derivation.equivFn`, then `Derivation.equivApp` |
+| Restr | [BC14, Fig. 2] | `Valid.equiv_tail` | `Derivation.equivTail` |
+| Perm | [BC14, Fig. 2] | `Valid.equiv_rename` | `Derivation.equivRename` |
+| Dup | [BC14, Fig. 2] | `Valid.equiv_dup` | `Derivation.equivDup` |
+| If (FA for the conditional) | [BC14, Fig. 2] | `Valid.equiv_ite` | `Derivation.equivIte` |
+| G.Case-Study:ITE | [LICS23, Fig. 8] | `Valid.equiv_caseStudy` | `Derivation.equivCaseStudy` |
+| If1 | [BC14, Fig. 2, Proposition 2] | `Valid.equiv_if1` | `Derivation.equivIf1` |
+| Rewriting under `[t = t']` | [LICS23] (G.Rewrite) | `Valid.equiv_rewrite` | `Derivation.equivRewrite` |
+| Eq1 | [BC14, Fig. 2] | `Valid.equiv_eq_self` | `Derivation.equivEqSelf` |
+| Name renaming | [BC14] | `Valid.equiv_renameNames_of_equiv` | `Derivation.equivRenameNames` |
+| EncCCA1 without decryption | [BC14, §7, Proposition 3]; [LICS23, Proposition 19] | `Valid.equiv_enc` | `Derivation.equivEnc` |
 
-`Interop/Squirrel/Test/Structural.lean` builds a small derivation for each, and checks that a
-premise is needed: `[false]` follows from the hypothesis `[false]` but not from none, and
-`[∀ (x : bool). x = true]` is not valid.
+`Interop/Squirrel/Test/Structural.lean` builds a small derivation for each structural rule, and
+checks that a premise is needed: `[false]` follows from the hypothesis `[false]` but not from none,
+and `[∀ (x : bool). x = true]` is not valid. The checks of the other rules are countermodels and
+satisfiability models:
+- `Test/TwoTimePad.lean`: the one-bit pad with a fresh pad gives indistinguishable encryptions,
+  with a reused pad it does not, and renaming exchanges the two pads;
+- `Test/CaseStudy.lean`: If1 at a random condition that both branches read, as a derivation; the
+  case split without the condition beside each branch is unsound; neither premise of If1 may be
+  dropped; and the case split's reduction changes the output;
+- `Test/EncExamples.lean`: the one-time pad meets every hypothesis of the encryption rule, and the
+  conclusion fails for a scheme that leaks the message, for a key name equal to the coin name and
+  for coins in the context, the last two rejected by `decide`;
+- `Test/WorkedEnc.lean`: the derivation `pk(k), enc(n; r), n ∼ pk(k), enc(zero; r), n` with its
+  soundness, and a pad that leaks lengths, which meets the rule's hypotheses although it fails the
+  unrestricted IND-CPA game.
 
 ## 9. Obligations
 
@@ -184,10 +270,14 @@ contiguous. Every name in the last column is in the namespace `Interop.Squirrel`
 
 | Id | Kind | Source anchor | Obligation | Status | Lean anchor |
 |---|---|---|---|---|---|
+| L7 | gap | [LICS23] Fig. 8; [BC14] Prop. 2 | LICS23 gives no proof of G.Case-Study:ITE and refers to BC14, whose Prop. 2 proves only If1, with one condition and one context on both sides. Its machines flip a coin when the condition fails, and their success probability, written `1/4 + p`, holds only when the condition is true with probability one half; the error cancels because the condition is shared, and would not with two conditions. The case split is proved here with two conditions, by two named reductions that return `false` when the condition fails, with the advantage at most the sum of the premises' advantages at every `η` (factor one; BC14's factor two comes from naming one of the two machines). If1 is its instance with both right-hand branches equal. A countermodel shows that each premise must keep the condition beside its branch. | closed (case split) | `advantage_cons_cond_le`, `Valid.equiv_caseStudy`, `Valid.equiv_if1`, `CaseStudy.caseStudy_needs_condition` |
 | L10 | choice | [LICS23] p. 5, Fig. 2 (p. 7) | Adversaries read the shared attacker tape `ρa` in the papers, while VCVio adversaries draw fresh coins. Here `ρa` is a uniform bitstring of a length the model chooses (`Model.TapeA`), and machines read it bit by bit through the tape interface (`tapeSpec`), as LICS23's machines read their randomness tape; attacker symbols read the same tape. Relating these machines to VCVio adversaries with fresh coins is open. | open | `Model.TapeA`, `tapeSpec`, `Machine.run` |
 | L11 | choice | [LICS23] p. 7; [CSF24] App. A; [CCS26] §3.1 (p. 6) | `∼` at arbitrary order (LICS23) versus order at most 1 for `∼` and at most 2 for `adv` (CSF24, CCS26). The fragment of CSF24 and CCS26 is adopted and made syntactic: the global constructors `adv τs β` and `equiv τs` carry proofs of `Ty.AdvOrder τs β` (the term `τ₁ → … → τₙ → β` has order at most 2) and `Ty.IndistOrder τs` (entries of order at most 1), so an atom outside the fragment cannot be written. The semantics is defined at every type. | closed (adopted fragment) | `GlobalOp`, `Ty.AdvOrder`, `Ty.IndistOrder` |
 | L12 | choice | [LICS23] §II-B (pp. 5–6) | Names read the honest tape, a product with one uniform bit block per name and index (`Model.Coin`, `coinLen η τ` bits); a name reads its own block and runs the sampler of its type on it, and names of one type share a sampler, so independence and identical distribution are structural. LICS23 (p. 6) notes that a name needs finitely many bits of the honest tape and requires names to be samplings computable in polynomial time. Neither polynomial bit blocks nor polynomial-time samplers are imposed on models here. | open | `Model.TapeH`, `Model.Coin`, `Model.name` |
 | L13 | choice | [LICS23] Fig. 2 | `const t` at arrow types is read as a logical relation (`Ty.Same`). LICS23 asks for a value in `⋂_η ⟦τ⟧_η`; the two agree at base types and at arrows from fixed types, and differ when the domain varies with `η`. | open | `Ty.Same`, `RV.IsConst` |
-| L14 | choice | [LICS23] §II-C.1, §II-C.2, Fig. 2 (p. 7) | The machines of `adv` and `∼` are free programs (`OracleComp`) over the sum of a tape interface and an input interface, run by fixed answers. LICS23's machines receive base values as bitstring encodings on input tapes and functions through handles on a query tape; here every input is an oracle that receives and returns typed values, a base input is queried with no arguments, and a query supplies all of a function's arguments (no handles for partial applications, which inputs of order at most 1 do not need). The class `AdvClass` is a predicate on machines and a parameter of validity: polynomial time is not imposed. `AdvClass.all`, the machines with polynomial read and query bounds, is the class of the satisfiability checks. | open | `Machine`, `Machine.ReadsBelow`, `Machine.QueryBound`, `AdvClass`, `AdvClass.all` |
+| L14 | choice | [LICS23] §II-C.1, §II-C.2, Fig. 2 (p. 7) | The machines of `adv` and `∼` are free programs (`OracleComp`) over the sum of a tape interface and an input interface, run by fixed answers. LICS23's machines receive base values as bitstring encodings on input tapes and functions through handles on a query tape; here every input is an oracle that receives and returns typed values, a base input is queried with no arguments, and a query supplies all of a function's arguments (no handles for partial applications, which inputs of order at most 1 do not need). The class `AdvClass` is a predicate on machines, closed under the constructions that the rules' reductions use (section 4), and a parameter of validity: polynomial time is not imposed. `AdvClass.all`, the machines with polynomial read and query bounds, is the class of the satisfiability checks. | open | `Machine`, `Machine.ReadsBelow`, `Machine.QueryBound`, `AdvClass`, `AdvClass.all` |
 | L15 | choice | [LICS23] §II-A, §II-B | LICS23's declared variables are split into constructors (names, honest symbols with tape-independent values, attacker symbols reading `ρa`, `=_τ`, `∀_τ`, `∃_τ`) and free variables, which range over all random variables. | open | `Decl`, `localSig` |
+| L16 | choice | [BC14] (α-renaming of names); [LICS23] §II-B.2 | Renaming names in a closed vector is sound along any type-preserving bijection of names, in every model: the renaming is the permutation `Model.tapePerm` of the honest tape's coordinates. The residue is the restriction to closed vectors, which LICS23's rule shares (free variables range over all random variables, which may read the tape). | closed | `Model.renamesNames`, `Valid.equiv_renameNames_of_equiv`, `Derivation.equivRenameNames`, `TwoTimePad.valid_swap` |
+| L17 | gap | [BC14] §7 (Fig. 2, EncCCA1; Prop. 3); [LICS23] Prop. 19 (G.CCA1) | Soundness of the encryption rule when the secret key is never used to decrypt: `pk(nk), enc(m₀; r, pk(nk)), u⃗ ∼ pk(nk), enc(m₁; r, pk(nk)), u⃗`, in left-or-right form. The key and coin names are distinct; the messages and the context have the public key free and are closed by substituting `pk(nk)`, and they use neither the key name nor the coin name (syntactic side conditions, L22); in every admitted model the two messages have equal length at every tape (a restriction on models). The length condition is BC14's guard `EQL(u, u′)` holding surely, as in LICS23's G.CCA1, where `zero (len m)` has the length of `m` in every model. The assumption is one-time IND-CPA (`IND_CPA_OneTime_Advantage` at `ProbCompRuntime.probComp`) for the image of the class under the named reduction `EncSymbols.encReduction`, which submits only pairs of equal length (it is admissible for the leakage `lenOf`); at every `η` the two advantages are equal. A scheme that leaks lengths meets every hypothesis, though it fails VCVio's unrestricted game. Countermodels show that the IND-CPA hypothesis, the distinct names and the freshness of the coins in the context are each needed. Still open: decryption (IND-CCA1), BC14's guard as a conditional in the conclusion for messages whose lengths differ on some tapes, and the real-or-zero form. | closed (this fragment) | `Valid.equiv_enc`, `EncSymbols.advantage_challenge`, `EncSymbols.encReduction_isAdmissible`, `WorkedEnc.workedDerivation_sound`, `WorkedEnc.valid_worked_lpad`, `WorkedEnc.lpad_advantage_unequalAdv`, `EncExamples.not_valid_enc_leaky`, `WorkedEnc.not_valid_leak`, `EncExamples.not_valid_enc_keyIsCoin`, `EncExamples.not_valid_enc_coinReused` |
 | L19 | choice | [LICS23] App. A (label `large`), §II-B.1 | `large` is LICS23's bound `Pr_ρh[⟦n⟧(η, a)(ρh) = b] ≤ 2^{-c·η}` for some real `c > 0`, read on the sampler that names of the type share. LICS23 lifts labels to compound types "in the natural way" without saying how `large` lifts; here Booleans and arrow types are not `large`. A base type labelled `finite`, `fixed` and `large` has no model, so the checks that use the trivial model assume no `large` base type. | open | `Model.IsLarge`, `Ty.HasLabel`, `Model.isLarge_of_hasLabel`, `Model.trivial_respectsLabels` |
+| L22 | choice | [BC14] §7 (freshness in EncCCA1) | Freshness side conditions are syntactic: a term avoids a set of names when none of its heads (PolyFun's `Term.heads`) is one of them (`FTerm.AvoidsNames`, `Vec.AvoidsNames`). The condition is a fold over the term and decidable for names with decidable equality, so `decide` checks it on concrete instances (`EncInstance.Syntactic`). It implies the semantic condition that the term's value ignores the honest-tape coordinates of those names (`FTerm.denote_update_eq_of_avoidsNames`, from `Term.denote_update_eq`). Not using a name is stronger than not reading the coordinate of one occurrence: a term that uses the key name at another index fails the check. Countermodels show that the encryption rule's syntactic conditions are needed, and `decide` rejects the instances that break them. | closed (this fragment) | `FTerm.AvoidsNames`, `FTerm.denote_update_eq_of_avoidsNames`, `EncInstance.Syntactic`, `WorkedEnc.workedInstance_syntactic`, `EncExamples.not_keyIsCoin_syntactic`, `EncExamples.not_coinReused_syntactic` |
