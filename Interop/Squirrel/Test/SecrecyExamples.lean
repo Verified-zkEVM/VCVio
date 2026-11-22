@@ -47,6 +47,12 @@ premises needed: `neg1_needs_nonDed` (`¬ (k ▷ h(k))` fails), `ineq_needs_nonD
 fails, while `k ▷ h(k)` holds) and `rwEquiv_needs_equiv` (`k ⊬ n` holds and `k ⊬ k` fails, so
 neither Rw-Equiv nor WeakR passes from one to the other without its second premise).
 
+The deductions and local reasoning: `valid_ded_k_app_hk` deduces `h k` from `k` by an honest
+symbol, an entry and an application, in every model against every class, with no `adv`
+hypothesis; `rewriteDerivation` deduces `k` from `h(h(k))` in `model`, by the entry, local validity
+twice, modus ponens under `[·]` and rewriting, and `valid_not_nonDed_hhk_k` draws Neg2 from it,
+while `h(h(k)) ⊬ n` holds (`valid_worked`).
+
 ## References
 
 * [CCS26] Hérouard, Jacomme, Koutsos, Lallemand, *Secrecy in Squirrel and the Post-Compromise
@@ -391,5 +397,62 @@ theorem rwEquiv_needs_equiv :
   ⟨valid_nonDed_nm nofun, fun h => not_nonDed_of_forall_eq (idMachine model) (idMachine_mem model)
     (fun _ _ => (AdvMachine.appVals_eval _ _).trans (Machine.run_input _ _ _))
     (Form.holds_nonDed.1 (h model model_respectsLabels rfl Env.empty (by simp)))⟩
+
+/-! ## Deductions and local reasoning -/
+
+/-- `k ▷ h k` by the deductions of an honest symbol, an entry and an application, in every model
+against every class: deductions need no `adv` hypothesis. -/
+theorem valid_ded_k_app_hk {R : Model decl → Prop} {C : ∀ M : Model decl, AdvClass M} :
+    Valid R C (Γ := []) []
+      (.ded (one (nm Name.k)) (FTerm.app (FTerm.fn (D := decl) Fn.h) (nm Name.k))) := by
+  have hk := Valid.ded_input (R := R) (C := C) (Θ := []) (u := one (nm Name.k))
+    (ho := of_decide_eq_true rfl) (ScopedVar.zero : ScopedVar [msg] msg)
+  have hf := Valid.ded_fn (R := R) (C := C) (Θ := []) (u := one (nm Name.k))
+    (ho := (of_decide_eq_true rfl : Ty.SecrecyOrder [msg] (.arrow msg msg)))
+    (Fn.h : decl.Fn (.arrow msg msg))
+  exact Valid.ded_app hf hk
+
+/-- In `model`, where `h` is the identity, `h(h(k)) = h(k)` at every tape. -/
+theorem denote_hhk_eq_hk (C : AdvClass model) (env : Env (Kind.Value model) []) (η : ℕ)
+    (ρ : model.Tape η) :
+    (FTerm.eq (hT (hT (nm Name.k))) (hT (nm Name.k))).denote (fullInterp model C) env η ρ =
+      true := by
+  rw [FTerm.denote_eq]
+  exact (@decide_eq_true_iff _ (Classical.propDecidable _)).2 rfl
+
+/-- In `model`, `h(k) = k` at every tape, so `h(h(k)) = h(k)` implies `h(h(k)) = k`. -/
+theorem denote_imp_hhk_eq_k (C : AdvClass model) (env : Env (Kind.Value model) []) (η : ℕ)
+    (ρ : model.Tape η) :
+    (FTerm.imp (FTerm.eq (hT (hT (nm Name.k))) (hT (nm Name.k)))
+        (FTerm.eq (hT (hT (nm Name.k))) (nm Name.k))).denote (fullInterp model C) env η ρ =
+      true := by
+  have hψ : (FTerm.eq (hT (hT (nm Name.k))) (nm Name.k)).denote (fullInterp model C) env η ρ =
+      true := by
+    rw [FTerm.denote_eq]
+    exact (@decide_eq_true_iff _ (Classical.propDecidable _)).2 rfl
+  simp only [FTerm.imp, FTerm.denote_ite, FTerm.denote_tt, hψ, Bool.cond_self]
+
+/-- From the vector `h(h(k))`, deduce `k` in `model`: the entry is deducible, and it equals `k`
+overwhelmingly, which local reasoning gives in two steps, `[h(h(k)) = h(k)]` and
+`[h(h(k)) = h(k) ⇒ h(h(k)) = k]`, both true at every tape of `model`. -/
+@[expose] def rewriteDerivation :
+    Derivation decl (fun _ => False) (· = model) (Γ := []) []
+      (.ded (one (hT (hT (nm Name.k)))) (nm Name.k)) :=
+  .dedRewrite (v := hT (hT (nm Name.k))) (.dedInput _ .zero (by decide))
+    (.boxMP (φ := FTerm.eq (hT (hT (nm Name.k))) (hT (nm Name.k)))
+      (.boxValid _ fun _ _ hM C env η ρ => by subst hM; exact denote_hhk_eq_hk C env η ρ)
+      (.boxValid _ fun _ _ hM C env η ρ => by subst hM; exact denote_imp_hhk_eq_k C env η ρ))
+
+/-- `rewriteDerivation` is valid in `model`, against every class. -/
+theorem rewriteDerivation_sound (C : ∀ M : Model decl, AdvClass M) :
+    Valid (· = model) C (Γ := []) [] (.ded (one (hT (hT (nm Name.k)))) (nm Name.k)) :=
+  rewriteDerivation.sound _ C (fun _ h => h.elim) fun _ h => h
+
+/-- **The deduction is not trivial.** `h(h(k)) ⊬ k` fails in `model` against all machines, as
+Neg2 gives from `rewriteDerivation`; while `h(h(k)) ⊬ n` holds there (`valid_worked`). -/
+theorem valid_not_nonDed_hhk_k :
+    Valid (· = model) (fun M => AdvClass.all M) (Γ := []) []
+      (.not (.nonDed (one (hT (hT (nm Name.k)))) (nm Name.k))) :=
+  Valid.not_nonDed (rewriteDerivation_sound _)
 
 end Interop.Squirrel.SecrecyExamples
