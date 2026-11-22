@@ -199,7 +199,7 @@ theorem not_avoidsNames_n_n : ¬ (one (nm Name.n)).AvoidsNames (· = ⟨_, _, Na
 /-- From `adv(h)`, derive `h(h(k)) ⊬ n`: FreshR gives `k ⊬ n`; `▷` from `adv` gives `k ▷ h(k)` and
 `h(k) ▷ h(h(k))`; Trans gives `k ▷ h(h(k))`; WeakL gives `h(h(k)) ⊬ n`. -/
 @[expose] def workedDerivation {R₀ : Model decl → Prop} :
-    Derivation decl (fun _ => False) R₀ (Γ := []) [advH]
+    Derivation decl (fun _ => False) (fun _ => False) R₀ (Γ := []) [advH]
       (.nonDed (one (hT (hT (nm Name.k)))) (nm Name.n)) :=
   .nonDedWeakL (.nonDedFreshR (one (nm Name.k)) Name.n Fn.idx (by decide) rfl (by decide))
     (.dedTrans (v := hT (nm Name.k)) (.dedApps (by decide) (.ax List.mem_cons_self))
@@ -208,7 +208,7 @@ theorem not_avoidsNames_n_n : ¬ (one (nm Name.n)).AvoidsNames (· = ⟨_, _, Na
 /-- The worked derivation is valid in every model restriction, against every class. -/
 theorem workedDerivation_sound (R : Model decl → Prop) (C : ∀ M : Model decl, AdvClass M) :
     Valid R C [advH] (.nonDed (one (hT (hT (nm Name.k)))) (nm Name.n)) :=
-  (workedDerivation (R₀ := R)).sound R C (fun _ h => h.elim) fun _ h => h
+  (workedDerivation (R₀ := R)).sound R C (fun _ h => h.elim) (fun _ h => h.elim) fun _ h => h
 
 /-- The machine applying `h` to its input: FA-App of the input to the input, answered by the
 honest symbol. -/
@@ -436,7 +436,7 @@ theorem denote_imp_hhk_eq_k (C : AdvClass model) (env : Env (Kind.Value model) [
 overwhelmingly, which local reasoning gives in two steps, `[h(h(k)) = h(k)]` and
 `[h(h(k)) = h(k) ⇒ h(h(k)) = k]`, both true at every tape of `model`. -/
 @[expose] def rewriteDerivation :
-    Derivation decl (fun _ => False) (· = model) (Γ := []) []
+    Derivation decl (fun _ => False) (fun _ => False) (· = model) (Γ := []) []
       (.ded (one (hT (hT (nm Name.k)))) (nm Name.k)) :=
   .dedRewrite (v := hT (hT (nm Name.k))) (.dedInput _ .zero (by decide))
     (.boxMP (φ := FTerm.eq (hT (hT (nm Name.k))) (hT (nm Name.k)))
@@ -446,7 +446,7 @@ overwhelmingly, which local reasoning gives in two steps, `[h(h(k)) = h(k)]` and
 /-- `rewriteDerivation` is valid in `model`, against every class. -/
 theorem rewriteDerivation_sound (C : ∀ M : Model decl, AdvClass M) :
     Valid (· = model) C (Γ := []) [] (.ded (one (hT (hT (nm Name.k)))) (nm Name.k)) :=
-  rewriteDerivation.sound _ C (fun _ h => h.elim) fun _ h => h
+  rewriteDerivation.sound _ C (fun _ h => h.elim) (fun _ h => h.elim) fun _ h => h
 
 /-- **The deduction is not trivial.** `h(h(k)) ⊬ k` fails in `model` against all machines, as
 Neg2 gives from `rewriteDerivation`; while `h(h(k)) ⊬ n` holds there (`valid_worked`). -/

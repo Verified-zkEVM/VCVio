@@ -82,7 +82,7 @@ abbrev LongR (M : Model decl) : Prop := M.LongTapes ∧ M.PolyCoins msg
 `adv(h)` gives `a ▷ h(a)` and `h(a) ▷ h(h(a))`; Trans gives `a ▷ h(h(a))`; WeakL gives
 `h(h(a)) ⊬ n`. -/
 @[expose] def workedPremise :
-    Derivation decl (fun _ => False) LongR (Γ := []) [advH, advA]
+    Derivation decl (fun _ => False) (fun _ => False) LongR (Γ := []) [advH, advA]
       (.nonDed (one (hT (hT aT))) (nm Name.n)) :=
   .nonDedWeakL (.nonDedFreshR (one aT) Name.n Fn.idx (by decide) rfl (by decide))
     (.dedTrans (v := hT aT) (.dedApps (by decide) (.ax List.mem_cons_self))
@@ -103,7 +103,7 @@ theorem worked_readsPoly (M : Model decl) (C : AdvClass M) (env : Env (Kind.Valu
 /-- From `adv(h)` and `adv(a)`, derive `h(h(a)), m ⊬ n`: FreshL adds the fresh name `m` to
 `workedPremise`. -/
 @[expose] def freshLDerivation :
-    Derivation decl (fun _ => False) LongR (Γ := []) [advH, advA]
+    Derivation decl (fun _ => False) (fun _ => False) LongR (Γ := []) [advH, advA]
       (.nonDed (Vec.snoc (one (hT (hT aT))) (nm Name.m)) (nm Name.n)) :=
   .nonDedFreshL (u := one (hT (hT aT))) (v := nm Name.n) (of_decide_eq_true rfl) Name.m Fn.idx
     (fun _ h => h) (fun M _ _ C env hΘ => worked_readsPoly M C env hΘ) (by decide) (by decide)
@@ -114,7 +114,7 @@ polynomial bit blocks for messages, against every class. -/
 theorem freshLDerivation_sound (R : Model decl → Prop) (C : ∀ M : Model decl, AdvClass M)
     (hR : ∀ M, R M → LongR M) :
     Valid R C [advH, advA] (.nonDed (Vec.snoc (one (hT (hT aT))) (nm Name.m)) (nm Name.n)) :=
-  freshLDerivation.sound R C (fun _ h => h.elim) hR
+  freshLDerivation.sound R C (fun _ h => h.elim) (fun _ h => h.elim) hR
 
 /-- In `longModel`, against all machines, the hypothesis `adv(a)` holds: the sampler of messages,
 run on the attacker tape, computes the attacker symbol. -/

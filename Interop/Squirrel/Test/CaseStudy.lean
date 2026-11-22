@@ -107,14 +107,14 @@ theorem denote_ite_parity (C : AdvClass model) (env : Env (Kind.Value model) [])
 
 /-- `valid_if1_flip` as a one-step derivation from the hypothesis `flipForm`. -/
 @[expose] def if1Derivation :
-    Derivation decl (fun _ => False) (fun _ => True) [flipForm] if1Form :=
+    Derivation decl (fun _ => False) (fun _ => False) (fun _ => True) [flipForm] if1Form :=
   .equivIf1 (.equivRefl _ (by decide)) (.ax List.mem_cons_self)
 
 /-- `Derivation.sound` applies to `if1Derivation`, and `valid_flip` discharges its hypothesis. -/
 theorem if1Derivation_sound (C : ∀ M : Model decl, AdvClass M) :
     Valid (fun M => M = model) C (Γ := []) [] if1Form :=
   (valid_flip C).cut
-    (if1Derivation.sound _ C (fun _ h => h.elim) fun _ _ => trivial)
+    (if1Derivation.sound _ C (fun _ h => h.elim) (fun _ h => h.elim) fun _ _ => trivial)
 
 /-- Twice the probability that the pad `r` is `true` is one. -/
 private theorem prEvent_padR_add_self (η : ℕ) :
