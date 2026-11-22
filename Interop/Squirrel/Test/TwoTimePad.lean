@@ -156,7 +156,7 @@ theorem not_valid_reuse :
       (.equiv (Env.cons (enc .ff) (Env.cons (enc .ff) Env.empty))
         (Env.cons (enc .tt) (Env.cons (enc .ff) Env.empty))) := fun h => by
   have hM := Form.holds_equiv.1 (h model model_respectsLabels rfl Env.empty (by simp))
-    (xorMachine model) (xorMachine_mem _ (AdvClass.all_mem_input _ _))
+    (xorMachine model) (xorMachine_mem _ ((AdvClass.all _).input_mem _ _))
   rw [xorMachine_test] at hM
   refine not_negligible_one (negligible_of_le (fun η => le_of_eq ?_) hM)
   simp only [advantage, Vec.rv_cons, VecRV.cons, Env.cons_zero, Env.cons_succ, denote_enc,

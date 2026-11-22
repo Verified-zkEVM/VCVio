@@ -37,12 +37,16 @@ advantage at every `η`; the case split (`AdvClass.Indist.caseStudy`, with BC14'
 most the sum of theirs (`advantage_cons_cond_le`). These are the concrete statements.
 
 The closure fields of `AdvClass` are the program constructions of `Interop.Squirrel.Machine` that
-these reductions use: relabelling the inputs, running one machine to answer another's input
-queries (substitution into a handler), querying an input at another input, answering by an honest
-symbol, branching on a Boolean input and the Boolean constants. The reductions of the rules are
-built from them (`AdvClass.adv_mem`, `AdvClass.ite_mem`, `AdvClass.guard_mem`). No field admits an
-`η`-indexed constant: the only values a field supplies are Booleans, the model's honest symbols
-and the arguments of a machine's own queries.
+the reductions of the rules use: relabelling the inputs, running one machine to answer another's
+input queries (substitution into a handler), querying an input at another input, answering by an
+honest symbol, returning an input, branching on a Boolean input, the Boolean constants, the
+equality test, reading the tape a polynomial offset further along and the samplers of names whose
+bit blocks have polynomial length (`Model.PolyCoins`); and a polynomial bound on the tape
+positions a machine reads. The reductions of the rules are built from them (`AdvClass.adv_mem`,
+`AdvClass.ite_mem`, `AdvClass.guard_mem`, `AdvClass.comp_mem`, `AdvClass.deduce_mem`,
+`AdvClass.freshL_mem`). No field admits an `η`-indexed constant: offsets are computed from
+polynomials, and the only values a field supplies are Booleans, the model's honest symbols and
+samplers, and the arguments of a machine's own queries.
 
 The class is a parameter of the semantics, and polynomial time is not imposed on it.
 `AdvClass.all` admits every machine with polynomial read and query bounds (`Machine.ReadsBelow`,
@@ -55,6 +59,8 @@ models and countermodels.
   Cryptographic Reasoning*, LICS 2023: §II-C, Fig. 2 and Fig. 8.
 * [BC14] Bana, Comon-Lundh, *A Computationally Complete Symbolic Attacker for Equivalence
   Properties*, CCS 2014: Fig. 2 and Prop. 2.
+* [CCS26] Hérouard, Jacomme, Koutsos, Lallemand, *Secrecy in Squirrel and the Post-Compromise
+  Security of a Ratchet*, CCS 2026: Fig. 3 and App. C.2.
 -/
 
 public section
@@ -151,6 +157,12 @@ end Machine
 
 /-! ## The class of machines -/
 
+/-- The bit blocks of names of type `τ` have polynomial length. LICS23 (§II-B.2, p. 6) interprets
+a name as a sampling computable in polynomial time, which reads polynomially many bits; FreshL's
+reduction runs the sampler (`Machine.sampler`) on as many bits of the attacker tape. -/
+@[expose] def Model.PolyCoins (M : Model D) (τ : Ty B) : Prop :=
+  ∃ p : Polynomial ℕ, ∀ η, M.coinLen η τ ≤ p.eval η
+
 /-- The machines of a model admitted for `adv` and `∼`, standing for LICS23's polynomial-time
 machines: a predicate on machines, closed under the program constructions of
 `Interop.Squirrel.Machine` that the reductions of the rules use. Each field names the rules it
@@ -159,15 +171,18 @@ structure AdvClass (M : Model D) where
   /-- The admitted machines. -/
   mem : {τs : List (Ty B)} → {β : Ty B} → Machine M τs β → Prop
   /-- Relabelling the inputs (`Machine.rename`): Perm, Restr and Dup (`Valid.equiv_rename`,
-  `Valid.equiv_tail`, `Valid.equiv_dup`), and through the derived reductions FA-Adv, If and the
-  case split. Polynomial time: closing the input interface through the handler that forwards each
+  `Valid.equiv_tail`, `Valid.equiv_dup`), and through the derived reductions FA-Adv, If, the case
+  split, Trans, WeakL, WeakR, Rw-Equiv, FreshL and the deductions of `Rules.Deduce`. Polynomial
+  time: closing the input interface through the handler that forwards each
   query along the renaming, a single query per query (`OracleComp.Complexity.closeHandler` with a
   dispatcher of constant cost). -/
   rename_mem {τs τs' : List (Ty B)} {β : Ty B} (r : Renaming τs τs') {A : Machine M τs β} :
     mem A → mem (A.rename r)
   /-- Substitution into a handler (`Machine.subst`): the queries to the first input are answered
   by running an admitted machine on the query's arguments and the remaining inputs, on the same
-  attacker tape. FA-Adv (`AdvClass.adv_mem`, `Valid.equiv_adv`). Polynomial time: VCVio's
+  attacker tape. FA-Adv (`AdvClass.adv_mem`, `Valid.equiv_adv`), Trans, WeakL and WeakR
+  (`AdvClass.comp_mem`), Rw-Equiv (`AdvClass.deduce_mem`), FreshL (`AdvClass.freshL_mem`) and the
+  deduction of an application (`Valid.ded_app`). Polynomial time: VCVio's
   proof-bearing handler closure, `OracleComp.Complexity.closeHandler` with a `HandlerCertificate`
   for the handler, and the sequencing of `IsOraclePPTBy.bind`; answers are values of Boolean or
   base types, whose size is polynomial. -/
@@ -185,6 +200,12 @@ structure AdvClass (M : Model D) where
   (VCVio's `PureCertificate`). -/
   fn_mem {τ : Ty B} {τs : List (Ty B)} {β : Ty B} (f : D.Fn τ) {A : Machine M (τ :: τs) β} :
     mem A → mem (A.fn f)
+  /-- Returning a Boolean or base input (`Machine.input`): LICS23's PT.Input (Fig. 10, p. 27), and
+  with `app_mem`, `fn_mem` and `subst_mem` the deductions of inputs, honest symbols and
+  applications (`Valid.ded_input`, `Valid.ded_fn`, `Valid.ded_app`). Polynomial time: one query,
+  whose answer is returned (VCVio's `PureCertificate` after the query). -/
+  input_mem {τs : List (Ty B)} {a : Ty B} (y : ScopedVar τs a) (ha : a.IsGround) :
+    mem (Machine.input y ha)
   /-- Branching on a Boolean input (`Machine.branch`): If (`AdvClass.ite_mem`,
   `Valid.equiv_ite`) and the case split (`AdvClass.guard_mem`, `Valid.equiv_caseStudy`,
   `Valid.equiv_if1`). Polynomial time: one query, then either machine (`IsOraclePPTBy.bind` with
@@ -195,6 +216,34 @@ structure AdvClass (M : Model D) where
   reduction returns `false` when the condition fails. Polynomial time: `PureCertificate` of a
   constant. -/
   const_mem {τs : List (Ty B)} (c : Bool) : mem (Machine.const c : Machine M τs .bool)
+  /-- The equality test at a Boolean or base type (`Machine.eqTest`): Rw-Equiv
+  (`AdvClass.deduce_mem`, `Valid.nonDed_rwEquiv`). It is not asked at arrow types, whose equality
+  no machine tests. Polynomial time: equality of Booleans or bitstrings (`Ty.decEqValue`). -/
+  eqTest_mem {β : Ty B} (hβ : β.IsGround) : mem (Machine.eqTest hβ : Machine M [β, β] .bool)
+  /-- Reading the tape a polynomial offset further along (`Machine.shift`): FreshL
+  (`AdvClass.freshL_mem`, `Valid.nonDed_freshL`), whose reduction draws the fresh name from bits
+  above the read bounds of the attacker machine and of the terms (CCS26 App. C.2, p. 17). The
+  offset is a polynomial, a finite object, so the closure is uniform. Polynomial time: computing
+  `p(η)` from `1^η` and adding it to each tape index, a handler of the tape interface of polynomial
+  cost per query (`OracleComp.Complexity.closeHandler` with a `HandlerCertificate`). -/
+  shift_mem {τs : List (Ty B)} {β : Ty B} (p : Polynomial ℕ) {A : Machine M τs β} :
+    mem A → mem (A.shift fun η => p.eval η)
+  /-- The sampler of names of a type of order at most one whose bit blocks have polynomial length
+  (`Machine.sampler`, `Model.PolyCoins`): FreshL (`AdvClass.freshL_mem`, `Valid.nonDed_freshL`),
+  whose reduction runs it to draw the fresh name. Polynomial time: LICS23 (§II-B.2, p. 6)
+  interprets names as polynomial-time samplings, so the machine reading `coinLen η b` bits and
+  running the sampler is polynomial-time. Like `fn_mem` for honest symbols, this is a
+  compatibility condition between the model and the class: VCVio's `PureCertificate` for the
+  sampler, sequenced after the tape reads by `IsOraclePPTBy.bind`. -/
+  sampler_mem {b : Ty B} (hb : b.order ≤ 1) : M.PolyCoins b → mem (Machine.sampler b hb)
+  /-- Each admitted machine reads the attacker tape below a polynomial (`Machine.ReadsBelow`):
+  FreshL (`AdvClass.NonDed.freshL`, `Valid.nonDed_freshL`) samples the fresh name from bits above
+  it (CCS26 App. C.2, footnote 2), and an `adv` term reads below it (`AdvClass.Adv.readsBelow`).
+  Polynomial time: LICS23's machines read `ρa` from a tape (§II-C.1), so a machine running in time
+  `t(η)` reads below `t(η)`; with random access to the tape this is a query bound on the tape
+  interface (VCVio's `AllQueriesSatisfy`). -/
+  readBound_mem {τs : List (Ty B)} {β : Ty B} {A : Machine M τs β} :
+    mem A → ∃ p : Polynomial ℕ, A.ReadsBelow fun η => p.eval η
 
 namespace AdvClass
 
@@ -209,22 +258,25 @@ meets every closure field. -/
     (hq.subst hq').mono fun η => by simp⟩
   app_mem ha := fun ⟨⟨p, hp⟩, q, hq⟩ => ⟨⟨p, hp.app ha⟩, q * 2, (hq.app ha).mono fun η => by simp⟩
   fn_mem f := fun ⟨⟨p, hp⟩, q, hq⟩ => ⟨⟨p, hp.fn f⟩, q, hq.fn f⟩
+  input_mem y ha := ⟨⟨0, Machine.readsBelow_input y ha⟩, 1,
+    (Machine.queryBound_input y ha).mono fun η => by simp⟩
   branch_mem := fun ⟨⟨p, hp⟩, q, hq⟩ ⟨⟨p', hp'⟩, q', hq'⟩ => ⟨⟨p + p',
     (hp.mono fun η => by simp).branch (hp'.mono fun η => by simp)⟩, 1 + (q + q'),
     (hq.branch hq').mono fun η => by simp⟩
   const_mem _ := ⟨⟨0, Machine.readsBelow_const _⟩, 0, Machine.queryBound_const _⟩
+  eqTest_mem hβ := ⟨⟨0, Machine.readsBelow_eqTest hβ⟩, 2,
+    (Machine.queryBound_eqTest hβ).mono fun η => by simp⟩
+  shift_mem p := fun ⟨⟨q, hq⟩, q', hq'⟩ => ⟨⟨p + q, (hq.shift _).mono fun η => by simp⟩, q',
+    hq'.shift _⟩
+  sampler_mem {b} hb := fun ⟨p, hp⟩ => ⟨⟨p, (Machine.readsBelow_sampler _ hb).mono hp⟩,
+    b.args.length, (Machine.queryBound_sampler b hb).mono fun η => by simp⟩
+  readBound_mem h := h.1
 
 /-- A machine that never reads the tape and makes boundedly many input queries is in
 `AdvClass.all`. -/
 theorem all_mem_of_readsBelow_zero {β : Ty B} {A : Machine M τs β}
     (h : A.ReadsBelow fun _ => 0) {n : ℕ} (hq : A.QueryBound fun _ => n) : (all M).mem A :=
   ⟨⟨0, by simpa using h⟩, n, by simpa using hq⟩
-
-/-- The input projections are in `AdvClass.all`: they read nothing of the tape and make one
-input query. -/
-theorem all_mem_input (y : ScopedVar τs a) (ha : a.IsGround) :
-    (all M).mem (Machine.input y ha) :=
-  all_mem_of_readsBelow_zero (Machine.readsBelow_input y ha) (Machine.queryBound_input y ha)
 
 /-- `adv t` (LICS23 Fig. 2), at the type `τ₁ → … → τₙ → β`: an admitted machine with inputs `τs`
 and the arguments of `β` computes `t` everywhere. -/
@@ -252,6 +304,22 @@ theorem guard_mem (c : Bool) {A : Machine M τs .bool} (hA : C.mem A) : C.mem (A
   cases c
   · exact C.branch_mem (C.const_mem false) hA
   · exact C.branch_mem hA (C.const_mem false)
+
+/-- The reduction of Trans, WeakL and WeakR is admitted. -/
+theorem comp_mem {β γ : Ty B} {k : AdvMachine M [β] γ} {f : AdvMachine M τs β} (hk : C.mem k)
+    (hf : C.mem f) : C.mem (k.comp f) :=
+  C.subst_mem (C.rename_mem _ hk) (C.rename_mem _ hf)
+
+/-- The reduction of Rw-Equiv is admitted. -/
+theorem deduce_mem {β : Ty B} (hβ : β.IsGround) {g : AdvMachine M τs β} (hg : C.mem g) :
+    C.mem (Machine.deduce hβ g) :=
+  C.subst_mem (C.rename_mem _ (C.eqTest_mem hβ)) (C.rename_mem _ hg)
+
+/-- The reduction of FreshL is admitted, at a polynomial offset, for a name type whose bit blocks
+have polynomial length. -/
+theorem freshL_mem (p : Polynomial ℕ) {β : Ty B} (hb : b.order ≤ 1) (hc : M.PolyCoins b)
+    {g : AdvMachine M (τs ++ [b]) β} (hg : C.mem g) : C.mem (g.freshL (fun η => p.eval η) hb) :=
+  C.subst_mem (C.rename_mem _ hg) (C.rename_mem _ (C.shift_mem p (C.sampler_mem hb hc)))
 
 end AdvClass
 

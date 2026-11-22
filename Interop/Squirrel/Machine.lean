@@ -39,9 +39,13 @@ interface of another, applied by `Machine.handle` (VCVio's `simulateQ`): relabel
 value of an input of type `a` (`Machine.app`), answering an input by an honest symbol
 (`Machine.fn`), and answering the first input by running another machine on the query's arguments
 and the remaining inputs (`Machine.subst`). Besides these, a machine may branch on a Boolean input
-(`Machine.branch`) or return a constant (`Machine.const`). Each has a `run` lemma that says what it
-does to the input values; the reductions of the rules (`Machine.ite`, `Machine.guard`,
-`Machine.adv`) are built from them, and their `run` lemmas follow.
+(`Machine.branch`), return a constant (`Machine.const`) or compare two Boolean or base inputs
+(`Machine.eqTest`). For FreshL, a machine may also read the tape further along (`Machine.shift`, a
+handler of the tape interface) and run the model's sampler for names of a type on bits of the tape
+(`Machine.sampler`). Each has a `run` lemma that says what it does to the input values and the
+tape; the reductions of the rules (`Machine.ite`, `Machine.guard`, `Machine.adv`,
+`Machine.deduce`, `AdvMachine.comp`, `AdvMachine.freshL`) are built from them, and their `run`
+lemmas follow.
 
 A reduction of a cryptographic rule runs a machine as a program (`Machine.simulate`): it supplies
 the attacker tape and answers the input queries in its own oracle computations
@@ -65,7 +69,9 @@ number of queries its handler makes per query (`Machine.QueryBound.handle`).
 ## References
 
 * [LICS23] Baelde, Koutsos, Lallemand, *A Higher-Order Indistinguishability Logic for
-  Cryptographic Reasoning*, LICS 2023: §II-C and Fig. 2.
+  Cryptographic Reasoning*, LICS 2023: §II-B.2, §II-C and Fig. 2.
+* [CCS26] Hérouard, Jacomme, Koutsos, Lallemand, *Secrecy in Squirrel and the Post-Compromise
+  Security of a Ratchet*, CCS 2026: Fig. 3 and App. C.2.
 -/
 
 public section
@@ -353,6 +359,13 @@ its remaining inputs are those of the result. -/
 /-- A constant Boolean. -/
 @[expose] def const (c : Bool) : Machine M τs .bool := fun _ => pure c
 
+/-- The test whether two inputs of a Boolean or base type are equal: equality of Booleans or of
+bitstrings (`Ty.decEqValue`). -/
+@[expose] def eqTest (hβ : β.IsGround) : Machine M [β, β] .bool := fun _ => do
+  let x ← fetch .zero hβ
+  let y ← fetch (.succ .zero) hβ
+  pure (@decide (x = y) (Ty.decEqValue hβ x y))
+
 variable {ρa : M.TapeA η}
 
 theorem run_rename (r : Renaming τs τs') (A : Machine M τs β) (e : Vals M η τs') :
@@ -393,6 +406,126 @@ theorem run_branch (x y : Machine M τs β) (e : Vals M η (.bool :: τs)) :
 theorem run_const (c : Bool) (e : Vals M η τs) : (const c : Machine M τs .bool).run η ρa e = c :=
   rfl
 
+theorem run_eqTest (hβ : β.IsGround) (e : Vals M η [β, β]) :
+    (eqTest hβ : Machine M [β, β] .bool).run η ρa e =
+      @decide (e _ .zero = e _ (.succ .zero)) (Ty.decEqValue hβ _ _) := by
+  simp only [run, eqTest, evalWithAnswerFn_bind, evalWithAnswerFn_pure]
+  exact decide_eq_decide.2 (by rw [evalWithAnswerFn_fetch, evalWithAnswerFn_fetch])
+
+end Machine
+
+/-! ## Tape offsets and the name sampler
+
+FreshL's reduction (CCS26 App. C.2, p. 17) samples a fresh name "from the adversarial
+randomness", from bits of the attacker tape that nothing else reads. Two constructions give it:
+`Machine.shift off A` runs `A` with every tape read moved `off η` bits along, a handler of the tape
+interface; and `Machine.sampler b` reads the first `coinLen η b` bits of the tape and runs the
+model's sampler for names of type `b` on them, as a name does on its bit block of the honest tape
+(LICS23 §II-B.2, p. 6). -/
+
+/-- The attacker tape read from bit `n` on: bit `i` of `M.shiftTape n ρa` is bit `n + i` of
+`ρa`. -/
+@[expose] def Model.shiftTape (M : Model D) {η : ℕ} (n : ℕ) (ρa : M.TapeA η) : M.TapeA η :=
+  fun i => M.readBit ρa (n + i)
+
+theorem Model.readBit_shiftTape (n : ℕ) (ρa : M.TapeA η) (i : ℕ) :
+    M.readBit (M.shiftTape n ρa) i = M.readBit ρa (n + i) := by
+  unfold Model.shiftTape Model.readBit
+  dsimp only
+  split_ifs <;> first | rfl | omega
+
+/-- The bit block of a name of type `τ`, read from the attacker tape from bit `n` on. -/
+@[expose] def Model.coinAt (M : Model D) {η : ℕ} (τ : Ty B) (ρa : M.TapeA η) (n : ℕ) :
+    M.Coin η τ :=
+  fun j => M.readBit ρa (n + j)
+
+theorem Model.coinAt_shiftTape (τ : Ty B) (n m : ℕ) (ρa : M.TapeA η) :
+    M.coinAt τ (M.shiftTape n ρa) m = M.coinAt τ ρa (n + m) :=
+  funext fun j => (M.readBit_shiftTape n ρa (m + j)).trans (congrArg _ (Nat.add_assoc _ _ _).symm)
+
+namespace Machine
+
+/-- Tape reads go `n` bits further along; input queries pass through. -/
+@[expose] def shiftImpl (n : ℕ) : QueryImpl (M.Iface η τs) (OracleComp (M.Iface η τs))
+  | .inl i => read (n + i)
+  | .inr q => ask q
+
+/-- Run `A` with every tape read moved `off η` bits along: the handler `shiftImpl` of the tape
+interface, applied by `simulateQ`. -/
+@[expose] def shift (off : ℕ → ℕ) (A : Machine M τs β) : Machine M τs β :=
+  fun η => simulateQ (shiftImpl (off η)) (A η)
+
+/-- Read `k` bits of the attacker tape from bit `n` on. -/
+@[expose] def readBits (n : ℕ) : (k : ℕ) → OracleComp (M.Iface η τs) (Fin k → Bool)
+  | 0 => pure Fin.elim0
+  | k + 1 => do
+    let x ← read n
+    let xs ← readBits (n + 1) k
+    pure (Fin.cons x xs)
+
+/-- The values of Boolean or base inputs at the positions `r`. -/
+@[expose] def fetchVals : {Ξ : List (Ty B)} → Renaming Ξ τs → (∀ τ ∈ Ξ, τ.IsGround) →
+    OracleComp (M.Iface η τs) (Vals M η Ξ)
+  | [], _, _ => pure Env.empty
+  | _ :: _, r, h => do
+    let x ← fetch (r _ .zero) (h _ List.mem_cons_self)
+    let xs ← fetchVals (fun _ y => r _ y.succ) fun σ hσ => h σ (List.mem_cons_of_mem _ hσ)
+    pure (Env.cons x xs)
+
+/-- The sampler of names of type `b`: read the first `coinLen η b` bits of the attacker tape, run
+the model's sampler on them, and apply the value to `b`'s arguments, which are Boolean or base
+inputs since `b` has order at most one. -/
+@[expose] def sampler (b : Ty B) (hb : b.order ≤ 1) : Machine M b.args b.res := fun η => do
+  let c ← readBits 0 (M.coinLen η b)
+  let q ← fetchVals (fun _ x => x) (Ty.isGround_of_mem_args hb)
+  pure (Ty.apply (M.sample η b c) q)
+
+variable {ρa : M.TapeA η}
+
+theorem run_shift (off : ℕ → ℕ) (A : Machine M τs β) (e : Vals M η τs) :
+    (A.shift off).run η ρa e = A.run η (M.shiftTape (off η) ρa) e := by
+  rw [run, run, shift, _root_.evalWithAnswerFn_simulateQ]
+  congr 1
+  funext t
+  rcases t with i | q
+  · exact (M.readBit_shiftTape _ _ _).symm
+  · rfl
+
+theorem evalWithAnswerFn_readBits (e : Vals M η τs) :
+    ∀ n k : ℕ,
+      evalWithAnswerFn (M.answer ρa e) (readBits n k) = fun j : Fin k => M.readBit ρa (n + j)
+  | _, 0 => funext fun j => j.elim0
+  | n, k + 1 => by
+    simp only [readBits, evalWithAnswerFn_bind, evalWithAnswerFn_read,
+      evalWithAnswerFn_readBits e (n + 1) k, evalWithAnswerFn_pure]
+    funext j
+    refine Fin.cases ?_ (fun j => ?_) j
+    · rfl
+    · simp only [Fin.cons_succ, Fin.val_succ]
+      congr 1
+      omega
+
+theorem evalWithAnswerFn_fetchVals (e : Vals M η τs) :
+    ∀ {Ξ : List (Ty B)} (r : Renaming Ξ τs) (h : ∀ τ ∈ Ξ, τ.IsGround),
+      evalWithAnswerFn (M.answer ρa e) (fetchVals r h) = Env.rename r e
+  | [], _, _ => (Env.eq_empty _).symm
+  | _ :: _, r, h => by
+    simp only [fetchVals, evalWithAnswerFn_bind, evalWithAnswerFn_fetch,
+      evalWithAnswerFn_fetchVals e _ _, evalWithAnswerFn_pure]
+    funext σ x
+    cases x <;> rfl
+
+theorem run_sampler (b : Ty B) (hb : b.order ≤ 1) (e : Vals M η b.args) :
+    (sampler b hb).run η ρa e = Ty.apply (M.sample η b (M.coinAt b ρa 0)) e := by
+  simp only [run, sampler, evalWithAnswerFn_bind, evalWithAnswerFn_readBits,
+    evalWithAnswerFn_fetchVals, evalWithAnswerFn_pure]
+  rfl
+
+/-- The sampler moved `off η` bits along reads the bit block from bit `off η` on. -/
+theorem run_shift_sampler (off : ℕ → ℕ) (b : Ty B) (hb : b.order ≤ 1) (e : Vals M η b.args) :
+    ((sampler b hb).shift off).run η ρa e = Ty.apply (M.sample η b (M.coinAt b ρa (off η))) e := by
+  rw [run_shift, run_sampler, Model.coinAt_shiftTape, Nat.add_zero]
+
 end Machine
 
 /-! ## The reductions of the rules -/
@@ -416,6 +549,25 @@ attacker machine `g` on the query's arguments. -/
     (g : AdvMachine M τs₀ β) : Machine M τs γ :=
   A.subst (g.rename (Renaming.liftMany (fun _ x => x.appendLeft τs) τs₀))
 
+/-- The renaming that moves the arguments of `ρ` before the tuple `τs` and the inputs `Γ`. -/
+@[expose] def argsFirst (τs : List (Ty B)) (ρ : Ty B) (Γ : List (Ty B)) :
+    Renaming (τs ++ ρ.args) (ρ.args ++ (τs ++ Γ)) :=
+  Env.append (fun _ x => (x.appendLeft Γ).weakenMany ρ.args) fun _ y => y.appendLeft (τs ++ Γ)
+
+/-- The reduction of Rw-Equiv (CCS26 Fig. 3): run the attacker machine `g` on the first inputs and
+test its result, of a Boolean or base type, against the last input. -/
+@[expose] def deduce (hβ : β.IsGround) (g : AdvMachine M τs β) : Machine M (τs ++ [β]) .bool :=
+  subst (as := []) (ρ := β)
+    ((eqTest hβ).rename (Env.cons .zero (Env.cons (.succ ((ScopedVar.zero).weakenMany τs))
+      Env.empty)))
+    (g.rename (argsFirst τs β [β]))
+
+/-- The renaming that moves the last entry `b` of the tuple `τs ++ [b]` before the rest. -/
+@[expose] def lastFirst (τs : List (Ty B)) (b : Ty B) (Γ : List (Ty B)) :
+    Renaming ((τs ++ [b]) ++ Γ) (b :: (τs ++ Γ)) :=
+  Env.append (Env.append (fun _ x => .succ (x.appendLeft Γ)) (Env.cons .zero Env.empty))
+    fun _ y => .succ (y.weakenMany τs)
+
 variable {ρa : M.TapeA η}
 
 theorem run_ite (A : Machine M (a :: τs) β) (e : Vals M η (.bool :: a :: a :: τs)) :
@@ -437,7 +589,94 @@ theorem run_adv {τs₀ : List (Ty B)} (A : Machine M (Ty.arrows τs₀ β :: τ
   simp only [run_rename, Env.rename_append, Env.rename_appendLeft_append]
   rfl
 
+theorem rename_argsFirst {τs₀ Γ : List (Ty B)} {ρ : Ty B} (q : Vals M η ρ.args)
+    (e : Vals M η τs₀) (e' : Vals M η Γ) :
+    Env.rename (argsFirst τs₀ ρ Γ) (Env.append q (Env.append e e')) = Env.append e q := by
+  rw [argsFirst, Env.rename_append_renaming]
+  congr 1
+  · funext _ x
+    exact (Env.append_weakenMany _ _ _).trans (Env.append_appendLeft e e' x)
+  · exact Env.rename_appendLeft_append q _
+
+theorem rename_lastFirst {τs₀ Γ : List (Ty B)} (y : b.Value M.carrier η) (e : Vals M η τs₀)
+    (e' : Vals M η Γ) :
+    Env.rename (lastFirst τs₀ b Γ) (Env.cons y (Env.append e e')) =
+      Env.append (Env.append e (Env.cons y Env.empty)) e' := by
+  rw [lastFirst, Env.rename_append_renaming, Env.rename_append_renaming]
+  refine congrArg₂ Env.append (congrArg₂ Env.append (Env.rename_appendLeft_append e e') ?_)
+    (Env.rename_weakenMany_append e e')
+  funext _ x
+  cases x with
+  | zero => rfl
+  | succ x => exact nomatch x
+
+theorem run_deduce (hβ : β.IsGround) (g : AdvMachine M τs β) (e : Vals M η τs)
+    (y : β.Value M.carrier η) :
+    (deduce hβ g).run η ρa (Env.append e (Env.cons y Env.empty)) =
+      @decide (Ty.appVals (g.eval η ρa) e = y) (Ty.decEqValue hβ _ _) := by
+  refine (run_subst _ _ _).trans ((run_rename _ _ _).trans ((run_eqTest hβ _).trans ?_))
+  rw [AdvMachine.appVals_eval]
+  congr 2
+  · refine congrArg Ty.curry (funext fun q => ?_)
+    exact (run_rename _ _ _).trans (congrArg _ (rename_argsFirst _ _ _))
+  · exact Env.append_weakenMany e _ .zero
+
 end Machine
+
+/-- Post-composition of an attacker function of the tuple `τs` with an attacker function `k`,
+both reading the same attacker tape: the denotation of `AdvMachine.comp`, the reduction of Trans,
+WeakL and WeakR (CCS26 Fig. 3). -/
+@[expose] def AttackerFn.comp (k : AttackerFn M (.arrow β γ)) (f : AttackerFn M (Ty.arrows τs β)) :
+    AttackerFn M (Ty.arrows τs γ) :=
+  fun η ρa => Ty.postcomp (k η ρa) (f η ρa)
+
+namespace AdvMachine
+
+/-- The reduction of Trans, WeakL and WeakR (CCS26 Fig. 3): answer the input of `k` by running
+`f` on the tuple, both on the same attacker tape. -/
+@[expose] def comp (k : AdvMachine M [β] γ) (f : AdvMachine M τs β) : AdvMachine M τs γ :=
+  Machine.subst (as := []) (ρ := β) (k.rename (Renaming.lift (fun _ x => x.weakenMany τs) β))
+    (f.rename (Machine.argsFirst τs β γ.args))
+
+theorem eval_comp (k : AdvMachine M [β] γ) (f : AdvMachine M τs β) :
+    (k.comp f).eval = k.eval.comp f.eval := funext fun η => funext fun ρa => by
+  refine Eq.trans ?_ (Ty.postcomp_curryVals _ _).symm
+  refine congrArg Ty.curryVals (funext fun e => congrArg Ty.curry (funext fun q => ?_))
+  refine (Machine.run_subst _ _ _).trans ((Machine.run_rename _ _ _).trans ?_)
+  refine congrArg (Machine.run k η ρa) ((Env.rename_cons _ _ _).trans ?_)
+  refine (congrArg (Env.cons _) (Env.rename_weakenMany_append e q)).trans ?_
+  refine congrArg (fun x => Env.cons x q) (congrArg Ty.curry (funext fun y => ?_))
+  exact (Machine.run_rename _ _ _).trans (congrArg _ (Machine.rename_argsFirst _ _ _))
+
+/-- The reduction of FreshL (CCS26 App. C.2, p. 17): answer the input of `g` for the fresh name,
+the last entry of its tuple, by the sampler of the name's type moved `off η` bits along
+(`Machine.subst`), so that the name is drawn from the bits `[off η, off η + coinLen η b)` of the
+attacker tape. CCS26's `f′` "simulates the sampling of `n_fresh` from the adversarial randomness
+and then runs `f`". FreshL's proof takes `off` to be a polynomial above the read bounds of `g` and
+of the terms. -/
+@[expose] def freshL (off : ℕ → ℕ) (hb : b.order ≤ 1) (g : AdvMachine M (τs ++ [b]) β) :
+    AdvMachine M τs β :=
+  Machine.subst (as := []) (ρ := b) (g.rename (Machine.lastFirst τs b β.args))
+    (((Machine.sampler b hb).shift off).rename fun _ x => x.appendLeft (τs ++ β.args))
+
+/-- The reduction of FreshL runs `g` with the fresh name's value sampled from the bit block of the
+attacker tape at `off η`. -/
+theorem appVals_eval_freshL (off : ℕ → ℕ) (hb : b.order ≤ 1) (g : AdvMachine M (τs ++ [b]) β)
+    (ρa : M.TapeA η) (e : Vals M η τs) :
+    Ty.appVals ((g.freshL off hb).eval η ρa) e = Ty.appVals (g.eval η ρa)
+      (Env.append e (Env.cons (M.sample η b (M.coinAt b ρa (off η))) Env.empty)) := by
+  rw [appVals_eval, appVals_eval, freshL]
+  refine congrArg Ty.curry (funext fun q => ?_)
+  refine (Machine.run_subst _ _ _).trans ((Machine.run_rename _ _ _).trans ?_)
+  refine congrArg (Machine.run g η ρa) (Eq.trans ?_ (Machine.rename_lastFirst _ e q))
+  refine congrArg
+    (fun x => Env.rename (Machine.lastFirst τs b β.args) (Env.cons x (Env.append e q)))
+    (Eq.trans ?_ (Ty.curry_apply (M.sample η b (M.coinAt b ρa (off η)))))
+  refine congrArg Ty.curry (funext fun y => ?_)
+  exact (Machine.run_rename _ _ _).trans ((congrArg _ (Env.rename_appendLeft_append _ _)).trans
+    (Machine.run_shift_sampler _ _ _ _))
+
+end AdvMachine
 
 /-! ## Read bounds -/
 
@@ -448,6 +687,12 @@ section ReadBounds
     ℕ ⊕ M.InQuery η τs → Prop
   | .inl i => i < n
   | .inr _ => True
+
+theorem Model.tapeBelow_mono {n n' : ℕ} (h : n ≤ n') (t : ℕ ⊕ M.InQuery η τs) :
+    M.tapeBelow n t → M.tapeBelow n' t := by
+  rcases t with i | _
+  · exact fun hi => lt_of_lt_of_le hi h
+  · exact id
 
 /-- Every tape read of `A`, on every path and at every `η`, is below `b η`. LICS23's machines read
 `ρa` from a tape (§II-C.1), so one that runs in time `t` reads below `t`. -/
@@ -515,10 +760,7 @@ variable {bd : ℕ → ℕ}
 
 theorem ReadsBelow.mono {A : Machine M τs β} {b' : ℕ → ℕ} (h : A.ReadsBelow bd)
     (hb : ∀ η, bd η ≤ b' η) : A.ReadsBelow b' := fun η =>
-  (h η).mono fun t ht => by
-    rcases t with i | _
-    · exact lt_of_lt_of_le ht (hb η)
-    · trivial
+  (h η).mono (Model.tapeBelow_mono (hb η))
 
 theorem ReadsBelow.handle {A : Machine M τs β} {H : ∀ η, Handler M η τs τs'}
     (hA : A.ReadsBelow bd) (hH : ∀ η, (H η).ReadsBelow (bd η)) : (A.handle H).ReadsBelow bd :=
@@ -561,6 +803,41 @@ theorem readsBelow_const (c : Bool) : (const c : Machine M τs .bool).ReadsBelow
 theorem readsBelow_input (y : ScopedVar τs a) (ha : a.IsGround) :
     (input y ha : Machine M τs a).ReadsBelow bd :=
   fun _ => allQueriesSatisfy_fetch _ ha _
+
+/-- The equality test reads nothing of the tape. -/
+theorem readsBelow_eqTest (hβ : β.IsGround) : (eqTest hβ : Machine M [β, β] .bool).ReadsBelow bd :=
+  fun _ => allQueriesSatisfy_bind (allQueriesSatisfy_fetch _ hβ _) fun _ =>
+    allQueriesSatisfy_bind (allQueriesSatisfy_fetch _ hβ _) fun _ => allQueriesSatisfy_pure _ _
+
+/-- A machine moved `off η` bits along reads below `off η` plus its own bound. -/
+theorem ReadsBelow.shift {A : Machine M τs β} (hA : A.ReadsBelow bd) (off : ℕ → ℕ) :
+    (A.shift off).ReadsBelow fun η => off η + bd η := fun η =>
+  (hA η).simulateQ fun t ht => by
+    rcases t with i | q
+    · exact (allQueriesSatisfy_query_iff _ _).2 (Nat.add_lt_add_left ht (off η))
+    · exact allQueriesSatisfy_ask _ _
+
+theorem allQueriesSatisfy_readBits :
+    ∀ n k : ℕ, (readBits (M := M) (η := η) (τs := τs) n k).AllQueriesSatisfy (M.tapeBelow (n + k))
+  | _, 0 => allQueriesSatisfy_pure _ _
+  | n, k + 1 => allQueriesSatisfy_bind
+      ((allQueriesSatisfy_query_iff _ _).2 (show n < n + (k + 1) by omega)) fun _ =>
+    allQueriesSatisfy_bind ((allQueriesSatisfy_readBits (n + 1) k).mono
+      (Model.tapeBelow_mono (by omega))) fun _ => allQueriesSatisfy_pure _ _
+
+theorem allQueriesSatisfy_fetchVals (n : ℕ) : ∀ {Ξ : List (Ty B)} (r : Renaming Ξ τs)
+    (h : ∀ τ ∈ Ξ, τ.IsGround), (fetchVals (M := M) (η := η) r h).AllQueriesSatisfy (M.tapeBelow n)
+  | [], _, _ => allQueriesSatisfy_pure _ _
+  | _ :: _, _, _ => allQueriesSatisfy_bind (allQueriesSatisfy_fetch _ _ _) fun _ =>
+    allQueriesSatisfy_bind (allQueriesSatisfy_fetchVals n _ _) fun _ => allQueriesSatisfy_pure _ _
+
+/-- The sampler of names of type `b` reads below `coinLen η b`. -/
+theorem readsBelow_sampler (b : Ty B) (hb : b.order ≤ 1) :
+    (sampler b hb : Machine M b.args b.res).ReadsBelow fun η => M.coinLen η b := fun _ =>
+  allQueriesSatisfy_bind ((allQueriesSatisfy_readBits 0 _).mono
+    (Model.tapeBelow_mono (Nat.zero_add _).le))
+    fun _ => allQueriesSatisfy_bind (allQueriesSatisfy_fetchVals _ _ _) fun _ =>
+      allQueriesSatisfy_pure _ _
 
 /-- A machine reading below `bd` depends on the attacker tape only through its bits below
 `bd η`. -/
@@ -615,6 +892,26 @@ theorem isQueryBoundP_fetch (y : ScopedVar τs a) (ha : a.IsGround) :
     (fetch (M := M) (η := η) y ha).IsQueryBoundP (fun t => t.isRight = true) 1 := by
   rw [fetch, isQueryBoundP_map_iff]
   exact isQueryBoundP_ask _
+
+theorem isQueryBoundP_readBits :
+    ∀ n k : ℕ, (readBits (M := M) (η := η) (τs := τs) n k).IsQueryBoundP
+      (fun t => t.isRight = true) 0
+  | _, 0 => by rw [readBits]; simp
+  | n, k + 1 => by
+    rw [readBits]
+    exact isQueryBoundP_bind_le (m := 0) (isQueryBoundP_read n 0) (fun _ _ =>
+      isQueryBoundP_bind_le (m := 0) (isQueryBoundP_readBits (n + 1) k) (fun _ _ => by simp)
+        (by omega)) (by omega)
+
+theorem isQueryBoundP_fetchVals : ∀ {Ξ : List (Ty B)} (r : Renaming Ξ τs)
+    (h : ∀ τ ∈ Ξ, τ.IsGround),
+    (fetchVals (M := M) (η := η) r h).IsQueryBoundP (fun t => t.isRight = true) Ξ.length
+  | [], _, _ => by rw [fetchVals]; simp
+  | _ :: _, _, _ => by
+    rw [fetchVals]
+    exact isQueryBoundP_bind_le (isQueryBoundP_fetch _ _) (fun _ _ =>
+      isQueryBoundP_bind_le (m := 0) (isQueryBoundP_fetchVals _ _) (fun _ _ => by simp) le_rfl)
+        (by simp [Nat.add_comm])
 
 end Machine
 
@@ -719,6 +1016,33 @@ theorem queryBound_const (c : Bool) : (const c : Machine M τs .bool).QueryBound
 theorem queryBound_input (y : ScopedVar τs a) (ha : a.IsGround) :
     (input y ha : Machine M τs a).QueryBound fun _ => 1 :=
   fun _ => isQueryBoundP_fetch y ha
+
+/-- The equality test makes two input queries. -/
+theorem queryBound_eqTest (hβ : β.IsGround) :
+    (eqTest hβ : Machine M [β, β] .bool).QueryBound fun _ => 2 := fun _ => by
+  unfold eqTest
+  exact isQueryBoundP_bind_le (isQueryBoundP_fetch _ hβ) (fun _ _ =>
+    isQueryBoundP_bind_le (m := 0) (isQueryBoundP_fetch _ hβ) (fun _ _ => by simp) le_rfl)
+      (show 1 + (1 + 0) ≤ 2 by omega)
+
+/-- Moving the tape reads makes no input query: a shifted machine keeps its query bound. -/
+theorem QueryBound.shift {A : Machine M τs β} (hA : A.QueryBound q) (off : ℕ → ℕ) :
+    (A.shift off).QueryBound q := fun η =>
+  ((hA η).simulateQ_of_step_le (cost := 1) (fun t ht => by
+    rcases t with i | q
+    · exact absurd ht (by simp)
+    · exact isQueryBoundP_ask q) fun t ht => by
+    rcases t with i | q
+    · exact isQueryBoundP_read (M := M) (η := η) (τs := τs) (off η + i) _
+    · exact absurd rfl ht).mono (Nat.mul_one _).le
+
+/-- The sampler of names of type `b` queries each of its inputs, the arguments of `b`, once. -/
+theorem queryBound_sampler (b : Ty B) (hb : b.order ≤ 1) :
+    (sampler b hb : Machine M b.args b.res).QueryBound fun _ => b.args.length := fun _ => by
+  unfold sampler
+  exact isQueryBoundP_bind_le (isQueryBoundP_readBits _ _) (fun _ _ =>
+    isQueryBoundP_bind_le (m := 0) (isQueryBoundP_fetchVals _ _) (fun _ _ => by simp) le_rfl)
+      (by simp)
 
 end Machine
 

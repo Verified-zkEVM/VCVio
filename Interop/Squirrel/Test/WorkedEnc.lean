@@ -246,7 +246,7 @@ theorem workedInstance_syntactic : workedInstance.Syntactic := by decide
 /-- **The worked derivation**: `pk(k), enc(n; r), n ∼ pk(k), enc(zero; r), n`, one step of the
 encryption rule. -/
 @[expose] def workedDerivation :
-    Derivation decl (· = workedInstance) (Γ := []) []
+    Derivation decl (· = workedInstance) (fun _ => True) (Γ := []) []
       (.equiv (encSymbols.challenge nTerm ctx) (encSymbols.challenge zeroTerm ctx)) :=
   .equivEnc workedInstance rfl workedInstance_syntactic
 
@@ -261,7 +261,8 @@ theorem workedDerivation_sound {R : Model decl → Prop} {C : ∀ M : Model decl
           ProbCompRuntime.probComp (encSymbols.encReduction nTerm zeroTerm ctx A η)) :
     Valid R C (Γ := []) []
       (.equiv (encSymbols.challenge nTerm ctx) (encSymbols.challenge zeroTerm ctx)) :=
-  workedDerivation.sound R C fun e (he : e = workedInstance) => he ▸ ⟨hlen, hcpa⟩
+  workedDerivation.sound R C (fun e (he : e = workedInstance) => he ▸ ⟨hlen, hcpa⟩)
+    fun _ _ => trivial
 
 /-- **Satisfiability, for a scheme that leaks lengths.** In the model of `lpad`, the length fact
 holds and the IND-CPA hypothesis holds against every machine, so the worked derivation's

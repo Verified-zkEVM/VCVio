@@ -165,7 +165,7 @@ theorem valid_enc_pad :
 
 /-- A one-step derivation by the encryption rule, admitting only `padInstance`. -/
 @[expose] def encDerivation :
-    Derivation decl (· = padInstance) (Γ := []) []
+    Derivation decl (· = padInstance) (fun _ => True) (Γ := []) []
       (.equiv ((encSymbols .s).challenge .tt Env.empty)
         ((encSymbols .s).challenge .ff Env.empty)) :=
   .equivEnc padInstance rfl (by decide)
@@ -175,7 +175,7 @@ theorem encDerivation_sound :
     Valid (fun M => M = encModel pad) (fun M => AdvClass.all M) (Γ := []) []
       (.equiv ((encSymbols .s).challenge .tt Env.empty)
         ((encSymbols .s).challenge .ff Env.empty)) :=
-  encDerivation.sound _ _ fun _ he => he ▸ padInstance_holds
+  encDerivation.sound _ _ (fun _ he => he ▸ padInstance_holds) fun _ _ => trivial
 
 /-- **The IND-CPA hypothesis is needed.** For a scheme that leaks the message, the conclusion
 fails against every machine, though the syntactic side conditions hold (`padInstance_syntactic`,
@@ -187,7 +187,7 @@ theorem not_valid_enc_leaky :
         ((encSymbols .s).challenge .ff Env.empty)) := fun h => by
   have hM := Form.holds_equiv.1 (h (encModel leaky) (encModel_respectsLabels _) rfl Env.empty
     (by simp)) (Machine.input (.succ .zero) Ty.isGround_bool)
-    (AdvClass.all_mem_input _ _)
+    ((AdvClass.all _).input_mem _ _)
   rw [Machine.test_input] at hM
   refine not_negligible_one (negligible_of_le (fun η => le_of_eq ?_) hM)
   simp only [advantage, EncSymbols.rv_challenge, Env.cons_succ, Env.cons_zero]
@@ -220,7 +220,7 @@ theorem not_valid_enc_keyIsCoin :
       (.equiv ((encSymbols .r).challenge .tt Env.empty)
         ((encSymbols .r).challenge .ff Env.empty)) := fun h => by
   have hM := Form.holds_equiv.1 (h (encModel pad) (encModel_respectsLabels _) rfl Env.empty
-    (by simp)) (xorMachine _) (xorMachine_mem _ (AdvClass.all_mem_input _ _))
+    (by simp)) (xorMachine _) (xorMachine_mem _ ((AdvClass.all _).input_mem _ _))
   rw [xorMachine_test] at hM
   refine not_negligible_one (negligible_of_le (fun η => le_of_eq ?_) hM)
   simp only [advantage, EncSymbols.rv_challenge, Env.cons_succ, Env.cons_zero]
@@ -270,7 +270,7 @@ theorem not_valid_enc_coinReused :
   have hM := Form.holds_equiv.1 (h (encModel pad) (encModel_respectsLabels _) rfl Env.empty
     (by simp))
     ((xorMachine _).rename (Env.cons (.succ .zero) (Env.cons (.succ (.succ .zero)) Env.empty)))
-    ((AdvClass.all _).rename_mem _ (xorMachine_mem _ (AdvClass.all_mem_input _ _)))
+    ((AdvClass.all _).rename_mem _ (xorMachine_mem _ ((AdvClass.all _).input_mem _ _)))
   rw [Machine.test_rename, xorMachine_test] at hM
   refine not_negligible_one (negligible_of_le (fun η => le_of_eq ?_) hM)
   simp only [advantage, Distinguisher.rename, Env.rename_apply, EncSymbols.rv_challenge,

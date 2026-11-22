@@ -26,15 +26,18 @@ weak.linter.constructorNameAsVariable = false
 name = "VCVio"
 path = "../.."
 
-# The syntax, the models and machines, global formulas and the derivations of the structural
-# rules. As the default target, its roots are the roots of the sub-project's axiom sweep in CI.
+# The syntax, the models and machines, global formulas, the rules proved sound and their
+# derivations. As the default target, its roots are the roots of the sub-project's axiom sweep in
+# CI.
 [[lean_lib]]
 name = "InteropSquirrel"
 roots = [
   "Interop.Squirrel.Syntax", "Interop.Squirrel.Model", "Interop.Squirrel.RandomVariable",
   "Interop.Squirrel.Machine", "Interop.Squirrel.Indist", "Interop.Squirrel.Global",
   "Interop.Squirrel.Avoids", "Interop.Squirrel.Rules.Local", "Interop.Squirrel.Rules.Equiv",
-  "Interop.Squirrel.Rules.Rename", "Interop.Squirrel.Rules.Enc", "Interop.Squirrel.Derivation",
+  "Interop.Squirrel.Rules.Rename", "Interop.Squirrel.Rules.Enc", "Interop.Squirrel.Secrecy",
+  "Interop.Squirrel.Rules.Secrecy", "Interop.Squirrel.Rules.Deduce", "Interop.Squirrel.Rules.Fresh",
+  "Interop.Squirrel.TapeBounds", "Interop.Squirrel.Rules.FreshL", "Interop.Squirrel.Derivation",
 ]
 
 # Satisfiability checks, countermodels, bound checks and worked derivations; `lake test` builds

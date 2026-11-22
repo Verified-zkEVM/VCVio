@@ -114,19 +114,19 @@ namespace AdvClass
 
 /-- `AdvClass.all` meets `rename_mem` at `Machine.swapInput`. -/
 theorem all_mem_swapInput : (all M).mem Machine.swapInput :=
-  (all M).rename_mem _ (all_mem_input _ _)
+  (all M).rename_mem _ ((all M).input_mem _ _)
 
 /-- `AdvClass.all` meets `app_mem` at `Machine.appInput`. -/
 theorem all_mem_appInput : (all M).mem Machine.appInput :=
-  (all M).app_mem _ (all_mem_input _ _)
+  (all M).app_mem _ ((all M).input_mem _ _)
 
 /-- `AdvClass.all` meets `fn_mem` at `Machine.fnInput`. -/
 theorem all_mem_fnInput (f : D.Fn .bool) : (all M).mem (Machine.fnInput f) :=
-  (all M).fn_mem f (all_mem_input _ _)
+  (all M).fn_mem f ((all M).input_mem _ _)
 
 /-- `AdvClass.all` meets `subst_mem` at `Machine.substInput`. -/
 theorem all_mem_substInput : (all M).mem Machine.substInput :=
-  (all M).subst_mem (all_mem_input _ _) (all_mem_input _ _)
+  (all M).subst_mem ((all M).input_mem _ _) ((all M).input_mem _ _)
 
 /-- `AdvClass.all` meets `branch_mem` and `const_mem` at `Machine.branchInput`. -/
 theorem all_mem_branchInput : (all M).mem Machine.branchInput :=

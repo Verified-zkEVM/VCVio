@@ -45,12 +45,14 @@ polynomial time is not a restriction here.
 * `denote_eq_app_of_eq`: function application is a congruence for local equality;
 * `Ty.finite_value`, `Ty.value_eq_of_fixed`, `Model.isLarge_of_hasLabel`: what the labels give.
 
-`Ty.appVals` applies a curried function of a tuple (`Ty.arrows`) to a vector of values, and
-`Ty.curryVals` is its inverse: the logic has no product types, so attacker functions of tuples are
-curried. `Ty.apply` and `Ty.curry` do the same for the argument spine `Ty.args` of a type, with
-result `Ty.res`: this is how a machine queries an input of order at most one. The arguments of
-`τ₁ → … → τₙ → ρ` split into those of the tuple and those of `ρ` (`Ty.splitArgs`), which is how a
-machine answers a query to an attacker function of a tuple (`Ty.apply_curryVals_curry`).
+`Ty.appVals` applies a curried function of a tuple (`Ty.arrows`) to a vector of values,
+`Ty.curryVals` is its inverse, and `Ty.postcomp` composes after it: the logic has no product
+types, so attacker functions of tuples are curried. `Ty.apply` and `Ty.curry` do the same for the
+argument spine `Ty.args` of a type, with result `Ty.res`: this is how a machine queries an input
+of order at most one. The arguments of `τ₁ → … → τₙ → ρ` split into those of the tuple and those
+of `ρ` (`Ty.splitArgs`), which is how a machine answers a query to an attacker function of a tuple
+(`Ty.apply_curryVals_curry`). Equality of values of a Boolean or base type is decidable
+(`Ty.decEqValue`), which is how a machine tests it.
 
 ## References
 
@@ -91,6 +93,20 @@ variable {B : Type}
     {τs : List (Ty B)} (g : (Ty.arrows (τ :: τs) β).Value carrier η) (x : τ.Value carrier η)
     (e : Env (Ty.Value carrier η) τs) : Ty.appVals g (Env.cons x e) = Ty.appVals (g x) e := rfl
 
+/-- Post-composition of a curried function of the tuple `τs` with `k`. -/
+@[expose] def Ty.postcomp {carrier : B → ℕ → Set (List Bool)} {η : ℕ} {β γ : Ty B}
+    (k : β.Value carrier η → γ.Value carrier η) :
+    {τs : List (Ty B)} → (Ty.arrows τs β).Value carrier η → (Ty.arrows τs γ).Value carrier η
+  | [], g => k g
+  | _ :: _, g => fun x => Ty.postcomp k (g x)
+
+@[simp] theorem Ty.appVals_postcomp {carrier : B → ℕ → Set (List Bool)} {η : ℕ} {β γ : Ty B}
+    (k : β.Value carrier η → γ.Value carrier η) :
+    ∀ {τs : List (Ty B)} (g : (Ty.arrows τs β).Value carrier η) (e : Env (Ty.Value carrier η) τs),
+      Ty.appVals (Ty.postcomp k g) e = k (Ty.appVals g e)
+  | [], _, _ => rfl
+  | _ :: _, g, e => Ty.appVals_postcomp k (g (e _ .zero)) _
+
 /-- A curried function of the tuple `τs`, from a function of a vector of arguments: the inverse
 of `Ty.appVals`. -/
 @[expose] def Ty.curryVals {carrier : B → ℕ → Set (List Bool)} {η : ℕ} {β : Ty B} :
@@ -106,6 +122,13 @@ of `Ty.appVals`. -/
   | _ :: _, g, e => by
     rw [← Env.cons_eta e, Ty.appVals_cons]
     exact Ty.appVals_curryVals (fun e' => g (Env.cons _ e')) _
+
+theorem Ty.postcomp_curryVals {carrier : B → ℕ → Set (List Bool)} {η : ℕ} {β γ : Ty B}
+    (k : β.Value carrier η → γ.Value carrier η) :
+    ∀ {τs : List (Ty B)} (g : Env (Ty.Value carrier η) τs → β.Value carrier η),
+      Ty.postcomp k (Ty.curryVals g) = Ty.curryVals (k ∘ g)
+  | [], _ => rfl
+  | _ :: _, g => funext fun x => Ty.postcomp_curryVals k fun e => g (Env.cons x e)
 
 /-! ## Argument spines
 
@@ -170,6 +193,14 @@ of type `τ₁ → … → τₙ → β`. -/
 instance (τs : List (Ty B)) (β : Ty B) : Decidable (Ty.AdvOrder τs β) :=
   inferInstanceAs (Decidable ((Ty.arrows τs β).order ≤ 2))
 
+/-- `u⃗ ⊬ v` and `u⃗ ▷ v` relate terms of order at most one, so that their attacker functions have
+order at most two (CCS26 §3.1, p. 6). -/
+@[expose, reducible] def Ty.SecrecyOrder (τs : List (Ty B)) (β : Ty B) : Prop :=
+  Ty.IndistOrder τs ∧ β.order ≤ 1
+
+instance (τs : List (Ty B)) (β : Ty B) : Decidable (Ty.SecrecyOrder τs β) :=
+  inferInstanceAs (Decidable (Ty.IndistOrder τs ∧ β.order ≤ 1))
+
 namespace Ty.IndistOrder
 
 variable {τ : Ty B} {τs τs' : List (Ty B)}
@@ -214,6 +245,16 @@ theorem isGround_app {a b : Ty B} (h : Ty.IndistOrder (.arrow a b :: a :: τs)) 
 end Ty.IndistOrder
 
 theorem Ty.order_cod_le (a b : Ty B) : b.order ≤ (Ty.arrow a b).order := le_max_right _ _
+
+/-- The attacker functions of `⊬` and `▷` have order at most two. -/
+theorem Ty.SecrecyOrder.advOrder :
+    ∀ {τs : List (Ty B)} {β : Ty B}, Ty.SecrecyOrder τs β → Ty.AdvOrder τs β
+  | [], _, h => le_trans h.2 (by norm_num)
+  | _ :: _, _, h => by
+    have ih := Ty.SecrecyOrder.advOrder ⟨h.1.tail, h.2⟩
+    have hd := h.1.head
+    simp only [Ty.AdvOrder, Ty.arrows, Ty.order] at ih ⊢
+    omega
 
 variable {carrier : B → ℕ → Set (List Bool)} {η : ℕ}
 
@@ -266,6 +307,13 @@ variable {carrier : B → ℕ → Set (List Bool)} {η : ℕ}
   | .bool, _, _ => rfl
   | .base _, _, _ => rfl
   | .arrow _ _, h, _ => h.elim
+
+/-- Equality of values of a Boolean or base type is decidable: they are Booleans or bitstrings. -/
+@[expose, instance_reducible] def Ty.decEqValue :
+    {τ : Ty B} → τ.IsGround → DecidableEq (τ.Value carrier η)
+  | .bool, _ => inferInstanceAs (DecidableEq Bool)
+  | .base b, _ => inferInstanceAs (DecidableEq (carrier b η))
+  | .arrow _ _, h => h.elim
 
 /-- The arguments of `τ₁ → … → τₙ → ρ`, split into those of the tuple and those of `ρ`. -/
 @[expose] def Ty.splitArgs {ρ : Ty B} : (as : List (Ty B)) →

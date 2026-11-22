@@ -67,7 +67,7 @@ theorem Valid.not_equiv_tt_ff (hD : ∀ b, ¬ D.labels b .large) :
       (.equiv (Env.cons .tt Env.empty) (Env.cons .ff Env.empty)) := fun h => by
   have hM := Form.holds_equiv.1 (h (Model.trivial D) (Model.trivial_respectsLabels hD) trivial
     Env.empty (by simp)) (Machine.input .zero Ty.isGround_bool)
-    (AdvClass.all_mem_input _ _)
+    ((AdvClass.all _).input_mem _ _)
   refine not_negligible_one (negligible_of_le (fun η => le_of_eq ?_) hM)
   simp only [advantage, Machine.test, Machine.run_input, Vec.rv_cons, VecRV.cons, Env.cons_zero,
     FTerm.denote_tt, FTerm.denote_ff]
