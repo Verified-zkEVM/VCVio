@@ -17,27 +17,25 @@ and unique responses. This file adds the soundness notions that read a protocol 
 
 - `ChallengeVerifyProtocol.Sound` / `ChallengeVerifyProtocol.PerfectlySound`: statistical soundness
   against arbitrary provers, obtained by quantifying existentially over the response once the
-  challenge has been drawn from the verifier's challenge sampler, which these properties take as
-  an argument.
+  challenge has been drawn uniformly.
 - `ChallengeVerifyProtocol.SpeciallySoundAt` / `ChallengeVerifyProtocol.SpeciallySound`: special
   soundness relative to an extractor supplied as a parameter, for protocols whose interaction is
   not packaged with an extractor. When the extractor *is* bundled as data, use the corresponding
   `SigmaProtocol` properties instead.
 
-`ChallengeVerifyProtocol.Sound` is the target soundness notion for interactive arguments such as
-the Kilian transformation (`VCVio.CryptoFoundations.ChallengeVerifyProtocol.Kilian`).
+`ChallengeVerifyProtocol.Sound` allows unbounded provers, so it is too strong for protocols whose
+soundness rests on a computational or idealized assumption. The Kilian transformation is one such
+protocol: its soundness is stated in the random-oracle model (`KilianTransformation_rom_sound`, in
+`VCVio.CryptoFoundations.ChallengeVerifyProtocol.Kilian.Soundness`).
 
 ## Probability assumptions
 
-The conventions are those of `VCVio.CryptoFoundations.SigmaProtocol`. The soundness properties
-bound the probability of an event over the verifier's challenge, so they are stated against the
-measure semantics `[EvalDistSemantics m]`. Special soundness quantifies over the possible outputs
-of the extractor, given by `[MonadAttach m]`, and needs no probability semantics.
-
-`ChallengeVerifyProtocol` has no challenge-sampling field, and its completeness notion
-`ChallengeVerifyProtocol.PerfectlyComplete` quantifies over the challenge pointwise. Soundness does
-depend on how the verifier draws its challenge, so `ChallengeVerifyProtocol.Sound` and
-`ChallengeVerifyProtocol.PerfectlySound` take the sampler `sampleChal : m Chal` as an argument.
+The conventions are those of `VCVio.CryptoFoundations.SigmaProtocol`: the verifier's challenge is
+uniform. The only randomness in the soundness properties is that challenge, since the commitment
+and response are quantified and `verify` is deterministic. They therefore draw `$ᵗ Chal` in
+`ProbComp` under `[SampleableType Chal]`, and need neither a lift into the participants' monad `m`
+nor a probability semantics on it. Special soundness quantifies over the possible outputs of the
+extractor, given by `[MonadAttach m]`, and needs no probability semantics.
 -/
 
 public section
@@ -52,12 +50,12 @@ section sound
 
 open scoped NNReal
 
-variable [Monad m] [EvalDistSemantics m]
+variable [SampleableType Chal]
 
 /-- Soundness of a challenge-verify protocol as an interactive argument, against arbitrary — even
 computationally unbounded and adaptive — provers: for every statement outside the relation's
-language and every adversarially chosen commitment, the probability over the verifier's challenge,
-drawn by `sampleChal`, that *some* response would be accepted is at most `soundnessError`.
+language and every adversarially chosen commitment, the probability over the verifier's uniform
+challenge that *some* response would be accepted is at most `soundnessError`.
 
 Because the protocol is public-coin and `verify` is deterministic, quantifying existentially over
 the response after the challenge is drawn dominates every prover strategy, so no prover model is
@@ -65,18 +63,17 @@ needed: whatever computation produces the response, it can do no better than the
 the sampled challenge. -/
 @[expose]
 def Sound (σ : ChallengeVerifyProtocol Stmt Wit Commit PrvState Chal Resp rel m)
-    (sampleChal : m Chal) (soundnessError : ℝ≥0) : Prop :=
+    (soundnessError : ℝ≥0) : Prop :=
   ∀ x : Stmt, (¬ ∃ w : Wit, rel x w) → ∀ pc : Commit,
-    Pr{let chal ← sampleChal}[∃ resp : Resp, σ.verify x pc chal resp = true]
+    Pr{let chal ← $ᵗ Chal}[∃ resp : Resp, σ.verify x pc chal resp = true]
       ≤ soundnessError
 
-/-- A protocol is perfectly sound for the challenge sampler `sampleChal` if it is sound with no
-error: outside the language, the set of challenges admitting any accepted response has probability
-zero. -/
+/-- A protocol is perfectly sound if it is sound with no error: outside the language, the set of
+challenges admitting any accepted response has probability zero. -/
 @[expose]
-def PerfectlySound (σ : ChallengeVerifyProtocol Stmt Wit Commit PrvState Chal Resp rel m)
-    (sampleChal : m Chal) : Prop :=
-  σ.Sound sampleChal 0
+def PerfectlySound (σ : ChallengeVerifyProtocol Stmt Wit Commit PrvState Chal Resp rel m) :
+    Prop :=
+  σ.Sound 0
 
 end sound
 

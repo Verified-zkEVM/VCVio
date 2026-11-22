@@ -331,24 +331,23 @@ theorem openingOrEqualRootDisagreement_of_mem_support_onlineGame {St Chal : Type
   · exact absurd (fun i v hv => by simp [hnone i] at hv) hdis
 
 /-- **Online extraction for Merkle trees.** Against a two-phase adversary whose commitment phase
-makes at most `qc` oracle queries and whose response makes at most `qr`, with a countable
-challenge type, the online extraction error of `merkleExtract` is at most the stateful
+makes at most `qc` oracle queries and whose response makes at most `qr`, with a uniformly random
+challenge between them, the online extraction error of `merkleExtract` is at most the stateful
 multi-extractability error of one checkpoint of a tree with `L` leaves and one batch opening,
 
 `multiCheckpointROMErrorNumerator (2L - 1) 1 (L - 1) (qc + qr) / |Y|`. -/
 theorem merkleVC_onlineExtractionError_le [DecidableEq Query] [Finite Y] [SampleableType Y]
-    [UniformAnswerMeasure (Query →ₒ Y)] {St Chal : Type} [Countable Chal]
-    (sampleChal : ProbComp Chal)
+    [UniformAnswerMeasure (Query →ₒ Y)] {St Chal : Type} [SampleableType Chal]
     (A : DetVectorCommitment.OnlineAdversary Query Y Y St Chal
       (PartialVec ℓ Msg × Option (BatchOpening Y s)))
     {qc qr : ℕ} (hc : IsTotalQueryBound A.commit qc)
     (hr : ∀ st chal, IsTotalQueryBound (A.respond st chal) qr) :
     (merkleVC model addressKey pos enc dec).onlineExtractionError
-        (merkleExtract model addressKey pos dec) sampleChal A ≤
+        (merkleExtract model addressKey pos dec) A ≤
       (multiCheckpointROMErrorNumerator (2 * s.leafCount - 1) 1 (s.leafCount - 1) (qc + qr) :
         ℝ≥0∞) * (Nat.card Y : ℝ≥0∞)⁻¹ := by
   unfold DetVectorCommitment.onlineExtractionError
-  refine DetVectorCommitment.prEvent_onlineRun_le_of_forall_chal _ _ _ _ fun chal => ?_
+  refine DetVectorCommitment.prEvent_onlineRun_le_of_forall_chal _ _ _ fun chal => ?_
   let config := singleConfig s addressKey
   let adv := onlineMerkleAdversary addressKey pos dec A chal
   -- An accepted, disagreeing response is a checkpoint disagreement of the reduction.

@@ -55,14 +55,15 @@ namespace KilianTransformation
 variable {Stmt Wit : Type} {X Y Cm Td Pf : Type} [DecidableEq X] [SampleableType Y]
 
 /-- The probability that the Kilian verifier for statement `x` accepts against the cheating prover
-`P` in the random-oracle model: `P` commits, the verifier draws the PCP's coins, `P` responds with
-claimed values and an opening proof, and the verifier accepts iff the commitment's check accepts the
-opening and the PCP verifier's replay against the claims accepts (`PCP.kilianDecision`). -/
+`P` in the random-oracle model: `P` commits, the verifier draws the PCP's coins uniformly, `P`
+responds with claimed values and an opening proof, and the verifier accepts iff the commitment's
+check accepts the opening and the PCP verifier's replay against the claims accepts
+(`PCP.kilianDecision`). -/
 @[expose]
 noncomputable def romAcceptance (pcp : PCP Stmt Wit)
     (vc : DetVectorCommitment X Y pcp.Symbol Cm Td Pf pcp.length) (x : Stmt) {St : Type}
     (P : OnlineAdversary X Y Cm St pcp.Coins (PartialVec pcp.length pcp.Symbol × Pf)) : ℝ≥0∞ :=
-  Pr{let t ← vc.onlineRun pcp.sampleCoins P}[
+  Pr{let t ← vc.onlineRun P}[
     pcp.kilianDecision x t.chal t.resp.1 t.accepted = true]
 
 end KilianTransformation
@@ -80,14 +81,14 @@ theorem KilianTransformation_rom_sound (pcp : PCP Stmt Wit) (rel : Stmt → Wit 
     (extract : (X →ₒ Y).QueryLog → Cm → Fin pcp.length → pcp.Symbol)
     {ε : ℝ≥0} (hpcp : pcp.soundness rel ε) (x : Stmt) (hx : ¬ ∃ w, rel x w) {St : Type}
     (P : OnlineAdversary X Y Cm St pcp.Coins (PartialVec pcp.length pcp.Symbol × Pf)) :
-    romAcceptance pcp vc x P ≤ ε + vc.onlineExtractionError extract pcp.sampleCoins P := by
+    romAcceptance pcp vc x P ≤ ε + vc.onlineExtractionError extract P := by
   unfold romAcceptance onlineExtractionError
   -- The PCP verifier accepts the extracted proof string on the drawn coins.
   let good : OnlineTranscript X Y Cm pcp.Coins (PartialVec pcp.length pcp.Symbol × Pf) → Prop :=
     fun t => pcp.runVerifier x t.chal (List.Vector.ofFn (extract t.log t.cm)) = true
   refine (prEvent_le_prEvent_add_prEvent_and_not _ _ good).trans (add_le_add ?_ ?_)
   · -- The extracted proof string is fixed before the coins, so PCP soundness bounds this event.
-    refine prEvent_onlineRun_le vc pcp.sampleCoins P
+    refine prEvent_onlineRun_le vc P
       (fun cm log coins =>
         pcp.runVerifier x coins (List.Vector.ofFn (extract log cm)) = true) fun cm log => ?_
     have h := hpcp x hx (List.Vector.ofFn (extract log cm))

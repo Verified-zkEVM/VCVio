@@ -43,8 +43,8 @@ is a deterministic `Bool`, as `ChallengeVerifyProtocol` requires. Completeness h
   correctness/soundness notions.
 - `KilianTransformation`: the succinct interactive argument built from a `PCP` and a
   `DetVectorCommitment`, with the oracle answered by `H`.
-- `KilianTransformation_perfectlyComplete`: perfect completeness, from PCP completeness for a coin
-  sampler with full support and perfect completeness of the commitment.
+- `KilianTransformation_perfectlyComplete`: perfect completeness, from perfect completeness of the
+  PCP and of the commitment.
 - `PCP.kilianDecision`: the verifier's decision given the verdict of the commitment's check.
 - `runVerifier_of_kilianDecision`: the deterministic core of soundness. If the values of an
   accepted response agree with some proof string, the PCP verifier accepts that string on the
@@ -66,9 +66,10 @@ open OracleComp OracleSpec
   The honest prover turns a statement and witness into a proof string of `length` symbols over the
   alphabet `Symbol`.
 
-  The verifier draws random coins of type `Coins` (sampled by `sampleCoins`); *given* its coins it
-  is the deterministic oracle computation `Verifier stmt coins`, which adaptively queries positions
-  of the proof string (modeled by `Fin length →ₒ Symbol`) and outputs a single accept/reject bit.
+  The verifier draws uniformly random coins of type `Coins`; *given* its coins it is the
+  deterministic oracle computation `Verifier stmt coins`, which adaptively queries positions of the
+  proof string (modeled by `Fin length →ₒ Symbol`) and outputs a single accept/reject bit. A
+  verifier that needs values from another distribution computes them from its uniform coins.
 
   Separating the coins from the proof queries — rather than folding both into a single
   `OracleComp (unifSpec + (Fin length →ₒ Symbol))` — matches the public-coin structure used by the
@@ -83,13 +84,15 @@ structure PCP (Stmt Wit : Type) where
   length : ℕ
   /-- The verifier's random coins. -/
   Coins : Type
-  /-- The verifier's coin sampler. -/
-  sampleCoins : ProbComp Coins
+  /-- The verifier's coins can be sampled uniformly. -/
+  [sampleableCoins : SampleableType Coins]
   /-- The honest prover, producing a proof string from a statement and a witness. -/
   Prover : Stmt → Wit → ProbComp (List.Vector Symbol length)
   /-- The verifier on given coins: it queries positions of the proof string and accepts or
   rejects. -/
   Verifier : Stmt → Coins → OracleComp (Fin length →ₒ Symbol) Bool
+
+attribute [instance] PCP.sampleableCoins
 
 namespace PCP
 
@@ -116,7 +119,7 @@ noncomputable def correctness (pcp : PCP Stmt Wit) (rel : Stmt → Wit → Bool)
     rel stmt wit →
       Pr{let accept ← (do
           let proof ← pcp.Prover stmt wit
-          let coins ← pcp.sampleCoins
+          let coins ← $ᵗ pcp.Coins
           return pcp.runVerifier stmt coins proof)}[accept] ≥ 1 - correctnessError
 
 /-- A PCP system satisfies **perfect correctness** if it satisfies correctness with no error. -/
@@ -138,7 +141,7 @@ noncomputable def soundness (pcp : PCP Stmt Wit) (rel : Stmt → Wit → Bool)
     (¬ ∃ wit : Wit, rel stmt wit) →
   ∀ proof : List.Vector pcp.Symbol pcp.length,
     Pr{let accept ← (do
-        let coins ← pcp.sampleCoins
+        let coins ← $ᵗ pcp.Coins
         return pcp.runVerifier stmt coins proof)}[accept] ≤ soundnessError
 
 /-- A PCP system satisfies **perfect soundness** if it satisfies soundness with no error, i.e. the
@@ -224,8 +227,7 @@ alphabet whose oracle is answered by the fixed function `H`:
 
 1. the prover commits to its PCP proof string with `vc.commit`, retaining the proof string
    alongside the trapdoor as its private state (`commit`);
-2. the verifier sends random coins (the protocol record carries no challenge sampler: completeness
-   holds on every challenge);
+2. the verifier sends uniformly random coins;
 3. the prover simulates `pcp.Verifier stmt coins` against its retained proof to learn exactly which
    positions the verifier reads, and opens *exactly* that set in one shot with `vc.opening`,
    returning the claimed values as a partial vector alongside the opening proof (`respond`);
@@ -379,14 +381,13 @@ theorem runVerifier_eq_evalWithAnswerFn
   rfl
 
 /-- Ordinary PCP completeness (`pcp.perfectCorrectness`): every proof the honest prover can produce
-passes the PCP verifier on every coin set the PCP's coin sampler can return. -/
+passes the PCP verifier on every coin set, since a uniform draw can return each of them. -/
 theorem runVerifier_of_perfectCorrectness
     (pcp : PCP Stmt Wit) (rel : Stmt → Wit → Bool) (hpcp : pcp.perfectCorrectness rel) :
     ∀ x w, rel x w →
       ∀ proof ∈ support (pcp.Prover x w),
-      ∀ coins ∈ support pcp.sampleCoins,
-        pcp.runVerifier x coins proof = true := by
-  intro x w hxw proof hproof coins hcoins
+      ∀ coins, pcp.runVerifier x coins proof = true := by
+  intro x w hxw proof hproof coins
   unfold PCP.perfectCorrectness PCP.correctness at hpcp
   have hpr := hpcp x w hxw
   simp only [ENNReal.coe_zero, tsub_zero, ge_iff_le] at hpr
@@ -396,16 +397,12 @@ theorem runVerifier_of_perfectCorrectness
   rw [mem_support_bind_iff]
   refine ⟨proof, hproof, ?_⟩
   rw [mem_support_bind_iff]
-  exact ⟨coins, hcoins, by rw [support_pure]; rfl⟩
+  exact ⟨coins, mem_support_uniformSample _, by rw [support_pure]; rfl⟩
 
 /-- **Perfect completeness of the Kilian transformation.** If the underlying deterministic vector
-commitment is perfectly complete, and the PCP is complete with a coin sampler that can return every
-coin set, then the resulting interactive argument is perfectly complete for every choice of the
-oracle function `H`: the honest prover convinces the verifier on every challenge.
-
-`hfull` is needed because `PerfectlyComplete` asks for acceptance on every challenge, while PCP
-completeness only speaks about the coins the sampler draws, so the two meet only when the sampler
-has full support.
+commitment and the PCP are perfectly complete, then the resulting interactive argument is perfectly
+complete for every choice of the oracle function `H`: the honest prover convinces the verifier on
+every challenge.
 
 The deterministic content lives in `KilianTransformation_verify_eq_true`; here it is lifted across
 the probabilistic structure, using that every `ProbComp` is lossless. -/
@@ -413,8 +410,7 @@ theorem KilianTransformation_perfectlyComplete
     (pcp : PCP Stmt Wit) (rel : Stmt → Wit → Bool)
     (vc : DetVectorCommitment X Y pcp.Symbol Cm Td Pf pcp.length) (H : X → Y)
     (hvc : vc.PerfectlyComplete)
-    (hpcp : pcp.perfectCorrectness rel)
-    (hfull : ∀ coins, coins ∈ support pcp.sampleCoins) :
+    (hpcp : pcp.perfectCorrectness rel) :
     (KilianTransformation pcp vc H rel).PerfectlyComplete := by
   have hAccept := runVerifier_of_perfectCorrectness pcp rel hpcp
   intro x w hxw coins
@@ -432,7 +428,7 @@ theorem KilianTransformation_perfectlyComplete
     (fun t ht => List.mem_toFinset.mpr ht) ?_ ?_
   · exact hvc H proof.get _ z hz
   · rw [← runVerifier_eq_evalWithAnswerFn]
-    exact hAccept x w hxw proof hproof coins (hfull coins)
+    exact hAccept x w hxw proof hproof coins
 
 end Completeness
 

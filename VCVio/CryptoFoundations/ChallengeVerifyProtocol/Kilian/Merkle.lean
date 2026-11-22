@@ -27,9 +27,6 @@ for a PCP with soundness error `ε` and a tree with `L` leaves
 (`KilianTransformation_merkle_rom_sound_quadratic`). The proof composes the generic soundness
 theorem `KilianTransformation_rom_sound`, with the Merkle transcript extractor, and the online
 extraction bound for Merkle trees, `MerkleVectorCommitment.merkleVC_onlineExtractionError_le`.
-
-The PCP's coin type is countable, so that the coins may be drawn before the commitment phase,
-which they are independent of.
 -/
 
 public section
@@ -49,7 +46,7 @@ prover `P` whose commitment phase makes at most `qc` queries and whose response 
 the Kilian verifier over the Merkle tree accepts with probability at most `ε` plus the
 multi-extractability error of one checkpoint of `L` leaves and one batch opening. -/
 theorem KilianTransformation_merkle_rom_sound (pcp : PCP Stmt Wit) (rel : Stmt → Wit → Bool)
-    [DecidableEq pcp.Symbol] [Inhabited pcp.Symbol] [Countable pcp.Coins]
+    [DecidableEq pcp.Symbol] [Inhabited pcp.Symbol]
     (model : MerkleTreeExtractability.NodeQueryModel Query Address Y)
     (addressKey : SkeletonInternalIndex s → Address) (pos : Fin pcp.length ≃ SkeletonLeafIndex s)
     (enc : pcp.Symbol → Y) (dec : Y → Option pcp.Symbol)
@@ -64,14 +61,14 @@ theorem KilianTransformation_merkle_rom_sound (pcp : PCP Stmt Wit) (rel : Stmt �
   classical
   exact (KilianTransformation_rom_sound pcp rel _ (merkleExtract model addressKey pos dec) hpcp x
     hx P).trans (add_le_add le_rfl
-      (merkleVC_onlineExtractionError_le model addressKey pos enc dec pcp.sampleCoins P hc hr))
+      (merkleVC_onlineExtractionError_le model addressKey pos enc dec P hc hr))
 
 /-- **Soundness of the Kilian transformation with Merkle trees, quadratic form.** Under the
 hypotheses of `KilianTransformation_merkle_rom_sound`, with `q = qc + qr` and `L` leaves, the
 Kilian verifier accepts with probability at most `ε + (q² + (2L - 1)(q + L - 1)) / |Y|`. -/
 theorem KilianTransformation_merkle_rom_sound_quadratic (pcp : PCP Stmt Wit)
     (rel : Stmt → Wit → Bool)
-    [DecidableEq pcp.Symbol] [Inhabited pcp.Symbol] [Countable pcp.Coins]
+    [DecidableEq pcp.Symbol] [Inhabited pcp.Symbol]
     (model : MerkleTreeExtractability.NodeQueryModel Query Address Y)
     (addressKey : SkeletonInternalIndex s → Address) (pos : Fin pcp.length ≃ SkeletonLeafIndex s)
     (enc : pcp.Symbol → Y) (dec : Y → Option pcp.Symbol)
