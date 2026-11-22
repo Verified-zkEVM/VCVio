@@ -11,7 +11,7 @@ public import Interop.Squirrel.Rules.Equiv
 public import Interop.Squirrel.Rules.Rename
 public import Interop.Squirrel.Rules.Enc
 public import Interop.Squirrel.Rules.Deduce
-public import Interop.Squirrel.Rules.FreshL
+public import Interop.Squirrel.Rules.Oracle
 
 /-!
 # Derivations of global sequents
@@ -46,15 +46,24 @@ lemma per constructor:
   modus ponens under `[·]` (`Interop.Squirrel.Rules.Deduce`);
 * FreshR and FreshL (CCS26 Fig. 11), for closed terms that do not use the name, a syntactic
   condition that `decide` discharges on concrete terms (`FTerm.AvoidsNames`). FreshR takes the
-  label `large` of the name's type.
+  label `large` of the name's type;
+* Rw-Oracle as CCS26's double rule (`nonDedRwOracle`, App. C.1), whose agreement premise deduces
+  from `u⃗, o_β` for `o_β` one of the two oracles, and Pc-Oracle (`nonDedPcOracle`), for oracles
+  with a Boolean or base argument type and a right side of Boolean or base type. CCS26 derives
+  Pc-Oracle from the double rule by concluding the agreement premise with Ineq under the
+  hypothesis `u⃗, o′ ▷ m`, which the fragment has no rule to introduce, so it is a constructor of
+  its own (`Valid.nonDed_pcOracle` is that derivation, read semantically).
 
 FreshL is sound only over models with long attacker tapes (`Model.LongTapes`); without them it
 fails (`FreshLCountermodel.freshL_needs_longTapes`, in the tests). So derivations carry a
 parameter `R₀`, the restriction on models that their rules assume: FreshL's constructor takes as
 premises that `R₀` gives long tapes and polynomial bit blocks for the name's type, and that the
-terms read the attacker tape below a polynomial in every model of `R₀` and of `Θ`.
-`Derivation.sound` holds over every restriction `R` contained in `R₀`. Derivations that use
-neither FreshL nor `boxValid` can take `R₀` to be every model.
+terms read the attacker tape below a polynomial in every model of `R₀` and of `Θ`. The guess of
+Rw-Oracle and Pc-Oracle draws its position from the attacker tape as FreshL draws its name, so
+their constructors take the same premises, with polynomial bit blocks for the oracles' argument
+type, from which the guess draws its default. `Derivation.sound` holds over every restriction `R`
+contained in `R₀`. Derivations that use none of FreshL, Rw-Oracle, Pc-Oracle and `boxValid` can
+take `R₀` to be every model.
 
 The rules about `∼`, `⊬` and `▷` hold for every class of machines, because the class is closed
 under their reductions by its fields (`AdvClass`). Formulas carry the order bounds of CSF24 and
@@ -71,7 +80,7 @@ takes the conclusion's bound.
 * [CSF24] Baelde, Fontaine, Koutsos, Scerri, Vignon, *A Probabilistic Logic for Concrete
   Security*, CSF 2024: App. A.
 * [CCS26] Hérouard, Jacomme, Koutsos, Lallemand, *Secrecy in Squirrel and the Post-Compromise
-  Security of a Ratchet*, CCS 2026: §3.1, Fig. 3 and Fig. 11.
+  Security of a Ratchet*, CCS 2026: §3.1, Fig. 3, Fig. 11 and App. C.1.
 -/
 
 public section
@@ -298,6 +307,36 @@ inductive Derivation (D : Decl B) (enc : EncInstance D → Prop) (R₀ : Model D
       u.AvoidsNames (· = ⟨a, b, n⟩) → v.AvoidsNames (· = ⟨a, b, n⟩) →
       Derivation D enc R₀ Θ (.nonDed u v ho) →
       Derivation D enc R₀ Θ (.nonDed (Vec.snoc u (FTerm.name n (FTerm.fn i))) v ho')
+  /-- Rw-Oracle as CCS26's double rule (Fig. 3, App. C.1), for oracles with a Boolean or base
+  argument type and a right side of Boolean or base type, over models where `R₀` gives long
+  attacker tapes and polynomial bit blocks for the argument type: the terms read the attacker
+  tape below a polynomial in every model of `R₀` and of `Θ`. -/
+  | nonDedRwOracle {Γ : List (Kind B)} {Θ : List (Form D Γ)} {τs : List (Ty B)} {a b β : Ty B}
+      {u : Vec D Γ τs} {o₁ o₂ oβ : FTerm D Γ (.arrow a b)} {v : FTerm D Γ β}
+      {ho₂ : Ty.SecrecyOrder (τs ++ [.arrow a b]) β}
+      {hd : Ty.SecrecyOrder (τs ++ [.arrow a b]) a} (ho₁ : Ty.SecrecyOrder (τs ++ [.arrow a b]) β)
+      (ha : a.IsGround) (hβ : β.IsGround) (hoβ : oβ = o₁ ∨ oβ = o₂) :
+      (∀ M, R₀ M → M.LongTapes ∧ M.PolyCoins a) →
+      (∀ M : Model D, M.RespectsLabels → R₀ M → ∀ (C : AdvClass M) env,
+        (∀ θ ∈ Θ, θ.Holds M C env) →
+          u.ReadsPoly M C env ∧ o₁.ReadsPoly M C env ∧ o₂.ReadsPoly M C env) →
+      Derivation D enc R₀ Θ (.nonDed (Vec.snoc u o₂) v ho₂) →
+      Derivation D enc R₀ Θ (Form.oracleAgree u oβ o₁ o₂ hd) →
+      Derivation D enc R₀ Θ (.nonDed (Vec.snoc u o₁) v ho₁)
+  /-- Pc-Oracle (CCS26 Fig. 3), under the conditions of Rw-Oracle, with the read bounds of the
+  oracle, the point and the new answer. -/
+  | nonDedPcOracle {Γ : List (Kind B)} {Θ : List (Form D Γ)} {τs : List (Ty B)} {a b β : Ty B}
+      {u : Vec D Γ τs} {o : FTerm D Γ (.arrow a b)} {m : FTerm D Γ a} {w : FTerm D Γ b}
+      {v : FTerm D Γ β} {ho₂ : Ty.SecrecyOrder (τs ++ [.arrow a b]) β}
+      {hom : Ty.SecrecyOrder (τs ++ [.arrow a b]) a} (ho₁ : Ty.SecrecyOrder (τs ++ [.arrow a b]) β)
+      (ha : a.IsGround) (hβ : β.IsGround) :
+      (∀ M, R₀ M → M.LongTapes ∧ M.PolyCoins a) →
+      (∀ M : Model D, M.RespectsLabels → R₀ M → ∀ (C : AdvClass M) env,
+        (∀ θ ∈ Θ, θ.Holds M C env) → u.ReadsPoly M C env ∧ o.ReadsPoly M C env ∧
+          m.ReadsPoly M C env ∧ w.ReadsPoly M C env) →
+      Derivation D enc R₀ Θ (.nonDed (Vec.snoc u (FTerm.puncture o m w)) v ho₂) →
+      Derivation D enc R₀ Θ (.nonDed (Vec.snoc u (FTerm.puncture o m w)) m hom) →
+      Derivation D enc R₀ Θ (.nonDed (Vec.snoc u o) v ho₁)
 
 variable {D : Decl B} {enc : EncInstance D → Prop} {R₀ : Model D → Prop}
 
@@ -358,5 +397,13 @@ theorem Derivation.sound (R : Model D → Prop) (C : ∀ M : Model D, AdvClass M
   | _, _, _, .nonDedFreshL _ n i hl hr hfu hfv d =>
     Valid.nonDed_freshL n i (fun M hRM => hl M (hR M hRM))
       (fun M hlM hRM env hΘ => hr M hlM (hR M hRM) (C M) env hΘ) hfu hfv (d.sound R C henc hR)
+  | _, _, _, .nonDedRwOracle _ ha hβ hoβ hl hr d₁ d₂ =>
+    Valid.nonDed_rwOracle_of ha hβ hoβ (fun M hRM => hl M (hR M hRM))
+      (fun M hlM hRM env hΘ => hr M hlM (hR M hRM) (C M) env hΘ) (d₁.sound R C henc hR)
+      (d₂.sound R C henc hR)
+  | _, _, _, .nonDedPcOracle _ ha hβ hl hr d₁ d₂ =>
+    Valid.nonDed_pcOracle ha hβ (fun M hRM => hl M (hR M hRM))
+      (fun M hlM hRM env hΘ => hr M hlM (hR M hRM) (C M) env hΘ) (d₁.sound R C henc hR)
+      (d₂.sound R C henc hR)
 
 end Interop.Squirrel

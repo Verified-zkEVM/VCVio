@@ -353,6 +353,13 @@ theorem Form.holds_ex {τ : Ty B} {F : Form D (.loc τ :: Γ)} :
       @decide (t.denote (fullInterp M C) env η ρ = u.denote (fullInterp M C) env η ρ)
         (Classical.propDecidable _) := rfl
 
+/-- An abstraction at `(η, ρ)` maps a value `x` to the body's reading with the variable at the
+constant random variable `RV.constAt η x`. -/
+theorem FTerm.denote_lam {a b : Ty B} (body : FTerm D (.loc a :: Γ) b) :
+    (FTerm.lam body).denote (fullInterp M C) env =
+      fun η ρ x => body.denote (fullInterp M C) (Env.cons (RV.constAt η x) env) η ρ :=
+  rfl
+
 /-- Local universal quantification at `(η, ρ)` ranges over the carrier at `η`; the bound variable
 is the constant random variable `RV.constAt η x`. -/
 @[simp] theorem FTerm.denote_all {a : Ty B} (φ : FTerm D (.loc a :: Γ) .bool) :

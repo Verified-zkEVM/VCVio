@@ -38,7 +38,7 @@ roots = [
   "Interop.Squirrel.Rules.Equiv", "Interop.Squirrel.Rules.Rename", "Interop.Squirrel.Rules.Enc",
   "Interop.Squirrel.Secrecy", "Interop.Squirrel.Rules.Secrecy", "Interop.Squirrel.Rules.Deduce",
   "Interop.Squirrel.Rules.Fresh", "Interop.Squirrel.TapeBounds", "Interop.Squirrel.Rules.FreshL",
-  "Interop.Squirrel.Derivation",
+  "Interop.Squirrel.Rules.Oracle", "Interop.Squirrel.Derivation",
 ]
 
 # Satisfiability checks, countermodels, bound checks and worked derivations; `lake test` builds

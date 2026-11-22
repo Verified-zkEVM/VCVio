@@ -34,6 +34,10 @@ of the honest tape at each `η` (`Model.nameSlot`).
 * `Valid.nonDed_freshR` is the rule, for a closed vector that does not use the name `n`. The
   freshness condition is CCS26's: `n` does not occur in `u⃗`. A closed vector is needed, because a
   free variable ranges over all random variables, which may read the name's coordinate.
+  `Valid.nonDed_freshR_of_freshAt` is the rule with the freshness premise semantic, under the
+  hypotheses `Θ`, as CCS26's premise `E; Θ ⊢ [ψ^n_fresh(u)]` is a judgment under `Θ`: the vector's
+  random variable does not read the name's coordinate in any admitted model. A term that uses the
+  name and does not read it, such as an oracle punctured back to the identity, meets it.
 
 FreshL (`u⃗ ⊬ v ⟹ u⃗, n ⊬ v` for `n` fresh in `u⃗, v`) is in `Interop.Squirrel.Rules.FreshL`.
 
@@ -149,13 +153,30 @@ theorem AdvClass.nonDed_nameAt (C : AdvClass M) (n : D.Name a b) (i : D.Fn a)
   exact negligible_of_le (fun η => deduceAdv_nameAt_le n i g.eval hu η (hle η))
     (negligible_two_rpow_neg_mul hc)
 
+namespace Valid
+
+variable {R : Model D → Prop} {C : ∀ M : Model D, AdvClass M}
+
+/-- **FreshR** (CCS26 Fig. 11, p. 17), with a semantic freshness premise: `u⃗ ⊬ n(i)` when the
+type of `n` is labelled `large` and, in every admitted model where `Θ` holds, the vector `u⃗` does
+not read the coordinate of `n(i)`. -/
+theorem nonDed_freshR_of_freshAt {Γ : List (Kind B)} {Θ : List (Form D Γ)} {u : Vec D Γ τs}
+    {ho : Ty.SecrecyOrder τs b} (n : D.Name a b) (i : D.Fn a)
+    (hlarge : b.HasLabel D.labels .large)
+    (hfresh : ∀ M : Model D, M.RespectsLabels → R M → ∀ env,
+      (∀ θ ∈ Θ, θ.Holds M (C M) env) → M.FreshAt (M.nameSlot n i) (u.rv M (C M) env)) :
+    Valid R C Θ (.nonDed u (FTerm.name n (FTerm.fn i)) ho) := fun M hl hR env hΘ =>
+  Form.holds_nonDed.2 ((C M).nonDed_nameAt n i (M.isLarge_of_hasLabel hl hlarge)
+    (hfresh M hl hR env hΘ))
+
 /-- **FreshR** (CCS26 Fig. 11, p. 17), for a closed vector: `u⃗ ⊬ n(i)` when the type of `n` is
 labelled `large` and no term of `u⃗` uses the name `n`. -/
-theorem Valid.nonDed_freshR {R : Model D → Prop} {C : ∀ M : Model D, AdvClass M}
-    {Θ : List (Form D [])} {u : Vec D [] τs} {ho : Ty.SecrecyOrder τs b} (n : D.Name a b)
-    (i : D.Fn a) (hlarge : b.HasLabel D.labels .large) (hfresh : u.AvoidsNames (· = ⟨a, b, n⟩)) :
-    Valid R C Θ (.nonDed u (FTerm.name n (FTerm.fn i)) ho) := fun M hl _ env _ =>
-  Form.holds_nonDed.2 ((C M).nonDed_nameAt n i (M.isLarge_of_hasLabel hl hlarge)
-    (hfresh.freshAt (fun _ => rfl) (C M) env))
+theorem nonDed_freshR {Θ : List (Form D [])} {u : Vec D [] τs} {ho : Ty.SecrecyOrder τs b}
+    (n : D.Name a b) (i : D.Fn a) (hlarge : b.HasLabel D.labels .large)
+    (hfresh : u.AvoidsNames (· = ⟨a, b, n⟩)) :
+    Valid R C Θ (.nonDed u (FTerm.name n (FTerm.fn i)) ho) :=
+  nonDed_freshR_of_freshAt n i hlarge fun M _ _ env _ => hfresh.freshAt (fun _ => rfl) (C M) env
+
+end Valid
 
 end Interop.Squirrel

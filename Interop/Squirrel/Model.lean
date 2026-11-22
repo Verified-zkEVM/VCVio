@@ -308,6 +308,28 @@ variable {carrier : B → ℕ → Set (List Bool)} {η : ℕ}
   | .base _, _, _ => rfl
   | .arrow _ _, h, _ => h.elim
 
+/-- The arguments of a Boolean or base type are `Ty.groundArgs`, the only vector. -/
+theorem Ty.eq_groundArgs : ∀ {τ : Ty B} (h : τ.IsGround) (q : Env (Ty.Value carrier η) τ.args),
+    q = Ty.groundArgs h
+  | .bool, _, q => Env.eq_empty q
+  | .base _, _, q => Env.eq_empty q
+  | .arrow _ _, h, _ => h.elim
+
+/-- A function of the arguments of a Boolean or base type, curried, is its value at
+`Ty.groundArgs`. -/
+theorem Ty.curry_eq_ofRes : ∀ {τ : Ty B} (h : τ.IsGround)
+    (g : Env (Ty.Value carrier η) τ.args → τ.res.Value carrier η),
+    Ty.curry g = Ty.ofRes h (g (Ty.groundArgs h))
+  | .bool, _, _ => rfl
+  | .base _, _, _ => rfl
+  | .arrow _ _, h, _ => h.elim
+
+/-- A Boolean or base type has no arguments, so its argument list has no position. -/
+@[expose] def Renaming.ofGround {Δ : List (Ty B)} : {τ : Ty B} → τ.IsGround → Renaming τ.args Δ
+  | .bool, _ => fun _ x => nomatch x
+  | .base _, _ => fun _ x => nomatch x
+  | .arrow _ _, h => h.elim
+
 /-- Equality of values of a Boolean or base type is decidable: they are Booleans or bitstrings. -/
 @[expose, instance_reducible] def Ty.decEqValue :
     {τ : Ty B} → τ.IsGround → DecidableEq (τ.Value carrier η)
