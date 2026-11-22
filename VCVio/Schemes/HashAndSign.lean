@@ -78,7 +78,7 @@ run the long-message forger on `(pk, s)` with each signing query `msg` forwarded
     (main : PK × Kh → OracleComp (unifSpec + (M →ₒ S)) (M × S)) (pk : PK) :
     OracleComp (unifSpec + (D →ₒ S)) (D × S) := do
   let s ← H.keygen
-  let (msg, σ) ← simulateQ (QueryImpl.translate (H.hash s)) (main (pk, s))
+  let (msg, σ) ← (main (pk, s)).mapLens (translateLens unifSpec (H.hash s))
   return (H.hash s msg, σ)
 
 /-- The EUF-CMA forger against the short-message scheme built from one against `scheme`. -/
@@ -128,7 +128,7 @@ theorem runWithSigningOracle_reductionMain (sig : SignatureAlg ProbComp D PK SK 
       let s ← H.keygen
       let ((msg, σ), log) ← (scheme sig H).runWithSigningOracle (pk, s) sk (main (pk, s))
       return ((H.hash s msg, σ), QueryLog.relabel (H.hash s) log)) := by
-  have htr := fun s => QueryImpl.run_simulateQ_withLogging_translate (sig.sign pk sk)
+  have htr := fun s => QueryImpl.run_simulateQ_withLogging_mapLens (sig.sign pk sk)
     ((scheme sig H).sign (pk, s) sk) (H.hash s) (fun _ => rfl) (main (pk, s))
   have hkey := QueryImpl.run_simulateQ_passthrough_add_liftM
     (QueryImpl.withLogging (sig.sign pk sk)) H.keygen
@@ -166,33 +166,6 @@ theorem evalDist_keyedCRExperiment_crReductionMain [DecidableEq M] [DecidableEq 
     map_bind, Functor.map_map, forgeryRun, collides, QueryLog.hasCollision]
   exact OracleComp.evalDist_bind_bind_swap _ _ _
 
-/-- The union bound behind both security statements: if the forger's test implies the reduced
-forger's test whenever the run `collides` is false, the forger's success probability is at most the
-reduced forger's plus the probability of a collision. -/
-theorem evalDist_le_add_of_not_collides [DecidableEq M] [DecidableEq D]
-    (sig : SignatureAlg ProbComp D PK SK S) (H : KeyedHashFamily Kh M D)
-    (main : PK × Kh → OracleComp (unifSpec + (M →ₒ S)) (M × S))
-    (win winSig : PK × Kh × ((M × S) × QueryLog (M →ₒ S)) → Bool)
-    (hwin : ∀ a, collides H a = false → win a = true → winSig a = true) :
-    𝒟[forgeryRun sig H main >>= fun a => do
-        let v ← sig.verify a.1 (H.hash a.2.1 a.2.2.1.1) a.2.2.1.2
-        return (win a && v)] {true} ≤
-      𝒟[forgeryRun sig H main >>= fun a => do
-          let v ← sig.verify a.1 (H.hash a.2.1 a.2.2.1.1) a.2.2.1.2
-          return (winSig a && v)] {true} +
-        𝒟[forgeryRun sig H main >>= fun a => pure (collides H a)] {true} := by
-  refine OracleComp.evalDist_bind_apply_le_add_of_support _ _ _ _ (measurableSet_singleton true)
-    fun a _ => ?_
-  cases hc : collides H a
-  · rw [evalDist_pure, show MeasureTheory.Measure.dirac false {true} = 0 by simp, add_zero]
-    refine OracleComp.evalDist_bind_apply_mono_of_support _ _ _ (measurableSet_singleton true)
-      fun v _ => ?_
-    cases hw : win a
-    · cases v <;> cases winSig a <;> simp
-    · simp [hwin a hc hw]
-  · rw [evalDist_pure, MeasureTheory.Measure.dirac_apply_of_mem (Set.mem_singleton _)]
-    exact MeasureTheory.prob_le_one.trans le_add_self
-
 /-! ## Security -/
 
 /-- **Hash-and-sign, existential unforgeability.** The EUF-CMA advantage against the hash-and-sign
@@ -222,8 +195,8 @@ theorem unforgeableAdvantage_le [DecidableEq M] [DecidableEq D]
   rw [SignatureAlg.unforgeableAdvantage, SignatureAlg.unforgeableAdvantage,
     ProbCompRuntime.probComp_evalDist, ProbCompRuntime.probComp_evalDist, hscheme, hsig,
     keyedCRAdvantage, crReduction, evalDist_keyedCRExperiment_crReductionMain]
-  refine evalDist_le_add_of_not_collides sig H adversary.main _ _
-    fun ⟨pk, s, ⟨msg, σ⟩, log⟩ hc hw => ?_
+  refine OracleComp.evalDist_bind_and_le_add_of_not_bad _ _ (collides H) _ _
+    fun ⟨pk, s, ⟨msg, σ⟩, log⟩ _ hc hw => ?_
   simp only [Bool.not_eq_eq_eq_not, Bool.not_true] at hw ⊢
   cases hmem : (QueryLog.relabel (H.hash s) log).wasQueried (H.hash s msg)
   · rfl
@@ -260,8 +233,8 @@ theorem strongUnforgeableAdvantage_le [DecidableEq M] [DecidableEq D]
   rw [SignatureAlg.strongUnforgeableAdvantage, SignatureAlg.strongUnforgeableAdvantage,
     ProbCompRuntime.probComp_evalDist, ProbCompRuntime.probComp_evalDist, hscheme, hsig,
     keyedCRAdvantage, strongCRReduction, evalDist_keyedCRExperiment_crReductionMain]
-  refine evalDist_le_add_of_not_collides sig H adversary.main _ _
-    fun ⟨pk, s, ⟨msg, σ⟩, log⟩ hc hw => ?_
+  refine OracleComp.evalDist_bind_and_le_add_of_not_bad _ _ (collides H) _ _
+    fun ⟨pk, s, ⟨msg, σ⟩, log⟩ _ hc hw => ?_
   simp only [Bool.not_eq_eq_eq_not, Bool.not_true] at hw ⊢
   cases hmem : SignatureAlg.signingLogContains (QueryLog.relabel (H.hash s) log) (H.hash s msg) σ
   · rfl
