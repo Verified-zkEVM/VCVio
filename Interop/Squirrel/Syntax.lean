@@ -98,6 +98,10 @@ machine can test equality. -/
   | .arrow _ _ => False
   | _ => True
 
+instance Ty.decidableIsGround : (τ : Ty B) → Decidable τ.IsGround
+  | .bool | .base _ => isTrue trivial
+  | .arrow _ _ => isFalse id
+
 /-- A declaration environment: labelled base types, names, and honest and attacker function
 symbols. -/
 structure Decl (B : Type) where

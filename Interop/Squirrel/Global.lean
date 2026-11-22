@@ -380,6 +380,16 @@ is the constant random variable `RV.constAt η x`. -/
     (FTerm.name n i).denote (fullInterp M C) env =
       fun η ρ => M.name η n (i.denote (fullInterp M C) env η ρ) ρ.2 := rfl
 
+/-- A conjunction of local formulas is true at a point exactly where each of them is. -/
+theorem FTerm.denote_conj_eq_true {η : ℕ} {ρ : M.Tape η} :
+    ∀ φs : List (FTerm D Γ .bool), (FTerm.conj φs).denote (fullInterp M C) env η ρ = true ↔
+      ∀ φ ∈ φs, φ.denote (fullInterp M C) env η ρ = true
+  | [] => iff_of_true rfl fun _ h => nomatch h
+  | φ :: φs => by
+    rw [List.forall_mem_cons, ← FTerm.denote_conj_eq_true φs]
+    simp only [FTerm.conj, FTerm.denote_ite, FTerm.denote_ff]
+    cases φ.denote (fullInterp M C) env η ρ <;> simp
+
 /-- A term weakened past a binder ignores the value bound there. -/
 theorem denote_weaken_cons {V : Kind B → Type} (alg : Interpretation (fullSig D) V)
     {s s' : Kind B} (t : (fullSig D).Term Γ s) (x : V s') (ξ : Env V Γ) :
