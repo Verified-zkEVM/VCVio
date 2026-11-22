@@ -44,7 +44,12 @@ chooses. Among them:
   Rw-Equiv is proved for a right side of Boolean or base type;
 - FreshL assumes models whose attacker tape is eventually longer than every polynomial and whose
   names of the fresh type read polynomially many bits, and terms that read the attacker tape below
-  a polynomial; it draws the fresh name from the attacker tape of the same model.
+  a polynomial; it draws the fresh name from the attacker tape of the same model;
+- Rw-Oracle is proved as CCS26's double rule and Pc-Oracle from it, for oracles with a Boolean or
+  base argument and a right side of Boolean or base type, under FreshL's conditions on models and
+  terms for the oracles' argument type; the guessed query position is uniform below the power of
+  two above the query bound, and the guess draws its default with the sampler of the argument
+  type.
 
 ## Implementations covered
 
@@ -57,8 +62,9 @@ None yet: the sub-project states the logic and proves its rules.
 | `Interop.Squirrel.Syntax` | simple types with the labels `finite`, `fixed` and `large`, declarations, and local terms as one scoped signature |
 | `Interop.Squirrel.Model` | models: carriers of bitstrings, the attacker tape, the honest tape of bit blocks, names, labels; the pointwise reading `interp`; β and the semantic core of local rewriting; argument spines and post-composition of attacker functions of tuples (`Ty.splitArgs`, `Ty.postcomp`); the order bounds of `adv`, `∼`, `⊬` and `▷` |
 | `Interop.Squirrel.RandomVariable` | local terms as random variables (`rvInterp`), and locality (`eval_denote_rvInterp`) |
-| `Interop.Squirrel.Machine` | machines as `OracleComp` programs over the tape and input interfaces, their runs, the denotations `Machine.test` and `AdvMachine.eval`; handlers and the constructions `rename`, `app`, `fn`, `subst`, `branch`, `const`, `eqTest`, `shift` and `sampler` with their runs; the reductions `ite`, `guard`, `adv`, `deduce`, `AdvMachine.comp` and `AdvMachine.freshL`; running a machine inside a reduction (`Machine.simulate`); read and query bounds, kept by every construction |
-| `Interop.Squirrel.Indist` | advantage, the class of admitted machines `AdvClass` with the closure fields of the rules' reductions, the class `AdvClass.all` of machines with polynomial read and query bounds, `adv` and `∼`; the named reductions as distinguishers, and the laws of `∼` with the advantage kept or bounded at every `η` |
+| `Interop.Squirrel.Machine` | machines as `OracleComp` programs over the tape and input interfaces, their runs, the denotations `Machine.test` and `AdvMachine.eval`; handlers and the constructions `rename`, `app`, `fn`, `subst`, `branch`, `const`, `eqTest`, `shift` and `sampler` with their runs; the reductions `ite`, `guard`, `adv`, `deduce`, `AdvMachine.comp` and `AdvMachine.freshL`; running a machine inside a reduction (`Machine.simulate`); reading and overwriting a block of the attacker tape (`Model.bitsAt`, `Model.setBlock`); read and query bounds, kept by every construction |
+| `Interop.Squirrel.Guess` | the guessing machine `Machine.guess`, which returns the argument of the query to its oracle input at a position read from the tape, with its run through VCVio's `runLog` and its read and query bounds; a run that queries an oracle only where it agrees with another is unchanged by swapping them; the averaging over drawn bits (`sum_prEvent_eq_two_pow_mul`) |
+| `Interop.Squirrel.Indist` | advantage, the class of admitted machines `AdvClass` with the closure fields of the rules' reductions and polynomial read and query bounds, the class `AdvClass.all` of machines with polynomial read and query bounds, `adv` and `∼`; the named reductions as distinguishers, and the laws of `∼` with the advantage kept or bounded at every `η` |
 | `Interop.Squirrel.Global` | global formulas as the sum of the local and global signatures, their semantics, validity, and the rules G.Axiom, G.Weak, G.Cut, G.L-∀̃, G.R-∀̃, L.ByGlob and G.ByLoc |
 | `Interop.Squirrel.Avoids` | terms that do not use a set of names (`FTerm.AvoidsNames`), stated on PolyFun's `Term.heads` and decidable; such a term ignores the honest-tape coordinates of those names |
 | `Interop.Squirrel.Rules.Local` | L.R-∀ |
@@ -68,10 +74,11 @@ None yet: the sub-project states the logic and proves its rules.
 | `Interop.Squirrel.Secrecy` | CCS26's `⊬` and `▷` as global formulas derived from `∀̃`/`∃̃`, `adv`, `⇒̃`/`∧̃` and `[·]`, read as `AdvClass.NonDed` and `AdvClass.Ded`; the laws of Neg1, Neg2, Ineq, Trans, WeakL, WeakR and Rw-Equiv as inequalities at every `η` with their reductions named |
 | `Interop.Squirrel.Rules.Secrecy` | Neg1, Neg2, Ineq, Trans, WeakL, WeakR, Rw-Equiv at Boolean or base types, and `u⃗ ▷ f(u⃗)` from `adv(f)` (CCS26 Fig. 3) |
 | `Interop.Squirrel.Rules.Deduce` | deductions of an entry, an honest symbol, an application and a rewritten term; local validity and modus ponens under `[·]` |
-| `Interop.Squirrel.Rules.Fresh` | FreshR for a closed vector that does not use a name of a `large` type; a closed term that does not use a name ignores its coordinate (`FTerm.AvoidsNames.freshAt`) |
+| `Interop.Squirrel.Rules.Fresh` | FreshR for a closed vector that does not use a name of a `large` type, and with a semantic freshness premise; a closed term that does not use a name ignores its coordinate (`FTerm.AvoidsNames.freshAt`) |
 | `Interop.Squirrel.TapeBounds` | read bounds of random variables and of terms (`FTerm.ReadsPoly`, discharged constructor by constructor and from `adv`), and long attacker tapes (`Model.LongTapes`) |
 | `Interop.Squirrel.Rules.FreshL` | FreshL by CCS26's argument, with the fresh name drawn from the attacker tape of the same model: the success probabilities are equal at every large `η` |
-| `Interop.Squirrel.Derivation` | derivations of these rules as data, the encryption rule at the admitted instances, the model restriction `R₀` that FreshL assumes, and `Derivation.sound` |
+| `Interop.Squirrel.Rules.Oracle` | Rw-Oracle as CCS26's double rule and in the form of Fig. 3, and Pc-Oracle, by identical until bad and the guessing reduction `AdvMachine.rwGuess`: at every large `η` the success against `u⃗, o₁ ⊢ v` is at most that against `u⃗, o₂ ⊢ v` plus `2^⌈log₂ q(η)⌉` times the probability that the oracles differ at the guess |
+| `Interop.Squirrel.Derivation` | derivations of these rules as data, the encryption rule at the admitted instances, the model restriction `R₀` that FreshL, Rw-Oracle and Pc-Oracle assume, and `Derivation.sound` |
 
 The declarations are in the namespace `Interop.Squirrel`. CI's axiom sweep holds every root of
 `InteropSquirrel` at zero `sorry` and nonstandard-axiom debt.
@@ -116,7 +123,10 @@ package's test driver, holds the checks:
 - a model with long tapes where every hypothesis of FreshL holds, with a worked derivation
   (`Interop/Squirrel/Test/FreshLExamples.lean`);
 - FreshL unsound without long tapes, against the class generated by the closure fields
-  (`Interop/Squirrel/Test/FreshLCountermodel.lean`).
+  (`Interop/Squirrel/Test/FreshLCountermodel.lean`);
+- Rw-Oracle's hypotheses holding jointly with a conclusion FreshR does not give, its form in
+  Fig. 3, its agreement premise needed, and a worked Pc-Oracle
+  (`Interop/Squirrel/Test/OracleExamples.lean`).
 
 CI's `Interop Squirrel` job builds the package, runs `lake test` and sweeps the roots of
 `InteropSquirrel` for axioms.
