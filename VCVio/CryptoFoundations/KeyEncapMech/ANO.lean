@@ -13,17 +13,20 @@ public import VCVio.CryptoFoundations.KeyEncapMech
 
 Anonymity (key privacy) asks that a ciphertext reveal nothing about which public key it was
 encapsulated under. The adversary sees two honestly generated public keys and a challenge
-ciphertext encapsulated under one of them, chosen by a hidden bit, and guesses the bit. It never
-sees the encapsulated key. In `ANO_CPA_Game` it has only the ambient oracles `spec`;
-`ANO_CCA_Game` adds a decapsulation oracle under either secret key, which refuses the challenge
-ciphertext after the challenge. The advantages are the `Measure.boolBias` of the games, as for
-`KEMScheme.IND_CPA_Advantage`, and `ANO_CPA_Game_eq_ANO_CCA_Game_toANO_CCA` embeds the CPA game
-in the CCA game.
+encapsulation under one of them, chosen by a hidden bit, and guesses the bit. The game is
+key-revealing: the adversary is handed the whole encapsulation, both the challenge ciphertext and
+the encapsulated key, the shape used by Grubbs, Maram and Paterson. In `ANO_CPA_Game` it has only
+the ambient oracles `spec`; `ANO_CCA_Game` adds a decapsulation oracle under either secret key,
+which refuses the challenge ciphertext after the challenge. The advantages are the
+`Measure.boolBias` of the games, as for `KEMScheme.IND_CPA_Advantage`, and
+`ANO_CPA_Game_eq_ANO_CCA_Game_toANO_CCA` embeds the CPA game in the CCA game.
 
 ## References
 
 * M. Bellare, A. Boldyreva, A. Desai and D. Pointcheval, *Key-Privacy in Public-Key Encryption*,
   ASIACRYPT 2001.
+* P. Grubbs, V. Maram and K. G. Paterson, *Anonymous, Robust Post-quantum Public Key Encryption*,
+  EUROCRYPT 2022. DOI 10.1007/978-3-031-07082-2_15.
 -/
 
 public section
@@ -39,33 +42,38 @@ variable {ι : Type u} {spec : OracleSpec ι} {K PK SK C : Type}
 
 /-! ## The anonymity adversary and games -/
 
-/-- Two-phase ciphertext-only anonymity adversary for a `KEMScheme`. The
+/-- Two-phase key-revealing anonymity adversary for a `KEMScheme`. The
 hidden bit selects which of two public keys the challenge ciphertext
 encapsulates under; `postChallenge` sees both public keys (encoded in the
-state) and the ciphertext but never the encapsulated shared key. This is
-the anonymity analogue of `KEMScheme.IND_CPA_Adversary`. -/
+state) together with the full challenge encapsulation, ciphertext and
+encapsulated key. This is the anonymity analogue of
+`KEMScheme.IND_CPA_Adversary`, which likewise hands its second phase the
+challenge key. Ciphertext-only anonymity is the special case that ignores
+the key argument. -/
 structure ANO_CPA_Adversary (kem : KEMScheme (OracleComp spec) K PK SK C) where
   /-- Internal adversary state carried across the challenge. -/
   State : Type
   /-- Pre-challenge phase: sees both public keys, returns a state. -/
   preChallenge : PK → PK → OracleComp spec State
-  /-- Post-challenge phase: sees the state and the challenge ciphertext. -/
-  postChallenge : State → C → OracleComp spec Bool
+  /-- Post-challenge phase: sees the state, the challenge ciphertext and the
+  encapsulated key. -/
+  postChallenge : State → C → K → OracleComp spec Bool
 
 /-- Fixed-branch ANO-CPA experiment: no oracle beyond the ambient `spec`;
-the challenge ciphertext encapsulates under `pk0` (`b = false`) or `pk1`
-(`b = true`); the value is the adversary's verdict bit. -/
+the challenge encapsulation is under `pk0` (`b = false`) or `pk1`
+(`b = true`), and both halves of it reach the adversary; the value is the
+adversary's verdict bit. -/
 @[expose]
 noncomputable def ANO_CPA_Experiment (adversary : kem.ANO_CPA_Adversary) (b : Bool) :
     OracleComp spec Bool := do
   let (pk0, _) ← kem.keygen
   let (pk1, _) ← kem.keygen
   let st ← adversary.preChallenge pk0 pk1
-  let (cStar, _) ← kem.encaps (if b then pk1 else pk0)
-  adversary.postChallenge st cStar
+  let (cStar, kStar) ← kem.encaps (if b then pk1 else pk0)
+  adversary.postChallenge st cStar kStar
 
 /-- The single-bit ANO-CPA game: a uniform hidden bit picks the key, and the
-adversary guesses it from the challenge ciphertext alone; the game returns
+adversary guesses it from the challenge encapsulation; the game returns
 whether the guess matched. -/
 @[expose]
 noncomputable def ANO_CPA_Game (runtime : ProbCompRuntime (OracleComp spec))
@@ -74,8 +82,8 @@ noncomputable def ANO_CPA_Game (runtime : ProbCompRuntime (OracleComp spec))
   let (pk1, _) ← kem.keygen
   let st ← adversary.preChallenge pk0 pk1
   let b ← runtime.liftProbComp ($ᵗ Bool)
-  let (cStar, _) ← kem.encaps (if b then pk1 else pk0)
-  let b' ← adversary.postChallenge st cStar
+  let (cStar, kStar) ← kem.encaps (if b then pk1 else pk0)
+  let b' ← adversary.postChallenge st cStar kStar
   return (b == b')
 
 /-- ANO-CPA anonymity advantage: the Boolean bias of the single game. The
@@ -117,15 +125,17 @@ def ANO_CCA_postChallengeImpl [DecidableEq C] (sk0 sk1 : SK) (cStar : C) :
     if bc.2 = cStar then return none
     else if bc.1 then kem.decaps sk1 bc.2 else kem.decaps sk0 bc.2
 
-/-- Two-phase ANO-CCA adversary with a decapsulation oracle for both keys.
-Neither phase ever sees the challenge shared key. -/
+/-- Two-phase key-revealing ANO-CCA adversary with a decapsulation oracle for
+both keys. The second phase sees the whole challenge encapsulation,
+ciphertext and encapsulated key, alongside its still-live oracle. -/
 structure ANO_CCA_Adversary (kem : KEMScheme (OracleComp spec) K PK SK C) where
   /-- Internal adversary state carried across the challenge. -/
   State : Type
   /-- Pre-challenge phase: sees both public keys, may decapsulate under both. -/
   preChallenge : PK → PK → OracleComp kem.ANO_CCA_oracleSpec State
-  /-- Post-challenge phase: sees the state and ciphertext, oracle still live. -/
-  postChallenge : State → C → OracleComp kem.ANO_CCA_oracleSpec Bool
+  /-- Post-challenge phase: sees the state, the challenge ciphertext and the
+  encapsulated key, oracle still live. -/
+  postChallenge : State → C → K → OracleComp kem.ANO_CCA_oracleSpec Bool
 
 /-- The single-bit ANO-CCA game. Both decapsulation oracles stay live
 throughout; the challenge ciphertext masks itself in the post-challenge
@@ -138,9 +148,9 @@ noncomputable def ANO_CCA_Game [DecidableEq C]
   let (pk1, sk1) ← kem.keygen
   let st ← simulateQ (kem.ANO_CCA_preChallengeImpl sk0 sk1) (adversary.preChallenge pk0 pk1)
   let b ← runtime.liftProbComp ($ᵗ Bool)
-  let (cStar, _) ← kem.encaps (if b then pk1 else pk0)
+  let (cStar, kStar) ← kem.encaps (if b then pk1 else pk0)
   let b' ← simulateQ (kem.ANO_CCA_postChallengeImpl sk0 sk1 cStar)
-    (adversary.postChallenge st cStar)
+    (adversary.postChallenge st cStar kStar)
   return (b == b')
 
 /-- ANO-CCA anonymity advantage: the Boolean bias of the single game. Totality
@@ -160,10 +170,10 @@ theorem ANO_CCA_Advantage_eq_game_bias [DecidableEq C]
 
 /-! ## The CPA-to-CCA embedding -/
 
-/-- Any ciphertext-only CPA anonymity adversary can be viewed as an ANO-CCA
-adversary that simply ignores the decapsulation oracle while preserving its
-ordinary pre-challenge interaction with the base oracle set `spec`. This is
-the anonymity analogue of `KEMScheme.IND_CPA_Adversary.toIND_CCA`. -/
+/-- Any CPA anonymity adversary can be viewed as an ANO-CCA adversary that
+simply ignores the decapsulation oracle while preserving its ordinary
+pre-challenge interaction with the base oracle set `spec`. This is the
+anonymity analogue of `KEMScheme.IND_CPA_Adversary.toIND_CCA`. -/
 @[expose]
 def ANO_CPA_Adversary.toANO_CCA (adversary : kem.ANO_CPA_Adversary) : kem.ANO_CCA_Adversary where
   State := adversary.State
@@ -171,10 +181,10 @@ def ANO_CPA_Adversary.toANO_CCA (adversary : kem.ANO_CPA_Adversary) : kem.ANO_CC
     (HasQuery.toQueryImpl (spec := spec)
       (m := OracleComp (spec + ((Bool × C) →ₒ Option K))))
     (adversary.preChallenge pk0 pk1)
-  postChallenge st cStar := simulateQ
+  postChallenge st cStar kStar := simulateQ
     (HasQuery.toQueryImpl (spec := spec)
       (m := OracleComp (spec + ((Bool × C) →ₒ Option K))))
-    (adversary.postChallenge st cStar)
+    (adversary.postChallenge st cStar kStar)
 
 -- The name mirrors `IND_CPA_Adversary.toIND_CCA`, whose underscore is likewise exempt.
 attribute [nolint defsWithUnderscore] ANO_CPA_Adversary.toANO_CCA
@@ -194,12 +204,13 @@ theorem toANO_CCA_preChallenge (adversary : kem.ANO_CPA_Adversary) (sk0 sk1 : SK
 /-- The oracle-ignoring lift's post-challenge phase, run under the game's real
 post-challenge handler, is exactly the CPA adversary's own phase re-expressed
 back in `OracleComp spec` — the challenge ciphertext is masked only on
-queries the lifted adversary never emits. -/
+queries the lifted adversary never emits, and the challenge key passes
+through untouched. -/
 theorem toANO_CCA_postChallenge (adversary : kem.ANO_CPA_Adversary) [DecidableEq C]
-    (sk0 sk1 : SK) (cStar : C) (st : adversary.State) (c : C) :
+    (sk0 sk1 : SK) (cStar : C) (st : adversary.State) (c : C) (k : K) :
     simulateQ (kem.ANO_CCA_postChallengeImpl sk0 sk1 cStar)
-      ((adversary.toANO_CCA).postChallenge st c)
-      = adversary.postChallenge st c := by
+      ((adversary.toANO_CCA).postChallenge st c k)
+      = adversary.postChallenge st c k := by
   simp only [ANO_CCA_postChallengeImpl, ANO_CPA_Adversary.toANO_CCA, ANO_CCA_oracleSpec,
     QueryImpl.add_eq_hAdd, QueryImpl.simulateQ_add_simulateQ_toQueryImpl_left]
   simp
