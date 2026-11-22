@@ -54,6 +54,16 @@ transcript `realTranscript`, and with it `HVZK` and `PerfectHVZK`, draws the cha
 `liftM ($ᵗ Chal)` and so asks for `[SampleableType Chal] [MonadLiftT ProbComp m]`; at
 `m := ProbComp` the lifted draw is the plain uniform sample (`realTranscript_probComp`).
 
+In a general monad these structures are independent of one another, with two consequences:
+
+- Nothing requires the `MonadLiftT ProbComp m` instance to preserve distributions, so the lifted
+  challenge need not be uniform under `[EvalDistSemantics m]`, and `HVZK` and `PerfectHVZK` are
+  relative to the chosen lift.
+- Nothing requires the possible outputs of `[MonadAttach m]` to agree with the outputs of positive
+  mass, so `SpeciallySound` and the probability-bearing properties need not describe the same
+  semantics. For `OracleComp spec` the two agree when every oracle answer has positive mass
+  (`mem_support_iff_evalDist_singleton_pos_of_fullSupport`), as it does in `ProbComp`.
+
 ## Type Parameters
 
 - `m`: the monad in which the participants' computations live
@@ -218,7 +228,10 @@ def SpeciallySoundAt (σ : SigmaProtocol m Stmt Wit Commit PrvState Chal Resp re
     σ.verify x pc ω₁ p₁ = true → σ.verify x pc ω₂ p₂ = true →
     ∀ w ∈ support (σ.extract ω₁ p₁ ω₂ p₂), rel x w = true
 
-/-- A Σ-protocol is specially sound if `SpeciallySoundAt` holds for all statements. -/
+/-- A Σ-protocol is specially sound if `SpeciallySoundAt` holds for all statements.
+
+This is a property of the possible outputs given by `[MonadAttach m]`, which in a general monad
+need not agree with the outputs of positive mass under a measure semantics on `m`. -/
 def SpeciallySound (σ : SigmaProtocol m Stmt Wit Commit PrvState Chal Resp rel) : Prop :=
   ∀ x, SpeciallySoundAt σ x
 
@@ -252,7 +265,9 @@ section transcript
 variable [SampleableType Chal] [MonadLiftT ProbComp m]
 
 /-- The honest prover's transcript distribution, with the verifier's challenge drawn uniformly
-and lifted into the participants' monad. -/
+and lifted into the participants' monad. The lift is not required to preserve distributions, so
+outside `ProbComp` the challenge is uniform only if the chosen `MonadLiftT ProbComp m` makes it
+so. -/
 def realTranscript (σ : ChallengeVerifyProtocol m Stmt Wit Commit PrvState Chal Resp rel)
     (x : Stmt) (w : Wit) :
     m (Commit × Chal × Resp) := do
@@ -277,7 +292,8 @@ variable [EvalDistSemantics m]
 /-- Honest-verifier zero-knowledge: the real transcript distribution is within total variation
 distance `ζ_zk` of the simulated one, measured in the discrete structure on transcripts.
 
-The real transcript is `σ.realTranscript x w`.
+The real transcript is `σ.realTranscript x w`, so the property is relative to the chosen
+`MonadLiftT ProbComp m`.
 The simulated transcript is produced by `simTranscript` given only the statement `x`.
 
 Note: the `sim` field of `SigmaProtocol` only produces a public commitment. For HVZK we need
@@ -290,7 +306,7 @@ def HVZK (σ : ChallengeVerifyProtocol m Stmt Wit Commit PrvState Chal Resp rel)
     measureETVDist (σ.realTranscript x w) (simTranscript x) ≤ ζ_zk
 
 /-- Exact honest-verifier zero-knowledge: the real transcript is equal in distribution to the
-simulated one. -/
+simulated one. As with `HVZK`, this is relative to the chosen `MonadLiftT ProbComp m`. -/
 def PerfectHVZK (σ : ChallengeVerifyProtocol m Stmt Wit Commit PrvState Chal Resp rel)
     (simTranscript : Stmt → m (Commit × Chal × Resp)) : Prop :=
   ∀ x w, rel x w = true → σ.realTranscript x w =ᵈ simTranscript x
