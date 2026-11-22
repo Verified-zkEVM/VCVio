@@ -339,7 +339,10 @@ is a policy error rather than an allowlist, and `lake exe axiomsweep --update-ba
 refuses to write one. `Interop/` (the declared TCB) is excluded — its boundary is enforced by
 the import-isolation gate instead. The `VCVioAxiomSweepTestFixtures` library carries
 synthetic taint for the tool's own tests and is deliberately excluded from every
-aggregate.
+aggregate. Pull-request and merge-queue runs skip the tool's self-test, and the init sweep's,
+unless `scripts/`, the toolchain, the manifest, the lakefile or the build workflow changed: their
+fixtures depend on nothing else, so the result is the one the last `main` run recorded. `main`,
+the nightly and manual runs always run them; the sweeps themselves run everywhere.
 
 `uv run --no-project --python 3.12 python ./scripts/check-comment-fences.py` enforces one rule over every Lean source the
 repository tracks or would track — tracked files plus untracked ones that are not ignored, the
