@@ -11,8 +11,7 @@ elsewhere (recorded only; upstream PRs are a separate effort), and **track** wha
 way to core or blocked on a design decision.
 
 Companion files: [`probability-semantics-landscape.md`](probability-semantics-landscape.md)
-(§19–20 are the probability-specific evidence ledger), PolyFun's
-`docs/reading/upstream-alignment.md` (the same survey for the polynomial-functor layer).
+(§19–20 are the probability-specific evidence ledger), [PolyFun’s upstream ownership guide](https://github.com/Verified-zkEVM/PolyFun/blob/91dc84fe/docs/development/upstream.md).
 
 ## Why this file exists
 
@@ -51,6 +50,45 @@ absent from a release tag must not be assigned to a future release without check
 instance-providing module can be load-bearing with zero textual references, so "unused"
 needs an instance-synthesis check, not a grep.
 
+## Lean and Mathlib v4.36.0
+
+Checked 2026-11-17 from the v4.35 probability migration in VCVio #1085. The release page covers
+Lean and Lake. The Mathlib and CSLib release entries have empty descriptions, so their tagged
+commit ranges are the changelogs. For the other root packages the comparisons below use the
+resolved revisions in the two manifests. The original survey below retains its historical source
+locations and measurements. [Lean release notes](https://lean-lang.org/doc/reference/latest/releases/v4.36.0/)
+· [Mathlib](https://github.com/leanprover-community/mathlib4/compare/v4.35.0...v4.36.0)
+· [CSLib](https://github.com/leanprover/cslib/compare/v4.35.0...v4.36.0)
+
+| Pin or release | Consequence for VCVio |
+|---|---|
+| Lean / Std v4.36.0 | The backward-spec elaborator uses `WP.wp_monotone_post_le`, and `triple_iff_le_wp` names the `eposts` binder. Core takes the `WP` instance from the goal. `pvcgen` opens only the pointwise specs when needed. The quantitative support and replication rules use proposition-indexed infima to introduce output and support hypotheses separately. Core also splits pointwise conjunctions and existential preconditions and supports pointwise exception conditions. [Rule construction](https://github.com/leanprover/lean4/blob/v4.36.0/src/Lean/Elab/Tactic/VCGen/RuleConstruction.lean) |
+| Mathlib `56a00585` → `fc4f59e5` | Mathlib supplies the measurable spaces of `Additive` and `Multiplicative` and four measurable conversions. VCVio registers those declarations with `fun_prop` and supplies the singleton and discrete instances for an arbitrary carrier. The vector and array counting proofs specialize `List.countP_ofFn` and `List.count_ofFn`. Infinite-sum proofs use `tsum_add`, the Fiat–Shamir attempt-count bound uses `sum_le_tsum`, and measure applications use pointwise lemmas. ML-DSA, ML-KEM and Falcon certify primitive roots of power-of-two order directly with `orderOf_eq_prime_pow`. [Type tags](https://github.com/leanprover-community/mathlib4/blob/fc4f59e5/Mathlib/MeasureTheory/MeasurableSpace/Constructions.lean) · [Finite counts](https://github.com/leanprover-community/mathlib4/pull/44993) · [Infinite sums](https://github.com/leanprover-community/mathlib4/pull/38489) · [Element orders](https://github.com/leanprover-community/mathlib4/blob/fc4f59e5/Mathlib/GroupTheory/OrderOfElement.lean) |
+| Batteries `66e46918` → `b4b25a38` | The option-valued list traversal uses `List.mapM_eq_some_iff_forall₂` and `List.isSome_mapM` from Batteries. The local bridge to equality of mapped lists is still used by the random-oracle relabeling and joint-potential proofs. [List lemmas](https://github.com/leanprover-community/batteries/blob/b4b25a38/Batteries/Data/List/Lemmas.lean) |
+| CSLib `5b56df99` → `22b39634` | `Cslib.Crypto.Negligible` applies to `ℕ → ℝ≥0`. VCVio’s bounds take values in `ℝ≥0∞` and its theorem for `toReal` has a finiteness premise. CSLib also counts calls to a deterministic oracle on an indexed query language. VCVio’s probabilistic and stateful accounting continues to use oracle handlers. [Negligible bounds](https://github.com/leanprover/cslib/blob/22b39634/Cslib/Crypto/Negligible.lean) · [Query bounds](https://github.com/leanprover/cslib/blob/22b39634/Cslib/Algorithms/Lean/Query/Bounds.lean) |
+| PolyFun `6237d5d7` → `528b3b1f` | The 28 former measure modules now have direct PolyFun or ToCslib imports. `CouplingPost.bind` uses the bind law of `ExpectationWP.couplingAlgebra`. PolyFun checks the scope of its WP instances and spec rules in its test library. Its trace API simplifies the position and occurrence count of a single event. [PolyFun comparison](https://github.com/Verified-zkEVM/PolyFun/compare/6237d5d7...528b3b1f) · [Scoped rules](https://github.com/Verified-zkEVM/PolyFun/pull/466) |
+| PolyFun inductive return predicate | On `OracleComp`, the return predicate behind `support` is PolyFun's inductive `PFunctor.FreeM.CanReturn`. Neither the kernel nor the elaborator evaluates a computation to compare memberships in its support (gotcha 13b). `support (pure x) = {x}` holds by `support_pure`, not by `rfl`, and memberships in the support of `pure` are read through `eq_of_mem_support_pure`. [Inductive return predicate](https://github.com/Verified-zkEVM/PolyFun/pull/509) |
+| PolyFun query counts and expectation readings | A structural total query budget implies CSLib’s deterministic size bound. The oracle lower WP equals the free expectation fold under the configured discrete answer measures. Exact uniform-draw rules also reduce residual core WPs with an explicit empty exception postcondition. [Deterministic paths](https://github.com/Verified-zkEVM/PolyFun/pull/484) · [Expectation readings](https://github.com/Verified-zkEVM/PolyFun/pull/464) · [Reading-specific rules](https://github.com/Verified-zkEVM/PolyFun/pull/473) |
+| QuantumFoundations `9bc93ed5` → `5ecbeec2` | Its v4.36 port updates the proofs behind the quantum matrix and instrument APIs. The root manifest selects that Mathlib-compatible commit. [QuantumFoundations comparison](https://github.com/lean-crypto-foundations/QuantumFoundations/compare/9bc93ed5...5ecbeec2) |
+| ProofWidgets `df72b022` → `2f0f3520` | The game-hop and open-syntax widgets select `ProofWidgets.Html` explicitly and use the `jsx%{…}` literal so their component trees keep the widget RPC representation. [Protected HTML type](https://github.com/leanprover-community/ProofWidgets4/pull/205) |
+| Remaining root packages | The Git trees for Cli, Qq, LeanSearchClient and Plausible change only `lean-toolchain`. Aesop changes its compile-time import for the unreachable-tactic linter. ImportGraph adds module-aware `#min_imports` and `#show_imports for`, useful when narrowing public imports. [Aesop](https://github.com/leanprover-community/aesop/compare/4a174c49...66ff77cf) · [ImportGraph](https://github.com/leanprover-community/import-graph/compare/a41f0e9a...8370c640) |
+| Interop | hax `a045d15a` uses its own Aeneas `RustM` for the extracted programs and contracts. Its backend at `2b9e3ea4` needs the upstream enum-name and scalar membership fixes on Lean 4.36. Interop pins the backport at `1e414a54` until hax picks up a compatible backend. The generated contracts still use `Std.Do`, and the Rust bridge exposes them as `Std.WP` triples. [Upstream port](https://github.com/AeneasVerif/aeneas/pull/1547) · [Backport diff](https://github.com/dtumad/aeneas/compare/2b9e3ea4...1e414a54) |
+
+### Bounds of the current program-logic integration
+
+`Std.WP` exports `vcgen`. Lean’s solver understands unary predicates, lattice connectives and
+program specifications. VCVio’s lower-expectation rules can produce weighted sums or integrals as
+verification conditions. Its unary driver retains evaluation rules there. Relational game hops
+require a coupling between two executions, so they use PolyFun’s coupling algebra and VCVio’s
+relational driver. The shared-continuation branch of core’s `vcgen` still raises an error when
+explicitly enabled on a join point in this release. [Core solver](https://github.com/leanprover/lean4/blob/v4.36.0/src/Lean/Elab/Tactic/VCGen/Solve.lean)
+· [VCVio driver and supported readings](../agents/program-logic.md)
+
+The generic ENNReal layer-cake formula now takes measurable nonnegative extended-real functions.
+VCVio’s TV contraction proof needs a *strict* threshold and integration over the unit interval.
+Its bounded-observation lemma supplies both. The sum rule registered for `finiteness` and the
+instances for append-based writer logs still have local consumers. [Layer-cake formulas](https://github.com/leanprover-community/mathlib4/blob/fc4f59e5/Mathlib/MeasureTheory/Integral/Layercake.lean)
+
 ## Ledger
 
 ### Adopt — upstream owns it, VCVio duplicates it
@@ -62,8 +100,8 @@ needs an instance-synthesis check, not a grep.
 | `ToMathlib/General.lean:419` `BitVec.toFin_bijective` | `BitVec.toFin_injective`, `Mathlib/Data/BitVec.lean:55`; `BitVec.equivFin`, `:107` | yes | **done** (this PR) — 0 consumers |
 | `ToMathlib/General.lean:156,165` `tprod_ite_eq_apply`, `'` (+ `tsum` twins) | `tprod_ite_eq`, `tprod_ite_eq'`, `Mathlib/Topology/Algebra/InfiniteSum/Basic.lean:510,518` (both `@[simp]`, `to_additive`) | yes | **done** (this PR) — identical statements, 0 consumers |
 | `ToMathlib/General.lean:280` `Finset.image_const_univ` | `Finset.image_const`, `Mathlib/Data/Finset/Image.lean:568` (`Finset.image_const univ_nonempty b`) | yes | **done** (this PR) — 0 named consumers; it is `@[simp]`, so deletion is guarded by a full build |
-| `ToMathlib/MeasureTheory/DiscreteInstances.lean` `BitVec.instFinite` | `FinEnum → Fintype → Finite` | yes | **done** — PolyFun declares the instance in `ToCslib/MeasureTheory/MeasurableSpace/Instances.lean:44` with the other staged measure modules (the generic measure semantics row below), still `Prop`-valued so that the module stands alone without `Mathlib.Data.FinEnum`; the VCVio module is a deprecated re-export |
-| `ToMathlib/Control/Monad/Commutative.lean:35` `Monad.Commutative`, `CommutativeAt` :26, `Set.monadComm` :196, the `Id`/`Option`/`Except`/`ReaderT` instances | `CommApplicative`, `Mathlib/Control/Basic.lean:206`; `instance : CommApplicative Set`, `Mathlib/Data/Set/Functor.lean:88` | yes | **done** (this PR) — 0 consumers outside the file; for a `LawfulMonad`, `bind_comm` follows from `CommApplicative.commutative_prod` via `seq_eq_bind_map`, and the converse constructs `CommApplicative` (both compiled during the survey). Mathlib has **no** `CommApplicative Option`/`Id`/`Except`/`ReaderT` instances at the pin (`grep instance.*CommApplicative` → `Finset`, `Set`, `Applicative.lean:74`, `FreeAbelianGroup`, `Filter`), so those four become *upstream* rows |
+| `ToMathlib/MeasureTheory/DiscreteInstances.lean` `BitVec.instFinite` | `FinEnum → Fintype → Finite` | yes | **done** — PolyFun declares the instance in `ToCslib/MeasureTheory/MeasurableSpace/Instances.lean:44` with the other staged measure modules (the generic measure semantics row below), still `Prop`-valued so that the module stands alone without `Mathlib.Data.FinEnum`; VCVio imports the PolyFun module directly |
+| `ToMathlib/Control/Monad/Commutative.lean:35` `Monad.Commutative`, `CommutativeAt` :26, `Set.monadComm` :196, the `Id`/`Option`/`Except`/`ReaderT` instances | `CommApplicative`, `Mathlib/Control/Basic.lean:206`; `instance : CommApplicative Set`, `Mathlib/Data/Set/Functor.lean:88` | yes | **done** (this PR) — 0 consumers outside the file; for a `LawfulMonad`, `bind_comm` follows from `CommApplicative.commutative_prod` via `seq_eq_bind_map`, and the converse constructs `CommApplicative` (both compiled during the survey). Mathlib supplies `CommApplicative Id` in `Mathlib/Control/Applicative.lean`. The Option, subsingleton-error Except and ReaderT instances remain upstream candidates |
 | `ToMathlib/Control/WriterT.lean:130` `run_seqLeft'` | local `run_seqLeft` :83 | — | **done** (this PR) — verbatim duplicate inside the same file, 0 consumers |
 | `ToMathlib/Control/Monad/Ordered.lean:39,46` `pointwiseRelation`, `Proper` | `Pi.le_def`; `Relator.LiftFun`, `Mathlib/Logic/Relator.lean` | yes | **done** (this PR) — 0 uses, even inside the file |
 | `HashSig/SLHDSA/WotsChecksum.lean:38` `Forall₂` (+ `length_eq` :43, `sum_le` :49, `take`, `drop`) | `List.Forall₂`, `Batteries/Data/List/Basic.lean:383`; `List.Forall₂.length_eq`, `Mathlib/Data/List/Forall2.lean:133`; `forall₂_take`/`forall₂_drop`, `:180,185`; `List.Forall₂.sum_le_sum`, `Mathlib/Algebra/Order/BigOperators/Group/List.lean:27` (`to_additive` of `prod_le_prod'`) | yes | **done** (this PR) — `sum_le_sum` needs `Mathlib.Algebra.Order.Group.Nat` for `AddLeftMono ℕ`; `append_inv` is re-proved from `forall₂_take_append`/`forall₂_drop_append` (`:190,196`); `eq_of_sum_eq` :57 is new content and stays |
@@ -81,10 +119,11 @@ needs an instance-synthesis check, not a grep.
 | `VCVio/OracleComp/QueryTracking/Structures.lean:321` `QueryCount.single i := Function.update 0 i 1` | `Pi.single i 1`, `Mathlib/Algebra/Notation/Pi/Basic.lean:30` (definitionally equal) | yes | **done** (this PR) — redefine; 50 consumers then use `Pi.single_eq_same/of_ne`, `Finset.sum_pi_single'` instead of hand case splits |
 | `VCVio/EvalDist/Defs/Support.lean:31–41` `SetM.pure_def/bind_def/run_eq` | local `SetM.run_pure/run_bind/run_map`, `ToMathlib/Data/Set/Functor.lean:36–45` | — | **done** (this PR) — two simp normal forms for one term; keep the `run_*` family |
 | `ToMathlib/Control/Monad/Indexed.lean` (whole file) | `PolyFun/Control/Monad/Indexed.lean` (verbatim copy; `ireturn`↔`ipure` only) | yes | **done** (this PR) — both declare a root-namespace `class IndexedMonad`; delete the copy, import PolyFun's from `Graded.lean` |
-| The generic measure semantics: `EvalDist/Defs/Measure/{Deterministic,ExceptT,Failure,OptionT}`, `Defs/Semantics/Core`, `EvalDist/{Lossless,WithFailure}`, `Monad/Failure`, `PFunctorMeasure/Core`, `PFunctorKernel`, `PFunctorKernelTransport`, `PFunctorPath`, `WiringKernel`, `ProgramLogic/Relational/Measure{,/Bind,/Deterministic}`, the laws in `Defs/Measure/Core`, `ProbabilityNotation` and `EvalDistEq`, and the staged `ToMathlib` measure modules (`DiscreteInstances`, `Function/AEMeasurable`, `MeasurableSpace/{Except,Option}`, `Measure/{Coupling,Coupling/Bind,Except,Option,Prop,Subprobability}`, `Probability/{UniformOn,Kernel/Subprobability}`) | PolyFun's `Measure` companions (`PolyFun/Control/Monad/Measure/`, `PolyFun/PFunctor/Free/Measure/`, `PolyFun/PFunctor/Wiring/Measure.lean`) and its staging in `ToCslib/MeasureTheory/` and `ToCslib/Probability/`, under the same names and namespaces | yes | **done** — the VCVio modules are deprecated re-exports of their PolyFun homes; VCVio keeps the notation, sampling, oracle answer measures and the `OracleComp` instances |
+| The generic measure semantics: `EvalDist/Defs/Measure/{Deterministic,ExceptT,Failure,OptionT}`, `Defs/Semantics/Core`, `EvalDist/{Lossless,WithFailure}`, `Monad/Failure`, `PFunctorMeasure/Core`, `PFunctorKernel`, `PFunctorKernelTransport`, `PFunctorPath`, `WiringKernel`, `ProgramLogic/Relational/Measure{,/Bind,/Deterministic}`, the laws in `Defs/Measure/Core`, `ProbabilityNotation` and `EvalDistEq`, and the staged `ToMathlib` measure modules (`DiscreteInstances`, `Function/AEMeasurable`, `MeasurableSpace/{Except,Option}`, `Measure/{Coupling,Coupling/Bind,Except,Option,Prop,Subprobability}`, `Probability/{UniformOn,Kernel/Subprobability}`) | PolyFun's `Measure` companions (`PolyFun/Control/Monad/Measure/`, `PolyFun/PFunctor/Free/Measure/`, `PolyFun/PFunctor/Wiring/Measure.lean`) and its staging in `ToCslib/MeasureTheory/` and `ToCslib/Probability/`, under the same names and namespaces | yes | **done** — VCVio imports these modules directly. The 28 deprecated re-exports and their three dedicated import tests are removed at v4.36. VCVio keeps the notation, sampling, oracle answer measures and `OracleComp` instances |
 | `ToMathlib/Control/WriterT.lean:30` `LawfulAppend` | `Std.Associative (·++·)` + `Std.LawfulIdentity (·++·) ∅`, `Init/Core.lean:2478,2542`; `List` instances `Init/Data/List/Basic.lean:627,647` (re-proved locally at `:51`) | yes | **deferred** — 49 sites in 8 files, the reverse associativity orientation, `grind =` attributes, and Mathlib's `LawfulMonad (WriterT ω M)` only for `[Monoid ω]`: over 100 lines of churn, so recorded rather than done |
 | `LatticeCrypto/Ring/Norms.lean:74` `centeredRepr` + six restated lemmas `:78–136` | `ZMod.valMinAbs`, `Mathlib/Data/ZMod/ValMinAbs.lean:23–29`; `natAbs_valMinAbs_le`, `natAbs_valMinAbs_neg`, `coe_valMinAbs`, `valMinAbs_mem_Ioc`, `valMinAbs_spec` | yes | **done** (#634) — `centeredRepr` is `ZMod.valMinAbs` by definition and its lemmas delegate |
 | `LatticeCrypto/Ring/Core.lean:204–210` `polyCoeffFinsetSum` | `Polynomial.finsetSum_coeff`, `Mathlib/Algebra/Polynomial/Coeff.lean` | yes | **done** (#634) — the coefficient proofs use `Polynomial.finsetSum_coeff` |
+| `LatticeCrypto/Ring/SchoolbookCert.lean:260–307` `vectorNegacyclicRing_instCommRing` (48 lines) | `Function.Injective.commRing`, `Mathlib/Algebra/Ring/InjSurj.lean:270` | yes | **done** — pulled back along `NegacyclicQuotient.ofBackend` (along the map to `Unit` for `n = 0`); the data fields are unchanged |
 | `LatticeCrypto/MLDSA/Concrete/NTT.lean:82–129` `zeta_pow_256`, `MLKEM/Concrete/NTT.lean:106–156` `zeta_pow_128`, both `nInv_stageScalar` | `reduce_mod_char`, `Mathlib/Tactic/ReduceModChar.lean` | yes | **done** (#634) — `reduce_mod_char` |
 | `LatticeCrypto/MLKEM/Concrete/Encoding.lean:510–520` `decode12Pair_fst/snd` | `omega` | — | **done** — `omega` |
 | `Extern/MLDSA/NonVacuity.lean:36–38,98`, `Extern/MLDSA/Laws.lean:236` docstrings citing a `native_decide` NTT certificate | — | — | **done (docs)** — the docstrings cite `LatticeCrypto/Ring/NTTCert.lean`; no `native_decide` remains in the proof libraries |
@@ -420,13 +459,12 @@ needs no `ExactMonadAttach` or numeric lift. Registering this upstream rule for 
 lets the short proof work over state and reader bases. The operational support/failure modules
 contain no PMF backend.
 `LawfulFailureEvalDistSemantics` separately certifies zero successful-output measure for an
-`Alternative`. The pinned Lean, Batteries, Mathlib, cslib, and PolyFun trees provide no corresponding
-measure-valued failure certificate. Native optional semantics supplies it from the base pure law;
+`Alternative`. PolyFun supplies this certificate in `PolyFun.Control.Monad.Measure.Failure`. Native optional semantics supplies it from the base pure law;
 composition proofs use upstream `Measure.bind_zero_left` and `Measure.bind_const`, with discrete
 intermediate spaces internal to the API. Failure, its compositions, and final events normalize to
 zero with `simp` and `grind`, without an operational/probability compatibility class.
-The pinned tree supplies `IsZeroApply` and its generic `zero_apply` rule, but no measure instance;
-`Measure.instIsZeroApply` connects zero measures to that upstream automation. Bare exceptional
+Mathlib v4.36 supplies `IsZeroApply (Measure α)` in `Mathlib.MeasureTheory.Measure.Module`,
+so the generic `zero_apply` rule applies directly. Bare exceptional
 constructor equations live in `ToMathlib.Control.Except` and register their operational facts for
 `simp` and `grind`, so deterministic event proofs need no additional tactic arguments.
 The upstream measurable embeddings' `comap_apply` equations hold on all sets and need no event
@@ -1168,9 +1206,9 @@ reading leave the expectation of the rest of the program in the verification con
 - lean4#14827: pointwise exception verification conditions.
 - `master` adds `vcgen +jp` (lean4#14398) and lexicographic loop measures (lean4#14753).
 
-**Next bump (v4.36).**
-- lean4#15217 renames the `epost` binder of `Std.WP.Triple.iff` to `eposts`. A named argument
-  would be a hard error; `triple_iff_le_wp` passes none.
+**Changes identified from the v4.36 release candidate.**
+- lean4#15217 renames the `epost` binder of `Std.WP.Triple.iff` to `eposts`.
+  `triple_iff_le_wp` uses this named argument and the v4.36 port updates it.
 - lean4#15290 deprecates the `Std.Do` proof mode (`mintro`, `mspec`, …). VCVio's `Std.Do`
   bridges (`Unary/StdDoBridge.lean`, `Unary/WriterTBridge.lean`, `Unary/StdDoExamples.lean` and
   `Interaction/UC/StdDoBridge.lean`) are already retired, so nothing here uses it.
@@ -1190,7 +1228,7 @@ reading leave the expectation of the rest of the program in the verification con
 - `CommApplicative` instances for `Option`, `Except`, `ReaderT`.
 - `FinEnum` instances for `ZMod n`, `USize`, `ISize` and the safe ones of
   `ToMathlib/Data/FinEnum.lean`.
-- An `IsZeroApply` instance for `Measure`.
+- An `IsZeroApply` instance for `Measure` (now in Mathlib v4.36).
 - The core-`Vector` equivalence with `Fin n → α` (`arrayVectorEquivFin`, duplicated by
   `HashSig/SLHDSA/Codec.lean`'s `WireCodec.vectorEquivFin`).
 

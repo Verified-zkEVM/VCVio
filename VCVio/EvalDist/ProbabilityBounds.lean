@@ -87,7 +87,8 @@ theorem prEvent_isSome_eq_sum {γ : Type} [Fintype γ] (mx : m α) (f : α → O
     Pr{let x ← mx}[(f x).isSome] = ∑ k, Pr{let x ← mx}[f x = some k] := by
   let : MeasurableSpace α := ⊤
   simp only [prEvent_eq_evalDist_of_discrete]
-  rw [← measure_biUnion_finset (fun i _ j _ hij ↦ Set.disjoint_left.mpr fun _ hi hj ↦
+  rw [← measure_biUnion_finset (f := fun i ↦ {x | f x = some i})
+    (fun i _ j _ hij ↦ Set.disjoint_left.mpr fun _ hi hj ↦
       hij (Option.some.inj (hi.symm.trans hj))) fun _ _ ↦ MeasurableSet.of_discrete]
   congr 1
   ext x
@@ -138,7 +139,8 @@ theorem prEvent_eq_prEvent_and_add_prEvent_and_not (mx : m α) (p q : α → Pro
     Pr{let x ← mx}[p x] = Pr{let x ← mx}[p x ∧ q x] + Pr{let x ← mx}[p x ∧ ¬ q x] := by
   let : MeasurableSpace α := ⊤
   simp only [prEvent_eq_evalDist_of_discrete]
-  rw [← measure_union (Set.disjoint_left.mpr fun x hx hx' ↦ hx'.2 hx.2) MeasurableSet.of_discrete]
+  rw [← measure_union (s₁ := {x | p x ∧ q x}) (s₂ := {x | p x ∧ ¬ q x})
+    (Set.disjoint_left.mpr fun _ hx hx' ↦ hx'.2 hx.2) MeasurableSet.of_discrete]
   congr 1
   ext x
   simp only [Set.mem_ofPred_eq, Set.mem_union]

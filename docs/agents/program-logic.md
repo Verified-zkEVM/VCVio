@@ -36,6 +36,15 @@ lower-priority fallback. The interpretation uses core `Std.WP.WP.wp` directly, a
 `wp_eq_lintegral` integrates a measurable assertion in the chosen result space;
 `wp_eq_lintegral_map` observes an arbitrary assertion without requiring a space on hidden results.
 
+Under `open scoped OracleComp.Lower`, `OracleComp.ProgramLogic.wp_eq_wpFold` computes the
+same expectation one call at a time, integrating each continuation under the configured answer
+measure. It applies to an arbitrary postcondition and needs no measurable space on results.
+The uniform-draw and constant-postcondition equations accept any empty exception postcondition,
+including the unit value that core normalization leaves in verification conditions.
+`OracleComp.Lower.instWP_eq_expectationWPMonad` identifies this scoped interpretation with
+PolyFun's free-program expectation reading. The default query rule integrates the exact
+postcondition, while `OracleComp.Lower.Pointwise` lets `vcgen` descend through each answer.
+
 Use `finiteness` for `wp oa post ≠ ⊤` when the result type is finite and the postcondition is
 pointwise finite. An arbitrary quantitative postcondition may still take the value `⊤`.
 The regression module `VCVioTest/ProgramLogic/GCongr.lean` checks the support binders and the
@@ -170,9 +179,11 @@ classes of probability goals:
 **Core `vcgen` steps**: in each exhaustive `pvcgen` pass, a quantitative `Triple` goal first goes
 to core `vcgen` (`tryCoreVCGen`) with the `@[spec]` rules of `Unary/WP/LowerSpecs.lean`. Core
 steps through binds, conditionals, matchers and transformer layers and uses the triples in the
-local context as rules. A triple with precondition `1` takes the pointwise rules
-(`OracleComp.Lower.Pointwise`) and descends through every draw; any other takes the exact rules,
-and the expectations of the rest of the program are computed under the averages of the draws.
+local context as rules. Core takes the WP interpretation from the triple itself, so callers can
+use a quantitative triple while another reading is in scope. A precondition of `1` takes the
+pointwise rules (`OracleComp.Lower.Pointwise`) and descends through every draw. Other
+preconditions take the exact rules, which compute the expectations of the rest of the program
+under the averages of the draws.
 Core's verification conditions are read back to `≤`, and those `simp` closes are closed. The step
 is skipped when core makes no progress or leaves a loop to an invariant, so the loop steps below
 and VCVio's own structural steps continue. `vcstep` and the `?` replays do not take it;
@@ -656,7 +667,7 @@ rewrite works).
 | `VCVio/ProgramLogic/Tactics/Common/Registry.lean` | `@[vcspec]` | Unary and relational `Triple` / `RelTriple` / `RelWP` / quantitative `VCVio.ProgramLogic.RelTriple` rules, indexed by a `Sym.Pattern` on the computation slot (`oa` for unary, `oa` with a secondary `rightHead?` filter for relational) |
 
 Each entry carries a `SpecProof` (reusing the core-Lean type from
-`Lean.Elab.Tactic.Do.SpecAttr`) so origins can be distinguished between a
+`Lean.Elab.Tactic.VCGen.SpecAttr`) so origins can be distinguished between a
 global declaration, a local hypothesis, or a raw term. Priorities are parsed
 from the attribute's optional priority argument (`@[vcspec (prio := 200)]`).
 
@@ -700,9 +711,7 @@ entries are tried first within the same candidate pool.
 `Lean.Meta.Sym.*` is still under active development in core Lean. The APIs
 we depend on today (`Sym.Pattern`, `Sym.DiscrTree`, `Sym.insertPattern`,
 `Sym.getMatch`, `Sym.mkPatternFromDeclWithKey`, and `SpecProof` in
-`Lean.Elab.Tactic.Do.SpecAttr`) are all used by core's `mvcgen` and `vcgen`
-too, so their direction is broadly stable, but none of them carry a
-compat-preservation promise yet. Expect the following classes of churn each
+`Lean.Elab.Tactic.VCGen.SpecAttr`) are also used by core’s `vcgen`. Their interfaces can change between Lean releases. Expect the following classes of churn each
 time we bump the toolchain:
 
 - **Signature changes on `Sym.mkPatternFromDeclWithKey`**. If the selector
@@ -731,7 +740,7 @@ stage degrade gracefully.
 
 ### Core WP and the symbolic rewriter boundary
 
-Lean v4.35 provides lattice-generic `Std.WP.WPMonad`, `Triple`, transformer
+Lean v4.36 provides lattice-generic `Std.WP.WPMonad`, `Triple`, transformer
 instances, and `vcgen`. The unary carriers in `Unary/WP/` consume these directly:
 
 - `open scoped OracleComp.Lower` selects expectation in `ℝ≥0∞` for `OracleComp spec`
@@ -750,8 +759,17 @@ expectation does not provide a general structural reachability certificate. The
 probability-one coherence theorems state their additional uniformity assumptions.
 
 The coupling interface `VCVio.ProgramLogic.RelWP` is local to VCVio and shares core's
-assertion lattices. Its three carriers in `Relational/WP/` also use explicit scopes
-(`OracleComp.Rel.Quantitative`, `.Qualitative`, `.Probabilistic`).
+assertion lattices. Instances provide `trans`, `trans_monotone`, `trans_pure` and
+`trans_bind_le`. The last law allows sequential composition to give a lower bound on the
+optimal coupling. Its three carriers in `Relational/WP/` also use explicit scopes
+(`OracleComp.Rel.Quantitative`, `.Qualitative`, `.Probabilistic`). The qualitative reading
+and the product coupling built by `relTriple_prod_of_wp` require countable oracle answer
+types on each side. The output types can be arbitrary.
+
+When migrating a `RelWP` instance declaration or record update, change the field labels
+`rwpTrans` to `trans`, `rwp_trans_monotone` to `trans_monotone`, `rwp_trans_pure` to
+`trans_pure`, and `rwp_trans_bind_le` to `trans_bind_le`. References to the old projections
+in expressions still elaborate through deprecated aliases.
 
 VCVio's probability/coupling tactics continue to consume `@[vcspec]` and the `wpStepRules` table.
 Core `vcgen` consumes the core `@[spec]` catalogue. Generic transformer WP comes from
@@ -805,7 +823,9 @@ readings; `VCVioTest/ProgramLogic/CoreVCGen.lean` exercises them.
 - `open scoped OracleComp.Lower.Pointwise` registers the pointwise rules above the exact ones:
   a bound at every answer, as core's indexed infimum, which `vcgen` splits per answer. They serve
   for bounds that hold on every path, such as events of probability one.
-- `Spec.ofSupport` (in both readings) is passed explicitly for an opaque sub-program.
+- Pass `Spec.ofSupport` explicitly for an opaque sub-program in either reading. The condition
+  introduces the output and its support hypothesis. The pointwise replication rule also supplies
+  the length of the returned list and the support of each entry.
 
 The v4.35 port adopts the public `Std.WP` namespace and exception stacks (`EStack⟨⟩`,
 `EStack⟨ε → L⟩`). An optional failure postcondition is a function from `Unit`; core's

@@ -6,12 +6,14 @@ Authors: Minhyuk Hwang
 
 module
 
+public import VCVio.CryptoFoundations.SymmEncAlg
 public import VCVio.CryptoFoundations.SymmEncAlg.INDCPA
 public import VCVio.CryptoFoundations.PRF
 public import VCVio.OracleComp.SimSemantics.StateT.UntilBad
 public import VCVio.OracleComp.SimSemantics.StateT.StateProjection
 public import VCVio.OracleComp.SimSemantics.Measure
 public import VCVio.OracleComp.QueryTracking.QueryBound.Hazard
+public import VCVio.OracleComp.QueryTracking.ListCache
 public import VCVio.OracleComp.Constructions.SampleableType.Measure
 public import ToMathlib.Data.ENNReal.Gauss
 
@@ -55,6 +57,7 @@ The triangle inequality over the five games gives the bound.
 ## Main statements
 
 * `PRFEncryption.decrypt_encrypt`: decryption inverts encryption.
+* `PRFEncryption.complete`: the scheme is complete (`SymmEncAlg.Complete`).
 * `PRFEncryption.IND_CPA_Advantage_le`: the CPA bound.
 
 ## References
@@ -91,6 +94,48 @@ theorem decrypt_encrypt [SampleableType R] [AddCommGroup M] (prf : PRFScheme K R
     ((scheme prf).encrypt k msg >>= (scheme prf).decrypt k) =
       ((scheme prf).encrypt k msg >>= fun _ => pure (some msg)) := by
   simp [scheme]
+
+/-- Decryption recovers every message (`SymmEncAlg.Complete`). -/
+theorem complete [SampleableType R] [AddCommGroup M] (prf : PRFScheme K R M) :
+    (scheme prf).Complete := by
+  let : MeasurableSpace M := ⊤
+  intro msg
+  have h : (scheme prf).completenessExperiment msg =
+      (fun _ => some msg) <$>
+        (do let k ← prf.keygen; let r ← ($ᵗ R : ProbComp R); pure (k, r)) := by
+    simp [SymmEncAlg.completenessExperiment, scheme, monad_norm]
+  rw [h]
+  exact OracleComp.evalDist_map_const _ _
+
+/-! ## Logs of encryptions -/
+
+/-- Two logged encryptions share their `r`. -/
+@[expose] def RepeatsNonce (log : List (R × M)) : Prop :=
+  ¬(log.map Prod.fst).Nodup
+
+/-- A log has no value at `r` exactly when `r` is not logged. -/
+private lemma lookup_eq_none_iff [DecidableEq R] (log : List (R × M)) (r : R) :
+    log.lookup r = none ↔ r ∉ log.map Prod.fst := by
+  induction log with
+  | nil => simp
+  | cons e log ih =>
+    obtain ⟨r', y⟩ := e
+    by_cases h : r = r'
+    · subst h
+      simp [List.lookup]
+    · simp [List.lookup, beq_false_of_ne h, h, ih]
+
+/-- Logging a pair keeps a repetition. -/
+private lemma repeatsNonce_cons {log : List (R × M)} (h : RepeatsNonce log) (e : R × M) :
+    RepeatsNonce (e :: log) := by
+  simp only [RepeatsNonce, List.map_cons, List.nodup_cons, not_and_or] at h ⊢
+  exact Or.inr h
+
+/-- Logging a pair at a logged `r` makes the log repeat. -/
+private lemma repeatsNonce_cons_of_mem {log : List (R × M)} {r : R} (h : r ∈ log.map Prod.fst)
+    (y : M) :
+    RepeatsNonce ((r, y) :: log) := by
+  simp [RepeatsNonce, h]
 
 /-! ## The PRF reduction -/
 
@@ -131,32 +176,17 @@ theorem prfRealExperiment_prfReduction (prf : PRFScheme K R M) (leak : M → Λ)
 
 /-! ## The random-function game -/
 
-variable [DecidableEq R] [SampleableType M]
-
-/-- The log `(r, F(r))` of a lazily sampled random function, read as a random-oracle cache: the
-value at `r` is the most recent logged value at `r`. -/
-@[expose] def logCache (log : List (R × M)) : (R →ₒ M).QueryCache :=
-  QueryCache.ofFn fun r => log.lookup r
-
-omit [SampleableType R] [AddCommGroup M] [SampleableType M] in
-/-- Logging the pair `(r, y)` caches `y` at `r`. -/
-lemma logCache_cons (r : R) (y : M) (log : List (R × M)) :
-    logCache ((r, y) :: log) = (logCache log).cacheQuery r y := by
-  ext r'
-  by_cases h : r' = r
-  · subst h
-    simp [logCache, List.lookup]
-  · simp [logCache, List.lookup, beq_false_of_ne h, h]
+variable [SampleableType M]
 
 /-- The value of the random function at `r`: the logged value, or a fresh uniform sample. -/
-@[expose] def rfAnswer (log : List (R × M)) (r : R) : ProbComp M :=
+@[expose] def rfAnswer [DecidableEq R] (log : List (R × M)) (r : R) : ProbComp M :=
   match log.lookup r with
   | some y => pure y
   | none => $ᵗ M
 
 /-- Encryption under the random function kept as the log: draw `r`, read or sample the value `y`
 at `r`, log `(r, y)` and return `(r, y + msg)`. -/
-@[expose] def rfEncrypt (msg : M) : StateT (List (R × M)) ProbComp (R × M) := do
+@[expose] def rfEncrypt [DecidableEq R] (msg : M) : StateT (List (R × M)) ProbComp (R × M) := do
   let r ← ($ᵗ R : ProbComp R)
   let log ← get
   let y ← (rfAnswer log r : ProbComp M)
@@ -165,13 +195,13 @@ at `r`, log `(r, y)` and return `(r, y + msg)`. -/
 
 /-- The CPA game under the random function at bit `b`, with the random function kept as the log
 of the encryptions. -/
-@[expose] def rfImpl (leak : M → Λ) (b : Bool) :
+@[expose] def rfImpl [DecidableEq R] (leak : M → Λ) (b : Bool) :
     QueryImpl (unifSpec + LeftOrRight.spec M (R × M)) (StateT (List (R × M)) ProbComp) :=
   unifSpec.passthrough + LeftOrRight.oracle (rfEncrypt (R := R)) leak b
 
 /-- In the ideal PRF world, the distinguisher at bit `b` is the random-function game `rfImpl` at
 `b` from the empty log. -/
-theorem prfIdealExperiment_prfReduction (prf : PRFScheme K R M) (leak : M → Λ)
+theorem prfIdealExperiment_prfReduction [DecidableEq R] (prf : PRFScheme K R M) (leak : M → Λ)
     (adversary : (scheme prf).IND_CPA_Adversary) (b : Bool) :
     prfIdealExperiment (prfReduction prf leak adversary b) =
       (simulateQ (rfImpl leak b) adversary).run' [] := by
@@ -182,8 +212,9 @@ theorem prfIdealExperiment_prfReduction (prf : PRFScheme K R M) (leak : M → Λ
     rw [← OracleComp.liftComp_eq_liftM, simulateQ_prfIdealQueryImpl_liftComp]
     simp [map_eq_bind_pure_comp]
   unfold prfIdealExperiment prfReduction
-  rw [← QueryImpl.simulateQ_compose, show (∅ : (R →ₒ M).QueryCache) = logCache [] by ext; rfl]
-  refine (OracleComp.run'_simulateQ_eq_of_query_map_eq (rfImpl leak b) _ logCache
+  rw [← QueryImpl.simulateQ_compose, ← QueryImpl.ListCache.decode_nil]
+  refine (OracleComp.run'_simulateQ_eq_of_query_map_eq (rfImpl leak b) _
+    QueryImpl.ListCache.decode
     (fun t log => ?_) adversary []).symm
   rcases t with n | ⟨m₀, m₁⟩
   · simp [rfImpl, reductionImpl, prfIdealQueryImpl, OracleSpec.romImpl_eq_passthrough_add,
@@ -196,22 +227,22 @@ theorem prfIdealExperiment_prfReduction (prf : PRFScheme K R M) (leak : M → Λ
       simp only [StateT.run_monadLift, StateT.run_get, StateT.run_set, StateT.run_pure,
         bind_assoc, pure_bind, map_bind, bind_map_left, map_pure]
       refine bind_congr fun r => ?_
-      simp only [logCache, QueryCache.ofFn_apply]
+      simp only [QueryImpl.ListCache.decode, QueryCache.ofFn_apply]
       cases hr : log.lookup r with
       | none =>
         simp only [rfAnswer, hr, bind_pure_comp, monadLift_self, Functor.map_map]
         refine congrArg (· <$> ($ᵗ M : ProbComp M)) (funext fun y => ?_)
-        simp only [Prod.map, id, logCache_cons]
+        simp only [Prod.map, id, QueryImpl.ListCache.decode_cons]
         rfl
       | some y =>
         simp only [rfAnswer, hr, pure_bind, monadLift_self, Prod.map, id]
         congr 2
-        rw [logCache_cons]
+        rw [QueryImpl.ListCache.decode_cons]
         ext r'
         by_cases h' : r' = r
         · subst h'
-          simp [logCache, hr]
-        · simp [h', logCache]
+          simp [QueryImpl.ListCache.decode, hr]
+        · simp [h', QueryImpl.ListCache.decode]
     · simp [rfImpl, reductionImpl, h]
 
 /-! ## The fresh game and the nonce-repetition event -/
@@ -230,31 +261,16 @@ the encryptions as state. -/
     QueryImpl (unifSpec + LeftOrRight.spec M (R × M)) (StateT (List (R × M)) ProbComp) :=
   unifSpec.passthrough + LeftOrRight.oracle (freshEncrypt (R := R)) leak b
 
-/-- Two logged encryptions share their `r`. -/
-@[expose] def RepeatsNonce (log : List (R × M)) : Prop :=
-  ¬(log.map Prod.fst).Nodup
-
-omit [SampleableType R] [AddCommGroup M] [SampleableType M] in
-/-- A log has no value at `r` exactly when `r` is not logged. -/
-lemma lookup_eq_none_iff (log : List (R × M)) (r : R) :
-    log.lookup r = none ↔ r ∉ log.map Prod.fst := by
-  induction log with
-  | nil => simp
-  | cons e log ih =>
-    obtain ⟨r', y⟩ := e
-    by_cases h : r = r'
-    · subst h
-      simp [List.lookup]
-    · simp [List.lookup, beq_false_of_ne h, h, ih]
-
 /-- An ambient query of `rfImpl` leaves the log unchanged. -/
-lemma rfImpl_run_inl (leak : M → Λ) (b : Bool) (n : ℕ) (log : List (R × M)) :
+private lemma rfImpl_run_inl [DecidableEq R] (leak : M → Λ) (b : Bool) (n : ℕ)
+    (log : List (R × M)) :
     ((rfImpl leak b) (Sum.inl n)).run log =
       (fun u => (u, log)) <$> (liftM (unifSpec.query n) : ProbComp _) := by
   simp [rfImpl]
 
 /-- A left-or-right query of `rfImpl`. -/
-lemma rfImpl_run_inr (leak : M → Λ) (b : Bool) (m₀ m₁ : M) (log : List (R × M)) :
+private lemma rfImpl_run_inr [DecidableEq R] (leak : M → Λ) (b : Bool) (m₀ m₁ : M)
+    (log : List (R × M)) :
     ((rfImpl leak b) (Sum.inr (m₀, m₁))).run log =
       if leak m₀ = leak m₁ then (do
         let r ← ($ᵗ R : ProbComp R)
@@ -265,16 +281,14 @@ lemma rfImpl_run_inr (leak : M → Λ) (b : Bool) (m₀ m₁ : M) (log : List (R
   · simp [rfImpl, h, rfEncrypt]
   · simp [rfImpl, h]
 
-omit [DecidableEq R] in
 /-- An ambient query of `freshImpl` leaves the log unchanged. -/
-lemma freshImpl_run_inl (leak : M → Λ) (b : Bool) (n : ℕ) (log : List (R × M)) :
+private lemma freshImpl_run_inl (leak : M → Λ) (b : Bool) (n : ℕ) (log : List (R × M)) :
     ((freshImpl leak b) (Sum.inl n)).run log =
       (fun u => (u, log)) <$> (liftM (unifSpec.query n) : ProbComp _) := by
   simp [freshImpl]
 
-omit [DecidableEq R] in
 /-- A left-or-right query of `freshImpl`. -/
-lemma freshImpl_run_inr (leak : M → Λ) (b : Bool) (m₀ m₁ : M) (log : List (R × M)) :
+private lemma freshImpl_run_inr (leak : M → Λ) (b : Bool) (m₀ m₁ : M) (log : List (R × M)) :
     ((freshImpl leak b) (Sum.inr (m₀, m₁))).run log =
       if leak m₀ = leak m₁ then (do
         let r ← ($ᵗ R : ProbComp R)
@@ -285,22 +299,9 @@ lemma freshImpl_run_inr (leak : M → Λ) (b : Bool) (m₀ m₁ : M) (log : List
   · simp [freshImpl, h, freshEncrypt]
   · simp [freshImpl, h]
 
-omit [SampleableType R] [AddCommGroup M] [SampleableType M] [DecidableEq R] in
-/-- Logging a pair keeps a repetition. -/
-lemma repeatsNonce_cons {log : List (R × M)} (h : RepeatsNonce log) (e : R × M) :
-    RepeatsNonce (e :: log) := by
-  simp only [RepeatsNonce, List.map_cons, List.nodup_cons, not_and_or] at h ⊢
-  exact Or.inr h
-
-omit [SampleableType R] [AddCommGroup M] [SampleableType M] [DecidableEq R] in
-/-- Logging a pair at a logged `r` makes the log repeat. -/
-lemma repeatsNonce_cons_of_mem {log : List (R × M)} {r : R} (h : r ∈ log.map Prod.fst) (y : M) :
-    RepeatsNonce ((r, y) :: log) := by
-  simp [RepeatsNonce, h]
-
 /-- `rfImpl` and `freshImpl` agree until an `r` repeats: at a fresh `r` both draw a uniform value,
 and a logged `r` makes the log repeat. -/
-theorem agreeUntilBad_rfImpl_freshImpl (leak : M → Λ) (b : Bool) :
+theorem agreeUntilBad_rfImpl_freshImpl [DecidableEq R] (leak : M → Λ) (b : Bool) :
     QueryImpl.AgreeUntilBad (rfImpl leak b) (freshImpl leak b)
       (RepeatsNonce (R := R) (M := M)) := by
   intro t log _ Q
@@ -315,25 +316,6 @@ theorem agreeUntilBad_rfImpl_freshImpl (leak : M → Λ) (b : Bool) :
       · simp [rfAnswer, (lookup_eq_none_iff log r).2 hr]
     · rw [ite_eq_right h, ite_eq_right h]
 
-/-- `rfImpl` never repairs a repetition. -/
-theorem preservesInv_rfImpl (leak : M → Λ) (b : Bool) :
-    QueryImpl.PreservesInv (rfImpl leak b) (RepeatsNonce (R := R) (M := M)) := by
-  intro t log hlog z hz
-  rcases t with n | ⟨m₀, m₁⟩
-  · rw [rfImpl_run_inl] at hz
-    simp only [support_map, Set.mem_image] at hz
-    obtain ⟨_, _, rfl⟩ := hz
-    exact hlog
-  · rw [rfImpl_run_inr] at hz
-    by_cases h : leak m₀ = leak m₁
-    · rw [ite_eq_left h] at hz
-      simp only [mem_support_bind_iff, mem_support_pure_iff] at hz
-      obtain ⟨r, _, y, _, rfl⟩ := hz
-      exact repeatsNonce_cons hlog _
-    · rw [ite_eq_right h, mem_support_pure_iff] at hz
-      exact hz ▸ hlog
-
-omit [DecidableEq R] in
 /-- `freshImpl` never repairs a repetition. -/
 theorem preservesInv_freshImpl (leak : M → Λ) (b : Bool) :
     QueryImpl.PreservesInv (freshImpl (R := R) leak b) (RepeatsNonce (R := R) (M := M)) := by
@@ -352,7 +334,6 @@ theorem preservesInv_freshImpl (leak : M → Λ) (b : Bool) :
     · rw [ite_eq_right h, mem_support_pure_iff] at hz
       exact hz ▸ hlog
 
-omit [DecidableEq R] in
 /-- **The nonce-repetition bound.** In the fresh game from the empty log, a computation with at
 most `q` left-or-right queries repeats an `r` with probability at most `q (q - 1) / (2 |R|)`: the
 `j`-th encryption draws a fresh uniform `r`, which is one of the `j` logged ones with probability
@@ -419,7 +400,6 @@ uniform `r` and `y`. -/
     let y ← ($ᵗ M : ProbComp M)
     return (r, y + msg) : ProbComp (R × M))) leak b
 
-omit [DecidableEq R] in
 /-- Forgetting its log, the fresh game is `freshPlainImpl`. -/
 theorem run'_simulateQ_freshImpl (leak : M → Λ) (b : Bool) {α : Type}
     (oa : OracleComp (unifSpec + LeftOrRight.spec M (R × M)) α) (log : List (R × M)) :
@@ -442,7 +422,6 @@ theorem run'_simulateQ_freshImpl (leak : M → Λ) (b : Bool) {α : Type}
       id_map, StateT.run'_eq, StateT.run_bind, map_bind, ih]
     rw [← hstep log, bind_map_left]
 
-omit [DecidableEq R] in
 /-- The fresh game outputs the same distribution at both bits: `y + m` is uniform whatever `m`
 is. -/
 theorem evalDist_run'_freshImpl_eq (leak : M → Λ) {α : Type} [MeasurableSpace α]
@@ -481,7 +460,7 @@ theorem evalDist_run'_freshImpl_eq (leak : M → Λ) {α : Type} [MeasurableSpac
 
 /-- At each bit, the random-function game and the fresh game are within the nonce-repetition
 bound of each other. -/
-theorem boolDist_rfImpl_freshImpl_le [Fintype R] (leak : M → Λ) (b : Bool)
+theorem boolDist_rfImpl_freshImpl_le [Fintype R] [DecidableEq R] (leak : M → Λ) (b : Bool)
     (oa : OracleComp (unifSpec + LeftOrRight.spec M (R × M)) Bool)
     {charged : (unifSpec + LeftOrRight.spec M (R × M)).Domain → Prop} [DecidablePred charged]
     (hcharged : ∀ mm, charged (.inr mm)) {q : ℕ} (hq : oa.IsQueryBoundP charged q) :
@@ -503,9 +482,10 @@ theorem boolDist_rfImpl_freshImpl_le [Fintype R] (leak : M → Λ) (b : Bool)
 
 /-- **CPA security from a pseudorandom function**, for multiple encryptions. Against an adversary
 with at most `q` left-or-right queries, the CPA advantage against `scheme prf` is at most the PRF
-advantages of the two distinguishers `prfReduction prf leak adversary b` plus the probability
-`q (q - 1) / |R|` that two encryptions share their randomness, counted once for each hidden bit. -/
-theorem IND_CPA_Advantage_le [Fintype R] (prf : PRFScheme K R M) (leak : M → Λ)
+advantages of the two distinguishers `prfReduction prf leak adversary b` plus `q (q - 1) / |R|`:
+for each hidden bit, the bound `q (q - 1) / (2 |R|)` on the probability that two encryptions share
+their randomness. -/
+theorem IND_CPA_Advantage_le [Fintype R] [DecidableEq R] (prf : PRFScheme K R M) (leak : M → Λ)
     (adversary : (scheme prf).IND_CPA_Adversary) {q : ℕ}
     (hq : adversary.MakesAtMostQueries q) :
     (scheme prf).IND_CPA_Advantage ProbCompRuntime.probComp leak adversary ≤

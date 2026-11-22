@@ -39,7 +39,7 @@ private lemma sum_smul_dirac_apply (l : List (α × ℚ≥0))
   induction l with
   | nil => simp
   | cons a l ih =>
-    simp only [List.map_cons, List.sum_cons, Measure.add_apply, Measure.smul_apply,
+    simp only [List.map_cons, List.sum_cons, add_apply, smul_apply,
       Measure.dirac_apply' _ hs, smul_eq_mul, ih]
     by_cases ha : a.1 ∈ s <;> simp [ha, NNRat.cast_add]
 
@@ -123,7 +123,7 @@ theorem toMeasure_bind (p : Raw α) (f : α → Raw β)
   induction p.toList with
   | nil => simp
   | cons a l ih =>
-    simp only [List.map_cons, List.sum_cons, Measure.add_apply, Measure.smul_apply,
+    simp only [List.map_cons, List.sum_cons, add_apply, smul_apply,
       smul_eq_mul, ih]
 
 end FinRatPMF.Raw

@@ -157,7 +157,7 @@ theorem blindStep_prf (publicSeed : Digest) (cells : Cells) (prf prf' : Digest) 
 /-- The expectation is monotone in a functional, pointwise on the support. -/
 theorem ex_mono_support {β : Type} (mx : ProbComp β) {f g : β → ℝ≥0∞}
     (h : ∀ x ∈ support mx, f x ≤ g x) : BlindCharge.ex mx f ≤ BlindCharge.ex mx g := by
-  refine ENNReal.tsum_le_tsum fun x => ?_
+  refine tsum_le_tsum fun x => ?_
   by_cases hx : x ∈ support mx
   · exact mul_le_mul' le_rfl (h x hx)
   · rw [(prEvent_eq_zero_of_not_mem_support _) hx, zero_mul, zero_mul]
@@ -173,7 +173,7 @@ theorem ex_const_le {β : Type} (mx : ProbComp β) (c : ℝ≥0∞) :
 theorem ex_add {β : Type} (mx : ProbComp β) (f g : β → ℝ≥0∞) :
     BlindCharge.ex mx f + BlindCharge.ex mx g = BlindCharge.ex mx (fun x => f x + g x) := by
   unfold BlindCharge.ex
-  rw [← ENNReal.tsum_add]
+  rw [← tsum_add]
   exact tsum_congr fun x => (mul_add _ _ _).symm
 
 /-- A draw nothing after it reads leaves an event's chance alone. -/

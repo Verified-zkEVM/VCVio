@@ -74,32 +74,9 @@ private def traceVCSpecCacheEvent (event : String) (entry : VCSpecEntry)
     logInfo m!"[vcspec cache] {event} `{source}` \
       ({rawGoalTraceLabel rawGoal}, {entry.kind.traceLabel})"
 
-private def instantiateProofNoBridge (proof : Lean.Elab.Tactic.Do.SpecAttr.SpecProof) :
-    MetaM (Array Expr × Array BinderInfo × Expr × Expr) := do
-  let prf ←
-    match proof with
-    | .global declName => mkConstWithFreshMVarLevels declName
-    | .local fvarId => pure <| mkFVar fvarId
-    | .stx _ _ proof => pure proof
-  let type ← instantiateMVars (← inferType prf)
-  let (xs, bis, type) ← forallMetaTelescope type
-  let prf := prf.beta xs
-  return (xs, bis, prf, type)
-
-/--
-If `(prf, type)` proves a `Std.WP.Triple`, return the corresponding
-`pre ⊑ wp ...` proof via `Std.WP.Triple.le_wp`.
-Relational `VCVio.ProgramLogic.RelTriple` is a reducible definition, so later raw
-normalization sees it by weak-head reducing the type to `pre ⊑ rwp ...`.
-Otherwise return the proof unchanged.
--/
+/-- Expose the underlying order relation of a core triple, preserving its WP instance. -/
 private def bridgeTriple? (prf type : Expr) : MetaM (Expr × Expr) := do
-  let type ← whnfR type
-  if type.isAppOfArity ``Std.WP.Triple 11 then
-    let prf' ← mkAppM ``Std.WP.Triple.le_wp #[prf]
-    let type' ← instantiateMVars (← inferType prf')
-    return (prf', type')
-  return (prf, type)
+  return (← Lean.Elab.Tactic.VCGen.SpecAttr.tripleToWpProof? prf type).getD (prf, type)
 
 /-- Extract the predicate carrier from a raw order relation. -/
 private def rawOrderCarrier? (type : Expr) : MetaM (Option Expr) := do
@@ -287,7 +264,7 @@ private def mkUnarySpecBackwardProof (pre rhs specProof : Expr) : MetaM Expr := 
     let hpostTy ← mkUnaryPostPointwisePremise postSpec postAbstract postTy
     let hpost ← mkFreshExprMVar (userName := `postImpl) hpostTy
     specApplied ←
-      mkAppM ``Std.WP.WP.wp_consequence_le
+      mkAppM ``Std.WP.WP.wp_monotone_post_le
         #[prog, postSpec, postAbstract, epostSpec, hpost, specApplied]
   let preTy ← inferType pre
   let preAbstract ← mkFreshExprMVar (userName := `pre) preTy
@@ -344,21 +321,12 @@ private def normalizeRawRelProof (prf type : Expr) : MetaM Expr := do
 
 private def mkVCSpecBackwardRule (entry : VCSpecEntry) (rawGoal : Bool) :
     MetaM VCSpecBackwardRule := do
-  let (_xsNoBridge, _bisNoBridge, prfNoBridge, typeNoBridge) ←
-    instantiateProofNoBridge entry.proof
-  let (_xs, _bis, prf, type) ← entry.proof.instantiate
-  let (prf, type) ←
-    if rawGoal then
-      bridgeTriple? prf type
-    else
-      pure (prf, type)
-  let prf ←
-    if !rawGoal then
-      match unaryTripleParts? typeNoBridge with
-      | some (pre, _prog, post) =>
-          mkUnaryTripleBackwardProof pre post prfNoBridge
-      | none =>
-          normalizeRawRelProof prf type
+  let (_, _, prf, type) ← entry.proof.instantiate
+  let prf ← if rawGoal then
+      let (prf, type) ← bridgeTriple? prf type
+      normalizeRawRelProof prf type
+    else if let some (pre, _, post) := unaryTripleParts? type then
+      mkUnaryTripleBackwardProof pre post prf
     else
       normalizeRawRelProof prf type
   let (proof, declName, rule) ← mkBackwardRuleFromProofExpr prf
@@ -428,7 +396,7 @@ def VCSpecEntry.tryApplyRawUnaryConsequence (entry : VCSpecEntry) (mvarId : MVar
   let hpostTy ← mkUnaryPostPointwisePremise postSpec postTarget postTy
   let hpost ← mkFreshExprMVar (userName := `postImpl) hpostTy
   let specApplied ←
-    mkAppM ``Std.WP.WP.wp_consequence_le
+    mkAppM ``Std.WP.WP.wp_monotone_post_le
       #[progSpec, postSpec, postTarget, epostSpec, hpost, specProof]
   let hpreTy ← mkOrderRel preTarget preSpec
   let hpre ← mkFreshExprMVar (userName := `vc) hpreTy

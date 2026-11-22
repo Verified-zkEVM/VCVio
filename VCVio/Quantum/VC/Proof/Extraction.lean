@@ -333,7 +333,7 @@ theorem outcomeLawWith_experiment_true_le {spec : QuantumOracleSpec.{u₁, v₁}
           ((R.run .instruments x).post (ρ.prod R.init) p) {true}
       ≤ ∑' p : Σ u, W u, ε * ENNReal.ofReal
           ((R.run .instruments x).post (ρ.prod R.init) p).matrix.trace.re :=
-        ENNReal.tsum_le_tsum fun p ↦ h p.1 p.2 _
+        tsum_le_tsum fun p ↦ h p.1 p.2 _
     _ = ε * (R.run .instruments x).outcomeMeasure (ρ.prod R.init) Set.univ := by
         rw [ENNReal.tsum_mul_left, DSubInstrument.outcomeMeasure_apply _ _ MeasurableSet.univ]
         simp [DSubInstrument.matrix_post]

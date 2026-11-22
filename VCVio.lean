@@ -253,6 +253,7 @@ public import VCVio.CryptoFoundations.PRG
 public import VCVio.CryptoFoundations.ReplayFork
 public import VCVio.CryptoFoundations.ReplayForkCost
 public import VCVio.CryptoFoundations.Rewinding.Basic
+public import VCVio.CryptoFoundations.Rewinding.Cost
 public import VCVio.CryptoFoundations.Rewinding.Eager
 public import VCVio.CryptoFoundations.Rewinding.Finder
 public import VCVio.CryptoFoundations.Rewinding.FinderBridge
@@ -311,12 +312,7 @@ public import VCVio.EvalDist.BitVec.Measure
 public import VCVio.EvalDist.Defs.Instances
 public import VCVio.EvalDist.Defs.Measure
 public import VCVio.EvalDist.Defs.Measure.Core
-public import VCVio.EvalDist.Defs.Measure.Deterministic
-public import VCVio.EvalDist.Defs.Measure.ExceptT
-public import VCVio.EvalDist.Defs.Measure.Failure
 public import VCVio.EvalDist.Defs.Measure.FinRatPMF
-public import VCVio.EvalDist.Defs.Measure.OptionT
-public import VCVio.EvalDist.Defs.Semantics.Core
 public import VCVio.EvalDist.Defs.Support
 public import VCVio.EvalDist.Defs.Support.Failure
 public import VCVio.EvalDist.DiscreteTVDist
@@ -330,7 +326,6 @@ public import VCVio.EvalDist.Instances.ErrorT
 public import VCVio.EvalDist.Instances.OptionT
 public import VCVio.EvalDist.Kernel
 public import VCVio.EvalDist.List
-public import VCVio.EvalDist.Lossless
 public import VCVio.EvalDist.MeasureSemantics
 public import VCVio.EvalDist.MeasureTVDist.Basic
 public import VCVio.EvalDist.MeasureTVDist.Bind
@@ -342,7 +337,6 @@ public import VCVio.EvalDist.Monad.Branch
 public import VCVio.EvalDist.Monad.DependentTable
 public import VCVio.EvalDist.Monad.Disagreement.Measure
 public import VCVio.EvalDist.Monad.Discard
-public import VCVio.EvalDist.Monad.Failure
 public import VCVio.EvalDist.Monad.Map
 public import VCVio.EvalDist.Monad.Measure
 public import VCVio.EvalDist.Monad.Option
@@ -351,18 +345,12 @@ public import VCVio.EvalDist.Monad.Seq.Measure
 public import VCVio.EvalDist.Monad.Seq.Uniform
 public import VCVio.EvalDist.Monad.Support
 public import VCVio.EvalDist.Monad.UniformTable
-public import VCVio.EvalDist.PFunctorKernel
-public import VCVio.EvalDist.PFunctorKernelTransport
-public import VCVio.EvalDist.PFunctorMeasure.Core
-public import VCVio.EvalDist.PFunctorPath
 public import VCVio.EvalDist.PFunctorSupport
 public import VCVio.EvalDist.ProbabilityBounds
 public import VCVio.EvalDist.ProbabilityNotation
 public import VCVio.EvalDist.ProbabilityNotation.Attr
 public import VCVio.EvalDist.Prod
 public import VCVio.EvalDist.ResumptionMeasure
-public import VCVio.EvalDist.WiringKernel
-public import VCVio.EvalDist.WithFailure
 public import VCVio.Foundations
 public import VCVio.Interaction.UC.AsyncRuntime
 public import VCVio.Interaction.UC.AsyncSecurity
@@ -451,6 +439,7 @@ public import VCVio.OracleComp.QueryTracking.Iter
 public import VCVio.OracleComp.QueryTracking.ListCache
 public import VCVio.OracleComp.QueryTracking.LoggingOracle.Core
 public import VCVio.OracleComp.QueryTracking.LoggingOracle.History
+public import VCVio.OracleComp.QueryTracking.LoggingOracle.Relabel
 public import VCVio.OracleComp.QueryTracking.MeasuredProgram
 public import VCVio.OracleComp.QueryTracking.MeasuredProgram.Composition
 public import VCVio.OracleComp.QueryTracking.ObservationOracle
@@ -471,6 +460,7 @@ public import VCVio.OracleComp.QueryTracking.QueryLogCheck
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
 public import VCVio.OracleComp.QueryTracking.RandomOracle.CachePartial
 public import VCVio.OracleComp.QueryTracking.RandomOracle.CachePartial.Cost
+public import VCVio.OracleComp.QueryTracking.RandomOracle.CachePartial.Hint
 public import VCVio.OracleComp.QueryTracking.RandomOracle.ClassIndexedTape
 public import VCVio.OracleComp.QueryTracking.RandomOracle.ClassIndexedTape.HitPotential
 public import VCVio.OracleComp.QueryTracking.RandomOracle.ClassIndexedTape.Position
@@ -555,9 +545,6 @@ public import VCVio.ProgramLogic.Relational.FromUnary
 public import VCVio.ProgramLogic.Relational.HandlerFromUnary
 public import VCVio.ProgramLogic.Relational.KernelHandler
 public import VCVio.ProgramLogic.Relational.Leakage
-public import VCVio.ProgramLogic.Relational.Measure
-public import VCVio.ProgramLogic.Relational.Measure.Bind
-public import VCVio.ProgramLogic.Relational.Measure.Deterministic
 public import VCVio.ProgramLogic.Relational.ProgrammingOracle
 public import VCVio.ProgramLogic.Relational.Quantitative
 public import VCVio.ProgramLogic.Relational.QuantitativeDefs
@@ -674,6 +661,8 @@ public import VCVio.Quantum.VC.Proof.Repeatability
 public import VCVio.Quantum.VC.Tuples
 public import VCVio.Quantum.VC.Unitaries
 public import VCVio.Schemes.EncryptThenMac
+public import VCVio.Schemes.HashAndMac
+public import VCVio.Schemes.HashAndSign
 public import VCVio.Schemes.KEMDEM
 public import VCVio.Schemes.KEMDEM.Measure
 public import VCVio.Schemes.MacFromPRF

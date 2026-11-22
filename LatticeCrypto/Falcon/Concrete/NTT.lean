@@ -55,24 +55,16 @@ private theorem primitiveRoot2N_isPrimitiveRoot_1024 :
     IsPrimitiveRoot (primitiveRoot2N 10) 2048 := by
   change IsPrimitiveRoot ((11 : ZMod 12289) ^ 6) 2048
   rw [IsPrimitiveRoot.iff_orderOf]
-  refine orderOf_eq_of_pow_and_pow_div_prime (by norm_num) (by reduce_mod_char) ?_
-  intro p hp hdvd
-  obtain rfl : p = 2 := (Nat.prime_dvd_prime_iff_eq hp Nat.prime_two).mp
-    (hp.dvd_of_dvd_pow (show p ∣ 2 ^ 11 by simpa using hdvd))
-  reduce_mod_char
-  decide
+  exact orderOf_eq_prime_pow (p := 2) (n := 10)
+    (by reduce_mod_char; decide) (by reduce_mod_char)
 
 /-- `primitiveRoot2N 9 = 11 ^ 12` is a primitive `1024`-th root of unity in `ℤ_q` (`n = 512`). -/
 private theorem primitiveRoot2N_isPrimitiveRoot_512 :
     IsPrimitiveRoot (primitiveRoot2N 9) 1024 := by
   change IsPrimitiveRoot ((11 : ZMod 12289) ^ 12) 1024
   rw [IsPrimitiveRoot.iff_orderOf]
-  refine orderOf_eq_of_pow_and_pow_div_prime (by norm_num) (by reduce_mod_char) ?_
-  intro p hp hdvd
-  obtain rfl : p = 2 := (Nat.prime_dvd_prime_iff_eq hp Nat.prime_two).mp
-    (hp.dvd_of_dvd_pow (show p ∣ 2 ^ 10 by simpa using hdvd))
-  reduce_mod_char
-  decide
+  exact orderOf_eq_prime_pow (p := 2) (n := 9)
+    (by reduce_mod_char; decide) (by reduce_mod_char)
 
 private def bitRevN (logn : ℕ) (i : Nat) : Nat := Id.run do
   let mut r := 0

@@ -30,6 +30,9 @@ contract `requires(x <= u32::MAX - y)` and `ensures(result.to_int() == x.to_int(
   reading, and the Rust step is the contract carried over by
   `Interop.Rust.triple_liftRustM_of_imp`.
 
+The Lean contract `Interop.Hax.Examples.panicOrDiverge.spec` states what each exceptional exit
+requires of the caller.
+
 Probabilities of Rust panics are in `Interop.Hax.Division.Verification` and
 `Interop.Hax.CenteredBinomial.Verification`.
 -/
@@ -44,7 +47,6 @@ namespace Interop.Hax.Examples.OracleThenAdd
 theorem U32_MAX_val : core.num.U32.MAX.val = 2 ^ 32 - 1 := by
   simp [core.num.U32.MAX, UScalar.ofNat, UScalar.ofNatCore_val_eq, U32.rMax]
 
-set_option mvcgen.warning false in
 set_option hax_mvcgen.warnings false in
 /-- hax's proof obligation for `add_or_panic`: the extracted contract holds. -/
 theorem add_or_panic_spec (x y : U32) : add_or_panic.spec x y := by
@@ -96,3 +98,29 @@ theorem triple_oracleThenAdd (x : U32) (t : ι) (coe : spec.Range t → U32)
     omega
 
 end Interop.Hax.Examples.OracleThenAdd
+
+namespace Interop.Hax.Examples
+
+set_option experimental.intrinsic true in
+/-- Lean contract for a Rust target with separate panic and divergence postconditions. -/
+def panicOrDiverge {ι : Type} (oracle : OracleSpec ι) (panics : Bool) :
+    RustOracleComp oracle Unit
+  given {Pred : Type} [Std.WP.Assertion Pred]
+    [Std.WP.WPMonad (OracleComp oracle) Pred Std.WP.EStackEnd]
+    (post : Unit → Pred) (panic : Interop.Rust.Error → Pred) (diverges : Unit → Pred)
+  requires if panics then panic .panic else diverges ()
+  ensures r => post r
+  throws (e : Interop.Rust.Error) => panic e
+  throws (u : Unit) => diverges u
+  := if panics then RustOracleComp.fail .panic else RustOracleComp.div
+
+open scoped OracleComp.Necessary in
+/-- The flag determines which exception postcondition holds. Neither exit returns a value. -/
+example {ι : Type} (oracle : OracleSpec ι) (panics : Bool) :
+    Std.WP.Triple (panicOrDiverge oracle panics) True (fun _ => False)
+      (fun e => panics = true ∧ e = .panic, fun _ => panics = false, ()) := by
+  have h := panicOrDiverge.spec oracle panics (Pred := Prop) (fun _ => False)
+    (fun e => panics = true ∧ e = .panic) (fun _ => panics = false)
+  exact ⟨fun _ => h.le_wp (by cases panics <;> simp)⟩
+
+end Interop.Hax.Examples

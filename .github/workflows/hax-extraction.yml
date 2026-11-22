@@ -48,8 +48,7 @@ jobs:
       - name: Read the pinned hax release
         id: pin
         run: |
-          rev="$(sed -n 's/^rev = "\([0-9a-f]\{40\}\)"$/\1/p' Interop/lakefile.toml)"
-          test -n "$rev"
+          rev="$(scripts/regenerate-hax.sh --print-pin)"
           echo "rev=$rev" >> "$GITHUB_OUTPUT"
       - name: Restore cargo-hax
         id: cargo-hax

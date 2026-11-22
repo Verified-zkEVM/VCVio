@@ -110,7 +110,7 @@ theorem wp_ite_flag_eq_tsum [∀ t, Finite (spec'.Range t)]
     (mx : OracleComp spec' (γ × σ × Bool)) (F : γ × σ × Bool → ℝ≥0∞) :
     (wp mx fun z => if z.2.2 then 0 else F z) =
       ∑' z : γ × σ, Pr{let x ← mx}[x = (z.1, z.2, false)] * F (z.1, z.2, false) := by
-  rw [wp_eq_tsum, ← (Equiv.prodAssoc γ σ Bool).tsum_eq, ENNReal.tsum_prod']
+  rw [wp_eq_tsum, ← (Equiv.prodAssoc γ σ Bool).tsum_eq, tsum_prod']
   refine tsum_congr fun z => ?_
   rw [tsum_bool]
   simp
@@ -245,7 +245,7 @@ lemma avgBadM_telescope_eq_tsum_postStep
     rw [← ENNReal.tsum_mul_left]
     refine tsum_congr fun z => ?_
     rw [avgBadM_pure_state]
-  rw [hstep, ENNReal.tsum_comm]
+  rw [hstep, tsum_comm]
   refine tsum_congr fun z => ?_
   rw [postStepJointM, ← ENNReal.tsum_mul_right]
   refine tsum_congr fun p => ?_
@@ -273,7 +273,7 @@ lemma avgBadM_query_bind_eq_tsum_output
     avgBadM impl ν (query t >>= cont) =
       ∑' u : spec.Range t, avgBadM impl (postStepOutM impl ν t u) (cont u) := by
   classical
-  rw [avgBadM_query_bind_eq, avgBadM_telescope_eq_tsum_postStep, ENNReal.tsum_prod']
+  rw [avgBadM_query_bind_eq, avgBadM_telescope_eq_tsum_postStep, tsum_prod']
   refine tsum_congr fun u => ?_
   rw [avgBadM_eq_tsum_pure]
   refine tsum_congr fun s => ?_
@@ -293,9 +293,9 @@ lemma tsum_tsum_postStepOutM_mul
     (∑' u : spec.Range t, ∑' s : σ × Bool, postStepOutM impl ν t u s * F s)
       = ∑' p : σ × Bool, ν p *
           ∑' z : spec.Range t × σ × Bool, Pr{let x ← (impl t).run p}[x = z] * F z.2 := by
-  rw [← ENNReal.tsum_prod]
+  rw [← tsum_prod]
   simp only [postStepOutM, postStepJointM, ← ENNReal.tsum_mul_right, mul_assoc]
-  exact ENNReal.tsum_comm.trans (tsum_congr fun p => ENNReal.tsum_mul_left)
+  exact tsum_comm.trans (tsum_congr fun p => ENNReal.tsum_mul_left)
 
 end AveragedStateMeasureBad
 

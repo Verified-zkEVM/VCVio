@@ -64,7 +64,9 @@ private lemma unlinkBadReaderQueryImpl_state_eq [Fintype TagId] [DecidableEq Dig
     ∀ z ∈ support ((unlinkBadReaderQueryImpl transcript).run st), z.2 = st := by
   intro z hz
   unfold unlinkBadReaderQueryImpl at hz
-  simpa using congrArg Prod.snd hz
+  simp only [StateT.run_bind, StateT.run_get, StateT.run_pure, pure_bind,
+    mem_support_pure_iff] at hz
+  simp [hz]
 
 /-- If any tag still has a free slot, the total remaining budget is positive. Used to justify
 the `- 1` arithmetic in `unlinkBadRemaining_tagNext`. -/

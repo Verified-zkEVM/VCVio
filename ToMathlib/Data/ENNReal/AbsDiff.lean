@@ -137,8 +137,8 @@ lemma tsum_tsub_le_tsum_tsub {α : Type*} (a b : α → ℝ≥0∞) :
     ∑' x, a x - ∑' x, b x ≤ ∑' x, (a x - b x) := by
   rw [tsub_le_iff_right]
   calc ∑' x, a x ≤ ∑' x, ((a x - b x) + b x) :=
-        ENNReal.tsum_le_tsum fun x => le_tsub_add
-    _ = ∑' x, (a x - b x) + ∑' x, b x := ENNReal.tsum_add
+        tsum_le_tsum fun x => le_tsub_add
+    _ = ∑' x, (a x - b x) + ∑' x, b x := tsum_add
 
 lemma absDiff_tsum_le {α : Type*} (a b : α → ℝ≥0∞) :
     ENNReal.absDiff (∑' x, a x) (∑' x, b x) ≤ ∑' x, ENNReal.absDiff (a x) (b x) := by
@@ -146,7 +146,7 @@ lemma absDiff_tsum_le {α : Type*} (a b : α → ℝ≥0∞) :
   calc (∑' x, a x - ∑' x, b x) + (∑' x, b x - ∑' x, a x)
       ≤ ∑' x, (a x - b x) + ∑' x, (b x - a x) :=
         add_le_add (tsum_tsub_le_tsum_tsub a b) (tsum_tsub_le_tsum_tsub b a)
-    _ = ∑' x, ((a x - b x) + (b x - a x)) := ENNReal.tsum_add.symm
+    _ = ∑' x, ((a x - b x) + (b x - a x)) := tsum_add.symm
 
 /-! ### Multiplication inequality -/
 
@@ -167,7 +167,7 @@ lemma absDiff_mul_right_le (a b c : ℝ≥0∞) :
 
 lemma tsum_fiber {α β : Type*} [DecidableEq β] (f : α → β) (g : α → ℝ≥0∞) :
     ∑' y, ∑' x, (if f x = y then g x else 0) = ∑' x, g x := by
-  rw [ENNReal.tsum_comm]
+  rw [tsum_comm]
   congr 1; ext x
   simp only [eq_comm (a := f x)]
   exact tsum_ite_eq (f x) (fun _ => g x)

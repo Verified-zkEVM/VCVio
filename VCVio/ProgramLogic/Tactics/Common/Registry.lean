@@ -44,15 +44,14 @@ normalization performed during pattern preprocessing.
 
 ## Alignment with core `SpecTheorem`
 
-Entries mirror the layout of `Lean.Elab.Tactic.Do.SpecAttr.SpecTheorem`
+Entries mirror the layout of `Lean.Elab.Tactic.VCGen.SpecAttr.SpecTheorem`
 wherever possible:
 
 * `proof : SpecProof` is reused directly, so entries can be global
   declarations (the common case for `@[vcspec]`), local hypotheses, or raw
   proof expressions.
-* `pattern : Sym.Pattern` is the Sym-side analogue of the combined
-  `SpecTheorem.{prog, keys}` pair; it carries the program sub-expression,
-  ∀-binder types, level parameters, and proof/instance slot metadata.
+* `pattern : Sym.Pattern` indexes the program sub-expression and carries binder types, universe
+  parameters and proof/instance slot metadata.
 * `priority : Nat` uses the same default as `SpecTheorem` so attribute
   overrides carry over cleanly.
 
@@ -71,14 +70,14 @@ insulated from `Sym` API churn.
 public meta section
 
 open Lean Elab Meta Lean.Meta
-open Lean.Elab.Tactic.Do.SpecAttr (SpecProof)
+open Lean.Elab.Tactic.VCGen.SpecAttr (SpecProof)
 
 namespace OracleComp.ProgramLogic
 
 /-- A registered `@[vcspec]` lemma together with everything the planner needs.
 
-Layout mirrors `Lean.Elab.Tactic.Do.SpecAttr.SpecTheorem`: `proof` is a
-shared `SpecProof`, `pattern` is the Sym analogue of `SpecTheorem.{prog, keys}`,
+Layout mirrors `Lean.Elab.Tactic.VCGen.SpecAttr.SpecTheorem`: `proof` is a
+shared `SpecProof`, `pattern` is a `Sym.Pattern` as in core,
 and `priority` uses the same default macro expansion. `spec` and `rightHead?`
 are VCVio-specific diagnostic / planner extras that core does not need. -/
 structure VCSpecEntry where
@@ -91,8 +90,7 @@ structure VCSpecEntry where
   /-- Sym-level pattern used for discrimination-tree indexing. The pattern
   stores the program sub-expression plus enough bookkeeping (level params,
   ∀-binder types, proof / instance slots) for `Sym.insertPattern` and
-  `Sym.getMatch` to work; it is the Sym-side analogue of
-  `SpecTheorem.{prog, keys}`. -/
+  `Sym.getMatch` to work; it is also used by core `SpecTheorem.pattern`. -/
   pattern : Lean.Meta.Sym.Pattern
   /-- Normalized IR summary attached for diagnostics and planner ranking.
   Not consumed by the discrimination-tree layer. -/

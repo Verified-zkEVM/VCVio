@@ -39,7 +39,7 @@ private lemma tsub_le_tsub_compl_of_isHahnDecomposition [IsFiniteMeasure ν] {s 
     μ t - ν t ≤ μ sᶜ - ν sᶜ :=
   calc μ t - ν t
       = (μ.restrict s t + μ.restrict sᶜ t) - (ν.restrict s t + ν.restrict sᶜ t) := by
-        rw [← Measure.add_apply, ← Measure.add_apply,
+        rw [← add_apply, ← add_apply,
           restrict_add_restrict_compl h.measurableSet, restrict_add_restrict_compl h.measurableSet]
     _ ≤ (μ.restrict s t - ν.restrict s t) + (μ.restrict sᶜ t - ν.restrict sᶜ t) :=
         add_tsub_add_le_tsub_add_tsub

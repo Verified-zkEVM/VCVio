@@ -38,7 +38,7 @@ namespace SLHDSA.SHAKE128s.Correctness
 
 namespace Wots
 
-variable [HasQuery HashSpec Id]
+variable {hash : HasQuery HashSpec Id}
 
 /-- Splitting a chain preserves both the hash inputs and their order. -/
 theorem chain_add (publicSeed : Digest) (address : Address)

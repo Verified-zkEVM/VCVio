@@ -81,8 +81,9 @@ return whether the adversary guessed it. -/
   return (b == b')
 
 /-- The left-or-right CPA advantage: the Boolean bias of the game,
-`|Pr[b' = b] - Pr[b' ≠ b]|`. This is twice Katz–Lindell's `Pr[PrivK = 1] - 1/2`, and equals the
-distance between the two fixed-bit experiments (`IND_CPA_Advantage_probComp`). -/
+`|Pr[b' = b] - Pr[b' ≠ b]|`. When the game never fails this is twice Katz–Lindell's
+`|Pr[PrivK = 1] - 1/2|`, and in `ProbComp` it equals the distance between the two fixed-bit
+experiments (`IND_CPA_Advantage_probComp`). -/
 @[expose] noncomputable def IND_CPA_Advantage (encAlg : SymmEncAlg (OracleComp spec) M K C)
     (runtime : ProbCompRuntime (OracleComp spec)) (leak : M → Λ)
     (adversary : encAlg.IND_CPA_Adversary) : ℝ≥0∞ :=

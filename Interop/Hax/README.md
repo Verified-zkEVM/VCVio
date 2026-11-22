@@ -20,10 +20,11 @@ external definitions; they are seeded once from hax's templates, and none of the
 
 ## Regenerating
 
-`scripts/regenerate-hax.sh` extracts every crate with `cargo-hax`, which must be the pinned release:
+The regeneration script uses Python 3.11 or later to read the hax commit from the Lean and Rust
+package files. Install that revision of `cargo-hax` to reproduce the extractions.
 
 ```
-cargo install --locked --git https://github.com/cryspen/hax --rev <rev in Interop/lakefile.toml> cargo-hax
+cargo install --locked --git https://github.com/cryspen/hax --rev "$(scripts/regenerate-hax.sh --print-pin)" cargo-hax
 scripts/regenerate-hax.sh          # regenerate in place
 scripts/regenerate-hax.sh --check  # compare a fresh extraction with the committed modules
 ```

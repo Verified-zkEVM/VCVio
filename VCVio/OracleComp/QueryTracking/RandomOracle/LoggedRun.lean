@@ -8,7 +8,6 @@ module
 public import VCVio.OracleComp.QueryTracking.RandomOracle.FreshQuery
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Simulation
 public import VCVio.ProgramLogic.Unary.HoareTriple
-public import VCVio.OracleComp.CanReturn
 
 /-!
 # Logged runs of interleaved private sampling and a cached random oracle
@@ -17,10 +16,6 @@ The observed charge belongs to the actual cached execution: a key is charged onc
 first query, even when later queries repeat it. The ordered oracle log and final cache remain
 available for continuing the experiment. Independent uniform-sampling operations use the
 separate `unifSpec` summand and never enter the random-oracle cache or log.
-
-Caching a fixed table changes no answer: from a cache that agrees with the table, every output of
-a fixed-table run is an output of the same computation with each oracle query answered by the
-table (`mem_support_simulateQ_of_mem_support_fixedTableLoggedRun`).
 -/
 
 public section
@@ -205,68 +200,6 @@ theorem fixedTableLoggedRun_hashQuery [DecidableEq D]
   simp [fixedTableLoggedRun, QueryImpl.passthrough_add,
     QueryImpl.add_apply_inr,
     StateT.run_bind]
-
-/-- An output of a cached execution against the fixed table `g`, started from a cache that agrees
-with `g`, is an output of the same computation with every oracle query answered by `g` and private
-draws forwarded: caching a fixed table changes no answer. -/
-theorem mem_support_simulateQ_of_mem_support_fixedTableLoggedRun [DecidableEq D]
-    (oa : OracleComp (unifSpec + ofFn R) α) (g : ∀ d, R d) (cache : (ofFn R).QueryCache)
-    (hcache : ∀ t v, cache t = some v → v = g t)
-    (z : (α × QueryLog (ofFn R)) × (ofFn R).QueryCache)
-    (hz : z ∈ support (fixedTableLoggedRun oa g cache)) :
-    z.1.1 ∈ support
-      (simulateQ (QueryImpl.id' unifSpec + fun d ↦ (pure (g d) : ProbComp (R d))) oa) := by
-  induction oa using OracleComp.inductionOn generalizing cache z with
-  | pure a =>
-    simp only [fixedTableLoggedRun, QueryImpl.passthrough_add, simulateQ_pure, WriterT.run_pure,
-      List.empty_eq, StateT.run_pure, MonadAttach.support_pure, Set.mem_singleton_iff] at hz
-    simp [hz]
-  | query_bind t k ih =>
-    rw [fixedTableLoggedRun_bind, mem_support_bind_iff] at hz
-    obtain ⟨p, hp, hz⟩ := hz
-    rw [support_map] at hz
-    obtain ⟨q, hq, rfl⟩ := hz
-    rw [simulateQ_bind, mem_support_bind_iff]
-    cases t with
-    | inl n =>
-      rw [fixedTableLoggedRun_uniformQuery] at hp
-      simp only [HasQuery.toQueryImpl_apply, HasQuery.instOfMonadLift_query,
-        MonadAttach.support_map, support_liftM, OracleQuery.input_query, OracleQuery.cont_query,
-        Set.range_id, Set.image_univ, Set.mem_range] at hp
-      obtain ⟨y, rfl⟩ := hp
-      refine ⟨y, ?_, ih y cache hcache q hq⟩
-      simp only [simulateQ_query]
-      exact OracleComp.mem_support_query (spec := unifSpec) n y
-    | inr x =>
-      rw [fixedTableLoggedRun_hashQuery] at hp
-      refine ⟨g x, ?_, ?_⟩
-      · simp only [simulateQ_query]
-        exact (MonadAttach.canReturn_pure_iff (m := ProbComp)).mpr rfl
-      rcases hcx : cache.toFn x with _ | u
-      · simp only [QueryImpl.withCaching_apply, PFunctor.Handler.liftTarget_apply,
-          ofPFunctor_toPFunctor, QueryImpl.ofFn_apply,
-          StateT.run_bind, StateT.run_get, pure_bind, hcx, StateT.run_monadLift, monadLift_self,
-          bind_pure_comp, StateT.run_modifyGet, Functor.map_map, MonadAttach.support_map,
-          Set.mem_image, MonadAttach.mem_support] at hp
-        obtain ⟨y, hy, rfl⟩ := hp
-        rw [OracleComp.canReturn_iff_mem_support] at hy
-        simp only [MonadAttach.mem_support] at hy
-        subst hy
-        refine ih _ _ ?_ q hq
-        intro t v hv
-        by_cases htx : t = x
-        · subst htx
-          simp only [QueryCache.cacheQuery_self, Option.some.injEq] at hv
-          exact hv.symm
-        · simp only [ne_eq, htx, not_false_eq_true, QueryCache.cacheQuery_of_ne] at hv
-          exact hcache t v hv
-      · simp only [QueryImpl.withCaching_apply, PFunctor.Handler.liftTarget_apply,
-          ofPFunctor_toPFunctor, QueryImpl.ofFn_apply,
-          StateT.run_bind, StateT.run_get, pure_bind, hcx, StateT.run_pure, map_pure,
-          MonadAttach.support_pure, Set.mem_singleton_iff] at hp
-        subst hp
-        obtain rfl : u = g x := hcache x u hcx
-        exact ih _ cache hcache q hq
 
 /-- The weighted distinct-query charge of an observed random-oracle log. -/
 @[expose] noncomputable def freshQueryCharge [DecidableEq D]

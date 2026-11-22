@@ -30,7 +30,7 @@ zero.
 
 This is eq. (26) of the notes on Chiesa, Di, Hu and Zheng, *How to Prove Post-Quantum Security
 for Succinct Non-Interactive Reductions* (ePrint 2025/2166), and sharpens their Lemma 9.5
-(pp. 60–61), which states `‖P̂ - P‖ ≤ 2√(d/N)`; that bound is the corollary
+(p. 61), which states `‖P̂ - P‖ ≤ 2√(d/N)`; that bound is the corollary
 `Quantum.l2_opNorm_compressedCheckProjector_sub_le_two_mul_sqrt`.
 
 ## Main definitions

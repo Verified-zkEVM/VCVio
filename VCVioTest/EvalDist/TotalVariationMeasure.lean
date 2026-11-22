@@ -76,7 +76,7 @@ example (κ η : Kernel ℝ ℝ) (ε : ENNReal)
     (h : ∀ᵐ x ∂((1 / 2 : ENNReal) • gaussianReal 0 1), (κ x).statEDist (η x) ≤ ε) :
     (((1 / 2 : ENNReal) • gaussianReal 0 1).bind κ).statEDist
       (((1 / 2 : ENNReal) • gaussianReal 0 1).bind η) ≤ ε * (1 / 2) := by
-  simpa only [lintegral_const, Measure.smul_apply, measure_univ, smul_eq_mul, mul_one] using
+  simpa only [lintegral_const, smul_apply, measure_univ, smul_eq_mul, mul_one] using
     Measure.statEDist_bind_bind_le_lintegral ((1 / 2 : ENNReal) • gaussianReal 0 1)
       κ η κ.aemeasurable η.aemeasurable (fun _ ↦ ε) h
 

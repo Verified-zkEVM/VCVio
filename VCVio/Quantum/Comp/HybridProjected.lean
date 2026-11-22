@@ -404,7 +404,7 @@ private theorem tsum_rpow_queryWeight_lemmaKraus_le_mass (hPV : P * V = V * P)
       ∑' j, (∑' i, (∑' r, ENNReal.ofReal (‖projDiff P V U W i r‖ ^ 2)) *
         (QuantumRuntime.mk D σ₀ s₀).queryMassAt I x (ρ.matrix ⊗ₖ σ₀.matrix) i j) ^
           (2⁻¹ : ℝ) :=
-  ENNReal.tsum_le_tsum fun j ↦ ENNReal.rpow_le_rpow
+  tsum_le_tsum fun j ↦ ENNReal.rpow_le_rpow
     ((QuantumRuntime.mk D σ₀ s₀).queryWeight_le_tsum_mul_queryMassAt I _
       (fun i _ hτ ↦ krausWeight_lemmaKraus_le hV hPV i hτ) x (ρ.prod σ₀).posSemidef j)
     (by norm_num)

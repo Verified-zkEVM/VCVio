@@ -43,7 +43,7 @@ theorem tsum_mul_add_const_of_tsum_eq_one
     rw [ENNReal.tsum_mul_right, hw, one_mul]
   calc (∑' i, w i * (f i + c))
       = ∑' i, (w i * f i + w i * c) := by simp_rw [mul_add]
-    _ = (∑' i, w i * f i) + (∑' i, w i * c) := ENNReal.tsum_add
+    _ = (∑' i, w i * f i) + (∑' i, w i * c) := tsum_add
     _ = (∑' i, w i * f i) + c := by rw [hc]
 
 /-- If the weights `w : ι → ℝ≥0∞` sum to `1`, a constant flanked by two
@@ -58,9 +58,9 @@ theorem tsum_mul_add_const_add_of_tsum_eq_one
     rw [ENNReal.tsum_mul_right, hw, one_mul]
   calc (∑' i, w i * (f i + c + g i))
       = ∑' i, ((w i * f i + w i * c) + w i * g i) := by simp_rw [mul_add]
-    _ = (∑' i, (w i * f i + w i * c)) + (∑' i, w i * g i) := ENNReal.tsum_add
+    _ = (∑' i, (w i * f i + w i * c)) + (∑' i, w i * g i) := tsum_add
     _ = ((∑' i, w i * f i) + (∑' i, w i * c)) + (∑' i, w i * g i) := by
-        rw [ENNReal.tsum_add]
+        rw [tsum_add]
     _ = (∑' i, w i * f i) + c + (∑' i, w i * g i) := by rw [hc]
 
 end ENNReal
