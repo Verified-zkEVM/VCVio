@@ -39,7 +39,12 @@ chooses. Among them:
 - `adv` applies to terms of order at most two and `∼` to vectors of order at most one;
 - freshness of names is syntactic: a fresh term does not use the name at all;
 - the encryption rule assumes one-time IND-CPA for the reduction of each admitted machine, and
-  equal message lengths in every admitted model.
+  equal message lengths in every admitted model;
+- `⊬` and `▷` are derived formulas, with a curried attacker function of the tuple on the left;
+  Rw-Equiv is proved for a right side of Boolean or base type;
+- FreshL assumes models whose attacker tape is eventually longer than every polynomial and whose
+  names of the fresh type read polynomially many bits, and terms that read the attacker tape below
+  a polynomial; it draws the fresh name from the attacker tape of the same model.
 
 ## Implementations covered
 
@@ -50,9 +55,9 @@ None yet: the sub-project states the logic and proves its rules.
 | Module | Content |
 |---|---|
 | `Interop.Squirrel.Syntax` | simple types with the labels `finite`, `fixed` and `large`, declarations, and local terms as one scoped signature |
-| `Interop.Squirrel.Model` | models: carriers of bitstrings, the attacker tape, the honest tape of bit blocks, names, labels; the pointwise reading `interp`; β and the semantic core of local rewriting; argument spines of attacker functions of tuples (`Ty.splitArgs`) |
+| `Interop.Squirrel.Model` | models: carriers of bitstrings, the attacker tape, the honest tape of bit blocks, names, labels; the pointwise reading `interp`; β and the semantic core of local rewriting; argument spines and post-composition of attacker functions of tuples (`Ty.splitArgs`, `Ty.postcomp`); the order bounds of `adv`, `∼`, `⊬` and `▷` |
 | `Interop.Squirrel.RandomVariable` | local terms as random variables (`rvInterp`), and locality (`eval_denote_rvInterp`) |
-| `Interop.Squirrel.Machine` | machines as `OracleComp` programs over the tape and input interfaces, their runs, the denotations `Machine.test` and `AdvMachine.eval`; handlers and the constructions `rename`, `app`, `fn`, `subst`, `branch` and `const` with their runs; the reductions `ite`, `guard` and `adv`; running a machine inside a reduction (`Machine.simulate`); read and query bounds, kept by every construction |
+| `Interop.Squirrel.Machine` | machines as `OracleComp` programs over the tape and input interfaces, their runs, the denotations `Machine.test` and `AdvMachine.eval`; handlers and the constructions `rename`, `app`, `fn`, `subst`, `branch`, `const`, `eqTest`, `shift` and `sampler` with their runs; the reductions `ite`, `guard`, `adv`, `deduce`, `AdvMachine.comp` and `AdvMachine.freshL`; running a machine inside a reduction (`Machine.simulate`); read and query bounds, kept by every construction |
 | `Interop.Squirrel.Indist` | advantage, the class of admitted machines `AdvClass` with the closure fields of the rules' reductions, the class `AdvClass.all` of machines with polynomial read and query bounds, `adv` and `∼`; the named reductions as distinguishers, and the laws of `∼` with the advantage kept or bounded at every `η` |
 | `Interop.Squirrel.Global` | global formulas as the sum of the local and global signatures, their semantics, validity, and the rules G.Axiom, G.Weak, G.Cut, G.L-∀̃, G.R-∀̃, L.ByGlob and G.ByLoc |
 | `Interop.Squirrel.Avoids` | terms that do not use a set of names (`FTerm.AvoidsNames`), stated on PolyFun's `Term.heads` and decidable; such a term ignores the honest-tape coordinates of those names |
@@ -60,7 +65,13 @@ None yet: the sub-project states the logic and proves its rules.
 | `Interop.Squirrel.Rules.Equiv` | Refl, Sym, Trans, G.Equiv:FA-App, FA-Fn, G.Equiv:FA-Adv, BC14's FA, Restr, Perm, Dup, If, G.Case-Study:ITE, BC14's If1, rewriting under an overwhelming equality and Eq1 |
 | `Interop.Squirrel.Rules.Rename` | renaming the names of a closed vector along a bijection of names, in every model |
 | `Interop.Squirrel.Rules.Enc` | BC14's EncCCA1 without decryption, from one-time IND-CPA through the named reduction `EncSymbols.encReduction`, with the advantages equal at every `η` |
-| `Interop.Squirrel.Derivation` | derivations of these rules as data, the encryption rule at the admitted instances, and `Derivation.sound` |
+| `Interop.Squirrel.Secrecy` | CCS26's `⊬` and `▷` as global formulas derived from `∀̃`/`∃̃`, `adv`, `⇒̃`/`∧̃` and `[·]`, read as `AdvClass.NonDed` and `AdvClass.Ded`; the laws of Neg1, Neg2, Ineq, Trans, WeakL, WeakR and Rw-Equiv as inequalities at every `η` with their reductions named |
+| `Interop.Squirrel.Rules.Secrecy` | Neg1, Neg2, Ineq, Trans, WeakL, WeakR, Rw-Equiv at Boolean or base types, and `u⃗ ▷ f(u⃗)` from `adv(f)` (CCS26 Fig. 3) |
+| `Interop.Squirrel.Rules.Deduce` | deductions of an entry, an honest symbol, an application and a rewritten term; local validity and modus ponens under `[·]` |
+| `Interop.Squirrel.Rules.Fresh` | FreshR for a closed vector that does not use a name of a `large` type; a closed term that does not use a name ignores its coordinate (`FTerm.AvoidsNames.freshAt`) |
+| `Interop.Squirrel.TapeBounds` | read bounds of random variables and of terms (`FTerm.ReadsPoly`, discharged constructor by constructor and from `adv`), and long attacker tapes (`Model.LongTapes`) |
+| `Interop.Squirrel.Rules.FreshL` | FreshL by CCS26's argument, with the fresh name drawn from the attacker tape of the same model: the success probabilities are equal at every large `η` |
+| `Interop.Squirrel.Derivation` | derivations of these rules as data, the encryption rule at the admitted instances, the model restriction `R₀` that FreshL assumes, and `Derivation.sound` |
 
 The declarations are in the namespace `Interop.Squirrel`. CI's axiom sweep holds every root of
 `InteropSquirrel` at zero `sorry` and nonstandard-axiom debt.
@@ -98,7 +109,14 @@ package's test driver, holds the checks:
 - the encryption rule: the one-time pad meets its hypotheses, and countermodels for a leaky scheme,
   a key equal to the coin and reused coins (`Interop/Squirrel/Test/EncExamples.lean`);
 - the derivation `pk(k), enc(n; r), n ∼ pk(k), enc(zero; r), n` with its soundness, and a pad that
-  leaks lengths (`Interop/Squirrel/Test/WorkedEnc.lean`).
+  leaks lengths (`Interop/Squirrel/Test/WorkedEnc.lean`);
+- the derivation `h(h(k)) ⊬ n` with its soundness, `⊬` not transitive, each secrecy rule used with
+  checks that premises are needed, and FreshR without `large` and FreshL without freshness
+  unsound (`Interop/Squirrel/Test/SecrecyExamples.lean`);
+- a model with long tapes where every hypothesis of FreshL holds, with a worked derivation
+  (`Interop/Squirrel/Test/FreshLExamples.lean`);
+- FreshL unsound without long tapes, against the class generated by the closure fields
+  (`Interop/Squirrel/Test/FreshLCountermodel.lean`).
 
 CI's `Interop Squirrel` job builds the package, runs `lake test` and sweeps the roots of
 `InteropSquirrel` for axioms.

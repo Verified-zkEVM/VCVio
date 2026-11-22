@@ -22,9 +22,11 @@ Status. The sub-project holds the syntax, the models, local terms as random vari
 with read and query bounds, the class of admitted machines, global formulas and their validity.
 Proved sound, each as a lemma about validity and as a constructor of derivations (section 8): the
 structural rules of [LICS23, Fig. 7]; the rules about `∼` that need no cryptographic assumption,
-from [BC14, Fig. 2] and [LICS23], among them the case split; name renaming; and
-[BC14]'s encryption axiom EncCCA1 without decryption, from one-time IND-CPA. The rules about `adv`
-and deduction, the other cryptographic rules and the secrecy judgments are not formalized here.
+from [BC14, Fig. 2] and [LICS23], among them the case split; name renaming;
+[BC14]'s encryption axiom EncCCA1 without decryption, from one-time IND-CPA; and [CCS26]'s
+secrecy judgments `⊬` and `▷` with the rules of its Fig. 3 other than Rw-Oracle and Pc-Oracle,
+deductions of terms, and FreshR and FreshL (Fig. 11). Rw-Oracle, Pc-Oracle, the PRF rules and the
+other cryptographic rules are not formalized here.
 
 ## 2. Syntax and models
 
@@ -87,13 +89,18 @@ inputs along a renaming (`Machine.rename`), answering an input of type `b` by qu
 type `a → b` at the value of a Boolean or base input (`Machine.app`), answering an input by an
 honest symbol (`Machine.fn`), and answering the first input by running another machine on the
 query's arguments and the remaining inputs (`Machine.subst`). A machine may also branch on a
-Boolean input (`Machine.branch`) or return a constant (`Machine.const`). Each construction has a
-`run` lemma, proved from what its handler evaluates to (`Handler.EvalsTo`), and keeps read and
-query bounds; a handler multiplies a query bound by the number of queries its answers make. The
-reductions of the rules (`Machine.ite`, `Machine.guard`, `Machine.adv`) are built from these. A
-cryptographic reduction runs a machine as a program inside its own oracle computations
-(`Machine.simulate`); answered from values, the run is the machine's run at those values
-(`Machine.simulate_ofVals`).
+Boolean input (`Machine.branch`), return a constant (`Machine.const`) or test two Boolean or base
+inputs for equality (`Machine.eqTest`, by the decidable equality of Booleans and bitstrings). Two
+constructions act on the tape: `Machine.shift off A` moves every tape read of `A` by `off η`, a
+handler of the tape interface, and `Machine.sampler b` reads the first `coinLen η b` bits and runs
+the model's sampler for names of type `b` on them, as a name does on its block of the honest tape.
+Each construction has a `run` lemma, proved from what its handler evaluates to
+(`Handler.EvalsTo`), and keeps read and query bounds; a handler multiplies a query bound by the
+number of queries its answers make, and a shift adds its offset to a read bound. The reductions of
+the rules (`Machine.ite`, `Machine.guard`, `Machine.adv`, `Machine.deduce`, `AdvMachine.comp`,
+`AdvMachine.freshL`) are built from these. A cryptographic reduction runs a machine as a program
+inside its own oracle computations (`Machine.simulate`); answered from values, the run is the
+machine's run at those values (`Machine.simulate_ofVals`).
 
 Two bounds describe a machine without a model of time. `Machine.ReadsBelow A b` says that every
 tape read of `A`, on every path, is below `b η` (VCVio's `AllQueriesSatisfy`); then `A`'s run
@@ -119,24 +126,33 @@ against its premises needs the class to admit those reductions. Such a rule adds
 polynomial-time machines that gives it, and comes with that construction and its run lemma.
 `AdvClass.all` meets every field, so a rule's hypotheses can be shown jointly satisfiable against
 it. A bound becomes a field only when a rule uses it on every admitted machine. No field admits an
-`η`-indexed constant: the values a field supplies are Booleans, the model's honest symbols and the
-arguments of a machine's own queries.
+`η`-indexed constant: offsets are computed from polynomials, and the values a field supplies are
+Booleans, the model's honest symbols and samplers, and the arguments of a machine's own queries.
 
 | Field | Construction | Rules | Polynomial-time counterpart |
 |---|---|---|---|
-| `rename_mem` | `Machine.rename` | Perm, Restr, Dup; with the fields below, FA-Adv, If and the case split | a handler forwarding each query along the renaming, one query per query |
-| `subst_mem` | `Machine.subst` | FA-Adv | VCVio's handler closure with a certificate for the handler, sequenced by `IsOraclePPTBy.bind`; answers are Boolean or base values |
-| `app_mem` | `Machine.app` | FA-App | a handler making two queries per query |
-| `fn_mem` | `Machine.fn` | FA-Fn, and through it [BC14]'s FA | a pure polynomial-time function of the query, since honest symbols are interpreted by polynomial-time functions |
+| `rename_mem` | `Machine.rename` | Perm, Restr, Dup; with the fields below, FA-Adv, If, the case split, Trans, WeakL, WeakR, Rw-Equiv, FreshL and the deductions | a handler forwarding each query along the renaming, one query per query |
+| `subst_mem` | `Machine.subst` | FA-Adv, Trans, WeakL, WeakR, Rw-Equiv, FreshL, the deduction of an application | VCVio's handler closure with a certificate for the handler, sequenced by `IsOraclePPTBy.bind`; answers are Boolean or base values |
+| `app_mem` | `Machine.app` | FA-App, the deduction of an entry or honest symbol of arrow type | a handler making two queries per query |
+| `fn_mem` | `Machine.fn` | FA-Fn, and through it [BC14]'s FA; the deduction of an honest symbol | a pure polynomial-time function of the query, since honest symbols are interpreted by polynomial-time functions |
+| `input_mem` | `Machine.input` | the deductions of an entry, an honest symbol and an application ([LICS23]'s PT.Input) | one query, whose answer is returned |
 | `branch_mem` | `Machine.branch` | If, the case split, If1 | one query, then either machine |
 | `const_mem` | `Machine.const` | the case split, If1 | a constant |
+| `eqTest_mem` | `Machine.eqTest`, at Boolean or base types | Rw-Equiv | equality of Booleans or bitstrings |
+| `shift_mem` | `Machine.shift`, by a polynomial offset | FreshL | a handler of the tape interface adding the offset, computed from `1^η`, to each read |
+| `sampler_mem` | `Machine.sampler`, for a type of order at most one with polynomial bit blocks (`Model.PolyCoins`) | FreshL | the name's polynomial-time sampler after reading its bits: a compatibility condition between model and class, like `fn_mem` for honest symbols |
+| `readBound_mem` | (a bound) `Machine.ReadsBelow` at a polynomial | FreshL; the read bound of an `adv` term | a machine running in time `t` reads its tape below `t` |
 
-The structural rules, name renaming and the encryption rule need no field: renaming gives every
-machine advantage zero, and the encryption rule states its assumption for the reduction of each
-admitted machine. Two pieces are present without a field. The input projection `Machine.input` is
-a member of `AdvClass.all`, which the checks use; the read and query bounds define `AdvClass.all`
-and are checked on their own. `Interop/Squirrel/Test/Constructions.lean` checks each field of
-`AdvClass.all` at a machine built by its construction.
+The structural rules, name renaming, the encryption rule, Neg1, Neg2, Ineq and FreshR need no
+field: renaming gives every machine advantage zero, the encryption rule states its assumption for
+the reduction of each admitted machine, Neg1, Neg2 and Ineq use the witness of a `▷` as it is, and
+FreshR's bound holds against every function of the attacker tape. The query bound defines
+`AdvClass.all` and is checked on its own, but no rule here uses it on every admitted machine, so it
+is not a field. Three conditions on models enter with these rules, as hypotheses on the model
+restriction rather than on every model: the label `large` (FreshR, L19), long attacker tapes
+`Model.LongTapes` and polynomial bit blocks `Model.PolyCoins` (FreshL, L12, L23).
+`Interop/Squirrel/Test/Constructions.lean` checks each field of `AdvClass.all` at a machine built
+by its construction.
 
 ## 5. Validity
 
@@ -148,11 +164,23 @@ use, as in LICS23's environments, and substitution of local terms into global fo
 PolyFun's. `adv` and `∼` carry the order bounds of CSF24 and CCS26 (`Ty.AdvOrder`,
 `Ty.IndistOrder`), so an atom outside that fragment cannot be written (L11).
 
+**Secrecy judgments.** [CCS26, §3.1] defines `u⃗ ⊬ v` and `u⃗ ▷ v` from the global connectives,
+and here they are derived formulas, not constructors: `Form.nonDed u v` is
+`∀̃ f. adv(f) ⇒̃ [¬ (f(u⃗) = v)]` and `Form.ded u v` is `∃̃ f. adv(f) ∧̃ [f(u⃗) = v]`. The logic has
+no product types, so the tuple on the left is a vector of the types `τs` and `f` has the curried
+type `τ₁ → … → τₙ → β`, applied to the vector by `FTerm.apps`. Both carry the order bound
+`Ty.SecrecyOrder τs β`: the entries and the right side have order at most one, so that `f` has
+order at most two, the bound of `adv` (`Ty.SecrecyOrder.advOrder`). A formula outside that
+fragment cannot be written (L18).
+
 **Semantics.** `fullInterp M C` reads local constructors as random variables and global ones as
 propositions. `[φ]` is `Overwhelming`: over uniform tapes, the probability that `φ` is false is
-negligible. `const t` is `RV.IsConst` (L13), `adv` is `C.Adv` and `∼` is `C.Indist`. Substitution
-does not keep local terms inside global formulas in the image of `Term.inl`, so locality is proved
-again for the full signature (`eval_denote_fullInterp`).
+negligible. `const t` is `RV.IsConst` (L13), `adv` is `C.Adv` and `∼` is `C.Indist`. The
+secrecy judgments mean `C.NonDed` (every admitted attacker machine computes the right side with
+negligible probability) and `C.Ded` (some admitted attacker machine computes it with overwhelming
+probability), by `Form.holds_nonDed` and `Form.holds_ded`. Substitution does not keep local terms
+inside global formulas in the image of `Term.inl`, so locality is proved again for the full
+signature (`eval_denote_fullInterp`).
 
 **Validity.** `Valid R C Θ F` says that in every model respecting the labels and the restriction
 `R`, against the class `C M`, at every value of the variables, `F` holds wherever every formula
@@ -189,33 +217,67 @@ machine has advantage zero (L16). The encryption rule's reduction `EncSymbols.en
 both tapes itself and runs the attacker's machine on the public key, the challenge and the
 context; at every `η` its one-time IND-CPA advantage equals the attacker's advantage (L17).
 
+**Secrecy.** The rules about `⊬` and `▷` follow the pattern with the success and failure of an
+attacker function (`deduceAdv`, `deduceErr`) in place of an advantage. Neg1, Neg2 and Ineq use the
+witness of `▷` as it is: success and failure sum to one, and `v` and `w` agree only where the
+witness of `u⃗ ▷ w` fails or an attacker computes `v`. Trans, WeakL and WeakR compose two attacker
+machines on the same tape (`AdvMachine.comp`), and the failure probabilities add. Rw-Equiv runs the
+attacker machine on the left part of the vector and tests its result against the last entry
+(`Machine.deduce`), so its success changes by at most that distinguisher's advantage (L21). The
+deductions build attacker machines from the input projection, honest symbols and substitution;
+local reasoning is read semantically, as a local formula true at every tape of every admitted
+model (`Valid.box_valid`), with modus ponens under `[·]`.
+
+**FreshR and FreshL.** FreshR overwrites the name's coordinate of the honest tape with a fresh
+coin, which leaves the tape uniform; for each tape, every attacker function hits the coin with at
+most the sampler's largest point probability, at most `2^{-cη}` for a `large` type (L19).
+FreshL's reduction `AdvMachine.freshL` runs the attacker machine with the fresh name drawn by the
+sampler from bits of the attacker tape above a polynomial that bounds what the machine
+(`AdvClass.readBound_mem`) and the terms read (`FTerm.ReadsPoly`, L24). Wherever those bits fit on
+the tape, swapping them with the name's coordinate is a bijection of the tapes that the machine
+and the terms do not see, so the two success probabilities are equal; long tapes make that hold at
+every large `η` (L20, L23). No model is extended, unlike [CCS26]'s proof.
+
 **Freshness.** The honest tape has one coin per name and index, and a name reads only the coins
 of its own slots, so freshness of names is syntactic. `FTerm.AvoidsNames N t` says that no head of
 `t`, in the sense of PolyFun's `Term.heads`, is the constructor of a name in `N`. It is a fold over
 the term, decidable for a decidable `N`, so `decide` checks it on concrete terms; and PolyFun's
 `Term.denote_update_eq` gives that such a term ignores every coordinate of the honest tape that
 belongs to a name in `N` (`FTerm.denote_update_eq_of_avoidsNames`), with no induction over terms.
-The encryption rule's side conditions are of this kind (L22). Not using a name at all is stronger
-than not reading the coordinate a given occurrence reads; no rule here needs the weaker, semantic
-form.
+The encryption rule's side conditions are of this kind, and so are FreshR's and FreshL's, for
+closed terms (L22): a free variable ranges over all random variables, which may read the name.
+For a closed term, `FTerm.AvoidsNames.freshAt` gives the semantic statement the proofs use, that
+its random variable agrees at two honest tapes that differ only at the name's coordinate
+(`Model.FreshAt`). Not using a name at all is stronger than not reading the coordinate a given
+occurrence reads; no rule here needs the weaker, semantic form as a side condition.
 
 ## 7. Derivations as data
 
-`Derivation D Θ F` is an inductive type with one constructor per rule, indexed by the context, the
-hypotheses and the conclusion; local sequents are unfolded to the global sequents they stand for.
-`Derivation.sound R C` maps every derivation to `Valid R C Θ F`, one rule lemma per constructor,
-for every model restriction and every class of machines. Derivations are data: Lean functions can
-build them, for example by recursion on a protocol's trace, and the kernel checks them. A rule with
-a semantic side condition takes it as a premise of its constructor.
+`Derivation D enc R₀ Θ F` is an inductive type with one constructor per rule, indexed by the
+context, the hypotheses and the conclusion; local sequents are unfolded to the global sequents they
+stand for. `Derivation.sound R C` maps every derivation to `Valid R C Θ F`, one rule lemma per
+constructor, for every model restriction contained in `R₀` and every class of machines. Derivations
+are data: Lean functions can build them, for example by recursion on a protocol's trace, and the
+kernel checks them. A rule with a semantic side condition takes it as a premise of its constructor.
 
-The encryption rule is a constructor at the instances that a parameter `enc` admits
-(`Derivation D enc Θ F`). Its syntactic side conditions (`EncInstance.Syntactic`: distinct key and
-coin names, which the messages and the context do not use) are a premise of the constructor, which
-`decide` discharges on concrete instances; `Derivation.sound` takes the semantic hypotheses of each
-admitted instance (`EncInstance.Holds`: equal message lengths in every admitted model, and one-time
-IND-CPA for the reductions of the admitted machines). With `enc` empty, derivations use the other
-rules only. [BC14]'s If1 is a constructor although the case split proves it: deriving it would
-rewrite `if c' then z else z` to `z`, and the fragment has no rule proving that local equality.
+The encryption rule is a constructor at the instances that the parameter `enc` admits. Its syntactic
+side conditions (`EncInstance.Syntactic`: distinct key and coin names, which the messages and the
+context do not use) are a premise of the constructor, which `decide` discharges on concrete
+instances; `Derivation.sound` takes the semantic hypotheses of each admitted instance
+(`EncInstance.Holds`: equal message lengths in every admitted model, and one-time IND-CPA for the
+reductions of the admitted machines). With `enc` empty, derivations use the other rules only.
+[BC14]'s If1 is a constructor although the case split proves it: deriving it would rewrite
+`if c' then z else z` to `z`, and the fragment has no rule proving that local equality.
+
+The parameter `R₀` is the restriction on models that a derivation's rules assume, and
+`Derivation.sound` holds over every restriction contained in it. FreshL is sound only over models
+with long attacker tapes, so its constructor takes as premises that `R₀` gives long tapes and
+polynomial bit blocks for the name's type, and that the terms read the attacker tape below a
+polynomial in every model of `R₀` and of the hypotheses. `boxValid` concludes `[φ]` for a local
+formula true at every tape of every model of `R₀`, which is how equations that `R₀` imposes on
+honest symbols are used. A derivation that uses neither takes `R₀` to be every model. FreshR's
+and FreshL's freshness premises are syntactic, and `decide` discharges them on concrete terms;
+Rw-Equiv takes the ground type of its right side as a premise.
 
 ## 8. Rules
 
@@ -244,6 +306,16 @@ rewrite `if c' then z else z` to `z`, and the fragment has no rule proving that 
 | Eq1 | [BC14, Fig. 2] | `Valid.equiv_eq_self` | `Derivation.equivEqSelf` |
 | Name renaming | [BC14] | `Valid.equiv_renameNames_of_equiv` | `Derivation.equivRenameNames` |
 | EncCCA1 without decryption | [BC14, §7, Proposition 3]; [LICS23, Proposition 19] | `Valid.equiv_enc` | `Derivation.equivEnc` |
+| Neg1, Neg2 | [CCS26, Fig. 3] | `Valid.not_ded`, `Valid.not_nonDed` | `Derivation.notDed`, `Derivation.notNonDed` |
+| Ineq | [CCS26, Fig. 3] | `Valid.box_not_eq` | `Derivation.boxNotEq` |
+| Trans | [CCS26, Fig. 3] | `Valid.ded_trans` | `Derivation.dedTrans` |
+| WeakL, WeakR | [CCS26, Fig. 3] | `Valid.nonDed_weakL`, `Valid.nonDed_weakR` | `Derivation.nonDedWeakL`, `Derivation.nonDedWeakR` |
+| Rw-Equiv, for a right side of Boolean or base type | [CCS26, Fig. 3] | `Valid.nonDed_rwEquiv` | `Derivation.nonDedRwEquiv` |
+| `u⃗ ▷ f(u⃗)` from `adv(f)` | [CCS26, §3.1] | `Valid.ded_apps` | `Derivation.dedApps` |
+| Deducing an entry, an honest symbol, an application, a rewritten term | [CCS26, §2.3] | `Valid.ded_input`, `Valid.ded_fn`, `Valid.ded_app`, `Valid.ded_rewrite` | `Derivation.dedInput`, `Derivation.dedFn`, `Derivation.dedApp`, `Derivation.dedRewrite` |
+| Local validity, modus ponens under `[·]` | local reasoning, read semantically | `Valid.box_valid`, `Valid.box_mp` | `Derivation.boxValid`, `Derivation.boxMP` |
+| FreshR | [CCS26, Fig. 11] | `Valid.nonDed_freshR` | `Derivation.nonDedFreshR` |
+| FreshL | [CCS26, Fig. 11, App. C.2] | `Valid.nonDed_freshL` | `Derivation.nonDedFreshL` |
 
 `Interop/Squirrel/Test/Structural.lean` builds a small derivation for each structural rule, and
 checks that a premise is needed: `[false]` follows from the hypothesis `[false]` but not from none,
@@ -259,7 +331,17 @@ satisfiability models:
   for coins in the context, the last two rejected by `decide`;
 - `Test/WorkedEnc.lean`: the derivation `pk(k), enc(n; r), n ∼ pk(k), enc(zero; r), n` with its
   soundness, and a pad that leaks lengths, which meets the rule's hypotheses although it fails the
-  unrestricted IND-CPA game.
+  unrestricted IND-CPA game;
+- `Test/SecrecyExamples.lean`: the derivation `h(h(k)) ⊬ n` from `adv(h)` with its soundness, in a
+  model where `msg` is large; `⊬` is not transitive; Neg1, Neg2, Ineq, Rw-Equiv and WeakR each
+  used, with checks that Neg1, Ineq, Rw-Equiv and WeakR need a premise; FreshR fails without
+  `large`, and FreshL without freshness;
+- `Test/FreshLExamples.lean`: a model with tapes of `2^η` bits, where every hypothesis of FreshL
+  holds against `AdvClass.all` and a worked derivation ends with FreshL; with the name not fresh,
+  the conclusion fails;
+- `Test/FreshLCountermodel.lean`: FreshL fails without long tapes. In a model with an empty
+  attacker tape, against the class generated by the closure fields, its premise holds and its
+  conclusion fails while its other hypotheses hold.
 
 ## 9. Obligations
 
@@ -273,11 +355,16 @@ contiguous. Every name in the last column is in the namespace `Interop.Squirrel`
 | L7 | gap | [LICS23] Fig. 8; [BC14] Prop. 2 | LICS23 gives no proof of G.Case-Study:ITE and refers to BC14, whose Prop. 2 proves only If1, with one condition and one context on both sides. Its machines flip a coin when the condition fails, and their success probability, written `1/4 + p`, holds only when the condition is true with probability one half; the error cancels because the condition is shared, and would not with two conditions. The case split is proved here with two conditions, by two named reductions that return `false` when the condition fails, with the advantage at most the sum of the premises' advantages at every `η` (factor one; BC14's factor two comes from naming one of the two machines). If1 is its instance with both right-hand branches equal. A countermodel shows that each premise must keep the condition beside its branch. | closed (case split) | `advantage_cons_cond_le`, `Valid.equiv_caseStudy`, `Valid.equiv_if1`, `CaseStudy.caseStudy_needs_condition` |
 | L10 | choice | [LICS23] p. 5, Fig. 2 (p. 7) | Adversaries read the shared attacker tape `ρa` in the papers, while VCVio adversaries draw fresh coins. Here `ρa` is a uniform bitstring of a length the model chooses (`Model.TapeA`), and machines read it bit by bit through the tape interface (`tapeSpec`), as LICS23's machines read their randomness tape; attacker symbols read the same tape. Relating these machines to VCVio adversaries with fresh coins is open. | open | `Model.TapeA`, `tapeSpec`, `Machine.run` |
 | L11 | choice | [LICS23] p. 7; [CSF24] App. A; [CCS26] §3.1 (p. 6) | `∼` at arbitrary order (LICS23) versus order at most 1 for `∼` and at most 2 for `adv` (CSF24, CCS26). The fragment of CSF24 and CCS26 is adopted and made syntactic: the global constructors `adv τs β` and `equiv τs` carry proofs of `Ty.AdvOrder τs β` (the term `τ₁ → … → τₙ → β` has order at most 2) and `Ty.IndistOrder τs` (entries of order at most 1), so an atom outside the fragment cannot be written. The semantics is defined at every type. | closed (adopted fragment) | `GlobalOp`, `Ty.AdvOrder`, `Ty.IndistOrder` |
-| L12 | choice | [LICS23] §II-B (pp. 5–6) | Names read the honest tape, a product with one uniform bit block per name and index (`Model.Coin`, `coinLen η τ` bits); a name reads its own block and runs the sampler of its type on it, and names of one type share a sampler, so independence and identical distribution are structural. LICS23 (p. 6) notes that a name needs finitely many bits of the honest tape and requires names to be samplings computable in polynomial time. Neither polynomial bit blocks nor polynomial-time samplers are imposed on models here. | open | `Model.TapeH`, `Model.Coin`, `Model.name` |
+| L12 | choice | [LICS23] §II-B (pp. 5–6) | Names read the honest tape, a product with one uniform bit block per name and index (`Model.Coin`, `coinLen η τ` bits); a name reads its own block and runs the sampler of its type on it, and names of one type share a sampler, so independence and identical distribution are structural, and a machine reading as many bits of its own tape and running the sampler draws a name's distribution. LICS23 (p. 6) notes that a name needs finitely many bits of the honest tape and requires names to be samplings computable in polynomial time. Both halves are stated where FreshL uses them: polynomial bit blocks are the model condition `Model.PolyCoins`, a hypothesis of FreshL on the model restriction; polynomial-time samplers are the closure field `AdvClass.sampler_mem`, which admits the machine reading `coinLen η b` bits of the attacker tape and running the sampler (`Machine.sampler`), a compatibility condition between model and class like `fn_mem` for honest symbols. Neither is imposed on models in general, and polynomial time itself is not imposed on the class (L14). | closed (stated as conditions) | `Model.TapeH`, `Model.Coin`, `Model.name`, `Model.PolyCoins`, `Machine.sampler`, `Machine.run_sampler`, `AdvClass.sampler_mem` |
 | L13 | choice | [LICS23] Fig. 2 | `const t` at arrow types is read as a logical relation (`Ty.Same`). LICS23 asks for a value in `⋂_η ⟦τ⟧_η`; the two agree at base types and at arrows from fixed types, and differ when the domain varies with `η`. | open | `Ty.Same`, `RV.IsConst` |
 | L14 | choice | [LICS23] §II-C.1, §II-C.2, Fig. 2 (p. 7) | The machines of `adv` and `∼` are free programs (`OracleComp`) over the sum of a tape interface and an input interface, run by fixed answers. LICS23's machines receive base values as bitstring encodings on input tapes and functions through handles on a query tape; here every input is an oracle that receives and returns typed values, a base input is queried with no arguments, and a query supplies all of a function's arguments (no handles for partial applications, which inputs of order at most 1 do not need). The class `AdvClass` is a predicate on machines, closed under the constructions that the rules' reductions use (section 4), and a parameter of validity: polynomial time is not imposed. `AdvClass.all`, the machines with polynomial read and query bounds, is the class of the satisfiability checks. | open | `Machine`, `Machine.ReadsBelow`, `Machine.QueryBound`, `AdvClass`, `AdvClass.all` |
 | L15 | choice | [LICS23] §II-A, §II-B | LICS23's declared variables are split into constructors (names, honest symbols with tape-independent values, attacker symbols reading `ρa`, `=_τ`, `∀_τ`, `∃_τ`) and free variables, which range over all random variables. | open | `Decl`, `localSig` |
 | L16 | choice | [BC14] (α-renaming of names); [LICS23] §II-B.2 | Renaming names in a closed vector is sound along any type-preserving bijection of names, in every model: the renaming is the permutation `Model.tapePerm` of the honest tape's coordinates. The residue is the restriction to closed vectors, which LICS23's rule shares (free variables range over all random variables, which may read the tape). | closed | `Model.renamesNames`, `Valid.equiv_renameNames_of_equiv`, `Derivation.equivRenameNames`, `TwoTimePad.valid_swap` |
 | L17 | gap | [BC14] §7 (Fig. 2, EncCCA1; Prop. 3); [LICS23] Prop. 19 (G.CCA1) | Soundness of the encryption rule when the secret key is never used to decrypt: `pk(nk), enc(m₀; r, pk(nk)), u⃗ ∼ pk(nk), enc(m₁; r, pk(nk)), u⃗`, in left-or-right form. The key and coin names are distinct; the messages and the context have the public key free and are closed by substituting `pk(nk)`, and they use neither the key name nor the coin name (syntactic side conditions, L22); in every admitted model the two messages have equal length at every tape (a restriction on models). The length condition is BC14's guard `EQL(u, u′)` holding surely, as in LICS23's G.CCA1, where `zero (len m)` has the length of `m` in every model. The assumption is one-time IND-CPA (`IND_CPA_OneTime_Advantage` at `ProbCompRuntime.probComp`) for the image of the class under the named reduction `EncSymbols.encReduction`, which submits only pairs of equal length (it is admissible for the leakage `lenOf`); at every `η` the two advantages are equal. A scheme that leaks lengths meets every hypothesis, though it fails VCVio's unrestricted game. Countermodels show that the IND-CPA hypothesis, the distinct names and the freshness of the coins in the context are each needed. Still open: decryption (IND-CCA1), BC14's guard as a conditional in the conclusion for messages whose lengths differ on some tapes, and the real-or-zero form. | closed (this fragment) | `Valid.equiv_enc`, `EncSymbols.advantage_challenge`, `EncSymbols.encReduction_isAdmissible`, `WorkedEnc.workedDerivation_sound`, `WorkedEnc.valid_worked_lpad`, `WorkedEnc.lpad_advantage_unequalAdv`, `EncExamples.not_valid_enc_leaky`, `WorkedEnc.not_valid_leak`, `EncExamples.not_valid_enc_keyIsCoin`, `EncExamples.not_valid_enc_coinReused` |
-| L19 | choice | [LICS23] App. A (label `large`), §II-B.1 | `large` is LICS23's bound `Pr_ρh[⟦n⟧(η, a)(ρh) = b] ≤ 2^{-c·η}` for some real `c > 0`, read on the sampler that names of the type share. LICS23 lifts labels to compound types "in the natural way" without saying how `large` lifts; here Booleans and arrow types are not `large`. A base type labelled `finite`, `fixed` and `large` has no model, so the checks that use the trivial model assume no `large` base type. | open | `Model.IsLarge`, `Ty.HasLabel`, `Model.isLarge_of_hasLabel`, `Model.trivial_respectsLabels` |
-| L22 | choice | [BC14] §7 (freshness in EncCCA1) | Freshness side conditions are syntactic: a term avoids a set of names when none of its heads (PolyFun's `Term.heads`) is one of them (`FTerm.AvoidsNames`, `Vec.AvoidsNames`). The condition is a fold over the term and decidable for names with decidable equality, so `decide` checks it on concrete instances (`EncInstance.Syntactic`). It implies the semantic condition that the term's value ignores the honest-tape coordinates of those names (`FTerm.denote_update_eq_of_avoidsNames`, from `Term.denote_update_eq`). Not using a name is stronger than not reading the coordinate of one occurrence: a term that uses the key name at another index fails the check. Countermodels show that the encryption rule's syntactic conditions are needed, and `decide` rejects the instances that break them. | closed (this fragment) | `FTerm.AvoidsNames`, `FTerm.denote_update_eq_of_avoidsNames`, `EncInstance.Syntactic`, `WorkedEnc.workedInstance_syntactic`, `EncExamples.not_keyIsCoin_syntactic`, `EncExamples.not_coinReused_syntactic` |
+| L18 | choice | [CCS26] §3.1 (p. 6), Fig. 3 (p. 7) | `u ⊬ v` and `u ▷ v` are global formulas built from `∀̃`/`∃̃`, `adv`, `⇒̃`/`∧̃` and `[·]`, with no new primitive (`Form.nonDed`, `Form.ded`), restricted to entries and right side of order at most one (`Ty.SecrecyOrder`), so that the attacker function has order at most two. The logic has no product types, so a tuple on the left is a vector and the attacker function is curried (`Ty.arrows`); the right side is one term, and a term in the middle of Trans or WeakL, being on the right of a `▷`, is a vector of one. Each rule of Fig. 3 but Rw-Oracle and Pc-Oracle is proved and used in a kernel-checked check, and Neg1, Ineq, Rw-Equiv and WeakR have checks that a premise is needed. Deductions from the entries of the vector, honest symbols, application and rewriting are rules of their own, and local reasoning is read semantically (`Valid.box_valid`, `Valid.box_mp`) rather than as a calculus. Still open: Rw-Oracle and Pc-Oracle. | open | `Form.nonDed`, `Form.ded`, `Form.holds_nonDed`, `Form.holds_ded`, `Ty.SecrecyOrder.advOrder`, `Valid.not_ded`, `Valid.not_nonDed`, `Valid.box_not_eq`, `Valid.ded_trans`, `Valid.nonDed_weakL`, `Valid.nonDed_weakR`, `Valid.ded_apps`, `Valid.ded_input`, `Valid.ded_fn`, `Valid.ded_app`, `Valid.ded_rewrite`, `SecrecyExamples.workedDerivation_sound`, `SecrecyExamples.nonDed_not_trans`, `SecrecyExamples.valid_neg1`, `SecrecyExamples.valid_neg2`, `SecrecyExamples.valid_ineq`, `SecrecyExamples.valid_rwEquiv`, `SecrecyExamples.valid_weakR`, `SecrecyExamples.neg1_needs_nonDed`, `SecrecyExamples.ineq_needs_nonDed`, `SecrecyExamples.rwEquiv_needs_equiv` |
+| L19 | choice | [LICS23] App. A (label `large`), §II-B.1 | `large` is LICS23's bound `Pr_ρh[⟦n⟧(η, a)(ρh) = b] ≤ 2^{-c·η}` for some real `c > 0`, read on the sampler that names of the type share. LICS23 lifts labels to compound types "in the natural way" without saying how `large` lifts; here Booleans and arrow types are not `large`. A base type labelled `finite`, `fixed` and `large` has no model, so the checks that use the trivial model assume no `large` base type. FreshR uses the label, and is unsound without it: a Boolean name, fresh in the empty vector, is guessed with probability one half. | open | `Model.IsLarge`, `Ty.HasLabel`, `Model.isLarge_of_hasLabel`, `Model.trivial_respectsLabels`, `Valid.nonDed_freshR`, `SecrecyExamples.model_isLarge`, `SecrecyExamples.freshR_needs_large` |
+| L20 | gap | [CCS26] Fig. 11, App. C.2 and footnote 2 (pp. 16–17); [LICS23] §II-A.3, §II-C.1, p. 17 | FreshL (`u ⊬ v ⟹ u, n ⊬ v`, `n` fresh in `u, v`) is proved in App. C.2 through a function `f′` that "simulates the sampling of `n_fresh` from the adversarial randomness and then runs `f`". Footnote 2 (p. 17) makes room for that randomness by extending the model's attacker tape and applying the premise "in the extended model", "since the secrecy property `u ⊬ v` is assumed to hold in any model". The premise is `E; Θ ⊢ u ⊬ v`, which holds only in models of `Θ`, and the footnote does not show that `Θ` holds in the extended model. The formalization extends no model. The attacker tape is a bitstring of model-chosen length; the reduction `AdvMachine.freshL` answers the fresh name's input of the attacker machine (`Machine.subst`) by the sampler of its type run on the bits `[p(η), p(η) + coinLen η b)` of the same tape (`Machine.shift`, `Machine.sampler`), with `p` the sum of the read bounds of the machine (`AdvClass.readBound_mem`) and of the terms; long tapes (`Model.LongTapes`, L23), a hypothesis on the model restriction, give those bits at every large `η`. At each such `η` the reduction's success against `u ⊢ v` equals the machine's against `u, n ⊢ v`, by one bijection of the tapes that swaps that block with the name's honest coordinate. The premise is used in the model where the conclusion is evaluated, so the question whether `Θ` holds in an extended model does not arise. The side conditions: the terms are closed and do not use the name (`FTerm.AvoidsNames`, L22), and they read the attacker tape below a polynomial (`FTerm.ReadsPoly`, discharged structurally; L24). The hypotheses are jointly satisfiable with `AdvClass.all` in a model with tapes of `2^η` bits, where a worked derivation ends with FreshL; FreshL fails without long tapes, against the class generated by the closure fields, and fails without freshness. Derivations carry the restriction `R₀` that their rules assume, and FreshL's constructor requires long tapes and polynomial bit blocks in `R₀`. | closed (this fragment) | `deduceAdv_freshL_eq`, `AdvClass.NonDed.freshL`, `Valid.nonDed_freshL`, `AdvMachine.freshL`, `AdvClass.freshL_mem`, `Derivation.nonDedFreshL`, `Derivation.sound`, `FreshLExamples.valid_freshLWorked`, `FreshLExamples.not_valid_freshL_n`, `FreshLCountermodel.freshL_needs_longTapes`, `SecrecyExamples.freshL_needs_freshness` |
+| L21 | choice | [CCS26] Fig. 3 (Rw-Equiv) | Rw-Equiv is proved for a right side of Boolean or base type. Its distinguisher tests `f(u) = v`, which no machine does at an arrow type, and the class is asked for the equality test only at these types. | open | `Valid.nonDed_rwEquiv`, `Machine.deduce`, `AdvClass.deduce_mem`, `AdvClass.eqTest_mem` |
+| L22 | choice | [BC14] §7 (freshness in EncCCA1); [CCS26] Fig. 11 (FreshR, FreshL) | Freshness side conditions are syntactic: a term avoids a set of names when none of its heads (PolyFun's `Term.heads`) is one of them (`FTerm.AvoidsNames`, `Vec.AvoidsNames`). The condition is a fold over the term and decidable for names with decidable equality, so `decide` checks it on concrete instances (`EncInstance.Syntactic`, and the premises of FreshR and FreshL). It implies the semantic condition that the term's value ignores the honest-tape coordinates of those names (`FTerm.denote_update_eq_of_avoidsNames`, from `Term.denote_update_eq`), and for a closed term that its random variable does not read them (`FTerm.AvoidsNames.freshAt`). FreshR and FreshL are stated for closed terms, as a free variable ranges over all random variables, which may read the name; CCS26's "`n` fresh in `u`" is the syntactic condition. Not using a name is stronger than not reading the coordinate of one occurrence: a term that uses the key name at another index fails the check. Countermodels show that the encryption rule's syntactic conditions and FreshL's freshness are needed, and `decide` rejects the instances that break them. | closed (this fragment) | `FTerm.AvoidsNames`, `FTerm.denote_update_eq_of_avoidsNames`, `FTerm.AvoidsNames.freshAt`, `EncInstance.Syntactic`, `WorkedEnc.workedInstance_syntactic`, `EncExamples.not_keyIsCoin_syntactic`, `EncExamples.not_coinReused_syntactic`, `SecrecyExamples.not_avoidsNames_n_n`, `FreshLExamples.not_avoidsNames_n` |
+| L23 | choice | [LICS23] §II-B (p. 5), p. 17; [CCS26] App. C.2, footnote 2 (p. 17) | LICS23 takes the tapes to be finite bitstrings and, comparing with the base logic's infinite tapes, builds models "with long enough finite tapes (for each η)"; CCS26 extends the attacker tape "as needed". Formal counterpart: `Model.LongTapes M`, the length of the attacker tape eventually exceeds every polynomial. It is not imposed on models; FreshL takes it as a hypothesis on the model restriction (with `Model.PolyCoins`), and a derivation using FreshL takes it in its restriction `R₀`. It is satisfiable (tapes of at least `2^η` bits) and needed: in a model with an empty attacker tape FreshL fails. | closed | `Model.LongTapes`, `Model.longTapes_of_two_pow_le`, `FreshLExamples.longModel_longTapes`, `FreshLCountermodel.freshL_needs_longTapes` |
+| L24 | choice | [CCS26] Fig. 11 caption (p. 17); [LICS23] p. 17 | FreshL's terms must read the attacker tape only below a polynomial, so that the fresh name can be drawn above it. The bound is semantic (`FTerm.ReadsPoly`, in every admitted model of `Θ`) and discharged one constructor at a time: honest symbols and constants read nothing, a name reads what its index reads, application, conditionals, equality and negation sum the bounds of their parts, and a term computed by an admitted machine has the machine's bound (`AdvClass.readBound_mem`). Free variables range over all random variables and attacker symbols are arbitrary functions of the attacker tape (`Model.att`); their bounds are derived from `adv` hypotheses, as CCS26's caption asks every declared variable to be a name or adversarial and LICS23 adds `adv(g)` for each attacker symbol `g`, rather than imposed on models. λ and the local quantifiers are not covered: a bound uniform in the bound variable is not built. | open | `FTerm.ReadsPoly`, `FTerm.ReadsPoly.app`, `FTerm.ReadsPoly.name`, `FTerm.readsPoly_of_adv`, `Valid.readsPoly_of_adv`, `AdvClass.Adv.readsBelow`, `FreshLExamples.worked_readsPoly` |
