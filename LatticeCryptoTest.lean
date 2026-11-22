@@ -10,6 +10,7 @@ public import LatticeCryptoTest.Falcon.SamplerMinEntropy
 public import LatticeCryptoTest.Falcon.TestVectors
 public import LatticeCryptoTest.MLDSA.ACVPVectors
 public import LatticeCryptoTest.MLDSA.BoxSampling
+public import LatticeCryptoTest.MLDSA.ExpandARO
 public import LatticeCryptoTest.MLDSA.Helpers
 public import LatticeCryptoTest.MLKEM.ACVPVectors
 public import LatticeCryptoTest.MLKEM.Helpers

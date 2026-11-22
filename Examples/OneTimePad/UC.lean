@@ -319,7 +319,7 @@ The real-semantics-view of `close W_real K` is a `Measure Unit` that
 depends on `readMsg (close W_real K)` and `P`; by OTP privacy, this
 is the same as the ideal-semantics view, which depends only on `P`
 and is the same for `W_real` and `W_ideal`. Hence the two
-real-semantics views coincide and the total variation distance is
+real-semantics views coincide and the statistical distance is
 zero. -/
 theorem observedCompEmulates_realSmcSemantics (sp : ℕ)
     (readMsg : MsgReader sp) (P : BitVec sp → Bool)
@@ -332,7 +332,7 @@ theorem observedCompEmulates_realSmcSemantics (sp : ℕ)
     exact (realSmcSemantics_eq_idealSmcSemantics sp readMsg P (T.close W_real K)).trans
       (realSmcSemantics_eq_idealSmcSemantics sp readMsg P (T.close W_ideal K)).symm
   unfold Semantics.distAdvantage
-  rw [hreal, MeasureTheory.Measure.etvDist_self]
+  rw [hreal, MeasureTheory.Measure.statEDist_self]
 
 /-! ## Concrete instantiation: two structurally distinct closed systems -/
 
@@ -444,7 +444,7 @@ packet on the single output port of `Δ_otp sp` carrying the
 ciphertext `k ⊕ msg`. -/
 def realEmit (sp : ℕ) (msg : BitVec sp) :
     PFunctor.Trace (Δ_otp sp).Out (BitVec sp) :=
-  fun k => [⟨(), k ^^^ msg⟩]
+  fun k => FreeMonoid.of ⟨(), k ^^^ msg⟩
 
 /-- Ideal-world boundary emission. On the unique sample node of
 `otpTree sp`, when the sampler produces `c : BitVec sp`, emit it
@@ -456,7 +456,7 @@ functionality's simulator is realised directly by the emission
 structure. -/
 def idealEmit (sp : ℕ) :
     PFunctor.Trace (Δ_otp sp).Out (BitVec sp) :=
-  fun c => [⟨(), c⟩]
+  fun c => FreeMonoid.of ⟨(), c⟩
 
 /-- The open-node context at the unique sample node of `otpTree sp`:
 trivial controllers and views, and the given boundary emission
@@ -538,7 +538,7 @@ one-step transcript as the emitted ciphertext packet. -/
 theorem realOtp_boundaryTrace (sp : ℕ) (msg k : BitVec sp) :
     Interaction.Open.OpenStep.boundaryTrace ((realOtp sp msg).step ())
       (⟨k, ⟨⟩⟩ : TypeTree.Path (otpTree sp)) =
-      [(⟨(), k ^^^ msg⟩ : Σ _ : Unit, BitVec sp)] := by
+      FreeMonoid.of (⟨(), k ^^^ msg⟩ : (Δ_otp sp).Out.Idx) := by
   rw [Interaction.Open.OpenStep.boundaryTrace_eq]
   change Interaction.Open.OpenNodeContext.boundaryTrace (otpTree sp)
     (otpDecoration sp (realEmit sp msg)) ⟨k, ⟨⟩⟩ = _
@@ -553,7 +553,7 @@ one-step transcript as the emitted uniform ciphertext packet. -/
 theorem idealOtp_boundaryTrace (sp : ℕ) (c : BitVec sp) :
     Interaction.Open.OpenStep.boundaryTrace ((idealOtp sp).step ())
       (⟨c, ⟨⟩⟩ : TypeTree.Path (otpTree sp)) =
-      [(⟨(), c⟩ : Σ _ : Unit, BitVec sp)] := by
+      FreeMonoid.of (⟨(), c⟩ : (Δ_otp sp).Out.Idx) := by
   rw [Interaction.Open.OpenStep.boundaryTrace_eq]
   change Interaction.Open.OpenNodeContext.boundaryTrace (otpTree sp)
     (otpDecoration sp (idealEmit sp)) ⟨c, ⟨⟩⟩ = _
@@ -588,7 +588,7 @@ theorem realOtp_ne_idealOtp (sp : ℕ) {msg : BitVec sp}
   have hemit : realEmit sp msg = idealEmit sp := by
     have := congrArg (·.1.boundary.emit) hsem
     exact this
-  have h0 := congrFun hemit (0#sp)
+  have h0 := congrArg FreeMonoid.toList (congrFun hemit (0#sp))
   change [(⟨(), 0#sp ^^^ msg⟩ : Σ _ : Unit, BitVec sp)] =
       [(⟨(), 0#sp⟩ : Σ _ : Unit, BitVec sp)] at h0
   simp only [List.cons.injEq, Sigma.mk.injEq, and_true,

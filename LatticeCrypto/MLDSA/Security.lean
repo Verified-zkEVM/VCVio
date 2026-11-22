@@ -84,7 +84,7 @@ private lemma polyNorm_neg (f : Rq) : polyNorm (-f) = polyNorm f := by
   simp only [LatticeCrypto.zmodCenteredCoeffView, coeffRing.coeff_neg]
   exact LatticeCrypto.centeredRepr_natAbs_neg _
 
-variable [nttOps : NTTRingOps]
+variable (nttOps : NTTRingOps)
 
 /-! ### Hint recovery -/
 
@@ -123,10 +123,10 @@ In our formalization, this is directly enforced by the `verify` function: it che
 `UseHint(h, w'_Approx) = w₁`, so any accepted transcript necessarily satisfies
 commitment recoverability. -/
 theorem idsWithAbort_commitment_recoverable :
-    ∃ recover, (identificationScheme p prims).CommitmentRecoverable recover := by
+    ∃ recover, (identificationScheme p prims nttOps).CommitmentRecoverable recover := by
   classical
   refine ⟨fun pk cTilde (z, h) =>
-    prims.useHintVec h (computeWApprox p prims (prims.expandA pk.rho)
+    prims.useHintVec h (computeWApprox p prims nttOps (prims.expandA pk.rho)
       (prims.sampleInBall cTilde) z pk.t1), ?_⟩
   rintro s w' c ⟨z, h⟩ hverify
   unfold identificationScheme at hverify
@@ -145,12 +145,12 @@ section conditional
 -- NTT linearity and primitives laws.
 variable
   (hRespondVerify : ∀ (pk : PublicKey p prims) (sk : SecretKey p),
-    validKeyPair p prims pk sk = true →
+    validKeyPair p prims nttOps pk sk = true →
     ∀ (w1 : Commitment p prims) (st : SigningState p) (cTilde : CommitHashBytes p),
-    (w1, st) ∈ support ((identificationScheme p prims).commit pk sk) →
+    (w1, st) ∈ support ((identificationScheme p prims nttOps).commit pk sk) →
     ∀ (zh : Response p prims),
-    some zh ∈ support ((identificationScheme p prims).respond pk sk st cTilde) →
-    (identificationScheme p prims).verify pk w1 cTilde zh = true)
+    some zh ∈ support ((identificationScheme p prims nttOps).respond pk sk st cTilde) →
+    (identificationScheme p prims nttOps).verify pk w1 cTilde zh = true)
 
 include hRespondVerify
 /-- Completeness of the ML-DSA identification scheme, conditional on `hRespondVerify`:
@@ -158,7 +158,7 @@ whenever `respond` returns `some (z, h)`, `verify` accepts. This algebraic fact 
 from the key generation identity, NTT linearity, and `Primitives.Laws`, but is isolated
 here to separate the probabilistic argument from the algebraic one. -/
 theorem idsWithAbort_complete' :
-    (identificationScheme p prims).Complete := by
+    (identificationScheme p prims nttOps).Complete := by
   classical
   intro pk sk hvalid
   refine (OracleComp.prEvent_eq_one_iff _ (· = true)).2 fun b hb => ?_
@@ -190,11 +190,11 @@ and the norm bounds satisfied by honest responses.
 The proof requires deriving the `hRespondVerify` algebraic fact from `Primitives.Laws`;
 see `idsWithAbort_complete'` for the conditional version. -/
 theorem idsWithAbort_complete (h_laws : Primitives.Laws prims nttOps) :
-    (identificationScheme p prims).Complete := by
+    (identificationScheme p prims nttOps).Complete := by
   classical
-  refine idsWithAbort_complete' p prims ?_
+  refine idsWithAbort_complete' p prims nttOps ?_
   intro pk sk hvalid w1 st cTilde hw1st zh hzh
-  obtain ⟨seed, hkeygen⟩ := (validKeyPair_eq_true_iff p prims pk sk).mp hvalid
+  obtain ⟨seed, hkeygen⟩ := (validKeyPair_eq_true_iff p prims nttOps pk sk).mp hvalid
   simp only [identificationScheme, support_bind, support_pure, Set.mem_iUnion,
     Set.mem_singleton_iff, Prod.mk.injEq] at hw1st
   simp only [identificationScheme] at hzh
@@ -232,7 +232,7 @@ theorem idsWithAbort_complete (h_laws : Primitives.Laws prims nttOps) :
       simp only [Vector.getElem_add, Vector.getElem_sub]; abel
     -- The high bits are unchanged by subtracting `c·s₂`.
     have hhide : prims.highBitsVec (aHat * y - c • sk.s2) = prims.highBitsVec (aHat * y) := by
-      have h := hide_lowVec p prims h_laws (aHat * y - c • sk.s2) (c • sk.s2) p.beta
+      have h := hide_lowVec p prims nttOps h_laws (aHat * y - c • sk.s2) (c • sk.s2) p.beta
         (fun j => le_trans
           (LatticeCrypto.PolyVec.component_cInfNorm_le normOps (c • sk.s2) j) hcs2_norm)
         (fun j => by
@@ -245,11 +245,11 @@ theorem idsWithAbort_complete (h_laws : Primitives.Laws prims nttOps) :
       rw [harith2] at h
       exact h.symm
     -- The key-generation identity for `wApprox`.
-    have hwa := keyGenFromSeed_wApprox_eq p prims h_laws seed hkeygen c y
+    have hwa := keyGenFromSeed_wApprox_eq p prims nttOps h_laws seed hkeygen c y
     -- Discharge `verify`.
     simp only [identificationScheme, Bool.and_eq_true, decide_eq_true_eq]
     refine ⟨⟨hz_norm, ?_⟩, hweight⟩
-    rw [hwa, useHintVec_makeHintVec p prims h_laws (-(c • sk.t0))
+    rw [hwa, useHintVec_makeHintVec p prims nttOps h_laws (-(c • sk.t0))
         (aHat * y - c • sk.s2 + c • sk.t0) hcond_t0, harith1, hhide]
   all_goals (rw [support_pure, Set.mem_singleton_iff] at hzh; exact absurd hzh (by simp))
 

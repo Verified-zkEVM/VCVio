@@ -94,6 +94,19 @@ theorem map_le [Monad m] [LawfulMonad m] [LawfulEvalDistSemantics m]
     discreteTVDist (f <$> mx) (f <$> my) ≤ discreteTVDist mx my := by
   simpa only [map_eq_bind_pure_comp] using bind_le mx my (pure ∘ f)
 
+/-- Two `pure` computations returning distinct values are at distance one. -/
+theorem pure_pure_of_ne [Monad m] [LawfulPureEvalDistSemantics m] {a b : α} (h : a ≠ b) :
+    discreteTVDist (pure a : m α) (pure b) = 1 := by
+  let : MeasurableSpace α := ⊤
+  exact measureTVDist_pure_pure_of_ne h
+
+/-- Two `pure` computations are at distance zero when they return the same value and at distance
+one otherwise. -/
+theorem pure_pure [Monad m] [LawfulPureEvalDistSemantics m] (a b : α) [Decidable (a = b)] :
+    discreteTVDist (pure a : m α) (pure b) = if a = b then 0 else 1 := by
+  let : MeasurableSpace α := ⊤
+  exact measureTVDist_pure_pure a b
+
 end discreteTVDist
 
 section eventTransfer
@@ -107,7 +120,7 @@ theorem ofReal_discreteTVDist_eq (p q : m β) :
     ENNReal.ofReal (discreteTVDist p q) = (letI : MeasurableSpace β := ⊤; measureETVDist p q) := by
   let : MeasurableSpace β := ⊤
   unfold discreteTVDist measureTVDist
-  exact ENNReal.ofReal_toReal (Measure.etvDist_ne_top _ _
+  exact ENNReal.ofReal_toReal (Measure.statEDist_ne_top _ _
     (EvalDistSemantics.apply_univ_le_one _) (EvalDistSemantics.apply_univ_le_one _))
 
 variable [Monad m] [LawfulMonad m] [LawfulEvalDistSemantics m]
@@ -118,7 +131,7 @@ theorem discreteTVDist.eq_zero_of_evalDistEq {mx my : m β} (h : mx =ᵈ my) :
   let : MeasurableSpace β := ⊤
   unfold discreteTVDist measureTVDist
   rw [h.evalDist_eq]
-  exact Measure.tvDist_self _
+  exact Measure.statDist_self _
 
 /-- **Probability transfer across total variation.** For any event `p`, its probability under
 `mx` is at most its probability under `my` plus `discreteTVDist mx my`. -/
@@ -127,8 +140,8 @@ theorem prEvent_le_prEvent_add_ofReal_discreteTVDist (mx my : m β)
     Pr{let x ← mx}[p x] ≤ Pr{let x ← my}[p x] + ENNReal.ofReal (discreteTVDist mx my) := by
   let : MeasurableSpace β := ⊤
   rw [prEvent_eq_evalDist mx p measurable_from_top, prEvent_eq_evalDist my p measurable_from_top,
-    discreteTVDist, measureTVDist, Measure.tvDist, ENNReal.ofReal_toReal
-      (Measure.etvDist_ne_top _ _ (EvalDistSemantics.apply_univ_le_one _)
+    discreteTVDist, measureTVDist, Measure.statDist, ENNReal.ofReal_toReal
+      (Measure.statEDist_ne_top _ _ (EvalDistSemantics.apply_univ_le_one _)
         (EvalDistSemantics.apply_univ_le_one _))]
   calc 𝒟[mx] {x | p x} ≤ 𝒟[my] {x | p x} + (𝒟[mx] {x | p x} - 𝒟[my] {x | p x}) := le_add_tsub
     _ ≤ _ := by

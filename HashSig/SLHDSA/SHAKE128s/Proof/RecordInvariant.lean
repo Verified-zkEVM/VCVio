@@ -101,7 +101,7 @@ theorem phase_invariant {Inv : S → Prop}
               ProbComp ((OracleWorld + SigningSpec).Range (Sum.inl world) ×
                 (ω × SigningLog × S)))) := hs
       obtain ⟨z, hz, hpure⟩ := support_bind_exists hs'
-      rw [show step.2.2.2 = z.2 from congrArg (fun p => p.2.2.2) hpure]
+      rw [show step.2.2.2 = z.2 from congrArg (fun p => p.2.2.2) (eq_of_mem_support_pure hpure)]
       exact run_invariant handler hstep _ carrier z hz hinv
     · have hs' : step ∈ support
           ((simulateQ handler (((inner (Sum.inr request)).run).run log)).run
@@ -110,7 +110,8 @@ theorem phase_invariant {Inv : S → Prop}
               ProbComp ((OracleWorld + SigningSpec).Range (Sum.inr request) ×
                 (ω × SigningLog × S)))) := hs
       obtain ⟨z, hz, hpure⟩ := support_bind_exists hs'
-      rw [show step.2.2.2 = after z.2 from congrArg (fun p => p.2.2.2) hpure]
+      rw [show step.2.2.2 = after z.2 from
+        congrArg (fun p => p.2.2.2) (eq_of_mem_support_pure hpure)]
       exact hafter z.2
         (run_invariant handler hstep _ (before request carrier) z hz
           (hbefore request carrier hinv))
@@ -161,7 +162,7 @@ theorem phase_invariant_of_after {Inv : S → Prop}
               ProbComp ((OracleWorld + SigningSpec).Range (Sum.inl world) ×
                 (ω × SigningLog × S)))) := hs
       obtain ⟨z, hz, hpure⟩ := support_bind_exists hs'
-      rw [show step.2.2.2 = z.2 from congrArg (fun p => p.2.2.2) hpure]
+      rw [show step.2.2.2 = z.2 from congrArg (fun p => p.2.2.2) (eq_of_mem_support_pure hpure)]
       exact run_invariant handler hstep _ carrier z hz hinv
     · have hs' : step ∈ support
           ((simulateQ handler (((inner (Sum.inr request)).run).run log)).run
@@ -170,7 +171,8 @@ theorem phase_invariant_of_after {Inv : S → Prop}
               ProbComp ((OracleWorld + SigningSpec).Range (Sum.inr request) ×
                 (ω × SigningLog × S)))) := hs
       obtain ⟨z, -, hpure⟩ := support_bind_exists hs'
-      rw [show step.2.2.2 = after z.2 from congrArg (fun p => p.2.2.2) hpure]
+      rw [show step.2.2.2 = after z.2 from
+        congrArg (fun p => p.2.2.2) (eq_of_mem_support_pure hpure)]
       exact hafter z.2
 
 /-! ## What the writer accumulates

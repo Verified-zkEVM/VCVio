@@ -280,7 +280,7 @@ lemma expectedCost_eq_lintegral_run
   rw [expectedCost, AddWriterT.costs_def]
   exact lintegral_evalDist_map oa.run
     (f := fun z ↦ Multiplicative.toAdd z.2)
-    (Multiplicative.measurable_toAdd.comp measurable_snd) hval
+    (measurable_toAdd.comp measurable_snd) hval
 
 /-- A measurable family of cost measures has a measurable expected valuation. Such a family
 is exactly the data needed by `evalDistKernel` on the cost marginal. -/
@@ -408,7 +408,7 @@ lemma expectedCostNat_le_tsum_of_tail_probs_le
     (oa : AddWriterT ℕ m α) {a : ℕ → ENNReal}
     (h : ∀ i : ℕ, Pr{let c ← oa.costs}[i < c] ≤ a i) :
     expectedCostNat oa ≤ ∑' i : ℕ, a i :=
-  (expectedCostNat_eq_tsum_tail_probs oa).trans_le (ENNReal.tsum_le_tsum h)
+  (expectedCostNat_eq_tsum_tail_probs oa).trans_le (tsum_le_tsum h)
 
 end tailBounds
 

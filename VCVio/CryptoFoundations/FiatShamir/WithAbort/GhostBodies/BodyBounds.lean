@@ -304,7 +304,7 @@ lemma measureETVDist_run_fsAbortSignLoop_progSignBody_le
                     (measureETVDist _ _)
                   ≤ ∑' oz : Option Resp, Pr{let x ← ids.respond pk sk ws.2 ch}[x = oz] *
                       (if oz = none then B' else 0) := by
-                    refine ENNReal.tsum_le_tsum fun oz => mul_le_mul_right ?_ _
+                    refine tsum_le_tsum fun oz => mul_le_mul_right ?_ _
                     cases oz with
                     | some z => simp
                     | none =>
@@ -320,7 +320,7 @@ lemma measureETVDist_run_fsAbortSignLoop_progSignBody_le
                   (measureETVDist _ _)
                 ≤ ∑' ch : Chal, Pr{let x ← uniformSample Chal}[x = ch] *
                     (Pr{let x ← ids.respond pk sk ws.2 ch}[x = none] * B') :=
-                  ENNReal.tsum_le_tsum fun ch => mul_le_mul_right (hch ch) _
+                  tsum_le_tsum fun ch => mul_le_mul_right (hch ch) _
               _ = Pr{let x ← (uniformSample Chal >>= fun ch =>
                     ids.respond pk sk ws.2 ch)}[x = none] * B' := by
                   rw [OracleComp.prEvent_bind_eq_tsum, ← ENNReal.tsum_mul_right]
@@ -331,14 +331,14 @@ lemma measureETVDist_run_fsAbortSignLoop_progSignBody_le
               ((if c (msg, ws.1) = none then 0 else 1) +
                 Pr{let x ← (uniformSample Chal >>= fun ch =>
                   ids.respond pk sk ws.2 ch)}[x = none] * B') :=
-            ENNReal.tsum_le_tsum fun ws => mul_le_mul_right (key ws) _
+            tsum_le_tsum fun ws => mul_le_mul_right (key ws) _
         _ = (∑' ws : Commit × PrvState, Pr{let x ← ids.commit pk sk}[x = ws] *
               (if c (msg, ws.1) = none then 0 else 1)) +
             ∑' ws : Commit × PrvState, Pr{let x ← ids.commit pk sk}[x = ws] *
               (Pr{let x ← (uniformSample Chal >>= fun ch =>
                 ids.respond pk sk ws.2 ch)}[x = none] * B') := by
             simp_rw [mul_add]
-            exact ENNReal.tsum_add
+            exact tsum_add
         _ ≤ QueryCache.enncard c * ENNReal.ofReal ε + ENNReal.ofReal p_abort * B' := by
             refine add_le_add ?_ ?_
             · refine le_trans (le_of_eq ?_)

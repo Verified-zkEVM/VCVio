@@ -529,7 +529,7 @@ theorem sum_tsum_comm {Index Result : Type} (indices : Finset Index)
   refine Finset.induction_on indices ?_ ?_
   · simp
   · intro head rest hhead ih
-    rw [Finset.sum_insert hhead, ih, ← ENNReal.tsum_add]
+    rw [Finset.sum_insert hhead, ih, ← tsum_add]
     refine tsum_congr fun result => ?_
     rw [Finset.sum_insert hhead]
 

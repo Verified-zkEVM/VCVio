@@ -51,11 +51,11 @@ info: 'PointerChainPuzzle.hidingAdvantage_sealScheme_le_paper' depends on axioms
 #print axioms hidingAdvantage_sealScheme_le_paper
 
 /--
-info: 'PointerChainPuzzle.hidingSecure_sealScheme' depends on axioms:
+info: 'PointerChainPuzzle.hidingSecureAgainst_sealScheme' depends on axioms:
 [propext, Classical.choice, Quot.sound]
 -/
 #guard_msgs (whitespace := lax) in
-#print axioms hidingSecure_sealScheme
+#print axioms hidingSecureAgainst_sealScheme
 
 /--
 info: 'PointerChainPuzzle.cappedHidingAdvantage_sealScheme_le_paper' depends on axioms:

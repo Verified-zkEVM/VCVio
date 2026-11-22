@@ -7,6 +7,7 @@ Authors: Quang Dao
 module
 
 public import VCVio.OracleComp.QueryTracking.LoggingOracle.Core
+public import VCVio.OracleComp.QueryTracking.QueryBound
 
 /-!
 # Allowed-query predicates and adaptive response paths
@@ -49,6 +50,17 @@ example : IsQueryBoundP (liftM (flagSpec.query true) : OracleComp flagSpec Bool)
 /-- Each index is queried at most once, on every response path. -/
 theorem adaptive_isQueryBoundP_eq (b : Bool) : IsQueryBoundP adaptive (· = b) 1 := by
   cases b <;> simp [adaptive]
+
+/-- The adaptive choice uses at most two queries under any fixed oracle. The other input returns
+immediately and exhausts its zero budget. -/
+example : Cslib.Query.UpperBound
+    (fun b : Bool => (if b then adaptive else pure false).toQueryProgram)
+    (fun b => if b then 2 else 0) id := by
+  apply queryUpperBound_of_isTotalQueryBound (spec := flagSpec)
+    (fun b : Bool => if b then adaptive else pure false) monotone_id
+  intro b
+  cases b <;>
+    simp [adaptive, IsTotalQueryBound, isQueryBound_query_bind_iff, isQueryBound_query_iff]
 
 /-- Budgets on the two indices add up to a budget on their disjunction: every query of
 `adaptive`, and there are two on the path through a true answer. -/

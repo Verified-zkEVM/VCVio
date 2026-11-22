@@ -5,10 +5,15 @@ Authors: Devon Tuma
 -/
 module
 
-public import ToMathlib.MeasureTheory.MeasurableSpace.Except
-public import ToMathlib.MeasureTheory.Measure.Option
+public import ToCslib.MeasureTheory.MeasurableSpace.Except
+public import ToCslib.MeasureTheory.Measure.Option
+public import ToMathlib.MeasureTheory.Measure.GiryMonad
 public import VCVio.EvalDist.Kernel
-public import VCVio.EvalDist.PFunctorMeasure.Core
+public import PolyFun.PFunctor.Free.Measure.EvalDist
+public import Mathlib.MeasureTheory.Measure.ProbabilityMeasure
+public import Mathlib.MeasureTheory.Measure.Prod
+public import Mathlib.Probability.UniformOn
+public import VCVio.EvalDist.Defs.Measure.Core
 public import Mathlib.Control.Monad.Writer
 
 /-!

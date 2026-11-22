@@ -478,10 +478,8 @@ end Collision
 section Reads
 
 variable {m : ℕ} {mkCtx : Salt → Ctx} {initAcc : Ctx → S} [NeZero n] [AddCommGroup L]
-  [DecidableEq S] [DecidableEq L] [DecidableEq Salt] [DecidableEq Ctx]
   {P : Puzzle n S L Salt} {ℓ₁ ℓ₂ : Labels n m S L} {R : Finset (PathValue n m)}
 
-omit [DecidableEq S] [DecidableEq L] [DecidableEq Salt] [DecidableEq Ctx] in
 /-- Whether a point is the legitimate query of a path value depends only on the labels of the
 reached set. -/
 lemma isLegit_congr (hR : ∀ v ∈ R, ℓ₁ v = ℓ₂ v) (t : Point n S L Salt Ctx) (v : PathValue n m) :
@@ -491,6 +489,8 @@ lemma isLegit_congr (hR : ∀ v ∈ R, ℓ₁ v = ℓ₂ v) (t : Point n S L Sal
     exact pathInput_congr m mkCtx initAcc P v fun w hw => hR w (h.1 hw)
   · rw [h.2]
     exact (pathInput_congr m mkCtx initAcc P v fun w hw => hR w (h.1 hw)).symm
+
+variable [DecidableEq S] [DecidableEq L] [DecidableEq Salt] [DecidableEq Ctx]
 
 /-- The path values a round newly reaches depend only on the labels of the reached set. -/
 lemma newlyReached_congr (hR : ∀ v ∈ R, ℓ₁ v = ℓ₂ v) (ts : List (Point n S L Salt Ctx)) :
@@ -694,11 +694,11 @@ end Bridge
 
 section Preprocessing
 
-variable {m : ℕ} {mkCtx : Salt → Ctx} {initAcc : Ctx → S} [NeZero n] [AddCommGroup L]
+variable {m : ℕ} {mkCtx : Salt → Ctx} {initAcc : Ctx → S}
 
 /-- A path input that is not the start of the first chain hits against the empty reached set. -/
-lemma hitAt_empty_of_eq {P : Puzzle n S L Salt} {ℓ : Labels n m S L} {t : Point n S L Salt Ctx}
-    {v : PathValue n m} (hv : t = pathInput m mkCtx initAcc P ℓ v)
+lemma hitAt_empty_of_eq [NeZero n] [AddCommGroup L] {P : Puzzle n S L Salt} {ℓ : Labels n m S L}
+    {t : Point n S L Salt Ctx} {v : PathValue n m} (hv : t = pathInput m mkCtx initAcc P ℓ v)
     (ht : ∀ ctx x, t ≠ .start ctx ⟨0, Nat.pos_of_neZero n⟩ x) :
     HitAt m mkCtx initAcc P ℓ ∅ t := by
   refine ⟨v, hv, fun hR => ?_⟩
@@ -706,14 +706,11 @@ lemma hitAt_empty_of_eq {P : Puzzle n S L Salt} {ℓ : Labels n m S L} {t : Poin
   subst hR
   exact ht _ _ hv
 
-variable [Fintype S] [Fintype L] [SampleableType S] [SampleableType L]
-
-omit [NeZero n] [AddCommGroup L] [Fintype S] [Fintype L] in
 /-- Resampling every label but the commitment fixes the puzzle: an event of the puzzle committing
 to a uniform labelling and of that labelling is bounded by bounding it, for each labelling `ℓ₀`,
 on the puzzle of `ℓ₀` and the labelling resampled outside the commitment. -/
-lemma prEvent_labelPuzzle_le (salt : Salt) (x : L) (z : Fin (n - 1) → L)
-    (E : Puzzle n S L Salt → Labels n m S L → Prop) {ε : ℝ≥0∞}
+lemma prEvent_labelPuzzle_le [SampleableType S] [SampleableType L] (salt : Salt) (x : L)
+    (z : Fin (n - 1) → L) (E : Puzzle n S L Salt → Labels n m S L → Prop) {ε : ℝ≥0∞}
     (h : ∀ ℓ₀, Pr{let ℓ' ← $ᵗ Labels n m S L}[E (labelPuzzle salt x z ℓ₀) (mixLabels ∅ ℓ₀ ℓ')] ≤
       ε) :
     Pr{let ℓ ← $ᵗ Labels n m S L}[E (labelPuzzle salt x z ℓ) ℓ] ≤ ε := by
@@ -730,7 +727,8 @@ probability at most `1 / (|Salt| |L|) + P / |S|`: a start point names one chain 
 path input of that chain's start only if its context is that of the fresh salt (through injective
 `mkCtx`) and its link is `x_i` (uniform: `x_0` directly, `x_i = z_{i-1} - μ_{i-1}` through the
 mask); every other point is as in case 4 against the empty reached set. -/
-theorem prEvent_eq_pathInput_seed_le (hctx : Function.Injective mkCtx)
+theorem prEvent_eq_pathInput_seed_le [NeZero n] [AddCommGroup L] [Fintype S] [Fintype L]
+    [SampleableType S] [SampleableType L] (hctx : Function.Injective mkCtx)
     (t : Point n S L Salt Ctx) [SampleableType Salt] [Fintype Salt] :
     Pr{let salt ← $ᵗ Salt; let p ← $ᵗ (L × (Fin (n - 1) → L)); let ℓ ← $ᵗ Labels n m S L}[
       ∃ v, t = pathInput m mkCtx initAcc (labelPuzzle salt p.1 p.2 ℓ) ℓ v] ≤
@@ -803,9 +801,8 @@ section OutcomeExperiment
 
 variable [DecidableEq S] [DecidableEq L] [DecidableEq Salt] [DecidableEq Ctx]
   [SampleableType S] [SampleableType L] [SampleableType Salt]
-  {m : ℕ} {mkCtx : Salt → Ctx} {initAcc : Ctx → S} [NeZero n] [AddCommGroup L]
+  {m : ℕ} {mkCtx : Salt → Ctx} {initAcc : Ctx → S}
 
-omit [NeZero n] [AddCommGroup L] in
 /-- A bound on an event after each run of the preprocessing computation, for the salt, links and
 labels drawn after it, bounds the event after the seed. -/
 lemma prEvent_seedOf_bind_le {State : Type}
@@ -817,6 +814,8 @@ lemma prEvent_seedOf_bind_le {State : Type}
     prEvent (seedOf pre m >>= g) ≤ ε := by
   simp only [seedOf, bind_assoc, pure_bind]
   exact prEvent_bind_le_of_support h
+
+variable [NeZero n] [AddCommGroup L]
 
 /-- **The generator's `Bad`.** For a preprocessing computation making at most `Q_pre` queries,
 the generator's `Bad` holds on the seed with probability at most
@@ -912,9 +911,8 @@ section Experiment
 variable [DecidableEq S] [DecidableEq L] [DecidableEq Salt] [DecidableEq Ctx]
   [SampleableType S] [SampleableType L] [SampleableType Salt]
   {adv : TimeLockPuzzle.Adversary (oracleSpec n S L Salt Ctx) (Puzzle n S L Salt) S}
-  {m : ℕ} {mkCtx : Salt → Ctx} {initAcc : Ctx → S} [NeZero n] [AddCommGroup L]
+  {m : ℕ} {mkCtx : Salt → Ctx} {initAcc : Ctx → S}
 
-omit [NeZero n] [AddCommGroup L] in
 /-- A bound on an event after each preprocessing run, for the salt, links and labels drawn
 after it, bounds the event after the seed. -/
 lemma prEvent_seed_bind_le {g : Seed n m S L Salt Ctx adv.State → ProbComp Prop} {ε : ℝ≥0∞}
@@ -923,6 +921,8 @@ lemma prEvent_seed_bind_le {g : Seed n m S L Salt Ctx adv.State → ProbComp Pro
         $ᵗ Labels n m S L >>= fun ℓ => g ⟨z.1, z.2, salt, p.1, p.2, ℓ⟩) ≤ ε) :
     prEvent (seed adv m >>= g) ≤ ε :=
   prEvent_seedOf_bind_le h
+
+variable [NeZero n] [AddCommGroup L]
 
 /-- **Online Bad.** In the ideal experiment, under an online budget of `Q_on` points, online Bad
 occurs with probability at most `Q_on ([n ≥ 2] / |L| + P / |S|)`: resampling every label but the
