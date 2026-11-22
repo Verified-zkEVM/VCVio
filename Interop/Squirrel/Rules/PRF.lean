@@ -775,6 +775,13 @@ it. For names with decidable equality they are decidable, and `decide` checks th
     (e.P.closeVec e.u).AvoidsNames (· = ⟨e.a, e.P.hTy, e.nn⟩) ∧
     FTerm.AvoidsNames (· = ⟨e.a, e.P.hTy, e.nn⟩) (e.P.close e.m)
 
+instance decidableSyntactic [DecidableEq ((a : Ty B) × (b : Ty B) × D.Name a b)] :
+    Decidable e.Syntactic :=
+  haveI := decidableForallEntries (fun _ t => e.P.KeyFree t) e.u
+  haveI := decidableForallEntries (fun _ t => e.P.Pptm t) e.u
+  haveI := decidableForallEntries (fun _ t => e.P.FirstOrder t) e.u
+  inferInstanceAs (Decidable (_ ∧ _ ∧ _ ∧ _ ∧ _ ∧ _ ∧ _ ∧ _ ∧ _ ∧ _ ∧ _))
+
 /-- The semantic hypotheses of G.PRF: in every model of `R`, names of the hash type are uniform;
 and the two named reductions of every admitted machine have negligible PRF advantage. -/
 @[expose] def Holds (R : Model D → Prop) (C : ∀ M : Model D, AdvClass M) : Prop :=

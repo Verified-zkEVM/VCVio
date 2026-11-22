@@ -72,6 +72,25 @@ open IPFunctor IPFunctor.ScopedSignature
 
 variable {B : Type} {D : Decl B}
 
+/-! ## Deciding a property of every entry of a vector
+
+A fact about PolyFun's environments, independent of Squirrel: the side conditions of a vector are
+decided entry by entry. -/
+
+/-- Whether a property holds of every entry of an environment, decided entry by entry. -/
+@[expose, instance_reducible] def decidableForallEntries {S : Type} {V : S → Type}
+    (p : ∀ a, V a → Prop) [∀ a v, Decidable (p a v)] :
+    {Γ : List S} → (η : Env V Γ) → Decidable (∀ a x, p a (η a x))
+  | [], _ => isTrue fun _ x => nomatch x
+  | _ :: _, η =>
+    haveI := decidableForallEntries p fun _ x => η _ (.succ x)
+    decidable_of_iff (p _ (η _ .zero) ∧ ∀ a (x : ScopedVar _ a), p a (η a (.succ x)))
+      ⟨fun h a x => by
+        cases x with
+        | zero => exact h.1
+        | succ x => exact h.2 a x,
+      fun h => ⟨h _ .zero, fun a x => h a (.succ x)⟩⟩
+
 /-- The symbols of a keyed hash in a declaration: a key name `nk` read at an honest constant
 index `ik`, and the hash `hOf : msg → key → hash`, applied to a message and the key. -/
 structure PRFSymbols (D : Decl B) where
