@@ -63,8 +63,10 @@ Two resource bounds describe a machine without fixing a model of time:
   inputs (VCVio's `IsQueryBoundP`; tape reads are not counted).
 
 A machine running in time `t(η)` meets both with `t`: it reads its tape below `t(η)` and makes at
-most `t(η)` queries. Each construction keeps a read bound, and multiplies a query bound by the
-number of queries its handler makes per query (`Machine.QueryBound.handle`).
+most `t(η)` queries. Each construction keeps a read bound, except that a shift adds its offset
+(`Machine.ReadsBelow.shift`) and the sampler reads its bit block (`Machine.readsBelow_sampler`),
+and multiplies a query bound by the number of queries its handler makes per query
+(`Machine.QueryBound.handle`).
 
 ## References
 
