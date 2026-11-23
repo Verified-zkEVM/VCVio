@@ -13,6 +13,7 @@ public import Interop.Squirrel.Rules.Enc
 public import Interop.Squirrel.Rules.Deduce
 public import Interop.Squirrel.Rules.Oracle
 public import Interop.Squirrel.Rules.PRF
+public import Interop.Squirrel.Rules.PRFLeft
 
 /-!
 # Derivations of global sequents
@@ -60,7 +61,13 @@ lemma per constructor:
   of each admitted instance (`PRFRule.Holds`: uniform names of the hash type, and the PRF
   assumption for the named reductions of the admitted machines). PRF-Simple is derived from
   G.PRF, Perm, FreshL and Rw-Equiv as CCS26 derives it (`Derivation.nonDedPRF`), so it is not a
-  constructor.
+  constructor;
+* PRF.R and PRF.L-sec (CCS26 Fig. 4 and §2.3), with the hash oracle on the left (`nonDedPRFR`,
+  `nonDedPRFLSec`), at the instances that `prf` admits, with their syntactic side conditions
+  (`PRFRInstance.Syntactic`, `PRFLInstance.Syntactic`) and their `[ψ_msg]` as premises.
+  `Derivation.sound` takes the PRF assumption of each admitted instance for its named reductions
+  (`PRFRule.Holds`: `PRFSymbols.rightReduction`, one per candidate; `PRFSymbols.leftReduction` and
+  `PRFSymbols.leftFreshReduction`).
 
 FreshL is sound only over models with long attacker tapes (`Model.LongTapes`); without them it
 fails (`FreshLCountermodel.freshL_needs_longTapes`, in the tests). So derivations carry a
@@ -69,9 +76,13 @@ premises that `R₀` gives long tapes and polynomial bit blocks for the name's t
 terms read the attacker tape below a polynomial in every model of `R₀` and of `Θ`. The guess of
 Rw-Oracle and Pc-Oracle draws its position from the attacker tape as FreshL draws its name, so
 their constructors take the same premises, with polynomial bit blocks for the oracles' argument
-type, from which the guess draws its default. `Derivation.sound` holds over every restriction `R`
-contained in `R₀`. Derivations that use none of FreshL, Rw-Oracle, Pc-Oracle and `boxValid` can
-take `R₀` to be every model.
+type, from which the guess draws its default. PRF.R and PRF.L-sec use the same guess against
+their premises on the message, and PRF.L-sec reads its fresh draw from the attacker tape, so their
+constructors take that `R₀` gives uniform names of the hash type, long tapes and polynomial bit
+blocks for messages (and for hashes, PRF.L-sec), with the read bounds of their terms.
+`Derivation.sound` holds over every restriction `R` contained in `R₀`. Derivations that use none
+of FreshL, Rw-Oracle, Pc-Oracle, PRF.R, PRF.L-sec and `boxValid` can take `R₀` to be every
+model.
 
 The rules about `∼`, `⊬` and `▷` hold for every class of machines, because the class is closed
 under their reductions by its fields (`AdvClass`). Formulas carry the order bounds of CSF24 and
@@ -88,7 +99,7 @@ takes the conclusion's bound.
 * [CSF24] Baelde, Fontaine, Koutsos, Scerri, Vignon, *A Probabilistic Logic for Concrete
   Security*, CSF 2024: App. A.
 * [CCS26] Hérouard, Jacomme, Koutsos, Lallemand, *Secrecy in Squirrel and the Post-Compromise
-  Security of a Ratchet*, CCS 2026: §3.1, Fig. 3, Fig. 11, p. 17 and App. C.1.
+  Security of a Ratchet*, CCS 2026: §2.3, §3.1, Fig. 3, Fig. 4, Fig. 11, p. 17 and App. C.
 -/
 
 public section
@@ -99,15 +110,21 @@ open IPFunctor IPFunctor.ScopedSignature
 
 variable {B : Type}
 
-/-- The instances of the PRF rules that a derivation may use: G.PRF. -/
+/-- The instances of the PRF rules that a derivation may use: G.PRF, PRF.R and PRF.L-sec. -/
 inductive PRFRule (D : Decl B) where
   /-- An instance of G.PRF. -/
   | gprf (e : PRFInstance D)
+  /-- An instance of PRF.R. -/
+  | right (e : PRFRInstance D)
+  /-- An instance of PRF.L-sec. -/
+  | left (e : PRFLInstance D)
 
 /-- The semantic hypotheses of an instance of a PRF rule. -/
 @[expose] def PRFRule.Holds {D : Decl B} : PRFRule D → (Model D → Prop) →
     (∀ M : Model D, AdvClass M) → Prop
   | .gprf e, R, C => e.Holds R C
+  | .right e, R, C => e.Holds R C
+  | .left e, R, C => e.Holds R C
 
 /-- Derivations of `Θ ⊢ F` in the context `Γ`, using the encryption rule at the instances that
 `enc` admits and the PRF rules at the instances that `prf` admits, over the models of `R₀`. -/
@@ -364,6 +381,33 @@ inductive Derivation (D : Decl B) (enc : EncInstance D → Prop) (prf : PRFRule 
   | equivPRF {Θ : List (Form D [])} (e : PRFInstance D) : prf (.gprf e) → e.Syntactic →
       Derivation D enc prf R₀ Θ (.box (e.P.psiMsg e.u e.m)) →
       Derivation D enc prf R₀ Θ (.equiv e.lhs e.rhs e.order)
+  /-- PRF.R (CCS26 Fig. 4), at an admitted instance whose syntactic side conditions hold, over
+  models where `R₀` gives uniform names of the hash type, long attacker tapes and polynomial bit
+  blocks for messages, with the read bounds of the terms in every model of `R₀` and of `Θ`, from
+  `[ψ_msg^{m,k}(u⃗)]` and `u⃗, o_h^k ⊬ m`. -/
+  | nonDedPRFR {Θ : List (Form D [])} (e : PRFRInstance D) : prf (.right e) → e.Syntactic →
+      (∀ M, R₀ M → M.UniformSampler e.P.hTy ∧ M.LongTapes ∧ M.PolyCoins e.P.msgTy) →
+      (∀ M : Model D, M.RespectsLabels → R₀ M → ∀ (C : AdvClass M) env,
+        (∀ θ ∈ Θ, θ.Holds M C env) →
+          Vec.ReadsPoly M C (e.P.closeVec e.u) env ∧ FTerm.ReadsPoly M C (e.P.close e.m) env) →
+      Derivation D enc prf R₀ Θ (.box (e.P.psiMsgVec e.u e.m)) →
+      Derivation D enc prf R₀ Θ (.nonDed e.lhs (e.P.close e.m) e.orderM) →
+      Derivation D enc prf R₀ Θ (.nonDed e.lhs (e.P.hashTerm (e.P.close e.m)) e.order)
+  /-- PRF.L-sec (CCS26 §2.3 and Fig. 4), at an admitted instance whose syntactic side conditions
+  hold, over models where `R₀` gives uniform names of the hash type, long attacker tapes and
+  polynomial bit blocks for messages and hashes, with the read bounds of the terms in every model
+  of `R₀` and of `Θ`, from `[ψ_msg^{m,k}(u⃗, v, m)]`, `u⃗, o_h^k ⊬ v` and `u⃗, o_h^k ⊬ m`. -/
+  | nonDedPRFLSec {Θ : List (Form D [])} (e : PRFLInstance D) : prf (.left e) → e.Syntactic →
+      (∀ M, R₀ M → M.UniformSampler e.P.hTy ∧ M.LongTapes ∧ M.PolyCoins e.P.msgTy ∧
+        M.PolyCoins e.P.hTy) →
+      (∀ M : Model D, M.RespectsLabels → R₀ M → ∀ (C : AdvClass M) env,
+        (∀ θ ∈ Θ, θ.Holds M C env) → Vec.ReadsPoly M C (e.P.closeVec e.u) env ∧
+          FTerm.ReadsPoly M C (e.P.close e.v) env ∧ FTerm.ReadsPoly M C (e.P.close e.m) env) →
+      Derivation D enc prf R₀ Θ (.box (e.P.psiMsg (Env.append e.u (Env.cons e.v Env.empty)) e.m)) →
+      Derivation D enc prf R₀ Θ (.nonDed e.lhs (e.P.close e.v) e.order) →
+      Derivation D enc prf R₀ Θ (.nonDed e.lhs (e.P.close e.m) e.orderM) →
+      Derivation D enc prf R₀ Θ
+        (.nonDed (Vec.snoc e.lhs (e.P.hashTerm (e.P.close e.m))) (e.P.close e.v) e.orderC)
 
 variable {D : Decl B} {enc : EncInstance D → Prop} {prf : PRFRule D → Prop}
   {R₀ : Model D → Prop}
@@ -439,6 +483,14 @@ theorem Derivation.sound (R : Model D → Prop) (C : ∀ M : Model D, AdvClass M
       (fun M hlM hRM env hΘ => hr M hlM (hR M hRM) (C M) env hΘ) (d₁.sound R C henc hprf hR)
       (d₂.sound R C henc hprf hR)
   | _, _, _, .equivPRF e he hs d => e.valid hs (hprf _ he) (d.sound R C henc hprf hR)
+  | _, _, _, .nonDedPRFR e he hs hl hr d₁ d₂ =>
+    e.valid hs (hprf _ he) (fun M hRM => hl M (hR M hRM))
+      (fun M hlM hRM env hΘ => hr M hlM (hR M hRM) (C M) env hΘ) (d₁.sound R C henc hprf hR)
+      (d₂.sound R C henc hprf hR)
+  | _, _, _, .nonDedPRFLSec e he hs hl hr d₁ d₂ d₃ =>
+    e.valid hs (hprf _ he) (fun M hRM => hl M (hR M hRM))
+      (fun M hlM hRM env hΘ => hr M hlM (hR M hRM) (C M) env hΘ) (d₁.sound R C henc hprf hR)
+      (d₂.sound R C henc hprf hR) (d₃.sound R C henc hprf hR)
 
 /-- **PRF-Simple, derived** (CCS26 Fig. 11, p. 17): from a derivation of `u⃗ ⊬ v`, a derivation of
 `u⃗, h(m, k) ⊬ v`, through the constructors of G.PRF (at the vector `u⃗, v` and a name `n` of the

@@ -373,6 +373,15 @@ theorem close_apply_update (C : AdvClass M) (env : Env (Kind.Value M) []) {τ : 
   exact congrFun (ointerp_eq_of_keyFree (fun k hk => Function.update_of_ne
     (fun h => hk (congrArg Sigma.fst h)) _ _) _ t hk) _
 
+/-- A closed vector with calls, without the key name, at the tapes `ρ` with the key's coordinate
+overwritten by `kc`: the readings of its entries at `ρ` with the key value of `kc`. -/
+theorem closeVec_rv_apply_update (C : AdvClass M) (env : Env (Kind.Value M) [])
+    {τs : List (Ty B)} (u : OVec P [] τs) (hku : ∀ τ x, P.KeyFree (u τ x))
+    (kc : M.Coin η P.keyTy) (ρ : M.Tape η) :
+    (P.closeVec u).rv M C env η (ρ.1, Function.update ρ.2 (P.keySlot M η) kc) =
+      fun τ x => (u τ x).denote (P.ointerp M η ρ (M.sample η P.keyTy kc)) Env.empty :=
+  funext fun τ => funext fun x => close_apply_update C env (u τ x) (hku τ x) kc ρ
+
 /-- The hash oracle at the tapes `ρ` with the key's coordinate overwritten by `kc` is the keyed
 hash under the key value of `kc`. -/
 theorem hashOracle_apply_update (C : AdvClass M) (env : Env (Kind.Value M) [])
@@ -441,10 +450,7 @@ private theorem exists_rightOutcome [DecidableEq (M.Slot η)] (m : OTerm P [] P.
         M.fn η P.hOf ((P.close m).denote (fullInterp M C) env η _)
           (P.keyVal M η (Function.update ρ.2 (P.keySlot M η) kc)) at hW
     rwa [AdvMachine.appVals_eval_eq_withOracleFirst hmg hh, hashOracle_apply_update,
-      close_apply_update C env m hkm, keyVal_update,
-      show Vec.rv M C (P.closeVec u) env η (ρ.1, Function.update ρ.2 (P.keySlot M η) kc) =
-          fun τ x => (u τ x).denote (P.ointerp M η ρ kv) Env.empty from
-        funext fun τ => funext fun x => close_apply_update C env (u τ x) (hku τ x) kc ρ] at hW
+      close_apply_update C env m hkm, keyVal_update, closeVec_rv_apply_update C env u hku] at hW
   · rw [@QueryLog.wasQueried_eq_decide_mem_map_fst _ _ (Classical.decEq _),
       decide_eq_false_iff_not]
     simp only [List.map_append, List.mem_append, not_or, List.append_nil]
@@ -522,8 +528,7 @@ theorem rightAdvantage_le (hU : M.UniformSampler P.hTy) (m : OTerm P [] P.msgTy)
       refine exists_rightOutcome hmg hh u g m hg hku hkm hpu hpm hfu hfm C env x.1 x.2 hW
         (Bool.not_eq_false _ ▸ hBU) fun y hy hyx => hBA ⟨y, ?_, ?_⟩
       · rwa [show O η _ = _ from hashOracle_apply_update C env x.1 x.2,
-          show U η (x.2.1, Function.update x.2.2 (P.keySlot M η) x.1) = _ from
-            funext fun τ => funext fun z => close_apply_update C env (u τ z) (hku τ z) x.1 x.2]
+          show U η _ = _ from closeVec_rv_apply_update C env u hku x.1 x.2]
       · rw [show Mv η _ = _ from close_apply_update C env m hkm x.1 x.2]
         exact hyx
     refine List.sum_le_sum fun t _ => ?_

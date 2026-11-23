@@ -40,7 +40,7 @@ roots = [
   "Interop.Squirrel.Rules.Fresh", "Interop.Squirrel.TapeBounds", "Interop.Squirrel.Rules.FreshL",
   "Interop.Squirrel.Rules.Oracle", "Interop.Squirrel.OracleTerm",
   "Interop.Squirrel.Compile", "Interop.Squirrel.Rules.PRF", "Interop.Squirrel.Rules.PRFOracle",
-  "Interop.Squirrel.Derivation",
+  "Interop.Squirrel.Rules.PRFLeft", "Interop.Squirrel.Derivation",
 ]
 
 # Satisfiability checks, countermodels, bound checks and worked derivations; `lake test` builds
