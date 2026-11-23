@@ -54,7 +54,13 @@ chooses. Among them:
   first-order terms with explicit hash calls in the `⊢pptm` fragment, of Boolean or base types,
   with `ψ_msg` generated over the call arguments and the conditions of conditionals dropped; the
   key name occurs nowhere but as the key of the hash (`ψ_key`), names of the hash type are uniform,
-  and the PRF assumption is a hypothesis on the two named reductions of each admitted machine.
+  and the PRF assumption is a hypothesis on the two named reductions of each admitted machine;
+- PRF.R and PRF.L-sec are proved with the hash oracle on the left as the term `λx. h(x, k)`,
+  answered in the reductions by the compiled `λx. call x`, under G.PRF's conditions on terms,
+  FreshL's conditions on models and terms for messages (and hashes, PRF.L-sec), and a `large` hash
+  type (PRF.R); PRF.R's `ψ_msg` ranges over the calls of the vector only, PRF.L-sec is the form of
+  CCS26 §2.3, with `ψ_msg` over the calls of the vector, the secret and the message, and the PRF
+  assumption is a hypothesis on the named reductions of each admitted machine.
 
 ## Implementations covered
 
@@ -67,8 +73,8 @@ None yet: the sub-project states the logic and proves its rules.
 | `Interop.Squirrel.Syntax` | simple types with the labels `finite`, `fixed` and `large`, declarations, and local terms as one scoped signature |
 | `Interop.Squirrel.Model` | models: carriers of bitstrings, the attacker tape, the honest tape of bit blocks, names, labels; the pointwise reading `interp`; β and the semantic core of local rewriting; argument spines and post-composition of attacker functions of tuples (`Ty.splitArgs`, `Ty.postcomp`); the order bounds of `adv`, `∼`, `⊬` and `▷` |
 | `Interop.Squirrel.RandomVariable` | local terms as random variables (`rvInterp`), and locality (`eval_denote_rvInterp`) |
-| `Interop.Squirrel.Machine` | machines as `OracleComp` programs over the tape and input interfaces, their runs, the denotations `Machine.test` and `AdvMachine.eval`; handlers and the constructions `rename`, `app`, `fn`, `subst`, `branch`, `const`, `eqTest`, `shift` and `sampler` with their runs; the reductions `ite`, `guard`, `adv`, `deduce`, `AdvMachine.comp` and `AdvMachine.freshL`; running a machine inside a reduction (`Machine.simulate`); reading and overwriting a block of the attacker tape (`Model.bitsAt`, `Model.setBlock`); read and query bounds, kept by every construction |
-| `Interop.Squirrel.Guess` | the guessing machine `Machine.guess`, which returns the argument of the query to its oracle input at a position read from the tape, with its run through VCVio's `runLog` and its read and query bounds; a run that queries an oracle only where it agrees with another is unchanged by swapping them; the averaging over drawn bits (`sum_prEvent_eq_two_pow_mul`) |
+| `Interop.Squirrel.Machine` | machines as `OracleComp` programs over the tape and input interfaces, their runs, the denotations `Machine.test` and `AdvMachine.eval`; handlers and the constructions `rename`, `app`, `fn`, `subst`, `branch`, `const`, `eqTest`, `shift` and `sampler` with their runs; the reductions `ite`, `guard`, `adv`, `deduce`, `AdvMachine.comp` and `AdvMachine.freshL`; running a machine inside a reduction (`Machine.simulate`); reading and overwriting a block of the attacker tape (`Model.bitsAt`, `Model.setBlock`); a machine run inside a reduction whose input answers evaluate to values returns its run (`Machine.evalWithAnswerFn_simulate`); read and query bounds, kept by every construction |
+| `Interop.Squirrel.Guess` | the guessing machine `Machine.guess`, which returns the argument of the query to its oracle input at a position read from the tape, with its run through VCVio's `runLog` and its read and query bounds; a run that queries an oracle only where it agrees with another is unchanged by swapping them, and so is its log; the averaging over drawn bits (`sum_prEvent_eq_two_pow_mul`) |
 | `Interop.Squirrel.Indist` | advantage, the class of admitted machines `AdvClass` with the closure fields of the rules' reductions and polynomial read and query bounds, the class `AdvClass.all` of machines with polynomial read and query bounds, `adv` and `∼`; the named reductions as distinguishers, and the laws of `∼` with the advantage kept or bounded at every `η` |
 | `Interop.Squirrel.Global` | global formulas as the sum of the local and global signatures, their semantics, validity, and the rules G.Axiom, G.Weak, G.Cut, G.L-∀̃, G.R-∀̃, L.ByGlob and G.ByLoc |
 | `Interop.Squirrel.Avoids` | terms that do not use a set of names (`FTerm.AvoidsNames`), stated on PolyFun's `Term.heads` and decidable; such a term ignores the honest-tape coordinates of those names |
@@ -83,10 +89,12 @@ None yet: the sub-project states the logic and proves its rules.
 | `Interop.Squirrel.TapeBounds` | read bounds of random variables and of terms (`FTerm.ReadsPoly`, discharged constructor by constructor and from `adv`), and long attacker tapes (`Model.LongTapes`) |
 | `Interop.Squirrel.Rules.FreshL` | FreshL by CCS26's argument, with the fresh name drawn from the attacker tape of the same model: the success probabilities are equal at every large `η` |
 | `Interop.Squirrel.Rules.Oracle` | Rw-Oracle as CCS26's double rule and in the form of Fig. 3, and Pc-Oracle, by identical until bad and the guessing reduction `AdvMachine.rwGuess`: at every large `η` the success against `u⃗, o₁ ⊢ v` is at most that against `u⃗, o₂ ⊢ v` plus `2^⌈log₂ q(η)⌉` times the probability that the oracles differ at the guess |
-| `Interop.Squirrel.OracleTerm` | terms with explicit calls to a keyed hash (`OTerm`), closed up into the logic's terms (`PRFSymbols.close`); `ψ_key`, `⊢pptm` and being first order as conditions on PolyFun's `Term.heads`, decidable; `ψ_msg` over the arguments of the calls |
-| `Interop.Squirrel.Compile` | the call-by-value reading of terms with calls as free programs over the honest coins, the attacker tape and a hash oracle: PolyFun's `Term.denoteCBV` at one `CBVInterpretation`; its adequacy, and that a run hashes only arguments of calls, from PolyFun's fundamental lemma `Term.denoteCBV_related` |
+| `Interop.Squirrel.OracleTerm` | terms with explicit calls to a keyed hash (`OTerm`), closed up into the logic's terms (`PRFSymbols.close`); `ψ_key`, `⊢pptm` and being first order as conditions on PolyFun's `Term.heads`, decidable; `ψ_msg` over the arguments of the calls of a vector and a message, or of a vector only (`PRFSymbols.psiMsgVec`); the calls of a call argument |
+| `Interop.Squirrel.Compile` | the call-by-value reading of terms with calls as free programs over the honest coins, the attacker tape and a hash oracle: PolyFun's `Term.denoteCBV` at one `CBVInterpretation`; its adequacy, and that a run hashes only arguments of calls, from PolyFun's fundamental lemma `Term.denoteCBV_related`; a candidate among a message and its call arguments that its own run does not hash (`PRFSymbols.exists_unhashed`) |
 | `Interop.Squirrel.Rules.PRF` | G.PRF without an oracle on the left, from VCVio's PRF game through the named reductions `PRFSymbols.hashReduction` and `PRFSymbols.freshReduction`: at every `η` the advantage is at most their two PRF advantages plus `Pr[ψ_msg = false]`; PRF-Simple, derived from G.PRF, Perm, FreshL and Rw-Equiv |
-| `Interop.Squirrel.Derivation` | derivations of these rules as data, the encryption rule and G.PRF at the admitted instances, PRF-Simple derived, the model restriction `R₀` that FreshL, Rw-Oracle and Pc-Oracle assume, and `Derivation.sound` |
+| `Interop.Squirrel.Rules.PRFOracle` | PRF.R with the hash oracle `o_h^k = λx. h(x, k)` on the left, answered as an input by the compiled `λx. call x`, through the named reductions `PRFSymbols.rightReduction`, one per candidate: at every large `η` the success is at most `Pr[ψ_msg(u⃗) = false]`, plus `2^⌈log₂ q(η)⌉` times the success of Rw-Oracle's guess against `u⃗, o_h^k ⊢ m`, plus a PRF advantage and `2^{-cη}` per candidate |
+| `Interop.Squirrel.Rules.PRFLeft` | PRF.L-sec in the form of CCS26 §2.3, through the named reductions `PRFSymbols.leftReduction` and `PRFSymbols.leftFreshReduction`, which intercept the attacker's oracle at the message: at every large `η` the success is at most `Pr[ψ_msg = false]`, plus their two PRF advantages, plus the success of FreshL's reduction against the premise, plus `2^⌈log₂ q(η)⌉` times the success of the guess against `C_sec` |
+| `Interop.Squirrel.Derivation` | derivations of these rules as data, the encryption rule, G.PRF, PRF.R and PRF.L-sec at the admitted instances, PRF-Simple derived, the model restriction `R₀` that FreshL, Rw-Oracle, Pc-Oracle, PRF.R and PRF.L-sec assume, and `Derivation.sound` |
 
 The declarations are in the namespace `Interop.Squirrel`. CI's axiom sweep holds every root of
 `InteropSquirrel` at zero `sorry` and nonstandard-axiom debt.
@@ -137,7 +145,10 @@ package's test driver, holds the checks:
   (`Interop/Squirrel/Test/OracleExamples.lean`);
 - the compiled reading on small terms, with adequacy failing outside `⊢pptm`; G.PRF and a worked
   PRF-Simple with every hypothesis holding jointly in a model whose hash is a perfect PRF; and
-  G.PRF failing without `ψ_msg` and without `ψ_key` (`Interop/Squirrel/Test/PRFExamples.lean`).
+  G.PRF failing without `ψ_msg` and without `ψ_key` (`Interop/Squirrel/Test/PRFExamples.lean`);
+- two PRF.R steps, and a PRF.R step followed by PRF.L-sec, with every hypothesis holding jointly in
+  the same model; PRF.L-sec failing without `ψ_msg`, and PRF.R and PRF.L-sec without their premise
+  (`Interop/Squirrel/Test/PRFOracleExamples.lean`).
 
 CI's `Interop Squirrel` job builds the package, runs `lake test` and sweeps the roots of
 `InteropSquirrel` for axioms.
