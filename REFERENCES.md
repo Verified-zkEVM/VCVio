@@ -84,6 +84,11 @@ Cryptology ePrint Archive, Report 2025/055, 2025.
 Preprint: <https://eprint.iacr.org/2025/055>
 
 Used in:
+- `VCVio/CryptoFoundations/SyncSignatureAlg.lean`
+- `HashSig/GXMSS/Scheme.lean`
+- `HashSig/GXMSS/Completeness.lean`
+- `HashSig/GXMSS/Security/Interval/Unforgeability.lean`
+- `docs/reading/gxmss.md`
 - `VCVio/CryptoFoundations/TweakableHash.lean`
 - `VCVio/CryptoFoundations/HardnessAssumptions/TweakableHash/SMDTTCR.lean`
 - `VCVio/CryptoFoundations/HardnessAssumptions/TweakableHash/SMDTPRE.lean`
