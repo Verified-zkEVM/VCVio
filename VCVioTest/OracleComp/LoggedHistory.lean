@@ -30,7 +30,7 @@ private abbrev runLogged {ι κ τ : Type} {spec : OracleSpec.{0, 0} ι}
     (ambient : QueryImpl spec (StateT σ (OracleComp target)))
     (service : QueryImpl sig (StateT σ (OracleComp target)))
     (client : OracleComp (spec + sig) α) (initial : σ) :=
-  ((simulateQ (ambient.liftTarget (WriterT (QueryLog sig) (StateT σ (OracleComp target))) +
+  ((simulateQ (ambient.liftTarget (WriterT (QueryLog sig) (StateT σ (OracleComp target))) +ₛ
     service.withLogging) client).run).run initial
 
 private noncomputable def ambient :

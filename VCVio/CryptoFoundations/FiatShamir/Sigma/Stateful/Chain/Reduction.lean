@@ -176,23 +176,23 @@ private lemma nma_runProb_shiftLeft_signedFreshAdv_eq_forkH5Body
       cmaOuterLens, cmaNmaLens, QueryImpl.Stateful.Frame.linkReshape,
       Functor.map_map]
   have hkeyLiftComp :
-      simulateQ (QueryImpl.id' unifSpec + uniformSampleImpl)
+      simulateQ (QueryImpl.id' unifSpec +ₛ uniformSampleImpl)
           (OracleComp.liftComp
             (hr.gen : OracleComp unifSpec (Stmt × Wit))
             (Fork.wrappedSpec Chal)) =
         (hr.gen : ProbComp (Stmt × Wit)) := by
     simpa using QueryImpl.simulateQ_liftComp_left_eq_of_apply
-      (impl := QueryImpl.id' unifSpec +
+      (impl := QueryImpl.id' unifSpec +ₛ
         (uniformSampleImpl (spec := (Unit →ₒ Chal))))
       (impl₁ := QueryImpl.id' unifSpec)
       (h := fun t => by rfl)
       (oa := (hr.gen : OracleComp unifSpec (Stmt × Wit)))
   rw (occs := .pos [1]) [← hkeyLiftComp]
-  change (simulateQ (QueryImpl.id' unifSpec + uniformSampleImpl)
+  change (simulateQ (QueryImpl.id' unifSpec +ₛ uniformSampleImpl)
       (OracleComp.liftComp
         (hr.gen : OracleComp unifSpec (Stmt × Wit))
         (Fork.wrappedSpec Chal)) >>= fun ps => _) =
-    (simulateQ (QueryImpl.id' unifSpec + uniformSampleImpl)
+    (simulateQ (QueryImpl.id' unifSpec +ₛ uniformSampleImpl)
       (OracleComp.liftComp
         (hr.gen : OracleComp unifSpec (Stmt × Wit))
         (Fork.wrappedSpec Chal)) >>= fun ps => _)

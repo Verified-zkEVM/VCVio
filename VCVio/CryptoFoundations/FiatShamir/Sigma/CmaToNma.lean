@@ -92,7 +92,7 @@ def simulatedNmaBaseSim
     QueryImpl (fsRoSpec M Commit Chal)
       (StateT (fsRoSpec M Commit Chal).QueryCache
         (OracleComp (fsRoSpec M Commit Chal))) :=
-  simulatedNmaUnifSim (M := M) (Commit := Commit) (Chal := Chal) +
+  simulatedNmaUnifSim (M := M) (Commit := Commit) (Chal := Chal) +ₛ
     simulatedNmaRoSim (M := M) (Commit := Commit) (Chal := Chal)
 
 /-- The signing handler: answers a message `msg` with `(c, s)` from a transcript
@@ -120,7 +120,7 @@ def simulatedNmaImpl
     QueryImpl (cmaOracleSpec M Commit Chal Resp)
       (StateT (fsRoSpec M Commit Chal).QueryCache
         (OracleComp (fsRoSpec M Commit Chal))) :=
-  simulatedNmaBaseSim (M := M) (Commit := Commit) (Chal := Chal) +
+  simulatedNmaBaseSim (M := M) (Commit := Commit) (Chal := Chal) +ₛ
     simulatedNmaSigSim (M := M) (Commit := Commit) (Chal := Chal)
       (Resp := Resp) simTranscript pk
 

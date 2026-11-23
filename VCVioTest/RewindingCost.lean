@@ -246,7 +246,7 @@ theorem cost_le_mul_runs_of_mem_support_chargedAttempt_twoReruns :
 /-- Against a fixed table that accepts and reports cost `3` on every input, the adapted finder
 accumulates `6` over its two reruns. -/
 theorem fst_map_simulateQ_counted_costAdapter_find :
-    Prod.fst <$> (simulateQ (coins (S := ℕ) + counted fun _ : Q => (true, 3))
+    Prod.fst <$> (simulateQ (coins (S := ℕ) +ₛ counted fun _ : Q => (true, 3))
       (costAdapter find)).run 0 = pure (some (), 6) := by
   simp [costAdapter, costAdapterImpl, find, counted, coins]
 

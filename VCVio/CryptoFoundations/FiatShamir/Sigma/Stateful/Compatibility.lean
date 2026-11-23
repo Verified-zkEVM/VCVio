@@ -155,7 +155,7 @@ theorem statefulCmaFreshAdvantage_eq_statefulPostKeygenFreshAdvantage
       (StateT (List M) (StateT (RoCache M Commit Chal) ProbComp)) :=
     (HasQuery.toQueryImpl (spec := unifSpec + roSpec M Commit Chal)
       (m := StateT (RoCache M Commit Chal) ProbComp)).liftTarget _
-  exact baseS +
+  exact baseS +ₛ
     QueryImpl.appendInputLog
       (cmaRealFixedSign (M := M) (Commit := Commit) (Chal := Chal)
         (Resp := Resp) σ hr pk sk)
@@ -706,7 +706,7 @@ theorem statefulPostKeygenFreshAdvantage_eq_cmaRealRunProb_signedFreshAdv
       (Chal := Chal) (Resp := Resp))
       (WriterT (QueryLog (signSpec M Commit Resp))
         (OracleComp (unifSpec + roSpec M Commit Chal))) :=
-    baseW + so
+    baseW +ₛ so
   exact do
     let ((msg, sig), log) ← (simulateQ implW (adv.main pk)).run
     let verified ← (SourceSigAlg (σ := σ) (hr := hr) (M := M)).verify pk msg sig
@@ -728,7 +728,7 @@ theorem statefulPostKeygenFreshAdvantage_eq_cmaRealRunProb_signedFreshAdv
       (Chal := Chal) (Resp := Resp))
       (WriterT (QueryLog (signSpec M Commit Resp))
         (StateT (RoCache M Commit Chal) ProbComp)) :=
-    baseW + QueryImpl.withLogging so
+    baseW +ₛ QueryImpl.withLogging so
   letI : HasQuery (roSpec M Commit Chal)
       (StateT (RoCache M Commit Chal) ProbComp) :=
     (randomOracle : QueryImpl (roSpec M Commit Chal) _).toHasQuery
@@ -762,7 +762,7 @@ private theorem postKeygenWriterLog_eq_inputLog
         (Chal := Chal) (Resp := Resp))
         (WriterT (QueryLog (signSpec M Commit Resp))
           (StateT (RoCache M Commit Chal) ProbComp)) :=
-      baseW + QueryImpl.withLogging so
+      baseW +ₛ QueryImpl.withLogging so
     ((fun z : (M × (Commit × Resp)) × QueryLog (signSpec M Commit Resp) =>
         (z.1, z.2.map (fun e => e.1))) <$>
         ((simulateQ implW (adv.main pk)).run :
@@ -810,7 +810,7 @@ private theorem postKeygenFreshWriterProb_eq_postKeygenFreshProb
       (Chal := Chal) (Resp := Resp))
       (WriterT (QueryLog (signSpec M Commit Resp))
         (StateT (RoCache M Commit Chal) ProbComp)) :=
-    baseW + QueryImpl.withLogging so
+    baseW +ₛ QueryImpl.withLogging so
   let mappedW : StateT (RoCache M Commit Chal) ProbComp
       ((M × (Commit × Resp)) × List M) :=
     (fun z : (M × (Commit × Resp)) × QueryLog (signSpec M Commit Resp) =>
@@ -858,7 +858,7 @@ private lemma fsBaseImpl_writerTMapBase_signingOracle_eq
         (Chal := Chal) (Resp := Resp))
         (WriterT (QueryLog (signSpec M Commit Resp))
           (OracleComp (unifSpec + roSpec M Commit Chal))) :=
-      baseW + (SourceSigAlg (σ := σ) (hr := hr) (M := M)).signingOracle pk sk
+      baseW +ₛ (SourceSigAlg (σ := σ) (hr := hr) (M := M)).signingOracle pk sk
     let baseS : QueryImpl (unifSpec + roSpec M Commit Chal)
         (WriterT (QueryLog (signSpec M Commit Resp))
           (StateT (RoCache M Commit Chal) ProbComp)) :=
@@ -867,7 +867,7 @@ private lemma fsBaseImpl_writerTMapBase_signingOracle_eq
         (Chal := Chal) (Resp := Resp))
         (WriterT (QueryLog (signSpec M Commit Resp))
           (StateT (RoCache M Commit Chal) ProbComp)) :=
-      baseS +
+      baseS +ₛ
         QueryImpl.withLogging
           (cmaRealFixedSign (M := M) (Commit := Commit) (Chal := Chal)
             (Resp := Resp) σ hr pk sk)
@@ -916,7 +916,7 @@ private theorem simulateQ_fsBaseImpl_postKeygenFreshWriterComp_run'_eq
       (Chal := Chal) (Resp := Resp))
       (WriterT (QueryLog (signSpec M Commit Resp))
         (OracleComp (unifSpec + roSpec M Commit Chal))) :=
-    baseW + (SourceSigAlg (σ := σ) (hr := hr) (M := M)).signingOracle pk sk
+    baseW +ₛ (SourceSigAlg (σ := σ) (hr := hr) (M := M)).signingOracle pk sk
   let baseS : QueryImpl (unifSpec + roSpec M Commit Chal)
       (WriterT (QueryLog (signSpec M Commit Resp))
         (StateT (RoCache M Commit Chal) ProbComp)) :=
@@ -925,7 +925,7 @@ private theorem simulateQ_fsBaseImpl_postKeygenFreshWriterComp_run'_eq
       (Chal := Chal) (Resp := Resp))
       (WriterT (QueryLog (signSpec M Commit Resp))
         (StateT (RoCache M Commit Chal) ProbComp)) :=
-    baseS +
+    baseS +ₛ
       QueryImpl.withLogging
         (cmaRealFixedSign (M := M) (Commit := Commit) (Chal := Chal)
           (Resp := Resp) σ hr pk sk)

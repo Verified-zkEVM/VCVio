@@ -44,7 +44,7 @@ def loggedRun {α : Type} (oa : OracleComp (ambSpec + logSpec) α) (n : ℕ) :
     ProbComp ((α × QueryLog logSpec) × ℕ) :=
   (simulateQ counter ((simulateQ
     ((HasQuery.toQueryImpl (spec := ambSpec) (m := OracleComp ambSpec)).liftTarget
-      (WriterT (QueryLog logSpec) (OracleComp ambSpec)) + inner.withLogging) oa).run)).run n
+      (WriterT (QueryLog logSpec) (OracleComp ambSpec)) +ₛ inner.withLogging) oa).run)).run n
 
 /-- A program making only ambient `false` queries ends with the counter at its initial value
 plus the length of the log. -/

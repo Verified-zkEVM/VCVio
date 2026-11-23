@@ -187,7 +187,7 @@ theorem cover_carrierTail
   have h1 := mem_support_dropCount_run (keyAt walk) (rightKeep walk) _ _ keys
     (by revert hkeys; intro; assumption)
   have h2 := mem_support_dropCount_phase (keyAt walk) (rightKeep walk)
-    (recordedAdversaryImpl + recordedSigningOracle (Scheme.sign keys.1.1)) _ 1 [] keys.2 middle
+    (recordedAdversaryImpl +ₛ recordedSigningOracle (Scheme.sign keys.1.1)) _ 1 [] keys.2 middle
     (by revert hmiddle; intro; assumption)
   have h3 := mem_support_dropCount_run (keyAt walk) (rightKeep walk) _ _ final
     (by revert hlast; intro; assumption)
@@ -204,7 +204,7 @@ theorem cover_carrierTail
           SigningLog) × RecorderView.StateOf HandlerCarrier.State),
       z ∈ support ((simulateQ (@noticingRecorderOf HandlerCarrier.State (servingView (keyAt walk))
         (disclosingKeep (keyAt walk)) (rightKeep walk))
-        ((((recordedAdversaryImpl + recordedSigningOracle (Scheme.sign keys.1.1))
+        ((((recordedAdversaryImpl +ₛ recordedSigningOracle (Scheme.sign keys.1.1))
           (Sum.inr request)).run).run log)).run (startServingOn request state)) →
       (fun _ : HandlerCarrier.State => True) state.1 →
       @CacheView.cacheOf HandlerCarrier.State (servingView (keyAt walk)) state.1 input = none →
@@ -251,7 +251,7 @@ theorem cover_carrierTail
         exact Option.some_injective _ hgoalCache
       subst hsame
       have hmem := FusedCover.mem_recordOf_of_cache_reaches (disclosingKeep (keyAt walk))
-        (rightKeep walk) (recordedAdversaryImpl + recordedSigningOracle (Scheme.sign keys.1.1))
+        (rightKeep walk) (recordedAdversaryImpl +ₛ recordedSigningOracle (Scheme.sign keys.1.1))
         startServingOn stopServingOn inClass (fun _ => True) input value hclass hcover'
         (fun _ _ _ _ => trivial) (fun _ _ _ => trivial)
         hbeforeRecord (fun _ => rfl) hbeforeCache (fun _ => rfl) (fun _ => trivial) hsub _
@@ -264,7 +264,7 @@ theorem cover_carrierTail
       exact hmem.imp (fun h => hleftPrefix.subset h) (fun h => hrightPrefix.subset h)
   · obtain ⟨value, hvalue⟩ := Option.ne_none_iff_exists'.mp hone
     have htwo := FusedCover.cache_value_persists (disclosingKeep (keyAt walk)) (rightKeep walk)
-      (recordedAdversaryImpl + recordedSigningOracle (Scheme.sign keys.1.1))
+      (recordedAdversaryImpl +ₛ recordedSigningOracle (Scheme.sign keys.1.1))
       startServingOn stopServingOn hbeforeCache (fun _ => rfl) _ (1, [], dropCount keys.2)
       (middle.1, (middle.2.1, middle.2.2.1, dropCount middle.2.2.2))
         (by revert h2; intro; assumption) input value hvalue
@@ -281,7 +281,7 @@ theorem cover_carrierTail
       (keys.1, dropCount keys.2) (by revert h1; intro; assumption)
         input value hclass trivial hfresh hvalue
     obtain ⟨hleftPhase, hrightPhase⟩ := FusedCover.recordOf_prefix (disclosingKeep (keyAt walk))
-      (rightKeep walk) (recordedAdversaryImpl + recordedSigningOracle (Scheme.sign keys.1.1))
+      (rightKeep walk) (recordedAdversaryImpl +ₛ recordedSigningOracle (Scheme.sign keys.1.1))
       startServingOn stopServingOn hbeforeRecord (fun _ => rfl) _ (1, [], dropCount keys.2)
       (middle.1, (middle.2.1, middle.2.2.1, dropCount middle.2.2.2))
         (by revert h2; intro; assumption)

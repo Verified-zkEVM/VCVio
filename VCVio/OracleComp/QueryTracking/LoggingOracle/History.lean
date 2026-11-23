@@ -62,7 +62,7 @@ private abbrev loggedRun (ambient : QueryImpl spec (StateT σ (OracleComp target
     (service : QueryImpl sig (StateT σ (OracleComp targetSpec)))
     (body : OracleComp (spec + sig) α) (s : σ) :=
   ((simulateQ
-    (ambient.liftTarget (WriterT (QueryLog sig) (StateT σ (OracleComp targetSpec))) +
+    (ambient.liftTarget (WriterT (QueryLog sig) (StateT σ (OracleComp targetSpec))) +ₛ
       service.withLogging) body).run).run s
 
 /-- Paths of the existing logged simulation, including its complete target-state endpoint.
@@ -75,7 +75,7 @@ abbrev LoggedRunPath (ambient : QueryImpl spec (StateT σ (OracleComp targetSpec
     (service : QueryImpl sig (StateT σ (OracleComp targetSpec)))
     (body : OracleComp (spec + sig) α) (s : σ) : Type :=
   Path (((simulateQ
-    (ambient.liftTarget (WriterT (QueryLog sig) (StateT σ (OracleComp targetSpec))) +
+    (ambient.liftTarget (WriterT (QueryLog sig) (StateT σ (OracleComp targetSpec))) +ₛ
       service.withLogging) body).run).run s)
 
 /-- Coherent paths of every ambient step and completed service request.
@@ -328,7 +328,7 @@ theorem exists_loggedHistory_of_mem_support
     (body : OracleComp (spec + sig) α) (s : σ)
     (z : (α × QueryLog sig) × σ)
     (hz : z ∈ support (((simulateQ
-      (ambient.liftTarget (WriterT (QueryLog sig) (StateT σ (OracleComp targetSpec))) +
+      (ambient.liftTarget (WriterT (QueryLog sig) (StateT σ (OracleComp targetSpec))) +ₛ
         service.withLogging) body).run).run s)) :
     ∃ h : LoggedHistory ambient service body s,
       output _ h.fullPath = z ∧

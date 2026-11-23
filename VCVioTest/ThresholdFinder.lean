@@ -70,7 +70,7 @@ theorem structured (z : Option (VecTree challenges branching) × ℕ)
 
 /-- The single-round Boolean finder has unconditional expected cost at most two. -/
 theorem oneRound_cost :
-    expectedCalls ((simulateQ (coins (S := ℕ) + counted (fun c : Fin 3 => decide (c ≠ 2)))
+    expectedCalls ((simulateQ (coins (S := ℕ) +ₛ counted (fun c : Fin 3 => decide (c ≠ 2)))
       (thresholdRound 2 [0, 1, 2])).run 0) ≤ 2 := by
   convert expectedCalls_thresholdRound (fun c : Fin 3 => decide (c ≠ 2)) 1 0 [1, 2] using 1
   norm_num
@@ -102,7 +102,7 @@ theorem tree_cost : expectedCalls attempt ≤ 2 := by
 
 /-- The concrete acceptance table gives success probability exactly two thirds. -/
 theorem oneRound_success :
-    Pr{let z ← (simulateQ (coins (S := ℕ) + counted (fun c : Fin 3 => decide (c ≠ 2)))
+    Pr{let z ← (simulateQ (coins (S := ℕ) +ₛ counted (fun c : Fin 3 => decide (c ≠ 2)))
       (thresholdRound 2 [0, 1, 2])).run 0}[z.1.isSome] = 2 / 3 := by
   rw [prEvent_thresholdRound]
   norm_num
@@ -140,7 +140,7 @@ theorem rate_eq_error : acceptRate onlyZero = thresholdError challenges branchin
 one accepting challenge cannot form a binary fork. With `rate_eq_error`, the scaled bound
 `ε ≤ κ + (1 − κ) p` holds with equality, so the threshold error cannot be lowered. -/
 theorem success_zero :
-    Pr{let z ← (simulateQ (coins (S := ℕ) + counted (fun c : Fin 3 => decide (c = 0)))
+    Pr{let z ← (simulateQ (coins (S := ℕ) +ₛ counted (fun c : Fin 3 => decide (c = 0)))
       (thresholdRound 2 [0, 1, 2])).run 0}[z.1.isSome] = 0 := by
   rw [prEvent_thresholdRound]
   simp

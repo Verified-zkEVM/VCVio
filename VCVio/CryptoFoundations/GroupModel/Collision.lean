@@ -85,7 +85,7 @@ The shared game handler acts on the table and preserves the collision flag. -/
     {m : Type → Type} [Monad m] {ι : Type} {Γ : OracleSpec ι}
     (game : QueryImpl Γ (StateT (Tbl V) m)) {α : Type}
     (oa : OracleComp (spec F σ + Γ) α) (st : Tbl V × Bool) : m (α × Tbl V × Bool) :=
-  (simulateQ (flagHandler obs (impl M cmp m) + liftGameFlag game) oa).run st
+  (simulateQ (flagHandler obs (impl M cmp m) +ₛ liftGameFlag game) oa).run st
 
 /-- Forgetting the flag in a monitored run recovers its underlying table run. -/
 theorem runFlag_project [∀ s, DecidableEq (W s)]
@@ -129,11 +129,11 @@ theorem measureETVDist_run_le_collisionProb
     [MeasurableSpace (α × Tbl V)] (oa : OracleComp (spec F σ + Γ) α) (tbl : Tbl V) :
     measureETVDist (run M obs game oa tbl) (run M (fun _ => id) game oa tbl) ≤
       collisionProb M obs game oa tbl := by
-  let h₁ := flagHandler obs (impl M (fun _ => id) (OracleComp spec')) + liftGameFlag game
-  let h₂ := implFlag M obs (OracleComp spec') + liftGameFlag game
+  let h₁ := flagHandler obs (impl M (fun _ => id) (OracleComp spec')) +ₛ liftGameFlag game
+  let h₂ := implFlag M obs (OracleComp spec') +ₛ liftGameFlag game
   have hmono {W : S → Type} [∀ s, DecidableEq (W s)] (cmp : (s : S) → V s → W s) :
       ∀ q st, st.2 = true → ∀ z ∈ support
-        (((flagHandler obs (impl M cmp (OracleComp spec')) + liftGameFlag game) q).run st),
+        (((flagHandler obs (impl M cmp (OracleComp spec')) +ₛ liftGameFlag game) q).run st),
         z.2.2 = true := by
     intro q st hs z hz
     cases q with

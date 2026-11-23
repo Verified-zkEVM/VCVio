@@ -27,7 +27,7 @@ namespace Rewinding
 /-- Interpreting a threshold finder counts each acceptance call and leaves sampling free. -/
 theorem simulateQ_counted_thresholdFinderWithPools (n : ℕ) (C : Fin n → Type)
     (k : Fin n → ℕ) (pools : (i : Fin n) → List (C i)) (f : ((i : Fin n) → C i) → Bool) :
-    simulateQ (coins (S := ℕ) + counted f) (thresholdFinderWithPools n C k pools) =
+    simulateQ (coins (S := ℕ) +ₛ counted f) (thresholdFinderWithPools n C k pools) =
       thresholdProgram (fun j => StateT.lift (ProbComp.uniformFin j)) n C k pools (counted f) := by
   rw [simulateQ_thresholdFinderWithPools]
   rfl

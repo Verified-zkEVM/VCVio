@@ -172,7 +172,7 @@ noncomputable def IND_CPA_Experiment (dem : DEMScheme (OracleComp spec) K M C)
     (runtime : ProbCompRuntime (OracleComp spec)) (leak : M → Λ)
     (adversary : dem.IND_CPA_Adversary) (b : Bool) : OracleComp spec Bool := do
   let k ← runtime.liftProbComp ($ᵗ K)
-  simulateQ (QueryImpl.id' spec + LeftOrRight.oracle (dem.encrypt k) leak b) adversary
+  simulateQ (QueryImpl.id' spec +ₛ LeftOrRight.oracle (dem.encrypt k) leak b) adversary
 
 /-- Game-form multi-query IND-CPA experiment for a DEM: sample a hidden bit, run the
 fixed-branch experiment at that bit, and return whether the adversary guessed it. -/
@@ -238,7 +238,7 @@ leakage runs the one-time adversary on the encryption of the message that the hi
 selects. -/
 theorem IND_CPA_OneTime_Adversary.simulateQ_toMultiQuery
     (adversary : dem.IND_CPA_OneTime_Adversary) (k : K) (b : Bool) :
-    simulateQ (QueryImpl.id' spec + LeftOrRight.oracle (dem.encrypt k) (fun _ => ()) b)
+    simulateQ (QueryImpl.id' spec +ₛ LeftOrRight.oracle (dem.encrypt k) (fun _ => ()) b)
         adversary.toMultiQuery = (do
       let (m₀, m₁, st) ← adversary.chooseMessages
       let c ← dem.encrypt k (if b then m₁ else m₀)

@@ -252,7 +252,7 @@ end Support
 and its run counter is the number of draws made, including rejected draws. -/
 theorem collectChildren_counted (f : C → Bool) (n : ℕ) :
     ∀ (r : ℕ) (pool : List C), pool.length = n → ∀ count : ℕ,
-    (simulateQ (coins (S := ℕ) + counted f)
+    (simulateQ (coins (S := ℕ) +ₛ counted f)
       (collectChildren (fun n => (unifSpec.query n)) acceptanceChild r pool)).run count =
       (fun d => (d.filter f, count + d.length)) <$> ProbComp.drawUntil f r pool := by
   induction n with
@@ -297,7 +297,7 @@ theorem collectChildren_counted (f : C → Bool) (n : ℕ) :
 /-- The counted law of a positive threshold attempt on a nonempty challenge pool. -/
 theorem thresholdRound_counted (f : C → Bool) (r : ℕ) (c : C) (cs : List C)
     (count : ℕ) :
-    (simulateQ (coins (S := ℕ) + counted f) (thresholdRound (r + 1) (c :: cs))).run count =
+    (simulateQ (coins (S := ℕ) +ₛ counted f) (thresholdRound (r + 1) (c :: cs))).run count =
       (do
         let i ← ProbComp.uniformFin cs.length
         let y := (c :: cs)[(i : ℕ)]'(by simpa using i.isLt)
@@ -354,7 +354,7 @@ theorem prEvent_drawUntil_enough (f : C → Bool) (r : ℕ) (pool : List C) :
 
 /-- Exact success probability of a one-round threshold attempt. -/
 theorem prEvent_thresholdRound (f : C → Bool) (r : ℕ) (c : C) (cs : List C) :
-    Pr{let z ← (simulateQ (coins (S := ℕ) + counted f)
+    Pr{let z ← (simulateQ (coins (S := ℕ) +ₛ counted f)
       (thresholdRound (r + 1) (c :: cs))).run 0}[z.1.isSome] =
       if r + 1 ≤ (c :: cs).countP f then
         ((c :: cs).countP f : ℝ≥0∞) / (cs.length + 1) else 0 := by
@@ -414,7 +414,7 @@ private theorem expectedCalls_drawUntil {B : Type} (out : List C → B)
 theorem thresholdRound_success (f : C → Bool) (r : ℕ) (c : C) (cs : List C) :
     ((c :: cs).countP f : ℝ≥0∞) / (cs.length + 1) -
         (r : ℝ≥0∞) / (cs.length + 1) ≤
-      Pr{let z ← (simulateQ (coins (S := ℕ) + counted f)
+      Pr{let z ← (simulateQ (coins (S := ℕ) +ₛ counted f)
         (thresholdRound (r + 1) (c :: cs))).run 0}[z.1.isSome] := by
   rw [prEvent_thresholdRound]
   split
@@ -428,7 +428,7 @@ theorem thresholdRound_success (f : C → Bool) (r : ℕ) (c : C) (cs : List C) 
 /-- The unconditional expected number of calls in one threshold attempt, including unsuccessful
 attempts, is at most the requested threshold. -/
 theorem expectedCalls_thresholdRound (f : C → Bool) (r : ℕ) (c : C) (cs : List C) :
-    expectedCalls ((simulateQ (coins (S := ℕ) + counted f)
+    expectedCalls ((simulateQ (coins (S := ℕ) +ₛ counted f)
       (thresholdRound (r + 1) (c :: cs))).run 0) ≤ r + 1 := by
   rw [thresholdRound_counted, expectedCalls_bind]
   let M := (c :: cs).countP f
@@ -506,7 +506,7 @@ theorem thresholdRound_success_scaled (f : C → Bool) (r : ℕ) (c : C) (cs : L
     ((c :: cs).countP f : ℝ≥0∞) / (cs.length + 1) -
         (r : ℝ≥0∞) / (cs.length + 1) ≤
       (1 - (r : ℝ≥0∞) / (cs.length + 1)) *
-        Pr{let z ← (simulateQ (coins (S := ℕ) + counted f)
+        Pr{let z ← (simulateQ (coins (S := ℕ) +ₛ counted f)
           (thresholdRound (r + 1) (c :: cs))).run 0}[z.1.isSome] := by
   rw [prEvent_thresholdRound]
   split

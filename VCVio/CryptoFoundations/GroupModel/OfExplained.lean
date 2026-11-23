@@ -269,7 +269,7 @@ variable [CommSemiring F] [DecidableEq S]
     (random : QueryImpl unifSpec N) (game : QueryImpl (plainSpec G Query Reply) N)
 
 private abbrev handler : QueryImpl (Target F S E Query Reply) (StateT (Tbl G) N) :=
-  impl M (fun _ => id) N + (encImpl (m := N) enc + (coinImpl (G := G) random + liftGame game))
+  impl M (fun _ => id) N +ₛ (encImpl (m := N) enc +ₛ (coinImpl (G := G) random +ₛ liftGame game))
 
 private theorem run_smul (s : S) (c : F) (h : Handle) (tbl : Tbl G) :
     (simulateQ (handler M enc random game)

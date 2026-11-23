@@ -218,9 +218,9 @@ def privateImpl (puzzle : Puzzle n S L Salt) (b : Bool) :
   (((QueryImpl.ofLift unifSpec
         (OracleComp (unifSpec + (sealSpec n S L Salt Ctx N K).batch))).liftTarget
       (StateT (privateSpec N K).QueryCache
-        (OracleComp (unifSpec + (sealSpec n S L Salt Ctx N K).batch)))) +
+        (OracleComp (unifSpec + (sealSpec n S L Salt Ctx N K).batch)))) +ₛ
     LeftOrRight.oracle (privateEncrypt (n := n) (S := S) (L := L) (Salt := Salt) (Ctx := Ctx)
-      prf codec (encodePuzzle puzzle)) plaintextLength b) +
+      prf codec (encodePuzzle puzzle)) plaintextLength b) +ₛ
     (fun ts => liftM ((unifSpec + (sealSpec n S L Salt Ctx N K).batch).query (.inr ts)) :
       QueryImpl (sealSpec n S L Salt Ctx N K).batch (StateT (privateSpec N K).QueryCache
         (OracleComp (unifSpec + (sealSpec n S L Salt Ctx N K).batch))))
@@ -528,7 +528,7 @@ noncomputable def hidingOnlineImpl (puzzle : Puzzle n S L Salt) (key : S) (b : B
       (StateT (sealSpec n S L Salt Ctx N K).QueryCache ProbComp) :=
   (sealSpec n S L Salt Ctx N K).romImpl ∘ₛ
     QueryImpl.batch' ((unifSpec.passthrough + LeftOrRight.oracle
-        ((sealDEM (Ctx := Ctx) prf codec encodePuzzle).encrypt (puzzle, key)) plaintextLength b) +
+        ((sealDEM (Ctx := Ctx) prf codec encodePuzzle).encrypt (puzzle, key)) plaintextLength b) +ₛ
       (QueryImpl.id' (sealSpec n S L Salt Ctx N K)).liftTarget
         (OracleComp (unifSpec + sealSpec n S L Salt Ctx N K)))
 
@@ -774,7 +774,8 @@ lemma simulateQ_romImpl_hidingChallenger {α : Type} (puzzle : Puzzle n S L Salt
       (sealSpec n S L Salt Ctx N K).batch) α) :
     simulateQ (sealSpec n S L Salt Ctx N K).romImpl
       (simulateQ ((unifSpec.passthrough + LeftOrRight.oracle
-          ((sealDEM (Ctx := Ctx) prf codec encodePuzzle).encrypt (puzzle, key)) plaintextLength b) +
+          ((sealDEM (Ctx := Ctx) prf codec encodePuzzle).encrypt (puzzle, key))
+          plaintextLength b) +ₛ
         (QueryImpl.id' (sealSpec n S L Salt Ctx N K)).liftTarget
           (OracleComp (unifSpec + sealSpec n S L Salt Ctx N K)))
         (simulateQ (sealSpec n S L Salt Ctx N K).unbatch oa)) =

@@ -131,11 +131,11 @@ variable {ι₁ ι₂ : Type} {spec₁ : OracleSpec ι₁} {spec₂ : OracleSpec
 -- formerly a saturating shape: bare `grind` timed out here before
 -- `simulateQ_add_liftComp_left` was tagged `@[grind =]`
 example (oa : OracleComp spec₁ α) :
-    simulateQ (impl₁ + impl₂) (do let x ← liftComp oa (spec₁ + spec₂); pure x) =
+    simulateQ (impl₁ +ₛ impl₂) (do let x ← liftComp oa (spec₁ + spec₂); pure x) =
       simulateQ impl₁ oa := by grind
 
 example (ob : OracleComp spec₂ α) :
-    simulateQ (impl₁ + impl₂) (liftComp ob (spec₁ + spec₂) >>= pure) =
+    simulateQ (impl₁ +ₛ impl₂) (liftComp ob (spec₁ + spec₂) >>= pure) =
       simulateQ impl₂ ob := by grind
 
 example (impl : QueryImpl spec₁ (StateT σ m)) (t : spec₁.Domain) (s : σ) (b : Bool) :

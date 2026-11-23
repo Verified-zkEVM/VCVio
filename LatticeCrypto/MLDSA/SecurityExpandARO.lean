@@ -149,9 +149,9 @@ def expandARoImpl :
     QueryImpl (RomSpec p prims M)
       (StateT (ExpandASpec p).QueryCache (OracleComp (unifSpec + HashSpec p prims M))) :=
   (QueryImpl.ofLift unifSpec (OracleComp (unifSpec + HashSpec p prims M))).liftTarget
-      (StateT (ExpandASpec p).QueryCache (OracleComp (unifSpec + HashSpec p prims M))) +
+      (StateT (ExpandASpec p).QueryCache (OracleComp (unifSpec + HashSpec p prims M))) +ₛ
   ((QueryImpl.ofLift (HashSpec p prims M) (OracleComp (unifSpec + HashSpec p prims M))).liftTarget
-      (StateT (ExpandASpec p).QueryCache (OracleComp (unifSpec + HashSpec p prims M))) +
+      (StateT (ExpandASpec p).QueryCache (OracleComp (unifSpec + HashSpec p prims M))) +ₛ
     (expandALazy p prims (M := M)).withCaching)
 
 /-- Run a three-oracle computation with `ExpandA` simulated lazily from the cache `c`, discarding
@@ -286,8 +286,8 @@ turns the oracle algorithms back into the scheme's algorithms at `f`. -/
 /-- Answer `ExpandA` queries from the fixed table `f`; forward uniform and `H` queries. -/
 def tableImpl (f : Bytes 32 → TqMatrix p.k p.l) :
     QueryImpl (RomSpec p prims M) (OracleComp (unifSpec + HashSpec p prims M)) :=
-  QueryImpl.ofLift unifSpec (OracleComp (unifSpec + HashSpec p prims M)) +
-    (QueryImpl.ofLift (HashSpec p prims M) (OracleComp (unifSpec + HashSpec p prims M)) +
+  QueryImpl.ofLift unifSpec (OracleComp (unifSpec + HashSpec p prims M)) +ₛ
+    (QueryImpl.ofLift (HashSpec p prims M) (OracleComp (unifSpec + HashSpec p prims M)) +ₛ
       (fun rho => (pure (f rho) : OracleComp (unifSpec + HashSpec p prims M) _) :
         QueryImpl (ExpandASpec p) (OracleComp (unifSpec + HashSpec p prims M))))
 

@@ -54,7 +54,7 @@ oracles and implementing queries to each independently. -/
 @[reducible] protected def add (O : OracleContext ι m) (O' : OracleContext ι' m) :
     OracleContext (ι ⊕ ι') m where
   spec := O.spec + O'.spec
-  impl := O.impl + O'.impl
+  impl := O.impl +ₛ O'.impl
 
 instance : HAdd (OracleContext ι m) (OracleContext ι' m) (OracleContext (ι ⊕ ι') m) where
   hAdd := OracleContext.add
@@ -66,6 +66,6 @@ lemma spec_add (O : OracleContext ι m) (O' : OracleContext ι' m) :
     (O + O').spec = O.spec + O'.spec := rfl
 
 lemma impl_add (O : OracleContext ι m) (O' : OracleContext ι' m) :
-    (O + O').impl = O.impl + O'.impl := rfl
+    (O + O').impl = O.impl +ₛ O'.impl := rfl
 
 end OracleContext

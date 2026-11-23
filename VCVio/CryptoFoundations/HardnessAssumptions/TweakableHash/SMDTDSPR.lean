@@ -132,8 +132,8 @@ target. -/
     (pk : PkSeed) :
     QueryImpl (unifSpec + (SM_DT_DSPR_challengeSpec Tweak M Y + collectionSpec prob.thColl))
       (StateT (SM_DT_DSPR_State Tweak M) ProbComp) :=
-  (QueryImpl.ofLift unifSpec ProbComp).liftTarget (StateT (SM_DT_DSPR_State Tweak M) ProbComp) +
-    (SM_DT_DSPR_challengeOracle prob pk +
+  (QueryImpl.ofLift unifSpec ProbComp).liftTarget (StateT (SM_DT_DSPR_State Tweak M) ProbComp) +ₛ
+    (SM_DT_DSPR_challengeOracle prob pk +ₛ
       collectionOracle (Q := Tweak × M) Prod.fst prob.thColl pk)
 
 /-- The SM-DT-DSPR experiment. The public seed is sampled, the first phase runs against both

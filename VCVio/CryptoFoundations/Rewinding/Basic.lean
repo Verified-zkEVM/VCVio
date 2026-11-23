@@ -57,8 +57,8 @@ structure ResetPolicy (init : ProbComp σ) (impl : QueryImpl spec (StateT σ Pro
   /-- A single execution, interleaved with independent ambient randomness, has the honest output
   distribution. The ambient randomness lets independently initialized policies be composed. -/
   faithful_coins : ∀ {α : Type} (oa : OracleComp (unifSpec + spec) α),
-    (simulateQ (coins (S := World × Cursor) + answer) oa).run' (empty, begin) =ᵈ
-      (do (simulateQ (coins (S := σ) + impl) oa).run' (← init))
+    (simulateQ (coins (S := World × Cursor) +ₛ answer) oa).run' (empty, begin) =ᵈ
+      (do (simulateQ (coins (S := σ) +ₛ impl) oa).run' (← init))
   /-- A query only extends the persistent world. -/
   grows : ∀ q w c z, z ∈ support ((answer q).run (w, c)) → w ≤ z.2.1
   /-- Every observed answer and cursor transition is fixed in extensions of its post-world. -/
@@ -114,7 +114,7 @@ complete runs. Each attempt starts with an empty world and a zero run count. -/
     (run : Q → OracleComp spec α) (alg : OracleComp (unifSpec + rerunSpec Q α) β) :
     ProbComp (β × ℕ) :=
   (fun z => (z.1, z.2.2)) <$>
-    (simulateQ (coins (S := P.World × ℕ) + P.rerun run) alg).run (P.empty, 0)
+    (simulateQ (coins (S := P.World × ℕ) +ₛ P.rerun run) alg).run (P.empty, 0)
 
 /-- Expected value of the natural-valued counter of an output-and-counter law, using the additive
 writer's natural-valued expectation. For `Rewinding.ResetPolicy.attempt` and for a run answered

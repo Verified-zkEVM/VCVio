@@ -41,14 +41,14 @@ example : QueryImpl.PreservesInv coinImpl (0 < ·) := fun _ =>
   StateT.preservesInv_bind _ _ _ (StateT.preservesInv_monadLift _ _) fun b =>
     StateT.preservesInv_set_of _ (by cases b <;> decide)
 
-example : QueryImpl.PreservesInv (bumpImpl + coinImpl) (0 < ·) :=
+example : QueryImpl.PreservesInv (bumpImpl +ₛ coinImpl) (0 < ·) :=
   QueryImpl.PreservesInv.add
     (fun _ => StateT.preservesInv_get_bind _ fun n _ =>
       StateT.preservesInv_set_of _ (Nat.succ_pos n))
     (fun _ => StateT.preservesInv_bind _ _ _ (StateT.preservesInv_monadLift _ _) fun b =>
       StateT.preservesInv_set_of _ (by cases b <;> decide))
 
-example (h : QueryImpl.PreservesInv (bumpImpl + coinImpl) (0 < ·)) :
+example (h : QueryImpl.PreservesInv (bumpImpl +ₛ coinImpl) (0 < ·)) :
     QueryImpl.PreservesInv coinImpl (0 < ·) :=
   ((QueryImpl.preservesInv_add_iff _ _ _).1 h).2
 

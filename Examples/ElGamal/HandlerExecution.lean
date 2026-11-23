@@ -69,10 +69,10 @@ theorem executeHandlers_reduction
     (adv : AsymmEncAlg.IND_CPA_OneTime_Adversary (elGamalAsymmEnc F G gen))
     (inner : ℕ)
     (himpl : ∀ a, IsTotalQueryBound
-      ((oneTimeINDCPAImpl (gen := gen) adv + oneTimeDDHFairCoinImpl) a) inner)
+      ((oneTimeINDCPAImpl (gen := gen) adv +ₛ oneTimeDDHFairCoinImpl) a) inner)
     (g A B T : G) :
     (fun out => result out.phase) <$>
-        executeHandlers (oneTimeINDCPAImpl (gen := gen) adv + oneTimeDDHFairCoinImpl)
+        executeHandlers (oneTimeINDCPAImpl (gen := gen) adv +ₛ oneTimeDDHFairCoinImpl)
           inner g A B T =
       some <$> IND_CPA_OneTime_DDHReduction (F := F) (G := G) (gen := gen) adv g A B T := by
   rw [executeHandlers_result _ inner himpl,

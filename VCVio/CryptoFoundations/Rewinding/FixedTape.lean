@@ -82,8 +82,8 @@ theorem run'_simulateQ_answer_of_fresh {α : Type} (oa : ProbComp α) (w : tapeS
 /-- Fresh external coins can be interleaved with a single honest private-tape execution. -/
 theorem run'_add_eq {α : Type} (oa : OracleComp (unifSpec + unifSpec) α)
     (w : tapeSpec.QueryCache) (c : Cursor) (h : Fresh w c) :
-    (simulateQ (coins (S := tapeSpec.QueryCache × Cursor) + answer) oa).run' (w, c) =
-      (simulateQ (coins (S := Unit) + coins (S := Unit)) oa).run' () := by
+    (simulateQ (coins (S := tapeSpec.QueryCache × Cursor) +ₛ answer) oa).run' (w, c) =
+      (simulateQ (coins (S := Unit) +ₛ coins (S := Unit)) oa).run' () := by
   induction oa using OracleComp.inductionOn generalizing w c with
   | pure a => simp
   | query_bind q k ih =>
@@ -101,8 +101,8 @@ theorem run'_add_eq {α : Type} (oa : OracleComp (unifSpec + unifSpec) α)
 
 /-- Interleaving fresh external coins preserves the honest distribution of one execution. -/
 theorem faithful_add {α : Type} (oa : OracleComp (unifSpec + unifSpec) α) :
-    (simulateQ (coins (S := tapeSpec.QueryCache × Cursor) + answer) oa).run' (∅, fun _ => 0) =ᵈ
-      (do (simulateQ (coins (S := Unit) + coins (S := Unit)) oa).run' (← pure ())) := by
+    (simulateQ (coins (S := tapeSpec.QueryCache × Cursor) +ₛ answer) oa).run' (∅, fun _ => 0) =ᵈ
+      (do (simulateQ (coins (S := Unit) +ₛ coins (S := Unit)) oa).run' (← pure ())) := by
   rw [run'_add_eq oa _ _ (fun _ _ _ => rfl)]
 
 /-- Answering a private query preserves every tape entry already sampled. -/

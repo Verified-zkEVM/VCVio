@@ -257,7 +257,7 @@ private lemma isSome_inr_iff_of_mem_support_sideLogOnImpl
     (t : (unifSpec + (spec + side).batch).Domain) (s : List ι') (P : ι' → Prop)
     (c : (spec + side).QueryCache) (hc : ∀ x, (c (.inr x)).isSome ↔ P x ∨ x ∈ s)
     {z : ((unifSpec + (spec + side).batch).Range t × List ι') × (spec + side).QueryCache}
-    (hz : z ∈ support ((simulateQ (unifFwdImpl (spec + side) + (spec + side).randomOracle.batch)
+    (hz : z ∈ support ((simulateQ (unifFwdImpl (spec + side) +ₛ (spec + side).randomOracle.batch)
       ((sideLogOnImpl t).run s)).run c))
     (x : ι') : (z.2 (.inr x)).isSome ↔ P x ∨ x ∈ z.1.2 := by
   rw [sideLogOnImpl_run, simulateQ_bind, simulateQ_spec_query, StateT.run_bind,
@@ -277,7 +277,7 @@ answered point by point, caches no `side` point. -/
 private lemma isSome_inr_iff_of_mem_support_liftComp {α : Type}
     (oa : OracleComp (unifSpec + spec.batch) α) (c : (spec + side).QueryCache)
     {z : α × (spec + side).QueryCache}
-    (hz : z ∈ support ((simulateQ (unifFwdImpl (spec + side) + (spec + side).randomOracle.batch)
+    (hz : z ∈ support ((simulateQ (unifFwdImpl (spec + side) +ₛ (spec + side).randomOracle.batch)
       (liftComp oa (unifSpec + (spec + side).batch))).run c)) (x : ι') :
     (z.2 (.inr x)).isSome ↔ (c (.inr x)).isSome := by
   rw [liftComp_def, ← QueryImpl.simulateQ_compose] at hz
@@ -287,13 +287,13 @@ private lemma isSome_inr_iff_of_mem_support_liftComp {α : Type}
   rw [OracleComp.liftM_eq_liftM_liftM, simulateQ_query, StateT.run_map, support_map] at hy
   obtain ⟨w, hw, rfl⟩ := hy
   rcases t with n | ts
-  · change w ∈ support (((unifFwdImpl (spec + side) + (spec + side).randomOracle.batch)
+  · change w ∈ support (((unifFwdImpl (spec + side) +ₛ (spec + side).randomOracle.batch)
       (.inl n)).run c') at hw
     rw [QueryImpl.add_apply_inl] at hw
     change (w.2 (.inr x)).isSome ↔ _
     rw [unifFwdImpl.snd_eq_of_mem_support_run n c' hw]
     exact hc' x
-  · change w ∈ support (((unifFwdImpl (spec + side) + (spec + side).randomOracle.batch)
+  · change w ∈ support (((unifFwdImpl (spec + side) +ₛ (spec + side).randomOracle.batch)
       (.inr (ts.map Sum.inl))).run c') at hw
     rw [QueryImpl.add_apply_inr] at hw
     change (w.2 (.inr x)).isSome ↔ _

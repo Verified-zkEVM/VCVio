@@ -69,7 +69,7 @@ challenge queries answered by `LeftOrRight.oracle (encAlg.encrypt k) leak b`. -/
 @[expose] def IND_CPA_Experiment (encAlg : SymmEncAlg (OracleComp spec) M K C) (leak : M → Λ)
     (adversary : encAlg.IND_CPA_Adversary) (b : Bool) : OracleComp spec Bool := do
   let k ← encAlg.keygen
-  simulateQ (QueryImpl.id' spec + LeftOrRight.oracle (encAlg.encrypt k) leak b) adversary
+  simulateQ (QueryImpl.id' spec +ₛ LeftOrRight.oracle (encAlg.encrypt k) leak b) adversary
 
 /-- The left-or-right CPA game: sample a uniform hidden bit, run the experiment at that bit, and
 return whether the adversary guessed it. -/

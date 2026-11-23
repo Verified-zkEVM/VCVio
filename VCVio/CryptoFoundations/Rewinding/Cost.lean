@@ -84,7 +84,7 @@ namespace Rewinding
 input `q`, from the initial counter `s`. -/
 @[expose] def runCharged {Q α β : Type} (alg : OracleComp (unifSpec + rerunSpec Q α) β)
     (f : Q → α) (cost : Q → ℕ) (s : ℕ) : ProbComp (β × ℕ) :=
-  (simulateQ (coins (S := ℕ) + charged f cost) alg).run s
+  (simulateQ (coins (S := ℕ) +ₛ charged f cost) alg).run s
 
 /-- A finder's run is its charged run at unit cost from the zero counter. -/
 theorem runFinder_eq_runCharged {R : Type} {C : R → Type} {β : Type}
@@ -207,7 +207,7 @@ reported costs. -/
 private theorem fst_map_simulateQ_counted_costAdapterImpl {Q α β : Type} (g : Q → α × ℕ)
     (alg : OracleComp (unifSpec + rerunSpec Q α) β) (s m : ℕ) :
     Prod.fst <$>
-        (simulateQ (coins (S := ℕ) + counted g) ((simulateQ costAdapterImpl alg).run s)).run m =
+        (simulateQ (coins (S := ℕ) +ₛ counted g) ((simulateQ costAdapterImpl alg).run s)).run m =
       runCharged alg (fun q => (g q).1) (fun q => (g q).2) s := by
   induction alg using OracleComp.inductionOn generalizing s m with
   | pure b => simp [runCharged]
@@ -223,7 +223,7 @@ private theorem fst_map_simulateQ_counted_costAdapterImpl {Q α β : Type} (g : 
 `costAdapter alg` form the charged run of `alg`. -/
 theorem fst_map_simulateQ_counted_costAdapter {Q α β : Type} (g : Q → α × ℕ)
     (alg : OracleComp (unifSpec + rerunSpec Q α) β) (m : ℕ) :
-    Prod.fst <$> (simulateQ (coins (S := ℕ) + counted g) (costAdapter alg)).run m =
+    Prod.fst <$> (simulateQ (coins (S := ℕ) +ₛ counted g) (costAdapter alg)).run m =
       runCharged alg (fun q => (g q).1) (fun q => (g q).2) 0 :=
   fst_map_simulateQ_counted_costAdapterImpl g alg 0 m
 
@@ -231,8 +231,8 @@ theorem fst_map_simulateQ_counted_costAdapter {Q α β : Type} (g : Q → α × 
 are those of `alg` against the answers alone. -/
 theorem map_simulateQ_counted_costAdapter {Q α β : Type} (g : Q → α × ℕ)
     (alg : OracleComp (unifSpec + rerunSpec Q α) β) (m : ℕ) :
-    (fun z => (z.1.1, z.2)) <$> (simulateQ (coins (S := ℕ) + counted g) (costAdapter alg)).run m =
-      (simulateQ (coins (S := ℕ) + counted (fun q => (g q).1)) alg).run m := by
+    (fun z => (z.1.1, z.2)) <$> (simulateQ (coins (S := ℕ) +ₛ counted g) (costAdapter alg)).run m =
+      (simulateQ (coins (S := ℕ) +ₛ counted (fun q => (g q).1)) alg).run m := by
   unfold costAdapter
   generalize (0 : ℕ) = s
   induction alg using OracleComp.inductionOn generalizing s m with
@@ -268,9 +268,9 @@ private theorem map_run_simulateQ_rerun_costAdapterImpl {Q α β : Type}
     (run : Q → OracleComp spec (α × ℕ)) (alg : OracleComp (unifSpec + rerunSpec Q α) β)
     (s : ℕ) (st : P.World × ℕ) :
     (fun z : (β × ℕ) × (P.World × ℕ) => (z.1.1, z.2)) <$>
-        (simulateQ (coins (S := P.World × ℕ) + P.rerun run)
+        (simulateQ (coins (S := P.World × ℕ) +ₛ P.rerun run)
           ((simulateQ costAdapterImpl alg).run s)).run st =
-      (simulateQ (coins (S := P.World × ℕ) + P.rerun (fun q => Prod.fst <$> run q)) alg).run
+      (simulateQ (coins (S := P.World × ℕ) +ₛ P.rerun (fun q => Prod.fst <$> run q)) alg).run
         st := by
   induction alg using OracleComp.inductionOn generalizing s st with
   | pure b => simp
@@ -302,7 +302,7 @@ private theorem le_of_mem_support_run_simulateQ_rerun_costAdapterImpl {Q α β :
     (run : Q → OracleComp spec (α × ℕ)) (c : ℕ)
     (hc : ∀ q st, ∀ z ∈ support ((simulateQ P.answer (run q)).run st), z.1.2 ≤ c)
     (alg : OracleComp (unifSpec + rerunSpec Q α) β) (s : ℕ) (st : P.World × ℕ) :
-    ∀ z ∈ support ((simulateQ (coins (S := P.World × ℕ) + P.rerun run)
+    ∀ z ∈ support ((simulateQ (coins (S := P.World × ℕ) +ₛ P.rerun run)
           ((simulateQ costAdapterImpl alg).run s)).run st),
       z.1.2 + c * st.2 ≤ s + c * z.2.2 := by
   induction alg using OracleComp.inductionOn generalizing s st with
@@ -310,14 +310,14 @@ private theorem le_of_mem_support_run_simulateQ_rerun_costAdapterImpl {Q α β :
   | query_bind t k ih =>
     rcases t with n | q
     · intro z hz
-      obtain ⟨u, hz⟩ : ∃ u, z ∈ support ((simulateQ (coins (S := P.World × ℕ) + P.rerun run)
+      obtain ⟨u, hz⟩ : ∃ u, z ∈ support ((simulateQ (coins (S := P.World × ℕ) +ₛ P.rerun run)
           ((simulateQ costAdapterImpl (k u)).run s)).run st) := by
         simpa [costAdapterImpl, coins] using hz
       exact ih u s st z hz
     · intro z hz
       obtain ⟨a, d, w, cur, ha, hz⟩ : ∃ (a : α) (d : ℕ) (w : P.World) (cur : P.Cursor),
           ((a, d), (w, cur)) ∈ support ((simulateQ P.answer (run q)).run (st.1, P.begin)) ∧
-            z ∈ support ((simulateQ (coins (S := P.World × ℕ) + P.rerun run)
+            z ∈ support ((simulateQ (coins (S := P.World × ℕ) +ₛ P.rerun run)
               ((simulateQ costAdapterImpl (k a)).run (s + d))).run (w, st.2 + 1)) := by
         simpa [costAdapterImpl, ResetPolicy.rerun] using hz
       have hd : d ≤ c := hc q _ _ ha

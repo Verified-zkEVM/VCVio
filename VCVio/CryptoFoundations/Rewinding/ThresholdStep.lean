@@ -34,7 +34,7 @@ theorem prEvent_thresholdChildren_table_eq (r : ℕ) (z : Option W × ℕ)
     (zs : List (Option W × ℕ)) (count : ℕ) :
     Pr{let t ← (thresholdChildren (fun n => StateT.lift (ProbComp.uniformFin n)) tableChild
       (r + 1) (z :: zs)).run count}[t.1.isSome] =
-    Pr{let t ← (simulateQ (coins (S := ℕ) + counted (fun z : Option W × ℕ => z.1.isSome))
+    Pr{let t ← (simulateQ (coins (S := ℕ) +ₛ counted (fun z : Option W × ℕ => z.1.isSome))
       (thresholdRound (r + 1) (z :: zs))).run 0}[t.1.isSome] := by
   rw [thresholdChildren_table, thresholdRound_counted]
   apply prEvent_bind_congr

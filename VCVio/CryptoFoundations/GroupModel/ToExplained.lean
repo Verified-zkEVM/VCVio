@@ -417,8 +417,8 @@ private theorem explainProgram_run (M : Model F (discreteSig S) G)
     Explained.value <$> simulateQ (valueHandler random game)
       (explainProgram enc p st) =
     (fun z => lookupMessage z.2 z.1) <$>
-      (simulateQ (impl M (fun _ => id) N +
-        (encImpl (m := N) enc + (coinImpl (G := G) random + liftGame game))) p).run
+      (simulateQ (impl M (fun _ => id) N +ₛ
+        (encImpl (m := N) enc +ₛ (coinImpl (G := G) random +ₛ liftGame game))) p).run
           (mapTbl (fun _ => Prod.snd) st.2) := by
   induction p using OracleComp.inductionOn generalizing st with
   | pure msg =>

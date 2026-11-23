@@ -69,7 +69,7 @@ open Security CacheReplay StrippedGame AdversaryQueries
 /-- The pair of handlers the adversary's phase runs against. -/
 @[expose] noncomputable def phaseImpl (sk : SecretKey) :
     QueryImpl (OracleWorld + SigningSpec) CountedRun :=
-  adversaryImpl + Security.signingOracle sk
+  adversaryImpl +ₛ Security.signingOracle sk
 
 /-! ## The invariant
 

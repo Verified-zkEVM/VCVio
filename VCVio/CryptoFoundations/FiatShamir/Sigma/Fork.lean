@@ -251,7 +251,7 @@ lemma mem_support_unifForward_run_iff
 lemma simulateQ_unifForward_add_roImpl_query_inl_run
     [DecidableEq M] [DecidableEq Commit]
     (n : unifSpec.Domain) (st : SimState M Commit Chal) :
-    (simulateQ (unifForward M Commit Chal + roImpl M Commit Chal)
+    (simulateQ (unifForward M Commit Chal +ₛ roImpl M Commit Chal)
       (liftM ((unifSpec + (M × Commit →ₒ Chal)).query (Sum.inl n)))).run st =
       wrappedUniformQuery Chal n >>= fun u => pure (u, st) := by
   rw [simulateQ_spec_query, QueryImpl.add_apply_inl]
@@ -263,7 +263,7 @@ lemma simulateQ_unifForward_add_roImpl_query_inr_run_some
     [DecidableEq M] [DecidableEq Commit]
     (mc : M × Commit) (cache : (M × Commit →ₒ Chal).QueryCache)
     (log : List (M × Commit)) (v : Chal) (hcache : cache mc = some v) :
-    (simulateQ (unifForward M Commit Chal + roImpl M Commit Chal)
+    (simulateQ (unifForward M Commit Chal +ₛ roImpl M Commit Chal)
       (liftM ((unifSpec + (M × Commit →ₒ Chal)).query (Sum.inr mc)))).run (cache, log) =
       pure (v, (cache, log)) := by
   rw [simulateQ_spec_query, QueryImpl.add_apply_inr]
@@ -276,7 +276,7 @@ lemma simulateQ_unifForward_add_roImpl_query_inr_run_none
     [DecidableEq M] [DecidableEq Commit]
     (mc : M × Commit) (cache : (M × Commit →ₒ Chal).QueryCache)
     (log : List (M × Commit)) (hcache : cache mc = none) :
-    (simulateQ (unifForward M Commit Chal + roImpl M Commit Chal)
+    (simulateQ (unifForward M Commit Chal +ₛ roImpl M Commit Chal)
       (liftM ((unifSpec + (M × Commit →ₒ Chal)).query (Sum.inr mc)))).run (cache, log) =
       wrappedChallengeQuery Chal >>=
         fun v => pure (v, (cache.cacheQuery mc v, log ++ [mc])) := by
@@ -290,7 +290,7 @@ lemma mem_support_simulateQ_unifForward_add_roImpl_query_inr_run_some_iff
     (mc : M × Commit) (cache : (M × Commit →ₒ Chal).QueryCache)
     (log : List (M × Commit)) (v : Chal) (hcache : cache mc = some v)
     (z : Chal × SimState M Commit Chal) :
-    z ∈ support ((simulateQ (unifForward M Commit Chal + roImpl M Commit Chal)
+    z ∈ support ((simulateQ (unifForward M Commit Chal +ₛ roImpl M Commit Chal)
       (liftM ((unifSpec + (M × Commit →ₒ Chal)).query (Sum.inr mc)))).run
       (cache, log)) ↔ z = (v, (cache, log)) := by
   rw [simulateQ_unifForward_add_roImpl_query_inr_run_some
@@ -307,7 +307,7 @@ lemma mem_support_simulateQ_unifForward_add_roImpl_query_inr_run_none_iff
     (mc : M × Commit) (cache : (M × Commit →ₒ Chal).QueryCache)
     (log : List (M × Commit)) (hcache : cache mc = none)
     (z : Chal × SimState M Commit Chal) :
-    z ∈ support ((simulateQ (unifForward M Commit Chal + roImpl M Commit Chal)
+    z ∈ support ((simulateQ (unifForward M Commit Chal +ₛ roImpl M Commit Chal)
       (liftM ((unifSpec + (M × Commit →ₒ Chal)).query (Sum.inr mc)))).run
         (cache, log)) ↔
       ∃ v : Chal, z = (v, (cache.cacheQuery mc v, log ++ [mc])) := by
@@ -326,7 +326,7 @@ lemma mem_support_simulateQ_unifForward_add_roImpl_query_inr_run_none_iff
   · rintro ⟨v, hz⟩
     exact ⟨v, support_wrapped_query_inr ▸ Set.mem_univ v, hz⟩
 
-/-- Running the inner `unifForward + roImpl` simulator against a source computation with
+/-- Running the inner `unifForward +ₛ roImpl` simulator against a source computation with
 an `nmaHashQueryBound Q` can grow the internal `queryLog` by at most `Q`.
 
 Each source `Sum.inr` step consumes one unit of the `nmaHashQueryBound` budget, while
@@ -336,7 +336,7 @@ theorem queryLog_length_le_of_nmaHashQueryBound
     {oa : OracleComp (unifSpec + (M × Commit →ₒ Chal)) α} {Q : ℕ}
     (hQ : nmaHashQueryBound (M := M) (Commit := Commit) (Chal := Chal) (oa := oa) Q)
     (st : SimState M Commit Chal) {z : α × SimState M Commit Chal}
-    (hz : z ∈ support ((simulateQ (unifForward M Commit Chal + roImpl M Commit Chal) oa).run st)) :
+    (hz : z ∈ support ((simulateQ (unifForward M Commit Chal +ₛ roImpl M Commit Chal) oa).run st)) :
     z.2.2.length ≤ st.2.length + Q := by
   induction oa using OracleComp.inductionOn generalizing Q st z with
   | pure x =>
@@ -407,7 +407,7 @@ def runTrace [DecidableEq M] [DecidableEq Commit] [SampleableType Chal]
     (pk : Stmt) :
     OracleComp (wrappedSpec Chal) (Trace Commit Chal Resp M) := do
   let ((forgery, advCache), st) ←
-    StateT.run (simulateQ (unifForward M Commit Chal + roImpl M Commit Chal) (nmaAdv.main pk))
+    StateT.run (simulateQ (unifForward M Commit Chal +ₛ roImpl M Commit Chal) (nmaAdv.main pk))
       (∅, [])
   let verified :=
     match forgery with
@@ -425,7 +425,7 @@ def experiment [DecidableEq M] [DecidableEq Commit] [SampleableType Chal]
       (FiatShamir.inROM σ hr M))
     (qH : ℕ) : ProbComp Bool :=
   let chalSpec : OracleSpec Unit := Unit →ₒ Chal
-  simulateQ (QueryImpl.ofLift unifSpec ProbComp + uniformSampleImpl (spec := chalSpec)) do
+  simulateQ (QueryImpl.ofLift unifSpec ProbComp +ₛ uniformSampleImpl (spec := chalSpec)) do
     let (pk, _) ← liftComp hr.gen (unifSpec + chalSpec)
     let trace ← runTrace σ hr M nmaAdv pk
     pure (forkPoint _ _ _ M qH trace).isSome
@@ -441,7 +441,7 @@ noncomputable def advantage [DecidableEq M] [DecidableEq Commit] [SampleableType
 preserves the distribution of every computation over `wrappedSpec Chal`. -/
 theorem simulateQ_uniformImpl_evalDistEq [SampleableType Chal]
     [UniformAnswerMeasure (Unit →ₒ Chal)] {α : Type} (oa : OracleComp (wrappedSpec Chal) α) :
-    simulateQ (QueryImpl.ofLift unifSpec ProbComp +
+    simulateQ (QueryImpl.ofLift unifSpec ProbComp +ₛ
       uniformSampleImpl (spec := (Unit →ₒ Chal))) oa =ᵈ oa := by
   let : MeasurableSpace α := ⊤
   refine EvalDistEq.of_evalDist_eq (evalDist_simulateQ_eq_of_forall _ (fun t => ?_) oa)
@@ -461,7 +461,7 @@ variable [DecidableEq M] [DecidableEq Commit]
 /-! ### Per-step support characterizations
 
 Two thin lemmas that describe the support of a single step of the layered simulation
-`(simulateQ loggingOracle (((unifForward + roImpl) t).run (c₀, l₀))).run`. Used by the
+`(simulateQ loggingOracle (((unifForward +ₛ roImpl) t).run (c₀, l₀))).run`. Used by the
 1-state and 2-state preservation helpers below to do *all* per-step case analysis in
 one place. The `Sum.inl` step always issues a forwarded uniform query and logs it; the
 `Sum.inr` step branches on whether the cache already contains the asked hash point. -/
@@ -471,11 +471,11 @@ private lemma support_step_inl
     (z : ((unifSpec + (M × Commit →ₒ Chal)).Range (Sum.inl n) × SimState M Commit Chal) ×
       QueryLog (wrappedSpec Chal)) :
     z ∈ support ((simulateQ (wrappedSpec Chal).loggingOracle
-      (((unifForward M Commit Chal + roImpl M Commit Chal) (Sum.inl n)).run s)).run) ↔
+      (((unifForward M Commit Chal +ₛ roImpl M Commit Chal) (Sum.inl n)).run s)).run) ↔
     ∃ u : (unifSpec + (M × Commit →ₒ Chal)).Range (Sum.inl n),
       z = ((u, s), [wrappedUniformEntry Chal n u]) := by
   obtain ⟨c₀, l₀⟩ := s
-  have hrun : ((unifForward M Commit Chal + roImpl M Commit Chal) (Sum.inl n)).run (c₀, l₀) =
+  have hrun : ((unifForward M Commit Chal +ₛ roImpl M Commit Chal) (Sum.inl n)).run (c₀, l₀) =
       (liftM ((wrappedSpec Chal).query (Sum.inl n)) : OracleComp _ _) >>=
         fun u => pure (u, (c₀, l₀)) := by
     simp [QueryImpl.add_apply_inl, unifForward, wrappedUniformQuery]
@@ -494,13 +494,13 @@ private lemma support_step_inr
     (z : ((unifSpec + (M × Commit →ₒ Chal)).Range (Sum.inr mc) × SimState M Commit Chal) ×
       QueryLog (wrappedSpec Chal)) :
     z ∈ support ((simulateQ (wrappedSpec Chal).loggingOracle
-      (((unifForward M Commit Chal + roImpl M Commit Chal) (Sum.inr mc)).run s)).run) ↔
+      (((unifForward M Commit Chal +ₛ roImpl M Commit Chal) (Sum.inr mc)).run s)).run) ↔
     (∃ v, s.1 mc = some v ∧ z = ((v, s), [])) ∨
     (s.1 mc = none ∧ ∃ v,
       z = ((v, (s.1.cacheQuery mc v, s.2 ++ [mc])), [wrappedChallengeEntry Chal v])) := by
   obtain ⟨c₀, l₀⟩ := s
   by_cases hcache : c₀ mc = none
-  · have hrun : ((unifForward M Commit Chal + roImpl M Commit Chal) (Sum.inr mc)).run (c₀, l₀) =
+  · have hrun : ((unifForward M Commit Chal +ₛ roImpl M Commit Chal) (Sum.inr mc)).run (c₀, l₀) =
         (liftM ((wrappedSpec Chal).query (Sum.inr ())) : OracleComp _ _) >>=
           fun v => pure (v, (c₀.cacheQuery mc v, l₀ ++ [mc])) := by
       simp [QueryImpl.add_apply_inr, roImpl, wrappedChallengeQuery,
@@ -521,7 +521,7 @@ private lemma support_step_inr
     · exact absurd hv.symm (hcache ▸ Option.some_ne_none v)
     · exact ⟨_, ⟨v, rfl⟩, hzeq⟩
   · rcases Option.ne_none_iff_exists.mp hcache with ⟨v, hv⟩
-    have hrun : ((unifForward M Commit Chal + roImpl M Commit Chal) (Sum.inr mc)).run (c₀, l₀) =
+    have hrun : ((unifForward M Commit Chal +ₛ roImpl M Commit Chal) (Sum.inr mc)).run (c₀, l₀) =
         pure (v, (c₀, l₀)) := by
       simp [QueryImpl.add_apply_inr, roImpl, StateT.run_bind, StateT.run_get, ← hv]
     rw [hrun]
@@ -547,7 +547,7 @@ private theorem preservesInv_layered {γ : Type}
     (hstep : ∀ t (s : SimState M Commit Chal) (w : QueryLog (wrappedSpec Chal)),
       Inv s w →
       ∀ z ∈ support ((simulateQ (wrappedSpec Chal).loggingOracle
-        (((unifForward M Commit Chal + roImpl M Commit Chal) t).run s)).run),
+        (((unifForward M Commit Chal +ₛ roImpl M Commit Chal) t).run s)).run),
       Inv z.1.2 (w ++ z.2))
     (Y : OracleComp (unifSpec + (M × Commit →ₒ Chal)) γ)
     (s₀ : SimState M Commit Chal) (w₀ : QueryLog (wrappedSpec Chal))
@@ -555,7 +555,7 @@ private theorem preservesInv_layered {γ : Type}
     {z : (γ × SimState M Commit Chal) × QueryLog (wrappedSpec Chal)}
     (hz : z ∈ support
       ((simulateQ (wrappedSpec Chal).loggingOracle
-        ((simulateQ (unifForward M Commit Chal + roImpl M Commit Chal) Y).run s₀)).run)) :
+        ((simulateQ (unifForward M Commit Chal +ₛ roImpl M Commit Chal) Y).run s₀)).run)) :
     Inv z.1.2 (w₀ ++ z.2) := by
   classical
   induction Y using OracleComp.inductionOn generalizing s₀ w₀ z with
@@ -577,7 +577,7 @@ private theorem queryLog_length_eq_outer_inr_count
     (c₀ : (M × Commit →ₒ Chal).QueryCache) (l₀ : List (M × Commit)) {z : γ × SimState M Commit Chal}
     {outerLog : QueryLog (wrappedSpec Chal)} (hz : (z, outerLog) ∈ support
       ((simulateQ (wrappedSpec Chal).loggingOracle
-        ((simulateQ (unifForward M Commit Chal + roImpl M Commit Chal) Y).run
+        ((simulateQ (unifForward M Commit Chal +ₛ roImpl M Commit Chal) Y).run
           (c₀, l₀))).run)) :
     z.2.2.length = l₀.length + outerLog.countQ (· = Sum.inr ()) := by
   have h := preservesInv_layered (M := M) (Commit := Commit) (Chal := Chal)
@@ -622,7 +622,7 @@ private theorem queryLog_cache_outer_lockstep {γ : Type}
     {outerLog : QueryLog (wrappedSpec Chal)}
     (hz : (z, outerLog) ∈ support
       ((simulateQ (wrappedSpec Chal).loggingOracle
-        ((simulateQ (unifForward M Commit Chal + roImpl M Commit Chal) Y).run
+        ((simulateQ (unifForward M Commit Chal +ₛ roImpl M Commit Chal) Y).run
           (c₀, l₀))).run)) :
     (∃ l_new, z.2.2 = l₀ ++ l_new) ∧
     (∀ mc ω, c₀ mc = some ω → z.2.1 mc = some ω) ∧
@@ -731,7 +731,7 @@ private theorem queryLog_cache_outer_lockstep {γ : Type}
                 rw [hk, getQueryValue?_wrappedChallengeEntry_succ, hk_eq]
                 exact hlogω
 
-/- Prefix monotonicity: running `(simulateQ (unifForward + roImpl) Y).run (c₀, l₀)` produces a
+/- Prefix monotonicity: running `(simulateQ (unifForward +ₛ roImpl) Y).run (c₀, l₀)` produces a
 final simulator state whose `queryLog` component extends `l₀`. The resulting list always
 starts with the initial `l₀`: cache misses only append entries, and cache hits plus
 `unifForward`-forwarded queries never touch `l₀`. Used by `inner_prefix_det` to fix the first
@@ -743,7 +743,7 @@ private theorem queryLog_extends_l₀
     {outerLog : QueryLog (wrappedSpec Chal)}
     (h : (z, outerLog) ∈ support
       ((simulateQ (wrappedSpec Chal).loggingOracle
-        ((simulateQ (unifForward M Commit Chal + roImpl M Commit Chal) Y).run
+        ((simulateQ (unifForward M Commit Chal +ₛ roImpl M Commit Chal) Y).run
           (c₀, l₀))).run)) :
     z.2.2.take l₀.length = l₀ := by
   classical
@@ -789,11 +789,11 @@ private theorem inner_prefix_det
     {outerLog₁ outerLog₂ : QueryLog (wrappedSpec Chal)}
     (h₁ : (z₁, outerLog₁) ∈ support
       ((simulateQ (wrappedSpec Chal).loggingOracle
-        ((simulateQ (unifForward M Commit Chal + roImpl M Commit Chal) Y).run
+        ((simulateQ (unifForward M Commit Chal +ₛ roImpl M Commit Chal) Y).run
           (c₀, l₀))).run))
     (h₂ : (z₂, outerLog₂) ∈ support
       ((simulateQ (wrappedSpec Chal).loggingOracle
-        ((simulateQ (unifForward M Commit Chal + roImpl M Commit Chal) Y).run
+        ((simulateQ (unifForward M Commit Chal +ₛ roImpl M Commit Chal) Y).run
           (c₀, l₀))).run))
     (p suffix₁ suffix₂ : QueryLog (wrappedSpec Chal))
     (hlog₁ : outerLog₁ = p ++ suffix₁)
@@ -885,7 +885,7 @@ private theorem inner_prefix_det
                   have take_eq : ∀ (v : Chal)
                       (pw : (γ × SimState M Commit Chal) × QueryLog (wrappedSpec Chal)),
                       pw ∈ support ((simulateQ (wrappedSpec Chal).loggingOracle
-                        ((simulateQ (unifForward M Commit Chal + roImpl M Commit Chal)
+                        ((simulateQ (unifForward M Commit Chal +ₛ roImpl M Commit Chal)
                           (oa v)).run (c₀.cacheQuery mc v, l₀ ++ [mc]))).run) →
                       pw.1.2.2.take l₀.length = l₀ := fun v pw h => by
                     have hext := queryLog_extends_l₀ (M := M) (Commit := Commit) (Chal := Chal)
@@ -937,11 +937,11 @@ private theorem inner_prefix_det_one_more_inr
     {outerLog₁ outerLog₂ : QueryLog (wrappedSpec Chal)}
     (h₁ : (z₁, outerLog₁) ∈ support
       ((simulateQ (wrappedSpec Chal).loggingOracle
-        ((simulateQ (unifForward M Commit Chal + roImpl M Commit Chal) Y).run
+        ((simulateQ (unifForward M Commit Chal +ₛ roImpl M Commit Chal) Y).run
           (c₀, l₀))).run))
     (h₂ : (z₂, outerLog₂) ∈ support
       ((simulateQ (wrappedSpec Chal).loggingOracle
-        ((simulateQ (unifForward M Commit Chal + roImpl M Commit Chal) Y).run
+        ((simulateQ (unifForward M Commit Chal +ₛ roImpl M Commit Chal) Y).run
           (c₀, l₀))).run))
     (p : QueryLog (wrappedSpec Chal))
     {v₁ v₂ : Chal} {rest₁ rest₂ : QueryLog (wrappedSpec Chal)}

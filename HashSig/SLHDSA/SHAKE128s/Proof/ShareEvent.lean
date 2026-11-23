@@ -201,7 +201,7 @@ theorem realView_eq_visible (setup : Setup) (p : St × Bool) (hinv : Inv setup p
 
 /-- The real verifier handler is the sum of its coin and hash parts. -/
 theorem realWorldImpl_eq_add :
-    SharePresent.realWorldImpl = realCoinImpl + realHashImpl := by
+    SharePresent.realWorldImpl = realCoinImpl +ₛ realHashImpl := by
   funext queried
   rcases queried with coin | input <;> rfl
 

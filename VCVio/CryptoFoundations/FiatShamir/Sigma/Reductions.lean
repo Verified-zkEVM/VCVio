@@ -192,7 +192,7 @@ def nmaReduction
     (nmaAdv : SignatureAlg.ManagedRoNmaAdversary
       (FiatShamir.inROM σ hr M))
     (qH : ℕ) : Stmt → ProbComp Wit := fun pk =>
-  simulateQ (QueryImpl.ofLift unifSpec ProbComp +
+  simulateQ (QueryImpl.ofLift unifSpec ProbComp +ₛ
     (uniformSampleImpl (spec := (Unit →ₒ Chal)))) (nmaForkExtract σ hr M nmaAdv qH pk)
 
 variable [Fintype Chal] [Inhabited Chal]

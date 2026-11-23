@@ -71,7 +71,7 @@ theorem clear_phase (walk : Walk) (sk : SecretKey) {α : Type}
     (accumulated : Multiplicative Tally) (log : SigningLog) (carrier : CountedState)
     (result : α × (Multiplicative Tally × SigningLog × CountedState))
     (hresult : result ∈ support ((simulateQ (fuseServing (handlerAt rightKeep walk)
-      (recordedAdversaryImpl + recordedSigningOracle (Scheme.sign sk))
+      (recordedAdversaryImpl +ₛ recordedSigningOracle (Scheme.sign sk))
       ServedAgreement.startServingOn ServedAgreement.stopServingOn) computation).run
         (accumulated, log, carrier)))
     (hclear : Clear carrier) : Clear result.2.2.2 :=
@@ -94,7 +94,7 @@ theorem clear_stages (adversary : Adversary) (walk : Walk)
         (startAt walk.2, (([], []), 0))))
     (middle : Forgery × (Multiplicative Tally × SigningLog × CountedState))
     (hmiddle : middle ∈ support ((simulateQ (fuseServing (handlerAt rightKeep walk)
-      (recordedAdversaryImpl + recordedSigningOracle (Scheme.sign keys.1.1))
+      (recordedAdversaryImpl +ₛ recordedSigningOracle (Scheme.sign keys.1.1))
       ServedAgreement.startServingOn ServedAgreement.stopServingOn)
         (adversary.main keys.1.2)).run (1, [], keys.2)))
     (final : (Bool × Tally) × CountedState)

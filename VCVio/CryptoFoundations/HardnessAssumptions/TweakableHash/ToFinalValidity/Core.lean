@@ -137,8 +137,8 @@ randomness passes straight through. -/
 @[expose] def roaOracles [DecidableEq Tweak] :
     QueryImpl (unifSpec + (roaChallengeSpec Qq Y + TweakableHash.collectionSpec thColl))
       (StateT (List Qh × List Tweak) ProbComp) :=
-  (QueryImpl.ofLift unifSpec ProbComp).liftTarget (StateT (List Qh × List Tweak) ProbComp) +
-    (roaChallengeOracle tweakOfQuery tweakOfHist numTargets draw entry resp +
+  (QueryImpl.ofLift unifSpec ProbComp).liftTarget (StateT (List Qh × List Tweak) ProbComp) +ₛ
+    (roaChallengeOracle tweakOfQuery tweakOfHist numTargets draw entry resp +ₛ
       TweakableHash.collectionOracle tweakOfHist thColl pk)
 
 /-- Both oracles of a source-final-validity game over their shared monitor, at a public seed. -/
@@ -146,8 +146,8 @@ randomness passes straight through. -/
     QueryImpl (unifSpec + (monitorChallengeSpec Qq Y + SourceFinalValidity.collectionSpec thColl))
       (StateT (SourceFinalValidity.State Qh Tweak) ProbComp) :=
   (QueryImpl.ofLift unifSpec ProbComp).liftTarget
-      (StateT (SourceFinalValidity.State Qh Tweak) ProbComp) +
-    (monitorChallengeOracle tweakOfHist numTargets draw entry resp +
+      (StateT (SourceFinalValidity.State Qh Tweak) ProbComp) +ₛ
+    (monitorChallengeOracle tweakOfHist numTargets draw entry resp +ₛ
       SourceFinalValidity.collectionOracle tweakOfHist thColl pk)
 
 /-! ## The wrapper
@@ -204,8 +204,8 @@ def toMonitorOracles [DecidableEq Tweak] :
     QueryImpl (unifSpec + (roaChallengeSpec Qq Y + TweakableHash.collectionSpec thColl))
       (StateT (List Tweak × List Tweak) (Wrapped Qq Y thColl)) :=
   (QueryImpl.ofLift unifSpec (Wrapped Qq Y thColl)).liftTarget
-      (StateT (List Tweak × List Tweak) (Wrapped Qq Y thColl)) +
-    (toMonitorChallengeOracle tweakOfQuery numTargets thColl +
+      (StateT (List Tweak × List Tweak) (Wrapped Qq Y thColl)) +ₛ
+    (toMonitorChallengeOracle tweakOfQuery numTargets thColl +ₛ
       toMonitorCollectionOracle thColl Qq)
 
 /-! ## The coupling

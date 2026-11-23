@@ -629,7 +629,7 @@ noncomputable def checkedRead (B : QReg) (j : Fin k) (t : X) :
 noncomputable def checkedOracleImpl (B : QReg) (j : Fin k) :
     QueryImpl (unifSpec + (X →ₒ Y)) (OptionT (QComp (mixedExtSpec k X Y Cm Z) B B)) :=
   (fun n ↦ OptionT.mk (some <$> QComp.coinImpl (mixedExtSpec k X Y Cm Z) B n) :
-    QueryImpl unifSpec (OptionT (QComp (mixedExtSpec k X Y Cm Z) B B))) +
+    QueryImpl unifSpec (OptionT (QComp (mixedExtSpec k X Y Cm Z) B B))) +ₛ
     (fun t ↦ OptionT.mk (checkedRead B j t) :
       QueryImpl (X →ₒ Y) (OptionT (QComp (mixedExtSpec k X Y Cm Z) B B)))
 
@@ -769,7 +769,7 @@ theorem runClassicalChecked_rom [AddCommGroup Y] {α : Type} (H : Fin k → X �
     let R := (romVCOracle k X Y H).mixedExtractRuntime ME code
     R.run₂ .instruments (runClassicalChecked B j p) =
       (R.run₂ .instruments (p.toQuantumAt
-        (QComp.coinImpl (mixedExtSpec k X Y Cm Z) B +
+        (QComp.coinImpl (mixedExtSpec k X Y Cm Z) B +ₛ
           (fun t ↦ QuantumComp₂.pure (H j t) :
             QueryImpl (X →ₒ Y) (QComp (mixedExtSpec k X Y Cm Z) B B))))).map some := by
   dsimp only

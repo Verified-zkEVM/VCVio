@@ -201,20 +201,20 @@ theorem rom_middle_stage_bind (inClass : Bytes → Prop) (inside outside : Query
     (rightKeep : Walk → Bytes → HandlerCarrier.State → Prop) (walk : Walk)
     (adversary : Adversary) (keys : (SecretKey × PublicKey) × SplitCountedState) :
     (simulateQ (romWithSplit inClass inside outside)
-        (((simulateQ (recordedAdversaryImpl + recordedSigningOracle (Scheme.sign keys.1.1))
+        (((simulateQ (recordedAdversaryImpl +ₛ recordedSigningOracle (Scheme.sign keys.1.1))
           (adversary.main keys.1.2)).run).run [])).run (keys.2.1.cache, keys.2.2.2) =
       (simulateQ (fuseServing (SplitTail.splitHandlerAt inClass inside outside rightKeep walk)
-          (recordedAdversaryImpl + recordedSigningOracle (Scheme.sign keys.1.1))
+          (recordedAdversaryImpl +ₛ recordedSigningOracle (Scheme.sign keys.1.1))
           ServedAgreement.startServingOn ServedAgreement.stopServingOn)
           (adversary.main keys.1.2)).run (1, [], keys.2) >>= fun step =>
         (pure (((step.1, step.2.1), step.2.2.1), (step.2.2.2.1.cache, step.2.2.2.2.2)) :
           ProbComp (((Forgery × Multiplicative Tally) × SigningLog) ×
             (QueryCache HashSpec × Counts))) := by
   rw [PhaseFusion.run_phase_fused (romWithSplit inClass inside outside)
-      (recordedAdversaryImpl + recordedSigningOracle (Scheme.sign keys.1.1))
+      (recordedAdversaryImpl +ₛ recordedSigningOracle (Scheme.sign keys.1.1))
       (adversary.main keys.1.2) [] (keys.2.1.cache, keys.2.2.2),
     ← rom_middle_forget inClass inside outside rightKeep walk
-      (recordedAdversaryImpl + recordedSigningOracle (Scheme.sign keys.1.1))
+      (recordedAdversaryImpl +ₛ recordedSigningOracle (Scheme.sign keys.1.1))
       (adversary.main keys.1.2) 1 [] keys.2, Functor.map_map, map_eq_bind_pure_comp]
   rfl
 

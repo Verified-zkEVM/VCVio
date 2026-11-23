@@ -56,7 +56,7 @@ structure VecTree [LinearOrder R] (C : R → Type) (k : R → ℕ) where
 acceptance-oracle calls. Coin queries and local work are not charged. -/
 @[expose] def runFinder {β : Type} (find : OracleComp (unifSpec + accSpec C) β)
     (f : ((r : R) → C r) → Bool) : ProbComp (β × ℕ) :=
-  (simulateQ (coins (S := ℕ) + counted f) find).run 0
+  (simulateQ (coins (S := ℕ) +ₛ counted f) find).run 0
 
 /-- The complete-run expectation depends only on the natural-valued counter marginal. -/
 theorem expectedCalls_eq_lintegral_counter {β : Type} (mx : ProbComp (β × ℕ)) :

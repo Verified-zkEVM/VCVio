@@ -293,14 +293,14 @@ lemma ghostNmaImpl_run_signed_inv (pk : Stmt) (sk : Wit) {β : Type}
 /-- **Overlay projection of the layered NMA handler.** Each step of the
 layered ghost-tagged handler `ghostNmaImpl`, projected by overlaying the ghost layer onto the
 base layer, equals the corresponding step of the plain single-cache hybrid handler
-`hybridBaseImpl + hybridSignImpl simSignBody`. -/
+`hybridBaseImpl +ₛ hybridSignImpl simSignBody`. -/
 lemma ghostNmaImpl_proj_hybrid (pk : Stmt) (sk : Wit)
     (t : ((unifSpec + (M × Commit →ₒ Chal)) + (M →ₒ Option (Commit × Resp))).Domain)
     (s : NmaGhostState M Commit Chal) :
     Prod.map id (fun g : NmaGhostState M Commit Chal =>
         (overlayCache M g.1.1 g.1.2, g.2)) <$>
         (ghostNmaImpl M maxAttempts sim pk sk t).run s =
-      ((hybridBaseImpl (Commit := Commit) (Chal := Chal) M +
+      ((hybridBaseImpl (Commit := Commit) (Chal := Chal) M +ₛ
           hybridSignImpl M (simSignBody M maxAttempts sim pk sk)) t).run
         (overlayCache M s.1.1 s.1.2, s.2) := by
   rcases t with (n | mc) | msg
@@ -348,12 +348,12 @@ lemma map_run_simulateQ_ghostNmaImpl_overlay {β : Type} (pk : Stmt) (sk : Wit)
     Prod.map id (fun g : NmaGhostState M Commit Chal =>
         (overlayCache M g.1.1 g.1.2, g.2)) <$>
         (simulateQ (ghostNmaImpl M maxAttempts sim pk sk) oa).run s =
-      (simulateQ (hybridBaseImpl (Commit := Commit) (Chal := Chal) M +
+      (simulateQ (hybridBaseImpl (Commit := Commit) (Chal := Chal) M +ₛ
           hybridSignImpl M (simSignBody M maxAttempts sim pk sk)) oa).run
         (overlayCache M s.1.1 s.1.2, s.2) :=
   map_run_simulateQ_eq_of_query_map_eq
     (ghostNmaImpl M maxAttempts sim pk sk)
-    (hybridBaseImpl (Commit := Commit) (Chal := Chal) M +
+    (hybridBaseImpl (Commit := Commit) (Chal := Chal) M +ₛ
       hybridSignImpl M (simSignBody M maxAttempts sim pk sk))
     (fun g => (overlayCache M g.1.1 g.1.2, g.2))
     (ghostNmaImpl_proj_hybrid M maxAttempts sim pk sk) oa s
@@ -368,7 +368,7 @@ lemma map_run_simulateQ_ghostNmaImpl_overlay_empty {β : Type} (pk : Stmt) (sk :
     Prod.map id (fun g : NmaGhostState M Commit Chal =>
         (overlayCache M g.1.1 g.1.2, g.2)) <$>
         (simulateQ (ghostNmaImpl M maxAttempts sim pk sk) oa).run ((∅, ∅), []) =
-      (simulateQ (hybridBaseImpl (Commit := Commit) (Chal := Chal) M +
+      (simulateQ (hybridBaseImpl (Commit := Commit) (Chal := Chal) M +ₛ
           hybridSignImpl M (simSignBody M maxAttempts sim pk sk)) oa).run (∅, []) := by
   rw [map_run_simulateQ_ghostNmaImpl_overlay M maxAttempts sim pk sk oa ((∅, ∅), [])]
   simp only [overlayCache_empty]

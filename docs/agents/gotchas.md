@@ -30,7 +30,7 @@ Those definitional identities are an implementation detail of `VCVio/EvalDist/**
 
 ### 4. `++ₒ` is dead — use `+`
 
-The README and large amounts of commented-out code use `++ₒ` for combining oracle specs. The current API uses standard `+` (`HAdd`).
+The README and large amounts of commented-out code use `++ₒ` for combining oracle specs. The current API uses standard `+` (`HAdd`). Handlers for a sum specification combine with `+ₛ` (`QueryImpl.add`), not `+`; see 8b.
 
 ### 5. Delete obsolete commented-out code
 
@@ -151,6 +151,14 @@ so that `Finite (Fin 3)` never elaborates through sampler code and the sampler i
 answers for types whose finiteness is known through nothing else (`spec.Range t` under
 `[∀ t, SampleableType (spec.Range t)]`). The same test file checks that routing. Data classes
 (`DecidableEq`, `Fintype`, `Inhabited`) get no such derived instance at any priority.
+
+The same indexing applies to handlers. `QueryImpl spec m` is reducibly the function type
+`(t : spec.Domain) → m (spec.Range t)`, so an instance whose conclusion mentions it is keyed on
+that function type and is a candidate for every ordinary function into a monad: an `HAdd`
+instance on handlers would make `f + g`, for `f g : ℕ → Multiset ℕ`, elaborate as a handler on
+`ℕ ⊕ ℕ`. No instance may be keyed on `QueryImpl`: handlers for a sum specification combine with
+the notation `+ₛ` (`QueryImpl.add`), and `VCVioTest/ModuleAPI/QueryImplSum.lean` checks that `+`
+on functions stays pointwise.
 
 ### 9. Universe polymorphism
 

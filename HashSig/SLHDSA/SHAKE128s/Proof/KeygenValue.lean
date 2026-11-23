@@ -56,7 +56,7 @@ one. -/
     (keys : SecretKey × PublicKey) (warm : QueryCache HashSpec) :
     OracleComp OracleWorld (Outcome × Multiset Bytes) := do
   let adversaryStep ←
-    (simulateQ (recordedAdversaryImpl +
+    (simulateQ (recordedAdversaryImpl +ₛ
       recordedSigningOracle (StrippedGame.strippedSign warm keys.1))
       (adversary.main keys.2)).run.run []
   let verifierStep ← countRecorded verifierCost

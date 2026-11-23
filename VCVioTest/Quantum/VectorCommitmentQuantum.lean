@@ -293,7 +293,7 @@ example (B : QReg) :
       (runClassicalChecked B 0 zeroCheck) =
     ((zeroOracle.mixedExtractRuntime toyME code0).run₂ .instruments
       (zeroCheck.toQuantumAt
-        (QComp.coinImpl mixedSpec B +
+        (QComp.coinImpl mixedSpec B +ₛ
           (fun _ ↦ QuantumComp₂.pure (0 : Fin 2) :
             QueryImpl (Fin 2 →ₒ Fin 2) (QComp mixedSpec B B))))).map some :=
   runClassicalChecked_rom (fun _ _ ↦ 0) toyME code0 B 0 _

@@ -52,7 +52,7 @@ def adaptive : KnowledgeProver Unit Bool Bool Unit Unit :=
 /-- Fixed replies for inspecting structural executions of the wrapped oracle. -/
 @[expose]
 def answers (reply : Bool) : QueryImpl (Fork.wrappedSpec Bool) Id :=
-  QueryImpl.ofFn (fun n : ℕ => (0 : Fin (n + 1))) + QueryImpl.ofFn (fun _ : Unit => reply)
+  QueryImpl.ofFn (fun n : ℕ => (0 : Fin (n + 1))) +ₛ QueryImpl.ofFn (fun _ : Unit => reply)
 
 example : nmaHashQueryBound Unit (noQuery () ()) 0 := by trivial
 

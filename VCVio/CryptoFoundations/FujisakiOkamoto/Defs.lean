@@ -287,7 +287,7 @@ def OW_PCVA_queryImpl (encAlg : AsymmEncAlg (OracleComp spec) M PK SK C)
     if c = cStar then return false else do
       let msg' ← encAlg.decrypt sk c
       return msg'.isSome
-  spec.passthrough + (checkImpl + validImpl)
+  spec.passthrough + (checkImpl +ₛ validImpl)
 
 /-- The validity oracle refuses the challenge ciphertext. -/
 @[simp]

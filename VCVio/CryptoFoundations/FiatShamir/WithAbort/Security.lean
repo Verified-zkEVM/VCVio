@@ -486,7 +486,7 @@ lemma simulatedNmaAdv_nmaHashQueryBound
   -- pure post-processing (erasing the forgery's own verification point from the returned
   -- cache) issues none, so the total bound is `qH + 0 = qH`.
   have hrun : FiatShamir.nmaHashQueryBound (M := M) (Commit := Commit) (Chal := Chal)
-      (oa := (simulateQ ((unifSim + roSim) + sigSim) (adv.main pk)).run ∅) qH := by
+      (oa := (simulateQ ((unifSim +ₛ roSim) +ₛ sigSim) (adv.main pk)).run ∅) qH := by
     unfold FiatShamir.nmaHashQueryBound
     refine OracleComp.IsQueryBoundP.simulateQ_run_of_step (hQ pk).2 ?_ ?_ ∅
     · rintro ((n | mc) | msg) hp s'
@@ -512,7 +512,7 @@ lemma simulatedNmaAdv_nmaHashQueryBound
   have hbind := FiatShamir.nmaHashQueryBound_bind (M := M) (Commit := Commit)
     (Chal := Chal) hrun (fun result => hpost result)
   change FiatShamir.nmaHashQueryBound (M := M) (Commit := Commit) (Chal := Chal)
-    (oa := (simulateQ ((unifSim + roSim) + sigSim) (adv.main pk)).run ∅ >>= fun result =>
+    (oa := (simulateQ ((unifSim +ₛ roSim) +ₛ sigSim) (adv.main pk)).run ∅ >>= fun result =>
       pure ((result.1.1, result.1.2),
         match result.1.2 with
         | some (w', _) =>
