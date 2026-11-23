@@ -44,6 +44,22 @@ Fiat-Shamir transform → managed-RO NMA → replay forking → DLog), see
 The Schnorr-specific σ-protocol facts that feed in live in
 [`VCVio/Schemes/Schnorr/SigmaProtocol.lean`](../../VCVio/Schemes/Schnorr/SigmaProtocol.lean).
 
+### Synchronized signatures
+
+[`SyncSignatureAlg`](../../VCVio/CryptoFoundations/SyncSignatureAlg.lean) captures system
+configuration in the scheme constructor and has parameterless key generation, epoch-indexed
+optional signing, and deterministic verification. Correctness and the regular/strong experiments
+observe the chosen partial runtime without normalizing away missing mass. Signing histories retain
+failed requests and consumed epochs; strong freshness compares exact message/signature pairs.
+
+The [GXMSS reading guide](../reading/gxmss.md) connects these generic notions to the interval
+construction, original-domain security reductions and shared PRF extension.
+The ordinary complete-tree endpoint is defined in
+[`HashSig/GXMSS/Security/Unforgeability.lean`](../../HashSig/GXMSS/Security/Unforgeability.lean).
+Interval endpoints are under `Security/Interval/`; each security layer keeps named
+reductions under `Reductions/` and simulation or witness support under `Auxiliary/`.
+PRF-derived components use descriptive filenames within these directories.
+
 ### Commitment schemes (`CommitmentScheme`)
 
 ```lean
