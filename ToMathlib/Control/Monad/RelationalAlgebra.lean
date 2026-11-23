@@ -71,15 +71,15 @@ variable {m₁ : Type u → Type v₁} {m₂ : Type u → Type v₂} {l : Type u
 
 /-- Strictness of the left state transformer algebra. -/
 instance instStrictBindStateTLeft (σ : Type u) :
-    StrictBind (StateT σ m₁) m₂ (σ → l) := strictBindStateTLeft σ
+    StrictBind (StateT σ m₁) m₂ (σ → l) := strictBind_stateTLeft σ
 
 /-- Strictness of the right state transformer algebra. -/
 instance instStrictBindStateTRight (σ : Type u) :
-    StrictBind m₁ (StateT σ m₂) (σ → l) := strictBindStateTRight σ
+    StrictBind m₁ (StateT σ m₂) (σ → l) := strictBind_stateTRight σ
 
 /-- Strictness of the two-sided state transformer algebra. -/
 instance instStrictBindStateTBoth (σ₁ σ₂ : Type u) :
-    StrictBind (StateT σ₁ m₁) (StateT σ₂ m₂) (σ₁ → σ₂ → l) := strictBindStateTBoth σ₁ σ₂
+    StrictBind (StateT σ₁ m₁) (StateT σ₂ m₂) (σ₁ → σ₂ → l) := strictBind_stateTBoth σ₁ σ₂
 
 end Strict
 

@@ -41,7 +41,8 @@ open scoped ExpectationWP.Lower
 
 example (c : ENNReal) : wp (none : Option Nat) (fun _ ↦ c) Lean.Order.bot = 0 := by simp
 
-example (c : ENNReal) : wp (some 7 : Option Nat) (fun _ ↦ c) Lean.Order.bot = c := by simp
+example (c : ENNReal) (epost : EStack⟨⟩) :
+    wp (some 7 : Option Nat) (fun _ ↦ c) epost = c := by simp
 
 noncomputable example : WPMonad Option ENNReal EStack⟨⟩ := inferInstance
 

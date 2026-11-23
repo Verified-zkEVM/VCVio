@@ -571,7 +571,7 @@ theorem log_length_le_of_mem_support_run_simulateQ
   induction oa using OracleComp.inductionOn generalizing n z with
   | pure x =>
       simp only [simulateQ_pure] at hz
-      subst hz
+      obtain rfl := (mem_support_pure_iff _ _).mp hz
       simp
   | query_bind t mx ih =>
       rw [isTotalQueryBound_query_bind_iff] at hbound
@@ -622,7 +622,7 @@ theorem holds_of_mem_log_of_mem_support_run_simulateQ
   induction oa using OracleComp.inductionOn generalizing z with
   | pure x =>
       simp only [simulateQ_pure] at hz
-      subst hz
+      obtain rfl := (mem_support_pure_iff _ _).mp hz
       simp
   | query_bind t mx ih =>
       rw [allQueriesSatisfy_query_bind_iff] at hbound

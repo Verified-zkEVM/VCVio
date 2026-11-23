@@ -254,6 +254,7 @@ public import VCVio.CryptoFoundations.PRG
 public import VCVio.CryptoFoundations.ReplayFork
 public import VCVio.CryptoFoundations.ReplayForkCost
 public import VCVio.CryptoFoundations.Rewinding.Basic
+public import VCVio.CryptoFoundations.Rewinding.Cost
 public import VCVio.CryptoFoundations.Rewinding.Eager
 public import VCVio.CryptoFoundations.Rewinding.Finder
 public import VCVio.CryptoFoundations.Rewinding.FinderBridge
@@ -290,6 +291,7 @@ public import VCVio.CryptoFoundations.SignatureAlg.WithPost
 public import VCVio.CryptoFoundations.SymmEncAlg
 public import VCVio.CryptoFoundations.SymmEncAlg.Defs
 public import VCVio.CryptoFoundations.SymmEncAlg.Deterministic
+public import VCVio.CryptoFoundations.SymmEncAlg.INDCPA
 public import VCVio.CryptoFoundations.SymmEncAlg.Measure
 public import VCVio.CryptoFoundations.SymmEncAlg.OneTimeINDCPA
 public import VCVio.CryptoFoundations.TimeLockPuzzle
@@ -437,6 +439,7 @@ public import VCVio.OracleComp.QueryTracking.Iter
 public import VCVio.OracleComp.QueryTracking.ListCache
 public import VCVio.OracleComp.QueryTracking.LoggingOracle.Core
 public import VCVio.OracleComp.QueryTracking.LoggingOracle.History
+public import VCVio.OracleComp.QueryTracking.LoggingOracle.Relabel
 public import VCVio.OracleComp.QueryTracking.MeasuredProgram
 public import VCVio.OracleComp.QueryTracking.MeasuredProgram.Composition
 public import VCVio.OracleComp.QueryTracking.ObservationOracle
@@ -457,6 +460,7 @@ public import VCVio.OracleComp.QueryTracking.QueryLogCheck
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
 public import VCVio.OracleComp.QueryTracking.RandomOracle.CachePartial
 public import VCVio.OracleComp.QueryTracking.RandomOracle.CachePartial.Cost
+public import VCVio.OracleComp.QueryTracking.RandomOracle.CachePartial.Hint
 public import VCVio.OracleComp.QueryTracking.RandomOracle.ClassIndexedTape
 public import VCVio.OracleComp.QueryTracking.RandomOracle.ClassIndexedTape.HitPotential
 public import VCVio.OracleComp.QueryTracking.RandomOracle.ClassIndexedTape.Position
@@ -656,10 +660,13 @@ public import VCVio.Quantum.VC.Proof.OnlineSecurity
 public import VCVio.Quantum.VC.Proof.Repeatability
 public import VCVio.Quantum.VC.Tuples
 public import VCVio.Quantum.VC.Unitaries
+public import VCVio.Schemes.HashAndMac
+public import VCVio.Schemes.HashAndSign
 public import VCVio.Schemes.KEMDEM
 public import VCVio.Schemes.KEMDEM.Measure
 public import VCVio.Schemes.MacFromPRF
 public import VCVio.Schemes.MerkleDamgard
+public import VCVio.Schemes.PRFEncryption
 public import VCVio.Schemes.Pedersen
 public import VCVio.Schemes.Pedersen.Generic
 public import VCVio.Schemes.PointerChainPuzzle.AsymptoticHiding

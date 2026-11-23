@@ -82,8 +82,10 @@ theorem Spec.query (t : spec.Domain) (post : spec.Range t → ℝ≥0∞) {epost
   ⟨(wp_HasQuery_query t post).ge⟩
 
 /-- The expectation of a uniform draw is the average of the postcondition. -/
-theorem wp_uniformSample_eq_tsum (β : Type) [SampleableType β] (post : β → ℝ≥0∞) :
-    OracleComp.ProgramLogic.wp ($ᵗ β) post = (∑' x, post x) / Nat.card β := by
+theorem wp_uniformSample_eq_tsum (β : Type) [SampleableType β] (post : β → ℝ≥0∞)
+    (epost : EStack⟨⟩ := Lean.Order.bot) :
+    Std.WP.wp ($ᵗ β) post epost = (∑' x, post x) / Nat.card β := by
+  change OracleComp.ProgramLogic.wp ($ᵗ β) post = _
   let : MeasurableSpace β := ⊤
   rw [wp_eq_lintegral _ _ Measurable.of_discrete, SampleableType.evalDist_uniformSample,
     ProbabilityTheory.uniformOn, ProbabilityTheory.cond, Measure.restrict_univ,
@@ -96,7 +98,7 @@ theorem wp_uniformSample_eq_tsum (β : Type) [SampleableType β] (post : β → 
 theorem Spec.uniformSample (β : Type) [SampleableType β] (post : β → ℝ≥0∞)
     {epost : EStack⟨⟩} :
     ⦃ (∑' x, post x) / Nat.card β ⦄ ($ᵗ β) ⦃ post; epost ⦄ :=
-  ⟨(wp_uniformSample_eq_tsum β post).ge⟩
+  ⟨(wp_uniformSample_eq_tsum β post epost).ge⟩
 
 end exact
 
@@ -139,21 +141,21 @@ theorem Spec.monadLift_query_iInf (t : spec.Domain) (post : spec.Range t → ℝ
       (MonadLift.monadLift (liftM (OracleSpec.query t) : OracleQuery spec (spec.Range t)) :
         OracleComp spec (spec.Range t))
     ⦃ post; epost ⦄ := by
-  rw [MAlgOrdered.iInf_eq_iInf]
+  rw [LeanOrder.iInf_eq_iInf]
   exact ⟨iInf_le_wp _ post⟩
 
 /-- A lower bound at every answer of a query bounds its expectation. -/
 theorem Spec.query_iInf (t : spec.Domain) (post : spec.Range t → ℝ≥0∞) {epost : EStack⟨⟩} :
     ⦃ Lean.Order.iInf post ⦄ (HasQuery.query t : OracleComp spec (spec.Range t))
     ⦃ post; epost ⦄ := by
-  rw [MAlgOrdered.iInf_eq_iInf]
+  rw [LeanOrder.iInf_eq_iInf]
   exact ⟨iInf_le_wp _ post⟩
 
 /-- A lower bound at every value of a uniform draw bounds its expectation. -/
 theorem Spec.uniformSample_iInf (β : Type) [SampleableType β] (post : β → ℝ≥0∞)
     {epost : EStack⟨⟩} :
     ⦃ Lean.Order.iInf post ⦄ ($ᵗ β) ⦃ post; epost ⦄ := by
-  rw [MAlgOrdered.iInf_eq_iInf]
+  rw [LeanOrder.iInf_eq_iInf]
   exact ⟨iInf_le_wp _ post⟩
 
 /-- A lower bound at every possible output bounds the expectation.

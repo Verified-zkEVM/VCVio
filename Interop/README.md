@@ -52,6 +52,13 @@ Charon, its runtime library) must never reach a routine build of the core.
 
 ## The Rust bridges
 
+A `Std.WP` contract for `RustOracleComp` can specify each exception channel by type.
+`throws (e : Interop.Rust.Error) => …` describes a panic and `throws (u : Unit) => …`
+describes divergence. The [Lean example](Hax/Examples/Verification.lean) uses different
+postconditions for the two exits under an arbitrary interpretation of oracle queries. Its
+caller applies the generated `panicOrDiverge.spec` theorem directly. On Lean 4.36, bare
+`vcgen` fails to reconstruct this two-slot rule at a call site.
+
 hax and Aeneas emit code in one monad, `Aeneas.Std.RustM`. hax's Lean library builds on Aeneas's,
 and the fork of Aeneas it pins names it `RustM`; upstream Aeneas calls the same definition
 `Result`.

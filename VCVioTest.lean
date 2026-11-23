@@ -124,6 +124,7 @@ public import VCVioTest.OracleComp.MeasuredProgram
 public import VCVioTest.OracleComp.PreservesInv
 public import VCVioTest.OracleComp.Query
 public import VCVioTest.OracleComp.QueryAndHandlerLaws
+public import VCVioTest.OracleComp.QueryLogRelabel
 public import VCVioTest.OracleComp.QueryTracking.QueryLog
 public import VCVioTest.OracleComp.SchwartzZippel
 public import VCVioTest.OracleComp.SecurityFamily
@@ -131,6 +132,7 @@ public import VCVioTest.OracleComp.SimulateQ
 public import VCVioTest.OracleComp.SpecInstanceSearch
 public import VCVioTest.OracleComp.SpecInstanceSearchLibrary
 public import VCVioTest.OracleComp.Sum
+public import VCVioTest.OracleComp.SupportKernel
 public import VCVioTest.OracleComp.SupportMeasure
 public import VCVioTest.OracleComp.SupportRefinement
 public import VCVioTest.OracleComp.UniformAnswerMeasure
@@ -225,6 +227,7 @@ public import VCVioTest.ReactiveWorld
 public import VCVioTest.ReplayCheckpoint
 public import VCVioTest.ResumptionCompatibility
 public import VCVioTest.Rewinding
+public import VCVioTest.RewindingCost
 public import VCVioTest.RoundByRound.OneRound
 public import VCVioTest.Runtime
 public import VCVioTest.SMDTDSPR
@@ -246,6 +249,7 @@ public import VCVioTest.Schemes.Schnorr.ChallengeRestriction
 public import VCVioTest.Schemes.Schnorr.Transforms
 public import VCVioTest.Schemes.VectorPedersen
 public import VCVioTest.SeparatedOTP
+public import VCVioTest.SigmaProtocolMonad
 public import VCVioTest.Smoke
 public import VCVioTest.StateSeparating.Measure
 public import VCVioTest.StateTLift

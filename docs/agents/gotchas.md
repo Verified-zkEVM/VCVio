@@ -241,6 +241,28 @@ that differs syntactically from `Monad.toBind`. This means `pure_bind`, `bind_as
 expose that instance with `show`/`change`, so that the `LawfulMonad` laws `pure_bind`,
 `bind_assoc` and `bind_pure` match the desugared binds.
 
+### 13b. Membership in `support` does not run the computation
+
+On `OracleComp`, `support mx` is `{a | CanReturn mx a}`, and the return predicate is PolyFun's
+inductive `PFunctor.FreeM.CanReturn`. Neither the kernel nor the elaborator reduces an inductive
+predicate. Comparing `x ∈ support mx` with `x ∈ support my` therefore compares `mx` with `my`, and
+neither computation runs. A proof can unfold a definition under `support`, rewrite a `do` block
+with `mem_support_bind_iff` and `support_pure` (entry 13), and pass a hypothesis
+`h : x ∈ support mx` to a lemma, even when `mx` samples `$ᵗ BitVec (2 ^ 32)`.
+`VCVioTest/OracleComp/SupportKernel.lean` checks these cases.
+
+The structural equations of the support on the free monad are theorems, not definitional
+unfoldings: `PFunctor.FreeM.support_liftBind`, `PFunctor.FreeM.mem_support_liftBind` and the
+generic `support_pure`. Rewrite with them instead of `change` or `rfl`. To take a membership apart,
+use `PFunctor.FreeM.canReturn_pure_iff` and `PFunctor.FreeM.canReturn_liftBind_iff`, or `cases` on
+the constructors `PFunctor.FreeM.CanReturn.pure` and `PFunctor.FreeM.CanReturn.liftBind`.
+
+The hazard remains for other sets defined by recursion over a computation. Mathlib's `Set` is a
+structure (mathlib4#41506), so `x ∈ s` unfolds to the applied projection `s.Mem x`. Before the
+kernel compares two such memberships, it reduces `s` to a constructor (leanprover/lean4#16613).
+When `s` is computed by recursion over a program, that reduction runs the program. Define such a
+notion as an inductive predicate `P`, and take the set as `{a | P a}`, as `support` does.
+
 ### 14. Hypothesis satisfiability is a proof obligation
 
 A conditional theorem whose hypotheses are jointly uninhabitable is vacuously true, and
