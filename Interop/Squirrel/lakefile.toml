@@ -55,4 +55,5 @@ roots = [
   "Interop.Squirrel.Test.SecrecyExamples", "Interop.Squirrel.Test.FreshLExamples",
   "Interop.Squirrel.Test.FreshLCountermodel", "Interop.Squirrel.Test.OracleExamples",
   "Interop.Squirrel.Test.PRFExamples", "Interop.Squirrel.Test.PRFOracleExamples",
+  "Interop.Squirrel.Test.ChainModel",
 ]
