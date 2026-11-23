@@ -14,6 +14,7 @@ public import Mathlib.Data.Fintype.BigOperators
 
 Acceptance rates decompose along the first challenge coordinate. The complement of the threshold
 error is multiplicative over rounds, yielding the affine recursion for successive extraction steps.
+The threshold error is at most the sum of the per-round errors (`thresholdError_le_sum`).
 -/
 
 public section
@@ -91,6 +92,34 @@ theorem one_sub_mul_one_sub {a b : ℝ≥0∞} (ha : a ≤ 1) (hb : b ≤ 1) :
   calc
     _ = a + (1 - a) * (b + (1 - b)) := by ring
     _ = 1 := by rw [add_tsub_cancel_of_le hb, mul_one, add_tsub_cancel_of_le ha]
+
+/-- The union bound for a product of complements: `1 - ∏ r ∈ s, (1 - a r) ≤ ∑ r ∈ s, a r`. -/
+theorem one_sub_prod_one_sub_le_sum {R : Type*} (s : Finset R) (a : R → ℝ≥0∞) :
+    1 - ∏ r ∈ s, (1 - a r) ≤ ∑ r ∈ s, a r := by
+  classical
+  induction s using Finset.induction_on with
+  | empty => simp
+  | insert j s hj ih =>
+      rw [Finset.prod_insert hj, Finset.sum_insert hj]
+      by_cases ha : 1 ≤ a j
+      · rw [tsub_eq_zero_of_le ha, zero_mul, tsub_zero]
+        exact le_add_right ha
+      · have ha' : a j ≤ 1 := (not_le.mp ha).le
+        have hP : ∏ r ∈ s, (1 - a r) ≤ 1 := Finset.prod_le_one fun r _ => tsub_le_self
+        rw [tsub_le_iff_right]
+        calc 1 ≤ ∑ r ∈ s, a r + ∏ r ∈ s, (1 - a r) := tsub_le_iff_right.mp ih
+          _ = ∑ r ∈ s, a r + ((1 - a j) * ∏ r ∈ s, (1 - a r) + a j * ∏ r ∈ s, (1 - a r)) := by
+              rw [← add_mul, tsub_add_cancel_of_le ha', one_mul]
+          _ ≤ ∑ r ∈ s, a r + ((1 - a j) * ∏ r ∈ s, (1 - a r) + a j) := by
+              gcongr
+              exact mul_le_of_le_one_right zero_le hP
+          _ = a j + ∑ r ∈ s, a r + (1 - a j) * ∏ r ∈ s, (1 - a r) := by ring
+
+/-- The threshold error is at most the sum of the per-round errors `(k r - 1) / |C r|`. -/
+theorem thresholdError_le_sum {R : Type} [Fintype R] (C : R → Type) [∀ r, Fintype (C r)]
+    (k : R → ℕ) :
+    thresholdError C k ≤ ∑ r, ((k r - 1 : ℕ) : ℝ≥0∞) / Fintype.card (C r) :=
+  one_sub_prod_one_sub_le_sum Finset.univ _
 
 /-- The complement of the affine union error is the product of the two complements. -/
 theorem one_sub_affine_error {a b : ℝ≥0∞} (ha : a ≤ 1) (hb : b ≤ 1) :
