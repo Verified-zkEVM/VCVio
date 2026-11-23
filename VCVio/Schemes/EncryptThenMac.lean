@@ -20,11 +20,13 @@ encrypt-then-MAC scheme: the key is a pair `(kₑ, kₘ)`, a message is encrypte
 and sent with the tag `t` of `c` under `kₘ`, and decryption of `(c, t)` returns `none` unless the
 tag verifies (Katz–Lindell, 3rd ed., §5.3.1).
 
-If `enc` is CPA-secure and `mac` is strongly secure, the scheme is CCA-secure. The MAC is assumed to
-verify deterministically, `mac.verify k c t = pure (vf k c t)`, which covers canonical verification
-by recomputing a deterministic tag. No correctness assumption on `enc` or `mac` is needed for CCA
-security. The forgers output a default pair when the guessed decryption query does not exist, so
-`C` and `T` are assumed inhabited.
+If `enc` is CPA-secure and `mac` is strongly unforgeable, the scheme is CCA-secure. The MAC is
+assumed to verify deterministically, `mac.verify k c t = pure (vf k c t)`, which covers canonical
+verification by recomputing a deterministic tag. No correctness assumption on `enc` or `mac` is
+needed, because the CCA game refuses every ciphertext its challenge oracle returned, including
+those of encryption queries `(m, m)` (`SymmEncAlg.IND_CCA_decryptImpl`). The forgers output a
+default pair when the guessed decryption query does not exist, so `C` and `T` are assumed
+inhabited.
 
 ## Proof
 
@@ -39,7 +41,8 @@ the challenge ciphertexts it receives (`cpaReduction`, `rejectExperiment_eq_IND_
 A fresh verifying decryption query is a forgery. The forger `forger enc mac leak A b j` runs the
 game, stops asking for tags at the `j`-th decryption query and outputs that query. The `j`-th
 query has the same distribution in the rejecting game and in the game stopped at it
-(`prEvent_rejectImpl_freshValidAt_eq`, by `map_run_simulateQ_evalDistEq_of_eq_until_stopped`).
+(`prEvent_rejectImpl_freshValidAt_eq`, by
+`OracleComp.map_run_simulateQ_evalDistEq_of_eq_until_stopped`).
 In the stopped game it is fresh against the final tagging log (`preservesInv_stopImpl`), so the
 forger's SUF-CMA advantage bounds the probability that the `j`-th decryption query is a fresh
 valid forgery (`map_run_simulateQ_stopImpl`). With at most `q_d` decryption queries, summing
@@ -70,100 +73,6 @@ open OracleSpec OracleComp ENNReal
 namespace EncryptThenMac
 
 variable {M Ke C Km T : Type}
-
-/-! ## Stopping a simulation -/
-
-section stopping
-
-variable {ι : Type} {spec : OracleSpec ι} {σ β : Type}
-
-/-- From a stopped state, a handler that keeps the state stopped and its observation fixed ends
-every run with the same observation. -/
-theorem map_run_simulateQ_evalDistEq_pure_of_stopped (impl : QueryImpl spec (StateT σ ProbComp))
-    (stopped : σ → Prop) (obs : σ → β)
-    (h : ∀ t s, stopped s → ∀ z ∈ support ((impl t).run s), stopped z.2 ∧ obs z.2 = obs s)
-    {α : Type} (oa : OracleComp spec α) {s : σ} (hs : stopped s) :
-    (fun z => obs z.2) <$> (simulateQ impl oa).run s =ᵈ (pure (obs s) : ProbComp β) := by
-  have hinv := OracleComp.simulateQ_run_preserves_inv_of_query impl
-    (fun s' => stopped s' ∧ obs s' = obs s) (fun t s' hs' z hz => ⟨(h t s' hs'.1 z hz).1,
-      (h t s' hs'.1 z hz).2.trans hs'.2⟩) oa s ⟨hs, rfl⟩
-  have hmap : (fun z => obs z.2) <$> (simulateQ impl oa).run s =ᵈ
-      (fun _ => obs s) <$> (simulateQ impl oa).run s := by
-    rw [map_eq_bind_pure_comp, map_eq_bind_pure_comp]
-    exact OracleComp.EvalDistEq.bind_congr_of_support _ fun z hz => by
-      simp [(hinv z hz).2]
-  exact hmap.trans (OracleComp.EvalDistEq.map_const _ _)
-
-/-- **Stopping.** Two handlers that agree on every state that is not stopped, and that each keep a
-stopped state stopped and its observation fixed, give every run the same distribution of the
-final observation. -/
-theorem map_run_simulateQ_evalDistEq_of_eq_until_stopped
-    (impl₁ impl₂ : QueryImpl spec (StateT σ ProbComp)) (stopped : σ → Prop) (obs : σ → β)
-    (hagree : ∀ t s, ¬stopped s → (impl₁ t).run s = (impl₂ t).run s)
-    (h₁ : ∀ t s, stopped s → ∀ z ∈ support ((impl₁ t).run s), stopped z.2 ∧ obs z.2 = obs s)
-    (h₂ : ∀ t s, stopped s → ∀ z ∈ support ((impl₂ t).run s), stopped z.2 ∧ obs z.2 = obs s)
-    {α : Type} (oa : OracleComp spec α) (s : σ) :
-    (fun z => obs z.2) <$> (simulateQ impl₁ oa).run s =ᵈ
-      (fun z => obs z.2) <$> (simulateQ impl₂ oa).run s := by
-  induction oa using OracleComp.inductionOn generalizing s with
-  | pure x => exact EvalDistEq.rfl
-  | query_bind t k ih =>
-    by_cases hs : stopped s
-    · exact (map_run_simulateQ_evalDistEq_pure_of_stopped impl₁ stopped obs h₁ _ hs).trans
-        (map_run_simulateQ_evalDistEq_pure_of_stopped impl₂ stopped obs h₂ _ hs).symm
-    · simp only [simulateQ_bind, simulateQ_query, OracleQuery.input_query,
-        OracleQuery.cont_query, id_map, StateT.run_bind, map_bind, hagree t s hs]
-      exact EvalDistEq.bind_right _ fun p => ih p.1 p.2
-
-end stopping
-
-/-! ## Flattening a writer -/
-
-section flatten
-
-variable {ι : Type} {spec : OracleSpec ι} {σ A : Type}
-
-/-- A handler over `StateT σ (WriterT (List A) ProbComp)` read as a handler over the product
-state `σ × List A`. -/
-@[expose] def flattenWriterT (impl : QueryImpl spec (StateT σ (WriterT (List A) ProbComp))) :
-    QueryImpl spec (StateT (σ × List A) ProbComp) := fun t =>
-  StateT.mk fun p => (fun z => (z.1.1, (z.1.2, p.2 ++ z.2))) <$> ((impl t).run p.1).run
-
-/-- Running a handler over `StateT σ (WriterT (List A) ProbComp)` is running its flattened
-handler on the product state. -/
-theorem run_simulateQ_flattenWriterT (impl : QueryImpl spec (StateT σ (WriterT (List A) ProbComp)))
-    {α : Type} (oa : OracleComp spec α) (s : σ) (w₀ : List A) :
-    (fun z : (α × σ) × List A => (z.1.1, (z.1.2, w₀ ++ z.2))) <$>
-        ((simulateQ impl oa).run s).run = (simulateQ (flattenWriterT impl) oa).run (s, w₀) := by
-  induction oa using OracleComp.inductionOn generalizing s w₀ with
-  | pure x => simp
-  | query_bind t k ih =>
-    simp only [simulateQ_bind, simulateQ_query, OracleQuery.input_query, OracleQuery.cont_query,
-      id_map, StateT.run_bind, WriterT.run_bind', map_bind, flattenWriterT, StateT.run_mk,
-      bind_map_left]
-    refine bind_congr fun z => ?_
-    rw [← ih z.1.1 z.1.2 (w₀ ++ z.2)]
-    simp [Functor.map_map, List.append_assoc]
-
-/-- The run of a handler over `StateT σ (WriterT (List A) ProbComp)` from the empty log, read off
-the run of its flattened handler. -/
-theorem run_simulateQ_eq_map_flattenWriterT
-    (impl : QueryImpl spec (StateT σ (WriterT (List A) ProbComp))) {α : Type}
-    (oa : OracleComp spec α) (s : σ) :
-    ((simulateQ impl oa).run s).run =
-      (fun w => ((w.1, w.2.1), w.2.2)) <$> (simulateQ (flattenWriterT impl) oa).run (s, []) := by
-  rw [← run_simulateQ_flattenWriterT impl oa s [], Functor.map_map]
-  simp
-
-/-- A uniform computation lifted into a writer runs unchanged with an empty log. -/
-lemma run_simulateQ_liftTarget_writerT {α : Type} (oa : ProbComp α) :
-    (simulateQ ((QueryImpl.id' unifSpec).liftTarget (WriterT (List A) ProbComp)) oa).run =
-      (fun x => (x, [])) <$> oa := by
-  induction oa using OracleComp.inductionOn with
-  | pure x => simp
-  | query_bind t f ih => simp [ih, map_bind]
-
-end flatten
 
 /-! ## The scheme -/
 
@@ -577,7 +486,7 @@ theorem prEvent_rejectImpl_freshValidAt_eq (enc : SymmEncAlg ProbComp M Ke C)
 
 /-- **Guessing the query.** With at most `q` decryption queries, a logged forgery is one of the
 first `q` logged decryption queries. -/
-theorem forgeryLogged_imp_exists_freshValidAt (enc : SymmEncAlg ProbComp M Ke C)
+theorem exists_freshValidAt_of_forgeryLogged (enc : SymmEncAlg ProbComp M Ke C)
     (mac : MacAlg ProbComp C Km T) (vf : C → T → Bool) (ke : Ke) (km : Km) (leak : M → Λ)
     (b : Bool) {α : Type} (oa : OracleComp (ccaSpec M C T) α)
     {charged : (ccaSpec M C T).Domain → Prop} [DecidablePred charged]
@@ -691,8 +600,8 @@ the tagging log. -/
 @[expose] noncomputable def forgerTaggedImpl (enc : SymmEncAlg ProbComp M Ke C)
     (mac : MacAlg ProbComp C Km T) (ke : Ke) (km : Km) (leak : M → Λ) (b : Bool) (j : ℕ) :
     QueryImpl (ccaSpec M C T) (StateT (List (C × T) × QueryLog (C →ₒ T)) ProbComp) :=
-  flattenWriterT ((unifSpec.passthrough + mac.taggingOracle km).mapStateTBase
-    (forgerImpl enc ke leak b j))
+  ((unifSpec.passthrough + mac.taggingOracle km).mapStateTBase
+    (forgerImpl enc ke leak b j)).flattenStateTWriterT
 
 /-- The state of the stopped game read as the forger's: the logged decryption queries, and the
 challenge log in tagging order. -/
@@ -713,26 +622,27 @@ theorem map_run_simulateQ_stopImpl (enc : SymmEncAlg ProbComp M Ke C)
           (fun u => (u, (forgerView s).1)) <$>
             (liftM (unifSpec.query n) : OracleComp (unifSpec + (C →ₒ T)) _) := by
       simp [map_eq_bind_pure_comp]
-    simp only [forgerTaggedImpl, flattenWriterT, forgerImpl, QueryImpl.mapStateTBase,
-      StateT.run_mk, QueryImpl.passthrough_add, QueryImpl.add_apply_inl, QueryImpl.liftTarget_apply,
-      QueryImpl.id'_apply]
+    simp only [forgerTaggedImpl, QueryImpl.flattenStateTWriterT, forgerImpl,
+      QueryImpl.mapStateTBase, StateT.run_mk, QueryImpl.passthrough_add, QueryImpl.add_apply_inl,
+      QueryImpl.liftTarget_apply, QueryImpl.id'_apply]
     erw [hq, simulateQ_map, QueryImpl.simulateQ_add_liftM_query_left]
     simp [Functor.map_map]
   · obtain ⟨m₀, m₁⟩ := mm
     rw [stopImpl_run_inl_inr]
     by_cases hst : j < s.2.length
     · rw [ite_eq_left hst]
-      simp [forgerTaggedImpl, flattenWriterT, forgerImpl, forgerChallengeImpl,
+      simp [forgerTaggedImpl, QueryImpl.flattenStateTWriterT, forgerImpl, forgerChallengeImpl,
         QueryImpl.mapStateTBase, forgerView, hst]
     · rw [ite_eq_right hst]
       by_cases h : leak m₀ = leak m₁
-      · simp [challengeImpl, forgerTaggedImpl, flattenWriterT, forgerImpl, forgerChallengeImpl,
-          QueryImpl.mapStateTBase, forgerView, hst, h, scheme, MacAlg.taggingOracle,
-          QueryImpl.simulateQ_add_liftM_left, run_simulateQ_liftTarget_writerT]
-      · simp [challengeImpl, forgerTaggedImpl, flattenWriterT, forgerImpl, forgerChallengeImpl,
-          QueryImpl.mapStateTBase, forgerView, h]
+      · simp [challengeImpl, forgerTaggedImpl, QueryImpl.flattenStateTWriterT, forgerImpl,
+          forgerChallengeImpl, QueryImpl.mapStateTBase, forgerView, hst, h, scheme,
+          MacAlg.taggingOracle,
+          QueryImpl.simulateQ_add_liftM_left, writerT_run_simulateQ_liftTarget, simulateQ_id']
+      · simp [challengeImpl, forgerTaggedImpl, QueryImpl.flattenStateTWriterT, forgerImpl,
+          forgerChallengeImpl, QueryImpl.mapStateTBase, forgerView, h]
   · rw [stopImpl_run_inr]
-    simp [forgerTaggedImpl, flattenWriterT, forgerImpl, forgerDecryptImpl,
+    simp [forgerTaggedImpl, QueryImpl.flattenStateTWriterT, forgerImpl, forgerDecryptImpl,
       QueryImpl.mapStateTBase, forgerView]
 
 /-- The SUF-CMA experiment of the forger: the forger run against the tagging oracle, with the
@@ -754,10 +664,11 @@ theorem strongUnforgeableExperiment_forger [Inhabited C] [Inhabited T]
   have hkey : (simulateQ (unifSpec.passthrough + mac.taggingOracle km)
       (liftM enc.keygen : OracleComp (unifSpec + (C →ₒ T)) Ke)).run =
         (fun x => (x, [])) <$> enc.keygen := by
-    rw [QueryImpl.passthrough_add, QueryImpl.simulateQ_add_liftM_left]
-    exact run_simulateQ_liftTarget_writerT _
+    rw [QueryImpl.passthrough_add, QueryImpl.simulateQ_add_liftM_left,
+      writerT_run_simulateQ_liftTarget, simulateQ_id']
+    rfl
   erw [hkey]
-  simp only [QueryImpl.simulateQ_mapStateTBase_run, run_simulateQ_eq_map_flattenWriterT,
+  simp only [QueryImpl.simulateQ_mapStateTBase_run, run_simulateQ_eq_map_flattenStateTWriterT,
     forgerTaggedImpl, simulateQ_pure, WriterT.run_pure', bind_map_left, map_bind, bind_assoc,
     pure_bind, Functor.map_map]
   refine bind_congr fun ke => bind_congr fun z => ?_
@@ -813,7 +724,7 @@ theorem forgeryExperiment_le_sum [Inhabited C] [Inhabited T] (enc : SymmEncAlg P
   have hU : ∀ w ∈ support (joint run₁), ForgeryLogged (vf w.1.2) w.2.2 →
       ∃ j ∈ Finset.range q, FreshValidAt (vf w.1.2) j w.2.2 := by
     intro w hw hf
-    refine forgeryLogged_imp_exists_freshValidAt enc mac (vf w.1.2) w.1.1 w.1.2 leak b adversary
+    refine exists_freshValidAt_of_forgeryLogged enc mac (vf w.1.2) w.1.1 w.1.2 leak b adversary
       ?_ hq w.2 (hmem run₁ w hw) hf
     intro ct
     rfl
@@ -866,7 +777,7 @@ theorem forgeryExperiment_le_sum [Inhabited C] [Inhabited T] (enc : SymmEncAlg P
 by `vf`. Against an adversary with at most `q` decryption queries, the CCA advantage against
 `scheme enc mac` is at most the CPA advantage of `cpaReduction` against `enc`, plus, for each hidden
 bit `b` and each `j < q`, the SUF-CMA advantage of the forger `forger enc mac leak adversary b j`
-that guesses that the `j`-th decryption query is the first forgery. -/
+that guesses that the `j`-th decryption query is a forgery. -/
 theorem IND_CCA_Advantage_le [Inhabited C] [Inhabited T] (enc : SymmEncAlg ProbComp M Ke C)
     (mac : MacAlg ProbComp C Km T) (vf : Km → C → T → Bool)
     (hvf : ∀ k c t, mac.verify k c t = pure (vf k c t)) (leak : M → Λ)

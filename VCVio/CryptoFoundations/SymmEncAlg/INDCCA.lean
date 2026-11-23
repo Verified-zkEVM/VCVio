@@ -22,7 +22,10 @@ other ciphertext it answers `encAlg.decrypt k c`.
 Katz–Lindell state the game with a single challenge pair. This is its left-or-right form with any
 number of challenge queries, in which every ciphertext the challenge oracle returned is refused;
 a pair `(m, m)` is an ordinary encryption query. A refused query is answered `none`, the same
-value as a ciphertext that fails to decrypt.
+value as a ciphertext that fails to decrypt. Refusing the ciphertexts of `(m, m)` queries as well
+costs the adversary nothing when decryption is correct, since it knows what they decrypt to.
+Without correctness the game is weaker than one with a separate encryption oracle whose
+ciphertexts may be decrypted.
 
 ## Main definitions
 
@@ -102,8 +105,9 @@ return whether the adversary guessed it. -/
   return (b == b')
 
 /-- The left-or-right CCA advantage: the Boolean bias of the game,
-`|Pr[b' = b] - Pr[b' ≠ b]|`. This is twice Katz–Lindell's `Pr[PrivK = 1] - 1/2`, and equals the
-distance between the two fixed-bit experiments (`IND_CCA_Advantage_eq_boolDist`). -/
+`|Pr[b' = b] - Pr[b' ≠ b]|`. When the game never fails this is twice Katz–Lindell's
+`|Pr[PrivK = 1] - 1/2|`, and in `ProbComp` it equals the distance between the two fixed-bit
+experiments (`IND_CCA_Advantage_eq_boolDist`). -/
 @[expose] noncomputable def IND_CCA_Advantage [DecidableEq C]
     (encAlg : SymmEncAlg (OracleComp spec) M K C) (runtime : ProbCompRuntime (OracleComp spec))
     (leak : M → Λ) (adversary : encAlg.IND_CCA_Adversary) : ℝ≥0∞ :=
