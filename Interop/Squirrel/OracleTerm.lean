@@ -397,6 +397,13 @@ conjunction of `t′ ≠ m`, closed up. -/
   FTerm.conj ((P.vecCalls u ++ P.calls m).map fun t' =>
     FTerm.not (FTerm.eq (P.close t') (P.close m)))
 
+/-- **ψ_msg over the vector only** (CCS26 Fig. 4, PRF.R): over the calls `o_h^k(t′)` of `u⃗`, the
+conjunction of `t′ ≠ m`, closed up. The calls of `m` itself are not among the conjuncts, so `m`
+may be hashed to compute `m`. -/
+@[expose] def psiMsgVec {Γ : List (Kind B)} {τs : List (Ty B)} (u : OVec P Γ τs)
+    (m : OTerm P Γ P.msgTy) : FTerm D Γ .bool :=
+  FTerm.conj ((P.vecCalls u).map fun t' => FTerm.not (FTerm.eq (P.close t') (P.close m)))
+
 /-! ## What the side conditions give -/
 
 section Semantics
@@ -479,6 +486,87 @@ theorem mem_vecCalls {Γ : List (Kind B)} {t' : OTerm P Γ P.msgTy} :
       | zero => exact .inl h
       | succ x => exact .inr ⟨τ, x, h⟩
 
+/-- **The calls of a call argument.** For a call argument `t′` of `t`, the list `t′ :: calls t′`
+is a contiguous block of `calls t`: the fold collects a call's argument followed by the calls
+inside it. -/
+theorem calls_infix {Γ : List (Kind B)} {s : Kind B} (t : P.oSig.Term Γ s) :
+    ∀ t' ∈ P.calls t, (t' :: P.calls t') <:+: P.calls t := by
+  induction t using Term.inductionOn with
+  | hvar Γ s x => exact fun _ h => absurd h List.not_mem_nil
+  | hnode Γ s op args ih =>
+    rcases op with o | o
+    · cases o with
+      | app a b =>
+        change ∀ t' ∈ P.calls (args 0) ++ P.calls (args 1), _ <:+: P.calls (args 0) ++
+          P.calls (args 1)
+        intro t' ht'
+        rcases List.mem_append.1 ht' with h | h
+        · exact (ih 0 t' h).trans (List.prefix_append _ _).isInfix
+        · exact (ih 1 t' h).trans (List.suffix_append _ _).isInfix
+      | ite a =>
+        change ∀ t' ∈ P.calls (args 0) ++ P.calls (args 1) ++ P.calls (args 2), _ <:+:
+          P.calls (args 0) ++ P.calls (args 1) ++ P.calls (args 2)
+        intro t' ht'
+        rcases List.mem_append.1 ht' with h | h
+        · rcases List.mem_append.1 h with h | h
+          · exact (ih 0 t' h).trans ((List.prefix_append _ _).trans
+              (List.prefix_append _ _)).isInfix
+          · exact (ih 1 t' h).trans (List.infix_append _ _ _)
+        · exact (ih 2 t' h).trans (List.suffix_append _ _).isInfix
+      | _ => exact fun _ h => absurd h List.not_mem_nil
+    · cases o
+      change ∀ t' ∈ (P.callsAux (args ())).1 :: P.calls (args ()), _ <:+:
+        (P.callsAux (args ())).1 :: P.calls (args ())
+      rw [fst_callsAux]
+      intro t' ht'
+      rcases List.mem_cons.1 ht' with rfl | h
+      · exact List.infix_refl _
+      · exact (ih () t' h).trans (List.suffix_cons _ _).isInfix
+
+/-- A call argument of a call argument of `t` is a call argument of `t`. -/
+theorem mem_calls_of_mem_calls {Γ : List (Kind B)} {s : Kind B} {t : P.oSig.Term Γ s}
+    {t' t'' : OTerm P Γ P.msgTy} (h' : t' ∈ P.calls t) (h'' : t'' ∈ P.calls t') :
+    t'' ∈ P.calls t :=
+  (calls_infix t t' h').subset (List.mem_cons_of_mem _ h'')
+
+/-- A call argument has fewer calls than the term it occurs in. -/
+theorem length_calls_lt {Γ : List (Kind B)} {s : Kind B} {t : P.oSig.Term Γ s}
+    {t' : OTerm P Γ P.msgTy} (h' : t' ∈ P.calls t) : (P.calls t').length < (P.calls t).length :=
+  (calls_infix t t' h').length_le
+
+/-- The heads of a call argument are heads of the term, so a call argument of a term meeting a
+side condition on heads (`KeyFree`, `Pptm`, `FirstOrder`) meets it too. -/
+theorem heads_subset_of_mem_calls {Γ : List (Kind B)} {s : Kind B} (t : P.oSig.Term Γ s) :
+    ∀ t' ∈ P.calls t, t'.heads ⊆ t.heads := by
+  induction t using Term.inductionOn with
+  | hvar Γ s x => exact fun _ h => absurd h List.not_mem_nil
+  | hnode Γ s op args ih =>
+    have ih' := fun p t' h => (ih p t' h).trans (Term.heads_subset_heads_node op args p)
+    rcases op with o | o
+    · cases o with
+      | app a b =>
+        change ∀ t' ∈ P.calls (args 0) ++ P.calls (args 1), _
+        intro t' ht'
+        rcases List.mem_append.1 ht' with h | h
+        · exact ih' 0 t' h
+        · exact ih' 1 t' h
+      | ite a =>
+        change ∀ t' ∈ P.calls (args 0) ++ P.calls (args 1) ++ P.calls (args 2), _
+        intro t' ht'
+        rcases List.mem_append.1 ht' with h | h
+        · rcases List.mem_append.1 h with h | h
+          · exact ih' 0 t' h
+          · exact ih' 1 t' h
+        · exact ih' 2 t' h
+      | _ => exact fun _ h => absurd h List.not_mem_nil
+    · cases o
+      change ∀ t' ∈ (P.callsAux (args ())).1 :: P.calls (args ()), _
+      rw [fst_callsAux]
+      intro t' ht'
+      rcases List.mem_cons.1 ht' with rfl | h
+      · exact Term.heads_subset_heads_node _ args ()
+      · exact ih' () t' h
+
 /-- A closed term with calls, closed up, means at `(η, ρ)` its reading with the key of `ρ`. -/
 theorem denote_close_apply (C : AdvClass M) {τ : Ty B} (t : OTerm P [] τ)
     (env : Env (Kind.Value M) []) (ρ : M.Tape η) :
@@ -498,6 +586,22 @@ theorem psiMsg_eq_true_iff (C : AdvClass M) {τs : List (Ty B)} (u : OVec P [] �
         t'.denote (P.ointerp M η ρ (P.keyVal M η ρ.2)) Env.empty ≠
           m.denote (P.ointerp M η ρ (P.keyVal M η ρ.2)) Env.empty := by
   rw [psiMsg, FTerm.denote_conj_eq_true, List.forall_mem_map]
+  refine forall₂_congr fun t' _ => ?_
+  simp only [FTerm.not, FTerm.denote_ite, FTerm.denote_eq, FTerm.denote_ff, FTerm.denote_tt]
+  rw [denote_close_apply, denote_close_apply]
+  by_cases h : t'.denote (P.ointerp M η ρ (P.keyVal M η ρ.2)) Env.empty =
+    m.denote (P.ointerp M η ρ (P.keyVal M η ρ.2)) Env.empty <;> simp [h]
+
+variable (P) in
+/-- **ψ_msg over the vector, at `(η, ρ)`**: no call argument of `u⃗` has the value of `m`, each
+read with the key of `ρ`. -/
+theorem psiMsgVec_eq_true_iff (C : AdvClass M) {τs : List (Ty B)} (u : OVec P [] τs)
+    (m : OTerm P [] P.msgTy) (env : Env (Kind.Value M) []) (ρ : M.Tape η) :
+    (P.psiMsgVec u m).denote (fullInterp M C) env η ρ = true ↔
+      ∀ t' ∈ P.vecCalls u,
+        t'.denote (P.ointerp M η ρ (P.keyVal M η ρ.2)) Env.empty ≠
+          m.denote (P.ointerp M η ρ (P.keyVal M η ρ.2)) Env.empty := by
+  rw [psiMsgVec, FTerm.denote_conj_eq_true, List.forall_mem_map]
   refine forall₂_congr fun t' _ => ?_
   simp only [FTerm.not, FTerm.denote_ite, FTerm.denote_eq, FTerm.denote_ff, FTerm.denote_tt]
   rw [denote_close_apply, denote_close_apply]

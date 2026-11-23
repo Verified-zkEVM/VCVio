@@ -122,16 +122,27 @@ theorem ReadsBelow.runLog_eq {A : Machine M τs β} {bd : ℕ → ℕ} (hA : A.R
     · exact hρ i ht
     · rfl) (hA η)
 
-/-- **Identical until bad, on one path** (CCS26 App. C.1, step 1): a machine whose first input is
-the oracle `o₁` runs as with `o₂` in its place, when its run with `o₁` queries `o₁` only at points
-where the two agree. -/
-theorem run_cons_eq_of_firstArgs (A : Machine M (.arrow a b :: Γ) γ)
+/-- The logged form of `Machine.evalWithAnswerFn_simulate`: a machine's logged program run inside
+a reduction whose input answers, run with the answers `ans`, answer as the values `e`, returns,
+run with `ans`, the machine's run at `e` and the log of that run. -/
+theorem evalWithAnswerFn_simulateQ_withQueryLog {ι : Type} {spec : OracleSpec ι}
+    {ans : QueryImpl spec Id} {H : InputImpl M η τs (OracleComp spec)} {e : Vals M η τs}
+    (A : Machine M τs β) (hH : ∀ τ x q, evalWithAnswerFn ans (H τ x q) = Ty.apply (e τ x) q) :
+    evalWithAnswerFn ans (simulateQ (M.answerIn ρa H) (A η).withQueryLog) =
+      (A.run η ρa e, runLog (M.answer ρa e) (A η)) := by
+  rw [_root_.evalWithAnswerFn_simulateQ, M.evalWithAnswerFn_answerIn hH,
+    evalWithAnswerFn_withQueryLog]
+  rfl
+
+/-- The answers with `o₁` and with `o₂` as the first input agree at every query of the run with
+`o₁`, when that run queries `o₁` only at points where the two agree. -/
+private theorem answer_cons_eq_of_firstArgs (A : Machine M (.arrow a b :: Γ) γ)
     {o₁ o₂ : (Ty.arrow a b).Value M.carrier η} {e : Vals M η Γ}
     (h : ∀ q ∈ M.firstArgs (runLog (M.answer ρa (Env.cons o₁ e)) (A η)),
       o₁ (q _ .zero) = o₂ (q _ .zero)) :
-    A.run η ρa (Env.cons o₁ e) = A.run η ρa (Env.cons o₂ e) := by
-  refine evalWithAnswerFn_eq_of_forall_mem_runLog fun ent hent => ?_
-  obtain ⟨t, r⟩ := ent
+    ∀ ent ∈ runLog (M.answer ρa (Env.cons o₁ e)) (A η),
+      M.answer ρa (Env.cons o₁ e) ent.1 = M.answer ρa (Env.cons o₂ e) ent.1 := by
+  rintro ⟨t, r⟩ hent
   rcases t with i | ⟨τ, x, q⟩
   · rfl
   · cases x with
@@ -141,6 +152,25 @@ theorem run_cons_eq_of_firstArgs (A : Machine M (.arrow a b :: Γ) γ)
       change Ty.apply (o₁ (q _ .zero)) _ = Ty.apply (o₂ (q _ .zero)) _
       rw [h q hq]
     | succ x => rfl
+
+/-- **Identical until bad, on one path** (CCS26 App. C.1, step 1): a machine whose first input is
+the oracle `o₁` runs as with `o₂` in its place, when its run with `o₁` queries `o₁` only at points
+where the two agree. -/
+theorem run_cons_eq_of_firstArgs (A : Machine M (.arrow a b :: Γ) γ)
+    {o₁ o₂ : (Ty.arrow a b).Value M.carrier η} {e : Vals M η Γ}
+    (h : ∀ q ∈ M.firstArgs (runLog (M.answer ρa (Env.cons o₁ e)) (A η)),
+      o₁ (q _ .zero) = o₂ (q _ .zero)) :
+    A.run η ρa (Env.cons o₁ e) = A.run η ρa (Env.cons o₂ e) :=
+  evalWithAnswerFn_eq_of_forall_mem_runLog (answer_cons_eq_of_firstArgs A h)
+
+/-- Under the condition of `run_cons_eq_of_firstArgs`, the run with `o₂` makes the same queries,
+with the same answers, as the run with `o₁`. -/
+theorem runLog_cons_eq_of_firstArgs (A : Machine M (.arrow a b :: Γ) γ)
+    {o₁ o₂ : (Ty.arrow a b).Value M.carrier η} {e : Vals M η Γ}
+    (h : ∀ q ∈ M.firstArgs (runLog (M.answer ρa (Env.cons o₁ e)) (A η)),
+      o₁ (q _ .zero) = o₂ (q _ .zero)) :
+    runLog (M.answer ρa (Env.cons o₁ e)) (A η) = runLog (M.answer ρa (Env.cons o₂ e)) (A η) :=
+  runLog_eq_of_forall_mem_runLog (answer_cons_eq_of_firstArgs A h)
 
 /-! ## Read and query bounds of the guessing machine -/
 

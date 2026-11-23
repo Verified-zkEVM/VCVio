@@ -320,6 +320,31 @@ theorem Machine.simulate_ofVals {ι : Type} {spec : OracleSpec ι} (A : Machine 
     (simulateQ_pure_eq_evalWithAnswerFn _ _)
   rcases t with i | q <;> rfl
 
+section Answers
+
+variable {ι : Type} {spec : OracleSpec ι} {ans : QueryImpl spec Id} {ρa : M.TapeA η}
+  {H : InputImpl M η τs (OracleComp spec)} {e : Vals M η τs}
+
+/-- Input answers that, run with the answers `ans`, answer as the values `e` make the reduction's
+answers of the machine's interface, run with `ans`, the answers of the tape `ρa` and of `e`. -/
+theorem Model.evalWithAnswerFn_answerIn
+    (hH : ∀ τ x q, evalWithAnswerFn ans (H τ x q) = Ty.apply (e τ x) q) :
+    (fun t => evalWithAnswerFn ans (M.answerIn ρa H t)) = M.answer ρa e := by
+  funext t
+  rcases t with i | ⟨τ, x, q⟩
+  · rfl
+  · exact hH τ x q
+
+/-- **Fusion with fixed answers.** A machine run inside a reduction whose input answers, run with
+the answers `ans`, answer as the values `e`, returns, run with `ans`, its run at `e`. -/
+theorem Machine.evalWithAnswerFn_simulate (A : Machine M τs β)
+    (hH : ∀ τ x q, evalWithAnswerFn ans (H τ x q) = Ty.apply (e τ x) q) :
+    evalWithAnswerFn ans (A.simulate η ρa H) = A.run η ρa e := by
+  rw [simulate, _root_.evalWithAnswerFn_simulateQ, M.evalWithAnswerFn_answerIn hH]
+  rfl
+
+end Answers
+
 /-! ## The constructions -/
 
 namespace Machine
