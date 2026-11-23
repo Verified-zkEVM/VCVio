@@ -54,5 +54,5 @@ roots = [
   "Interop.Squirrel.Test.EncExamples", "Interop.Squirrel.Test.WorkedEnc",
   "Interop.Squirrel.Test.SecrecyExamples", "Interop.Squirrel.Test.FreshLExamples",
   "Interop.Squirrel.Test.FreshLCountermodel", "Interop.Squirrel.Test.OracleExamples",
-  "Interop.Squirrel.Test.PRFExamples",
+  "Interop.Squirrel.Test.PRFExamples", "Interop.Squirrel.Test.PRFOracleExamples",
 ]
