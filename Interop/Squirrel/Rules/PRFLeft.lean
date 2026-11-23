@@ -60,7 +60,9 @@ in phase one. `PRFSymbols.leftAdvantage_le` is the statement at one `η`, in fou
    against `u⃗, o_h^k ⊢ m`, bounded by `C_sec`.
 
 `Valid.nonDed_prfLSec` is the rule, with the conclusion's entries in CCS26's order
-(`AdvClass.NonDed.swapLast`), and `PRFLInstance` packages its data for derivations.
+(`AdvClass.NonDed.swapLast`), and `PRFLInstance` packages its data for derivations. Two facts
+the proof uses are independent of Squirrel and stated over VCVio's own types, in their own
+section: `uniformSample_prod_update_pair_evalDistEq` and `prEvent_prfRealExperiment_le_of_ideal`.
 
 ## References
 
@@ -75,6 +77,94 @@ namespace Interop.Squirrel
 open IPFunctor IPFunctor.ScopedSignature OracleComp OracleSpec PRFScheme
 
 variable {B : Type} {D : Decl B}
+
+/-! ## Uniform tables and the PRF game
+
+Two facts independent of Squirrel, about VCVio's uniform sampling and PRF game: writing an
+independent draw into a coordinate of a uniform table, beside a further independent draw, leaves
+the draws uniform; and the hop through the ideal world between two distinguishers that the ideal
+world does not tell apart. -/
+
+section Generic
+
+/-- Drawing a value of `R t`, a uniform pair of a value and a dependent table, and an independent
+value of `γ`, and writing the first draw into the table's coordinate `t`, gives a uniform pair and
+an independent value of `γ`: `SampleableType.prEvent_uniformSample_prod_update` beside a further
+draw. -/
+theorem uniformSample_prod_update_pair_evalDistEq {D β γ : Type} {R : D → Type} [DecidableEq D]
+    [Finite D] [∀ d, SampleableType (R d)] [SampleableType (∀ d, R d)] [SampleableType β]
+    [SampleableType γ] (t : D) :
+    (do
+        let u ← $ᵗ (R t)
+        let x ← $ᵗ (β × ∀ d, R d)
+        let y ← $ᵗ γ
+        pure ((x.1, Function.update x.2 t u), y) : ProbComp ((β × ∀ d, R d) × γ)) =ᵈ
+      (do
+        let y ← $ᵗ γ
+        let x ← $ᵗ (β × ∀ d, R d)
+        pure (x, y) : ProbComp ((β × ∀ d, R d) × γ)) := by
+  have hupd : (do
+        let u ← $ᵗ (R t)
+        let x ← $ᵗ (β × ∀ d, R d)
+        pure (x.1, Function.update x.2 t u) : ProbComp (β × ∀ d, R d)) =ᵈ
+      ($ᵗ (β × ∀ d, R d) : ProbComp (β × ∀ d, R d)) := EvalDistEq.of_forall_prEvent_eq fun q => by
+    simpa only [prEvent_norm] using SampleableType.prEvent_uniformSample_prod_update (β := β)
+      (R := R) t q
+  calc (do
+          let u ← $ᵗ (R t)
+          let x ← $ᵗ (β × ∀ d, R d)
+          let y ← $ᵗ γ
+          pure ((x.1, Function.update x.2 t u), y) : ProbComp ((β × ∀ d, R d) × γ))
+      =ᵈ (do
+          let u ← $ᵗ (R t)
+          let y ← $ᵗ γ
+          let x ← $ᵗ (β × ∀ d, R d)
+          pure ((x.1, Function.update x.2 t u), y) : ProbComp ((β × ∀ d, R d) × γ)) :=
+        EvalDistEq.bind_right _ fun _ => OracleComp.EvalDistEq.bind_bind_swap _ _ _
+    _ =ᵈ (do
+          let y ← $ᵗ γ
+          let u ← $ᵗ (R t)
+          let x ← $ᵗ (β × ∀ d, R d)
+          pure ((x.1, Function.update x.2 t u), y) : ProbComp ((β × ∀ d, R d) × γ)) :=
+        OracleComp.EvalDistEq.bind_bind_swap _ _ _
+    _ = (do
+          let y ← $ᵗ γ
+          (fun x => (x, y)) <$> (do
+            let u ← $ᵗ (R t)
+            let x ← $ᵗ (β × ∀ d, R d)
+            pure (x.1, Function.update x.2 t u)) : ProbComp ((β × ∀ d, R d) × γ)) := by
+        simp [map_eq_bind_pure_comp, bind_assoc]
+    _ =ᵈ (do
+          let y ← $ᵗ γ
+          (fun x => (x, y)) <$> ($ᵗ (β × ∀ d, R d) : ProbComp (β × ∀ d, R d)) :
+            ProbComp ((β × ∀ d, R d) × γ)) :=
+        EvalDistEq.bind_right _ fun _ => hupd.map _
+    _ = _ := by simp [map_eq_bind_pure_comp]
+
+/-- **Through the ideal world.** If two distinguishers output `true` equally often in the PRF
+game's ideal world, the first's probability of `true` in the real world is at most the two PRF
+advantages plus the second's. -/
+theorem prEvent_prfRealExperiment_le_of_ideal {K D R : Type} [DecidableEq D] [SampleableType R]
+    (prf : PRFScheme K D R) (adv adv' : PRFAdversary D R)
+    (hid : Pr{let b ← prfIdealExperiment adv}[b = true] =
+      Pr{let b ← prfIdealExperiment adv'}[b = true]) :
+    Pr{let b ← prf.prfRealExperiment adv}[b = true] ≤
+      prfAdvantage prf adv + prfAdvantage prf adv' +
+        Pr{let b ← prf.prfRealExperiment adv'}[b = true] := by
+  have habs : ∀ a, prfAdvantage prf a = ENNReal.absDiff
+      Pr{let b ← prf.prfRealExperiment a}[b = true] Pr{let b ← prfIdealExperiment a}[b = true] :=
+    fun a => by
+      change MeasureTheory.Measure.boolDist _ _ = _
+      rw [MeasureTheory.Measure.boolDist, prEvent_eq_evalDist_singleton,
+        prEvent_eq_evalDist_singleton]
+  have hr := (ENNReal.absDiff_le_iff.1 (habs adv).ge).1
+  have hf := (ENNReal.absDiff_le_iff.1 (habs adv').ge).2
+  rw [hid] at hr
+  calc _ ≤ _ := hr
+    _ ≤ _ := add_le_add hf le_rfl
+    _ = _ := by ring
+
+end Generic
 
 /-- **Reprogramming at an unqueried point.** A machine whose first input is an oracle queries a
 point `x` with one oracle exactly when it queries it with another that agrees with the first away
@@ -152,60 +242,6 @@ theorem prEvent_coin_eq_coinAt {M : Model D} {η : ℕ} {b : Ty B} (p : ℕ)
   rw [SampleableType.prEvent_uniformSample_prod]
   dsimp only
   exact OracleComp.prEvent_bind_const ($ᵗ (M.Coin η b)) _
-
-/-- Drawing a coin of `a`, the tapes and an independent coin of `b`, and writing the first coin
-into the honest tape's coordinate `k`, gives uniform tapes and an independent coin of `b`. -/
-private theorem update_coin_evalDistEq {M : Model D} {η : ℕ} [DecidableEq (M.Slot η)]
-    (k : M.Slot η) (b : Ty B) :
-    (do
-        let c ← $ᵗ (M.Coin η k.1.2.1)
-        let ρ ← $ᵗ (M.Tape η)
-        let yc ← $ᵗ (M.Coin η b)
-        pure ((ρ.1, Function.update ρ.2 k c), yc) : ProbComp (M.Tape η × M.Coin η b)) =ᵈ
-      (do
-        let yc ← $ᵗ (M.Coin η b)
-        let ρ ← $ᵗ (M.Tape η)
-        pure (ρ, yc) : ProbComp (M.Tape η × M.Coin η b)) := by
-  have := D.finite_names
-  have : ∀ n : (a : Ty B) × (b : Ty B) × D.Name a b, Finite (n.1.Value M.carrier η) :=
-    fun n => M.finite_index η n.2.2
-  have hupd : (do
-        let c ← $ᵗ (M.Coin η k.1.2.1)
-        let ρ ← $ᵗ (M.Tape η)
-        pure (ρ.1, Function.update ρ.2 k c) : ProbComp (M.Tape η)) =ᵈ
-      ($ᵗ (M.Tape η) : ProbComp (M.Tape η)) := EvalDistEq.of_forall_prEvent_eq fun q => by
-    simpa only [prEvent_norm] using SampleableType.prEvent_uniformSample_prod_update
-      (β := M.TapeA η) (R := fun k : M.Slot η => M.Coin η k.1.2.1) k q
-  calc (do
-          let c ← $ᵗ (M.Coin η k.1.2.1)
-          let ρ ← $ᵗ (M.Tape η)
-          let yc ← $ᵗ (M.Coin η b)
-          pure ((ρ.1, Function.update ρ.2 k c), yc) : ProbComp (M.Tape η × M.Coin η b))
-      =ᵈ (do
-          let c ← $ᵗ (M.Coin η k.1.2.1)
-          let yc ← $ᵗ (M.Coin η b)
-          let ρ ← $ᵗ (M.Tape η)
-          pure ((ρ.1, Function.update ρ.2 k c), yc) : ProbComp (M.Tape η × M.Coin η b)) :=
-        EvalDistEq.bind_right _ fun _ => OracleComp.EvalDistEq.bind_bind_swap _ _ _
-    _ =ᵈ (do
-          let yc ← $ᵗ (M.Coin η b)
-          let c ← $ᵗ (M.Coin η k.1.2.1)
-          let ρ ← $ᵗ (M.Tape η)
-          pure ((ρ.1, Function.update ρ.2 k c), yc) : ProbComp (M.Tape η × M.Coin η b)) :=
-        OracleComp.EvalDistEq.bind_bind_swap _ _ _
-    _ = (do
-          let yc ← $ᵗ (M.Coin η b)
-          (fun ρ => (ρ, yc)) <$> (do
-            let c ← $ᵗ (M.Coin η k.1.2.1)
-            let ρ ← $ᵗ (M.Tape η)
-            pure (ρ.1, Function.update ρ.2 k c)) : ProbComp (M.Tape η × M.Coin η b)) := by
-        simp [map_eq_bind_pure_comp, bind_assoc]
-    _ =ᵈ (do
-          let yc ← $ᵗ (M.Coin η b)
-          (fun ρ => (ρ, yc)) <$> ($ᵗ (M.Tape η) : ProbComp (M.Tape η)) :
-            ProbComp (M.Tape η × M.Coin η b)) :=
-        EvalDistEq.bind_right _ fun _ => hupd.map _
-    _ = _ := by simp [map_eq_bind_pure_comp]
 
 namespace PRFSymbols
 
@@ -489,25 +525,6 @@ theorem prEvent_prfIdealExperiment_leftReduction [DecidableEq (P.Dom M η)]
 
 /-! ## PRF.L-sec at one security parameter -/
 
-/-- **Through the ideal world.** If two distinguishers output `true` equally often in the ideal
-world, the first's probability of `true` in the real world is at most the two PRF advantages plus
-the second's. -/
-private theorem prEvent_prfRealExperiment_le_of_ideal (hU : M.UniformSampler P.hTy)
-    (adv adv' : PRFAdversary (P.Dom M η) (P.Rng M η))
-    (hid : Pr{let b ← (@prfIdealExperiment _ _ (Classical.decEq _)
-        (M.uniformSampler P.hTy hU η) adv)}[b = true] =
-      Pr{let b ← (@prfIdealExperiment _ _ (Classical.decEq _)
-        (M.uniformSampler P.hTy hU η) adv')}[b = true]) :
-    Pr{let b ← (P.scheme M η).prfRealExperiment adv}[b = true] ≤
-      P.prfAdv M η hU adv + P.prfAdv M η hU adv' +
-        Pr{let b ← (P.scheme M η).prfRealExperiment adv'}[b = true] := by
-  have hr := (ENNReal.absDiff_le_iff.1 (le_of_eq (prfAdv_eq hU adv).symm)).1
-  have hf := (ENNReal.absDiff_le_iff.1 (le_of_eq (prfAdv_eq hU adv').symm)).2
-  rw [hid] at hr
-  calc _ ≤ _ := hr
-    _ ≤ _ := add_le_add hf le_rfl
-    _ = _ := by ring
-
 /-- The event of the second reduction's real world, at the tapes `ρ` and the challenge `n`: with
 `n` in place of the hash of the message, `g` computes `V`, or its run queries its oracle at `Mv`. -/
 private def leftEvent (U : VecRV M τs) (O : RV M (.arrow P.msgTy P.hTy)) (V : RV M β)
@@ -763,9 +780,15 @@ theorem leftAdvantage_le (hU : M.UniformSampler P.hTy) (hh : P.hTy.IsGround)
     exact prEvent_mono T _ _ fun x hx => leftOutcome_of_win hmg hβ u v m g hh hg hku hkv hkm
       hpu hpv hpm C env hfu hfv hfm x.1 x.2 hx.1 (Bool.not_eq_false _ ▸ hx.2)
   -- Hop 2: through the ideal world, where the two reductions agree.
-  have h₂ := prEvent_prfRealExperiment_le_of_ideal hU _ _
-    (@prEvent_prfIdealExperiment_leftReduction _ _ P M η _ _ hmg hβ u v m g
-      (Classical.decEq _) (M.uniformSampler P.hTy hU η) rfl)
+  have h₂ : Pr{let b ← (P.scheme M η).prfRealExperiment (leftReduction η hmg hβ u v m g)}[
+        b = true] ≤
+      P.prfAdv M η hU (leftReduction η hmg hβ u v m g) +
+        P.prfAdv M η hU (leftFreshReduction η hmg hβ u v m g) +
+        Pr{let b ← (P.scheme M η).prfRealExperiment (leftFreshReduction η hmg hβ u v m g)}[
+          b = true] :=
+    @prEvent_prfRealExperiment_le_of_ideal _ _ _ (Classical.decEq _) (M.uniformSampler P.hTy hU η)
+      (P.scheme M η) _ _ (@prEvent_prfIdealExperiment_leftReduction _ _ P M η _ _ hmg hβ u v m g
+        (Classical.decEq _) (M.uniformSampler P.hTy hU η) rfl)
   -- Hop 3: the second reduction's real world is the event `leftEvent` at uniform tapes and a
   -- fresh draw.
   have h₃ : Pr{let b ← (P.scheme M η).prfRealExperiment (leftFreshReduction η hmg hβ u v m g)}[
@@ -776,7 +799,9 @@ theorem leftAdvantage_le (hU : M.UniformSampler P.hTy) (hh : P.hTy.IsGround)
           ((P.close v).denote (fullInterp M C) env) ((P.close m).denote (fullInterp M C) env) η
           ρ (M.sample η P.hTy yc)] := by
     rw [prEvent_prfRealExperiment_leftFreshReduction]
-    have h := (update_coin_evalDistEq (P.keySlot M η) P.hTy).prEvent_eq (fun z =>
+    have h := (uniformSample_prod_update_pair_evalDistEq (β := M.TapeA η)
+      (R := fun k : M.Slot η => M.Coin η k.1.2.1) (γ := M.Coin η P.hTy) (P.keySlot M η)).prEvent_eq
+      (fun z =>
       P.leftEvent hmg hβ g ((P.closeVec u).rv M C env)
         ((P.hashOracle (Γ := [])).denote (fullInterp M C) env)
         ((P.close v).denote (fullInterp M C) env) ((P.close m).denote (fullInterp M C) env) η
