@@ -66,7 +66,7 @@ theorem generatedKey_realView (setup : Setup) (state : St) :
 theorem honestMessage_unionCache (publicSeed : Digest) (table : Cells × Padding)
     (cache : QueryCache HashSpec) (key : WotsKey) (node : StructuralNode)
     (hnode : ShareCells.messageNode key = some node) :
-    @GraphStakes.honestMessage
+    GraphStakes.honestMessage
         (CacheReplay.replayQuery (RedrawCell.unionCache publicSeed table cache))
         (table.1 Node.secretSeed) publicSeed key = table.1 (.structural node) := by
   unfold ShareCells.messageNode at hnode
@@ -89,7 +89,7 @@ theorem honestMessage_unionCache (publicSeed : Digest) (table : Cells × Padding
 the table's. -/
 theorem honestRevealed_le_revealedOf (publicSeed : Digest) (table : Cells × Padding)
     (cache : QueryCache HashSpec) (key : WotsKey) (chain : Fin chains) :
-    @GraphStakes.honestRevealed
+    GraphStakes.honestRevealed
         (CacheReplay.replayQuery (RedrawCell.unionCache publicSeed table cache))
         (table.1 Node.secretSeed) publicSeed key chain ≤
       ShareCells.revealedOf table.1 key chain := by
@@ -399,7 +399,7 @@ theorem flag_of_inputBad (setup : Setup)
     congrArg (fun r => r.1.1.2.2) hreal
   have hcacheW : w.2.2 = realView setup p.1 := hwCache.symm.trans hcache
   rw [hwTally] at hver
-  have hcand' : candidate ∈ @ClaimedProbes.claimedCandidatesOf (CacheReplay.replayQuery w.2.2)
+  have hcand' : candidate ∈ ClaimedProbes.claimedCandidatesOf (CacheReplay.replayQuery w.2.2)
       setup.publicSeed w.2.2 setup.pk message parsed := by
     rw [← hwCache]
     exact hcand
@@ -416,7 +416,7 @@ theorem flag_of_inputBad (setup : Setup)
     rw [hcacheW]
     exact realView_eq_visible setup p hinv hflag probe ⟨entry, hentry, hx, hsnap⟩
   have hclaims : claimsOf setup p.1 real.1.1.1.1 =
-      @ClaimedProbes.claimedCandidatesOf (CacheReplay.replayQuery w.2.2) setup.publicSeed w.2.2
+      ClaimedProbes.claimedCandidatesOf (CacheReplay.replayQuery w.2.2) setup.publicSeed w.2.2
         setup.pk message parsed := by
     unfold claimsOf
     rw [hframe', hparsed']
@@ -428,7 +428,7 @@ theorem flag_of_inputBad (setup : Setup)
     obtain ⟨node, hunavailable, hinput⟩ := hsens
     refine ⟨node, fun havailable => hunavailable ?_, hinput⟩
     refine available_mono _ _ _ _ (fun key chain => ?_) (fun key => ?_) _ havailable
-    · change @GraphStakes.honestRevealed (CacheReplay.replayQuery real.2)
+    · change GraphStakes.honestRevealed (CacheReplay.replayQuery real.2)
           (setup.table.1 Node.secretSeed) setup.publicSeed key chain ≤ _
       rw [hcache, realView_eq_unionCache]
       exact honestRevealed_le_revealedOf setup.publicSeed setup.table _ key chain

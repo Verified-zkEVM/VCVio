@@ -575,7 +575,7 @@ theorem simulateQ_cachingOracle_cache_le {α : Type u}
   induction oa using OracleComp.inductionOn generalizing cache₀ z with
   | pure a =>
       simp only [StateT.run, simulateQ_pure] at hmem
-      obtain rfl := hmem
+      obtain rfl := (mem_support_pure_iff _ _).mp hmem
       exact le_rfl
   | query_bind t mx ih =>
       simp only [simulateQ_query_bind, StateT.run_bind] at hmem

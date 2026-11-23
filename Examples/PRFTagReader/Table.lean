@@ -63,7 +63,7 @@ variable [SampleableType Digest]
 lemma evalDist_idealCacheStep_bind_uniformTable_comp {D : Type} [DecidableEq D] [Finite D]
     [Finite Digest] [SampleableType (D → Digest)]
     [MeasurableSpace Digest] [MeasurableSingletonClass Digest]
-    [EvalDistSemantics ProbComp] [LawfulEvalDistSemantics ProbComp]
+    {semantics : EvalDistSemantics ProbComp} [LawfulEvalDistSemantics ProbComp]
     {β : Type} [MeasurableSpace β]
     (hDigest : 𝒟[$ᵗ Digest] = uniformOn Set.univ)
     (hTable : 𝒟[$ᵗ (D → Digest)] = uniformOn Set.univ)
@@ -91,7 +91,7 @@ lemma evalDist_idealCacheStep_bind_uniformTable_comp {D : Type} [DecidableEq D] 
 lemma evalDist_idealCacheMapM_bind_uniformTable_comp {D : Type} [DecidableEq D] [Finite D]
     [Finite Digest] [SampleableType (D → Digest)]
     [MeasurableSpace Digest] [MeasurableSingletonClass Digest]
-    [EvalDistSemantics ProbComp] [LawfulEvalDistSemantics ProbComp]
+    {semantics : EvalDistSemantics ProbComp} [LawfulEvalDistSemantics ProbComp]
     {β : Type} [MeasurableSpace β]
     (hDigest : 𝒟[$ᵗ Digest] = uniformOn Set.univ)
     (hTable : 𝒟[$ᵗ (D → Digest)] = uniformOn Set.univ)
@@ -449,7 +449,7 @@ overlaying the cache `c`, and running the deterministic real multiple-session ta
 lemma evalDist_simulateQ_multipleIdealQueryImpl_run'_eq_tableExtending [NeZero sessionsPerTag]
     [Fintype Nonce] [Finite Digest]
     [MeasurableSpace Digest] [MeasurableSingletonClass Digest]
-    [EvalDistSemantics ProbComp] [LawfulEvalDistSemantics ProbComp]
+    {semantics : EvalDistSemantics ProbComp} [LawfulEvalDistSemantics ProbComp]
     (hDigest : 𝒟[$ᵗ Digest] = uniformOn Set.univ)
     (hTable : 𝒟[$ᵗ (TagId × Nonce → Digest)] = uniformOn Set.univ)
     (oa : UnlinkAdversary TagId Nonce Digest)
@@ -643,7 +643,7 @@ overlaying the cache `c`, and running the deterministic real single-session tabl
 lemma evalDist_simulateQ_singleIdealQueryImpl_run'_eq_tableExtending
     [Fintype Nonce] [Finite Digest]
     [MeasurableSpace Digest] [MeasurableSingletonClass Digest]
-    [EvalDistSemantics ProbComp] [LawfulEvalDistSemantics ProbComp]
+    {semantics : EvalDistSemantics ProbComp} [LawfulEvalDistSemantics ProbComp]
     (hDigest : 𝒟[$ᵗ Digest] = uniformOn Set.univ)
     (hTable : 𝒟[$ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)] = uniformOn Set.univ)
     (oa : UnlinkAdversary TagId Nonce Digest)

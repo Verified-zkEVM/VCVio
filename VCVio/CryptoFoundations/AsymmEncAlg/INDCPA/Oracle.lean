@@ -263,6 +263,7 @@ lemma IND_CPA_queryImpl'_counted_counter_le_succ
         liftM, monadLift] at hp
       change p ∈ support ((StateT.lift _).run st) at hp
       rw [StateT.run_lift, mem_support_bind_iff] at hp
+      simp only [mem_support_pure_iff] at hp
       obtain ⟨a, _, rfl⟩ := hp
       simp
   | inr mm =>
@@ -274,7 +275,7 @@ lemma IND_CPA_queryImpl'_counted_counter_le_succ
           StateT.run_bind, StateT.run_get, pure_bind] at hp
         rw [mem_support_bind_iff] at hp
         obtain ⟨c, _, hp⟩ := hp
-        simp only [StateT.run_set, StateT.run_pure] at hp
+        simp only [StateT.run_set, StateT.run_pure, pure_bind, mem_support_pure_iff] at hp
         subst p
         simp
       · simp_all [IND_CPA_challengeOracle'_counted, IND_CPA_countedChallengeOracle]
@@ -338,6 +339,7 @@ private lemma IND_CPA_queryImpl'_counted_run_invariant_le
         liftM, monadLift] at hz
       change z ∈ support ((StateT.lift _).run st) at hz
       rw [StateT.run_lift, mem_support_bind_iff] at hz
+      simp only [mem_support_pure_iff] at hz
       obtain ⟨a, _, rfl⟩ := hz
       simpa using hInv
   | inr mm =>
@@ -532,6 +534,7 @@ lemma IND_CPA_hybridLR_counted_counter_le
       liftM, monadLift] at hp
     change p ∈ support ((StateT.lift _).run st) at hp
     rw [StateT.run_lift, mem_support_bind_iff] at hp
+    simp only [mem_support_pure_iff] at hp
     obtain ⟨a, _, rfl⟩ := hp
     simp
   | inr mm =>

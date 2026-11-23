@@ -11,13 +11,14 @@ public meta section
 namespace VCVioWidgets
 namespace GameHop
 
-open Lean Server ProofWidgets
-open scoped ProofWidgets.Jsx
+open Lean hiding Html
+open Server ProofWidgets
+open ProofWidgets (Html)
 
 namespace GameHopPanel
 
 private def emptyHtml (modName : Name) : Html :=
-  <details «open»={true}>
+  jsx%{<details open={true}>
     <summary className="mv2 pointer">Game Hop</summary>
     <div style={Json.mkObj [
       ("display", Json.str "flex"),
@@ -33,10 +34,10 @@ private def emptyHtml (modName : Name) : Html :=
         {.text s!"Current module: {modName}"}
       </div>
     </div>
-  </details>
+  </details>}
 
 private def errorHtml (modName : Name) (message : String) : Html :=
-  <details «open»={true}>
+  jsx%{<details open={true}>
     <summary className="mv2 pointer">Game Hop</summary>
     <div style={Json.mkObj [
       ("display", Json.str "flex"),
@@ -52,10 +53,10 @@ private def errorHtml (modName : Name) (message : String) : Html :=
         {.text s!"Current module: {modName}"}
       </div>
     </div>
-  </details>
+  </details>}
 
 private def loadingHtml (modName : Name) : Html :=
-  <details «open»={true}>
+  jsx%{<details open={true}>
     <summary className="mv2 pointer">Game Hop</summary>
     <div style={Json.mkObj [
       ("display", Json.str "flex"),
@@ -71,7 +72,7 @@ private def loadingHtml (modName : Name) : Html :=
         {.text s!"Current module: {modName}"}
       </div>
     </div>
-  </details>
+  </details>}
 
 private def latestReadySnap?
     (snaps : Lean.AsyncList IO.Error Snapshots.Snapshot) :
@@ -80,10 +81,10 @@ private def latestReadySnap?
   return ready.getLast?
 
 private def wrapPanel (rendered : Html) : Html :=
-  <details «open»={true}>
+  jsx%{<details open={true}>
     <summary className="mv2 pointer">Game Hop</summary>
     <div className="ml1">{rendered}</div>
-  </details>
+  </details>}
 
 private def renderDiagram (snap : Snapshots.Snapshot) (modName : Name) (diagram : GameDiagram) :
     RequestM Html := do

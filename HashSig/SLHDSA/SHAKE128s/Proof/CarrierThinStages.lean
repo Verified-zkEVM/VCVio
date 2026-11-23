@@ -688,7 +688,7 @@ theorem tsum_le_of_support {β : Type} (computation : ProbComp β) (left right :
     (h : ∀ z ∈ support computation, left z ≤ right z) :
     ∑' z, Pr{let x ← computation}[x = z] * left z ≤
       ∑' z, Pr{let x ← computation}[x = z] * right z := by
-  refine ENNReal.tsum_le_tsum fun z => ?_
+  refine tsum_le_tsum fun z => ?_
   by_cases hz : z ∈ support computation
   · exact mul_le_mul' le_rfl (h z hz)
   · rw [(prEvent_eq_zero_of_not_mem_support _) hz, zero_mul, zero_mul]

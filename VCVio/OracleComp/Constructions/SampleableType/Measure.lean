@@ -10,7 +10,7 @@ public import VCVio.OracleComp.Constructions.SampleableType.Basic
 public import VCVio.OracleComp.Constructions.Replicate.Basic
 public import VCVio.OracleComp.EvalDist.Measure
 public import VCVio.OracleComp.SimSemantics.Measure
-public import ToMathlib.MeasureTheory.DiscreteInstances
+public import ToCslib.MeasureTheory.MeasurableSpace.Instances
 import VCVio.EvalDist.Monad.Measure
 import VCVio.EvalDist.ProbabilityBounds
 import Mathlib.Logic.Equiv.Bool
@@ -338,6 +338,15 @@ theorem prEvent_uniformSample_pair_of_bijective [SampleableType γ] {g : α → 
         rw [evalDist_map_of_discrete, evalDist_pair, evalDist_uniformSample,
           evalDist_uniformSample, evalDist_uniformSample, ← uniformOn_univ_prod]
         exact map_uniformOn_univ_of_bijective Measurable.of_discrete hg
+
+/-- Combining two independent uniform samples by a bijection gives the uniform distribution
+on the target sample space. -/
+theorem evalDistEq_uniformSample_pair_of_bijective [SampleableType γ] {f : α → β → γ}
+    (hf : Function.Bijective (Function.uncurry f)) :
+    (do let a ← $ᵗ α; let b ← $ᵗ β; pure (f a b)) =ᵈ ($ᵗ γ : ProbComp γ) := by
+  apply EvalDistEq.of_forall_prEvent_eq
+  intro p
+  simpa only [prEvent_norm] using prEvent_uniformSample_pair_of_bijective hf p
 
 /-- A uniform draw from a product is two independent uniform draws. -/
 theorem prEvent_uniformSample_prod (p : α × β → Prop) :

@@ -64,7 +64,7 @@ theorem deviatingCollision_at_walk_cells (adversary : Adversary)
     {result : (Outcome × Nat) × QueryCache HashSpec}
     (hresult : result ∈ support (WarmedGame.tail adversary walk))
     (hdeviating : StructuralTerm.DeviatingCollision walk.1.1.2.2
-      (@value (CacheReplay.replayQuery result.2) walk.1.1.1 walk.1.1.2.2) result) :
+      (value (CacheReplay.replayQuery result.2) walk.1.1.1 walk.1.1.2.2) result) :
     StructuralTerm.DeviatingCollision walk.1.1.2.2 walk.1.2 result := by
   rwa [WarmedCharges.value_replay_eq_walk_cells adversary hwalk hresult] at hdeviating
 
@@ -75,10 +75,11 @@ produce, and that is the graph's cell at the `forsRoots` node of the FORS key th
 selects. Both names unfold to the same tweakable hash of the same fourteen canonical roots. -/
 
 /-- **At the bottom layer the honest message is that cell.** -/
-theorem honestMessage_zero [HasQuery HashSpec Id] (secretSeed publicSeed : Digest) (key : WotsKey)
+theorem honestMessage_zero {hash : HasQuery HashSpec Id} (secretSeed publicSeed : Digest)
+    (key : WotsKey)
     (hlayer : key.tree.layer.val = 0) :
-    GraphStakes.honestMessage secretSeed publicSeed key =
-      value secretSeed publicSeed (.structural (.forsRoots ⟨key.tree.tree, key.leaf⟩)) := by
+    GraphStakes.honestMessage hash secretSeed publicSeed key =
+      value hash secretSeed publicSeed (.structural (.forsRoots ⟨key.tree.tree, key.leaf⟩)) := by
   rw [GraphStakes.honestMessage, hlayer]
 
 /-! ## The WOTS branch
@@ -98,13 +99,13 @@ theorem forgedKey_coords (tree : Fin (2 ^ (totalHeight - subtreeHeight)))
 
 /-- **The digit the honest key at that layer discloses**, whichever layer the residue stopped
 at: the message the residue threads for the honest side is the message the key really signs. -/
-theorem honestRevealed_eq_revealedAt [HasQuery HashSpec Id] (secretSeed publicSeed : Digest)
+theorem honestRevealed_eq_revealedAt {hash : HasQuery HashSpec Id} (secretSeed publicSeed : Digest)
     (tree : Fin (2 ^ (totalHeight - subtreeHeight)))
     (leaf : SLHDSA.SHAKE128s.Hypertree.LeafIndex) (layer : Fin layers) (chain : Fin chains) :
-    GraphStakes.honestRevealed secretSeed publicSeed
+    GraphStakes.honestRevealed hash secretSeed publicSeed
         (ClaimedProbes.forgedKey tree leaf layer) chain =
-      (Checksum.encode (revealedAt secretSeed publicSeed
-        (value secretSeed publicSeed (.structural (.forsRoots ⟨tree, leaf⟩))) 0 tree.val
+      (Checksum.encode (revealedAt hash secretSeed publicSeed
+        (value hash secretSeed publicSeed (.structural (.forsRoots ⟨tree, leaf⟩))) 0 tree.val
         layer.val) chain).val := by
   obtain ⟨hlayer, htree, hleaf⟩ := forgedKey_coords tree leaf layer
   cases hstep : layer.val with
@@ -121,27 +122,29 @@ theorem honestRevealed_eq_revealedAt [HasQuery HashSpec Id] (secretSeed publicSe
     simp only [revealedAt]
   | succ j =>
     exact HonestMessage.honestRevealed_eq secretSeed publicSeed
-      (value secretSeed publicSeed (.structural (.forsRoots ⟨tree, leaf⟩))) 0 tree.val leaf j
+      (value hash secretSeed publicSeed (.structural (.forsRoots ⟨tree, leaf⟩))) 0 tree.val leaf j
       (ClaimedProbes.forgedKey tree leaf layer)
       (by rw [hlayer, hstep, layerAt_eq]; omega) (by rw [htree, hstep])
       (by rw [hleaf, hstep]) chain
 
 /-- **The residue names a claim the record already holds, and it is sensitive.** -/
-theorem sensitive_of_residue [HasQuery HashSpec Id] {State : Type} (secretSeed publicSeed : Digest)
+theorem sensitive_of_residue {hash : HasQuery HashSpec Id} {State : Type}
+    (secretSeed publicSeed : Digest)
     (signedAt : State → ForsKey → Finset (Fin (forsTrees * 2 ^ forsHeight))) (state : State)
-    (cells : Cells) (hcells : value secretSeed publicSeed = cells)
+    (cells : Cells) (hcells : value hash secretSeed publicSeed = cells)
     (tree : Fin (2 ^ (totalHeight - subtreeHeight)))
     (leaf : SLHDSA.SHAKE128s.Hypertree.LeafIndex) (signature : Signature) (recovered : Digest)
-    (hresidue : FaultCharge.WotsResidue secretSeed publicSeed layers signature.hypertree 0
+    (hresidue : FaultCharge.WotsResidue hash secretSeed publicSeed layers signature.hypertree 0
       tree.val leaf recovered
-      (value secretSeed publicSeed (.structural (.forsRoots ⟨tree, leaf⟩)))) :
+      (value hash secretSeed publicSeed (.structural (.forsRoots ⟨tree, leaf⟩)))) :
     ∃ (layer : Fin layers) (chain : Fin chains),
       SensitiveQuery.Sensitive (GraphStakes.stakes publicSeed)
-        (GraphStakes.unavailableAt (GraphStakes.honestRevealed secretSeed publicSeed) signedAt)
+        (GraphStakes.unavailableAt (GraphStakes.honestRevealed hash secretSeed publicSeed) signedAt)
         cells state
         (GraphStakes.inputOf publicSeed
           (GraphStakes.wotsHashNode (ClaimedProbes.forgedKey tree leaf layer) chain
-            (ClaimedProbes.forgedSteps publicSeed signature tree.val leaf recovered layer chain))
+            (ClaimedProbes.forgedSteps hash publicSeed signature tree.val leaf recovered
+              layer chain))
           ((signature.hypertree layer).wots chain)) := by
   obtain ⟨layer, chain, hheld, hdigit⟩ :=
     exists_held_value_of_residue secretSeed publicSeed layers signature.hypertree 0 tree.val leaf
@@ -173,7 +176,7 @@ theorem signed_or_sensitive_of_secrets {State : Type} (secretSeed publicSeed : D
     (revealed : WotsKey → Fin chains → Nat)
     (signedAt : State → ForsKey → Finset (Fin (forsTrees * 2 ^ forsHeight))) (state : State)
     (cache : QueryCache HashSpec) (cells : Cells)
-    (hcells : @value (CacheReplay.replayQuery cache) secretSeed publicSeed = cells)
+    (hcells : value (CacheReplay.replayQuery cache) secretSeed publicSeed = cells)
     (key : ForsKey) (indices : SLHDSA.SHAKE128s.Fors.Indices) (signature : ForsSignature)
     (hsecrets : ∀ tree : Fin forsTrees, (signature tree).secret =
       @SLHDSA.SHAKE128s.Fors.secret Id Id.instMonad (CacheReplay.replayQuery cache)

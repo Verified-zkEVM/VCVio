@@ -6,6 +6,7 @@ Authors: Matthias Meijers
 
 module
 public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.Collection
+public import VCVio.Algorithms.FirstSuccess.Basic
 public import VCVio.OracleComp.Constructions.SampleableType.Measure
 public import VCVio.OracleComp.SimSemantics.Append
 
@@ -37,7 +38,7 @@ choose.
 
 ## Resampling, and the two kinds of rejection
 
-`SM_DT_RTCR_resample` is the paper's bounded loop, as structural recursion on the attempt budget:
+`SM_DT_RTCR_resample` is the paper's bounded loop through the shared first-success kernel:
 draw `ρ`, evaluate, and answer as soon as the digest satisfies `prop`. At `numRetries = 0` it draws
 nothing and answers `none`.
 
@@ -161,13 +162,10 @@ produced it as soon as that digest satisfies `prop`, giving up after `attempts` 
 At `attempts = 0` this draws nothing and answers `none`, so the loop is total at every budget. -/
 @[expose] noncomputable def SM_DT_RTCR_resample [SampleableType R]
     (prob : SM_DT_RTCR_Problem PkSeed Tweak M R Y) (pk : PkSeed) (t : Tweak) (m : M) :
-    ℕ → ProbComp (Option (Y × R))
-  | 0 => pure none
-  | attempts + 1 => do
-      let ρ ← $ᵗ R
-      let y := prob.th.eval pk t (m, ρ)
-      if prob.prop y then pure (some (y, ρ))
-      else SM_DT_RTCR_resample prob pk t m attempts
+    ℕ → ProbComp (Option (Y × R)) :=
+  VCVio.Algorithms.FirstSuccess.runWith ($ᵗ R) (fun ρ =>
+    let y := prob.th.eval pk t (m, ρ)
+    if prob.prop y then some (y, ρ) else none)
 
 /-- The challenge oracle at a public seed. A query is rejected with `none`, and leaves the history
 untouched, when the target cap is reached or when its tweak is already recorded. Otherwise the
@@ -250,18 +248,31 @@ variable [SampleableType R] {prob : SM_DT_RTCR_Problem PkSeed Tweak M R Y} {pk :
 at `numRetries = 0` and answers every accepted query `none`. -/
 theorem SM_DT_RTCR_resample_zero : SM_DT_RTCR_resample prob pk t m 0 = pure none := rfl
 
+/-- A positive retry budget draws once; a rejected digest uses the remaining budget. -/
+theorem SM_DT_RTCR_resample_succ (attempts : ℕ) :
+    SM_DT_RTCR_resample prob pk t m (attempts + 1) = (do
+      let ρ ← $ᵗ R
+      let y := prob.th.eval pk t (m, ρ)
+      if prob.prop y then pure (some (y, ρ))
+      else SM_DT_RTCR_resample prob pk t m attempts) := by
+  rw [SM_DT_RTCR_resample, VCVio.Algorithms.FirstSuccess.runWith_succ]
+  congr 1
+  funext ρ
+  dsimp only
+  cases prob.prop (prob.th.eval pk t (m, ρ)) <;> rfl
+
 /-- With `prop` accepting everything, the first draw is answered, at every positive budget. -/
 theorem SM_DT_RTCR_resample_of_prop_true (hprop : ∀ y, prob.prop y = true) (attempts : ℕ) :
     SM_DT_RTCR_resample prob pk t m (attempts + 1) =
       (fun ρ => some (prob.th.eval pk t (m, ρ), ρ)) <$> ($ᵗ R) := by
-  simp [SM_DT_RTCR_resample, hprop]
+  simp [SM_DT_RTCR_resample_succ, hprop]
 
 /-- With `prop` rejecting everything, resampling is exhausted at every budget. -/
 theorem SM_DT_RTCR_resample_eq_none_of_prop_false (hprop : ∀ y, prob.prop y = false)
     (attempts : ℕ) : ∀ z ∈ support (SM_DT_RTCR_resample prob pk t m attempts), z = none := by
   induction attempts with
-  | zero => simp [SM_DT_RTCR_resample]
-  | succ attempts ih => simpa [SM_DT_RTCR_resample, hprop] using ih
+  | zero => simp [SM_DT_RTCR_resample_zero]
+  | succ attempts ih => simpa [SM_DT_RTCR_resample_succ, hprop] using ih
 
 end Resample
 
@@ -295,8 +306,8 @@ theorem SM_DT_RTCR_challengeOracle_run_of_fresh (hprop : ∀ y, prob.prop y = tr
       (fun ρ => (some (prob.th.eval pk t (m, ρ), ρ),
         qsChal ++ [(t, m, some ρ)])) <$> ($ᵗ R) := by
   obtain ⟨attempts, hattempts⟩ := Nat.exists_eq_succ_of_ne_zero hretries
-  simp [SM_DT_RTCR_challengeOracle, Nat.not_le.mpr hlen, hnew, hattempts, SM_DT_RTCR_resample,
-    hprop, Functor.map_map]
+  simp [SM_DT_RTCR_challengeOracle, Nat.not_le.mpr hlen, hnew, hattempts,
+    SM_DT_RTCR_resample_of_prop_true hprop, Functor.map_map]
 
 /-- A query below the cap with a fresh tweak, when `prop` rejects everything, is answered `none` and
 still records a slot, with `none` in place of the randomness.

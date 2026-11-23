@@ -258,7 +258,7 @@ theorem prEvent_eq_tsum_prEvent_index_aux {ι : Type} (mx : ProbComp ι) (P : ι
       = ∑' x : ι, if P x ∧ idx x = some j then Pr{let y ← mx}[y = x] else 0 := fun j =>
     OracleComp.prEvent_eq_tsum_ite mx _
   simp_rw [hcongr]
-  rw [ENNReal.tsum_comm]
+  rw [tsum_comm]
   refine tsum_congr fun x => ?_
   by_cases hPx : P x
   · rcases eq_or_ne (Pr{let y ← mx}[y = x]) 0 with hp0 | hp0
@@ -272,7 +272,7 @@ theorem prEvent_eq_tsum_prEvent_index_aux {ι : Type} (mx : ProbComp ι) (P : ι
         exact hj (by rw [hj₀] at hjeq; exact (Option.some.inj hjeq).symm)
   · rw [ite_eq_right hPx]
     symm
-    exact ENNReal.tsum_eq_zero.mpr fun j => ite_eq_right (fun h => hPx h.1)
+    exact tsum_eq_zero_iff.mpr fun j => ite_eq_right (fun h => hPx h.1)
 
 omit [DecidableEq Range] [Fintype Salt] in
 /-- **Counter-augmented trap run: counter bound.** From any start state, every final state of the
@@ -639,7 +639,7 @@ lemma embedTrapImpl_run_step_count_le (pk : PK) (sk : SK) (j : ℕ) (y : Range)
           rw [embedTrapImpl_run_inl_inl, map_eq_bind_pure_comp] at hz
           obtain ⟨v, -, hh⟩ := (mem_support_bind_iff _ _ _).1 hz
           simp only [Function.comp_apply] at hh
-          subst hh
+          obtain rfl := eq_of_mem_support_pure hh
           rfl
       | inr q =>
           rw [embedTrapImpl_run_inl_inr] at hz
@@ -659,7 +659,7 @@ lemma embedTrapImpl_run_step_count_le (pk : PK) (sk : SK) (j : ℕ) (y : Range)
       rw [map_eq_bind_pure_comp] at hz
       obtain ⟨x, -, hh⟩ := (mem_support_bind_iff _ _ _).1 hz
       simp only [Function.comp_apply] at hh
-      subst hh; simp
+      obtain rfl := eq_of_mem_support_pure hh; simp
 
 omit [DecidableEq Range] [Fintype Salt] in
 /-- **Post-winner coincidence.** Once the running programming counter has passed the winner slot
@@ -1090,7 +1090,7 @@ lemma embedTrapIdxImpl_run_step_count_le (pk : PK) (sk : SK) (j : ℕ) (y : Rang
           rw [embedTrapIdxImpl_run_inl_inl, map_eq_bind_pure_comp] at hz
           obtain ⟨v, -, hh⟩ := (mem_support_bind_iff _ _ _).1 hz
           simp only [Function.comp_apply] at hh
-          subst hh
+          obtain rfl := eq_of_mem_support_pure hh
           rfl
       | inr q =>
           rw [embedTrapIdxImpl_run_inl_inr] at hz
@@ -1110,7 +1110,7 @@ lemma embedTrapIdxImpl_run_step_count_le (pk : PK) (sk : SK) (j : ℕ) (y : Rang
       rw [map_eq_bind_pure_comp] at hz
       obtain ⟨x, -, hh⟩ := (mem_support_bind_iff _ _ _).1 hz
       simp only [Function.comp_apply] at hh
-      subst hh; simp
+      obtain rfl := eq_of_mem_support_pure hh; simp
 
 omit [DecidableEq Range] [Fintype Salt] in
 /-- **Post-winner coincidence (idx-augmented).** Once the running counter has passed the winner slot
@@ -1241,7 +1241,7 @@ lemma reservoir_embed_winnerIdx_le [DecidableEq Domain] (pk : PK) (sk : SK)
         pure (decide (r.1.2.2 = x) &&
           decide (r.2.1 (r.1.2.1, r.1.1) = some y)) : ProbComp Bool)}[z = true] := by
   rw [OracleComp.prEvent_bind_eq_tsum]
-  refine ENNReal.tsum_le_tsum fun y => ?_
+  refine tsum_le_tsum fun y => ?_
   refine mul_le_mul' le_rfl ?_
   -- Rewrite the un-augmented embed run as the projection of the index-augmented run.
   rw [show (simulateQ (embedTrapImpl psf M Salt pk sk j y) (adv.main pk)).run
@@ -1294,7 +1294,7 @@ lemma embedTrapIdxImpl_idx_iff_cache (pk : PK) (sk : SK) (j : ℕ) (y : Range) :
       · rw [embedTrapIdxImpl_run_inl_inl, map_eq_bind_pure_comp] at hps
         obtain ⟨x, -, hh⟩ := (mem_support_bind_iff _ _ _).1 hps
         simp only [Function.comp_apply] at hh
-        have hps' : pst = s := (Prod.ext_iff.mp hh).2
+        have hps' : pst = s := (Prod.ext_iff.mp (eq_of_mem_support_pure hh)).2
         refine ih pv pst ?_ z hz2
         rw [hps']; exact hs
       · rw [embedTrapIdxImpl_run_inl_inr] at hps
@@ -1312,7 +1312,7 @@ lemma embedTrapIdxImpl_idx_iff_cache (pk : PK) (sk : SK) (j : ℕ) (y : Range) :
             have hps' : pst = ((if s.1.2 = j then s.1.1.cacheQuery mc y
                   else s.1.1.cacheQuery mc v, s.1.2 + 1),
                 fun t' => if t' = mc then some s.1.2 else s.2 t') := by
-              have h2 := (Prod.ext_iff.mp hh).2
+              have h2 := (Prod.ext_iff.mp (eq_of_mem_support_pure hh)).2
               by_cases hb : s.1.2 = j <;> simp only [hb, ite_true, ite_false] at h2 ⊢ <;>
                 exact h2
             refine ih pv pst ?_ z hz2
@@ -1331,7 +1331,8 @@ lemma embedTrapIdxImpl_idx_iff_cache (pk : PK) (sk : SK) (j : ℕ) (y : Range) :
         obtain ⟨x, -, hh⟩ := (mem_support_bind_iff _ _ _).1 hps
         simp only [Function.comp_apply] at hh
         have hps' : pst = ((s.1.1.cacheQuery (r, msg) c, s.1.2 + 1),
-            fun t' => if t' = (r, msg) then some s.1.2 else s.2 t') := (Prod.ext_iff.mp hh).2
+            fun t' => if t' = (r, msg) then some s.1.2 else s.2 t') :=
+          (Prod.ext_iff.mp (eq_of_mem_support_pure hh)).2
         refine ih pv pst ?_ z hz2
         intro k
         rw [hps']

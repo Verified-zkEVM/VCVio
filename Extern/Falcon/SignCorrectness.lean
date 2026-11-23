@@ -7,6 +7,7 @@ Authors: Oleksandr Vovkotrub
 module
 import all Extern.Falcon.Instance
 import all Extern.Falcon.FPR.Verify
+import Extern.Falcon.VerifyBridge
 public import Extern.Falcon.FPR.Verify
 public import LatticeCrypto.Falcon.Security
 public import LatticeCrypto.Falcon.Coset
@@ -24,6 +25,20 @@ condition `Falcon.LandsOnLattice` on the FFT fields together with the key relati
 FFT, `Falcon.hpreimage_of_exactFFT` discharges it:
 `verify_sign_correct_concretePrimitives_of_validKeyPair` needs only a valid key pair with `f`
 invertible modulo `q`.
+
+## Byte-level correctness
+
+The two bundles agree on every field `verify` reads, so the abstract verifiers at
+`concretePrimitives` and at `FPRBridge.verifyPrimitives` coincide
+(`verify_concretePrimitives_eq_verifyPrimitives`). Composing the structured theorem with the
+verify bridge `FPRBridge.concrete_verify_eq_verify_of_logn` gives
+`concreteVerify_sign_correct_of_validKeyPair`: the executable byte-level verifier
+`concreteVerify` accepts the `sigEncode` encoding of every honest signature under the
+`publicKeyBytes` encoding of the public key, at every degree `n = 2 ^ logn` with
+`2 ≤ logn ≤ 10`. The bridge needs a positive compressed-signature length, which the signer
+supplies: its payload is a successful compression (`exists_compress_eq_of_mem_support_sign`),
+and a successful compression is a nonempty string of exactly `p.sbytelen` bytes
+(`ne_nil_of_compress_eq_some`, `length_eq_of_compress_eq_some`).
 -/
 
 public section
@@ -111,6 +126,39 @@ theorem verify_sign_correct_concretePrimitives_of_validKeyPair
   exact verify_sign_correct_concretePrimitives p hn pk sk msg maxAttempts sig
     (hpreimage_of_exactFFT p (concretePrimitives p hn) h (concretePrimitives_exactFFT p hn h)
       pk sk hkey (capRelation_of_validKeyPair p hpos pk sk hvalid hunit)) hsig
+
+/-! ## Byte-level correctness -/
+
+/-- The abstract verifiers at `concretePrimitives` and at `FPRBridge.verifyPrimitives` coincide:
+the two bundles share the decompressor, the hash to the point and the public-key encoder, which
+are the only fields `verify` reads. -/
+theorem verify_concretePrimitives_eq_verifyPrimitives (p : Params) (hn : p.n = 2 ^ p.logn) :
+    verify p (concretePrimitives p hn) = verify p (FPRBridge.verifyPrimitives p hn) := by
+  rfl
+
+/-- **Byte-level verification correctness at the concrete primitives.** For a valid key pair with
+`f` invertible modulo `q`, the executable verifier `concreteVerify` accepts every signature the
+signer at `concretePrimitives` returns, given as its `sigEncode` byte encoding, under the
+`publicKeyBytes` byte encoding of the public key. The degree range `2 ≤ logn ≤ 10` is that of
+`FPRBridge.concrete_verify_eq_verify_of_logn`; it contains both Falcon parameter sets. -/
+theorem concreteVerify_sign_correct_of_validKeyPair
+    (p : Params) (hn : p.n = 2 ^ p.logn) (hlo : 2 ≤ p.logn) (hhi : p.logn ≤ 10)
+    (pk : PublicKey p) (sk : SecretKey p) (hvalid : validKeyPair p pk sk = true)
+    (hunit : ∃ u : Rq p.n, negacyclicMul (IntPoly.toRq sk.f) u = 1)
+    (msg : List Byte) (maxAttempts : ℕ) (sig : Signature)
+    (hsig : some sig ∈ support (sign p (concretePrimitives p hn) pk sk msg maxAttempts)) :
+    concreteVerify p (publicKeyBytes p.logn pk.h) msg
+      (sigEncode sig.salt sig.compressedS2 p.logn) = true := by
+  have hpos : 0 < p.n := by rw [hn]; positivity
+  obtain ⟨s, hcomp⟩ := exists_compress_eq_of_mem_support_sign p _ hsig
+  replace hcomp : compress p.n s p.sbytelen = some sig.compressedS2 := hcomp
+  have hsbytelen : 0 < p.sbytelen := by
+    rw [← length_eq_of_compress_eq_some hcomp]
+    exact List.length_pos_iff.mpr (ne_nil_of_compress_eq_some hpos hcomp)
+  refine (FPRBridge.concrete_verify_eq_verify_of_logn p hn hsbytelen hlo hhi pk msg sig).trans ?_
+  rw [← verify_concretePrimitives_eq_verifyPrimitives]
+  exact verify_sign_correct_concretePrimitives_of_validKeyPair p hn (by omega) pk sk hvalid hunit
+    msg maxAttempts sig hsig
 
 end Falcon.Concrete
 

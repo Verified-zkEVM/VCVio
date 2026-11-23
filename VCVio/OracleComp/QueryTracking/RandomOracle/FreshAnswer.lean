@@ -315,8 +315,9 @@ theorem evalDist_apply_setOf_and_le_of_potential (so : QueryImpl spec (StateT σ
   · rw [support_pure, Set.mem_singleton_iff] at hy
     rw [hy]
   · rw [evalDist_pure, Measure.dirac_apply' _ MeasurableSet.of_discrete,
-      Set.indicator_of_notMem (fun h => hz h.1)]
-    exact zero_le
+      Set.indicator_of_notMem]
+    · exact zero_le
+    · exact fun h => hz h.1
 
 /-- **The potential-charged first-fire bound, as an event probability.**  `P` is a predicate on
 the state and `Φ` a potential that never decreases along a step.  If every step out of a state

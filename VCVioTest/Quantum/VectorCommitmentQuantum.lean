@@ -120,7 +120,7 @@ theorem extractProj_toyME (tic : TpIC 1 Unit) (tdm : TpDLen 1 Dm0 tic.1) :
     extractProj toyME tic tdm = 1 := by
   ext s s'
   obtain rfl : (fun _ ↦ (fun _ ↦ none, ()) : TpDLen 1 Dm0 tic.1) = tdm := Subsingleton.elim _ _
-  by_cases hs : s = s' <;> simp [extractProj, hs, one_apply]
+  by_cases hs : s = s' <;> simp [extractProj, hs, Matrix.one_apply]
 
 /-- Non-vacuity of `Quantum.run₂_extractQuery_branch`: on the toy instance the unique successful
 branch of extraction, at `some tdm`, is the identity. -/

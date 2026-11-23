@@ -205,7 +205,8 @@ is not cached, nothing is programmed, and the live read at `(true, false)` is ca
 theorem probeRun_pin_abort :
     Pr{let x ← probeRun}[x = ⟨true, none, none, none, none, none, some true⟩] = 1 / 4 := by
   refine (ENNReal.toReal_eq_toReal_iff' (prEvent_ne_top _) (by finiteness)).mp ?_
-  simp only [probeRun, simulatedNmaAdv, probeAdv, toySim, toyIds, firstSome, simulateQ_bind,
+  simp only [probeRun, simulatedNmaAdv, probeAdv, toySim, toyIds, firstSome_succ,
+    firstSome_zero, simulateQ_bind,
     simulateQ_query, OracleQuery.input_query, OracleQuery.cont_query, StateT.run_bind,
     StateT.run_get, map_eq_bind_pure_comp, bind_assoc, pure_bind, QueryImpl.add_apply_inl,
     QueryImpl.add_apply_inr, simulateQ_unifSim_run, roSim.simulateQ_liftComp]
@@ -223,7 +224,8 @@ theorem probeRun_pin_sign_true :
     Pr{let x ← probeRun}[x = ⟨true, some (true, true), none, some true, none, none, some false⟩]
       = 1 / 8 := by
   refine (ENNReal.toReal_eq_toReal_iff' (prEvent_ne_top _) (by finiteness)).mp ?_
-  simp only [probeRun, simulatedNmaAdv, probeAdv, toySim, toyIds, firstSome, simulateQ_bind,
+  simp only [probeRun, simulatedNmaAdv, probeAdv, toySim, toyIds, firstSome_succ,
+    firstSome_zero, simulateQ_bind,
     simulateQ_query, OracleQuery.input_query, OracleQuery.cont_query, StateT.run_bind,
     StateT.run_get, map_eq_bind_pure_comp, bind_assoc, pure_bind, QueryImpl.add_apply_inl,
     QueryImpl.add_apply_inr, simulateQ_unifSim_run, roSim.simulateQ_liftComp]
@@ -241,7 +243,8 @@ theorem probeRun_pin_sign_false_erases :
     Pr{let x ← probeRun}[x = ⟨true, some (false, true), none, none, some true, none, none⟩]
       = 1 / 4 := by
   refine (ENNReal.toReal_eq_toReal_iff' (prEvent_ne_top _) (by finiteness)).mp ?_
-  simp only [probeRun, simulatedNmaAdv, probeAdv, toySim, toyIds, firstSome, simulateQ_bind,
+  simp only [probeRun, simulatedNmaAdv, probeAdv, toySim, toyIds, firstSome_succ,
+    firstSome_zero, simulateQ_bind,
     simulateQ_query, OracleQuery.input_query, OracleQuery.cont_query, StateT.run_bind,
     StateT.run_get, map_eq_bind_pure_comp, bind_assoc, pure_bind, QueryImpl.add_apply_inl,
     QueryImpl.add_apply_inr, simulateQ_unifSim_run, roSim.simulateQ_liftComp]
@@ -282,7 +285,8 @@ theorem managedRoNmaAdvantage_replay_pin :
       managedRoNmaExperiment_simulatedNmaAdv_eq_eufNmaExperiment,
     SignatureAlg.eufNmaExperiment, runtime_evalDist_apply_singleton]
   refine (ENNReal.toReal_eq_toReal_iff' (prEvent_ne_top _) (by finiteness)).mp ?_
-  simp only [simulatedEufNmaAdv, simulatedNmaAdv, replayAdv, toySim, toyIds, toyHr, firstSome,
+  simp only [simulatedEufNmaAdv, simulatedNmaAdv, replayAdv, toySim, toyIds, toyHr, firstSome_succ,
+    firstSome_zero,
     FiatShamirWithAbort,
     simulateQ_bind, simulateQ_query, OracleQuery.input_query, OracleQuery.cont_query,
     StateT.run_bind, StateT.run'_eq, map_eq_bind_pure_comp, bind_assoc, pure_bind,
@@ -303,7 +307,8 @@ theorem eufNmaAdvantage_replay_pin :
   classical
   rw [SignatureAlg.eufNmaAdvantage, SignatureAlg.eufNmaExperiment, runtime_evalDist_apply_singleton]
   refine (ENNReal.toReal_eq_toReal_iff' (prEvent_ne_top _) (by finiteness)).mp ?_
-  simp only [simulatedEufNmaAdv, simulatedNmaAdv, replayAdv, toySim, toyIds, toyHr, firstSome,
+  simp only [simulatedEufNmaAdv, simulatedNmaAdv, replayAdv, toySim, toyIds, toyHr, firstSome_succ,
+    firstSome_zero,
     FiatShamirWithAbort,
     simulateQ_bind, simulateQ_query, OracleQuery.input_query, OracleQuery.cont_query,
     StateT.run_bind, StateT.run'_eq, map_eq_bind_pure_comp, bind_assoc, pure_bind,

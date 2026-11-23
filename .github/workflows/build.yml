@@ -156,9 +156,10 @@ jobs:
         run: >-
           lake exe axiomsweep --root Interop.Aeneas.ITree --root Interop.Aeneas.WP
           --root Interop.Rust.Common --root Interop.Rust.Run --root Interop.Rust.RustM
-          --root Interop.Rust.Triple --root Interop.Hax.Adc --root Interop.Hax.Barrett
-          --root Interop.Hax.CenteredBinomial --root Interop.Hax.Computation
-          --root Interop.Hax.Division --root Interop.Hax.Examples
+          --root Interop.Rust.Triple --root Interop.Hax.Holds
+          --root Interop.Hax.Adc.Verification --root Interop.Hax.Barrett.Verification
+          --root Interop.Hax.CenteredBinomial.Verification --root Interop.Hax.Computation.Verification
+          --root Interop.Hax.Division.Verification --root Interop.Hax.Examples.Verification
           --baseline ../scripts/axiom_baseline.json --check
 
   downstream_stub_link:
@@ -259,7 +260,7 @@ jobs:
             echo '-- `public import`: the universe example below is a `public` declaration, so'
             echo '-- the names in its type must be publicly imported, not just privately visible.'
             echo 'public import VCVio'
-            echo 'public import VCVio.EvalDist.PFunctorMeasure.Core'
+            echo 'public import PolyFun.PFunctor.Free.Measure.EvalDist'
             echo 'public import SchemeAPI'
             echo 'public import CountingAPI'
             echo 'public import CacheAPI'
@@ -338,6 +339,28 @@ jobs:
             git log -1 --format=%s
             echo "EOF"
           } >> "$GITHUB_ENV"
+      # The axiom-sweep and init-sweep self-tests show that those gates can still fail. Their
+      # fixtures import only Mathlib and themselves, so the result depends on nothing but the
+      # tools and fixtures under `scripts/`, the toolchain, the manifest, the lakefile and this
+      # workflow. Pull-request and merge-queue runs skip them unless one of those changed; `main`,
+      # the nightly and manual runs always run them. (The documentation name checker's self-test
+      # cites library declarations, so it always runs.)
+      - name: Decide whether the tool self-tests run
+        id: tool-tests
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || '' }}
+        run: |
+          run=true
+          if { [ "$EVENT" = pull_request ] || [ "$EVENT" = merge_group ]; } && [ -n "$BASE_SHA" ] \
+              && git fetch --no-tags --depth=1 origin "$BASE_SHA"; then
+            if ! git diff --name-only "$BASE_SHA" HEAD \
+                | grep -qE '^(scripts/|lean-toolchain$|lake-manifest\.json$|lakefile\.lean$|\.github/workflows/build\.yml$)'; then
+              run=false
+            fi
+          fi
+          echo "run=$run" >> "$GITHUB_OUTPUT"
+          echo "Tool self-tests run: $run"
       - name: Free unused hosted-runner SDKs
         run: bash scripts/free-ci-disk-space.sh
       # Two caches with different lifetimes. Dependencies change only with the manifest; the VCVio
@@ -378,7 +401,10 @@ jobs:
           lint: false
           use-github-cache: false
           use-mathlib-cache: false
+      # An exact dependency-cache hit restores the packages, Mathlib's oleans included, that
+      # `main` saved after its own `lake exe cache get`, so there is nothing to fetch.
       - name: Fetch Mathlib cache
+        if: steps.deps-cache.outputs.cache-hit != 'true'
         run: lake exe cache get
       # The module times recorded with the restored build are this run's per-module baseline.
       - name: Keep cached module times as the baseline
@@ -424,6 +450,7 @@ jobs:
       # family whose taint crosses the cycle, generated `._native.` name shapes), plus
       # the exit-code matrix CI depends on.
       - name: Test the axiom sweep tool
+        if: steps.tool-tests.outputs.run == 'true'
         run: ./scripts/test-axiomsweep.sh
       - name: Axiom sweep
         run: lake exe axiomsweep --check
@@ -440,6 +467,7 @@ jobs:
       # narrow / widen / re-scope / preserve behaviour, so the committed baseline is
       # falsifiable rather than merely true.
       - name: Test the init sweep tool
+        if: steps.tool-tests.outputs.run == 'true'
         run: ./scripts/test-initsweep.sh
       - name: Init sweep
         run: lake exe initsweep --check

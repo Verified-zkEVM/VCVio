@@ -40,7 +40,7 @@ theorem sum_tsum_comm {Index Result : Type} (nodes : Finset Index)
   refine Finset.induction_on nodes ?_ ?_
   · simp
   · intro head rest hhead ih
-    rw [Finset.sum_insert hhead, ih, ← ENNReal.tsum_add]
+    rw [Finset.sum_insert hhead, ih, ← tsum_add]
     exact tsum_congr fun result => by rw [Finset.sum_insert hhead]
 
 variable (publicSeed : Digest)

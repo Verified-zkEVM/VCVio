@@ -315,7 +315,7 @@ theorem cases_of_win (adversary : Adversary)
                     parsed.randomizer
                     (@Scheme.keygenInternal Id Id.instMonad (CacheReplay.replayQuery result.2)
                       walk.1.1.1 walk.1.1.2.1 walk.1.1.2.2).2 message)) = honestForsKey ∨
-              @Extraction.HypertreeChain.HypertreeFault (CacheReplay.replayQuery result.2)
+              Extraction.HypertreeChain.HypertreeFault (CacheReplay.replayQuery result.2)
                 walk.1.1.1 walk.1.1.2.2 layers parsed.hypertree 0
                 (MessageDigest.treeIndex
                   (@Hashing.messageDigest Id (CacheReplay.replayQuery result.2)

@@ -46,11 +46,10 @@ def typedThenRaw {ι D M : Type} {spec : OracleSpec ι} [SampleableType M]
   let word ← query (spec := unifSpec + (spec + (D →ₒ M))) (.inr (.inr (E.encode point)))
   pure (answer, word)
 
-variable {ι D M : Type} {spec : OracleSpec ι} [DecidableEq ι] [DecidableEq D]
+variable {ι D M : Type} {spec : OracleSpec ι} [DecidableEq D]
   [SampleableType M] [∀ point, SampleableType (spec.Range point)]
   (E : RandomOracleEncoding spec D M)
 
-omit [DecidableEq ι] in
 /-- A repeated raw query has one sampled full reply and one matching final cache cell. -/
 theorem repeatedRaw_single (input : D) :
     (simulateQ E.singleImpl (repeatedRaw spec input)).run ∅ = (do
@@ -59,6 +58,18 @@ theorem repeatedRaw_single (input : D) :
   simp [repeatedRaw, StateT.run_bind,
     RandomOracleEncoding.singleImpl, RandomOracleEncoding.singleHashImpl,
     QueryImpl.add_apply_inr]
+
+/-- The raw reply retains the tail correlated with the typed answer at the same point. -/
+theorem typedThenRaw_single (point : ι) :
+    (simulateQ E.singleImpl (typedThenRaw E point)).run ∅ = (do
+      let word ← $ᵗ M
+      pure ((E.trunc point word, word),
+        (∅ : (D →ₒ M).QueryCache).cacheQuery (E.encode point) word)) := by
+  simp [typedThenRaw, StateT.run_bind,
+    RandomOracleEncoding.singleImpl, RandomOracleEncoding.singleHashImpl,
+    RandomOracleEncoding.truncatedImpl, StateT.run_map, bind_map_left]
+
+variable [DecidableEq ι]
 
 /-- Completion keeps the repeated full reply correlated with the filled cache. -/
 theorem repeatedRaw_typed_filled (injective : Function.Injective E.encode) (input : D) :
@@ -70,17 +81,6 @@ theorem repeatedRaw_typed_filled (injective : Function.Injective E.encode) (inpu
       pure ((word, word), (∅ : (D →ₒ M).QueryCache).cacheQuery input word)) := by
   exact (E.singleImpl_run_evalDistEq_typedImpl_fill_of_injective injective
     (repeatedRaw spec input)).symm.trans (by rw [repeatedRaw_single E input])
-
-omit [DecidableEq ι] in
-/-- The raw reply retains the tail correlated with the typed answer at the same point. -/
-theorem typedThenRaw_single (point : ι) :
-    (simulateQ E.singleImpl (typedThenRaw E point)).run ∅ = (do
-      let word ← $ᵗ M
-      pure ((E.trunc point word, word),
-        (∅ : (D →ₒ M).QueryCache).cacheQuery (E.encode point) word)) := by
-  simp [typedThenRaw, StateT.run_bind,
-    RandomOracleEncoding.singleImpl, RandomOracleEncoding.singleHashImpl,
-    RandomOracleEncoding.truncatedImpl, StateT.run_map, bind_map_left]
 
 /-- Filling a typed execution restores the same full reply, rather than an unrelated tail. -/
 theorem typedThenRaw_typed_filled (injective : Function.Injective E.encode) (point : ι) :

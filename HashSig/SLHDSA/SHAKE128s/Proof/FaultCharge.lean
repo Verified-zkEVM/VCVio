@@ -123,7 +123,7 @@ theorem simulateQ_endpoints (cache : QueryCache HashSpec) (signature : WotsSigna
             { address with chainOrHeight := BitVec.ofNat 32 i.val }
             (Checksum.encode message i).val (w - 1 - (Checksum.encode message i).val)
             (signature i)) : Id (Fin chains → Digest)) =
-      @Extraction.Wots.endpoints (CacheReplay.replayQuery cache) signature message publicSeed
+      Extraction.Wots.endpoints (CacheReplay.replayQuery cache) signature message publicSeed
         address := by
   rw [VerifierNaturality.sequenceFin_simulate (CacheReplay.replay cache)]
   rw [Correctness.sequenceFin_id]
@@ -138,7 +138,7 @@ theorem queriesUnder_wots_compression (cache : QueryCache HashSpec)
       (SLHDSA.SHAKE128s.Wots.publicKeyFromSignature (m := OracleComp HashSpec) signature message
         publicSeed address)
       (Hashing.tweakableInput publicSeed (SLHDSA.SHAKE128s.Wots.publicKeyAddress address)
-        (digestArrayBytes (@Extraction.Wots.endpoints (CacheReplay.replayQuery cache)
+        (digestArrayBytes (Extraction.Wots.endpoints (CacheReplay.replayQuery cache)
           signature message publicSeed address))) := by
   rw [← simulateQ_endpoints cache signature message publicSeed address]
   exact queriesUnder_compression cache _ publicSeed _ digestArrayBytes
@@ -221,11 +221,11 @@ chain-top cells: advancing from the signed digit to the top is advancing from th
 secret all the way. -/
 theorem endpoints_sign_eq_cells (cache : QueryCache HashSpec)
     (secretSeed publicSeed message : Digest) (key : WotsKey) :
-    @Extraction.Wots.endpoints (CacheReplay.replayQuery cache)
+    Extraction.Wots.endpoints (CacheReplay.replayQuery cache)
         (@SLHDSA.SHAKE128s.Wots.sign Id Id.instMonad (CacheReplay.replayQuery cache) message
           secretSeed publicSeed key.address)
         message publicSeed key.address =
-      fun chainIndex => @value (CacheReplay.replayQuery cache) secretSeed publicSeed
+      fun chainIndex => value (CacheReplay.replayQuery cache) secretSeed publicSeed
         (.structural (.wotsHash key chainIndex ⟨w - 2, by decide⟩)) := by
   funext chainIndex
   have hdigit : (Checksum.encode message chainIndex).val < w :=
@@ -234,7 +234,7 @@ theorem endpoints_sign_eq_cells (cache : QueryCache HashSpec)
       (w - 1 - (Checksum.encode message chainIndex).val) = w - 1 := by
     simp only [w, winternitzBits] at hdigit ⊢
     omega
-  have htop : @value (CacheReplay.replayQuery cache) secretSeed publicSeed
+  have htop : value (CacheReplay.replayQuery cache) secretSeed publicSeed
       (.structural (.wotsHash key chainIndex ⟨w - 2, by decide⟩)) =
       @SLHDSA.SHAKE128s.Wots.chain Id Id.instMonad (CacheReplay.replayQuery cache) publicSeed
         { key.address with chainOrHeight := BitVec.ofNat 32 chainIndex.val } 0 (w - 1)
@@ -276,11 +276,11 @@ theorem deviatingCollision_of_layerCollision {α : Type}
     (hcached : ∀ probe, QueriesUnder cache
       (SLHDSA.SHAKE128s.Merkle.publicKeyFromSignature (m := OracleComp HashSpec) leaf xsig
         message publicSeed location.address) probe → cache probe ≠ none)
-    (hcollision : @Extraction.Hypertree.LayerCollision (CacheReplay.replayQuery cache)
+    (hcollision : Extraction.Hypertree.LayerCollision (CacheReplay.replayQuery cache)
       secretSeed publicSeed message location.layer.val location.tree.val leaf xsig)
     (result : α × QueryCache HashSpec) (hcache : result.2 = cache) :
     StructuralTerm.DeviatingCollision publicSeed
-      (@value (CacheReplay.replayQuery cache) secretSeed publicSeed) result := by
+      (value (CacheReplay.replayQuery cache) secretSeed publicSeed) result := by
   rcases hcollision with ⟨j, hj, hpath⟩ | hcompression | ⟨chainIndex, offset, hoffset, hchain⟩
   · -- A collision on the authentication path.
     obtain ⟨output, hout⟩ := Option.ne_none_iff_exists'.mp
@@ -321,29 +321,24 @@ theorem deviatingCollision_of_layerCollision {α : Type}
 
 /-! ## What the collision cases leave behind -/
 
-section Residue
-
-variable [HasQuery HashSpec Id]
-
 /-- The one-wayness residue of a hypertree fault: some layer's WOTS signature is the honest
 signature of a message differing from the honest input threaded into that layer. The recursion
 mirrors `Extraction.HypertreeChain.HypertreeFault`'s own, so the signature at each layer is
 still the component the forgery supplied and the message is still the one that layer was fed.
 -/
-@[expose] def WotsResidue (secretSeed publicSeed : Digest) :
+@[expose] def WotsResidue (hash : HasQuery HashSpec Id)
+    (secretSeed publicSeed : Digest) :
     (remaining : Nat) → (Fin remaining → XmssSignature) → (layer tree : Nat) →
       SLHDSA.SHAKE128s.Hypertree.LeafIndex → (message expectedInput : Digest) → Prop
   | 0, _, _, _, _, _, _ => False
   | remaining + 1, signatures, layer, tree, leaf, message, expectedInput =>
     ((signatures 0).wots = SLHDSA.SHAKE128s.Wots.sign (m := Id) message secretSeed publicSeed
         (Extraction.Hypertree.wotsAddress layer tree leaf) ∧ message ≠ expectedInput) ∨
-    WotsResidue secretSeed publicSeed remaining (fun i => signatures i.succ) (layer + 1)
+    WotsResidue hash secretSeed publicSeed remaining (fun i => signatures i.succ) (layer + 1)
       (tree / 2 ^ subtreeHeight) (SLHDSA.SHAKE128s.Hypertree.nextLeaf tree)
       (SLHDSA.SHAKE128s.Merkle.publicKeyFromSignature (m := Id) leaf (signatures 0) message
         publicSeed (SLHDSA.SHAKE128s.Hypertree.address layer tree))
-      (Extraction.HypertreeChain.honestNode secretSeed publicSeed layer tree)
-
-end Residue
+      (Extraction.HypertreeChain.honestNode hash secretSeed publicSeed layer tree)
 
 /-! ## The fault, charged
 
@@ -371,11 +366,11 @@ theorem deviatingCollision_or_residue_of_fault {α : Type}
         (SLHDSA.SHAKE128s.Hypertree.rootFromSignature (m := OracleComp HashSpec) publicSeed
           remaining signatures layer tree leaf message) probe → cache probe ≠ none) →
       ∀ result : α × QueryCache HashSpec, result.2 = cache →
-      @Extraction.HypertreeChain.HypertreeFault (CacheReplay.replayQuery cache) secretSeed
+      Extraction.HypertreeChain.HypertreeFault (CacheReplay.replayQuery cache) secretSeed
         publicSeed remaining signatures layer tree leaf message expectedInput →
       StructuralTerm.DeviatingCollision publicSeed
-          (@value (CacheReplay.replayQuery cache) secretSeed publicSeed) result ∨
-        @WotsResidue (CacheReplay.replayQuery cache) secretSeed publicSeed remaining signatures
+          (value (CacheReplay.replayQuery cache) secretSeed publicSeed) result ∨
+        WotsResidue (CacheReplay.replayQuery cache) secretSeed publicSeed remaining signatures
           layer tree leaf message expectedInput := by
   intro remaining
   induction remaining with
@@ -426,11 +421,11 @@ theorem deviatingCollision_or_residue_of_top_fault {α : Type}
       (SLHDSA.SHAKE128s.Hypertree.rootFromSignature (m := OracleComp HashSpec) publicSeed layers
         signature 0 tree.toNat leaf message) probe → cache probe ≠ none)
     (result : α × QueryCache HashSpec) (hcache : result.2 = cache)
-    (hfault : @Extraction.HypertreeChain.HypertreeFault (CacheReplay.replayQuery cache)
+    (hfault : Extraction.HypertreeChain.HypertreeFault (CacheReplay.replayQuery cache)
       secretSeed publicSeed layers signature 0 tree.toNat leaf message expectedInput) :
     StructuralTerm.DeviatingCollision publicSeed
-        (@value (CacheReplay.replayQuery cache) secretSeed publicSeed) result ∨
-      @WotsResidue (CacheReplay.replayQuery cache) secretSeed publicSeed layers signature 0
+        (value (CacheReplay.replayQuery cache) secretSeed publicSeed) result ∨
+      WotsResidue (CacheReplay.replayQuery cache) secretSeed publicSeed layers signature 0
         tree.toNat leaf message expectedInput :=
   deviatingCollision_or_residue_of_fault secretSeed publicSeed cache layers signature 0
     tree.toNat leaf message expectedInput (by omega) tree.isLt hcached result hcache hfault

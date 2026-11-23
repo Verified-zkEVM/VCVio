@@ -179,7 +179,7 @@ lemma prEvent_true_hybridVerifyCont_of_mem (pk : Stmt)
     (c : (M × Commit →ₒ Chal).QueryCache) (l : List M) (hmem : ms.1 ∈ l) :
     Pr{let x ← hybridVerifyCont ids hr M maxAttempts pk (ms, (c, l))}[x = true] = 0 := by
   rw [hybridVerifyCont, OracleComp.prEvent_bind_eq_tsum]
-  refine ENNReal.tsum_eq_zero.mpr fun ok => ?_
+  refine tsum_eq_zero_iff.mpr fun ok => ?_
   rw [prEvent_pure, ite_eq_right (by simp [hmem]), mul_zero]
 
 end scaffold

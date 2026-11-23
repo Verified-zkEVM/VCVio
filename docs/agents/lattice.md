@@ -48,6 +48,10 @@ instantiating those abstractions for a lattice scheme.
 
 ### ML-DSA
 
+The scheme and its security theorems take an explicit transform backend `nttOps : NTTRingOps`.
+For example, `keyGenFromSeed p prims nttOps seed` uses that backend for the matrix product.
+The concrete FIPS implementation supplies `MLDSA.Concrete.concreteNTTRingOps`.
+
 - `LatticeCrypto/MLDSA/Params.lean`: parameter sets and byte sizes.
 - `LatticeCrypto/MLDSA/Arithmetic.lean`: ML-DSA-specific arithmetic assembly, vectors, and
   NTT-facing types.
@@ -67,6 +71,8 @@ instantiating those abstractions for a lattice scheme.
   which shows it equal in distribution to the honest prover on valid keys.
 - `LatticeCrypto/MLDSA/SecurityNMA.lean`: the no-message-attack chain, with the key swap modelled
   over short-box MLWE.
+- `LatticeCrypto/MLDSA/SecurityExpandARO.lean`: the no-message-attack bound with ExpandA a programmed
+  random oracle, reaching uniform-matrix MLWE.
 - `LatticeCrypto/MLDSA/Concrete/`: executable implementations of NTT, rounding, and encoding, plus
   `LawBounds.lean` — the algebraic range and bit-width bounds behind the `Primitives.Laws` fields.
 - `Extern/MLDSA/`: FFI bindings, SHAKE-backed sampling, and the FFI-backed instance. `Laws.lean`

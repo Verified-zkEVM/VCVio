@@ -11,7 +11,9 @@ public import VCVio.OracleComp.ProbCompLift
 public import VCVio.OracleComp.Coercions.Add.Basic
 public import VCVio.OracleComp.SimSemantics.Append
 public import VCVio.OracleComp.SimSemantics.StateT.Basic
-public import VCVio.EvalDist.Defs.Semantics.Core
+public import PolyFun.Control.Monad.Measure.SemanticsVia
+public import VCVio.EvalDist.Defs.Measure.Core
+public import ToMathlib.MeasureTheory.Measure.GiryMonad
 public import ToMathlib.Control.StateT
 
 /-!

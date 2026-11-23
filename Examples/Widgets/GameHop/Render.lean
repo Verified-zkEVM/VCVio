@@ -10,8 +10,9 @@ public meta section
 namespace VCVioWidgets
 namespace GameHop
 
-open Lean Meta ProofWidgets
-open scoped ProofWidgets.Jsx
+open Lean hiding Html
+open Meta ProofWidgets
+open ProofWidgets (Html)
 
 private def css (entries : List (String × String)) : Json :=
   Json.mkObj <| entries.map fun (k, v) => (k, Json.str v)
@@ -96,27 +97,27 @@ private def renderResolvedText (resolved : ResolvedText) : Html :=
   match resolved with
   | .text contents target? =>
       wrapReveal target?
-        <div style={css [
+        jsx%{<div style={css [
           ("fontSize", "12px"),
           ("lineHeight", "1.45"),
           ("whiteSpace", "pre-wrap")
-        ]}>{.text contents}</div>
+        ]}>{.text contents}</div>}
         (block := true)
   | .markdown contents target? =>
       wrapReveal target?
-        <div style={css [
+        jsx%{<div style={css [
           ("fontSize", "12px"),
           ("lineHeight", "1.45")
         ]}>
           <MarkdownDisplay contents={contents} />
-        </div>
+        </div>}
         (block := true)
 
 private def renderResolvedSnippet (snippet : ResolvedSnippet) : Html :=
   match snippet with
   | .interactiveCode fmt target? =>
       wrapReveal target?
-        <div style={css [
+        jsx%{<div style={css [
           ("fontFamily", "var(--vscode-editor-font-family)"),
           ("fontSize", "12px"),
           ("lineHeight", "1.45"),
@@ -124,34 +125,34 @@ private def renderResolvedSnippet (snippet : ResolvedSnippet) : Html :=
           ("overflowX", "auto")
         ]}>
           <InteractiveCode fmt={fmt} />
-        </div>
+        </div>}
         (block := true)
   | .code contents target? =>
       wrapReveal target?
-        <div style={css [
+        jsx%{<div style={css [
           ("fontFamily", "var(--vscode-editor-font-family)"),
           ("fontSize", "12px"),
           ("lineHeight", "1.45"),
           ("whiteSpace", "pre-wrap"),
           ("overflowX", "auto")
-        ]}>{.text contents}</div>
+        ]}>{.text contents}</div>}
         (block := true)
   | .text contents target? =>
       wrapReveal target?
-        <div style={css [
+        jsx%{<div style={css [
           ("fontSize", "12px"),
           ("lineHeight", "1.45"),
           ("whiteSpace", "pre-wrap")
-        ]}>{.text contents}</div>
+        ]}>{.text contents}</div>}
         (block := true)
   | .markdown contents target? =>
       wrapReveal target?
-        <div style={css [
+        jsx%{<div style={css [
           ("fontSize", "12px"),
           ("lineHeight", "1.45")
         ]}>
           <MarkdownDisplay contents={contents} />
-        </div>
+        </div>}
         (block := true)
 
 private def renderAnchorChip (anchor? : Option AnchorRef) (target? : Option RevealTarget) :
@@ -160,7 +161,7 @@ private def renderAnchorChip (anchor? : Option AnchorRef) (target? : Option Reve
   | none => none
   | some anchor =>
       let base : Html :=
-        <span style={css [
+        jsx%{<span style={css [
           ("border", "1px solid var(--vscode-editor-foreground)"),
           ("borderRadius", "999px"),
           ("padding", "2px 8px"),
@@ -169,7 +170,7 @@ private def renderAnchorChip (anchor? : Option AnchorRef) (target? : Option Reve
           ("textTransform", "uppercase")
         ]}>
           {.text anchor.kind.chipLabel}
-        </span>
+        </span>}
       some <| wrapReveal target? base
 
 private def renderSnippet (currentModule : Name) (snippet : CodeSnippet) : RenderM Html := do
@@ -182,12 +183,12 @@ private def renderNode (currentModule : Name) (node : GameNode) : RenderM Html :
   let summary? ← resolveTextCached currentModule node.anchor? node.summary
   let titleHtml : Html :=
     wrapReveal target?
-      <span style={css [
+      jsx%{<span style={css [
         ("fontSize", "14px"),
         ("fontWeight", "700")
-      ]}>{.text node.title}</span>
+      ]}>{.text node.title}</span>}
   let body : Html :=
-    <div style={css [
+    jsx%{<div style={css [
     ("display", "flex"),
     ("flexDirection", "column"),
     ("gap", "10px"),
@@ -216,7 +217,7 @@ private def renderNode (currentModule : Name) (node : GameNode) : RenderM Html :
     {if snippets.isEmpty then
       Html.text ""
     else
-      <div style={css [
+      jsx%{<div style={css [
         ("display", "flex"),
         ("flexDirection", "column"),
         ("gap", "6px"),
@@ -226,8 +227,8 @@ private def renderNode (currentModule : Name) (node : GameNode) : RenderM Html :
         ("overflowX", "auto")
       ]}>
         {...snippets}
-      </div>}
-  </div>
+      </div>}}
+  </div>}
   pure <| wrapReveal target? body
     (block := true)
 
@@ -236,12 +237,12 @@ private def renderEdgeNote (currentModule : Name) (edge : GameEdge) (note : Game
   let target? ← anchorTarget? currentModule note.anchor?
   let labelHtml : Html :=
     wrapReveal target?
-      <span style={css [
+      jsx%{<span style={css [
         ("fontSize", "11px"),
         ("fontWeight", "600")
-      ]}>{.text note.label}</span>
+      ]}>{.text note.label}</span>}
   let body : Html :=
-    <div style={css [
+    jsx%{<div style={css [
     ("display", "flex"),
     ("flexDirection", "column"),
     ("gap", "3px"),
@@ -255,26 +256,26 @@ private def renderEdgeNote (currentModule : Name) (edge : GameEdge) (note : Game
     {labelHtml}
     {match note.detail? with
      | some detail =>
-         <div style={css [
+         jsx%{<div style={css [
            ("fontSize", "11px"),
            ("lineHeight", "1.35"),
            ("whiteSpace", "pre-wrap")
-         ]}>{.text detail}</div>
+         ]}>{.text detail}</div>}
      | none => Html.text ""}
-  </div>
+  </div>}
   pure <| wrapReveal target? body
     (block := true)
 
 private def renderEdge (currentModule : Name) (layout : LayoutHint) (edge? : Option GameEdge) :
     RenderM Html := do
   let some edge := edge?
-    | pure <div style={css [
+    | pure jsx%{<div style={css [
       ("display", "flex"),
       ("alignItems", "center"),
       ("justifyContent", "center"),
       ("minWidth", "110px"),
       ("fontSize", "28px")
-    ]}>{.text "⟶"}</div>
+    ]}>{.text "⟶"}</div>}
   let target? ← anchorTarget? currentModule edge.anchor?
   let chip? := renderAnchorChip edge.anchor? target?
   let notes ←
@@ -284,14 +285,14 @@ private def renderEdge (currentModule : Name) (layout : LayoutHint) (edge? : Opt
       pure #[]
   let labelHtml : Html :=
     wrapReveal target?
-      <span style={css [
+      jsx%{<span style={css [
         ("fontSize", "12px"),
         ("fontWeight", "700"),
         ("color", edgeAccent edge.kind),
         ("textAlign", "center")
-      ]}>{.text edge.label}</span>
+      ]}>{.text edge.label}</span>}
   let body : Html :=
-    <div style={css [
+    jsx%{<div style={css [
     ("display", "flex"),
     ("flexDirection", "column"),
     ("alignItems", "center"),
@@ -308,12 +309,12 @@ private def renderEdge (currentModule : Name) (layout : LayoutHint) (edge? : Opt
     {labelHtml}
     {match edge.detail? with
      | some detail =>
-         <div style={css [
+         jsx%{<div style={css [
            ("fontSize", "11px"),
            ("lineHeight", "1.35"),
            ("textAlign", "center"),
            ("whiteSpace", "pre-wrap")
-         ]}>{.text detail}</div>
+         ]}>{.text detail}</div>}
      | none => Html.text ""}
     {match chip? with
      | some chip => chip
@@ -321,20 +322,20 @@ private def renderEdge (currentModule : Name) (layout : LayoutHint) (edge? : Opt
     {if notes.isEmpty then
       Html.text ""
     else
-      <div style={css [
+      jsx%{<div style={css [
         ("display", "flex"),
         ("flexDirection", "column"),
         ("alignItems", "center"),
         ("gap", "6px")
       ]}>
         {...notes}
-      </div>}
-  </div>
+      </div>}}
+  </div>}
   pure <| wrapReveal target? body
     (block := true)
 
 private def renderMissingNode (nodeId : NodeId) : Html :=
-  <div style={css [
+  jsx%{<div style={css [
     ("minWidth", "220px"),
     ("padding", "12px"),
     ("border", "1px dashed #e45756"),
@@ -342,7 +343,7 @@ private def renderMissingNode (nodeId : NodeId) : Html :=
     ("color", "#e45756")
   ]}>
     {.text s!"Missing node: {nodeId}"}
-  </div>
+  </div>}
 
 private def renderPathItemsFor (currentModule : Name) (diagram : GameDiagram) (path : List NodeId) :
     RenderM (Array Html) := do
@@ -366,7 +367,7 @@ private def renderPathItemsFor (currentModule : Name) (diagram : GameDiagram) (p
 private def renderHtmlCached (currentModule : Name) (diagram : GameDiagram) : RenderM Html := do
   let items ← renderPathItemsFor currentModule diagram diagram.mainPath.toList
   let subtitle? ← resolveTextCached currentModule none diagram.subtitle
-  pure <div style={css [
+  pure jsx%{<div style={css [
     ("display", "flex"),
     ("flexDirection", "column"),
     ("gap", "12px"),
@@ -394,7 +395,7 @@ private def renderHtmlCached (currentModule : Name) (diagram : GameDiagram) : Re
     ]}>
       {...items}
     </div>
-  </div>
+  </div>}
 
 /-- Render a game diagram with resolved code snippets and editor navigation links. -/
 def GameDiagram.renderHtml (currentModule : Name) (diagram : GameDiagram) : MetaM Html := do

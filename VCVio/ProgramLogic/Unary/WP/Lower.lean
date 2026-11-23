@@ -14,7 +14,9 @@ public import ToMathlib.Control.WriterT
 public import VCVio.ProgramLogic.Unary.WP.Measure
 public import VCVio.OracleComp.EvalDist.AnswerMeasure
 public import PolyFun.Control.Monad.Algebra.WP
+public import PolyFun.Control.Monad.WriterT.WP
 public import PolyFun.Control.Do.Spec
+public import PolyFun.PFunctor.Free.Measure.WP
 
 /-!
 # Quantitative weakest preconditions
@@ -31,7 +33,6 @@ interpretation are independent of the choice of probability semantics.
 @[expose] public section
 
 open ENNReal MeasureTheory
-open Lean.Order
 open Std.WP
 open scoped WriterT.MonoidWP
 
@@ -67,7 +68,19 @@ variable {α β : Type}
 Enable with `open scoped OracleComp.Lower`. -/
 noncomputable scoped instance instWP :
     Std.WP.WPMonad (OracleComp spec) ℝ≥0∞ EStack⟨⟩ :=
-  MAlgOrdered.toWPMonad
+  ExpectationWP.Lower.instWP (OracleComp spec)
+
+/-- The successful-output measure interpretation is the free-program expectation reading under
+the oracle's discrete answer measures. -/
+theorem instWP_eq_expectationWPMonad : instWP (spec := spec) =
+    @PFunctor.FreeM.expectationWPMonad spec.toPFunctor (fun _ => ⊤)
+      OracleSpec.AnswerMeasure.toMeasure := by
+  let : ∀ a, MeasurableSpace (spec.toPFunctor.B a) := fun _ => ⊤
+  let : ∀ a, DiscreteMeasurableSpace (spec.toPFunctor.B a) := fun _ =>
+    inferInstanceAs (@DiscreteMeasurableSpace _ ⊤)
+  exact ExpectationWP.toWPMonad_algebra_freeM (P := spec.toPFunctor)
+
+open Lean.Order
 
 /-! ## `StateT (OracleComp spec)` WP normalization -/
 
@@ -230,23 +243,17 @@ variable {α β : Type}
 
 namespace WriterT
 
-@[simp]
 theorem wp_bind {ω : Type} [Monoid ω] (x : _root_.WriterT ω (OracleComp spec) α)
     (f : α → _root_.WriterT ω (OracleComp spec) β) (post : β → ω → ℝ≥0∞) (epost : EStack⟨⟩) :
     Std.WP.wp (x >>= f) post epost =
       fun w => Std.WP.wp x
-        (fun a w' => Std.WP.wp (f a) post epost w') epost w := by
-  funext w
-  simp only [_root_.WriterT.wp_apply_eq,
-    _root_.WriterT.run_bind, ExactWPMonad.wp_bind, ExactWPMonad.wp_map, mul_assoc]
+        (fun a w' => Std.WP.wp (f a) post epost w') epost w :=
+  ExactWPMonad.wp_bind x f post epost
 
-@[simp]
 theorem wp_pure {ω : Type} [Monoid ω] (x : α) (post : α → ω → ℝ≥0∞) (epost : EStack⟨⟩) :
     Std.WP.wp (pure x : _root_.WriterT ω (OracleComp spec) α) post epost =
-      fun w => post x w := by
-  funext w
-  simp only [_root_.WriterT.wp_apply_eq,
-    _root_.WriterT.run_pure, ExactWPMonad.wp_pure, mul_one]
+      fun w => post x w :=
+  ExactWPMonad.wp_pure (m := _root_.WriterT ω (OracleComp spec)) x post epost
 
 @[simp]
 theorem wp_tell {ω : Type} [Monoid ω] (out : ω) (post : PUnit → ω → ℝ≥0∞) (epost : EStack⟨⟩) :
@@ -265,14 +272,11 @@ theorem wp_monadLift {ω : Type} [Monoid ω] (oa : OracleComp spec α)
   simp only [_root_.WriterT.wp_apply_eq,
     _root_.WriterT.run_core_monadLift, ExactWPMonad.wp_map, mul_one]
 
-@[simp]
 theorem wp_map {ω : Type} [Monoid ω] (f : α → β)
     (x : _root_.WriterT ω (OracleComp spec) α) (post : β → ω → ℝ≥0∞) (epost : EStack⟨⟩) :
     Std.WP.wp (f <$> x) post epost =
-      Std.WP.wp x (fun a w => post (f a) w) epost := by
-  funext w
-  simp only [_root_.WriterT.wp_apply_eq,
-    _root_.WriterT.run_map, ExactWPMonad.wp_map]
+      Std.WP.wp x (fun a w => post (f a) w) epost :=
+  ExactWPMonad.wp_map f x post epost
 
 end WriterT
 

@@ -24,11 +24,11 @@ universe u
 
 namespace FinRatPMF.Raw
 
-noncomputable instance : EvalDistSemantics Raw where
+noncomputable instance instEvalDistSemantics : EvalDistSemantics Raw where
   denote := toMeasure
   apply_univ_le_one p := le_of_eq (toMeasure_apply_univ p)
 
-instance : LawfulEvalDistSemantics Raw where
+instance instLawfulEvalDistSemantics : LawfulEvalDistSemantics Raw where
   denote_pure := toMeasure_pure
   denote_bind := toMeasure_bind
 
@@ -40,8 +40,8 @@ theorem evalDist_eq_toMeasure (p : Raw α) : 𝒟[p] = p.toMeasure := rfl
 /-- Executable rational sampling has total mass one. -/
 theorem evalDist_apply_univ (p : Raw α) : 𝒟[p] Set.univ = 1 := toMeasure_apply_univ p
 
-instance (p : Raw α) : IsProbabilityMeasure 𝒟[p] := inferInstanceAs
-  (IsProbabilityMeasure p.toMeasure)
+instance instIsProbabilityMeasureEvalDist (p : Raw α) : IsProbabilityMeasure 𝒟[p] :=
+  inferInstanceAs (IsProbabilityMeasure p.toMeasure)
 
 /-- Singleton mass is computable with rational arithmetic. -/
 @[simp]
