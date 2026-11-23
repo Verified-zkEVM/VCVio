@@ -353,6 +353,13 @@ theorem Form.holds_ex {τ : Ty B} {F : Form D (.loc τ :: Γ)} :
       @decide (t.denote (fullInterp M C) env η ρ = u.denote (fullInterp M C) env η ρ)
         (Classical.propDecidable _) := rfl
 
+/-- A local disequality `¬ (t = u)` is true where the two sides differ. -/
+theorem FTerm.denote_not_eq_eq_true {a : Ty B} {t u : FTerm D Γ a} {η : ℕ} {ρ : M.Tape η} :
+    (FTerm.not (FTerm.eq t u)).denote (fullInterp M C) env η ρ = true ↔
+      t.denote (fullInterp M C) env η ρ ≠ u.denote (fullInterp M C) env η ρ := by
+  simp only [FTerm.not, FTerm.denote_ite, FTerm.denote_eq, FTerm.denote_ff, FTerm.denote_tt]
+  by_cases h : t.denote (fullInterp M C) env η ρ = u.denote (fullInterp M C) env η ρ <;> simp [h]
+
 /-- An abstraction at `(η, ρ)` maps a value `x` to the body's reading with the variable at the
 constant random variable `RV.constAt η x`. -/
 theorem FTerm.denote_lam {a b : Ty B} (body : FTerm D (.loc a :: Γ) b) :

@@ -44,7 +44,8 @@ lemma per constructor:
   (`dedApp`) and rewriting under an overwhelming equality (`dedRewrite`), and local reasoning read
   semantically: `boxValid` concludes `[φ]` for a local formula true at every tape of every model
   of `R₀`, which is how equations of honest symbols that `R₀` imposes are used, and `boxMP` is
-  modus ponens under `[·]` (`Interop.Squirrel.Rules.Deduce`);
+  modus ponens under `[·]` (`Interop.Squirrel.Rules.Deduce`); `Derivation.boxOfMap` combines
+  them to conclude `[χ]` from boxes indexed by a list, when `χ` follows from them locally;
 * FreshR and FreshL (CCS26 Fig. 11), for closed terms that do not use the name, a syntactic
   condition that `decide` discharges on concrete terms (`FTerm.AvoidsNames`). FreshR takes the
   label `large` of the name's type;
@@ -530,5 +531,26 @@ def Derivation.nonDedPRF {Θ : List (Form D [])} (P : PRFSymbols D) {τs : List 
     rename_swapLast (P.closeVec u) (P.close v) w
   Derivation.nonDedRwEquiv hβ (Derivation.nonDedFreshL ho' nn i hl hread hnu hnv d)
     (hperm _ ▸ hperm _ ▸ dperm)
+
+/-- `[χ]` from derivations of `[f a]` for each `a` of a list, when `χ` is true at every tape where
+they all are, in every model of `R₀`: `boxValid` of `f a₁ ⇒ (… ⇒ (f aₙ ⇒ χ))`, then `boxMP` once
+per element. The premises are indexed by elements, not by membership proofs, since a derivation is
+data and cannot be extracted from a proof of membership. -/
+def Derivation.boxOfMap {Γ : List (Kind B)} {Θ : List (Form D Γ)} {α : Type}
+    (f : α → FTerm D Γ .bool) :
+    (l : List α) → ((a : α) → a ∈ l → Derivation D enc prf R₀ Θ (.box (f a))) →
+    {χ : FTerm D Γ .bool} →
+    (∀ M : Model D, M.RespectsLabels → R₀ M → ∀ (C : AdvClass M) env η ρ,
+      (∀ a ∈ l, (f a).denote (fullInterp M C) env η ρ = true) →
+        χ.denote (fullInterp M C) env η ρ = true) →
+    Derivation D enc prf R₀ Θ (.box χ)
+  | [], _, χ, h => .boxValid χ fun M hl hR C env η ρ => h M hl hR C env η ρ fun _ h => nomatch h
+  | a :: l, ds, _, h => .boxMP (ds a List.mem_cons_self)
+      (Derivation.boxOfMap f l (fun b hb => ds b (List.mem_cons_of_mem _ hb))
+        fun M hl hR C env η ρ hall => by
+          simp only [FTerm.imp, FTerm.denote_ite, FTerm.denote_tt]
+          cases hφ : (f a).denote (fullInterp M C) env η ρ
+          · rfl
+          · exact h M hl hR C env η ρ (List.forall_mem_cons.2 ⟨hφ, hall⟩))
 
 end Interop.Squirrel
