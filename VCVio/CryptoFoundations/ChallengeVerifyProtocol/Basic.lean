@@ -62,7 +62,7 @@ the response after the challenge is drawn dominates every prover strategy, so no
 needed: whatever computation produces the response, it can do no better than the best response for
 the sampled challenge. -/
 @[expose]
-def Sound (σ : ChallengeVerifyProtocol Stmt Wit Commit PrvState Chal Resp rel m)
+def Sound (σ : ChallengeVerifyProtocol m Stmt Wit Commit PrvState Chal Resp rel)
     (soundnessError : ℝ≥0) : Prop :=
   ∀ x : Stmt, (¬ ∃ w : Wit, rel x w) → ∀ pc : Commit,
     Pr{let chal ← $ᵗ Chal}[∃ resp : Resp, σ.verify x pc chal resp = true]
@@ -71,7 +71,7 @@ def Sound (σ : ChallengeVerifyProtocol Stmt Wit Commit PrvState Chal Resp rel m
 /-- A protocol is perfectly sound if it is sound with no error: outside the language, the set of
 challenges admitting any accepted response has probability zero. -/
 @[expose]
-def PerfectlySound (σ : ChallengeVerifyProtocol Stmt Wit Commit PrvState Chal Resp rel m) :
+def PerfectlySound (σ : ChallengeVerifyProtocol m Stmt Wit Commit PrvState Chal Resp rel) :
     Prop :=
   σ.Sound 0
 
@@ -90,7 +90,7 @@ a protocol's interaction (`commit`/`respond`/`verify`) is independent of any par
 witness-extraction strategy. For a protocol that does bundle an extractor, see
 `SigmaProtocol.SpeciallySoundAt`. -/
 @[expose]
-def SpeciallySoundAt (σ : ChallengeVerifyProtocol Stmt Wit Commit PrvState Chal Resp rel m)
+def SpeciallySoundAt (σ : ChallengeVerifyProtocol m Stmt Wit Commit PrvState Chal Resp rel)
     (extract : Chal → Resp → Chal → Resp → m Wit) (x : Stmt) : Prop :=
   ∀ pc ω₁ ω₂ p₁ p₂, ω₁ ≠ ω₂ →
     σ.verify x pc ω₁ p₁ = true → σ.verify x pc ω₂ p₂ = true →
@@ -99,14 +99,14 @@ def SpeciallySoundAt (σ : ChallengeVerifyProtocol Stmt Wit Commit PrvState Chal
 /-- A protocol is specially sound (relative to `extract`) if `SpeciallySoundAt` holds for all
 statements. -/
 @[expose]
-def SpeciallySound (σ : ChallengeVerifyProtocol Stmt Wit Commit PrvState Chal Resp rel m)
+def SpeciallySound (σ : ChallengeVerifyProtocol m Stmt Wit Commit PrvState Chal Resp rel)
     (extract : Chal → Resp → Chal → Resp → m Wit) : Prop :=
   ∀ x, SpeciallySoundAt σ extract x
 
 /-- Special soundness immediately validates any witness returned by the extractor from two accepting
 transcripts with the same statement and commitment and with distinct challenges. -/
 theorem extract_sound_of_speciallySoundAt
-    (σ : ChallengeVerifyProtocol Stmt Wit Commit PrvState Chal Resp rel m)
+    (σ : ChallengeVerifyProtocol m Stmt Wit Commit PrvState Chal Resp rel)
     {extract : Chal → Resp → Chal → Resp → m Wit} {x : Stmt}
     (hss : σ.SpeciallySoundAt extract x)
     {pc : Commit} {ω₁ ω₂ : Chal} {p₁ p₂ : Resp} (hω : ω₁ ≠ ω₂)

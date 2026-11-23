@@ -16,7 +16,9 @@ public import VCVio.OracleComp.QueryTracking.LoggingOracle.Core
 public import VCVio.OracleComp.QueryTracking.QueryCost
 public import VCVio.OracleComp.Coercions.Add.Basic
 public import VCVio.OracleComp.ProbCompLift
-public import VCVio.EvalDist.Defs.Semantics.Core
+public import PolyFun.Control.Monad.Measure.SemanticsVia
+public import VCVio.EvalDist.Defs.Measure.Core
+public import ToMathlib.MeasureTheory.Measure.GiryMonad
 public import Mathlib.Data.FinEnum
 public import Mathlib.Data.Nat.Choose.Basic
 public import Mathlib.Order.Interval.Finset.Fin
@@ -75,11 +77,17 @@ open OracleComp OracleSpec
 /-- Input to the Fischlin random oracle. Defined as a structure rather than a nested product
 to give fast `DecidableEq` synthesis (avoiding deep product-type unfolding). -/
 structure FischlinROInput (Stmt Commit Chal Resp : Type) (ρ : ℕ) (M : Type) where
+  /-- The statement being proved, which is the signer's public key. -/
   stmt : Stmt
+  /-- The message being signed. -/
   msg : M
+  /-- The commitments of all `ρ` repetitions. -/
   comList : List Commit
+  /-- The repetition this query belongs to. -/
   rep : Fin ρ
+  /-- The candidate challenge for that repetition. -/
   chal : Chal
+  /-- The prover's response to the candidate challenge. -/
   resp : Resp
   deriving DecidableEq
 
@@ -106,7 +114,7 @@ the prover queries `H` on each input and keeps the best. -/
 def fischlinSearchAux {Stmt Wit Commit PrvState Chal Resp M : Type}
     {rel : Stmt → Wit → Bool} {ρ b : ℕ}
     {m : Type → Type v} [Monad m]
-    (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel ProbComp)
+    (σ : SigmaProtocol ProbComp Stmt Wit Commit PrvState Chal Resp rel)
     [MonadLiftT ProbComp m] [HasQuery (fischlinROSpec Stmt Commit Chal Resp ρ b M) m]
     (pk : Stmt) (sk : Wit) (sc : PrvState) (msg : M) (comList : List Commit) (i : Fin ρ) :
     List Chal → Option (Chal × Resp × Fin (2 ^ b)) → m (Option (Chal × Resp))
@@ -145,7 +153,7 @@ sigma-protocol verification for each repetition, and verifies that the sum of ha
 values is at most `S`. -/
 def Fischlin
     {m : Type → Type v} [Monad m]
-    (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel ProbComp)
+    (σ : SigmaProtocol ProbComp Stmt Wit Commit PrvState Chal Resp rel)
     (hr : GenerableRelation Stmt Wit rel) (ρ b S : ℕ) (M : Type)
     [MonadLiftT ProbComp m]
     [HasQuery (fischlinROSpec Stmt Commit Chal Resp ρ b M) m] :

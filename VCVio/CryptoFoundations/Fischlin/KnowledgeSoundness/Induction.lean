@@ -29,7 +29,7 @@ variable {Stmt Wit Commit PrvState Chal Resp : Type} {rel : Stmt → Wit → Boo
 
 open ENNReal OracleComp.ProgramLogic
 
-variable (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel ProbComp)
+variable (σ : SigmaProtocol ProbComp Stmt Wit Commit PrvState Chal Resp rel)
   (hr : GenerableRelation Stmt Wit rel)
   (ρ b S : ℕ) (M : Type)
 

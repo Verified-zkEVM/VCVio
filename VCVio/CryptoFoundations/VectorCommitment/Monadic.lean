@@ -19,9 +19,9 @@ instance (`VCVio.CryptoFoundations.VectorCommitment.MonadicMerkle`).
 
 ## Relation to `VectorCommitment`
 
-`VectorCommitment` (`VCVio.CryptoFoundations.VectorCommitment`) is the vector commitment in the
-model of one oracle `X →ₒ Y`: its algorithms are oracle computations, so its security notions can
-reinterpret the oracle (a fixed function, a random oracle) and extractors can read the queries.
+`VectorCommitment` (`VCVio.CryptoFoundations.VectorCommitment.Basic`) is the vector commitment in
+the model of one oracle `X →ₒ Y`: its algorithms are oracle computations, so its security notions
+can reinterpret the oracle (a fixed function, a random oracle) and extractors can read the queries.
 `MonadicVectorCommitment` instead leaves the monad abstract and has a deterministic verifier, so
 its notions are information-theoretic: correctness over the possible outputs, and perfect
 position binding (`MonadicVectorCommitment.PositionBinding`), which no two accepted openings of

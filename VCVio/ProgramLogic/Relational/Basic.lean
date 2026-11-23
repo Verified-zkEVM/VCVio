@@ -7,7 +7,11 @@ Authors: Quang Dao
 module
 
 public import ToMathlib.Control.Monad.RelationalAlgebra
-public import VCVio.ProgramLogic.Relational.Measure.Bind
+public import PolyFun.Control.Monad.Measure.Relational.Bind
+public import PolyFun.Control.Monad.Measure.Relational.Algebra
+public import VCVio.EvalDist.Defs.Measure.Core
+public import ToMathlib.MeasureTheory.Measure.GiryMonad
+public import ToMathlib.MeasureTheory.Measure.Monotone
 public import VCVio.OracleComp.EvalDist.Measure
 public import VCVio.OracleComp.Constructions.Replicate.Basic
 public import VCVio.OracleComp.Constructions.SampleableType.Basic
@@ -21,7 +25,7 @@ instantiated for `OracleComp` with measure coupling semantics: `CouplingPost oa 
 coupling of the two output measures, each observed in the discrete structure on its output type,
 under which `R` holds almost everywhere.
 
-Finite oracle response types make every output measure concentrate on the finite structural
+Countable oracle response types make every output measure concentrate on the countable structural
 support, which supplies the countable choice behind the sequential rule. The anchoring and
 bijection rules additionally need uniform response measures, under which every structurally
 reachable output has positive mass.
@@ -51,7 +55,7 @@ theorem ae_map_of_ae_mem_countable {X Y : Type*} [MeasurableSpace X] [Measurable
     {s : Set X} (hs : s.Countable) {p : Y → Prop} (h : ∀ᵐ x ∂μ, x ∈ s ∧ p (f x)) :
     ∀ᵐ y ∂μ.map f, p y := by
   have hT : MeasurableSet (f '' {x | x ∈ s ∧ p (f x)}) :=
-    ((hs.mono fun _ hx ↦ hx.1).image f).measurableSet
+    (hs.mono (Set.sep_subset s (fun x ↦ p (f x)))).image f |>.measurableSet
   filter_upwards [(ae_map_iff hf.aemeasurable hT).2 (h.mono fun x hx ↦ ⟨x, hx, rfl⟩)] with y hy
   obtain ⟨x, hx, rfl⟩ := hy
   exact hx.2
@@ -104,42 +108,25 @@ theorem ae_mem_support_prod {oa : OracleComp spec₁ α} {ob : OracleComp spec�
   exact c.isCoupling.ae_mem_prod MeasurableSet.of_discrete MeasurableSet.of_discrete
     (ae_mem_support oa) (ae_mem_support ob)
 
-section finite
+section countable
 
-variable [∀ t, Finite (spec₁.Range t)] [∀ t, Finite (spec₂.Range t)]
+variable [∀ t, Countable (spec₁.Range t)] [∀ t, Countable (spec₂.Range t)]
 
-/-- Sequential composition of couplings. Finite response types discharge the countable choice
+/-- Sequential composition of couplings. Countable response types discharge the countable choice
 and concentration obligations of the measure-level rule; no positivity of response masses is
 required. -/
 theorem CouplingPost.bind {oa : OracleComp spec₁ α} {ob : OracleComp spec₂ β}
     {fa : α → OracleComp spec₁ γ} {fb : β → OracleComp spec₂ δ} {post : RelPost γ δ}
     (h : CouplingPost oa ob fun a b ↦ CouplingPost (fa a) (fb b) post) :
-    CouplingPost (oa >>= fa) (ob >>= fb) post := by
-  let : MeasurableSpace α := ⊤
-  let : MeasurableSpace β := ⊤
-  let : MeasurableSpace γ := ⊤
-  let : MeasurableSpace δ := ⊤
-  rw [CouplingPost, RelWP, evalDist_bind_of_discrete, evalDist_bind_of_discrete]
-  rw [CouplingPost, RelWP] at h
-  exact h.bind_of_countable_of_ae_mem
-    (PFunctor.FreeM.support_finite oa).countable
-    (PFunctor.FreeM.support_finite ob).countable
-    (PFunctor.FreeM.support_finite (oa >>= fa)).countable
-    (PFunctor.FreeM.support_finite (ob >>= fb)).countable
-    (ae_mem_support oa) (ae_mem_support ob) .of_discrete .of_discrete
-    (fun a ha ↦ evalDist.ae_of_forall_mem_support (fa a) _ MeasurableSet.of_discrete
-      fun x hx ↦ MonadAttach.mem_support_bind.mpr ⟨a, ha, hx⟩)
-    (fun b hb ↦ evalDist.ae_of_forall_mem_support (fb b) _ MeasurableSet.of_discrete
-      fun y hy ↦ MonadAttach.mem_support_bind.mpr ⟨b, hb, hy⟩)
-    (fun _ _ _ _ h ↦ by simpa only [CouplingPost, RelWP] using h)
+    CouplingPost (oa >>= fa) (ob >>= fb) post :=
+  (ExpectationWP.couplingAlgebra (OracleComp spec₁) (OracleComp spec₂)).rwp_bind_le
+    oa ob fa fb post h
 
-/-- Relational algebra instance for `OracleComp`, based on measure coupling semantics. -/
+/-- Relational algebra instance for `OracleComp`: PolyFun's coupling algebra, whose relational
+weakest precondition is `CouplingPost`. Countable response types supply `CountableEvalDist`. -/
 noncomputable instance instMAlgRelOrdered :
-    MAlgRelOrdered (OracleComp spec₁) (OracleComp spec₂) Prop where
-  rwp := CouplingPost
-  rwp_pure a b R := propext (couplingPost_pure_pure_iff a b R)
-  rwp_mono hpost h := h.mono hpost
-  rwp_bind_le _ _ _ _ _ h := CouplingPost.bind h
+    MAlgRelOrdered (OracleComp spec₁) (OracleComp spec₂) Prop :=
+  ExpectationWP.couplingAlgebra _ _
 
 /-- Relational weakest precondition induced by `MAlgRelOrdered` for `OracleComp`. -/
 abbrev RelWP (oa : OracleComp spec₁ α) (ob : OracleComp spec₂ β) (R : RelPost α β) : Prop :=
@@ -171,7 +158,7 @@ lemma relTriple_refl_of_mem_support (oa : OracleComp spec₁ α) {R : RelPost α
   refine relTriple_iff_relWP.2 ⟨Measure.Coupling.refl 𝒟[oa], ?_⟩
   rw [Measure.Coupling.refl_joint]
   exact ae_map_of_ae_mem_countable (measurable_id.prodMk measurable_id)
-    (PFunctor.FreeM.support_finite oa).countable
+    (PFunctor.FreeM.support_countable oa)
     ((ae_mem_support oa).mono fun a ha ↦ ⟨ha, hR a ha⟩)
 
 /-- Every computation is coupled with itself on equality of outputs. -/
@@ -188,7 +175,7 @@ lemma relTriple_refl (oa : OracleComp spec₁ α) :
 lemma relTriple_post_mono {oa : OracleComp spec₁ α} {ob : OracleComp spec₂ β} {R R' : RelPost α β}
     (h : RelTriple oa ob R) (hpost : ∀ ⦃x y⦄, R x y → R' x y) :
     RelTriple oa ob R' :=
-  relTriple_iff_relWP.2 ((relTriple_iff_relWP.1 h).mono fun _ _ hR => hpost hR)
+  relTriple_iff_relWP.2 (CouplingPost.mono (relTriple_iff_relWP.1 h) fun _ _ hR => hpost hR)
 
 /-- Two computations whose outputs satisfy independent support-wide postconditions are related
 by their conjunction, through the independent product coupling. -/
@@ -233,7 +220,7 @@ lemma relTriple_symm {oa : OracleComp spec₁ α} {ob : OracleComp spec₂ β} {
 lemma relTriple_of_evalDistEq_left
     {ι₃ : Type w} {spec₃ : OracleSpec.{w, 0} ι₃}
     [AnswerMeasure spec₃]
-    [∀ t, Finite (spec₃.Range t)]
+    [∀ t, Countable (spec₃.Range t)]
     {oa : OracleComp spec₁ α} {oa' : OracleComp spec₂ α}
     {ob : OracleComp spec₃ β} {R : RelPost α β}
     (heq : oa =ᵈ oa') (h : RelTriple oa' ob R) :
@@ -249,7 +236,7 @@ lemma relTriple_of_evalDistEq_left
 lemma relTriple_of_evalDistEq_right
     {ι₃ : Type w} {spec₃ : OracleSpec.{w, 0} ι₃}
     [AnswerMeasure spec₃]
-    [∀ t, Finite (spec₃.Range t)]
+    [∀ t, Countable (spec₃.Range t)]
     {oa : OracleComp spec₁ α} {ob : OracleComp spec₂ β}
     {ob' : OracleComp spec₃ β} {R : RelPost α β}
     (heq : ob =ᵈ ob') (h : RelTriple oa ob R) :
@@ -340,7 +327,7 @@ lemma prEvent_le_of_relTriple {oa : OracleComp spec₁ α} {ob : OracleComp spec
 lemma relTriple_trans_eqRel_left
     {ι₃ : Type w} {spec₃ : OracleSpec.{w, 0} ι₃}
     [AnswerMeasure spec₃]
-    [∀ t, Finite (spec₃.Range t)]
+    [∀ t, Countable (spec₃.Range t)]
     {oa : OracleComp spec₁ α} {mid : OracleComp spec₂ α}
     {ob : OracleComp spec₃ β} {R : RelPost α β}
     (hleft : RelTriple oa mid (EqRel α)) (hright : RelTriple mid ob R) :
@@ -351,7 +338,7 @@ lemma relTriple_trans_eqRel_left
 lemma relTriple_trans_eqRel_right
     {ι₃ : Type w} {spec₃ : OracleSpec.{w, 0} ι₃}
     [AnswerMeasure spec₃]
-    [∀ t, Finite (spec₃.Range t)]
+    [∀ t, Countable (spec₃.Range t)]
     {oa : OracleComp spec₁ α} {mid : OracleComp spec₂ β}
     {ob : OracleComp spec₃ β} {R : RelPost α β}
     (hleft : RelTriple oa mid R) (hright : RelTriple mid ob (EqRel β)) :
@@ -362,7 +349,7 @@ lemma relTriple_trans_eqRel_right
 lemma relTriple_trans_eqRel
     {ι₃ : Type w} {spec₃ : OracleSpec.{w, 0} ι₃}
     [AnswerMeasure spec₃]
-    [∀ t, Finite (spec₃.Range t)]
+    [∀ t, Countable (spec₃.Range t)]
     {oa : OracleComp spec₁ α} {mid : OracleComp spec₂ α} {ob : OracleComp spec₃ α}
     (hleft : RelTriple oa mid (EqRel α)) (hright : RelTriple mid ob (EqRel α)) :
     RelTriple oa ob (EqRel α) :=
@@ -395,6 +382,24 @@ lemma evalDistEq_map_of_relTriple {σ : Type} {f : α → σ} {g : β → σ}
     (h : RelTriple oa ob (fun a b => f a = g b)) :
     f <$> oa =ᵈ g <$> ob :=
   evalDistEq_of_relTriple_eqRel (relTriple_map h)
+
+/-- Equality of the projected output law and a support invariant give a coupling preserving
+both the visible output and the chosen relation between full and projected states. -/
+lemma relTriple_of_projected_eq {A S T : Type}
+    (source : OracleComp spec₁ (A × S)) (target : OracleComp spec₂ (A × T))
+    (proj : S → T) (relation : S → T → Prop)
+    (heq : Prod.map id proj <$> source =ᵈ target)
+    (hsource : ∀ result ∈ support source, relation result.2 (proj result.2)) :
+    RelTriple source target (fun left right => left.1 = right.1 ∧ relation left.2 right.2) := by
+  have hself : RelTriple source source
+      (fun left right => left.1 = right.1 ∧ relation left.2 (proj right.2)) := by
+    apply relTriple_refl_of_mem_support
+    intro result hresult
+    exact ⟨rfl, hsource result hresult⟩
+  have hmap : RelTriple (id <$> source) (Prod.map id proj <$> source)
+      (fun left right => left.1 = right.1 ∧ relation left.2 right.2) :=
+    relTriple_map (f := id) (g := Prod.map id proj) hself
+  simpa only [id_map] using relTriple_of_evalDistEq_right heq hmap
 
 private lemma list_eq_of_forall₂_eqRel {xs ys : List α}
     (hxy : List.Forall₂ (EqRel α) xs ys) : xs = ys := by
@@ -521,7 +526,7 @@ lemma relTriple_pure_right {oa : OracleComp spec₁ α} {b : β}
     RelTriple oa (pure b : OracleComp spec₂ β) R :=
   relTriple_post_mono h (fun _ _ ⟨_, hr⟩ => hr)
 
-end finite
+end countable
 
 end measureSpec
 

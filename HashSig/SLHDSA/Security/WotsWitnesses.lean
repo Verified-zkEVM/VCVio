@@ -5,6 +5,7 @@ Authors: Alexander Hicks
 -/
 
 module
+public import VCVio.Algorithms.IndexedChain.Witnesses
 public import HashSig.SLHDSA.Security.CanonicalGames
 public import HashSig.SLHDSA.Security.ReachableTargets
 public import HashSig.SLHDSA.WotsInjectivity
@@ -114,14 +115,15 @@ theorem chain_diverge (prims : Primitives p) (pkSeed : prims.PkSeed) (adrs : Adr
       chain prims pkSeed adrs u i j ≠ chain prims pkSeed adrs v i j ∧
       prims.F pkSeed (adrs.setHashAddress (i + j)) (chain prims pkSeed adrs u i j) =
         prims.F pkSeed (adrs.setHashAddress (i + j)) (chain prims pkSeed adrs v i j) := by
-  induction n with
-  | zero => exact Or.inl (by simpa using hend)
-  | succ n ih =>
-      by_cases hn : chain prims pkSeed adrs u i n = chain prims pkSeed adrs v i n
-      · rcases ih hn with h | ⟨j, hj, hne, hcoll⟩
-        · exact Or.inl h
-        · exact Or.inr ⟨j, Nat.lt_succ_of_lt hj, hne, hcoll⟩
-      · exact Or.inr ⟨n, Nat.lt_succ_self n, hn, by simpa only [chain_succ] using hend⟩
+  by_cases heq : u = v
+  · exact Or.inl heq
+  · have hend' := hend
+    simp only [chain_eq_indexedChain] at hend'
+    obtain ⟨d, hne, hmerge⟩ := VCVio.Algorithms.IndexedChain.exists_merge
+      (fun j => prims.F pkSeed (adrs.setHashAddress j)) i n u v heq hend'
+    refine Or.inr ⟨d, d.isLt, ?_, ?_⟩
+    · simpa only [chain_eq_indexedChain] using hne
+    · simpa only [chain_eq_indexedChain, VCVio.Algorithms.IndexedChain.chain_succ] using hmerge
 
 /-- The first step below `n` at which the two chains from `u` and `v` still differ while their
 successors already agree.  Computable, so a reduction can build the witness rather than know one
@@ -129,9 +131,19 @@ exists.  The EasyCrypt counterpart `find_collidx_l` (`WOTS_TW_ES.ec:620`) instea
 first step at which the two chains agree and reads the collision off the step before it. -/
 def findChainDivergence (prims : Primitives p) [DecidableEq prims.Y] (pkSeed : prims.PkSeed)
     (adrs : Adrs) (u v : prims.Y) (i n : ℕ) : Option ℕ :=
-  (List.range n).find? fun j =>
-    decide (chain prims pkSeed adrs u i j ≠ chain prims pkSeed adrs v i j ∧
-      chain prims pkSeed adrs u i (j + 1) = chain prims pkSeed adrs v i (j + 1))
+  (VCVio.Algorithms.IndexedChain.findMerge
+    (fun j => prims.F pkSeed (adrs.setHashAddress j)) i n u v).map Fin.val
+
+/-- The finite shared search returns the same first natural offset as the chain scan. -/
+theorem findChainDivergence_eq_find (prims : Primitives p) [DecidableEq prims.Y]
+    (pkSeed : prims.PkSeed) (adrs : Adrs) (u v : prims.Y) (i n : ℕ) :
+    findChainDivergence prims pkSeed adrs u v i n =
+      (List.range n).find? (fun j => decide
+        (chain prims pkSeed adrs u i j ≠ chain prims pkSeed adrs v i j ∧
+          chain prims pkSeed adrs u i (j + 1) = chain prims pkSeed adrs v i (j + 1))) := by
+  simpa only [findChainDivergence, chain_eq_indexedChain] using
+    VCVio.Algorithms.IndexedChain.findMerge_map_val
+      (fun j => prims.F pkSeed (adrs.setHashAddress j)) i n u v
 
 /-- Whatever `findChainDivergence` returns is a genuine `F`-collision below `n`: the two chain
 values at that step differ and their `F` images at the step's hash address agree.
@@ -144,11 +156,10 @@ theorem findChainDivergence_sound (prims : Primitives p) [DecidableEq prims.Y]
     j < n ∧ chain prims pkSeed adrs u i j ≠ chain prims pkSeed adrs v i j ∧
       prims.F pkSeed (adrs.setHashAddress (i + j)) (chain prims pkSeed adrs u i j) =
         prims.F pkSeed (adrs.setHashAddress (i + j)) (chain prims pkSeed adrs v i j) := by
-  have hmem := List.mem_of_find?_eq_some hj
-  have hsat := List.find?_some hj
-  rw [decide_eq_true_eq] at hsat
-  refine ⟨List.mem_range.mp hmem, hsat.1, ?_⟩
-  simpa only [chain_succ] using hsat.2
+  obtain ⟨d, hd, rfl⟩ := Option.map_eq_some_iff.mp hj
+  have hmerge := VCVio.Algorithms.IndexedChain.findMerge_step_sound
+    (fun j => prims.F pkSeed (adrs.setHashAddress j)) i n u v hd
+  simpa only [chain_eq_indexedChain] using And.intro d.isLt hmerge
 
 /-- The search succeeds whenever the two chains start from different values and reach the same
 value after `n` steps: the divergence step exists by `chain_diverge`.
@@ -158,12 +169,9 @@ theorem findChainDivergence_isSome_of_ne (prims : Primitives p) [DecidableEq pri
     (pkSeed : prims.PkSeed) (adrs : Adrs) (u v : prims.Y) (i n : ℕ) (hne : u ≠ v)
     (hend : chain prims pkSeed adrs u i n = chain prims pkSeed adrs v i n) :
     (findChainDivergence prims pkSeed adrs u v i n).isSome := by
-  rw [Option.isSome_iff_ne_none]
-  intro hnone
-  rw [findChainDivergence, List.find?_eq_none] at hnone
-  obtain ⟨j, hj, hjne, hjcoll⟩ := (chain_diverge prims pkSeed adrs u v i n hend).resolve_left hne
-  exact hnone j (List.mem_range.mpr hj)
-    (decide_eq_true ⟨hjne, by simpa only [chain_succ] using hjcoll⟩)
+  simp only [findChainDivergence, Option.isSome_map]
+  apply VCVio.Algorithms.IndexedChain.findMerge_isSome _ i n u v hne
+  simpa only [chain_eq_indexedChain] using hend
 
 /-! ## One chain pair, two digits
 

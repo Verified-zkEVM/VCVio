@@ -34,7 +34,7 @@ theorem measureETVDist_bind_le (mx my : m α) (f : α → m β)
     (hf : Measurable fun a ↦ 𝒟[f a]) :
     measureETVDist (mx >>= f) (my >>= f) ≤ measureETVDist mx my := by
   simp only [measureETVDist, evalDist_bind _ _ hf]
-  exact Measure.etvDist_bind_le 𝒟[mx] 𝒟[my] (fun a ↦ 𝒟[f a]) hf
+  exact Measure.statEDist_bind_le 𝒟[mx] 𝒟[my] (fun a ↦ 𝒟[f a]) hf
 
 /-- An AE conditional majorant bounds the distance after a common prefix. -/
 theorem measureETVDist_bind_bind_le_lintegral (mx : m α) (f g : α → m β)
@@ -42,7 +42,7 @@ theorem measureETVDist_bind_bind_le_lintegral (mx : m α) (f g : α → m β)
     (bound : α → ENNReal) (hbound : ∀ᵐ a ∂𝒟[mx], measureETVDist (f a) (g a) ≤ bound a) :
     measureETVDist (mx >>= f) (mx >>= g) ≤ ∫⁻ a, bound a ∂𝒟[mx] := by
   simp only [measureETVDist, evalDist_bind _ _ hf, evalDist_bind _ _ hg] at hbound ⊢
-  exact Measure.etvDist_bind_bind_le_lintegral 𝒟[mx] (fun a ↦ 𝒟[f a]) (fun a ↦ 𝒟[g a])
+  exact Measure.statEDist_bind_bind_le_lintegral 𝒟[mx] (fun a ↦ 𝒟[f a]) (fun a ↦ 𝒟[g a])
     hf.aemeasurable hg.aemeasurable bound hbound
 
 /-- Vary the prefix and continuation, integrating the conditional bound under the second
@@ -53,7 +53,7 @@ theorem measureETVDist_bind_bind_le_add_lintegral (mx my : m α) (f g : α → m
     measureETVDist (mx >>= f) (my >>= g) ≤
       measureETVDist mx my + ∫⁻ a, bound a ∂𝒟[my] := by
   simp only [measureETVDist, evalDist_bind _ _ hf, evalDist_bind _ _ hg] at hbound ⊢
-  exact Measure.etvDist_bind_bind_le_add_lintegral 𝒟[mx] 𝒟[my]
+  exact Measure.statEDist_bind_bind_le_add_lintegral 𝒟[mx] 𝒟[my]
     (fun a ↦ 𝒟[f a]) (fun a ↦ 𝒟[g a]) hf hg.aemeasurable bound hbound
 
 /-- Charge a measurable exceptional prefix event and retain the successful good-branch mass. -/
@@ -63,7 +63,7 @@ theorem measureETVDist_bind_bind_le_of_bad (mx : m α) (f g : α → m β)
     (hgood : ∀ᵐ a ∂𝒟[mx], a ∉ bad → measureETVDist (f a) (g a) ≤ ε) :
     measureETVDist (mx >>= f) (mx >>= g) ≤ 𝒟[mx] bad + ε * 𝒟[mx] badᶜ := by
   simp only [measureETVDist, evalDist_bind _ _ hf, evalDist_bind _ _ hg] at hgood ⊢
-  exact Measure.etvDist_bind_bind_le_of_bad 𝒟[mx] (fun a ↦ 𝒟[f a]) (fun a ↦ 𝒟[g a])
+  exact Measure.statEDist_bind_bind_le_of_bad 𝒟[mx] (fun a ↦ 𝒟[f a]) (fun a ↦ 𝒟[g a])
     hf.aemeasurable hg.aemeasurable hbad ε hgood
 
 /-- A common measurable continuation contracts real denotational distance. -/
@@ -71,7 +71,7 @@ theorem measureTVDist_bind_le (mx my : m α) (f : α → m β)
     (hf : Measurable fun a ↦ 𝒟[f a]) :
     measureTVDist (mx >>= f) (my >>= f) ≤ measureTVDist mx my := by
   simp only [measureTVDist, evalDist_bind _ _ hf]
-  exact Measure.tvDist_bind_le 𝒟[mx] 𝒟[my] (fun a ↦ 𝒟[f a]) hf
+  exact Measure.statDist_bind_le 𝒟[mx] 𝒟[my] (fun a ↦ 𝒟[f a]) hf
 
 /-- A finite integrated majorant bounds real conditional distance. -/
 theorem measureTVDist_bind_bind_le_lintegral (mx : m α) (f g : α → m β)
@@ -81,5 +81,5 @@ theorem measureTVDist_bind_bind_le_lintegral (mx : m α) (f g : α → m β)
     measureTVDist (mx >>= f) (mx >>= g) ≤ (∫⁻ a, bound a ∂𝒟[mx]).toReal := by
   simp only [measureTVDist, measureETVDist, evalDist_bind _ _ hf, evalDist_bind _ _ hg]
     at hbound ⊢
-  exact Measure.tvDist_bind_bind_le_lintegral 𝒟[mx] (fun a ↦ 𝒟[f a]) (fun a ↦ 𝒟[g a])
+  exact Measure.statDist_bind_bind_le_lintegral 𝒟[mx] (fun a ↦ 𝒟[f a]) (fun a ↦ 𝒟[g a])
     hf.aemeasurable hg.aemeasurable bound hbound hfinite

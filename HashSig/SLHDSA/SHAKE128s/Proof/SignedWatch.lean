@@ -68,7 +68,7 @@ theorem run_invariant {ι : Type} {spec : OracleSpec ι} {S : Type}
 theorem tsum_bound_le_one {S β : Type} (computation : ProbComp (β × S)) (bound : S → ℝ≥0∞)
     (hbound : ∀ state, bound state ≤ 1) :
     ∑' z, Pr{let x ← computation}[x = z] * bound z.2 ≤ 1 :=
-  le_trans (ENNReal.tsum_le_tsum fun z => mul_le_of_le_one_right' (hbound z.2))
+  le_trans (tsum_le_tsum fun z => mul_le_of_le_one_right' (hbound z.2))
     (OracleComp.tsum_prEvent_le_one _)
 
 /-- **The cancellation**, isolated: two inequalities that share a finite middle term. -/
@@ -90,8 +90,8 @@ theorem tsum_add_le_of_support {β : Type} (computation : ProbComp β)
         ∑' z, Pr{let x ← computation}[x = z] * outerLeft z ≤
       (∑' z, Pr{let x ← computation}[x = z] * right z) +
         ∑' z, Pr{let x ← computation}[x = z] * outerRight z := by
-  rw [← ENNReal.tsum_add, ← ENNReal.tsum_add]
-  refine ENNReal.tsum_le_tsum fun z => ?_
+  rw [← tsum_add, ← tsum_add]
+  refine tsum_le_tsum fun z => ?_
   by_cases hz : z ∈ support computation
   · rw [← mul_add, ← mul_add]
     exact mul_le_mul' le_rfl (h z hz)
@@ -365,7 +365,7 @@ theorem watchPair_step_le (leftKeep rightKeep : Bytes → σ → Prop) (first se
       · -- one input, two disjoint sets
         subst hfirst
         by_cases hcached : CacheView.cacheOf state.1 input = none
-        · refine le_trans (le_of_eq (ENNReal.tsum_eq_zero.mpr fun z => ?_)) zero_le
+        · refine le_trans (le_of_eq (tsum_eq_zero_iff.mpr fun z => ?_)) zero_le
           by_cases hz : z ∈ support step
           · have hself := tapeStep_cache_self leftKeep rightKeep input state z hz
             have hle1 := watchValue_le_of_cache input firstHits z.2 z.1 hself

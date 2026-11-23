@@ -6,7 +6,7 @@ Authors: Bolton Bailey
 
 module
 
-public import VCVio.CryptoFoundations.VectorCommitment
+public import VCVio.CryptoFoundations.VectorCommitment.Basic
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
 public import VCVio.OracleComp.QueryTracking.LoggingOracle.Core
 

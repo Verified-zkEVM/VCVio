@@ -154,7 +154,8 @@ lemma updateProb_mono (D : QueryCache spec) (x : spec.Domain) (h : T ⊆ T') :
 /-- Union bound for the update probability. -/
 lemma updateProb_union_le (D : QueryCache spec) (x : spec.Domain) (T T' : Set (QueryCache spec)) :
     D.updateProb x (T ∪ T') ≤ D.updateProb x T + D.updateProb x T' :=
-  MeasureTheory.measure_union_le _ _
+  MeasureTheory.measure_union_le (μ := AnswerMeasure.toMeasure x)
+    (D.cacheQuery x ⁻¹' T) (D.cacheQuery x ⁻¹' T')
 
 /-- Updating a database lands in the empty property with probability zero. -/
 @[simp]

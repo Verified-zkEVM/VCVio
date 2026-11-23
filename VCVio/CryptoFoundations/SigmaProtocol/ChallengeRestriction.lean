@@ -7,7 +7,6 @@ Authors: Devon Tuma
 module
 
 public import VCVio.CryptoFoundations.SigmaProtocol
-import VCVio.OracleComp.EvalDist.Measure
 
 /-!
 # Restricting the challenge space of a Σ-protocol
@@ -21,9 +20,11 @@ The restriction and its preservation laws hold in any participants' monad `m`.
 
 public section
 
+universe u
+
 open OracleComp OracleSpec
 
-variable {m : Type → Type} {Stmt Wit Commit PrvState Chal Resp C D : Type}
+variable {m : Type → Type u} {Stmt Wit Commit PrvState Chal Resp C D : Type}
   {rel : Stmt → Wit → Bool}
 
 namespace ChallengeVerifyProtocol
@@ -31,18 +32,18 @@ namespace ChallengeVerifyProtocol
 /-- Interpret challenges through `encode`, retaining the original commitment algorithm. -/
 @[expose]
 def restrictChallenges
-    (σ : ChallengeVerifyProtocol Stmt Wit Commit PrvState Chal Resp rel m) (encode : C → Chal) :
-    ChallengeVerifyProtocol Stmt Wit Commit PrvState C Resp rel m where
+    (σ : ChallengeVerifyProtocol m Stmt Wit Commit PrvState Chal Resp rel) (encode : C → Chal) :
+    ChallengeVerifyProtocol m Stmt Wit Commit PrvState C Resp rel where
   commit := σ.commit
   respond x w s c := σ.respond x w s (encode c)
   verify x pc c p := σ.verify x pc (encode c) p
 
 @[simp] theorem restrictChallenges_id
-    (σ : ChallengeVerifyProtocol Stmt Wit Commit PrvState Chal Resp rel m) :
+    (σ : ChallengeVerifyProtocol m Stmt Wit Commit PrvState Chal Resp rel) :
     σ.restrictChallenges id = σ := rfl
 
 @[simp] theorem restrictChallenges_comp
-    (σ : ChallengeVerifyProtocol Stmt Wit Commit PrvState Chal Resp rel m)
+    (σ : ChallengeVerifyProtocol m Stmt Wit Commit PrvState Chal Resp rel)
     (encode : C → Chal) (encode' : D → C) :
     (σ.restrictChallenges encode).restrictChallenges encode' =
       σ.restrictChallenges (encode ∘ encode') := rfl
@@ -50,7 +51,7 @@ def restrictChallenges
 /-- At `m := ProbComp`, perfect completeness makes every supported honest response valid for
 every challenge. -/
 theorem PerfectlyComplete.verify
-    {σ : ChallengeVerifyProtocol Stmt Wit Commit PrvState Chal Resp rel ProbComp}
+    {σ : ChallengeVerifyProtocol ProbComp Stmt Wit Commit PrvState Chal Resp rel}
     (hc : σ.PerfectlyComplete) (x : Stmt) (w : Wit) (hrel : rel x w = true)
     (pc : Commit) (sc : PrvState) (hpc : (pc, sc) ∈ support (σ.commit x w))
     (c : Chal) (p : Resp) (hp : p ∈ support (σ.respond x w sc c)) :
@@ -64,14 +65,14 @@ theorem PerfectlyComplete.verify
 /-- Challenge restriction preserves perfect completeness, including non-surjective maps: the
 restricted protocol runs the original one on the encoded challenge. -/
 theorem PerfectlyComplete.restrictChallenges [Monad m] [EvalDistSemantics m]
-    {σ : ChallengeVerifyProtocol Stmt Wit Commit PrvState Chal Resp rel m}
+    {σ : ChallengeVerifyProtocol m Stmt Wit Commit PrvState Chal Resp rel}
     (hc : σ.PerfectlyComplete) (encode : C → Chal) :
     (σ.restrictChallenges encode).PerfectlyComplete :=
   fun x w hrel c => hc x w hrel (encode c)
 
 /-- Restricting challenges cannot create two responses to a single original challenge. -/
 theorem UniqueResponses.restrictChallenges
-    {σ : ChallengeVerifyProtocol Stmt Wit Commit PrvState Chal Resp rel m}
+    {σ : ChallengeVerifyProtocol m Stmt Wit Commit PrvState Chal Resp rel}
     (hur : σ.UniqueResponses) (encode : C → Chal) :
     (σ.restrictChallenges encode).UniqueResponses :=
   fun x pc c p₁ p₂ => hur x pc (encode c) p₁ p₂
@@ -84,25 +85,25 @@ namespace SigmaProtocol
 The commitment-only `sim` field is retained; this does not assert full-transcript HVZK. -/
 @[expose]
 def restrictChallenges
-    (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel m) (encode : C → Chal) :
-    SigmaProtocol Stmt Wit Commit PrvState C Resp rel m where
+    (σ : SigmaProtocol m Stmt Wit Commit PrvState Chal Resp rel) (encode : C → Chal) :
+    SigmaProtocol m Stmt Wit Commit PrvState C Resp rel where
   toChallengeVerifyProtocol := σ.toChallengeVerifyProtocol.restrictChallenges encode
   sim := σ.sim
   extract c₁ p₁ c₂ p₂ := σ.extract (encode c₁) p₁ (encode c₂) p₂
 
 @[simp] theorem restrictChallenges_id
-    (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel m) :
+    (σ : SigmaProtocol m Stmt Wit Commit PrvState Chal Resp rel) :
     σ.restrictChallenges id = σ := rfl
 
 @[simp] theorem restrictChallenges_comp
-    (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel m)
+    (σ : SigmaProtocol m Stmt Wit Commit PrvState Chal Resp rel)
     (encode : C → Chal) (encode' : D → C) :
     (σ.restrictChallenges encode).restrictChallenges encode' =
       σ.restrictChallenges (encode ∘ encode') := rfl
 
 /-- An injective challenge restriction preserves the original witness extraction guarantee. -/
 theorem SpeciallySoundAt.restrictChallenges [MonadAttach m]
-    {σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel m} {x : Stmt}
+    {σ : SigmaProtocol m Stmt Wit Commit PrvState Chal Resp rel} {x : Stmt}
     (hss : σ.SpeciallySoundAt x) (encode : C → Chal) (hinj : Function.Injective encode) :
     (σ.restrictChallenges encode).SpeciallySoundAt x := by
   intro pc c₁ c₂ p₁ p₂ hne hv₁ hv₂ w hw
@@ -110,7 +111,7 @@ theorem SpeciallySoundAt.restrictChallenges [MonadAttach m]
 
 /-- Injective challenge restriction preserves special soundness at every statement. -/
 theorem SpeciallySound.restrictChallenges [MonadAttach m]
-    {σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel m}
+    {σ : SigmaProtocol m Stmt Wit Commit PrvState Chal Resp rel}
     (hss : σ.SpeciallySound) (encode : C → Chal) (hinj : Function.Injective encode) :
     (σ.restrictChallenges encode).SpeciallySound :=
   fun x => (hss x).restrictChallenges encode hinj

@@ -6,7 +6,7 @@ Authors: Bolton Bailey
 
 module
 
-public import VCVio.CryptoFoundations.VectorCommitment
+public import VCVio.CryptoFoundations.VectorCommitment.Completeness
 public import VCVio.CryptoFoundations.ChallengeVerifyProtocol.Basic
 public import VCVio.OracleComp.ProbComp
 public import VCVio.OracleComp.QueryTracking.LoggingOracle.Core
@@ -28,7 +28,7 @@ zero-knowledge proof more efficient while keeping zero knowledge by implementing
 ## The commitment
 
 The transformation is built on a `DetVectorCommitment` relative to one oracle `X →ₒ Y`
-(`VCVio.CryptoFoundations.VectorCommitment`), for instance the salted Merkle tree of
+(`VCVio.CryptoFoundations.VectorCommitment.Basic`), for instance the salted Merkle tree of
 `VCVio.CryptoFoundations.MerkleTree.Salted.Defs`. Its opening is batched: the prover opens the
 whole set of positions the PCP verifier reads with a single proof, and the claimed values travel as
 one partial vector `PartialVec pcp.length pcp.Symbol`.
@@ -244,12 +244,12 @@ noncomputable def KilianTransformation
     (pcp : PCP Stmt Wit)
     (vc : DetVectorCommitment X Y pcp.Symbol Cm Td Pf pcp.length) (H : X → Y)
     (rel : Stmt → Wit → Bool) :
-    ChallengeVerifyProtocol Stmt Wit
+    ChallengeVerifyProtocol ProbComp Stmt Wit
       Cm                                                      -- Commit: the vector commitment
       (Td × (Fin pcp.length → pcp.Symbol))                    -- PrvState: trapdoor + proof
       pcp.Coins                                               -- Chal: the verifier's coins
       (PartialVec pcp.length pcp.Symbol × Pf)                 -- Resp: claims + opening proof
-      rel ProbComp where
+      rel where
   commit stmt wit := do
     let proof ← pcp.Prover stmt wit
     let z ← simulateQ (VectorCommitment.fixedOracleImpl H) (vc.commit proof.get)

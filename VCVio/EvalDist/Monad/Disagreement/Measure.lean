@@ -9,7 +9,6 @@ public import ToMathlib.Probability.Kernel.Bounds
 public import VCVio.EvalDist.Monad.Measure
 public import VCVio.EvalDist.ProbabilityNotation
 public import VCVio.EvalDist.Monad.Branch
-import Mathlib.Data.Fin.VecNotation
 
 /-!
 # Additive comparison of observed continuations

@@ -144,7 +144,7 @@ lemma evalDist_slotZeroSubTable_uniformSample
     [Fintype TagId] [Fintype Nonce]
     [Finite Digest] [Nonempty Digest] [SampleableType Digest]
     [MeasurableSpace Digest] [MeasurableSingletonClass Digest]
-    [EvalDistSemantics ProbComp] [LawfulEvalDistSemantics ProbComp]
+    {semantics : EvalDistSemantics ProbComp} [LawfulEvalDistSemantics ProbComp]
     (hSmall : 𝒟[$ᵗ (TagId × Nonce → Digest)] = uniformOn Set.univ)
     (hLarge : 𝒟[$ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)] = uniformOn Set.univ) :
     𝒟[($ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)) >>=

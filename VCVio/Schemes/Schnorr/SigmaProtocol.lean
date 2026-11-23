@@ -83,8 +83,8 @@ variable (G : Type) [AddCommGroup G] [Module F G] [SampleableType G] [DecidableE
 
 /-- Standard Schnorr Σ-protocol for knowledge of discrete log.
 Challenge space is the full scalar field `F`. -/
-def sigma (g : G) : SigmaProtocol G F G F F F
-    (fun pk sk => decide (sk • g = pk)) ProbComp where
+def sigma (g : G) : SigmaProtocol ProbComp G F G F F F
+    (fun pk sk => decide (sk • g = pk)) where
   commit _pk _sk := do
     let r ← $ᵗ F
     return (r • g, r)
@@ -116,7 +116,7 @@ theorem sigma_speciallySound (g : G) :
     SpeciallySound (sigma F G g) := by
   intro pk R c₁ c₂ z₁ z₂ h_ne h_v1 h_v2 w h_w
   dsimp [sigma] at *
-  simp only [Set.mem_singleton_iff] at h_w
+  simp only [support_pure, Set.mem_singleton_iff] at h_w
   subst h_w
   simp only [decide_eq_true_eq] at h_v1 h_v2 ⊢
   have h_sub : (z₁ - z₂) • g = (c₁ - c₂) • pk := by
