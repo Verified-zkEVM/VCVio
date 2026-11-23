@@ -55,6 +55,12 @@ decidable on concrete terms.
   every call has the key `k(ik)`, there is no `α`, and the conditions are dropped, which makes the
   formula stronger and keeps the rule sound. The challenge `h(m, k)` itself is not a call of `u⃗`
   or `m`, so it is not among the conjuncts. `PRFSymbols.psiMsg_eq_true_iff` reads it at a tape.
+  PRF.R (CCS26 Fig. 4) asks it over the calls of `u⃗` only (`PRFSymbols.psiMsgVec`), so that `m`
+  may be hashed to compute `m`.
+
+The arguments of a call argument's own calls form a block of the term's calls
+(`PRFSymbols.calls_infix`): a call argument has fewer calls, and its heads are heads of the term
+(`PRFSymbols.heads_subset_of_mem_calls`), so it meets every side condition the term meets.
 
 ## References
 

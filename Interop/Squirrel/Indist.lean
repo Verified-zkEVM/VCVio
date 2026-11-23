@@ -173,17 +173,18 @@ structure AdvClass (M : Model D) where
   mem : {τs : List (Ty B)} → {β : Ty B} → Machine M τs β → Prop
   /-- Relabelling the inputs (`Machine.rename`): Perm, Restr and Dup (`Valid.equiv_rename`,
   `Valid.equiv_tail`, `Valid.equiv_dup`), and through the derived reductions FA-Adv, If, the case
-  split, Trans, WeakL, WeakR, Rw-Equiv, FreshL, Rw-Oracle, Pc-Oracle, PRF-Simple and the deductions
-  of `Rules.Deduce`. Polynomial time: closing the input interface through the handler that forwards
-  each query along the renaming, a single query per query (`OracleComp.Complexity.closeHandler` with
-  a dispatcher of constant cost). -/
+  split, Trans, WeakL, WeakR, Rw-Equiv, FreshL, Rw-Oracle, Pc-Oracle, PRF-Simple, PRF.R, PRF.L-sec
+  (`AdvMachine.swapLast`) and the deductions of `Rules.Deduce`. Polynomial time: closing the input
+  interface through the handler that forwards each query along the renaming, a single query per
+  query (`OracleComp.Complexity.closeHandler` with a dispatcher of constant cost). -/
   rename_mem {τs τs' : List (Ty B)} {β : Ty B} (r : Renaming τs τs') {A : Machine M τs β} :
     mem A → mem (A.rename r)
   /-- Substitution into a handler (`Machine.subst`): the queries to the first input are answered
   by running an admitted machine on the query's arguments and the remaining inputs, on the same
   attacker tape. FA-Adv (`AdvClass.adv_mem`, `Valid.equiv_adv`), Trans, WeakL and WeakR
   (`AdvClass.comp_mem`), Rw-Equiv (`AdvClass.deduce_mem`), FreshL (`AdvClass.freshL_mem`),
-  PRF-Simple through these two (`Valid.nonDed_prf`), and the deduction of an application
+  PRF-Simple through these two (`Valid.nonDed_prf`), PRF.L-sec through FreshL's reduction
+  (`Valid.nonDed_prfLSec`), and the deduction of an application
   (`Valid.ded_app`). Polynomial time: VCVio's
   proof-bearing handler closure, `OracleComp.Complexity.closeHandler` with a `HandlerCertificate`
   for the handler, and the sequencing of `IsOraclePPTBy.bind`; answers are values of Boolean or
@@ -226,17 +227,17 @@ structure AdvClass (M : Model D) where
   /-- Reading the tape a polynomial offset further along (`Machine.shift`): FreshL
   (`AdvClass.freshL_mem`, `Valid.nonDed_freshL`), whose reduction draws the fresh name from bits
   above the read bounds of the attacker machine and of the terms (CCS26 App. C.2, p. 17), and
-  PRF-Simple through FreshL. The offset is a polynomial, a finite object, so the closure is uniform.
-  Polynomial time: computing `p(η)` from `1^η` and adding it to each tape index, a handler of the
-  tape interface of polynomial cost per query (`OracleComp.Complexity.closeHandler` with a
-  `HandlerCertificate`). -/
+  PRF-Simple and PRF.L-sec through FreshL's reduction. The offset is a polynomial, a finite
+  object, so the closure is uniform. Polynomial time: computing `p(η)` from `1^η` and adding it to
+  each tape index, a handler of the tape interface of polynomial cost per query
+  (`OracleComp.Complexity.closeHandler` with a `HandlerCertificate`). -/
   shift_mem {τs : List (Ty B)} {β : Ty B} (p : Polynomial ℕ) {A : Machine M τs β} :
     mem A → mem (A.shift fun η => p.eval η)
   /-- The sampler of names of a type of order at most one whose bit blocks have polynomial length
   (`Machine.sampler`, `Model.PolyCoins`): FreshL (`AdvClass.freshL_mem`, `Valid.nonDed_freshL`),
-  whose reduction runs it to draw the fresh name, PRF-Simple through FreshL, and Rw-Oracle and
-  Pc-Oracle
-  (`AdvClass.rwGuess_mem`), whose guess draws its default value with it. Polynomial time: LICS23
+  whose reduction runs it to draw the fresh name, PRF-Simple and PRF.L-sec through FreshL's
+  reduction, and Rw-Oracle, Pc-Oracle, PRF.R and PRF.L-sec (`AdvClass.rwGuess_mem`), whose guess
+  draws its default value with it. Polynomial time: LICS23
   (§II-B.2, p. 6) interprets names as polynomial-time samplings, so the machine reading
   `coinLen η b` bits and running the sampler is polynomial-time. Like `fn_mem` for honest symbols,
   this is a compatibility condition between the model and the class: VCVio's `PureCertificate` for
@@ -246,7 +247,8 @@ structure AdvClass (M : Model D) where
   FreshL (`AdvClass.NonDed.freshL`, `Valid.nonDed_freshL`), and through it PRF-Simple, samples the
   fresh name from bits above it (CCS26 App. C.2, footnote 2), Rw-Oracle and Pc-Oracle
   (`AdvClass.NonDed.rwOracle`) draw the guessed position from bits above it (CCS26 App. C.1: "using
-  a part of `ρa` further away"), and an `adv` term reads below it (`AdvClass.Adv.readsBelow`).
+  a part of `ρa` further away"), as do PRF.R and PRF.L-sec (`Valid.nonDed_prfR`,
+  `Valid.nonDed_prfLSec`), and an `adv` term reads below it (`AdvClass.Adv.readsBelow`).
   Polynomial time: LICS23's machines read `ρa` from a tape (§II-C.1), so a machine running in time
   `t(η)` reads below `t(η)`; with random access to the tape this is a query bound on the tape
   interface (VCVio's `AllQueriesSatisfy`). -/
@@ -255,7 +257,8 @@ structure AdvClass (M : Model D) where
   /-- Each admitted machine makes polynomially many queries to its inputs, on every path
   (`Machine.QueryBound`): Rw-Oracle and Pc-Oracle (`AdvClass.NonDed.rwOracle`,
   `Valid.nonDed_rwOracle_of`, `Valid.nonDed_pcOracle`), whose guessing reduction draws the
-  position of the faulty query below this bound (CCS26 App. C.1: "there exists a polynomial `q(η)`
+  position of the faulty query below this bound, and PRF.R and PRF.L-sec, which guess the
+  attacker's query at the message in the same way (CCS26 App. C.1: "there exists a polynomial `q(η)`
   bounding" the adversary's oracle calls). The bound counts the queries to all inputs together; a
   machine has finitely many inputs, so this is a polynomial bound on the queries to each.
   Polynomial time: a machine running in time `t(η)` makes at most `t(η)` queries (time bounds
@@ -265,9 +268,10 @@ structure AdvClass (M : Model D) where
   /-- The guessing machine (`Machine.guess`): read `⌈log₂ q(η)⌉` bits of the tape from bit `p(η)`
   as a number `j`; run an admitted machine, logging its queries; return the argument of its `j`-th
   query to its first input, an oracle with a Boolean or base argument, or an admitted default.
-  Rw-Oracle and Pc-Oracle (`AdvClass.rwGuess_mem`, `Valid.nonDed_rwOracle_of`,
-  `Valid.nonDed_pcOracle`; CCS26 App. C.1, p. 15: `B` "samples `j` … using a part of `ρa` further
-  away" and runs `A_j`, which "returns the input of" the `j`-th call). The offset and the number
+  Rw-Oracle, Pc-Oracle, PRF.R and PRF.L-sec (`AdvClass.rwGuess_mem`, `Valid.nonDed_rwOracle_of`,
+  `Valid.nonDed_pcOracle`, `Valid.nonDed_prfR`, `Valid.nonDed_prfLSec`; CCS26 App. C.1, p. 15:
+  `B` "samples `j` … using a part of `ρa` further away" and runs `A_j`, which "returns the input
+  of" the `j`-th call). The offset and the number
   of bits are computed from polynomials, finite objects, so the closure is uniform. Polynomial
   time: computing `p(η)` and `⌈log₂ q(η)⌉` from `1^η` and reading that many bits, then running the
   machine through a handler that forwards each query unchanged and keeps its argument (VCVio's

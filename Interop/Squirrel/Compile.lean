@@ -52,7 +52,10 @@ of conditionals dropped. `PRFSymbols.denoteCBV_guard` is the theorem: where that
 holds, the run's hash queries satisfy `Q`. With `Q` the inequality to the challenge message this is
 what `ψ_msg` gives a reduction: it never queries the challenge before the challenge itself
 (`PRFSymbols.snd_denote_guardInterp_iff` relates the proposition to `PRFSymbols.calls` for
-first-order terms).
+first-order terms). For a closed first-order term, the run hashes only values of its call
+arguments (`PRFSymbols.exists_mem_calls_of_hashed`), so among a message and the arguments of its
+calls some term has the message's value and its run does not hash it
+(`PRFSymbols.exists_unhashed`).
 
 ## References
 
