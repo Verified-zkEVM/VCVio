@@ -6,168 +6,113 @@ Authors: Alexander Hicks
 
 module
 
+public import PolyFun.PFunctor.Free.Cost.Measured
 public import VCVio.OracleComp.QueryTracking.DeterminedCost
 
 /-!
-# Measured programs
+# Measured programs as oracle computations
 
-A measured program computes a function by running an instruction program on a view of its input.
-Deterministic handlers answer the instructions, and each instruction carries a charge in an
-additive cost type, such as a vector of operation counts. `MeasuredProgram.Realizes` states that a
-function is the handlers' execution of the program, and `MeasuredProgram.CostAtMost` bounds the
-cost of every execution path, on every view, by a budget. The budget holds for every view, not
-only for views arising from the inputs of interest. `BudgetedProgram f` bundles a program that
-realizes `f` with a budget that bounds its cost.
+`PFunctor.FreeM.MeasuredProgram` computes a function by running a free program on an uncharged view
+of its input. Deterministic answers resolve the program's operations, and each operation has a
+price in a cost type. Its interface at a view is an `OracleSpec`, and its program is an
+`OracleComp`. This file relates that structure to the oracle-cost API.
 
-The program does not depend on any security game. A game whose extractor or witness map has a
-given input and result type states its resource contract by naming that map and a measured
-program for it.
+* `queryImpl`: the answers of a view as a `QueryImpl` into `Id`.
+* `run_eq_evalWithAnswerFn`: the run is `evalWithAnswerFn` of the view's answers.
+* `costAtMost_iff_worstCaseCostBound`: the all-path budget is `WorstCaseCostBound` on every view.
+* `runAdd_fst_eq_run` and `CostAtMost.runAdd_le`: the `QueryImpl.withAddCost` run of the answers
+  returns the run's result, and a budget bounds the charge it records.
+* `costAtMost_of_forall_eq_answer`: if the answers are the only responses, the recorded charge
+  bounds every path.
+* `simulateQ_withAddCost_comp`: the instrumented run of a composite is the instrumented run of the
+  inner program, then of the outer program on its actual result.
 
-Only the declared instructions are charged. Computing the view, the size or encoding of the view,
-evaluating any handler, pure Lean code between instructions, and the bit complexity of values are
-not. The instruction set, charges and cost order form the declared accounting model. A program that
-computes its result without instructions, for example by exhaustive search, costs zero. In
-particular, every function has a budgeted program with budget zero (`BudgetedProgram.ofFun`), so
-an existential statement over measured programs adds nothing. A named program retains the
-accounting boundary for review; naming alone does not make its charges an operation count.
-Signed weights may cancel and reversed orders may make an upper bound vacuous. Idempotent or
-saturating accumulation may collapse repeated positive charges; a canonically ordered nonnegative
-monoid alone is not a counter. An operation-count interpretation requires justified counting
-arithmetic and a charge table, including the meaning of zero charges and omitted work. Ordinary
-natural-number vectors with designated unit charges are one such model. The generic weighted bound
-is not a running-time bound. Each instance must state what its view and handlers leave uncharged.
-
-For ordinary count vectors, budgets are coordinatewise. With infinitely many coordinates, a fixed
-pointwise budget can permit arbitrarily many distinct-kind charges. A uniform scalar total needs
-a fixed finite coordinate set or a separately proved bounded or summable budget sum. Finite support
-of each individual run alone is insufficient.
-
-## Scope
-
-Handlers are deterministic: each returns its response in `Id`. One budget bounds every view.
-`CostAtMost` uses VCVio's `WorstCaseCostBound`; `CostAtMost.runAdd_le` transfers the bound to
-the handlers' execution. `runAdd_fst_eq_run` identifies that execution's result with `run`.
-`Realizes` is equality of the resulting functions, not a step-by-step refinement of arbitrary host
-code implementing the same function.
-Input, result and cost types live in `Type`, matching the structural cost interface.
+Only the operations are charged. Computing the view, the size and encoding of the view,
+evaluating the answers, the pure code between operations and the bit complexity of values are not.
+Each instance must state what its view and its answers leave uncharged. The prices and the cost
+order form the declared accounting model.
+Signed prices may cancel, and a reversed order makes an upper bound a lower bound. Idempotent or
+saturating addition may collapse repeated positive charges, so a canonically ordered monoid alone is
+not a counter. An operation count needs counting arithmetic and a charge table, such as natural
+number vectors with unit charges. With infinitely many coordinates, a pointwise budget can permit
+arbitrarily many charges of distinct kinds. A uniform scalar total then needs a fixed finite
+coordinate set, or a separately proved bounded or summable budget. Finite support of each run is not
+enough.
 -/
 
 public section
 
-open OracleSpec
+open OracleSpec OracleComp
 
-namespace OracleComp
-
-/-- A charged instruction program computing a function from `Input` to `Result`.
-
-The input is reduced to a `View`, which the instruction program reads through handlers whose
-response types may depend on the view. Computing the view and evaluating the handlers are outside
-the charged program. -/
-structure MeasuredProgram (Input Result ω : Type) where
-  /-- The data read by the instruction program. -/
-  View : Type
-  /-- The uncharged reduction of the input to the program's view. -/
-  view : Input → View
-  /-- The instruction names. -/
-  Op : Type
-  /-- The instruction set for one view, whose responses may certify the view's data. -/
-  spec : View → OracleSpec.{0, 0} Op
-  /-- The charged program. -/
-  program : (v : View) → OracleComp (spec v) Result
-  /-- The uncharged deterministic instruction handlers. -/
-  answer : (v : View) → QueryImpl (spec v) Id
-  /-- The charge for one instruction. -/
-  cost : Op → ω
-
-namespace MeasuredProgram
+namespace PFunctor.FreeM.MeasuredProgram
 
 variable {Input Result ω : Type} (M : MeasuredProgram Input Result ω)
 
-/-- The handlers' execution of the program on the view of `input`. -/
-@[expose] def run (input : Input) : Result :=
-  evalWithAnswerFn (M.answer (M.view input)) (M.program (M.view input))
+/-- The answers of view `v` as a deterministic query implementation. -/
+@[expose] def queryImpl (v : M.View) : QueryImpl (M.spec v) Id :=
+  fun op => pure (M.answer v op)
 
-/-- The function `f` is the handlers' execution of the program on the view of each input. -/
-@[expose] def Realizes (f : Input → Result) : Prop :=
-  ∀ input, f input = M.run input
+@[simp]
+theorem queryImpl_apply (v : M.View) (op : M.Op) : M.queryImpl v op = pure (M.answer v op) :=
+  rfl
 
-/-- On every view, every execution path has accumulated weight at most `budget` in the declared
-order. Paths are taken over all responses permitted by the instruction set. Signed weights and
-arbitrary preorders are permitted; an operation-count interpretation needs a justified counting
-model. -/
-@[expose] def CostAtMost [AddCommMonoid ω] [Preorder ω] (budget : ω) : Prop :=
-  ∀ v, WorstCaseCostBound (M.program v) ⟨M.cost⟩ budget
+/-- The run is the evaluation of the view's program with the view's answers. -/
+theorem run_eq_evalWithAnswerFn (input : Input) :
+    M.run input = evalWithAnswerFn (M.queryImpl (M.view input)) (M.program (M.view input)) :=
+  rfl
 
-/-- Discarding the recorded charge from the instrumented execution gives the uninstrumented
-result on the same input. No singleton-response assumption or cost order is needed. -/
+/-- The all-path budget is a worst-case cost bound on the program of every view. -/
+theorem costAtMost_iff_worstCaseCostBound [AddCommMonoid ω] [Preorder ω] (budget : ω) :
+    M.CostAtMost budget ↔ ∀ v, WorstCaseCostBound (M.program v) ⟨M.cost⟩ budget := by
+  simp only [worstCaseCostBound_iff_forall_charge_le]
+  rfl
+
+/-- The additively instrumented run of the answers returns the run's result. No cost order is
+needed. -/
 theorem runAdd_fst_eq_run [AddMonoid ω] (input : Input) :
-    (simulateQ ((M.answer (M.view input)).withAddCost M.cost)
+    (simulateQ ((M.queryImpl (M.view input)).withAddCost M.cost)
       (M.program (M.view input))).runAdd.1 = M.run input :=
-  congrArg Id.run (QueryImpl.fst_map_run_withCost (M.answer (M.view input))
+  congrArg Id.run (QueryImpl.fst_map_run_withCost (M.queryImpl (M.view input))
     (fun op => Multiplicative.ofAdd (M.cost op)) (M.program (M.view input)))
 
 variable {M} in
-/-- A cost bound remains valid for any larger budget. -/
-theorem CostAtMost.mono [AddCommMonoid ω] [Preorder ω] {budget budget' : ω}
-    (h : M.CostAtMost budget) (hle : budget ≤ budget') : M.CostAtMost budget' :=
-  fun v z hz ↦ (h v z hz).trans hle
-
-variable {M} in
-/-- The handlers' execution, which `Realizes` identifies with the realized function, records a
-cost within the budget. -/
+/-- A budget bounds the charge that the instrumented run of any view's answers records. -/
 theorem CostAtMost.runAdd_le [AddCommMonoid ω] [Preorder ω] {budget : ω}
     (h : M.CostAtMost budget) (v : M.View) :
-    (simulateQ ((M.answer v).withAddCost M.cost) (M.program v)).runAdd.2 ≤ budget :=
-  worstCaseCostBound_runAdd_withAddCost_le (h v) (M.answer v)
+    (simulateQ ((M.queryImpl v).withAddCost M.cost) (M.program v)).runAdd.2 ≤ budget :=
+  worstCaseCostBound_runAdd_withAddCost_le ((M.costAtMost_iff_worstCaseCostBound budget).mp h v)
+    (M.queryImpl v)
 
-/-- If the handlers' answers are the only responses, the cost recorded by running the handlers
-bounds every execution path. -/
+/-- If the answers are the only responses, the charge that the instrumented run records on every
+view bounds every path. -/
 theorem costAtMost_of_forall_eq_answer [AddCommMonoid ω] [Preorder ω] (budget : ω)
-    (hanswer : ∀ v t (u : (M.spec v).Range t), u = M.answer v t)
-    (hcost : ∀ v, (simulateQ ((M.answer v).withAddCost M.cost) (M.program v)).runAdd.2 ≤
+    (hanswer : ∀ v op (u : M.spec v op), u = M.answer v op)
+    (hcost : ∀ v, (simulateQ ((M.queryImpl v).withAddCost M.cost) (M.program v)).runAdd.2 ≤
       budget) :
     M.CostAtMost budget :=
-  fun v ↦ (worstCaseCostBound_iff_of_forall_eq_answer
-    (M.answer v) (hanswer v) (M.program v) ⟨M.cost⟩ budget).mpr (hcost v)
+  (M.costAtMost_iff_worstCaseCostBound budget).mpr fun v ↦
+    (worstCaseCostBound_iff_of_forall_eq_answer (M.queryImpl v) (hanswer v) (M.program v)
+      ⟨M.cost⟩ budget).mpr (hcost v)
 
-/-- The program with no instructions that computes `f` on its whole input. -/
-@[expose] def ofFun (f : Input → Result) : MeasuredProgram Input Result ω where
-  View := Input
-  view := id
-  Op := PEmpty
-  spec _ := []ₒ
-  program v := pure (f v)
-  answer _ := fun t ↦ t.elim
-  cost := fun t ↦ t.elim
+/-- The instrumented run of a composite runs the instrumented inner program, then the
+instrumented outer program on the view of its actual result. Both price lists are kept. -/
+theorem simulateQ_withAddCost_comp {A B C : Type} [AddMonoid ω]
+    (outer : MeasuredProgram B C ω) (inner : MeasuredProgram A B ω) (v : inner.View) :
+    simulateQ (((outer.comp inner).queryImpl v).withAddCost (outer.comp inner).cost)
+      ((outer.comp inner).program v) = (do
+        let result ← simulateQ ((inner.queryImpl v).withAddCost inner.cost) (inner.program v)
+        simulateQ ((outer.queryImpl (outer.view result)).withAddCost outer.cost)
+          (outer.program (outer.view result))) := by
+  simp only [comp, simulateQ, FreeM.liftM_bind, FreeM.liftM_mapLens]
+  congr 1
+  · congr 1
+    funext op
+    simp only [Handler.comapLens_apply, innerLens, QueryImpl.withAddCost_apply]
+    exact id_map' _
+  · funext result
+    congr 1
+    funext op
+    simp only [Handler.comapLens_apply, outerLens, QueryImpl.withAddCost_apply]
+    exact id_map' _
 
-/-- The program with no instructions realizes the function it computes. -/
-theorem realizes_ofFun (f : Input → Result) : (ofFun f (ω := ω)).Realizes f :=
-  fun _ ↦ rfl
-
-/-- A program with no instructions costs zero. -/
-theorem costAtMost_ofFun [AddCommMonoid ω] [Preorder ω] (f : Input → Result) :
-    (ofFun f (ω := ω)).CostAtMost 0 :=
-  fun _ ↦ (worstCaseCostBound_pure _ _ _).mpr le_rfl
-
-end MeasuredProgram
-
-/-- A named measured program for `f` and a budget: the program realizes `f`, and every execution
-path of the program, on every view, costs at most the budget. -/
-structure BudgetedProgram {Input Result : Type} (f : Input → Result) (ω : Type) [AddCommMonoid ω]
-    [Preorder ω] where
-  /-- The measured program whose returned values agree with `f`. -/
-  program : MeasuredProgram Input Result ω
-  /-- The bound on the program's declared instruction charges. -/
-  budget : ω
-  /-- The function is the handlers' execution of the program. -/
-  realizes : program.Realizes f
-  /-- Every execution path of the program costs at most the budget. -/
-  costAtMost : program.CostAtMost budget
-
-/-- Every function has a budgeted program with budget zero, which requests no instruction. -/
-@[expose] def BudgetedProgram.ofFun {Input Result ω : Type} [AddCommMonoid ω] [Preorder ω]
-    (f : Input → Result) : BudgetedProgram f ω :=
-  ⟨MeasuredProgram.ofFun f, 0, MeasuredProgram.realizes_ofFun f,
-    MeasuredProgram.costAtMost_ofFun f⟩
-
-end OracleComp
+end PFunctor.FreeM.MeasuredProgram

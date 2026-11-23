@@ -6,7 +6,7 @@ Authors: Alexander Hicks
 
 module
 
-public import VCVio.OracleComp.QueryTracking.MeasuredProgram.Composition
+public import VCVio.OracleComp.QueryTracking.MeasuredProgram
 
 /-!
 # Measured program composition
@@ -16,12 +16,15 @@ coordinates. Composition must execute the first instruction before preparing the
 retain both charges and pass the first result to the second program. A separate nondeterministic
 example shows that a cheap deterministic handler does not establish a worst-case bound. Abstract
 preorders, signed refunds and reversed orders exercise the generic weighted scope, and empty
-carriers require no chosen witness.
+carriers require no chosen witness. The oracle-facing examples check the composite's operations
+and prices, the run as `evalWithAnswerFn`, the budget as `WorstCaseCostBound`, and that the budget
+covers views no input reaches.
 -/
 
 public section
 
 open OracleComp OracleSpec
+open PFunctor.FreeM (MeasuredProgram BudgetedProgram)
 
 namespace VCVioTest.OracleComp.MeasuredProgram
 
@@ -42,7 +45,7 @@ abbrev Profile := Bool → Nat
   program values := do
     let result ← liftM ((addSpec values).query ())
     return result.val
-  answer values := fun _ => pure ⟨values.1 + values.2, rfl⟩
+  answer values _ := ⟨values.1 + values.2, rfl⟩
   cost _ kind := if kind = coordinate then 1 else 0
 
 /-- The program returns the sum of the two values supplied by its view. -/
@@ -81,7 +84,7 @@ example : composed.CostAtMost (fun _ => 1) := by
 /-- Observe the actual deterministic run and both instruction charges. -/
 def observations (input : Nat) : Nat × Nat × Nat :=
   let view := composed.view input
-  let result := (simulateQ ((composed.answer view).withAddCost composed.cost)
+  let result := (simulateQ ((composed.queryImpl view).withAddCost composed.cost)
     (composed.program view)).runAdd.run
   (result.1, result.2 false, result.2 true)
 
@@ -112,7 +115,7 @@ example {A B C ω : Type} [AddCommMonoid ω] [Preorder ω] [IsOrderedAddMonoid �
 /-- Writer instrumentation retains the result even with signed weights and arbitrary responses. -/
 example {Input Result ω : Type} [AddMonoid ω] (program : MeasuredProgram Input Result ω)
     (input : Input) :
-    (simulateQ ((program.answer (program.view input)).withAddCost program.cost)
+    (simulateQ ((program.queryImpl (program.view input)).withAddCost program.cost)
       (program.program (program.view input))).runAdd.1 = program.run input :=
   program.runAdd_fst_eq_run input
 
@@ -130,7 +133,7 @@ abbrev unitSignature : OracleSpec Unit := fun _ => Unit
   Op := Unit
   spec _ := unitSignature
   program _ := liftM (unitSignature.query ())
-  answer _ _ := pure ()
+  answer _ _ := ()
   cost _ := weight
 
 /-- The one instruction has its declared weight in any cost preorder. -/
@@ -147,7 +150,7 @@ example : ¬ (weightedInstruction (1 : Nat)).CostAtMost 0 := by
   intro bound
   have recorded := bound.runAdd_le ()
   have charge :
-      (simulateQ ((weightedInstruction (1 : Nat)).answer () |>.withAddCost
+      (simulateQ ((weightedInstruction (1 : Nat)).queryImpl () |>.withAddCost
         (weightedInstruction (1 : Nat)).cost)
         ((weightedInstruction (1 : Nat)).program ())).runAdd.2 = 1 := by
     simp [weightedInstruction, QueryImpl.withAddCost_apply]
@@ -198,6 +201,88 @@ example : ¬ WorstCaseCostBound choiceProgram (⟨fun _ => 1⟩ : CostModel choi
     rfl
   rw [cost] at recorded
   exact Nat.not_succ_le_self 1 recorded
+
+/-! ## Oracle-facing form of the composite -/
+
+/-- The composite's operations are the two interfaces, each operation tagged with its view. -/
+example {A B C ω : Type} (outer : MeasuredProgram B C ω) (inner : MeasuredProgram A B ω) :
+    (outer.comp inner).Op = ((Σ _ : inner.View, inner.Op) ⊕ (Σ _ : outer.View, outer.Op)) :=
+  rfl
+
+/-- The composite keeps the inner price of a left-tagged operation. -/
+example {A B C ω : Type} (outer : MeasuredProgram B C ω) (inner : MeasuredProgram A B ω)
+    (v : inner.View) (op : inner.Op) : (outer.comp inner).cost (.inl ⟨v, op⟩) = inner.cost op :=
+  rfl
+
+/-- The composite keeps the outer price of a right-tagged operation. -/
+example {A B C ω : Type} (outer : MeasuredProgram B C ω) (inner : MeasuredProgram A B ω)
+    (v : outer.View) (op : outer.Op) : (outer.comp inner).cost (.inr ⟨v, op⟩) = outer.cost op :=
+  rfl
+
+/-- The run is `evalWithAnswerFn` of the view's answers, for a generic program. -/
+example {Input Result ω : Type} (program : MeasuredProgram Input Result ω) (input : Input) :
+    program.run input =
+      evalWithAnswerFn (program.queryImpl (program.view input))
+        (program.program (program.view input)) :=
+  rfl
+
+/-- The run is `evalWithAnswerFn` of the view's answers, for a composite. -/
+example (input : Nat) :
+    composed.run input =
+      evalWithAnswerFn (composed.queryImpl (composed.view input))
+        (composed.program (composed.view input)) :=
+  rfl
+
+/-- A worst-case cost bound on every view gives the all-path budget. The one instruction costs
+its weight, whatever its response. -/
+example {ω : Type} [AddCommMonoid ω] [Preorder ω] (weight : ω) :
+    (weightedInstruction weight).CostAtMost weight :=
+  ((weightedInstruction weight).costAtMost_iff_worstCaseCostBound weight).mpr fun _ =>
+    worstCaseCostBound_query () ⟨fun _ => weight⟩
+
+/-- The all-path budget of the increment is a worst-case cost bound on each of its views. -/
+example (values : Nat × Nat) :
+    WorstCaseCostBound (increment.program values) ⟨increment.cost⟩
+      (fun kind => if kind = false then 1 else 0) :=
+  (increment.costAtMost_iff_worstCaseCostBound _).mp (addProgram_costAtMost _ _) values
+
+/-- A budget bounds the recorded charge of the answers on every view of a generic program. -/
+example {Input Result ω : Type} [AddCommMonoid ω] [Preorder ω]
+    {program : MeasuredProgram Input Result ω} {budget : ω} (h : program.CostAtMost budget)
+    (v : program.View) :
+    (simulateQ ((program.queryImpl v).withAddCost program.cost) (program.program v)).runAdd.2 ≤
+      budget :=
+  h.runAdd_le v
+
+/-- A program whose input view is always `false`. Only the view `true` requests an
+instruction. -/
+@[expose] def unreachedView : MeasuredProgram Unit Unit Nat where
+  View := Bool
+  view _ := false
+  Op := Unit
+  spec _ := unitSignature
+  program v := if v then liftM (unitSignature.query ()) else pure ()
+  answer _ _ := ()
+  cost _ := 1
+
+/-- Every run of the program records no charge. -/
+example (input : Unit) :
+    (simulateQ ((unreachedView.queryImpl (unreachedView.view input)).withAddCost
+      unreachedView.cost) (unreachedView.program (unreachedView.view input))).runAdd.2 = 0 := by
+  simp [unreachedView]
+  rfl
+
+/-- The budget also covers views that no input reaches, so a zero budget fails. -/
+example : ¬ unreachedView.CostAtMost 0 := by
+  intro bound
+  have recorded := bound.runAdd_le true
+  have charge :
+      (simulateQ ((unreachedView.queryImpl true).withAddCost unreachedView.cost)
+        (unreachedView.program true)).runAdd.2 = 1 := by
+    simp [unreachedView, QueryImpl.withAddCost_apply]
+    rfl
+  rw [charge] at recorded
+  exact Nat.not_succ_le_self 0 recorded
 
 /-- Run the composed programs and observe both charges and response-dependent instruction counts. -/
 def run : IO Unit := do
