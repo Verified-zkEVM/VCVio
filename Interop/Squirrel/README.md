@@ -60,7 +60,11 @@ chooses. Among them:
   FreshL's conditions on models and terms for messages (and hashes, PRF.L-sec), and a `large` hash
   type (PRF.R); PRF.R's `ψ_msg` ranges over the calls of the vector only, PRF.L-sec is the form of
   CCS26 §2.3, with `ψ_msg` over the calls of the vector, the secret and the message, and the PRF
-  assumption is a hypothesis on the named reductions of each admitted machine.
+  assumption is a hypothesis on the named reductions of each admitted machine;
+- the toy ratchet of CCS26 §2 is derived for each trace given as a Lean value, by Lean recursion on
+  its history, rather than by induction in the logic; its NoCollision lemmas are hypotheses, as
+  CCS26's proof takes them; a hash query leaves the key unchanged, where CCS26's Fig. 2 resets it;
+  frames have a base type of their own, and `fst(⟨x, y⟩) = x` is a condition on models.
 
 ## Implementations covered
 
@@ -94,7 +98,8 @@ None yet: the sub-project states the logic and proves its rules.
 | `Interop.Squirrel.Rules.PRF` | G.PRF without an oracle on the left, from VCVio's PRF game through the named reductions `PRFSymbols.hashReduction` and `PRFSymbols.freshReduction`: at every `η` the advantage is at most their two PRF advantages plus `Pr[ψ_msg = false]`; PRF-Simple, derived from G.PRF, Perm, FreshL and Rw-Equiv |
 | `Interop.Squirrel.Rules.PRFOracle` | PRF.R with the hash oracle `o_h^k = λx. h(x, k)` on the left, answered as an input by the compiled `λx. call x`, through the named reductions `PRFSymbols.rightReduction`, one per candidate: at every large `η` the success is at most `Pr[ψ_msg(u⃗) = false]`, plus `2^⌈log₂ q(η)⌉` times the success of Rw-Oracle's guess against `u⃗, o_h^k ⊢ m`, plus a PRF advantage and `2^{-cη}` per candidate |
 | `Interop.Squirrel.Rules.PRFLeft` | PRF.L-sec in the form of CCS26 §2.3, through the named reductions `PRFSymbols.leftReduction` and `PRFSymbols.leftFreshReduction`, which intercept the attacker's oracle at the message: at every large `η` the success is at most `Pr[ψ_msg = false]`, plus their two PRF advantages, plus the success of FreshL's reduction against the premise, plus `2^⌈log₂ q(η)⌉` times the success of the guess against `C_sec` |
-| `Interop.Squirrel.Derivation` | derivations of these rules as data, the encryption rule, G.PRF, PRF.R and PRF.L-sec at the admitted instances, PRF-Simple derived, the model restriction `R₀` that FreshL, Rw-Oracle, Pc-Oracle, PRF.R and PRF.L-sec assume, and `Derivation.sound` |
+| `Interop.Squirrel.Derivation` | derivations of these rules as data, the encryption rule, G.PRF, PRF.R and PRF.L-sec at the admitted instances, PRF-Simple derived, local facts combined under `[·]` (`Derivation.boxOfMap`), the model restriction `R₀` that FreshL, Rw-Oracle, Pc-Oracle, PRF.R and PRF.L-sec assume, and `Derivation.sound` |
+| `Interop.Squirrel.Chain` | CCS26's toy ratchet: its declaration, traces and terms (CCS26 Fig. 2), and the derivation of its forward secrecy `frame(τ′) ⊬ ck(τ)` at every safe position of every trace given as a Lean value (`Chain.chainPFS`), from FreshR, PRF.R, the deduction rules, PRF.L-sec, Ineq, WeakR and WeakL, sound over the models of `Chain.ChainR` against every class under which each PRF instance meets its PRF assumption (`Chain.chainPFS_sound`) |
 
 The declarations are in the namespace `Interop.Squirrel`. CI's axiom sweep holds every root of
 `InteropSquirrel` at zero `sorry` and nonstandard-axiom debt.
@@ -148,7 +153,11 @@ package's test driver, holds the checks:
   G.PRF failing without `ψ_msg` and without `ψ_key` (`Interop/Squirrel/Test/PRFExamples.lean`);
 - two PRF.R steps, and a PRF.R step followed by PRF.L-sec, with every hypothesis holding jointly in
   the same model; PRF.L-sec failing without `ψ_msg`, and PRF.R and PRF.L-sec without their premise
-  (`Interop/Squirrel/Test/PRFOracleExamples.lean`).
+  (`Interop/Squirrel/Test/PRFOracleExamples.lean`);
+- every hypothesis of the ratchet's derivation holding jointly in a model whose hash is a perfect
+  PRF, the NoCollision lemmas from VCVio's bound on collisions among the iterates of a random
+  function, and the corrupted key deducible there, so safety is needed
+  (`Interop/Squirrel/Test/ChainModel.lean`).
 
 CI's `Interop Squirrel` job builds the package, runs `lake test` and sweeps the roots of
 `InteropSquirrel` for axioms.
