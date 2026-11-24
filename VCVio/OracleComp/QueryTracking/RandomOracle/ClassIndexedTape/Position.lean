@@ -89,8 +89,7 @@ open scoped ENNReal
 
 namespace AnswerTape
 
-variable {ι J : Type} {spec : OracleSpec.{0, 0} ι} [DecidableEq ι]
-  [Fintype J] [DecidableEq J] {R : J → Type} [∀ j, SampleableType (R j)]
+variable {ι J : Type} {spec : OracleSpec.{0, 0} ι} {R : J → Type}
 
 /-! ## The position instrumentation -/
 
@@ -115,47 +114,8 @@ every counter is zero. -/
 def ClassPos.init {D J : Type} : ClassPos D J :=
   ⟨fun _ => none, fun _ => none, fun _ => 0, fun _ => 0⟩
 
-variable [∀ t : spec.Domain, SampleableType (spec.Range t)]
-  {τ : (spec + spec).Domain → J}
+variable {τ : (spec + spec).Domain → J}
   {hR : ∀ t : (spec + spec).Domain, (spec + spec).Range t = R (τ t)}
-
-/-- The bookkeeping of one `tapeStep` at a point `t` of class `j`: a query answered off the
-tape records its class and position and advances that tape's counter, a query answered after
-the tape ran out records only its class, a cache hit records nothing, and every query
-increments its class's query counter. -/
-def classPosStep (R : J → Type) (j : J) (t : spec.Domain) :
-    (spec.QueryCache × ((k : J) → List (R k))) → spec.Range t →
-      (spec.QueryCache × ((k : J) → List (R k))) → ClassPos spec.Domain J →
-      ClassPos spec.Domain J :=
-  fun s _ _ p =>
-    match s.1 t, s.2 j with
-    | none, _ :: _ =>
-        ⟨Function.update p.cls t (some j), Function.update p.pos t (some (p.next j)),
-          Function.update p.next j (p.next j + 1), Function.update p.cnt j (p.cnt j + 1)⟩
-    | none, [] =>
-        ⟨Function.update p.cls t (some j), p.pos, p.next,
-          Function.update p.cnt j (p.cnt j + 1)⟩
-    | some _, _ => ⟨p.cls, p.pos, p.next, Function.update p.cnt j (p.cnt j + 1)⟩
-
-/-- The bookkeeping of one step of the class-indexed tape oracle. -/
-def classPosAux (R : J → Type) (τ : (spec + spec).Domain → J) :
-    (t : (spec + spec).Domain) → (spec.QueryCache × ((k : J) → List (R k))) →
-      (spec + spec).Range t → (spec.QueryCache × ((k : J) → List (R k))) →
-      ClassPos spec.Domain J → ClassPos spec.Domain J
-  | .inl t => classPosStep R (τ (Sum.inl t)) t
-  | .inr t => classPosStep R (τ (Sum.inr t)) t
-
-omit [Fintype J] [∀ j, SampleableType (R j)] [∀ t : spec.Domain, SampleableType (spec.Range t)] in
-/-- The bookkeeping at the left copy is the step of its call-site class. -/
-@[simp] theorem classPosAux_inl (R : J → Type) (τ : (spec + spec).Domain → J) (t : spec.Domain) :
-    classPosAux R τ (.inl t) = classPosStep R (τ (.inl t)) t := by
-  simp only [classPosAux]
-
-omit [Fintype J] [∀ j, SampleableType (R j)] [∀ t : spec.Domain, SampleableType (spec.Range t)] in
-/-- The bookkeeping at the right copy is the step of its call-site class. -/
-@[simp] theorem classPosAux_inr (R : J → Type) (τ : (spec + spec).Domain → J) (t : spec.Domain) :
-    classPosAux R τ (.inr t) = classPosStep R (τ (.inr t)) t := by
-  simp only [classPosAux]
 
 /-- The invariant maintained by the position instrumentation of a class-indexed tape run on
 the tape family `Lfam`, relating the answer cache `c`, the unconsumed tapes `l`, and the four
@@ -191,8 +151,6 @@ structure ClassPosInv (τ : (spec + spec).Domain → J) (Lfam : (k : J) → List
 
 namespace ClassPosInv
 
-omit [DecidableEq ι] [Fintype J] [DecidableEq J] [∀ j, SampleableType (R j)]
-  [∀ t : spec.Domain, SampleableType (spec.Range t)] in
 /-- The empty cache with every tape unconsumed and no queries made satisfies the invariant. -/
 theorem empty (τ : (spec + spec).Domain → J) (Lfam : (k : J) → List (R k)) :
     ClassPosInv τ Lfam (∅ : spec.QueryCache) Lfam (fun _ => none) (fun _ => none)
@@ -210,33 +168,108 @@ theorem empty (τ : (spec + spec).Domain → J) (Lfam : (k : J) → List (R k)) 
 
 end ClassPosInv
 
-omit [DecidableEq ι] [Fintype J] [DecidableEq J] [∀ j, SampleableType (R j)]
-  [∀ t : spec.Domain, SampleableType (spec.Range t)] in
 private theorem heq_some_cast {A B : Type} (h : A = B) (u : B) :
     HEq (some (cast h.symm u)) (some u) := by
   subst h; rfl
 
-omit [DecidableEq ι] [Fintype J] [DecidableEq J] [∀ j, SampleableType (R j)]
-  [∀ t : spec.Domain, SampleableType (spec.Range t)] in
 private theorem eq_some_cast_of_heq {A B : Type} (h : A = B) {a : A} {o : Option B}
     (hh : HEq (some a) o) : o = some (cast h a) := by
   subst h
   simpa using (eq_of_heq hh).symm
 
+/-- **The positions of cached points, read off the invariant.** Under `ClassPosInv` with
+bookkeeping `p`, every cached point has a class, pinned to one of its two call sites. If every
+class in `T` was queried no more often than its tape is long, then a cached point whose class
+`j` lies in `T` is the value of that class's tape at a position of that tape, returned in cast
+form along the equality of the point's range with `R j`. Distinct cached points sit at distinct
+class-position pairs.
+
+The per-class query bounds are what exclude the fallback answers sampled after a tape runs
+out: such an answer costs its class one query beyond the ones that consumed its whole tape.
+A bound on the *total* size of the cache does not exclude them, because one class running out
+of tape is consistent with the others' entries making up the total. Classes outside `T` need
+no bound, so a class without a query budget does not obstruct the conclusion for the others. -/
+theorem ClassPosInv.exists_pos (hR : ∀ t : (spec + spec).Domain, (spec + spec).Range t = R (τ t))
+    {Lfam l : (k : J) → List (R k)} {c : spec.QueryCache} {p : ClassPos spec.Domain J}
+    (hinv : ClassPosInv τ Lfam c l p.cls p.pos p.next p.cnt) (T : Set J)
+    (hq : ∀ j ∈ T, p.cnt j ≤ (Lfam j).length) :
+    (∀ t y, c t = some y → ∃ j, p.cls t = some j ∧ (j = τ (Sum.inl t) ∨ j = τ (Sum.inr t)) ∧
+        (j ∈ T → ∃ n, p.pos t = some n ∧ n < (Lfam j).length ∧
+          ∃ h : spec.Range t = R j, (Lfam j)[n]? = some (cast h y))) ∧
+      (∀ t t' j n, p.cls t = some j → p.pos t = some n → p.cls t' = some j →
+        p.pos t' = some n → t = t') := by
+  refine ⟨fun t y ht => ?_, hinv.pos_inj⟩
+  have htne : c t ≠ none := by rw [ht]; exact Option.some_ne_none y
+  obtain ⟨j, hj⟩ : ∃ j, p.cls t = some j := Option.ne_none_iff_exists'.mp (hinv.cls_ne_none t htne)
+  have hjt : j = τ (Sum.inl t) ∨ j = τ (Sum.inr t) := by
+    rcases hinv.cls_tau t (by rw [hj]; exact Option.some_ne_none j) with hc | hc
+    · exact Or.inl (Option.some_inj.mp (hj.symm.trans hc))
+    · exact Or.inr (Option.some_inj.mp (hj.symm.trans hc))
+  refine ⟨j, hj, hjt, fun hjT => ?_⟩
+  obtain ⟨n, hn⟩ : ∃ n, p.pos t = some n := by
+    rcases hp : p.pos t with _ | n
+    · obtain ⟨hnil, hlt⟩ := hinv.fallback t j htne hj hp
+      have hlen := hinv.length_add j
+      rw [hnil, List.length_nil, Nat.zero_add] at hlen
+      exact absurd (hlen ▸ hlt) (by have := hq j hjT; omega)
+    · exact ⟨n, rfl⟩
+  obtain ⟨hlt, hval⟩ := hinv.pos_spec t j n hj hn
+  have hRj : spec.Range t = R j := by
+    rcases hjt with rfl | rfl
+    · exact hR (Sum.inl t)
+    · exact hR (Sum.inr t)
+  rw [ht] at hval
+  exact ⟨n, hn, lt_of_lt_of_le hlt (by have := hinv.length_add j; omega), hRj,
+    eq_some_cast_of_heq _ hval⟩
+
+variable [DecidableEq ι] [DecidableEq J]
+
+/-- The bookkeeping of one `tapeStep` at a point `t` of class `j`: a query answered off the
+tape records its class and position and advances that tape's counter, a query answered after
+the tape ran out records only its class, a cache hit records nothing, and every query
+increments its class's query counter. -/
+def classPosStep (R : J → Type) (j : J) (t : spec.Domain) :
+    (spec.QueryCache × ((k : J) → List (R k))) → spec.Range t →
+      (spec.QueryCache × ((k : J) → List (R k))) → ClassPos spec.Domain J →
+      ClassPos spec.Domain J :=
+  fun s _ _ p =>
+    match s.1 t, s.2 j with
+    | none, _ :: _ =>
+        ⟨Function.update p.cls t (some j), Function.update p.pos t (some (p.next j)),
+          Function.update p.next j (p.next j + 1), Function.update p.cnt j (p.cnt j + 1)⟩
+    | none, [] =>
+        ⟨Function.update p.cls t (some j), p.pos, p.next,
+          Function.update p.cnt j (p.cnt j + 1)⟩
+    | some _, _ => ⟨p.cls, p.pos, p.next, Function.update p.cnt j (p.cnt j + 1)⟩
+
+/-- The bookkeeping of one step of the class-indexed tape oracle. -/
+def classPosAux (R : J → Type) (τ : (spec + spec).Domain → J) :
+    (t : (spec + spec).Domain) → (spec.QueryCache × ((k : J) → List (R k))) →
+      (spec + spec).Range t → (spec.QueryCache × ((k : J) → List (R k))) →
+      ClassPos spec.Domain J → ClassPos spec.Domain J
+  | .inl t => classPosStep R (τ (Sum.inl t)) t
+  | .inr t => classPosStep R (τ (Sum.inr t)) t
+
+/-- The bookkeeping at the left copy is the step of its call-site class. -/
+@[simp] theorem classPosAux_inl (R : J → Type) (τ : (spec + spec).Domain → J) (t : spec.Domain) :
+    classPosAux R τ (.inl t) = classPosStep R (τ (.inl t)) t := by
+  simp only [classPosAux]
+
+/-- The bookkeeping at the right copy is the step of its call-site class. -/
+@[simp] theorem classPosAux_inr (R : J → Type) (τ : (spec + spec).Domain → J) (t : spec.Domain) :
+    classPosAux R τ (.inr t) = classPosStep R (τ (.inr t)) t := by
+  simp only [classPosAux]
+
 variable {j : J} {t : spec.Domain} {c : spec.QueryCache} {L : (k : J) → List (R k)}
   {x : spec.Range t} {s' : spec.QueryCache × ((k : J) → List (R k))}
   {p : ClassPos spec.Domain J}
 
-omit [Fintype J] [∀ j, SampleableType (R j)]
-  [∀ t : spec.Domain, SampleableType (spec.Range t)] in
 /-- A cache hit records only the query at its class. -/
 theorem classPosStep_of_some {u₀ : spec.Range t} (hc : c t = some u₀) :
     classPosStep R j t (c, L) x s' p =
       ⟨p.cls, p.pos, p.next, Function.update p.cnt j (p.cnt j + 1)⟩ := by
   simp [classPosStep, hc]
 
-omit [Fintype J] [∀ j, SampleableType (R j)]
-  [∀ t : spec.Domain, SampleableType (spec.Range t)] in
 /-- An answer sampled after the class's tape ran out records only its class. -/
 theorem classPosStep_of_nil (hc : c t = none) (hL : L j = []) :
     classPosStep R j t (c, L) x s' p =
@@ -244,8 +277,6 @@ theorem classPosStep_of_nil (hc : c t = none) (hL : L j = []) :
         Function.update p.cnt j (p.cnt j + 1)⟩ := by
   simp [classPosStep, hc, hL]
 
-omit [Fintype J] [∀ j, SampleableType (R j)]
-  [∀ t : spec.Domain, SampleableType (spec.Range t)] in
 /-- An answer taken off the tape records its class and position and advances that tape. -/
 theorem classPosStep_of_cons {u : R j} {l : List (R j)} (hc : c t = none)
     (hL : L j = u :: l) :
@@ -254,7 +285,8 @@ theorem classPosStep_of_cons {u : R j} {l : List (R j)} (hc : c t = none)
         Function.update p.next j (p.next j + 1), Function.update p.cnt j (p.cnt j + 1)⟩ := by
   simp [classPosStep, hc, hL]
 
-omit [Fintype J] [∀ j, SampleableType (R j)] in
+variable [∀ t : spec.Domain, SampleableType (spec.Range t)]
+
 /-- Every step of the instrumented class-indexed tape oracle preserves `ClassPosInv`. -/
 private theorem classPosInv_step (Lfam : (k : J) → List (R k)) (h : spec.Range t = R j)
     (hjt : j = τ (Sum.inl t) ∨ j = τ (Sum.inr t))
@@ -440,7 +472,6 @@ private theorem classPosInv_step (Lfam : (k : J) → List (R k)) (h : spec.Range
       · simpa using Nat.lt_succ_of_lt h₂
       · rwa [Function.update_of_ne hnj]
 
-omit [Fintype J] [∀ j, SampleableType (R j)] in
 /-- One instrumented step at the left copy: the tape step at the point, followed by the
 bookkeeping of that point's tape class. -/
 theorem extendState_run_inl (t : spec.Domain)
@@ -451,7 +482,6 @@ theorem extendState_run_inl (t : spec.Domain)
   rw [QueryImpl.extendState_apply, tapeCachingImplClass_apply_inl]
   rfl
 
-omit [Fintype J] [∀ j, SampleableType (R j)] in
 /-- One instrumented step at the right copy: the tape step at the point, followed by the
 bookkeeping of that point's tape class. -/
 theorem extendState_run_inr (t : spec.Domain)
@@ -462,7 +492,6 @@ theorem extendState_run_inr (t : spec.Domain)
   rw [QueryImpl.extendState_apply, tapeCachingImplClass_apply_inr]
   rfl
 
-omit [Fintype J] [∀ j, SampleableType (R j)] in
 /-- Every step of the instrumented class-indexed tape oracle preserves `ClassPosInv`. -/
 theorem classPosInvAux_step (Lfam : (k : J) → List (R k)) (t : (spec + spec).Domain)
     (s : (spec.QueryCache × ((k : J) → List (R k))) × ClassPos spec.Domain J)
@@ -481,54 +510,6 @@ theorem classPosInvAux_step (Lfam : (k : J) → List (R k)) (t : (spec + spec).D
     exact classPosInv_step (spec := spec) (j := τ (Sum.inr t)) (t := t) (c := c) (L := L)
       (p := p) Lfam (hR (Sum.inr t)) (Or.inr rfl) hs y hy
 
-omit [DecidableEq ι] [Fintype J] [DecidableEq J] [∀ j, SampleableType (R j)]
-  [∀ t : spec.Domain, SampleableType (spec.Range t)] in
-/-- **The positions of cached points, read off the invariant.** Under `ClassPosInv` with
-bookkeeping `p`, every cached point has a class, pinned to one of its two call sites. If every
-class in `T` was queried no more often than its tape is long, then a cached point whose class
-`j` lies in `T` is the value of that class's tape at a position of that tape, returned in cast
-form along the equality of the point's range with `R j`. Distinct cached points sit at distinct
-class-position pairs.
-
-The per-class query bounds are what exclude the fallback answers sampled after a tape runs
-out: such an answer costs its class one query beyond the ones that consumed its whole tape.
-A bound on the *total* size of the cache does not exclude them, because one class running out
-of tape is consistent with the others' entries making up the total. Classes outside `T` need
-no bound, so a class without a query budget does not obstruct the conclusion for the others. -/
-theorem ClassPosInv.exists_pos (hR : ∀ t : (spec + spec).Domain, (spec + spec).Range t = R (τ t))
-    {Lfam l : (k : J) → List (R k)} {c : spec.QueryCache} {p : ClassPos spec.Domain J}
-    (hinv : ClassPosInv τ Lfam c l p.cls p.pos p.next p.cnt) (T : Set J)
-    (hq : ∀ j ∈ T, p.cnt j ≤ (Lfam j).length) :
-    (∀ t y, c t = some y → ∃ j, p.cls t = some j ∧ (j = τ (Sum.inl t) ∨ j = τ (Sum.inr t)) ∧
-        (j ∈ T → ∃ n, p.pos t = some n ∧ n < (Lfam j).length ∧
-          ∃ h : spec.Range t = R j, (Lfam j)[n]? = some (cast h y))) ∧
-      (∀ t t' j n, p.cls t = some j → p.pos t = some n → p.cls t' = some j →
-        p.pos t' = some n → t = t') := by
-  refine ⟨fun t y ht => ?_, hinv.pos_inj⟩
-  have htne : c t ≠ none := by rw [ht]; exact Option.some_ne_none y
-  obtain ⟨j, hj⟩ : ∃ j, p.cls t = some j := Option.ne_none_iff_exists'.mp (hinv.cls_ne_none t htne)
-  have hjt : j = τ (Sum.inl t) ∨ j = τ (Sum.inr t) := by
-    rcases hinv.cls_tau t (by rw [hj]; exact Option.some_ne_none j) with hc | hc
-    · exact Or.inl (Option.some_inj.mp (hj.symm.trans hc))
-    · exact Or.inr (Option.some_inj.mp (hj.symm.trans hc))
-  refine ⟨j, hj, hjt, fun hjT => ?_⟩
-  obtain ⟨n, hn⟩ : ∃ n, p.pos t = some n := by
-    rcases hp : p.pos t with _ | n
-    · obtain ⟨hnil, hlt⟩ := hinv.fallback t j htne hj hp
-      have hlen := hinv.length_add j
-      rw [hnil, List.length_nil, Nat.zero_add] at hlen
-      exact absurd (hlen ▸ hlt) (by have := hq j hjT; omega)
-    · exact ⟨n, rfl⟩
-  obtain ⟨hlt, hval⟩ := hinv.pos_spec t j n hj hn
-  have hRj : spec.Range t = R j := by
-    rcases hjt with rfl | rfl
-    · exact hR (Sum.inl t)
-    · exact hR (Sum.inr t)
-  rw [ht] at hval
-  exact ⟨n, hn, lt_of_lt_of_le hlt (by have := hinv.length_add j; omega), hRj,
-    eq_some_cast_of_heq _ hval⟩
-
-omit [Fintype J] [∀ j, SampleableType (R j)] in
 /-- **Every cache entry of a class-indexed tape run of a budgeted class sits at its own
 position on its class's tape.** `ClassPosInv.exists_pos` at the final state of a run of `oa`
 under the instrumented `tapeCachingImplClass` from the empty cache and the empty bookkeeping on
@@ -558,14 +539,20 @@ end Position
 
 section Forwarded
 
-variable [∀ t : spec.Domain, SampleableType (spec.Range t)]
-
 /-- The tape class of a query of the forwarded interface `unifSpec + (spec + spec)`: a query of
 the duplicated interface has its class under `τ`, and a private uniform query has none. -/
 @[expose]
 def classOf (τ : (spec + spec).Domain → J) : (unifSpec + (spec + spec)).Domain → Option J
   | .inl _ => none
   | .inr t => some (τ t)
+
+@[simp] theorem classOf_inl (τ : (spec + spec).Domain → J) (n : unifSpec.Domain) :
+    classOf τ (Sum.inl n) = none := rfl
+
+@[simp] theorem classOf_inr (τ : (spec + spec).Domain → J) (t : (spec + spec).Domain) :
+    classOf τ (Sum.inr t) = some (τ t) := rfl
+
+variable [DecidableEq ι] [DecidableEq J]
 
 /-- The bookkeeping of one step of the forwarded class-indexed tape oracle: a query of the
 duplicated interface is recorded by `classPosAux`, and a private uniform query records
@@ -578,25 +565,13 @@ def classPosAuxFwd (R : J → Type) (τ : (spec + spec).Domain → J) :
   | .inl _ => fun _ _ _ p => p
   | .inr t => classPosAux R τ t
 
-omit [DecidableEq ι] [Fintype J] [DecidableEq J] [∀ j, SampleableType (R j)]
-  [∀ t : spec.Domain, SampleableType (spec.Range t)] in
-@[simp] theorem classOf_inl (τ : (spec + spec).Domain → J) (n : unifSpec.Domain) :
-    classOf τ (Sum.inl n) = none := rfl
-
-omit [DecidableEq ι] [Fintype J] [DecidableEq J] [∀ j, SampleableType (R j)]
-  [∀ t : spec.Domain, SampleableType (spec.Range t)] in
-@[simp] theorem classOf_inr (τ : (spec + spec).Domain → J) (t : (spec + spec).Domain) :
-    classOf τ (Sum.inr t) = some (τ t) := rfl
-
-omit [Fintype J] [∀ j, SampleableType (R j)]
-  [∀ t : spec.Domain, SampleableType (spec.Range t)] in
 @[simp] theorem classPosAuxFwd_inl (R : J → Type) (τ : (spec + spec).Domain → J)
     (n : unifSpec.Domain) : classPosAuxFwd R τ (Sum.inl n) = fun _ _ _ p => p := rfl
 
-omit [Fintype J] [∀ j, SampleableType (R j)]
-  [∀ t : spec.Domain, SampleableType (spec.Range t)] in
 @[simp] theorem classPosAuxFwd_inr (R : J → Type) (τ : (spec + spec).Domain → J)
     (t : (spec + spec).Domain) : classPosAuxFwd R τ (Sum.inr t) = classPosAux R τ t := rfl
+
+variable [∀ t : spec.Domain, SampleableType (spec.Range t)]
 
 /-- **The instrumented forwarded class-indexed tape oracle.** `tapeImplFwd`, with the position
 bookkeeping of `classPosAuxFwd` beside a passive auxiliary state `Q` that `aux` updates from
@@ -618,7 +593,6 @@ variable (τ : (spec + spec).Domain → J)
     (spec.QueryCache × ((k : J) → List (R k))) → (unifSpec + (spec + spec)).Range t →
     (spec.QueryCache × ((k : J) → List (R k))) → Q → Q) (q₀ : Q)
 
-omit [Fintype J] [∀ j, SampleableType (R j)] in
 /-- Every step of `classPosImplFwd` preserves `ClassPosInv`: a private uniform query changes
 neither the cache, the tapes nor the bookkeeping, and a query of the duplicated interface is a
 step of the unforwarded instrumentation. -/
@@ -641,7 +615,6 @@ theorem classPosInvAuxFwd_step (Lfam : (k : J) → List (R k))
   · exact classPosInvAux_step Lfam t (s.1, s.2.1) hs (y.1, (y.2.1, y.2.2.1))
       ((QueryImpl.mem_support_extendState_run_iff _ _ t _ _).2 ⟨hv, congrArg Prod.fst hq⟩)
 
-omit [Fintype J] [∀ j, SampleableType (R j)] in
 /-- **Every cache entry of a forwarded class-indexed tape run of a budgeted class sits at its
 own position on its class's tape.** `ClassPosInv.exists_pos` at the final state of a run of
 `oa` under `classPosImplFwd` from the empty cache and the empty bookkeeping on the tape family
@@ -663,7 +636,6 @@ theorem exists_pos_of_mem_support_run_classPosImplFwd {α : Type}
     (classPosInvAuxFwd_step τ hR aux Lfam) oa _ (ClassPosInv.empty τ Lfam) z hz).exists_pos
     hR T hq
 
-omit [Fintype J] [∀ j, SampleableType (R j)] in
 /-- **Per-class query budgets bound the class counters.** If `oa` makes at most `n` queries of
 tape class `j`, then on every run of `oa` under `classPosImplFwd` from the empty bookkeeping,
 the query counter of class `j` is at most `n`. -/
@@ -713,8 +685,8 @@ instrumented run of `oa` on `L` whose output and final cache satisfy `P` has a w
 with the tape event `M w L` and the run event `H w z`, and that each run event `H w` has mass
 at most `β w` on every such family. Then the lazy run of `oa` under `dupRandomOracleFwd` from
 the empty cache satisfies `P` with probability at most `∑ w ∈ Ws, Pr_tape[M w] * β w`. -/
-theorem prEvent_run_dupRandomOracleFwd_le_sum {α W : Type}
-    (oa : OracleComp (unifSpec + (spec + spec)) α) (m : J → ℕ)
+theorem prEvent_run_dupRandomOracleFwd_le_sum [Fintype J] [∀ j, SampleableType (R j)]
+    {α W : Type} (oa : OracleComp (unifSpec + (spec + spec)) α) (m : J → ℕ)
     (P : α × spec.QueryCache → Prop) (Ws : Finset W) (M : W → ((k : J) → List (R k)) → Prop)
     (H : W → α × ((spec.QueryCache × ((k : J) → List (R k))) × (ClassPos spec.Domain J × Q)) →
       Prop)

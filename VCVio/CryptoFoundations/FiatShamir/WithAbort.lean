@@ -15,7 +15,9 @@ public import VCVio.OracleComp.HasQuery.Basic
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Simulation
 public import VCVio.OracleComp.ProbCompLift
-public import VCVio.EvalDist.Defs.Semantics.Core
+public import PolyFun.Control.Monad.Measure.SemanticsVia
+public import VCVio.EvalDist.Defs.Measure.Core
+public import ToMathlib.MeasureTheory.Measure.GiryMonad
 
 /-!
 # Fiat-Shamir-with-aborts transform
@@ -174,7 +176,7 @@ lemma fsAbortSignLoop_cache_invariant
     roSim.simulateQ_HasQuery_query _
   induction n generalizing s₀ with
   | zero =>
-    simp [fsAbortSignLoop, simulateQ_pure, StateT.run_pure] at hsup
+    simp [fsAbortSignLoop, StateT.run_pure] at hsup
   | succ n ih =>
     simp only [fsAbortSignLoop, simulateQ_bind] at hsup
     rw [StateT.run_bind] at hsup

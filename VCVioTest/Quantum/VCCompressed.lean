@@ -180,8 +180,8 @@ example (y : ZMod 2) :
     (E₂).toRuntime.evalDist₂ .instruments answerCall (SubState.basis ()) {y} = 2⁻¹ := by
   have h := outcomeLawWith_compressedVCOracle (k := 2) (X := Bool) (Y := ZMod 2) .instruments
     answerCall (SubState.basis ()) (QuantumComp₂.leafEquiv (QReg.of Unit) (ZMod 2)).symm
-  rw [QuantumRuntime.evalDist₂_eq_evalDistMap, h, Measure.coe_finsetSum, Finset.sum_apply]
-  simp only [Measure.smul_apply, ← QuantumRuntime.evalDist₂_eq_evalDistMap, smul_eq_mul]
+  rw [QuantumRuntime.evalDist₂_eq_evalDistMap, h, FunLike.coe_sum, Finset.sum_apply]
+  simp only [smul_apply, ← QuantumRuntime.evalDist₂_eq_evalDistMap, smul_eq_mul]
   rw [Finset.sum_congr rfl fun H _ ↦ by rw [outcomeLaw₂_romVCOracle_answerCall H y]]
   have h8 : (Finset.univ.filter fun H : Fin 2 → Bool → ZMod 2 ↦ H 0 false = y).card = 8 := by
     fin_cases y <;> decide

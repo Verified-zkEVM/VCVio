@@ -7,7 +7,6 @@ Authors: Quang Dao, Bolton Bailey
 module
 
 public import VCVio.CryptoFoundations.MerkleTree.Extractor
-import ToMathlib.Data.IndexedBinaryTree.Lemmas
 
 /-!
 # Transcript extractor for inductive Merkle trees

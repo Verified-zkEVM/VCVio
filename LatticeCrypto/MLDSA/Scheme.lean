@@ -5,6 +5,7 @@ Authors: Quang Dao
 -/
 
 module
+public import LatticeCrypto.MLDSA.BoxSampling
 public import LatticeCrypto.MLDSA.Primitives
 public import VCVio.CryptoFoundations.IdenSchemeWithAbort
 public import VCVio.OracleComp.Constructions.SampleableType.Basic
@@ -35,8 +36,8 @@ The `IdenSchemeWithAbort` type parameters instantiate as follows for ML-DSA:
 
 This file models the **proof-level IDS** used in the Fiat-Shamir-with-aborts security argument:
 
-- **Commit** samples `y` uniformly at random, rather than deriving it from message-dependent
-  seeds via `ExpandMask(ρ'', κ)`.
+- **Commit** samples `y` with `sampleMaskVec`, which decodes uniform values as `ExpandMask` does,
+  rather than deriving it from message-dependent seeds via `ExpandMask(ρ'', κ)`.
 - **No message hashing**: the IDS operates without messages; the message enters only through
   the Fiat-Shamir transform.
 - **No retry counter**: the IDS commit is a single probabilistic step; retry logic with
@@ -56,7 +57,7 @@ open LatticeCrypto TransformOps
 
 namespace MLDSA
 
-variable (p : Params) (prims : Primitives p) [nttOps : NTTRingOps]
+variable (p : Params) (prims : Primitives p) (nttOps : NTTRingOps)
 
 /-- The semantic public key: the public seed `ρ` and the power-2 rounded key vector `t₁`. -/
 structure PublicKey where
@@ -132,19 +133,20 @@ def keyGenFromSeed (seed : Bytes 32) : PublicKey p prims × SecretKey p :=
   let sk : SecretKey p := ⟨rho, key, tr, s1, s2, t0⟩
   (pk, sk)
 
-open Classical in
 /-- A key pair is valid when it is honestly generated: there is a seed `ξ` such that
 `keyGenFromSeed ξ = (pk, sk)`. This captures the full key-generation relationship
 (`t = A·s₁ + s₂`, `(t₁, t₀) = Power2Round(t)`, `s₁, s₂` bounded by `η`), which is what the
 completeness and signing-correctness proofs require. The predicate is decidable because the
 seed space `Bytes 32` is finite. -/
 noncomputable def validKeyPair (pk : PublicKey p prims) (sk : SecretKey p) : Bool :=
-  decide (∃ seed : Bytes 32, keyGenFromSeed p prims seed = (pk, sk))
+  @decide _ <| Classical.propDecidable (∃ seed : Bytes 32,
+    keyGenFromSeed p prims nttOps seed = (pk, sk))
 
 @[simp] theorem validKeyPair_eq_true_iff (pk : PublicKey p prims) (sk : SecretKey p) :
-    validKeyPair p prims pk sk = true ↔
-      ∃ seed : Bytes 32, keyGenFromSeed p prims seed = (pk, sk) := by
-  simp [validKeyPair]
+    validKeyPair p prims nttOps pk sk = true ↔
+      ∃ seed : Bytes 32, keyGenFromSeed p prims nttOps seed = (pk, sk) := by
+  unfold validKeyPair
+  exact @decide_eq_true_iff _ (Classical.propDecidable _)
 
 /-! ### Short-secret idealized key validity
 
@@ -174,7 +176,7 @@ noncomputable def validKeyPairShort (pk : PublicKey p prims) (sk : SecretKey p) 
       PublicKey p prims × SecretKey p) = (pk, sk))
 
 @[simp] theorem validKeyPairShort_eq_true_iff (pk : PublicKey p prims) (sk : SecretKey p) :
-    validKeyPairShort p prims pk sk = true ↔
+    validKeyPairShort p prims nttOps pk sk = true ↔
       ∃ (rho key : Bytes 32) (s1 : RqVec p.l) (s2 : RqVec p.k),
         polyVecBounded s1 p.eta ∧ polyVecBounded s2 p.eta ∧
         ((⟨rho, (prims.power2RoundVec (prims.expandA rho * s1 + s2)).1⟩,
@@ -189,7 +191,7 @@ noncomputable def validKeyPairShort (pk : PublicKey p prims) (sk : SecretKey p) 
 
 /-- The core identification scheme with aborts for ML-DSA.
 
-- **Commit**: sample `y` uniformly, compute `w = NTT⁻¹(Â · NTT(y))`,
+- **Commit**: sample `y` uniformly from the mask box, compute `w = NTT⁻¹(Â · NTT(y))`,
   return `(w₁ = HighBits(w), state = (y, w))`.
 - **Respond** (Alg 7, lines 16–30): derive `c = SampleInBall(c̃)`, compute
   `z = y + c·s₁`, check `‖z‖∞ < γ₁ - β` and `‖LowBits(w - c·s₂)‖∞ < γ₂ - β`,
@@ -199,15 +201,15 @@ noncomputable def validKeyPairShort (pk : PublicKey p prims) (sk : SecretKey p) 
   `w'_Approx = Az - c·(t₁·2^d)`, verify `UseHint(h, w'_Approx) = w₁` and
   hint weight `≤ ω`. -/
 def identificationScheme
-    [DecidableEq prims.High] :
+    [DecidableEq prims.High] [NeZero p.gamma1] :
     IdenSchemeWithAbort
       (PublicKey p prims) (SecretKey p)
       (Commitment p prims) (SigningState p)
       (CommitHashBytes p) (Response p prims)
-      (validKeyPair p prims) where
+      (validKeyPair p prims nttOps) where
   commit := fun pk _sk => do
     let aHat := prims.expandA pk.rho
-    let y ← $ᵗ (RqVec p.l)
+    let y ← sampleMaskVec p.l p.gamma1
     let w := aHat * y
     let w1 := prims.highBitsVec w
     return (w1, ⟨y, w⟩)
@@ -229,7 +231,7 @@ def identificationScheme
   verify := fun pk w1 cTilde (z, h) =>
     let c := prims.sampleInBall cTilde
     let aHat := prims.expandA pk.rho
-    let wApprox := computeWApprox p prims aHat c z pk.t1
+    let wApprox := computeWApprox p prims nttOps aHat c z pk.t1
     let w1' := prims.useHintVec h wApprox
     decide (polyVecNorm z < p.gamma1 - p.beta) &&
     decide (w1' = w1) &&
@@ -242,22 +244,66 @@ never consumed by the operations — so every per-key fact about the operations 
 between the two scheme constants. This is the scheme used by the idealized short-key security
 statements, whose key generators produce material-valid rather than seed-derived pairs. -/
 def identificationSchemeShort
-    [DecidableEq prims.High] :
+    [DecidableEq prims.High] [NeZero p.gamma1] :
     IdenSchemeWithAbort
       (PublicKey p prims) (SecretKey p)
       (Commitment p prims) (SigningState p)
       (CommitHashBytes p) (Response p prims)
-      (validKeyPairShort p prims) :=
-  ⟨(identificationScheme p prims).commit,
-    (identificationScheme p prims).respond,
-    (identificationScheme p prims).verify⟩
+      (validKeyPairShort p prims nttOps) :=
+  ⟨(identificationScheme p prims nttOps).commit,
+    (identificationScheme p prims nttOps).respond,
+    (identificationScheme p prims nttOps).verify⟩
+
+/-! ### The statement with `t₀` public
+
+FIPS 204 publishes only `t₁` and keeps the low-order part `t₀` of `t = t₁·2^d + t₀` in the secret
+key. The security analyses of ML-DSA work with the variant whose public key is the full `t`: a
+forger against the real scheme is a forger against the variant that ignores `t₀`, and the variant's
+statement gives an HVZK simulator `t₀` directly.
+
+That transfer (`unforgeableAdvantage_eq_full`) holds because the Fiat–Shamir-with-aborts layer
+hashes `(msg, w₁)` and never the statement. FIPS 204's signing layer also binds the message to
+`tr = H(ρ, t₁)`. A FIPS-format layer over this variant must keep that hash on `(ρ, t₁)` and never
+hash `t₀`; otherwise its signatures depend on `t₀` and its forgers differ from the real scheme's. -/
+
+/-- The public key together with the low-order part `t₀`: the statement of the identification
+scheme in which the full `t = t₁·2^d + t₀` is public. -/
+structure FullPublicKey where
+  /-- The public key `(ρ, t₁)`. -/
+  pk : PublicKey p prims
+  /-- The low-order part `t₀` of `Power2Round(t)`. -/
+  t0 : RqVec p.k
+
+/-- Key validity with `t₀` public: the public key and the secret key form a generated pair, and
+the published `t₀` is the secret key's. -/
+noncomputable def validFullKeyPair (fpk : FullPublicKey p prims) (sk : SecretKey p) : Bool :=
+  validKeyPair p prims nttOps fpk.pk sk && decide (fpk.t0 = sk.t0)
+
+@[simp] theorem validFullKeyPair_eq_true_iff (fpk : FullPublicKey p prims) (sk : SecretKey p) :
+    validFullKeyPair p prims nttOps fpk sk = true ↔
+      validKeyPair p prims nttOps fpk.pk sk = true ∧ fpk.t0 = sk.t0 := by
+  simp [validFullKeyPair]
+
+/-- The ML-DSA identification scheme with `t₀` in the statement. Commit, respond and verify are
+those of `identificationScheme` at the public key `fpk.pk` and ignore `t₀`, so the transcripts and
+verification are the same; only a simulator, which sees the statement, can use `t₀`. -/
+def identificationSchemeFull
+    [DecidableEq prims.High] [NeZero p.gamma1] :
+    IdenSchemeWithAbort
+      (FullPublicKey p prims) (SecretKey p)
+      (Commitment p prims) (SigningState p)
+      (CommitHashBytes p) (Response p prims)
+      (validFullKeyPair p prims nttOps) :=
+  ⟨fun fpk => (identificationScheme p prims nttOps).commit fpk.pk,
+    fun fpk => (identificationScheme p prims nttOps).respond fpk.pk,
+    fun fpk => (identificationScheme p prims nttOps).verify fpk.pk⟩
 
 /-! ### Key Generation Algebraic Properties -/
 
 /-- Keys generated by `keyGenFromSeed` satisfy `validKeyPair`. -/
 theorem keyGenFromSeed_validKeyPair (seed : Bytes 32) :
-    let (pk, sk) := keyGenFromSeed p prims seed
-    validKeyPair p prims pk sk = true := by
+    let (pk, sk) := keyGenFromSeed p prims nttOps seed
+    validKeyPair p prims nttOps pk sk = true := by
   simp only [validKeyPair_eq_true_iff]
   exact ⟨seed, rfl⟩
 
@@ -270,9 +316,9 @@ and NTT linearity. -/
 theorem keyGenFromSeed_wApprox_eq {pk : PublicKey p prims} {sk : SecretKey p}
     (h_laws : Primitives.Laws prims nttOps)
     (seed : Bytes 32)
-    (hkeygen : keyGenFromSeed p prims seed = (pk, sk)) :
+    (hkeygen : keyGenFromSeed p prims nttOps seed = (pk, sk)) :
     ∀ (c : Rq) (y : RqVec p.l),
-      computeWApprox p prims (prims.expandA pk.rho) c (y + c • sk.s1) pk.t1 =
+      computeWApprox p prims nttOps (prims.expandA pk.rho) c (y + c • sk.s1) pk.t1 =
       (prims.expandA pk.rho) * y - c • sk.s2 + c • sk.t0 := by
   intro c y
   have := h_laws.transform

@@ -12,10 +12,8 @@ Status: current placement policy; the migration table distinguishes planned move
 | `VCVio/CryptoFoundations/` | Cryptographic interfaces, assumptions, games and generic reduction theory | Uses the framework; does not import concrete schemes |
 | `VCVio/Schemes/` | Named constructions with their correctness and security proofs | Uses algorithms and foundations, never Examples or widgets |
 | `LatticeCrypto/`, `HashSig/` | Existing lattice and hash-signature libraries | Peers above VCVio; migrate only in dependency-complete slices |
-| `VCVioCslib/` | Optional non-uniform complexity facade | Separate non-default Lake target |
-| `VCVioComplexity/` | Optional concrete machine backend | Separate Lake package with coordinated pins |
 | `Examples/` | Pedagogical consumers and proof walkthroughs | Above reusable libraries |
-| `VCVioWidgets/` | Interactive proof visualizations | Presentation dependency, never a scheme dependency |
+| `Examples/Widgets/` | Interactive proof visualizations used by the examples | Presentation dependency, never a scheme dependency |
 | `VCVioTest/`, `LatticeCryptoTest/`, `HashSigTest/` | Tests, vectors and executable regressions | Mirror the owning implementation; fixtures do not enter proof libraries |
 | `Extern/`, `csrc/`, `third_party/` | FFI bindings, native shims and vendored backends | Proof libraries never import Extern; downstream links work without submodules |
 | `Interop/` | Source-language models, imported references and conformance | Optional downstream development; core never imports it |
@@ -30,6 +28,22 @@ Keep one implementation and update its consumers when moving it. Preserve declar
 proof statements and attribution where a move changes only module ownership. Examples should
 contain instructional uses, not forwarding aliases for library definitions. Test support may
 be shared by other test libraries without pulling a scheme into pure implementation imports.
+
+## Optional backends and external bridges
+
+Core VCVio stays backend-neutral: PolyFun owns the generic realizability theory, and a concrete
+machine model enters only through an optional package. A planned nested package, `VCVioFrontier`,
+built on PolyFun's `PolyFunFrontier` package and through it on
+[cslib-frontier](https://github.com/cslib-community/cslib-frontier), will hold that role.
+
+The `VCVioCslib` library, a one-file non-uniform P/poly facade over PolyFun's
+`ComplexityBackends.CslibSingleTape`, was removed. cslib-frontier has its own P/poly, so the
+crypto-facing non-uniform facade belongs in `VCVioFrontier`. The `VCVioComplexity` nested
+package, which pinned complexitylib at `b6738219`, was also removed: cslib-frontier is the
+renamed complexitylib, and its oracle machines replace the substrate and adequacy phases of the
+[complexity design](computational-complexity.md#delivery-phases)
+([#906](https://github.com/Verified-zkEVM/VCVio/issues/906)). The removed sources remain in git
+history.
 
 ## Upstream comparison
 
@@ -86,11 +100,15 @@ functions `bsig0Sha512`, `bsig1Sha512`, `ssig0Sha512`, `ssig1Sha512`, `hmacKey0S
 SLH-DSA adapters remain in HashSig and consume these implementations directly.
 
 `lake exe algorithm_tests` runs the pure regressions and checks the pinned shared corpus in
-`VCVioTest/Algorithms/HashVectors/`. `slhdsa_primitive_tests` checks the scheme's address
+`VCVioTest/Algorithms/HashVectors/`. It also runs the leanSeal known-answer tests against the
+vendored vectors in `VCVioTest/PointerChainPuzzle/LeanSealVectors/`. `slhdsa_primitive_tests` checks the scheme's address
 boundary and twelve profile fingerprints. The corpus split preserves the input/output bytes,
 source hashes and evidence classifications; it does not regenerate expected answers.
 
 ## Documentation checks
+
+See [Python tooling](../../CONTRIBUTING.md#python-tooling) for uv setup and the
+commands used by the Agent Docs workflow.
 
 `scripts/check-agent-docs.py` inventories every tracked or non-ignored first-party Markdown
 and Lean file. It checks local Markdown links and anchors, and repository-root file paths in
@@ -104,13 +122,9 @@ backend names must be resolved in their owning environment. The reference audit 
 build commands, dependency versions, upstream citations and script/CI consumers of moved files.
 Generated guide fragments remain checked by `scripts/extract-doc-fragments.py --check`.
 
-## Review stack and provenance
+## Archived inputs
 
-The review order is repository groundwork, shared algorithms, Lean 4.35 compatibility,
-the remaining probability/program-logic work in PR #821, and Cryptol interop in PR #840.
-Scheme moves branch after the refreshed #821 and do not block Cryptol review.
-
-Preserved original inputs:
+The trees from before the consolidation are preserved:
 
 - Main: `afa6593f15e1e79ecb3cf22fc56191cecb452bb0`.
 - PR #821: `53e93b7679cc222c26ad1027779e4840a4262a93`.
@@ -118,9 +132,3 @@ Preserved original inputs:
 - Remote archive branches: `archive/main-before-consolidation-20261015`,
   `archive/measure-before-consolidation-20261015`, and
   `archive/cryptol-before-consolidation-20261015`.
-
-Extract the mixed commits by responsibility. The algorithm PR owns the native implementation,
-its pure helper decomposition and tests; Cryptol source imports, semantic models and conformance
-certificates stay in #840. The upgrade PR owns the dependency bump and required upstream API
-port; the larger notation and tactic redesign stays in #821. Validate each PR against its own
-base and pins, and compare the reconstructed combined tree against these preserved inputs.

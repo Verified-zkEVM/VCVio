@@ -6,7 +6,11 @@ Authors: Devon Tuma
 
 module
 public import VCVio.ProgramLogic.Unary.WP.Measure
-public import VCVio.EvalDist.Defs.Measure.Deterministic
+public import PolyFun.Control.Monad.Measure.Deterministic
+public import VCVio.EvalDist.Defs.Measure.Core
+public import VCVio.EvalDist.ProbabilityNotation
+public import ToMathlib.Control.Except
+public import ToMathlib.Control.Option
 public import Mathlib.Tactic.GRewrite
 
 /-!
@@ -37,7 +41,8 @@ open scoped ExpectationWP.Lower
 
 example (c : ENNReal) : wp (none : Option Nat) (fun _ ↦ c) Lean.Order.bot = 0 := by simp
 
-example (c : ENNReal) : wp (some 7 : Option Nat) (fun _ ↦ c) Lean.Order.bot = c := by simp
+example (c : ENNReal) (epost : EStack⟨⟩) :
+    wp (some 7 : Option Nat) (fun _ ↦ c) epost = c := by simp
 
 noncomputable example : WPMonad Option ENNReal EStack⟨⟩ := inferInstance
 

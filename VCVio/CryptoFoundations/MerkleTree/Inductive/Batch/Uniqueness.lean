@@ -99,21 +99,6 @@ def BatchOpeningHashCovered (hashFn : α → α → α) (log : List (α × α)) 
     {sel : LeafData Bool s} (v : SelectedValues α sel) (p : BatchProof α sel) : Prop :=
   ∀ q ∈ batchOpeningHashQueries hashFn v p, q ∈ log
 
-/-- A batch proof selects some leaf. -/
-theorem BatchProof.exists_get_eq_true {s : Skeleton} {sel : LeafData Bool s}
-    (p : BatchProof α sel) : ∃ idx : SkeletonLeafIndex s, sel.get idx = true := by
-  induction p with
-  | leaf => exact ⟨.ofLeaf, rfl⟩
-  | internalBoth pl pr ihl ihr =>
-    obtain ⟨idx, hidx⟩ := ihl
-    exact ⟨.ofLeft idx, by simpa using hidx⟩
-  | pruneRight hr rightRoot pl ih =>
-    obtain ⟨idx, hidx⟩ := ih
-    exact ⟨.ofLeft idx, by simpa using hidx⟩
-  | pruneLeft hl leftRoot pr ih =>
-    obtain ⟨idx, hidx⟩ := ih
-    exact ⟨.ofRight idx, by simpa using hidx⟩
-
 /-- Every pair queried by the single opening extracted at a selected leaf is queried by the batch
 opening. -/
 theorem mem_batchOpeningHashQueries_of_mem_openingHashQueries (hashFn : α → α → α)

@@ -5,7 +5,8 @@
 > [`docs/agents/probability.md`](../agents/probability.md).
 >
 > Current v4.35 implementation: Loom2 has been removed; unary carriers use core WP,
-> shared algebra/transformer constructions come from PolyFun, and coupling remains local.
+> shared algebra/transformer constructions come from PolyFun, and so do the generic measure
+> semantics and couplings, from PolyFun's measure companions.
 > See [upstream alignment](upstream-alignment.md) and the
 > [program-logic guide](../agents/program-logic.md) for the implemented boundary.
 >
@@ -45,7 +46,7 @@ several meanings of “probability semantics”:
 - expectations, costs, couplings, and divergences;
 - measure-theoretic independence and conditioning for Bluebell;
 - bounded and unbounded execution for PolyFun's coalgebraic computations;
-- a semantic base that can be exposed through `mvcgen`, VCVio's `vcgen`, and Iris-style
+- a semantic base that can be exposed through core `vcgen`, VCVio's `pvcgen`, and Iris-style
   weakest preconditions.
 
 The central conclusion of this survey is that no single upstream type is a drop-in
@@ -172,7 +173,7 @@ acknowledges measure semantics.
 
 ### 2.2 `SemanticsVia` is an existing abstraction seam
 
-[`VCVio/EvalDist/Defs/Semantics/Core.lean`](../../VCVio/EvalDist/Defs/Semantics/Core.lean)
+[`VCVio/EvalDist/Defs/Semantics/Core.lean`](https://github.com/Verified-zkEVM/VCVio/blob/64d416837721aadba4a6918fad79e8248465e33a/VCVio/EvalDist/Defs/Semantics/Core.lean)
 defines `SemanticsVia m Obs`. It separates:
 
 - an internal semantic monad `Sem`;
@@ -218,7 +219,7 @@ where that theory now lives.
 | Independent products | [`EvalDist/IndepProduct.lean`](../../VCVio/EvalDist/IndepProduct.lean) | Product distributions and factorization |
 | Total variation | [`EvalDist/MeasureTVDist/Basic.lean`](../../VCVio/EvalDist/MeasureTVDist/Basic.lean) | Total variation of output measures |
 | Rényi divergence | [`Divergence/Renyi.lean`](../../ToMathlib/Probability/Divergence/Renyi.lean) | Measure-level, via `Measure.rnDeriv` |
-| Couplings | [`ToMathlib/MeasureTheory/Measure/Coupling.lean`](../../ToMathlib/MeasureTheory/Measure/Coupling.lean) | A joint measure with fixed marginals |
+| Couplings | [`ToMathlib/MeasureTheory/Measure/Coupling.lean`](https://github.com/Verified-zkEVM/VCVio/blob/64d416837721aadba4a6918fad79e8248465e33a/ToMathlib/MeasureTheory/Measure/Coupling.lean) | A joint measure with fixed marginals |
 | Expected query cost | [`QueryCost.lean`](../../VCVio/OracleComp/QueryTracking/QueryCost.lean) and [`WriterCost.lean`](../../VCVio/OracleComp/QueryTracking/WriterCost.lean) | Expectations of instrumented runs |
 | Relational logic | [`ProgramLogic/Relational`](../../VCVio/ProgramLogic/Relational) | Coupling existence and quantitative relational WP |
 | Executable finite distributions | [`FinRatPMF.lean`](../../ToMathlib/ProbabilityTheory/FinRatPMF.lean), [`FinRatPMF/Measure.lean`](../../ToMathlib/ProbabilityTheory/FinRatPMF/Measure.lean) | Array-backed `Raw` representation and its `SameDist` quotient |
@@ -257,7 +258,7 @@ quantitative mass, and probability is a bounded presentation of the quantitative
 families:
 
 - Lean core `mvcgen`, built around `Std.Do`, `WPSound`, and `MonadAttach`;
-- VCVio `vcgen`/`rvcgen`, which understands probability notation, raw expectation `wp`,
+- VCVio `pvcgen`/`rvcgen`, which understands probability notation, raw expectation `wp`,
   oracle simulation, coupling rules, and VCVio-specific registries.
 
 The long-term goal should not be to make probability semantics depend on a particular
@@ -314,13 +315,13 @@ Two consequences for this document:
 
 What core's `vcgen` will *not* absorb is the domain layer: lowering `Pr[…]` and
 `evalDist`-equality goals into `wp` goals, oracle-query specs, `simulateQ` stepping,
-support/indicator leaf closure, and the `@[vcspec]` / `@[wpStep]` registries. Core does
+support/indicator leaf closure, the `@[vcspec]` registry and the raw-`wp` rule table. Core does
 expose extension points for these (the `@[spec]` database, `vcgen [terms]`, and
 `mvcgen_trivial_extensible`).
 
-One immediate consequence is a name collision rather than a semantic one: core already
-declares a bare `vcgen` tactic token at `v4.33.0`, so VCVio's `vcgen` now shares a
-leading token with it and survives only by careful syntax-kind splitting.
+One immediate consequence concerns names rather than semantics: core declares a bare `vcgen`
+tactic token at `v4.33.0`, so VCVio's exhaustive driver is `pvcgen` and a bare `vcgen` is
+always core's.
 
 ## 3. Consumers at the Original Snapshot
 
@@ -1145,12 +1146,11 @@ in favour of `vcgen`, which dispatches on `Std.WP.wp` rather than `Std.Do`'s
 bridge — will need retargeting, and the natural time to do it is the same cycle in which
 `Std.WP` becomes public.
 
-**`vcgen` is already a taken name.** Lean `v4.33.0` declares a bare `vcgen` tactic token
-in `Std/Tactic/Do/Syntax.lean`, plus a low-priority stub in `Init/Tactics.lean`. VCVio's
-own `vcgen` therefore shares a leading token with a core tactic that is under active
-development and is about to become *the* VC generator. Renaming VCVio's is cheap now and
-gets steadily less so; more importantly, once VCVio's domain tactic is layered *on top
-of* core's, having two tactics named `vcgen` in scope stops being merely confusing.
+**`vcgen` is core's name.** Lean `v4.33.0` declares a bare `vcgen` tactic token
+in `Std/Tactic/Do/Syntax.lean`, plus a low-priority stub in `Init/Tactics.lean`, and core's
+tactic is under active development as *the* VC generator. VCVio's domain tactic is layered
+*on top of* core's under its own name, `pvcgen`, so the two are never in scope under one
+token (`VCVioTest/VCGenAmbiguity.lean`).
 
 This does not change the division of labor above. It changes who owns the name.
 
@@ -1345,13 +1345,13 @@ users retain ordinary discrete probability notation.
 
 ### VCVio and examples
 
-- [`VCVio/EvalDist/Defs/Semantics/Core.lean`](../../VCVio/EvalDist/Defs/Semantics/Core.lean)
+- [`VCVio/EvalDist/Defs/Semantics/Core.lean`](https://github.com/Verified-zkEVM/VCVio/blob/64d416837721aadba4a6918fad79e8248465e33a/VCVio/EvalDist/Defs/Semantics/Core.lean)
 - [`VCVio/EvalDist/Defs/Support.lean`](../../VCVio/EvalDist/Defs/Support.lean)
 - [`VCVio/OracleComp/EvalDist.lean`](../../VCVio/OracleComp/EvalDist.lean)
 - [`VCVio/ProgramLogic/Unary/HoareTriple.lean`](../../VCVio/ProgramLogic/Unary/HoareTriple.lean)
 - [`VCVio/EvalDist/MeasureTVDist/Basic.lean`](../../VCVio/EvalDist/MeasureTVDist/Basic.lean)
 - [`ToMathlib/Probability/Divergence/Renyi.lean`](../../ToMathlib/Probability/Divergence/Renyi.lean)
-- [`ToMathlib/MeasureTheory/Measure/Coupling.lean`](../../ToMathlib/MeasureTheory/Measure/Coupling.lean)
+- [`ToMathlib/MeasureTheory/Measure/Coupling.lean`](https://github.com/Verified-zkEVM/VCVio/blob/64d416837721aadba4a6918fad79e8248465e33a/ToMathlib/MeasureTheory/Measure/Coupling.lean)
 - [`ToMathlib/ProbabilityTheory/FinRatPMF.lean`](../../ToMathlib/ProbabilityTheory/FinRatPMF.lean)
 - [`ToMathlib/ProbabilityTheory/FinRatPMF/Measure.lean`](../../ToMathlib/ProbabilityTheory/FinRatPMF/Measure.lean)
 - [`ToMathlib/MeasureTheory/Measure/TotalVariation.lean`](../../ToMathlib/MeasureTheory/Measure/TotalVariation.lean)

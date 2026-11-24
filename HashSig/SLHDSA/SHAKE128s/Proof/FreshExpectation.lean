@@ -56,7 +56,7 @@ theorem freshMass_cacheQuery (inClass : Bytes → Prop) (initial final : QueryCa
       (if inClass input then 1 else 0) +
         freshMass inClass (initial.cacheQuery input answer) final := by
   unfold freshMass
-  rw [ENNReal.tsum_eq_add_tsum_ite input]
+  rw [tsum_eq_add_tsum_ite input]
   congr 1
   · by_cases hclass : inClass input <;> simp [hclass, hfresh, hfinal]
   · refine tsum_congr fun other => ?_
@@ -76,7 +76,7 @@ theorem freshMass_le_card (inClass : Bytes → Prop) (initial final : QueryCache
   calc (∑' input : Bytes,
         if inClass input ∧ initial input = none ∧ final input ≠ none then (1 : ℝ≥0∞) else 0)
       ≤ ∑' input : Bytes, if input ∈ holder then (1 : ℝ≥0∞) else 0 := by
-        refine ENNReal.tsum_le_tsum fun input => ?_
+        refine tsum_le_tsum fun input => ?_
         split_ifs with hfresh hmem
         · exact le_rfl
         · exact absurd (hheld input hfresh.1 hfresh.2.1 hfresh.2.2) hmem
@@ -94,7 +94,7 @@ theorem freshMass_add (left right : Bytes → Prop) (initial final : QueryCache 
     freshMass left initial final + freshMass right initial final =
       freshMass (fun input => left input ∨ right input) initial final := by
   unfold freshMass
-  rw [← ENNReal.tsum_add]
+  rw [← tsum_add]
   refine tsum_congr fun input => ?_
   by_cases hleft : left input
   · have hright := hdisjoint input hleft
@@ -118,7 +118,7 @@ theorem length_le_freshMass (inClass : Bytes → Prop) (initial final : QueryCac
             else 0) :=
         Finset.sum_congr rfl fun input hinput =>
           (ite_eq_left (hfresh input (List.mem_toFinset.mp hinput))).symm
-    _ ≤ _ := ENNReal.sum_le_tsum _
+    _ ≤ _ := sum_le_tsum _
 
 /-! ## Expectations of a value -/
 
@@ -141,7 +141,7 @@ theorem tsum_mul_le {β : Type} (run : ProbComp β) (left right : β → ℝ≥0
     (hle : ∀ value ∈ support run, left value ≤ right value) :
     ∑' value, Pr{let x ← run}[x = value] * left value ≤
       ∑' value, Pr{let x ← run}[x = value] * right value := by
-  refine ENNReal.tsum_le_tsum fun value => ?_
+  refine tsum_le_tsum fun value => ?_
   by_cases hmem : value ∈ support run
   · exact mul_le_mul' le_rfl (hle value hmem)
   · rw [(prEvent_eq_zero_of_not_mem_support _) hmem, zero_mul, zero_mul]
@@ -199,7 +199,7 @@ theorem prob_bad_le_expected_fresh (inClass : Bytes → Prop) (bad : Bytes → H
           simpa [KeygenUniform.rom, RandomOracleModel.impl, unifFwdImpl] using hstep
         obtain ⟨value, hvalue⟩ := hform
         rw [← hvalue]
-      refine ENNReal.tsum_le_tsum fun step => ?_
+      refine tsum_le_tsum fun step => ?_
       by_cases hmem : step ∈ support ((KeygenUniform.rom (Sum.inl coin)).run initial)
       · rw [mul_assoc, hstep step hmem]
         exact mul_le_mul' le_rfl (ih step.1 initial hclean)
@@ -256,7 +256,7 @@ theorem prob_bad_le_expected_fresh (inClass : Bytes → Prop) (bad : Bytes → H
                 ∑' result, Pr{let x ← ((simulateQ KeygenUniform.rom (next answer)).run
                     (initial.cacheQuery input answer))}[x = result] *
                   freshMass inClass (initial.cacheQuery input answer) result.2 := by
-                rw [← ENNReal.tsum_add]
+                rw [← tsum_add]
                 exact tsum_congr fun result => mul_add _ _ _
             _ = _ := by
                 rw [ENNReal.tsum_mul_right, OracleComp.tsum_prEvent_eq_one, one_mul]
@@ -274,10 +274,10 @@ theorem prob_bad_le_expected_fresh (inClass : Bytes → Prop) (bad : Bytes → H
             exact le_add_right (prEvent_le_one _)
           · rw [ite_eq_right hbadness, zero_add]
             exact ih answer (initial.cacheQuery input answer) (hclean.cacheQuery hbadness)
-        refine le_trans (ENNReal.tsum_le_tsum fun answer =>
+        refine le_trans (tsum_le_tsum fun answer =>
           mul_le_mul' le_rfl (hpointwise answer)) ?_
         simp_rw [mul_add]
-        rw [ENNReal.tsum_add, ENNReal.tsum_add, add_mul]
+        rw [tsum_add, tsum_add, add_mul]
         refine add_le_add ?_ ?_
         · have hbadMass : (∑' answer : HashOutput,
                 Pr{let x ← ($ᵗ HashOutput : ProbComp HashOutput)}[x = answer] *

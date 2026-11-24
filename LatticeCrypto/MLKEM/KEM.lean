@@ -90,7 +90,7 @@ def decaps (ring : NTTRingOps) (encoding : Encoding params)
 This wrapper is intended for reuse inside the repo's generic KEM interfaces; it assumes callers
 only supply inputs that have already passed the public `encaps` / `decaps` checks above. -/
 def asKEMScheme (ring : NTTRingOps) (encoding : Encoding params)
-    (prims : Primitives params encoding) [DecidableEq encoding.EncodedTHat]
+    (prims : Primitives params encoding)
     [DecidableEq encoding.EncodedU] [DecidableEq encoding.EncodedV] :
     KEMScheme ProbComp SharedSecret (EncapsulationKey params encoding)
       (DecapsulationKey params encoding) (Ciphertext params encoding) where

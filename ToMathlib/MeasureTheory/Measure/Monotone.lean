@@ -51,13 +51,13 @@ private theorem iSup_tsum_of_monotone (f : ℕ → ℕ → ENNReal)
     (⨆ n, ∑' i, f n i) = ∑' i, ⨆ n, f n i := by
   calc
     (⨆ n, ∑' i, f n i) = ⨆ n, ⨆ s : Finset ℕ, ∑ i ∈ s, f n i := by
-      simp_rw [ENNReal.tsum_eq_iSup_sum]
+      simp_rw [tsum_eq_iSup_sum]
     _ = ⨆ s : Finset ℕ, ⨆ n, ∑ i ∈ s, f n i := iSup_comm
     _ = ⨆ s : Finset ℕ, ∑ i ∈ s, ⨆ n, f n i := by
       congr 1
       funext s
       exact (ENNReal.finsetSum_iSup_of_monotone (s := s) hf).symm
-    _ = ∑' i, ⨆ n, f n i := ENNReal.tsum_eq_iSup_sum.symm
+    _ = ∑' i, ⨆ n, f n i := tsum_eq_iSup_sum.symm
 
 /-- The measure whose value on a measurable set is the supremum of an increasing sequence. -/
 private noncomputable def monotoneLimit (μ : ℕ → Measure α) (hμ : Monotone μ) : Measure α :=

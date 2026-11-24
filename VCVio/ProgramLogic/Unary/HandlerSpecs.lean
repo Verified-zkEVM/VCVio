@@ -14,6 +14,7 @@ public import VCVio.OracleComp.QueryTracking.LoggingOracle.Core
 public import VCVio.OracleComp.QueryTracking.SeededOracle
 public import VCVio.ProgramLogic.Unary.WP.Necessary
 public import PolyFun.Control.Monad.WriterT.WP
+public import PolyFun.PFunctor.Free.WP.Charge
 
 /-!
 # Handler specifications for `OracleComp` simulators
@@ -37,8 +38,9 @@ reading to the stateful handlers. The writer handlers read their log as accumula
 * *Composite programs* are handled by `vcgen` from the per-query specifications: the worked
   examples below compose two-, three-, and four-query bind chains.
 * *Whole simulations*: `simulateQ_triple_preserves_invariant` and its `WriterT` analogue
-  lift a per-query invariant to `simulateQ handler oa` by induction on `oa` with
-  `Std.WP.Triple.pure` and `Std.WP.Triple.bind`.
+  lift a per-query invariant to `simulateQ handler oa`. Both instantiate PolyFun's
+  monad-generic `PFunctor.FreeM.triple_liftM_invariant`, since `simulateQ handler` is the fold
+  `PFunctor.FreeM.liftM handler`.
 * `triple_stateT_iff_forall_support` and its writer analogues read a triple as a statement
   about the support of the run, the form consumed by the relational lifts in
   `VCVio.ProgramLogic.Relational.HandlerFromUnary`.
@@ -135,12 +137,8 @@ theorem simulateQ_triple_preserves_invariant {σ α : Type}
     (hhandler : ∀ t : spec.Domain, ⦃ fun s => I s ⦄ handler t ⦃ fun _ s' => I s' ⦄)
     (oa : OracleComp spec α) :
     ⦃ fun s => I s ⦄ (simulateQ handler oa : StateT σ (OracleComp spec) α)
-      ⦃ fun _ s' => I s' ⦄ := by
-  induction oa using OracleComp.inductionOn with
-  | pure x => exact Std.WP.Triple.pure x fun _ h => h
-  | query_bind t oa ih =>
-    rw [simulateQ_query_bind]
-    exact Std.WP.Triple.bind _ _ _ (hhandler t) ih
+      ⦃ fun _ s' => I s' ⦄ :=
+  PFunctor.FreeM.triple_liftM_invariant (P := spec.toPFunctor) handler (fun s => I s) _ hhandler oa
 
 /-- Specialized simulation triple: combine a starting-state precondition `s = s₀` with an
 invariant that holds of `s₀`. The invariant is threaded through the entire simulation. -/
@@ -163,12 +161,8 @@ theorem simulateQ_writerT_triple_preserves_invariant {ω α : Type} [Monoid ω]
     (hhandler : ∀ t : spec.Domain, ⦃ fun s => I s ⦄ handler t ⦃ fun _ s' => I s' ⦄)
     (oa : OracleComp spec α) :
     ⦃ fun s => I s ⦄ (simulateQ handler oa : WriterT ω (OracleComp spec) α)
-      ⦃ fun _ s' => I s' ⦄ := by
-  induction oa using OracleComp.inductionOn with
-  | pure x => exact Std.WP.Triple.pure x fun _ h => h
-  | query_bind t oa ih =>
-    rw [simulateQ_query_bind]
-    exact Std.WP.Triple.bind _ _ _ (hhandler t) ih
+      ⦃ fun _ s' => I s' ⦄ :=
+  PFunctor.FreeM.triple_liftM_invariant (P := spec.toPFunctor) handler (fun s => I s) _ hhandler oa
 
 section cachingOracle
 

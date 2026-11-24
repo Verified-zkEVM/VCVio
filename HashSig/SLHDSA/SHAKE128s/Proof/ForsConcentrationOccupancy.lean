@@ -169,7 +169,7 @@ theorem poissonLoads_eq_mixture (bins : Nat) [NeZero bins] :
   apply Measure.ext_of_singleton
   intro counts
   rw [Measure.sum_apply _ (measurableSet_singleton _)]
-  simp only [Measure.smul_apply, smul_eq_mul, uniformLoads_singleton, mul_ite, mul_zero]
+  simp only [smul_apply, smul_eq_mul, uniformLoads_singleton, mul_ite, mul_zero]
   rw [tsum_eq_single (∑ i, counts i)]
   · simpa [uniformLoads_singleton] using poissonLoads_singleton_factor bins counts
   · intro requests hne
@@ -240,9 +240,9 @@ theorem uniformLoads_mul_poisson_tail_le (bins requests : Nat) [NeZero bins]
   rw [← Measure.tsum_indicator_apply_singleton
     (poissonMeasure (3 * (bins : ℝ≥0))) {n | requests ≤ n} .of_discrete,
     ← ENNReal.tsum_mul_left]
-  apply ENNReal.tsum_le_tsum
+  apply tsum_le_tsum
   intro n
-  simp only [Set.indicator_apply, Set.mem_ofPred_eq, Measure.smul_apply, smul_eq_mul]
+  simp only [Set.indicator_apply, Set.mem_ofPred_eq, smul_apply, smul_eq_mul]
   split_ifs with h
   · rw [mul_comm]
     exact mul_le_mul_right (uniformLoads_monotone bins event hup h) _

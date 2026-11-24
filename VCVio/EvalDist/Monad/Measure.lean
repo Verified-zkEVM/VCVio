@@ -10,7 +10,7 @@ public import VCVio.EvalDist.ProbabilityNotation
 public import VCVio.EvalDist.Monad.Support
 public import ToMathlib.MeasureTheory.Measure.IndependentDraws
 public import ToMathlib.MeasureTheory.Measure.Bounds
-import ToMathlib.Probability.UniformOn
+import ToCslib.Probability.UniformOn
 
 /-!
 # Measure-valued computation laws
@@ -37,7 +37,7 @@ variable {m : Type u → Type v} [Monad m] [EvalDistSemantics m]
 /-- Reindexing a uniform draw by a bijection does not change the measure of any subsequent
 computation. -/
 theorem evalDist_bind_bijective_of_uniform [LawfulMonad m]
-    [DiscreteMeasurableSpace α] [MeasurableSingletonClass α] [Finite α] [Nonempty α]
+    [DiscreteMeasurableSpace α] [MeasurableSingletonClass α]
     (mx : m α) (huniform : 𝒟[mx] = uniformOn Set.univ)
     (e : α → α) (he : Function.Bijective e) (f : α → m β) :
     𝒟[mx >>= fun x => f (e x)] = 𝒟[mx >>= f] := by
@@ -54,7 +54,6 @@ before an arbitrary continuation. -/
 theorem evalDist_bind_bijective_uniform_cross [LawfulMonad m]
     [DiscreteMeasurableSpace α] [DiscreteMeasurableSpace β]
     [MeasurableSingletonClass α] [MeasurableSingletonClass β]
-    [Finite α] [Finite β] [Nonempty α] [Nonempty β]
     (mx : m α) (my : m β)
     (hα : 𝒟[mx] = uniformOn Set.univ) (hβ : 𝒟[my] = uniformOn Set.univ)
     (e : α → β) (he : Function.Bijective e) (f : β → m γ) :
@@ -129,6 +128,19 @@ theorem evalDist_bind_apply_mono_of_discrete [DiscreteMeasurableSpace α]
     𝒟[mx >>= f] event ≤ 𝒟[mx >>= g] event :=
   evalDist_bind_apply_mono mx f g .of_discrete .of_discrete hevent
     (Filter.Eventually.of_forall hfg)
+
+/-- Measure domination of a prefix and of every continuation gives domination of the composed
+measures, in any measurable space of final outputs. The prefix is compared under the discrete
+σ-algebra on its outputs. -/
+theorem evalDist_bind_le_of_le {α : Type u} {mx my : m α} {f g : α → m β}
+    (hxy : (letI : MeasurableSpace α := ⊤; 𝒟[mx] ≤ 𝒟[my])) (hfg : ∀ a, 𝒟[f a] ≤ 𝒟[g a]) :
+    𝒟[mx >>= f] ≤ 𝒟[my >>= g] := by
+  let : MeasurableSpace α := ⊤
+  rw [evalDist_bind_of_discrete, evalDist_bind_of_discrete]
+  refine Measure.le_iff.mpr fun T hT => ?_
+  rw [Measure.bind_apply hT Measurable.of_discrete.aemeasurable,
+    Measure.bind_apply hT Measurable.of_discrete.aemeasurable]
+  exact (lintegral_mono fun a => Measure.le_iff'.mp (hfg a) T).trans (lintegral_mono' hxy le_rfl)
 
 /-- Charge a bad intermediate event separately from uniformly bounded good continuations. -/
 theorem evalDist_bind_apply_le_add_of_bad (mx : m α) (f : α → m β)
