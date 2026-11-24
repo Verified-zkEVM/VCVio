@@ -38,19 +38,20 @@ theorem unforgeableAdvantage_le {F G₁ G₂ Gₜ M : Type}
     [AddCommGroup Gₜ] [Module F Gₜ] [DecidableEq Gₜ] [DecidableEq M]
     {e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ} {g₁ : G₁} {g₂ : G₂}
     (A : SignatureAlg.UnforgeableAdversary (scheme (M := M) e g₁ g₂))
-    (qH qS : ℕ) (hQ : QueryBound A qH qS)
+    (qH qS : ℕ) (hQ : A.RomQueryBound qH qS)
     (hg₁ : Function.Bijective (· • g₁ : F → G₁)) (he : e g₁ g₂ ≠ 0) :
     SignatureAlg.unforgeableAdvantage (ProbCompRuntime.rom (M →ₒ G₁)) A ≤
-      (qH + qS + 1) * Pr{let b ← CoCDH.experiment g₁ g₂ (BLS.reduction A qH qS)}[b = true] := by
-  rw [unforgeableAdvantage_eq_indexed A hg₁ he, mul_prEvent_experiment_reduction]
+      (qH + qS + 1) *
+        Pr{let b ← CoCDH.experiment g₁ g₂ (BLS.coCDHReduction A qH qS)}[b = true] := by
+  rw [unforgeableAdvantage_eq_indexed A hg₁ he, mul_prEvent_experiment_coCDHReduction]
   let : MeasurableSpace F := ⊤
   rw [prEvent_bind_of_discrete]
   calc
     _ ≤ ∫⁻ x : F, ∑ j : Fin (qH + qS + 1),
         Pr{let h ← ($ᵗ G₁ : ProbComp G₁)
-           let y ← reductionAt A j.val g₁ g₂ (x • g₁) (x • g₂) h}[y = x • h]
+           let y ← coCDHReductionAt A j.val g₁ g₂ (x • g₁) (x • g₂) h}[y = x • h]
         ∂𝒟[($ᵗ F : ProbComp F)] :=
-      lintegral_mono fun x => prEvent_winning_le_sum_reductionAt A hg₁ x qH qS hQ
+      lintegral_mono fun x => prEvent_winning_le_sum_coCDHReductionAt A hg₁ x qH qS hQ
     _ = _ := by
       rw [lintegral_finsetSum _ (fun _ _ => Measurable.of_discrete)]
       apply Finset.sum_congr rfl
