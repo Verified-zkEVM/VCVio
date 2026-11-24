@@ -110,12 +110,12 @@ acceptance. -/
 theorem IsFinder.mem_log_of_mem_support [Fintype R] [DecidableEq R] [∀ r, Fintype (C r)]
     {Out : Type} {good : (((r : R) → C r) → Bool) → Out → Prop}
     {find : OracleComp (unifSpec + accSpec C) (Option Out)} {κ T : ENNReal}
-    (h : IsFinder good find κ T) {m : ℕ} (points : Out → Fin m → ((r : R) → C r))
+    (h : IsFinder good find κ T) {I : Type} (points : Out → I → ((r : R) → C r))
     (hpts : ∀ f o, good f o → ∀ i, f (points o i) = true) (g : ((r : R) → C r) → Bool)
     (z : Option Out × (Set ((r : R) → C r) × ℕ))
     (hz : z ∈ support
       ((simulateQ (coins (S := Set ((r : R) → C r) × ℕ) + logCounted g) find).run (∅, 0)))
-    (o : Out) (ho : z.1 = some o) (i : Fin m) : points o i ∈ z.2.1 := by
+    (o : Out) (ho : z.1 = some o) (i : I) : points o i ∈ z.2.1 := by
   classical
   by_contra hmiss
   let g' := Function.update g (points o i) false

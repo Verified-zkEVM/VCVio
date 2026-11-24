@@ -8,6 +8,7 @@ module
 public import VCVio.CryptoFoundations.Rewinding.FinderBridge
 public import VCVio.CryptoFoundations.Rewinding.QueriedPoints
 public import VCVio.CryptoFoundations.Rewinding.ThresholdSemantics
+public import Mathlib.Data.FinEnum
 
 /-!
 # Recovering transcripts from a finder
@@ -215,12 +216,13 @@ theorem run_simulateQ_counted_lookupAll (F : Q → α) (L : Set Q) {m : ℕ} (qs
 
 /-- The recovery step against a fixed table: on a successful output, the extractor receives the
 table's entries at its points, and the counter grows by one complete run per point missing from
-the log. -/
-@[expose] noncomputable def recoverFrom {Out W : Type} {m : ℕ} (F : Q → α)
-    (points : Out → Fin m → Q) (ext : Out → (Fin m → α) → ProbComp W)
+the log. The points are looked up in the order of the enumeration of their index type. -/
+@[expose] noncomputable def recoverFrom {Out W I : Type} [FinEnum I] (F : Q → α)
+    (points : Out → I → Q) (ext : Out → (I → α) → ProbComp W)
     (z : (Option Out × Set Q) × ℕ) : ProbComp (Option W × ℕ) :=
   z.1.1.elim (pure (none, z.2)) fun o =>
-    (fun w => (some w, z.2 + missCount z.1.2 (points o))) <$> ext o fun i => F (points o i)
+    (fun w => (some w, z.2 + missCount z.1.2 fun j => points o (FinEnum.equiv.symm j))) <$>
+      ext o fun i => F (points o i)
 
 variable [DecidableEq Q]
 
@@ -249,16 +251,16 @@ theorem run_cachingImpl_inr (accept : Q → α → Bool) (q : Q) (c : Q → Opti
   simp [cachingImpl]
 
 /-- Run a finder against the verdicts of complete reruns, caching their outputs. On success,
-recover the transcripts at the points of its output from the cache, and hand them to the
-extractor. -/
-@[expose] def recover {Out W : Type} {m : ℕ} (accept : Q → α → Bool)
+recover the transcripts at the points of its output from the cache, in the order of the
+enumeration of their index type, and hand them to the extractor. -/
+@[expose] def recover {Out W I : Type} [FinEnum I] (accept : Q → α → Bool)
     (find : OracleComp (unifSpec + rerunSpec Q Bool) (Option Out))
-    (points : Out → Fin m → Q) (ext : Out → (Fin m → α) → ProbComp W) :
+    (points : Out → I → Q) (ext : Out → (I → α) → ProbComp W) :
     OracleComp (unifSpec + rerunSpec Q α) (Option W) := do
   let z ← (simulateQ (cachingImpl accept) find).run fun _ => none
   z.1.elim (pure none) fun o => do
-    let ts ← lookupAll z.2 (points o)
-    some <$> OracleComp.liftComp (ext o ts) (unifSpec + rerunSpec Q α)
+    let ts ← lookupAll z.2 fun j => points o (FinEnum.equiv.symm j)
+    some <$> OracleComp.liftComp (ext o fun i => ts (FinEnum.equiv i)) (unifSpec + rerunSpec Q α)
 
 /-- Against a fixed table, the caching finder is the logged finder against the table's verdicts,
 its cache holding the table's entries at the logged vectors. -/
@@ -288,9 +290,9 @@ theorem run_simulateQ_counted_caching (accept : Q → α → Bool) (F : Q → α
 
 /-- Against a fixed table, cached recovery is the logged finder against the table's verdicts,
 followed by extraction from the table's entries at the output's points. -/
-theorem run_simulateQ_counted_recover {Out W : Type} {m : ℕ} (accept : Q → α → Bool)
+theorem run_simulateQ_counted_recover {Out W I : Type} [FinEnum I] (accept : Q → α → Bool)
     (F : Q → α) (find : OracleComp (unifSpec + rerunSpec Q Bool) (Option Out))
-    (points : Out → Fin m → Q) (ext : Out → (Fin m → α) → ProbComp W) :
+    (points : Out → I → Q) (ext : Out → (I → α) → ProbComp W) :
     (simulateQ (coins (S := ℕ) + counted F) (recover accept find points ext)).run 0 =
       regroup <$> logRun (fun q => accept q (F q)) find >>= recoverFrom F points ext := by
   simp only [recover, simulateQ_bind, StateT.run_bind]
@@ -302,7 +304,7 @@ theorem run_simulateQ_counted_recover {Out W : Type} {m : ℕ} (accept : Q → �
   | some o =>
     simp only [Option.elim, simulateQ_bind, StateT.run_bind, run_simulateQ_counted_lookupAll,
       pure_bind, simulateQ_map, StateT.run_map, QueryImpl.simulateQ_add_liftComp_left,
-      recoverFrom, regroup]
+      recoverFrom, regroup, Equiv.symm_apply_apply]
     simp [coins]
 
 end Cache
@@ -321,10 +323,10 @@ variable {ι σ : Type} {spec : OracleSpec ι} {init : ProbComp σ}
 
 /-- Against frozen reruns, recovery is the logged finder against the verdicts of an eager table of
 complete outputs, followed by extraction from the same table, with the same complete-run count. -/
-theorem attempt_recover {Q α Out W : Type} [Finite Q] [DecidableEq Q] {m : ℕ}
+theorem attempt_recover {Q α Out W I : Type} [Finite Q] [DecidableEq Q] [FinEnum I]
     (run : Q → OracleComp spec α) (accept : Q → α → Bool)
     (find : OracleComp (unifSpec + rerunSpec Q Bool) (Option Out))
-    (points : Out → Fin m → Q) (ext : Out → (Fin m → α) → ProbComp W) :
+    (points : Out → I → Q) (ext : Out → (I → α) → ProbComp W) :
     P.attempt run (recover accept find points ext) =ᵈ
       (do let F ← P.eagerTable run
           regroup <$> logRun (fun q => accept q (F q)) find >>= recoverFrom F points ext) := by
@@ -340,9 +342,9 @@ theorem recover_bounds [Fintype R] [DecidableEq R] [∀ r, Fintype (C r)]
     (run : ((r : R) → C r) → OracleComp spec α) (accept : ((r : R) → C r) → α → Bool)
     {good : (((r : R) → C r) → Bool) → Out → Prop}
     {find : OracleComp (unifSpec + accSpec C) (Option Out)} {κ T : ℝ≥0∞}
-    (h : IsFinder good find κ T) {m : ℕ} (points : Out → Fin m → ((r : R) → C r))
+    (h : IsFinder good find κ T) {I : Type} [FinEnum I] (points : Out → I → ((r : R) → C r))
     (hpts : ∀ f o, good f o → ∀ i, f (points o i) = true)
-    (ext : Out → (Fin m → α) → ProbComp W) (valid : W → Prop)
+    (ext : Out → (I → α) → ProbComp W) (valid : W → Prop)
     (hext : ∀ F ∈ support (P.eagerTable run), ∀ o, good (fun c => accept c (F c)) o →
       ∀ w ∈ support (ext o fun i => F (points o i)), valid w) :
     (∑ c, Pr{let a ← (do (simulateQ impl (run c)).run' (← init))}[accept c a = true]) /
@@ -409,8 +411,8 @@ theorem recover_bounds [Fintype R] [DecidableEq R] [∀ r, Fintype (C r)]
             simp only [regroup, recoverFrom, Option.elim, support_map,
               Set.mem_image] at hy
             obtain ⟨w, -, rfl⟩ := hy
-            rw [missCount_eq_zero L (points o)
-              fun i => h.mem_log_of_mem_support points hpts _ _ hz' o rfl i]
+            rw [missCount_eq_zero L _
+              fun j => h.mem_log_of_mem_support points hpts _ _ hz' o rfl _]
             simp [regroup]
         · rw [Nat.cast_zero, add_zero, ← expectedCalls_map_output Prod.fst]
           have hmap : (fun y => (y.1.1, y.2)) <$>
@@ -438,9 +440,9 @@ theorem recover_bounds_sub [Fintype R] [DecidableEq R] [∀ r, Fintype (C r)]
     (run : ((r : R) → C r) → OracleComp spec α) (accept : ((r : R) → C r) → α → Bool)
     {good : (((r : R) → C r) → Bool) → Out → Prop}
     {find : OracleComp (unifSpec + accSpec C) (Option Out)} {κ T : ℝ≥0∞}
-    (h : IsFinder good find κ T) {m : ℕ} (points : Out → Fin m → ((r : R) → C r))
+    (h : IsFinder good find κ T) {I : Type} [FinEnum I] (points : Out → I → ((r : R) → C r))
     (hpts : ∀ f o, good f o → ∀ i, f (points o i) = true)
-    (ext : Out → (Fin m → α) → ProbComp W) (valid : W → Prop)
+    (ext : Out → (I → α) → ProbComp W) (valid : W → Prop)
     (hext : ∀ F ∈ support (P.eagerTable run), ∀ o, good (fun c => accept c (F c)) o →
       ∀ w ∈ support (ext o fun i => F (points o i)), valid w) :
     (∑ c, Pr{let a ← (do (simulateQ impl (run c)).run' (← init))}[accept c a = true]) /
@@ -451,6 +453,27 @@ theorem recover_bounds_sub [Fintype R] [DecidableEq R] [∀ r, Fintype (C r)]
   obtain ⟨hs, hc⟩ := P.recover_bounds run accept h points hpts ext valid hext
   exact ⟨tsub_le_iff_left.mpr
     (hs.trans (add_le_add le_rfl (mul_le_of_le_one_left zero_le tsub_le_self))), hc⟩
+
+
+/-- `ResetPolicy.recover_bounds` for a tree finder, recovering the transcripts at the leaves of the
+returned tree. Every leaf of a returned tree accepts, so its transcript is cached. -/
+theorem recover_tree_bounds [Fintype R] [LinearOrder R] [∀ r, Fintype (C r)]
+    [DecidableEq ((r : R) → C r)] {k : R → ℕ} [FinEnum ((r : R) → Fin (k r))] {α W : Type}
+    (run : ((r : R) → C r) → OracleComp spec α) (accept : ((r : R) → C r) → α → Bool)
+    {nodeOk : (r : R) → (Fin (k r) → C r) → Prop}
+    {find : OracleComp (unifSpec + accSpec C) (Option (VecTree C k))} {κ T : ℝ≥0∞}
+    (h : IsTreeFinder k nodeOk find κ T)
+    (ext : VecTree C k → (((r : R) → Fin (k r)) → α) → ProbComp W) (valid : W → Prop)
+    (hext : ∀ F ∈ support (P.eagerTable run), ∀ t : VecTree C k, t.IsStructured nodeOk →
+      (∀ p, accept (t.leaf p) (F (t.leaf p)) = true) →
+      ∀ w ∈ support (ext t fun p => F (t.leaf p)), valid w) :
+    (∑ c, Pr{let a ← (do (simulateQ impl (run c)).run' (← init))}[accept c a = true]) /
+        Fintype.card ((r : R) → C r) ≤
+      κ + (1 - κ) * Pr{let z ← P.attempt run (recover accept find VecTree.leaf ext)}[
+        ∃ w, z.1 = some w ∧ valid w] ∧
+    expectedCalls (P.attempt run (recover accept find VecTree.leaf ext)) ≤ T :=
+  P.recover_bounds run accept h.toIsFinder VecTree.leaf (fun _ _ ht p => ht.2 p) ext valid
+    fun F hF t ht => hext F hF t ht.1 ht.2
 
 end ResetPolicy
 

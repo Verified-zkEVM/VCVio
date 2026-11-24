@@ -50,8 +50,10 @@ response to the challenge. -/
 
 /-- The Σ-protocol's extractor on the transcripts at the two leaves. -/
 @[expose] def sigmaExt (σ : SigmaProtocol ProbComp Stmt Wit Commit St Chal Resp rel)
-    (t : VecTree (chals Chal) two) (ts : Fin 2 → Commit × Resp) : ProbComp Wit :=
-  σ.extract (leafPoints t 0 0) (ts 0).2 (leafPoints t 1 0) (ts 1).2
+    (t : VecTree (chals Chal) two) (ts : ((i : Fin 1) → Fin (two i)) → Commit × Resp) :
+    ProbComp Wit :=
+  σ.extract (leafPoints t 0 0) (ts fun _ => (0 : Fin 2)).2 (leafPoints t 1 0)
+    (ts fun _ => (1 : Fin 2)).2
 
 /-- A computation answered by fresh coins, with no ambient state, is itself. -/
 theorem run'_simulateQ_coins {α : Type} (oa : ProbComp α) :
@@ -73,11 +75,9 @@ theorem sigmaExt_valid [Finite Chal]
     (commit : ProbComp (Commit × St)) (respond : St → Chal → ProbComp Resp)
     (F : ((i : Fin 1) → chals Chal i) → Commit × Resp)
     (hF : F ∈ support (fixedTape.eagerTable (proverRun commit respond)))
-    (t : VecTree (chals Chal) two)
-    (ht : t.IsStructured (fun _ ch => Function.Injective ch) ∧
-      ∀ p, (fun c => σ.verify x (F c).1 (c 0) (F c).2) (t.leaf p) = true)
-    (w : Wit) (hw : w ∈ support (sigmaExt σ t fun i => F (leafPoints t i))) : rel x w = true := by
-  obtain ⟨hstruct, hacc⟩ := ht
+    (t : VecTree (chals Chal) two) (hstruct : t.IsStructured fun _ ch => Function.Injective ch)
+    (hacc : ∀ p, σ.verify x (F (t.leaf p)).1 (t.leaf p 0) (F (t.leaf p)).2 = true)
+    (w : Wit) (hw : w ∈ support (sigmaExt σ t fun p => F (t.leaf p))) : rel x w = true := by
   have hcommit : (F (leafPoints t 0)).1 = (F (leafPoints t 1)).1 :=
     fixedTape.eagerTable_fst_eq (Q := (i : Fin 1) → chals Chal i) (S := Commit × St)
       (A := Commit) (B := Resp) commit Prod.fst (fun s c => respond s.2 (c 0)) hF _ _
@@ -98,7 +98,7 @@ then recovery of the two transcripts from a cache of those runs, and the Σ-prot
 @[expose] def sigmaRecover [SampleableType Chal] [DecidableEq Chal]
     (σ : SigmaProtocol ProbComp Stmt Wit Commit St Chal Resp rel) (x : Stmt) :
     OracleComp (unifSpec + rerunSpec ((i : Fin 1) → chals Chal i) (Commit × Resp)) (Option Wit) :=
-  recover (fun c t => σ.verify x t.1 (c 0) t.2) (thresholdFinder (chals Chal) two) leafPoints
+  recover (fun c t => σ.verify x t.1 (c 0) t.2) (thresholdFinder (chals Chal) two) VecTree.leaf
     (sigmaExt σ)
 
 /-- Against frozen reruns of a malicious prover, recovery gives a valid witness with probability at
@@ -116,13 +116,12 @@ theorem sigma_recover [Fintype Chal] [SampleableType Chal] [DecidableEq Chal]
         2 := by
   have hk : ∀ i, 1 ≤ two i ∧ two i ≤ Fintype.card (chals Chal i) :=
     fun _ => ⟨(by norm_num : (1 : ℕ) ≤ 2), hc⟩
-  have hb := fixedTape.recover_bounds_sub (proverRun commit respond)
-    (fun c t => σ.verify x t.1 (c 0) t.2)
-    (isTreeFinder_thresholdFinder (chals Chal) two hk).toIsFinder leafPoints
-    (fun _ _ ht j => ht.2 fun _ => j) (sigmaExt σ) (fun w => rel x w = true)
-    (sigmaExt_valid σ x hss commit respond)
+  have hb := fixedTape.recover_tree_bounds (proverRun commit respond)
+    (fun c t => σ.verify x t.1 (c 0) t.2) (isTreeFinder_thresholdFinder (chals Chal) two hk)
+    (sigmaExt σ) (fun w => rel x w = true) (sigmaExt_valid σ x hss commit respond)
   simp only [pure_bind, run'_simulateQ_coins] at hb
-  refine ⟨hb.1, hb.2.trans ?_⟩
+  refine ⟨tsub_le_iff_left.mpr (hb.1.trans
+    (add_le_add le_rfl (mul_le_of_le_one_left zero_le tsub_le_self))), hb.2.trans ?_⟩
   norm_num
 
 end VCVioTest.RewindingExtraction
