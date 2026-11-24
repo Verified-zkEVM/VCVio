@@ -10,10 +10,8 @@ import Mathlib.Tactic.Ring
 
 /-! # Independent slopes under affine masking
 
-This follows Gurkan's linear-functional proof of BLS security in the algebraic group model
-of Fuchsbauer, Kiltz and Loss (CRYPTO 2018). Adding a uniform mask to a scalar multiple of
-a slope table hides the slope perfectly, including from an adaptive computation that observes
-the entire masked table.
+Adding a uniform mask to a scalar multiple of a slope table hides the slope perfectly, including
+from an adaptive computation that observes the entire masked table.
 -/
 
 public section
@@ -67,20 +65,6 @@ theorem masked_view_evalDistEq {F ι γ : Type} [Ring F] [SampleableType F]
     simpa only [seen, bind_assoc, pure_bind] using
       OracleComp.EvalDistEq.bind_bind_swap ($ᵗ (ι → F)) seen
         (fun a z => pure (z.1, z.2, a))
-
-/-- A zero affine equation with nonzero slope reveals the masked scalar. -/
-theorem affine_extract_eq {F ι : Type*} [Field F] [Fintype ι]
-    (L a b : ι → F) (α c : F)
-    (hzero : ∑ i, L i * (a i * α + b i) = c)
-    (hslope : ∑ i, L i * a i ≠ 0) :
-    (c - ∑ i, L i * b i) / (∑ i, L i * a i) = α := by
-  apply (div_eq_iff hslope).2
-  have he : ∑ i, L i * (a i * α + b i) =
-      (∑ i, L i * a i) * α + ∑ i, L i * b i := by
-    simp only [mul_add, ← mul_assoc, Finset.sum_add_distrib, Finset.sum_mul]
-  rw [he] at hzero
-  rw [← hzero]
-  ring
 
 /-- A zero verification gap in a public view yields an affine guess, except for a hidden
 uniform slope collision. The entire public view is drawn before the slope table. -/

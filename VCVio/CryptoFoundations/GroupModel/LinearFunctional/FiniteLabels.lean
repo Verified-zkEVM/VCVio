@@ -11,10 +11,9 @@ public import VCVio.OracleComp.Traversal
 
 /-! # Finite proof covers for arbitrary labels
 
-This follows Gurkan's linear-functional proof of BLS security in the algebraic group model
-of Fuchsbauer, Kiltz and Loss (CRYPTO 2018). Finite answers give a finite cover of all adaptive
-paths, including output labels. The cover is a proof artifact and is never enumerated by a
-reduction. No query budget or finite message space is assumed.
+Finite answers give a finite cover of all adaptive paths, including output labels. The cover is a
+proof artifact and is never enumerated by a reduction. No query budget or finite message space is
+assumed.
 -/
 
 public section
@@ -123,8 +122,9 @@ theorem simulateQ_romImpl_evalDistEq_finite_table {M R α : Type}
       (do let table ← $ᵗ (S → R)
           simulateQ (unifFwdAnswerImpl (QueryImpl.ofFn (extendTable S fallback table))) oa) := by
   rw [← restrict_rom S oa h ∅, restrictCache_empty]
-  refine (simulateQ_romImpl_evalDistEq_table
-    (restrictRandomOracleQueries S oa (queriesCovered_elim h)) ∅).trans ?_
+  let : MeasurableSpace α := ⊤
+  refine (EvalDistEq.of_evalDist_eq (evalDist_simulateQ_romImpl_run'_eq_completeTable
+    (restrictRandomOracleQueries S oa (queriesCovered_elim h)) ∅)).trans ?_
   apply _root_.EvalDistEq.bind_right
   intro table
   rw [completeTable_empty]

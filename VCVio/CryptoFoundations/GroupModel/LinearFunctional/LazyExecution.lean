@@ -10,10 +10,9 @@ public import VCVio.OracleComp.SimSemantics.StateT.Basic
 
 /-! # Chronological private-oracle programs
 
-This follows Gurkan's linear-functional proof of BLS security in the algebraic group model
-of Fuchsbauer, Kiltz and Loss (CRYPTO 2018). The public interface has two kinds of group replies.
-The private interface supplies their common scalar or mask values. Transcript positions retain
-repetitions and query order, including when the two kinds share a cached label.
+The public interface has two kinds of group replies. The private interface supplies their common
+scalar or mask values. Transcript positions retain repetitions and query order, including when the
+two kinds share a cached label.
 -/
 
 public section

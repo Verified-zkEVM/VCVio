@@ -7,7 +7,6 @@ Authors: Quang Dao
 module
 public import VCVio.Schemes.BLS.AGM.Security
 import all VCVio.Schemes.BLS.AGM.Reductions
-import VCVio.CryptoFoundations.GroupModel.LinearFunctional.LazyExecution
 public import Mathlib.Algebra.Field.ZMod
 
 /-! # Concrete algebraic BLS fixtures over the field of order 101
@@ -49,10 +48,6 @@ private def oneHash : BLS.AlgebraicAdversary K Bool K K (LinearMap.mul K K) 1 1 
     · exact fun s => by cases s <;> exact .nil
     · intro reply
       exact Explained.valid_ofVectors _ _ _
-  protocol input := by
-    rw [allPathsSatisfy_query_bind]
-    refine ⟨fun s => by cases s <;> rfl, fun reply _ => ?_⟩
-    simp [output, Explained.ofVectors]
 
 private theorem oneHash_raw (pk : K × K) :
     oneHash.toUnforgeableAdversary.main pk = (do
@@ -85,7 +80,7 @@ private theorem oneHash_good (X Y : K) :
   simp [GroupModel.LinearFunctional.readTranscript]
 
 /-- A certified one-hash algebraic adversary forgets to exactly the ordinary hash-and-return
-program in the existing BLS oracle specification. -/
+program in the BLS oracle specification. -/
 theorem one_hash_adversary_exists :
     ∃ A : BLS.AlgebraicAdversary (ZMod 101) Bool (ZMod 101) (ZMod 101)
       (LinearMap.mul (ZMod 101) (ZMod 101)) 1 1,
@@ -119,14 +114,7 @@ theorem one_hash_unforgeable_bound :
         Pr{let b ← DLog11.experiment 1 1 (BLS.badReduction A)}[b = true] +
         (1 / 101 : ℝ≥0∞) := by
   refine ⟨oneHash, oneHash_raw, ?_⟩
-  have h := BLS.unforgeableAdvantage_le_of_algebraic oneHash
-    (by
-      constructor
-      · intro a b hab
-        simpa only [smul_eq_mul, mul_one] using hab
-      · intro a
-        exact ⟨a, by simp⟩)
-    (by simp)
+  have h := BLS.unforgeableAdvantage_le_of_algebraic oneHash (fun a => ⟨a, by simp⟩) (by simp)
   simpa using h
 
 end BLSAGMTest

@@ -11,10 +11,9 @@ import all VCVio.CryptoFoundations.GroupModel.LinearFunctional.FiniteLabels
 
 /-! # Covers preserved by chronological extraction
 
-This follows Gurkan's linear-functional proof of BLS security in the algebraic group model
-of Fuchsbauer, Kiltz and Loss (CRYPTO 2018). A cover of public interaction labels also covers
-the private transcript replay and final target lookup. Thus one finite table suffices for all
-parts of the reduction, without changing its executable cache.
+A cover of public interaction labels also covers the private transcript replay and final target
+lookup. Thus one finite table suffices for all parts of the reduction, without changing its
+executable cache.
 -/
 
 public section

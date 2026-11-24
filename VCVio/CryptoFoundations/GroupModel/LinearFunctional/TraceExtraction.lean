@@ -13,10 +13,9 @@ import Mathlib.Algebra.Module.Pi
 
 /-! # Linear functionals extracted from chronological replies
 
-This follows Gurkan's linear-functional proof of BLS security in the algebraic group model
-of Fuchsbauer, Kiltz and Loss (CRYPTO 2018). The first two coefficient positions explain a
-generator and public key; subsequent positions correspond to chronological reply occurrences.
-The signing functional has a separate constant for the received public-key coefficient.
+The first two coefficient positions explain a generator and public key; subsequent positions
+correspond to chronological reply occurrences. The signing functional has a separate constant for
+the received public-key coefficient.
 -/
 
 public section

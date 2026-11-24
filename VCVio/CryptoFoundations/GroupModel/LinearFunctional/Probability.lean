@@ -11,9 +11,8 @@ public import VCVio.EvalDist.ProbabilityBounds
 
 /-! # Extraction and independent affine collision bounds
 
-This follows Gurkan's linear-functional proof of BLS security in the algebraic group model
-of Fuchsbauer, Kiltz and Loss (CRYPTO 2018). The extraction split applies to adaptive
-representations. The collision bound requires a fresh scalar independent of the coefficients.
+The extraction split applies to adaptive representations. The collision bound requires a fresh
+scalar independent of the coefficients.
 -/
 
 public section
@@ -21,21 +20,6 @@ public section
 open OracleComp
 
 namespace GroupModel.LinearFunctional
-
-/-- Successful affine verification either extracts the secret or has zero denominator. -/
-theorem prEvent_success_le_extract_add_degenerate {F γ : Type} [Field F]
-    (oa : ProbComp γ) (success : γ → Prop) (repr : γ → AffineForm F)
-    (target secret : γ → F)
-    (hsound : ∀ z ∈ support oa, success z →
-      (repr z).eval (secret z) = target z * secret z) :
-    Pr{let z ← oa}[success z] ≤
-      Pr{let z ← oa}[(repr z).const / (target z - (repr z).lin) = secret z] +
-      Pr{let z ← oa}[success z ∧ (repr z).lin = target z] := by
-  refine (prEvent_mono_of_support oa _ _ ?_).trans (prEvent_or_le oa _ _)
-  intro z hz hsucc
-  by_cases hlin : (repr z).lin = target z
-  · exact Or.inr ⟨hsucc, hlin⟩
-  · exact Or.inl (AffineForm.extract_secret (hsound z hz hsucc) hlin).symm
 
 /-- A fresh uniform scalar satisfies a nonconstant affine equation with probability at most
 one over the field size, even when the coefficients depend on an earlier computation. -/

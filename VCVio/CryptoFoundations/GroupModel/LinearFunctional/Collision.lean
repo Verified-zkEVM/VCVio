@@ -10,10 +10,8 @@ import VCVio.OracleComp.QueryTracking.RandomOracle.FreshQuery
 
 /-! # Uniform linear-functional collisions
 
-This follows Gurkan's linear-functional proof of BLS security in the algebraic group model
-of Fuchsbauer, Kiltz and Loss (CRYPTO 2018). Resampling one nonzero coordinate bounds a
-functional of an independent uniform table. Coefficients may be selected by an earlier
-computation, provided the table remains independent of it.
+Resampling one nonzero coordinate bounds a functional of an independent uniform table. Coefficients
+may be selected by an earlier computation, provided the table remains independent of it.
 -/
 
 public section
@@ -40,21 +38,5 @@ theorem prEvent_sum_mul_uniform_le {F ι : Type} [Field F] [Fintype F] [Sampleab
   simp_rw [hsum]
   exact prEvent_affine_uniform_le ($ᵗ (ι → F)) (fun _ => L j)
     (fun g => ∑ i ∈ univ.erase j, L i * g i) (fun _ => t) (fun _ _ => hj)
-
-/-- Adaptive coefficients still obey the collision bound when their entire view is sampled
-before the independent uniform vector. -/
-theorem prEvent_adaptive_sum_mul_uniform_le {F ι γ : Type}
-    [Field F] [Fintype F] [SampleableType F] [Fintype ι]
-    (oa : ProbComp γ) (L : γ → ι → F) (j : γ → ι) (t : γ → F)
-    (h : ∀ z ∈ support oa, L z (j z) ≠ 0) :
-    Pr{let z ← oa; let ρ ← $ᵗ (ι → F)}[∑ i, L z i * ρ i = t z] ≤
-      1 / Fintype.card F := by
-  classical
-  have hb := prEvent_bind_le_of_forall_le_of_support oa
-    (fun z => (fun ρ : ι → F => ∑ i, L z i * ρ i = t z) <$> ($ᵗ (ι → F))) id
-    (ε := 1 / Fintype.card F) (fun z hz => by
-      simpa only [prEvent_norm, id_eq] using
-        prEvent_sum_mul_uniform_le (L z) (j z) (h z hz) (t z))
-  simpa only [prEvent_norm, id_eq] using hb
 
 end GroupModel.LinearFunctional
