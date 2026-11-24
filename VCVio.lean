@@ -304,6 +304,10 @@ public import VCVio.CryptoFoundations.SymmEncAlg.INDCCA
 public import VCVio.CryptoFoundations.SymmEncAlg.INDCPA
 public import VCVio.CryptoFoundations.SymmEncAlg.Measure
 public import VCVio.CryptoFoundations.SymmEncAlg.OneTimeINDCPA
+public import VCVio.CryptoFoundations.SyncSignatureAlg
+public import VCVio.CryptoFoundations.SyncSignatureAlg.Basic
+public import VCVio.CryptoFoundations.SyncSignatureAlg.Correctness
+public import VCVio.CryptoFoundations.SyncSignatureAlg.Unforgeability
 public import VCVio.CryptoFoundations.TimeLockPuzzle
 public import VCVio.CryptoFoundations.TimeLockPuzzle.Encoding
 public import VCVio.CryptoFoundations.TimeLockPuzzle.Hiding
