@@ -171,6 +171,7 @@ public import VCVio.CryptoFoundations.HashChain.Extraction
 public import VCVio.CryptoFoundations.HashCommitment
 public import VCVio.CryptoFoundations.IdenSchemeWithAbort
 public import VCVio.CryptoFoundations.KeyEncapMech
+public import VCVio.CryptoFoundations.KeyEncapMech.ANO
 public import VCVio.CryptoFoundations.LeftOrRight
 public import VCVio.CryptoFoundations.MacAlg
 public import VCVio.CryptoFoundations.MerkleTree.Addressed.Basic
