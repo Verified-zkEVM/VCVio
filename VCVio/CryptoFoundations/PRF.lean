@@ -51,6 +51,12 @@ random functions on `D`.
 - `prfAdvantage` — distinguishing advantage.
 - `PRFScheme.multiKey` — independent instances of a PRF as one PRF, whose `prfAdvantage` is the
   multi-instance PRF advantage.
+
+## Main Statements
+
+- `prfAdvantage_eq_absDiff` — the advantage as a difference of two probabilities.
+- `absDiff_prfRealExperiment_le` — two distinguishers compared in the real world through the
+  ideal world.
 -/
 
 @[expose] public section
@@ -130,6 +136,42 @@ a random function. -/
 noncomputable def prfAdvantage [DecidableEq D] [SampleableType R]
     (prf : PRFScheme K D R) (adversary : PRFAdversary D R) : ℝ≥0∞ :=
   𝒟[prf.prfRealExperiment adversary].boolDist 𝒟[prfIdealExperiment adversary]
+
+/-- The PRF advantage is the absolute difference of the two experiments' probabilities of
+returning `true`. -/
+theorem prfAdvantage_eq_absDiff [DecidableEq D] [SampleableType R] (prf : PRFScheme K D R)
+    (adversary : PRFAdversary D R) :
+    prf.prfAdvantage adversary =
+      ENNReal.absDiff (Pr{let b ← prf.prfRealExperiment adversary}[b = true])
+        (Pr{let b ← prfIdealExperiment adversary}[b = true]) :=
+  boolDist_evalDist_eq_absDiff _ _
+
+/-- **Through the ideal world.** The real experiments of two distinguishers return `true` with
+probabilities that differ by at most the two PRF advantages and the difference in the ideal
+experiments. -/
+theorem absDiff_prfRealExperiment_le [DecidableEq D] [SampleableType R] (prf : PRFScheme K D R)
+    (adv₁ adv₂ : PRFAdversary D R) :
+    ENNReal.absDiff (Pr{let b ← prf.prfRealExperiment adv₁}[b = true])
+        (Pr{let b ← prf.prfRealExperiment adv₂}[b = true]) ≤
+      prf.prfAdvantage adv₁ +
+        ENNReal.absDiff (Pr{let b ← prfIdealExperiment adv₁}[b = true])
+          (Pr{let b ← prfIdealExperiment adv₂}[b = true]) +
+        prf.prfAdvantage adv₂ := by
+  rw [prfAdvantage_eq_absDiff, prfAdvantage_eq_absDiff,
+    ENNReal.absDiff_comm (Pr{let b ← prf.prfRealExperiment adv₂}[b = true])]
+  exact (ENNReal.absDiff_triangle _ _ _).trans
+    (add_le_add (ENNReal.absDiff_triangle _ _ _) le_rfl)
+
+/-- If the ideal world returns `true` equally often for two distinguishers, their probabilities in
+the real world differ by at most the two PRF advantages. -/
+theorem absDiff_prfRealExperiment_le_of_ideal_eq [DecidableEq D] [SampleableType R]
+    (prf : PRFScheme K D R) (adv₁ adv₂ : PRFAdversary D R)
+    (h : Pr{let b ← prfIdealExperiment adv₁}[b = true] =
+      Pr{let b ← prfIdealExperiment adv₂}[b = true]) :
+    ENNReal.absDiff (Pr{let b ← prf.prfRealExperiment adv₁}[b = true])
+        (Pr{let b ← prf.prfRealExperiment adv₂}[b = true]) ≤
+      prf.prfAdvantage adv₁ + prf.prfAdvantage adv₂ := by
+  simpa [h] using prf.absDiff_prfRealExperiment_le adv₁ adv₂
 
 /-! ## Independent instances
 

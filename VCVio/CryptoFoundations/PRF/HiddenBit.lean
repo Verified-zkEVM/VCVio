@@ -115,8 +115,7 @@ theorem absDiff_prfRealExperiment_eq_two_mul_prfAdvantage [DecidableEq D] [Sampl
         let b ← (liftM ($ᵗ Bool : ProbComp Bool) : OracleComp (PRFOracleSpec D R) Bool)
         let g ← run b
         return decide (g = b) : OracleComp (PRFOracleSpec D R) Bool) := by
-  rw [prfAdvantage, MeasureTheory.Measure.boolDist, ← prEvent_eq_evalDist_singleton,
-    ← prEvent_eq_evalDist_singleton, prfRealExperiment_guessBit, prfIdealExperiment_guessBit]
+  rw [prfAdvantage_eq_absDiff, prfRealExperiment_guessBit, prfIdealExperiment_guessBit]
   simp only [← Bool.not_eq_true, prEvent_not_eq_one_sub, hideal]
   set p₁ := Pr{let g ← prf.prfRealExperiment (run true)}[g = true]
   set p₀ := Pr{let g ← prf.prfRealExperiment (run false)}[g = true]
