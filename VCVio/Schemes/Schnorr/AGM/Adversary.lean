@@ -111,7 +111,7 @@ structure AlgebraicAdversary (F G M : Type) [Field F] [AddCommGroup G] [Module F
 `Schnorr.signature` unforgeability game without modifying any of its oracles. -/
 @[expose] def AlgebraicAdversary.toUnforgeableAdversary {F G M : Type}
     [Field F] [SampleableType F] [AddCommGroup G] [Module F G] [DecidableEq G]
-    [SampleableType G] [DecidableEq M] (A : AlgebraicAdversary F G M) (g : G) :
+    [SampleableType G] (A : AlgebraicAdversary F G M) (g : G) :
     SignatureAlg.UnforgeableAdversary (signature F G g M) where
   main pk := AGM.forgery <$> simulateQ (fun q => AGM.oracle q.value) (A.main (AGM.initial g pk))
 
