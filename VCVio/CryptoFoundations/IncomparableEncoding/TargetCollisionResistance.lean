@@ -9,10 +9,24 @@ public import VCVio.CryptoFoundations.IncomparableEncoding.Retry
 public import VCVio.OracleComp.SimSemantics.Append
 
 /-!
-# Encoding target-collision game
+# Target-collision resistance of an incomparable encoding
 
-The adaptive experiment retains eligible queries in order, including exhausted retries. It
-rejects reused epochs and excess requests before sampling, and tests exact pair freshness.
+The experiment samples public parameters `pp` and runs the adversary with a challenge oracle. On a
+query `(msg, ep)` the oracle runs the encoding's retry loop for at most `numRetries` draws and
+records the epoch, the message and the result. A query whose draws all fail is still recorded,
+with result `none`, so it uses up one of the `numRecords` slots and its epoch. The oracle rejects a
+query without sampling once `numRecords` records exist, or when its epoch was used before.
+
+The adversary outputs `(m*, r*, ep*)`. It wins if `m*` and `r*` encode at `ep*` to the word of a
+successful record at `ep*` whose message/randomizer pair differs from `(m*, r*)`.
+
+The paper samples the public parameters and the randomizers uniformly. `Problem` takes both
+samplers as parameters instead.
+
+## References
+
+- Drake, Khovratovich, Kudinov and Wagner, *Hash-Based Multi-Signatures for Post-Quantum Ethereum*,
+  [ePrint 2025/055](https://eprint.iacr.org/2025/055), Definition 15 (T-COLL-RES).
 -/
 
 public section
@@ -48,53 +62,6 @@ abbrev Transcript (M R E : Type) (n radix : ℕ) := List (Record M R E n radix)
     (msg : M) (ep : E) (answer : Option (Codeword n radix × R)) :
     Option (Codeword n radix × R) × Transcript M R E n radix :=
   if rejected p s ep then (none, s) else (answer, s ++ [⟨ep, msg, answer⟩])
-
-/-- Rejection preserves the entire first record and all older records. -/
-theorem finish_of_rejected [DecidableEq E] (p : ℕ) (s : Transcript M R E n radix)
-    (msg : M) (ep : E) (answer : Option (Codeword n radix × R))
-    (h : rejected p s ep = true) : finish p s msg ep answer = (none, s) := by
-  simp [finish, h]
-
-/-- An eligible exhausted query appends its message and consumed epoch with a failed result. -/
-theorem finish_none_of_eligible [DecidableEq E] (p : ℕ) (s : Transcript M R E n radix)
-    (msg : M) (ep : E) (h : rejected p s ep = false) :
-    finish p s msg ep none = (none, s ++ [⟨ep, msg, none⟩]) := by
-  simp [finish, h]
-
-/-- Every completed transition preserves the record bound from a bounded transcript. -/
-theorem length_finish_le [DecidableEq E] (p : ℕ) (s : Transcript M R E n radix)
-    (msg : M) (ep : E) (answer : Option (Codeword n radix × R)) (h : s.length ≤ p) :
-    let result := finish p s msg ep answer
-    let transcript := result.2
-    transcript.length ≤ p := by
-  dsimp
-  unfold finish
-  split_ifs with hr
-  · exact h
-  · have hp : s.length < p ∧ used s ep = false := by simpa [rejected] using hr
-    simpa using Nat.succ_le_of_lt hp.1
-
-/-- Every old record remains in the transcript after any transition. -/
-theorem mem_finish_of_mem [DecidableEq E] (p : ℕ) (s : Transcript M R E n radix)
-    (msg : M) (ep : E) (answer : Option (Codeword n radix × R))
-    (entry : Record M R E n radix) (h : entry ∈ s) : entry ∈ (finish p s msg ep answer).2 := by
-  unfold finish
-  split_ifs <;> simp_all
-
-/-- An eligible completed query consumes its epoch for either successful or failed answers. -/
-theorem used_finish_of_eligible [DecidableEq E] (p : ℕ) (s : Transcript M R E n radix)
-    (msg : M) (ep : E) (answer : Option (Codeword n radix × R))
-    (h : rejected p s ep = false) : used (finish p s msg ep answer).2 ep = true := by
-  simp [finish, h, used]
-
-/-- A repeated epoch is rejected regardless of the message and the earlier outcome. -/
-theorem rejected_of_used [DecidableEq E] (p : ℕ) (s : Transcript M R E n radix)
-    (ep : E) (h : used s ep = true) : rejected p s ep = true := by
-  simp [rejected, h]
-
-/-- A zero record budget rejects every request. -/
-theorem rejected_zero [DecidableEq E] (s : Transcript M R E n radix) (ep : E) :
-    rejected 0 s ep = true := by simp [rejected]
 
 /-- The query exposes both the successful word and the sampled randomizer. -/
 abbrev challengeSpec (M R E : Type) (n radix : ℕ) : OracleSpec (M × E) :=
@@ -132,22 +99,6 @@ structure Adversary (prob : Problem PP M R E n radix) where
     set result.2
     return result.1
 
-/-- Rejected queries return without drawing randomness or changing the transcript. -/
-theorem challengeOracle_run_of_rejected [DecidableEq E]
-    (prob : Problem PP M R E n radix) (pp : PP) (q : M × E)
-    (s : Transcript M R E n radix) (h : rejected prob.numRecords s q.2 = true) :
-    (challengeOracle prob pp q).run s = pure (none, s) := by
-  simp [challengeOracle, h]
-
-/-- Every eligible returned answer records exactly one query, including returned exhaustion. -/
-theorem challengeOracle_run_of_eligible [DecidableEq E]
-    (prob : Problem PP M R E n radix) (pp : PP) (q : M × E)
-    (s : Transcript M R E n radix) (h : rejected prob.numRecords s q.2 = false) :
-    (challengeOracle prob pp q).run s =
-      prob.enc.retry prob.randomGen pp q.1 q.2 prob.numRetries >>= fun answer =>
-        pure (answer, s ++ [⟨q.2, q.1, answer⟩]) := by
-  simp [challengeOracle, h, finish]
-
 /-- Forward private random draws while retaining the same challenge transcript. -/
 @[expose] def oracles [DecidableEq E] (prob : Problem PP M R E n radix) (pp : PP) :
     QueryImpl (unifSpec + challengeSpec M R E n radix)
@@ -155,65 +106,35 @@ theorem challengeOracle_run_of_eligible [DecidableEq E]
   (QueryImpl.ofLift unifSpec ProbComp).liftTarget
     (StateT (Transcript M R E n radix) ProbComp) + challengeOracle prob pp
 
-/-- Check the same epoch and word and a distinct message/randomizer pair.
-Failed entries never provide a collision target. -/
+/-- Whether one transcript entry is a target that the submitted collision hits. The entry must
+hold a successful word at the same epoch, equal to the word that the collision encodes to, from a
+different message/randomizer pair. A failed entry is never a target. -/
+@[expose] def witnesses [DecidableEq M] [DecidableEq R] [DecidableEq E]
+    (enc : IncomparableEncoding PP M R E n radix) (pp : PP) (collision : M × R × E)
+    (entry : Record M R E n radix) : Bool :=
+  match enc.encode pp collision.1 collision.2.1 collision.2.2, entry.result with
+  | some word, some (target, r) =>
+      decide (entry.epoch = collision.2.2 ∧ target = word ∧
+        (entry.message, r) ≠ (collision.1, collision.2.1))
+  | _, _ => false
+
+/-- The adversary wins if some transcript entry witnesses its collision. -/
 @[expose] def valid [DecidableEq M] [DecidableEq R] [DecidableEq E]
     (enc : IncomparableEncoding PP M R E n radix) (pp : PP) (s : Transcript M R E n radix)
     (collision : M × R × E) : Bool :=
-  let candidate := collision.2
-  match enc.value pp collision.1 candidate.1 candidate.2 with
-  | none => false
-  | some word => s.any fun entry =>
-      match entry.result with
-      | none => false
-      | some (target, r) => decide (entry.epoch = candidate.2 ∧ target = word ∧
-          (entry.message, r) ≠ (collision.1, candidate.1))
+  s.any (witnesses enc pp collision)
 
-/-- The Boolean experiment preserves missing mass from generation or adversarial interaction. -/
+/-- Sample the public parameters, run the adversary against the challenge oracle, and check its
+output against the final transcript. -/
 @[expose] def experiment [DecidableEq M] [DecidableEq R] [DecidableEq E]
     {prob : Problem PP M R E n radix} (adv : Adversary prob) : ProbComp Bool := do
   let pp ← prob.paramGen
   let (collision, transcript) ← (simulateQ (oracles prob pp) (adv.find pp)).run []
   return valid prob.enc pp transcript collision
 
-/-- The public successful-output measure, with no conditioning on experiment termination. -/
-@[expose] noncomputable def outputMeasure [DecidableEq M] [DecidableEq R] [DecidableEq E]
-    {prob : Problem PP M R E n radix}
-    (adv : Adversary prob) : MeasureTheory.Measure Bool := 𝒟[experiment adv]
-
-/-- Winning mass is measured at the returned Boolean value `true`. -/
+/-- The probability that the experiment returns `true`. -/
 @[expose] noncomputable def advantage [DecidableEq M] [DecidableEq R] [DecidableEq E]
     {prob : Problem PP M R E n radix}
-    (adv : Adversary prob) : ℝ≥0∞ := outputMeasure adv {true}
-
-/-- The paper's finite uniform sampling specialization requires runtime laws for fresh draws. -/
-@[expose] def UniformSamplingLaws [Fintype PP] [Fintype R]
-    (prob : Problem PP M R E n radix) : Prop :=
-  UniformSampler ProbCompRuntime.probComp prob.paramGen ∧
-    UniformSampler ProbCompRuntime.probComp prob.randomGen ∧
-    ProbCompRuntime.probComp.SamplingLaws
-
-/-- A failed encoding cannot win against any transcript. -/
-theorem valid_of_failure [DecidableEq M] [DecidableEq R] [DecidableEq E]
-    (enc : IncomparableEncoding PP M R E n radix) (pp : PP) (s : Transcript M R E n radix)
-    (collision : M × R × E)
-    (h : let candidate := collision.2; enc.value pp collision.1 candidate.1 candidate.2 = none) :
-    valid enc pp s collision = false := by simp [valid, h]
-
-/-- An empty transcript has no target, even if the collision encodes successfully. -/
-theorem valid_nil [DecidableEq M] [DecidableEq R] [DecidableEq E]
-    (enc : IncomparableEncoding PP M R E n radix) (pp : PP) (collision : M × R × E) :
-    valid enc pp [] collision = false := by
-  let candidate := collision.2
-  change (match enc.value pp collision.1 candidate.1 candidate.2 with
-    | none => false
-    | some _ => false) = false
-  split <;> rfl
-
-/-- The public measure agrees with the pinned Boolean output probability. -/
-theorem advantage_eq_probability [DecidableEq M] [DecidableEq R] [DecidableEq E]
-    {prob : Problem PP M R E n radix}
-    (adv : Adversary prob) :
-    advantage adv = 𝒟[experiment adv] {true} := rfl
+    (adv : Adversary prob) : ℝ≥0∞ := 𝒟[experiment adv] {true}
 
 end IncomparableEncoding.TargetCollisionResistance

@@ -9,10 +9,12 @@ public import VCVio.CryptoFoundations.IncomparableEncoding.TargetCollisionResist
 public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.SMDTRTCR
 
 /-!
-# Encoding collision bridge
+# The encoding-to-hash bridge
 
-An injective word map connects the fallible encoding to a tweakable hash. Retry outputs,
-occupied target slots and the winning index retain their exact source observations.
+`Bridge` relates an incomparable encoding to a tweakable hash. This file defines the two games the
+reduction compares (`encodingProblem` and `hashProblem`), translates the encoding game's transcript
+into the SM-rTCR history (`targetHistory`), and shows that a source win names an SM-rTCR
+collision at the first witnessing record (`valid_implies_hash_collision`).
 -/
 
 public section
@@ -32,14 +34,17 @@ structure Bridge (PP M R E Tweak Y : Type) (n radix : ℕ) where
   th : TweakableHash PP Tweak (M × R) Y
   /-- Address of the message-hash computation for each epoch. -/
   epochToTweak : E → Tweak
+  /-- Distinct epochs use distinct tweaks. -/
   epochToTweak_injective : Function.Injective epochToTweak
   /-- Test identifying hash outputs accepted by the encoding. -/
   accepts : Y → Bool
   /-- Codeword associated with each message-hash output. -/
   word : Y → Codeword n radix
+  /-- Distinct hash outputs give distinct words. -/
   word_injective : Function.Injective word
-  value_eq : ∀ pp msg r ep,
-    enc.value pp msg r ep =
+  /-- The encoding succeeds exactly when the hash output is accepted, with that output's word. -/
+  encode_eq : ∀ pp msg r ep,
+    enc.encode pp msg r ep =
       if accepts (th.eval pp (epochToTweak ep) (msg, r)) then
         some (word (th.eval pp (epochToTweak ep) (msg, r))) else none
 
@@ -53,7 +58,7 @@ structure Bridge (PP M R E Tweak Y : Type) (n radix : ℕ) where
   numRecords := p
   numRetries := K
 
-/-- The VCVio target game uses the hash word and the encoding success predicate. -/
+/-- The SM-rTCR game uses the hash word and the encoding success predicate. -/
 @[expose] def hashProblem (bridge : Bridge PP M R E Tweak Y n radix) (p K : ℕ) :
     SM_DT_RTCR_Problem PP Tweak M R Y where
   th := bridge.th
@@ -120,7 +125,7 @@ theorem retry_eq_resample [SampleableType R]
     | zero => rfl
     | succ k ih =>
         simp only [IncomparableEncoding.retry_succ, SM_DT_RTCR_resample_succ, target, hashProblem,
-          bridge.value_eq, PFunctor.FreeM.map_eq_map, map_bind, ih]
+          bridge.encode_eq, PFunctor.FreeM.map_eq_map, map_bind, ih]
         congr 1
         funext r
         by_cases h : bridge.accepts (bridge.th.eval pp (bridge.epochToTweak ep) (msg, r)) = true
@@ -134,23 +139,11 @@ theorem word_eq_of_mem_retry [SampleableType R]
     (msg : M) (ep : E) (K : ℕ) (word : Codeword n radix) (r : R)
     (hreturned : some (word, r) ∈ support (bridge.enc.retry ($ᵗ R) pp msg ep K)) :
     word = bridge.word (bridge.th.eval pp (bridge.epochToTweak ep) (msg, r)) := by
-  have hvalue := IncomparableEncoding.Retry.value_eq_some_of_mem_retry
+  have hvalue := IncomparableEncoding.Retry.encode_eq_some_of_mem_retry
     bridge.enc ($ᵗ R) pp msg ep K word r hreturned
-  rw [bridge.value_eq] at hvalue
+  rw [bridge.encode_eq] at hvalue
   split_ifs at hvalue
   exact Option.some.inj hvalue.symm
-
-/-- This is the exact source winning predicate for one transcript entry. -/
-@[expose] def witnesses (bridge : Bridge PP M R E Tweak Y n radix)
-    (pp : PP) (collision : M × R × E)
-    [DecidableEq M] [DecidableEq R] [DecidableEq E]
-    (entry : TargetCollisionResistance.Record M R E n radix) : Bool :=
-  let candidate := collision.2
-  match bridge.enc.value pp collision.1 candidate.1 candidate.2, entry.result with
-  | some word, some (target, r) =>
-      decide (entry.epoch = candidate.2 ∧ target = word ∧
-        (entry.message, r) ≠ (collision.1, candidate.1))
-  | _, _ => false
 
 /-- The target index is the first source record that witnesses the submitted collision. If no
 record witnesses it, the index is the out-of-range value `transcript.length`. -/
@@ -158,31 +151,7 @@ record witnesses it, the index is the out-of-range value `transcript.length`. -/
     (bridge : Bridge PP M R E Tweak Y n radix) (pp : PP)
     (transcript : TargetCollisionResistance.Transcript M R E n radix)
     (collision : M × R × E) : ℕ :=
-  transcript.findIdx (witnesses bridge pp collision)
-
-/-- The source win test is precisely the existence of an entry selected by the index search. -/
-theorem valid_iff_witness [DecidableEq M] [DecidableEq R] [DecidableEq E]
-    (bridge : Bridge PP M R E Tweak Y n radix) (pp : PP)
-    (transcript : TargetCollisionResistance.Transcript M R E n radix)
-    (collision : M × R × E) :
-    TargetCollisionResistance.valid bridge.enc pp transcript collision = true ↔
-      ∃ entry ∈ transcript, witnesses bridge pp collision entry = true := by
-  unfold TargetCollisionResistance.valid
-  cases h : bridge.enc.value pp collision.1 collision.2.1 collision.2.2 with
-  | none => simp [witnesses, h]
-  | some word =>
-      simp only [h, List.any_eq_true]
-      constructor
-      · rintro ⟨entry, hmem, hw⟩
-        refine ⟨entry, hmem, ?_⟩
-        cases hresult : entry.result with
-        | none => simp [hresult] at hw
-        | some result => simpa [witnesses, h, hresult] using hw
-      · rintro ⟨entry, hmem, hw⟩
-        refine ⟨entry, hmem, ?_⟩
-        cases hresult : entry.result with
-        | none => simp [witnesses, h, hresult] at hw
-        | some result => simpa [witnesses, h, hresult] using hw
+  transcript.findIdx (witnesses bridge.enc pp collision)
 
 /-- Every returned successful target word is the bridge's full word for the recorded hash output.
 This is an invariant of the challenge simulation, not a property of arbitrary user data. -/
@@ -192,7 +161,7 @@ This is an invariant of the challenge simulation, not a property of arbitrary us
     word = bridge.word (bridge.th.eval pp (bridge.epochToTweak entry.epoch)
       (entry.message, r))
 
-/-- A well-formed source collision names a VCVio target at the same issue index. -/
+/-- A well-formed source collision names an SM-rTCR target at the same issue index. -/
 theorem valid_implies_hash_collision [DecidableEq M] [DecidableEq R] [DecidableEq E]
     [DecidableEq Y]
     (bridge : Bridge PP M R E Tweak Y n radix) (p K : ℕ) (pp : PP)
@@ -201,17 +170,17 @@ theorem valid_implies_hash_collision [DecidableEq M] [DecidableEq R] [DecidableE
     (hwin : TargetCollisionResistance.valid bridge.enc pp transcript collision = true) :
     SM_DT_RTCR_IsCollision (hashProblem bridge p K) pp (targetHistory bridge transcript)
       (witnessIndex bridge pp transcript collision, collision.1, collision.2.1) = true := by
-  have hexists := (valid_iff_witness bridge pp transcript collision).mp hwin
+  have hexists := List.any_eq_true.mp hwin
   have hindex : witnessIndex bridge pp transcript collision < transcript.length :=
     List.findIdx_lt_length_of_exists hexists
   let entry := transcript[witnessIndex bridge pp transcript collision]
-  have hwitness : witnesses bridge pp collision entry = true :=
+  have hwitness : witnesses bridge.enc pp collision entry = true :=
     List.findIdx_getElem (w := hindex)
   have hslot : (targetHistory bridge transcript)[witnessIndex bridge pp transcript collision]? =
       some (targetRecord bridge entry) := by
     rw [targetHistory_getElem?, List.getElem?_eq_getElem hindex]
     rfl
-  cases hvalue : bridge.enc.value pp collision.1 collision.2.1 collision.2.2 with
+  cases hvalue : bridge.enc.encode pp collision.1 collision.2.1 collision.2.2 with
   | none => simp [witnesses, hvalue] at hwitness
   | some candidateWord =>
       cases hresult : entry.result with
@@ -226,7 +195,7 @@ theorem valid_implies_hash_collision [DecidableEq M] [DecidableEq R] [DecidableE
           have hnew : candidateWord = bridge.word
               (bridge.th.eval pp (bridge.epochToTweak collision.2.2)
                 (collision.1, collision.2.1)) := by
-            rw [bridge.value_eq] at hvalue
+            rw [bridge.encode_eq] at hvalue
             split_ifs at hvalue; simp_all
           have hhash : bridge.th.eval pp (bridge.epochToTweak entry.epoch)
               (entry.message, targetRandomizer) =

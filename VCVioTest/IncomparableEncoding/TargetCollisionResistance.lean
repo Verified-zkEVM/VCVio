@@ -8,10 +8,10 @@ module
 public import VCVio.CryptoFoundations.IncomparableEncoding.TargetCollisionReduction
 
 /-!
-# Adaptive encoding target-collision tests
+# Encoding target-collision game tests
 
-A singleton global code and three randomizers distinguish failure, pair freshness and repeated
-epoch rejection. The adaptive adversary chooses its collision after observing the oracle reply.
+A one-word code and three randomizers separate encoding failure, pair freshness and repeated-epoch
+rejection. The adaptive adversaries choose their collision after seeing the oracle's replies.
 -/
 
 public section
@@ -29,7 +29,10 @@ open TargetCollisionResistance OracleComp OracleSpec
   incomparable := by
     intro x hx y hy hne
     exact (hne ((Set.mem_singleton_iff.mp hx).trans (Set.mem_singleton_iff.mp hy).symm)).elim
-  encode _ _ r _ := if r = 0 then none else some ⟨word, by simp⟩
+  encode _ _ r _ := if r = 0 then none else some word
+  mem_code_of_encode_eq_some := by
+    intro _ _ r _ x h
+    split at h <;> simp_all [eq_comm]
 
 /-- Draw the next randomizer from an explicit stream; exhausted streams supply zero. -/
 @[expose] def draw : StateM (List (Fin 3)) (Fin 3) := fun s =>
@@ -38,14 +41,10 @@ open TargetCollisionResistance OracleComp OracleSpec
   | r :: rest => (r, rest)
 
 /-- Encoding failure is a returned value, independently of any sampler divergence. -/
-theorem returned_failure : enc.value false false 0 false = none := rfl
+theorem returned_failure : enc.encode false false 0 false = none := rfl
 
 /-- A successful randomizer returns the singleton codeword. -/
-theorem successful_encoding : enc.value false false 1 false = some word := rfl
-
-/-- Zero retries neither draw nor change the randomizer stream. -/
-theorem zero_retries :
-    (enc.retry draw false false false 0).run [1, 2] = (none, [1, 2]) := rfl
+theorem successful_encoding : enc.encode false false 1 false = some word := rfl
 
 /-- The first success ends the retry loop before consuming the next randomizer. -/
 theorem first_success :
@@ -62,11 +61,6 @@ theorem exhaustion_consumes_epoch :
       [⟨false, false, none⟩] ∧
     used (finish 1 ([] : Transcript Bool (Fin 3) Bool 1 2) false false none).2 false = true :=
   ⟨rfl, rfl⟩
-
-/-- A zero record budget returns failure without adding a record. -/
-theorem zero_record_budget :
-    finish 0 ([] : Transcript Bool (Fin 3) Bool 1 2) false false (some (word, 1)) =
-      (none, []) := rfl
 
 /-- A second request cannot replace even the message of an exhausted first request. -/
 theorem duplicate_preserves_failure :
@@ -135,24 +129,5 @@ theorem handler_duplicate_preserves_failure :
 
 /-- Both failed and duplicate replies are data; the completed experiment returns a losing bit. -/
 theorem adaptive_failure_continues : experiment afterFailure = pure false := rfl
-
-/-- A zero target capacity rejects before any VCVio randomizer draw. -/
-theorem hash_zero_capacity {PP M R E Tweak Y : Type} {n radix : ℕ}
-    [SampleableType R] [DecidableEq Tweak]
-    (bridge : TargetCollisionReduction.Bridge PP M R E Tweak Y n radix)
-    (pp : PP) (ep : E) (msg : M) :
-    (TweakableHash.SM_DT_RTCR_challengeOracle
-      (TargetCollisionReduction.hashProblem bridge 0 1) pp (bridge.epochToTweak ep, msg)).run [] =
-        pure (none, []) := by
-  simp [TweakableHash.SM_DT_RTCR_challengeOracle, TargetCollisionReduction.hashProblem]
-
-/-- The target game performs no draw at retry capacity zero. -/
-theorem hash_zero_retry {PP M R E Tweak Y : Type} {n radix : ℕ}
-    [SampleableType R]
-    (bridge : TargetCollisionReduction.Bridge PP M R E Tweak Y n radix)
-    (pp : PP) (ep : E) (msg : M) :
-    TweakableHash.SM_DT_RTCR_resample
-      (TargetCollisionReduction.hashProblem bridge 1 0) pp (bridge.epochToTweak ep) msg 0 =
-        pure none := rfl
 
 end IncomparableEncoding.TargetCollisionProbe

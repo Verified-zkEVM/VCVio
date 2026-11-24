@@ -8,10 +8,11 @@ module
 public import VCVio.CryptoFoundations.IncomparableEncoding.TargetCollisionReduction.Simulation
 
 /-!
-# Encoding collision advantage transport
+# The encoding target-collision bound
 
-The named hash adversary preserves the actual public-seed draw and both resource capacities.
-Its Boolean observation on the common returned sample bounds the source winning mass.
+`reduction` turns an encoding target-collision adversary into an SM-rTCR adversary with the same
+record and retry caps. Both experiments are rewritten as observations of one coupled run
+(`runCoupled`), and every source win in that run is a hash win, which gives `advantage_le_hash`.
 -/
 
 public section
@@ -53,7 +54,7 @@ reports the first successful source target's index and the same candidate pair. 
   let (collision, state) := output
   TargetCollisionResistance.valid bridge.enc pp state.1 collision
 
-/-- Boolean VCVio observation on the same sample and first witnessing index. -/
+/-- Boolean SM-rTCR observation on the same sample and first witnessing index. -/
 @[expose] def targetObservation [DecidableEq M] [DecidableEq R] [DecidableEq E]
     [DecidableEq Y]
     (bridge : Bridge PP M R E Tweak Y n radix) (p K : ℕ)
@@ -102,7 +103,7 @@ theorem source_experiment_eq_coupled
   simp only [map_eq_bind_pure_comp, Function.comp_def, bind_assoc, pure_bind]
   rfl
 
-/-- The VCVio experiment of the constructed adversary observes the same common sample. -/
+/-- The SM-rTCR experiment of the constructed adversary observes the same common sample. -/
 theorem target_experiment_eq_coupled
     [DecidableEq M] [DecidableEq R] [DecidableEq E] [DecidableEq Tweak]
     [DecidableEq Y] [SampleableType R]
@@ -119,8 +120,9 @@ theorem target_experiment_eq_coupled
   simp only [map_eq_bind_pure_comp, Function.comp_def, bind_assoc, pure_bind]
   rfl
 
-/-- The unconditional native returned-mass bound for any capacities, including zero. Both games
-sample the same public seed and use the canonical randomizer sampler; no mass is normalized. -/
+/-- DKKW25 Lemmas 6 and 8: the encoding target-collision advantage of `source` is at most the
+SM-rTCR advantage of `reduction source`, for every record cap `p` and retry cap `K`, including zero.
+Both games sample the same public seed and draw randomizers uniformly. -/
 theorem advantage_le_hash
     [DecidableEq M] [DecidableEq R] [DecidableEq E] [DecidableEq Tweak]
     [DecidableEq Y] [SampleableType R]
@@ -128,8 +130,7 @@ theorem advantage_le_hash
     (source : TargetCollisionResistance.Adversary (encodingProblem bridge p K)) :
     TargetCollisionResistance.advantage source ≤
       SM_DT_RTCR_Advantage (reduction bridge p K source) := by
-  unfold TargetCollisionResistance.advantage TargetCollisionResistance.outputMeasure
-    SM_DT_RTCR_Advantage
+  unfold TargetCollisionResistance.advantage SM_DT_RTCR_Advantage
   rw [source_experiment_eq_coupled bridge p K source,
     target_experiment_eq_coupled bridge p K source]
   simp only [map_eq_bind_pure_comp, Function.comp_def]

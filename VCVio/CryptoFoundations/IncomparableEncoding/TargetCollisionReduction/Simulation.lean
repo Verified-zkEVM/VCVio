@@ -10,10 +10,18 @@ public import VCVio.OracleComp.SimSemantics.StateT.Basic
 public import VCVio.OracleComp.SimSemantics.StateT.StateProjection
 
 /-!
-# Encoding collision oracle simulation
+# The coupled run behind the encoding reduction
 
-Coupled source and hash histories agree throughout adaptive interaction. Program equalities
-retain returned exhaustion and every occupied slot without conditioning on termination.
+`liftedOracles` is the challenge oracle that `reduction` gives the source adversary: it forwards
+each query to the SM-rTCR challenge oracle and maps the returned hash output to its codeword.
+`sourceCoupledOracles` answers like the encoding game's challenge oracle and also keeps the
+SM-rTCR history that the same query would produce.
+
+The proof runs the source adversary once with `sourceCoupledOracles`. Its first projection is the
+encoding game's run (`sourceCoupled_run_proj`), the SM-rTCR game's run of `reduction` equals it
+(`nested_run_eq_source`), and the two histories stay related by `CoupledInv` on every outcome
+(`sourceCoupled_run_preserves_inv`). All three are exact equalities of programs, so runs that fail
+or never return are kept as they are.
 -/
 
 public section
