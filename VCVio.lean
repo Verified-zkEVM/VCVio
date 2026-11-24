@@ -129,6 +129,18 @@ public import VCVio.CryptoFoundations.GroupModel.GenericSXDH
 public import VCVio.CryptoFoundations.GroupModel.GenericXDH
 public import VCVio.CryptoFoundations.GroupModel.Instances
 public import VCVio.CryptoFoundations.GroupModel.Interaction
+public import VCVio.CryptoFoundations.GroupModel.LinearFunctional.Affine
+public import VCVio.CryptoFoundations.GroupModel.LinearFunctional.Collision
+public import VCVio.CryptoFoundations.GroupModel.LinearFunctional.Extraction
+public import VCVio.CryptoFoundations.GroupModel.LinearFunctional.FiniteLabels
+public import VCVio.CryptoFoundations.GroupModel.LinearFunctional.Interaction
+public import VCVio.CryptoFoundations.GroupModel.LinearFunctional.LazyCover
+public import VCVio.CryptoFoundations.GroupModel.LinearFunctional.LazyExecution
+public import VCVio.CryptoFoundations.GroupModel.LinearFunctional.LazyTable
+public import VCVio.CryptoFoundations.GroupModel.LinearFunctional.Masking
+public import VCVio.CryptoFoundations.GroupModel.LinearFunctional.Probability
+public import VCVio.CryptoFoundations.GroupModel.LinearFunctional.TraceExtraction
+public import VCVio.CryptoFoundations.GroupModel.LinearFunctional.Weights
 public import VCVio.CryptoFoundations.GroupModel.MasterBound
 public import VCVio.CryptoFoundations.GroupModel.OfExplained
 public import VCVio.CryptoFoundations.GroupModel.Oracle
@@ -143,6 +155,7 @@ public import VCVio.CryptoFoundations.GroupModel.Typed
 public import VCVio.CryptoFoundations.GroupModel.Virtualize
 public import VCVio.CryptoFoundations.HardnessAssumptions.CoCDH
 public import VCVio.CryptoFoundations.HardnessAssumptions.CollisionResistance
+public import VCVio.CryptoFoundations.HardnessAssumptions.DLog11
 public import VCVio.CryptoFoundations.HardnessAssumptions.DiffieHellman
 public import VCVio.CryptoFoundations.HardnessAssumptions.DiscreteLogRelation
 public import VCVio.CryptoFoundations.HardnessAssumptions.DiscreteLogRelation.Algebra
@@ -687,6 +700,9 @@ public import VCVio.Quantum.VC.Proof.OnlineSecurity
 public import VCVio.Quantum.VC.Proof.Repeatability
 public import VCVio.Quantum.VC.Tuples
 public import VCVio.Quantum.VC.Unitaries
+public import VCVio.Schemes.BLS.AGM.Adversary
+public import VCVio.Schemes.BLS.AGM.Reductions
+public import VCVio.Schemes.BLS.AGM.Security
 public import VCVio.Schemes.BLS.Abort
 public import VCVio.Schemes.BLS.Aggregate.Algebra
 public import VCVio.Schemes.BLS.Aggregate.Averaging
