@@ -199,7 +199,8 @@ theorem unforgeableAdvantage_eq_indexed {F G₁ G₂ Gₜ M : Type}
   rw [← hproj]
   simp only [prEvent_map]
   have hmap := simulateQ_indexedOracle_map_evalDistEq (· • g₁ : F → G₁)
-    (fun _ => $ᵗ F) (fun _ => $ᵗ G₁) (fun _ => smul_uniformSample_evalDistEq g₁ hg₁)
+    (fun _ => $ᵗ F) (fun _ => $ᵗ G₁)
+    (fun _ => SampleableType.map_uniformSample_evalDistEq_of_bijective hg₁)
     id (x • ·) none (withFinalPairings e (A.main (x • g₂))) OracleState.empty
   have hmempty : (OracleState.empty : OracleState F M).map (· • g₁) = OracleState.empty := by
     apply OracleState.ext <;> simp [OracleState.map, OracleState.empty]

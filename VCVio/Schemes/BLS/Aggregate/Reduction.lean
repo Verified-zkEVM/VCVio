@@ -119,7 +119,7 @@ theorem simulated_signature_eq [Field F]
     (ψ : G₂ →ₗ[F] G₁) (g₂ : G₂) (x r : F) :
     r • ψ (x • g₂) = x • (r • ψ g₂) := by
   rw [map_smul]
-  exact BLS.simulated_signature_eq (ψ g₂) x r
+  exact smul_comm r x (ψ g₂)
 
 /-- Subtracting the selected hash's mask from an honest signature extracts the co-CDH answer. -/
 theorem sub_mask_eq [Field F]
