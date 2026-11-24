@@ -79,7 +79,7 @@ The hypothesis is `CoordinateWise.IsCoordSpecialSoundTranscripts`, which mention
 rewinding argument produces and the shape a downstream reduction consumes, and neither should have
 to adopt `SigmaProtocol` to say it. -/
 @[expose] def CoordSpeciallySoundAt
-    (σ : SigmaProtocol Stmt Wit Commit PrvState (ι → S) Resp rel) (k : ℕ)
+    (σ : SigmaProtocol ProbComp Stmt Wit Commit PrvState (ι → S) Resp rel) (k : ℕ)
     (ext : Stmt → Commit → Finset ((ι → S) × Resp) → ProbComp Wit) (x : Stmt) : Prop :=
   ∀ (pc : Commit) (T : Finset ((ι → S) × Resp)),
     IsCoordSpecialSoundTranscripts (σ.verify x pc) k T →
@@ -88,7 +88,7 @@ to adopt `SigmaProtocol` to say it. -/
 /-- A Σ-protocol is `ℓ`-coordinate-wise `k`-special sound if `CoordSpeciallySoundAt` holds at every
 statement. -/
 @[expose] def CoordSpeciallySound
-    (σ : SigmaProtocol Stmt Wit Commit PrvState (ι → S) Resp rel) (k : ℕ)
+    (σ : SigmaProtocol ProbComp Stmt Wit Commit PrvState (ι → S) Resp rel) (k : ℕ)
     (ext : Stmt → Commit → Finset ((ι → S) × Resp) → ProbComp Wit) : Prop :=
   ∀ x, σ.CoordSpeciallySoundAt k ext x
 
@@ -97,7 +97,7 @@ accepting transcripts with `k` distinct challenges yields a valid witness. This 
 shape, kept separate so the collapse below is a statement about two independently-written
 definitions. -/
 @[expose] def KSpeciallySoundAt
-    (σ : SigmaProtocol Stmt Wit Commit PrvState (ι → S) Resp rel) (k : ℕ)
+    (σ : SigmaProtocol ProbComp Stmt Wit Commit PrvState (ι → S) Resp rel) (k : ℕ)
     (ext : Stmt → Commit → Finset ((ι → S) × Resp) → ProbComp Wit) (x : Stmt) : Prop :=
   ∀ (pc : Commit) (T : Finset ((ι → S) × Resp)),
     (∀ p ∈ T, σ.verify x pc p.1 p.2 = true) →
@@ -111,7 +111,8 @@ omit [DecidableEq ι] [Fintype S] in
 `k`-special soundness is ordinary `k`-special soundness. The `1 ≤ k` side condition is real: at
 `k = 0` the truncated `k - 1` makes `SS(S, ℓ, 0)` and `SS(S, ℓ, 1)` the same condition. -/
 theorem coordSpeciallySoundAt_iff_kSpeciallySoundAt [Unique ι]
-    (σ : SigmaProtocol Stmt Wit Commit PrvState (ι → S) Resp rel) {k : ℕ} (hk : 1 ≤ k)
+    (σ : SigmaProtocol ProbComp Stmt Wit Commit PrvState (ι → S) Resp rel) {k : ℕ}
+    (hk : 1 ≤ k)
     (ext : Stmt → Commit → Finset ((ι → S) × Resp) → ProbComp Wit) (x : Stmt) :
     σ.CoordSpeciallySoundAt k ext x ↔ σ.KSpeciallySoundAt k ext x :=
   ⟨fun h pc T hacc hcard => h pc T ⟨hacc, (isCoordSpecialSound_iff_of_unique hk).mpr hcard⟩,
@@ -126,7 +127,7 @@ challenges inherits soundness from the repository's two-transcript `SpeciallySou
 This is the honest bridge to `SigmaProtocol.extract`: that field has arity two, so it cannot serve
 as `ext` directly, but `hfactor` says `ext` is built from it. -/
 theorem coordSpeciallySoundAt_two_of_speciallySoundAt
-    (σ : SigmaProtocol Stmt Wit Commit PrvState (ι → S) Resp rel)
+    (σ : SigmaProtocol ProbComp Stmt Wit Commit PrvState (ι → S) Resp rel)
     (ext : Stmt → Commit → Finset ((ι → S) × Resp) → ProbComp Wit)
     (hss : σ.SpeciallySoundAt x)
     (hfactor : ∀ pc T, ∀ w ∈ support (ext x pc T),
@@ -155,7 +156,7 @@ omit [Fintype S] in
 /-- The premises of `CoordSpeciallySoundAt` are jointly satisfiable: `coordFamily` supplies the
 challenge set, and any response function the verifier accepts on it supplies the transcripts. -/
 theorem exists_accepting_isCoordSpecialSound
-    (σ : SigmaProtocol Stmt Wit Commit PrvState (ι → S) Resp rel) (pc : Commit)
+    (σ : SigmaProtocol ProbComp Stmt Wit Commit PrvState (ι → S) Resp rel) (pc : Commit)
     (c₀ : ι → S) (R : ι → Finset S) (hnot : ∀ j, c₀ j ∉ R j)
     (hcard : ∀ j, (R j).card = k - 1) (τ : (ι → S) → Resp)
     (hacc : ∀ c ∈ coordFamily c₀ R, σ.verify x pc c (τ c) = true) :

@@ -6,7 +6,7 @@ Authors: Devon Tuma
 module
 
 public import VCVio.CryptoFoundations.CoordinateFork
-public import ToMathlib.Probability.UniformOn
+public import ToCslib.Probability.UniformOn
 public import VCVio.EvalDist.IndepProduct
 public import VCVio.EvalDist.IndepProductMeasure
 

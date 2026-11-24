@@ -5,7 +5,7 @@ Authors: Devon Tuma
 -/
 module
 
-public import ToMathlib.Probability.UniformOn
+public import ToCslib.Probability.UniformOn
 public import VCVio.CryptoFoundations.CoordinateFork
 public import VCVio.EvalDist.IndepProduct
 public import VCVio.EvalDist.IndepProductMeasure

@@ -5,7 +5,7 @@ Authors: Devon Tuma
 -/
 module
 
-public import ToMathlib.Probability.UniformOn
+public import ToCslib.Probability.UniformOn
 public import VCVio.CryptoFoundations.CoordinateFork.Operational
 public import VCVio.CryptoFoundations.CoordinateFork.SpecialSoundness
 
@@ -60,7 +60,7 @@ variable {k : ℕ} {x : Stmt}
 apply the `k`-ary extractor to the accepting transcripts it returns. Aborts exactly when the fork
 does. -/
 @[expose] noncomputable def coordExtract
-    (σ : SigmaProtocol Stmt Wit Commit PrvState (ι → S) Resp rel)
+    (σ : SigmaProtocol ProbComp Stmt Wit Commit PrvState (ι → S) Resp rel)
     (k : ℕ) (ext : Stmt → Commit → Finset ((ι → S) × Resp) → ProbComp Wit) (x : Stmt)
     (pc : Commit)
     (P : ProbComp ((ι → S) → Resp)) : ProbComp (Option Wit) :=
@@ -84,7 +84,7 @@ Naming this makes the fork's output usable without the extractor: it is the hypo
 `CoordSpeciallySoundAt`, and `CoordinateWise.IsCoordSpecialSoundTranscripts.exists_pair` reads a
 verified pair off it in any prescribed coordinate. -/
 theorem isCoordSpecialSoundTranscripts_of_goodTranscripts
-    {σ : SigmaProtocol Stmt Wit Commit PrvState (ι → S) Resp rel} {pc : Commit}
+    {σ : SigmaProtocol ProbComp Stmt Wit Commit PrvState (ι → S) Resp rel} {pc : Commit}
     {τ : (ι → S) → Resp} {X : Finset (ι → S)}
     (hgood : GoodTranscripts (σ.verify x pc) k (some (τ, X))) :
     IsCoordSpecialSoundTranscripts (σ.verify x pc) k (transcripts τ X) := by
@@ -99,7 +99,7 @@ theorem isCoordSpecialSoundTranscripts_of_goodTranscripts
 omit [DecidableEq ι] [Fintype S] [SampleableType (ι → S)] in
 /-- On a good fork the composite extractor certainly produces a valid witness. -/
 theorem prEvent_extracted_eq_one_of_goodTranscripts
-    {σ : SigmaProtocol Stmt Wit Commit PrvState (ι → S) Resp rel}
+    {σ : SigmaProtocol ProbComp Stmt Wit Commit PrvState (ι → S) Resp rel}
     {ext : Stmt → Commit → Finset ((ι → S) × Resp) → ProbComp Wit} {pc : Commit}
     (hss : σ.CoordSpeciallySoundAt k ext x) {τ : (ι → S) → Resp} {X : Finset (ι → S)}
     (hgood : GoodTranscripts (σ.verify x pc) k (some (τ, X))) :
@@ -116,7 +116,7 @@ where `ε` is the probability that the prover's response is accepted on a unifor
 
 This theorem alone is not a knowledge-soundness definition or an efficiency theorem. -/
 theorem sub_div_le_prEvent_extracted_coordExtract [Nonempty S]
-    (σ : SigmaProtocol Stmt Wit Commit PrvState (ι → S) Resp rel) (k : ℕ)
+    (σ : SigmaProtocol ProbComp Stmt Wit Commit PrvState (ι → S) Resp rel) (k : ℕ)
     (ext : Stmt → Commit → Finset ((ι → S) × Resp) → ProbComp Wit) (x : Stmt)
     (hss : σ.CoordSpeciallySoundAt k ext x) (pc : Commit)
     (P : ProbComp ((ι → S) → Resp)) :
@@ -151,7 +151,7 @@ section Operational
 response table, then hand the accepting transcripts it returns to the `k`-ary extractor. The
 lookup count the loop reports is carried through unchanged. -/
 @[expose] noncomputable def coordExtractOp
-    (σ : SigmaProtocol Stmt Wit Commit PrvState (ι → S) Resp rel)
+    (σ : SigmaProtocol ProbComp Stmt Wit Commit PrvState (ι → S) Resp rel)
     (k : ℕ) (ext : Stmt → Commit → Finset ((ι → S) × Resp) → ProbComp Wit) (x : Stmt)
     (pc : Commit) (P : ProbComp ((ι → S) → Resp)) : ProbComp (Option Wit × ℕ) :=
   coordForkOpT (σ.verify x pc) k P >>= fun r =>
@@ -161,7 +161,7 @@ lookup count the loop reports is carried through unchanged. -/
 
 /-- **The success clause, for the paper's algorithm.** -/
 theorem sub_div_le_prEvent_extracted_coordExtractOp [Nonempty S]
-    (σ : SigmaProtocol Stmt Wit Commit PrvState (ι → S) Resp rel) (k : ℕ)
+    (σ : SigmaProtocol ProbComp Stmt Wit Commit PrvState (ι → S) Resp rel) (k : ℕ)
     (ext : Stmt → Commit → Finset ((ι → S) × Resp) → ProbComp Wit) (x : Stmt)
     (hss : σ.CoordSpeciallySoundAt k ext x) (pc : Commit)
     (P : ProbComp ((ι → S) → Resp)) :
@@ -183,7 +183,7 @@ theorem sub_div_le_prEvent_extracted_coordExtractOp [Nonempty S]
 /-- **The expected-lookup clause, for the paper's algorithm.** The composite reports exactly the
 lookups its fork made, so the bound is the fork's. -/
 theorem lintegral_cost_coordExtractOp_le [Nonempty S]
-    (σ : SigmaProtocol Stmt Wit Commit PrvState (ι → S) Resp rel) (k : ℕ)
+    (σ : SigmaProtocol ProbComp Stmt Wit Commit PrvState (ι → S) Resp rel) (k : ℕ)
     (ext : Stmt → Commit → Finset ((ι → S) × Resp) → ProbComp Wit) (x : Stmt)
     (pc : Commit) (P : ProbComp ((ι → S) → Resp)) :
     ∫⁻ n, (n : ℝ≥0∞) ∂𝒟[Prod.snd <$> σ.coordExtractOp k ext x pc P]
@@ -231,7 +231,7 @@ section Commit
 
 /-- The composite extractor when the prover chooses its first message too. -/
 @[expose] noncomputable def coordExtractCommit
-    (σ : SigmaProtocol Stmt Wit Commit PrvState (ι → S) Resp rel)
+    (σ : SigmaProtocol ProbComp Stmt Wit Commit PrvState (ι → S) Resp rel)
     (k : ℕ) (ext : Stmt → Commit → Finset ((ι → S) × Resp) → ProbComp Wit) (x : Stmt)
     (P : ProbComp (Commit × ((ι → S) → Resp))) : ProbComp (Option Wit) :=
   P >>= fun p => σ.coordExtract k ext x p.1 (pure p.2)
@@ -239,7 +239,7 @@ section Commit
 /-- The `ε` of the bound below: the probability that the prover's transcript verifies, over its own
 first message and response table and a uniform challenge. -/
 @[expose] noncomputable def verifyProb
-    (σ : SigmaProtocol Stmt Wit Commit PrvState (ι → S) Resp rel)
+    (σ : SigmaProtocol ProbComp Stmt Wit Commit PrvState (ι → S) Resp rel)
     (x : Stmt) (P : ProbComp (Commit × ((ι → S) → Resp))) : ℝ≥0∞ :=
   Pr{let p ← P; let c ← $ᵗ (ι → S)}[σ.verify x p.1 c (p.2 c)]
 
@@ -259,7 +259,8 @@ theorem acceptRatio_acceptTable_pure (V : (ι → S) → Resp → Bool) (τ : (�
 
 omit [DecidableEq S] [DecidableEq Resp] in
 /-- Averaging the fixed-first-message accepting ratio over the prover's choice. -/
-theorem verifyProb_eq_lintegral (σ : SigmaProtocol Stmt Wit Commit PrvState (ι → S) Resp rel)
+theorem verifyProb_eq_lintegral
+    (σ : SigmaProtocol ProbComp Stmt Wit Commit PrvState (ι → S) Resp rel)
     (x : Stmt) (P : ProbComp (Commit × ((ι → S) → Resp)))
     [MeasurableSpace (Commit × ((ι → S) → Resp))]
     [DiscreteMeasurableSpace (Commit × ((ι → S) → Resp))] :
@@ -275,7 +276,7 @@ theorem verifyProb_eq_lintegral (σ : SigmaProtocol Stmt Wit Commit PrvState (ι
 /-- The `μ = 1` extraction bound with the prover's first message sampled rather than fixed. The
 loss is unchanged: averaging a pointwise bound over the first message costs nothing. -/
 theorem sub_div_le_prEvent_extracted_coordExtractCommit [Nonempty S]
-    (σ : SigmaProtocol Stmt Wit Commit PrvState (ι → S) Resp rel) (k : ℕ)
+    (σ : SigmaProtocol ProbComp Stmt Wit Commit PrvState (ι → S) Resp rel) (k : ℕ)
     (ext : Stmt → Commit → Finset ((ι → S) × Resp) → ProbComp Wit) (x : Stmt)
     (hss : σ.CoordSpeciallySoundAt k ext x) (P : ProbComp (Commit × ((ι → S) → Resp))) :
     verifyProb σ x P - (Fintype.card ι : ℝ≥0∞) * (k - 1 : ℕ) / Fintype.card S

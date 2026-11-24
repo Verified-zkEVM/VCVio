@@ -35,7 +35,8 @@ abbrev SChal : Type := Fin 2 → Fin 3
 /-- A toy Σ-protocol on challenge vectors. Statements, witnesses and responses are all `Fin 3`; the
 relation is equality, and the verifier accepts exactly when the response equals the statement. The
 verifier is deliberately not constantly `true`, so an accepting transcript carries information. -/
-def toySigma : SigmaProtocol (Fin 3) (Fin 3) Unit Unit SChal (Fin 3) (fun x w => x == w) where
+def toySigma :
+    SigmaProtocol ProbComp (Fin 3) (Fin 3) Unit Unit SChal (Fin 3) (fun x w => x == w) where
   commit _ _ := pure ((), ())
   respond _ w _ _ := pure w
   verify x _ _ resp := resp == x
