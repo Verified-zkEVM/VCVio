@@ -13,9 +13,9 @@ public import Batteries.Control.OptionT
 # Finite support of uniform sampling
 
 For `c : ProbComp α` with `[DecidableEq α]`, `finSupport c` enumerates the reachable outputs
-by taking the union over the answers to each query. For a uniform draw, `ProbComp.support_uniformFin`
-gives the whole answer set. For a small closed computation, membership can also be proved by
-enumeration.
+by taking the union over the answers to each query. For a uniform draw,
+`ProbComp.support_uniformFin` gives the whole answer set. For a small closed computation,
+membership can also be proved by enumeration.
 
 ```lean
 example : (1 : Fin 2) ∈ support (ProbComp.uniformFin 1) := by

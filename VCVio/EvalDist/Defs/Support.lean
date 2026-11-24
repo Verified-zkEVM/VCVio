@@ -123,7 +123,7 @@ lemma finSupport_eqRec {m} [hms : MonadAttach m] [hmfs : HasEvalFinset m]
 
 section decidable
 
-/-- Decides membership in `support mx` for each computation `mx : m α`, for every result type `α`. -/
+/-- Decides membership in `support mx` for each result type `α` and computation `mx : m α`. -/
 protected class HasEvalSet.Decidable (m : Type u → Type v) [MonadAttach m] where
   /-- A decision procedure for whether a value is a possible output of `mx`. -/
   mem_support_decidable {α : Type u} (mx : m α) : DecidablePred (· ∈ support mx)

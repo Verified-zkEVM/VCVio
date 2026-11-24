@@ -13,7 +13,7 @@ public import VCVio.OracleComp.Support
 # Exact return predicates for oracle computations
 
 For an oracle program `mx`, `x ∈ support mx` is definitionally `MonadAttach.CanReturn mx x`.
-A proof about possible oracle outputs can therefore use the free program's return predicate directly.
+Proofs about possible oracle outputs can use the free program's return predicate directly.
 -/
 
 public section
