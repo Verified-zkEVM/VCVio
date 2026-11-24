@@ -96,6 +96,9 @@ public import VCVioTest.HashChainAntichain
 public import VCVioTest.HashChainExtraction
 public import VCVioTest.HashChainStrongPayload
 public import VCVioTest.ITSR
+public import VCVioTest.IncomparableEncoding.Basic
+public import VCVioTest.IncomparableEncoding.Code
+public import VCVioTest.IncomparableEncoding.Retry
 public import VCVioTest.IndexedChain
 public import VCVioTest.KernelSemantics
 public import VCVioTest.ListCache
