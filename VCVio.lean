@@ -258,7 +258,6 @@ public import VCVio.CryptoFoundations.Rewinding.Basic
 public import VCVio.CryptoFoundations.Rewinding.Cost
 public import VCVio.CryptoFoundations.Rewinding.Eager
 public import VCVio.CryptoFoundations.Rewinding.Extraction
-public import VCVio.CryptoFoundations.Rewinding.ExtractionCached
 public import VCVio.CryptoFoundations.Rewinding.Finder
 public import VCVio.CryptoFoundations.Rewinding.FinderBridge
 public import VCVio.CryptoFoundations.Rewinding.FixedTape

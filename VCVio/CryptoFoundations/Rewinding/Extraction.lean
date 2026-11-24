@@ -6,6 +6,7 @@ Authors: Devon Tuma
 module
 
 public import VCVio.CryptoFoundations.Rewinding.FinderBridge
+public import VCVio.CryptoFoundations.Rewinding.QueriedPoints
 public import VCVio.CryptoFoundations.Rewinding.ThresholdSemantics
 
 /-!
@@ -13,20 +14,25 @@ public import VCVio.CryptoFoundations.Rewinding.ThresholdSemantics
 
 A finder (`Rewinding.IsFinder`) sees only the verdicts of complete runs. To extract a witness, the
 transcripts at the challenges of its output are needed as well. `Rewinding.recover` runs a finder
-against the verdicts of frozen reruns, reruns every point of a successful output to recover its
-transcript, and hands the transcripts to an extractor.
+against the verdicts of frozen reruns, caching the output of every run it makes. On success, it
+looks up the transcript at every point of the output in the cache, rerunning only on a miss, and
+hands the transcripts to an extractor.
 
 Against a fixed table of complete outputs, the recovered transcripts are the table's entries at the
 output's points (`Rewinding.run_simulateQ_counted_recover`), so they are exactly the runs whose
 verdicts the finder saw. Against frozen reruns, the eager representation
-(`Rewinding.ResetPolicy.attempt_eagerTable`) carries this over, and the finder's success and cost
-bounds become an extractor's (`Rewinding.ResetPolicy.recover_bounds`).
+(`Rewinding.ResetPolicy.attempt_eagerTable`) carries this over
+(`Rewinding.ResetPolicy.attempt_recover`). A sound finder queries every point it vouches for
+(`Rewinding.IsFinder.mem_log_of_mem_support`), so there are no misses, and the finder's success
+and cost bounds become an extractor's with no further complete runs
+(`Rewinding.ResetPolicy.recover_bounds`).
 
 ## Main definitions
 
-* `Rewinding.verdictImpl`: answer an acceptance query with the verdict of a complete rerun.
-* `Rewinding.rerunAll`: rerun each of finitely many inputs.
-* `Rewinding.recover`: find, recover the transcripts at the output's points, extract.
+* `Rewinding.cachingImpl`: answer an acceptance query by a complete rerun, cache its output, and
+  return its verdict.
+* `Rewinding.lookupAll`: look up finitely many inputs in a cache, rerunning only on a miss.
+* `Rewinding.recover`: find, recover the transcripts from the cache, extract.
 
 ## Main results
 
@@ -34,10 +40,12 @@ bounds become an extractor's (`Rewinding.ResetPolicy.recover_bounds`).
   in one world.
 * `Rewinding.ResetPolicy.eagerTable_fst_eq`: runs that share a first phase give one public value
   in every table, as a Σ-protocol's commitment.
-* `Rewinding.ResetPolicy.attempt_recover`: against frozen reruns, recovery is the finder against
-  the verdicts of an eager table, followed by extraction from the same table.
-* `Rewinding.ResetPolicy.recover_bounds`: the finder's affine success bound and its cost, plus
-  the replays, transfer to the extractor.
+* `Rewinding.run_simulateQ_counted_caching`: against a fixed table, the caching finder is the
+  logged finder, its cache holding the table's entries at the logged vectors.
+* `Rewinding.ResetPolicy.attempt_recover`: against frozen reruns, recovery is the logged finder
+  against the verdicts of an eager table, followed by extraction from the same table.
+* `Rewinding.ResetPolicy.recover_bounds`: the finder's affine success bound and its cost transfer
+  to the extractor.
 -/
 
 public section
@@ -90,93 +98,6 @@ theorem eagerTable_fst_eq {Q S A B : Type} [Finite Q] (pre : OracleComp spec S) 
 
 end ResetPolicy
 
-/-! ## Recovery against a fixed table -/
-
-section Recover
-
-variable {Q α : Type}
-
-/-- Answer an acceptance query with the verdict of a complete rerun. The finder's coins pass
-through unchanged. -/
-@[expose] def verdictImpl (accept : Q → α → Bool) :
-    QueryImpl (unifSpec + rerunSpec Q Bool) (OracleComp (unifSpec + rerunSpec Q α)) :=
-  (show QueryImpl unifSpec (OracleComp (unifSpec + rerunSpec Q α)) from
-    fun n => liftM (unifSpec.query n)) +
-  (show QueryImpl (rerunSpec Q Bool) (OracleComp (unifSpec + rerunSpec Q α)) from
-    fun q => accept q <$> liftM ((rerunSpec Q α).query q))
-
-/-- Rerun each of finitely many inputs once, in order. -/
-@[expose] def rerunAll : {m : ℕ} → (Fin m → Q) → OracleComp (unifSpec + rerunSpec Q α) (Fin m → α)
-  | 0, _ => pure Fin.elim0
-  | _ + 1, qs => do
-      let a ← liftM ((rerunSpec Q α).query (qs 0))
-      let ts ← rerunAll (Fin.tail qs)
-      pure (Fin.cons a ts)
-
-/-- Run a finder against the verdicts of complete reruns. On success, rerun every point of its
-output to recover the transcripts, and hand them to the extractor. -/
-@[expose] def recover {Out W : Type} {m : ℕ} (accept : Q → α → Bool)
-    (find : OracleComp (unifSpec + rerunSpec Q Bool) (Option Out))
-    (points : Out → Fin m → Q) (ext : Out → (Fin m → α) → ProbComp W) :
-    OracleComp (unifSpec + rerunSpec Q α) (Option W) := do
-  let o? ← simulateQ (verdictImpl accept) find
-  o?.elim (pure none) fun o => do
-    let ts ← rerunAll (points o)
-    some <$> OracleComp.liftComp (ext o ts) (unifSpec + rerunSpec Q α)
-
-/-- Against a fixed table of complete outputs, the finder answered by verdicts of reruns is the
-finder against the table's verdicts. -/
-theorem simulateQ_counted_verdictImpl (accept : Q → α → Bool) (F : Q → α) {β : Type}
-    (find : OracleComp (unifSpec + rerunSpec Q Bool) β) :
-    simulateQ (coins (S := ℕ) + counted F) (simulateQ (verdictImpl accept) find) =
-      simulateQ (coins (S := ℕ) + counted fun q => accept q (F q)) find := by
-  exact QueryImpl.simulateQ_simulateQ_eq_of_apply (fun t => by cases t <;> rfl) find
-
-/-- Against a fixed table, rerunning finitely many inputs returns their entries and charges one
-complete run each. -/
-theorem run_simulateQ_counted_rerunAll (F : Q → α) {m : ℕ} (qs : Fin m → Q) (s : ℕ) :
-    (simulateQ (coins (S := ℕ) + counted F) (rerunAll qs)).run s =
-      pure (fun i => F (qs i), s + m) := by
-  induction m generalizing s with
-  | zero =>
-    simp only [rerunAll, simulateQ_pure, StateT.run_pure, Nat.add_zero]
-    congr
-    funext i
-    exact i.elim0
-  | succ m ih =>
-    simp only [rerunAll, simulateQ_bind, simulateQ_pure, StateT.run_bind, StateT.run_pure,
-      QueryImpl.simulateQ_add_liftM_query_right, counted, StateT.run_modify, pure_bind, ih]
-    refine congrArg pure (Prod.ext ?_ (by simp only; omega))
-    funext i
-    exact Fin.cases rfl (fun _ => rfl) i
-
-/-- The recovery step against a fixed table: on a successful output, the extractor receives the
-table's entries at its points, and the counter grows by one complete run per point. -/
-@[expose] def recoverFrom {Out W : Type} {m : ℕ} (F : Q → α) (points : Out → Fin m → Q)
-    (ext : Out → (Fin m → α) → ProbComp W) (z : Option Out × ℕ) : ProbComp (Option W × ℕ) :=
-  z.1.elim (pure (none, z.2)) fun o =>
-    (fun w => (some w, z.2 + m)) <$> ext o fun i => F (points o i)
-
-/-- Against a fixed table, recovery is the finder against the table's verdicts, followed by
-extraction from the table's entries at the output's points. -/
-theorem run_simulateQ_counted_recover {Out W : Type} {m : ℕ} (accept : Q → α → Bool)
-    (F : Q → α) (find : OracleComp (unifSpec + rerunSpec Q Bool) (Option Out))
-    (points : Out → Fin m → Q) (ext : Out → (Fin m → α) → ProbComp W) :
-    (simulateQ (coins (S := ℕ) + counted F) (recover accept find points ext)).run 0 =
-      (simulateQ (coins (S := ℕ) + counted fun q => accept q (F q)) find).run 0 >>=
-        recoverFrom F points ext := by
-  simp only [recover, simulateQ_bind, StateT.run_bind, simulateQ_counted_verdictImpl]
-  refine bind_congr fun z => ?_
-  obtain ⟨o?, n⟩ := z
-  cases o? with
-  | none => rfl
-  | some o =>
-    simp only [Option.elim, simulateQ_bind, StateT.run_bind, run_simulateQ_counted_rerunAll,
-      pure_bind, simulateQ_map, StateT.run_map, QueryImpl.simulateQ_add_liftComp_left, recoverFrom]
-    simp [coins]
-
-end Recover
-
 /-- A continuation that adds at most `B` to the counter adds at most `B` to the expected
 counter. -/
 theorem expectedCalls_bind_le_add {β γ : Type} (mx : ProbComp (β × ℕ))
@@ -209,45 +130,228 @@ theorem expectedCalls_bind_le_add {β γ : Type} (mx : ProbComp (β × ℕ))
       gcongr
       exact mul_le_of_le_one_right zero_le (evalDist_apply_univ_le_one mx)
 
-/-! ## Recovery against frozen reruns -/
+section Cache
+
+variable {Q α : Type}
+
+/-- The finder against a fixed acceptance function, logging its queries from the empty log. -/
+@[expose] def logRun {β : Type} (g : Q → Bool)
+    (find : OracleComp (unifSpec + rerunSpec Q Bool) β) : ProbComp (β × (Set Q × ℕ)) :=
+  (simulateQ (coins (S := Set Q × ℕ) + logCounted g) find).run (∅, 0)
+
+/-- Group a logged run's output with its log, leaving its counter. -/
+@[expose] def regroup {β S : Type} (z : β × (S × ℕ)) : (β × S) × ℕ := ((z.1, z.2.1), z.2.2)
+
+open Classical in
+/-- The cache holding a table's entries at the vectors of a log. -/
+@[expose] noncomputable def cacheOf (F : Q → α) (L : Set Q) : Q → Option α :=
+  fun q => if q ∈ L then some (F q) else none
+
+/-- Recording a vector in the log caches the table's entry there. -/
+theorem update_cacheOf [DecidableEq Q] (F : Q → α) (L : Set Q) (q : Q) :
+    Function.update (cacheOf F L) q (some (F q)) = cacheOf F (insert q L) := by
+  funext q'
+  by_cases h : q' = q
+  · subst h
+    simp [cacheOf]
+  · by_cases hL : q' ∈ L <;> simp [cacheOf, hL, h]
+
+/-- The cache of the empty log is empty. -/
+theorem cacheOf_empty (F : Q → α) : cacheOf F ∅ = fun _ => none := by
+  funext q
+  simp [cacheOf]
+
+/-- Look up finitely many inputs in a cache, rerunning only on a miss. -/
+@[expose] def lookupAll (cache : Q → Option α) :
+    {m : ℕ} → (Fin m → Q) → OracleComp (unifSpec + rerunSpec Q α) (Fin m → α)
+  | 0, _ => pure Fin.elim0
+  | _ + 1, qs => do
+      let a ← (cache (qs 0)).elim (liftM ((rerunSpec Q α).query (qs 0))) pure
+      let ts ← lookupAll cache (Fin.tail qs)
+      pure (Fin.cons a ts)
+
+open Classical in
+/-- The number of inputs missing from a log. -/
+@[expose] noncomputable def missCount (L : Set Q) : {m : ℕ} → (Fin m → Q) → ℕ
+  | 0, _ => 0
+  | _ + 1, qs => (if qs 0 ∈ L then 0 else 1) + missCount L (Fin.tail qs)
+
+/-- No input is missing from a log containing all of them. -/
+theorem missCount_eq_zero (L : Set Q) {m : ℕ} (qs : Fin m → Q) (h : ∀ i, qs i ∈ L) :
+    missCount L qs = 0 := by
+  induction m with
+  | zero => rfl
+  | succ m ih =>
+    simp only [missCount, h 0, ite_true, ih (Fin.tail qs) fun i => h i.succ]
+
+/-- Against a fixed table, looking inputs up in the cache of a log returns their entries, and
+charges one complete run per input missing from the log. -/
+theorem run_simulateQ_counted_lookupAll (F : Q → α) (L : Set Q) {m : ℕ} (qs : Fin m → Q)
+    (s : ℕ) :
+    (simulateQ (coins (S := ℕ) + counted F) (lookupAll (cacheOf F L) qs)).run s =
+      pure (fun i => F (qs i), s + missCount L qs) := by
+  classical
+  induction m generalizing s with
+  | zero =>
+    simp only [lookupAll, simulateQ_pure, StateT.run_pure, missCount, Nat.add_zero]
+    congr
+    funext i
+    exact i.elim0
+  | succ m ih =>
+    by_cases hq : qs 0 ∈ L
+    · have hc : cacheOf F L (qs 0) = some (F (qs 0)) := by simp [cacheOf, hq]
+      simp only [lookupAll, hc, Option.elim, simulateQ_bind, simulateQ_pure, StateT.run_bind,
+        StateT.run_pure, pure_bind, ih, missCount, hq, ite_true, Nat.zero_add]
+      refine congrArg pure (Prod.ext ?_ rfl)
+      funext i
+      exact Fin.cases rfl (fun _ => rfl) i
+    · have hc : cacheOf F L (qs 0) = none := by simp [cacheOf, hq]
+      simp only [lookupAll, hc, Option.elim, simulateQ_bind, simulateQ_pure, StateT.run_bind,
+        StateT.run_pure, QueryImpl.simulateQ_add_liftM_query_right, counted, StateT.run_modify,
+        pure_bind, ih, missCount, hq, ite_false]
+      refine congrArg pure (Prod.ext ?_ (by simp only; omega))
+      funext i
+      exact Fin.cases rfl (fun _ => rfl) i
+
+/-- The recovery step against a fixed table: on a successful output, the extractor receives the
+table's entries at its points, and the counter grows by one complete run per point missing from
+the log. -/
+@[expose] noncomputable def recoverFrom {Out W : Type} {m : ℕ} (F : Q → α)
+    (points : Out → Fin m → Q) (ext : Out → (Fin m → α) → ProbComp W)
+    (z : (Option Out × Set Q) × ℕ) : ProbComp (Option W × ℕ) :=
+  z.1.1.elim (pure (none, z.2)) fun o =>
+    (fun w => (some w, z.2 + missCount z.1.2 (points o))) <$> ext o fun i => F (points o i)
+
+variable [DecidableEq Q]
+
+/-- Answer an acceptance query by a complete rerun, cache its output, and return its verdict. The
+finder's coins pass through unchanged. -/
+@[expose] def cachingImpl (accept : Q → α → Bool) :
+    QueryImpl (unifSpec + rerunSpec Q Bool)
+      (StateT (Q → Option α) (OracleComp (unifSpec + rerunSpec Q α))) :=
+  (show QueryImpl unifSpec (StateT (Q → Option α) (OracleComp (unifSpec + rerunSpec Q α))) from
+    fun n => liftM (liftM (unifSpec.query n) : OracleComp (unifSpec + rerunSpec Q α) _)) +
+  (show QueryImpl (rerunSpec Q Bool)
+      (StateT (Q → Option α) (OracleComp (unifSpec + rerunSpec Q α))) from fun q => do
+    let a ← liftM (liftM ((rerunSpec Q α).query q) : OracleComp (unifSpec + rerunSpec Q α) α)
+    modify fun cache => Function.update cache q (some a)
+    pure (accept q a))
+
+theorem run_cachingImpl_inl (accept : Q → α → Bool) (t : ℕ) (c : Q → Option α) :
+    (cachingImpl accept (Sum.inl t)).run c =
+      (liftM (unifSpec.query t) : OracleComp (unifSpec + rerunSpec Q α) _) >>=
+        fun u => pure (u, c) := rfl
+
+theorem run_cachingImpl_inr (accept : Q → α → Bool) (q : Q) (c : Q → Option α) :
+    (cachingImpl accept (Sum.inr q)).run c =
+      (liftM ((rerunSpec Q α).query q) : OracleComp (unifSpec + rerunSpec Q α) α) >>=
+        fun a => pure (accept q a, Function.update c q (some a)) := by
+  simp [cachingImpl]
+
+/-- Run a finder against the verdicts of complete reruns, caching their outputs. On success,
+recover the transcripts at the points of its output from the cache, and hand them to the
+extractor. -/
+@[expose] def recover {Out W : Type} {m : ℕ} (accept : Q → α → Bool)
+    (find : OracleComp (unifSpec + rerunSpec Q Bool) (Option Out))
+    (points : Out → Fin m → Q) (ext : Out → (Fin m → α) → ProbComp W) :
+    OracleComp (unifSpec + rerunSpec Q α) (Option W) := do
+  let z ← (simulateQ (cachingImpl accept) find).run fun _ => none
+  z.1.elim (pure none) fun o => do
+    let ts ← lookupAll z.2 (points o)
+    some <$> OracleComp.liftComp (ext o ts) (unifSpec + rerunSpec Q α)
+
+/-- Against a fixed table, the caching finder is the logged finder against the table's verdicts,
+its cache holding the table's entries at the logged vectors. -/
+theorem run_simulateQ_counted_caching (accept : Q → α → Bool) (F : Q → α) {β : Type}
+    (oa : OracleComp (unifSpec + rerunSpec Q Bool) β) (L : Set Q) (n : ℕ) :
+    (simulateQ (coins (S := ℕ) + counted F)
+        ((simulateQ (cachingImpl accept) oa).run (cacheOf F L))).run n =
+      (fun z => ((z.1, cacheOf F z.2.1), z.2.2)) <$>
+        (simulateQ (coins (S := Set Q × ℕ) + logCounted fun q => accept q (F q)) oa).run
+          (L, n) := by
+  induction oa using OracleComp.inductionOn generalizing L n with
+  | pure a => simp
+  | query_bind q k ih =>
+    cases q with
+    | inl t =>
+      simp only [simulateQ_bind, simulateQ_spec_query, QueryImpl.add_apply_inl, StateT.run_bind,
+        run_cachingImpl_inl, QueryImpl.simulateQ_add_liftM_query_left, bind_assoc, pure_bind]
+      simp only [coins, QueryImpl.liftTarget_apply_run, QueryImpl.ofLift_apply, bind_map_left,
+        map_bind]
+      exact bind_congr fun a => ih a L n
+    | inr q =>
+      simp only [simulateQ_bind, simulateQ_spec_query, QueryImpl.add_apply_inr, StateT.run_bind,
+        run_cachingImpl_inr, QueryImpl.simulateQ_add_liftM_query_right, bind_assoc, pure_bind,
+        counted, logCounted, StateT.run_modify]
+      rw [update_cacheOf]
+      exact ih _ _ _
+
+/-- Against a fixed table, cached recovery is the logged finder against the table's verdicts,
+followed by extraction from the table's entries at the output's points. -/
+theorem run_simulateQ_counted_recover {Out W : Type} {m : ℕ} (accept : Q → α → Bool)
+    (F : Q → α) (find : OracleComp (unifSpec + rerunSpec Q Bool) (Option Out))
+    (points : Out → Fin m → Q) (ext : Out → (Fin m → α) → ProbComp W) :
+    (simulateQ (coins (S := ℕ) + counted F) (recover accept find points ext)).run 0 =
+      regroup <$> logRun (fun q => accept q (F q)) find >>= recoverFrom F points ext := by
+  simp only [recover, simulateQ_bind, StateT.run_bind]
+  rw [← cacheOf_empty F, run_simulateQ_counted_caching, bind_map_left, logRun, bind_map_left]
+  refine bind_congr fun z => ?_
+  obtain ⟨o?, L, n⟩ := z
+  cases o? with
+  | none => rfl
+  | some o =>
+    simp only [Option.elim, simulateQ_bind, StateT.run_bind, run_simulateQ_counted_lookupAll,
+      pure_bind, simulateQ_map, StateT.run_map, QueryImpl.simulateQ_add_liftComp_left,
+      recoverFrom, regroup]
+    simp [coins]
+
+end Cache
+
+/-- The counted finder is the logged finder with its log forgotten. -/
+theorem runFinder_eq_map_logRun {R : Type} {C : R → Type} {β : Type}
+    (find : OracleComp (unifSpec + accSpec C) β) (g : ((r : R) → C r) → Bool) :
+    runFinder find g = (fun z => (z.1, z.2.2)) <$> logRun g find :=
+  (map_run_simulateQ_logCounted g find ∅ 0).symm
 
 namespace ResetPolicy
 
 variable {ι σ : Type} {spec : OracleSpec ι} {init : ProbComp σ}
   {impl : QueryImpl spec (StateT σ ProbComp)} (P : ResetPolicy init impl)
+  {R : Type} {C : R → Type}
 
-/-- Against frozen reruns, recovery is the finder against the verdicts of an eager table of
+/-- Against frozen reruns, recovery is the logged finder against the verdicts of an eager table of
 complete outputs, followed by extraction from the same table, with the same complete-run count. -/
-theorem attempt_recover {Q α Out W : Type} [Finite Q] {m : ℕ} (run : Q → OracleComp spec α)
-    (accept : Q → α → Bool) (find : OracleComp (unifSpec + rerunSpec Q Bool) (Option Out))
+theorem attempt_recover {Q α Out W : Type} [Finite Q] [DecidableEq Q] {m : ℕ}
+    (run : Q → OracleComp spec α) (accept : Q → α → Bool)
+    (find : OracleComp (unifSpec + rerunSpec Q Bool) (Option Out))
     (points : Out → Fin m → Q) (ext : Out → (Fin m → α) → ProbComp W) :
     P.attempt run (recover accept find points ext) =ᵈ
       (do let F ← P.eagerTable run
-          (simulateQ (coins (S := ℕ) + counted fun q => accept q (F q)) find).run 0 >>=
-            recoverFrom F points ext) := by
+          regroup <$> logRun (fun q => accept q (F q)) find >>= recoverFrom F points ext) := by
   simpa only [run_simulateQ_counted_recover] using
     P.attempt_eagerTable run (recover accept find points ext)
 
-variable {R : Type} {C : R → Type}
-
-/-- A finder's affine success bound and cost transfer to recovery against frozen reruns. If the
-extractor returns a valid witness from every good output's transcripts, a valid witness comes
-back with the finder's success guarantee, and the expected number of complete runs is the
-finder's cost plus one replay per point. -/
-theorem recover_bounds [Fintype R] [DecidableEq R] [∀ r, Fintype (C r)] {α Out W : Type}
+/-- A finder's affine success bound and its cost transfer to recovery against frozen reruns, with
+no further complete runs: every point of a good output was queried, so its transcript is cached.
+If the extractor returns a valid witness from every good output's transcripts, a valid witness
+comes back with the finder's success guarantee. -/
+theorem recover_bounds [Fintype R] [DecidableEq R] [∀ r, Fintype (C r)]
+    [DecidableEq ((r : R) → C r)] {α Out W : Type}
     (run : ((r : R) → C r) → OracleComp spec α) (accept : ((r : R) → C r) → α → Bool)
     {good : (((r : R) → C r) → Bool) → Out → Prop}
     {find : OracleComp (unifSpec + accSpec C) (Option Out)} {κ T : ℝ≥0∞}
     (h : IsFinder good find κ T) {m : ℕ} (points : Out → Fin m → ((r : R) → C r))
+    (hpts : ∀ f o, good f o → ∀ i, f (points o i) = true)
     (ext : Out → (Fin m → α) → ProbComp W) (valid : W → Prop)
     (hext : ∀ F ∈ support (P.eagerTable run), ∀ o, good (fun c => accept c (F c)) o →
       ∀ w ∈ support (ext o fun i => F (points o i)), valid w) :
     (∑ c, Pr{let a ← (do (simulateQ impl (run c)).run' (← init))}[accept c a = true]) /
         Fintype.card ((r : R) → C r) ≤
-      κ + (1 - κ) *
-        Pr{let z ← P.attempt run (recover accept find points ext)}[∃ w, z.1 = some w ∧ valid w] ∧
-    expectedCalls (P.attempt run (recover accept find points ext)) ≤ T + m := by
+      κ + (1 - κ) * Pr{let z ← P.attempt run (recover accept find points ext)}[
+        ∃ w, z.1 = some w ∧ valid w] ∧
+    expectedCalls (P.attempt run (recover accept find points ext)) ≤ T := by
   classical
+  have hlaw := P.attempt_recover run accept find points ext
   have hmarg : ∀ c, ((fun f => f c) <$> ((fun F c => accept c (F c)) <$> P.eagerTable run)) =ᵈ
       (accept c <$> (do (simulateQ impl (run c)).run' (← init))) := by
     intro c
@@ -266,41 +370,58 @@ theorem recover_bounds [Fintype R] [DecidableEq R] [∀ r, Fintype (C r)] {α Ou
           fun f => runFinder find f)}[z.1.isSome] ≤
         Pr{let z ← P.attempt run (recover accept find points ext)}[
           ∃ w, z.1 = some w ∧ valid w] := by
-    rw [(P.attempt_recover run accept find points ext).prEvent_eq, bind_map_left]
+    rw [hlaw.prEvent_eq, bind_map_left]
     refine prEvent_bind_mono_of_forall_le_of_support _ _ _ _ _ fun F hF => ?_
+    rw [runFinder_eq_map_logRun, prEvent_map, bind_map_left]
     refine prEvent_le_prEvent_bind_of_support _ _ _ _ fun z hz hsome => ?_
     obtain ⟨o, ho⟩ := Option.isSome_iff_exists.mp hsome
-    have hgood := h.sound _ z hz o ho
+    have hcount : (z.1, z.2.2) ∈ support (runFinder find (fun c => accept c (F c))) := by
+      rw [runFinder_eq_map_logRun, support_map]
+      exact ⟨z, hz, rfl⟩
+    have hgood := h.sound _ _ hcount o ho
     apply prEvent_eq_one_of_forall_mem_support
     intro y hy
-    obtain ⟨o?, n⟩ := z
+    obtain ⟨o?, L, n⟩ := z
     simp only at ho
     subst ho
-    simp only [recoverFrom, Option.elim, support_map, Set.mem_image] at hy
+    simp only [regroup, recoverFrom, Option.elim, support_map, Set.mem_image] at hy
     obtain ⟨w, hw, rfl⟩ := hy
     exact ⟨w, rfl, hext F hF o hgood w hw⟩
-  have hcost : expectedCalls (P.attempt run (recover accept find points ext)) ≤ T + m := by
-    rw [expectedCalls_eq_of_evalDistEq (P.attempt_recover run accept find points ext)]
+  have hcost : expectedCalls (P.attempt run (recover accept find points ext)) ≤ T := by
+    rw [expectedCalls_eq_of_evalDistEq hlaw]
     let : MeasurableSpace (((r : R) → C r) → α) := ⊤
     rw [expectedCalls_bind]
     calc
-      (∫⁻ F, expectedCalls ((simulateQ (coins (S := ℕ) + counted fun q => accept q (F q))
-            find).run 0 >>= recoverFrom F points ext) ∂𝒟[P.eagerTable run]) ≤
-          ∫⁻ _F, (T + m) ∂𝒟[P.eagerTable run] := by
+      (∫⁻ F, expectedCalls (regroup <$> logRun (fun q => accept q (F q)) find >>=
+            recoverFrom F points ext) ∂𝒟[P.eagerTable run]) ≤
+          ∫⁻ _F, T ∂𝒟[P.eagerTable run] := by
         refine lintegral_mono fun F => ?_
-        refine (expectedCalls_bind_le_add _ _ m fun z _ y hy => ?_).trans
-          (add_le_add (h.cost _) le_rfl)
-        obtain ⟨o?, n⟩ := z
-        cases o? with
-        | none =>
-          simp only [recoverFrom, Option.elim, support_pure, Set.mem_singleton_iff] at hy
-          simp [hy]
-        | some o =>
-          simp only [recoverFrom, Option.elim, support_map, Set.mem_image] at hy
-          obtain ⟨w, -, rfl⟩ := hy
-          exact le_rfl
-      _ = (T + m) * 𝒟[P.eagerTable run] Set.univ := lintegral_const _
-      _ ≤ T + m := mul_le_of_le_one_right zero_le (evalDist_apply_univ_le_one _)
+        refine (expectedCalls_bind_le_add _ _ 0 fun z hz y hy => ?_).trans ?_
+        · rw [support_map] at hz
+          obtain ⟨z', hz', rfl⟩ := hz
+          obtain ⟨o?, L, n⟩ := z'
+          cases o? with
+          | none =>
+            simp only [regroup, recoverFrom, Option.elim, support_pure,
+              Set.mem_singleton_iff] at hy
+            simp [hy, regroup]
+          | some o =>
+            simp only [regroup, recoverFrom, Option.elim, support_map,
+              Set.mem_image] at hy
+            obtain ⟨w, -, rfl⟩ := hy
+            rw [missCount_eq_zero L (points o)
+              fun i => h.mem_log_of_mem_support points hpts _ _ hz' o rfl i]
+            simp [regroup]
+        · rw [Nat.cast_zero, add_zero, ← expectedCalls_map_output Prod.fst]
+          have hmap : (fun y => (y.1.1, y.2)) <$>
+              (regroup <$> logRun (fun q => accept q (F q)) find) =
+                runFinder find fun c => accept c (F c) := by
+            rw [runFinder_eq_map_logRun, Functor.map_map]
+            rfl
+          rw [hmap]
+          exact h.cost _
+      _ = T * 𝒟[P.eagerTable run] Set.univ := lintegral_const _
+      _ ≤ T := mul_le_of_le_one_right zero_le (evalDist_apply_univ_le_one _)
   refine ⟨?_, hcost⟩
   rw [← hacc]
   calc
@@ -311,22 +432,23 @@ theorem recover_bounds [Fintype R] [DecidableEq R] [∀ r, Fintype (C r)] {α Ou
       h.average_success _
     _ ≤ _ := by gcongr
 
-/-- `ResetPolicy.recover_bounds` with the subtractive success bound: a valid witness comes back
-with probability at least the honest acceptance probability, averaged over complete challenge
-vectors, minus the finder's error. -/
-theorem recover_bounds_sub [Fintype R] [DecidableEq R] [∀ r, Fintype (C r)] {α Out W : Type}
+/-- `ResetPolicy.recover_bounds` with the subtractive success bound. -/
+theorem recover_bounds_sub [Fintype R] [DecidableEq R] [∀ r, Fintype (C r)]
+    [DecidableEq ((r : R) → C r)] {α Out W : Type}
     (run : ((r : R) → C r) → OracleComp spec α) (accept : ((r : R) → C r) → α → Bool)
     {good : (((r : R) → C r) → Bool) → Out → Prop}
     {find : OracleComp (unifSpec + accSpec C) (Option Out)} {κ T : ℝ≥0∞}
     (h : IsFinder good find κ T) {m : ℕ} (points : Out → Fin m → ((r : R) → C r))
+    (hpts : ∀ f o, good f o → ∀ i, f (points o i) = true)
     (ext : Out → (Fin m → α) → ProbComp W) (valid : W → Prop)
     (hext : ∀ F ∈ support (P.eagerTable run), ∀ o, good (fun c => accept c (F c)) o →
       ∀ w ∈ support (ext o fun i => F (points o i)), valid w) :
     (∑ c, Pr{let a ← (do (simulateQ impl (run c)).run' (← init))}[accept c a = true]) /
         Fintype.card ((r : R) → C r) - κ ≤
-      Pr{let z ← P.attempt run (recover accept find points ext)}[∃ w, z.1 = some w ∧ valid w] ∧
-    expectedCalls (P.attempt run (recover accept find points ext)) ≤ T + m := by
-  obtain ⟨hs, hc⟩ := P.recover_bounds run accept h points ext valid hext
+      Pr{let z ← P.attempt run (recover accept find points ext)}[
+        ∃ w, z.1 = some w ∧ valid w] ∧
+    expectedCalls (P.attempt run (recover accept find points ext)) ≤ T := by
+  obtain ⟨hs, hc⟩ := P.recover_bounds run accept h points hpts ext valid hext
   exact ⟨tsub_le_iff_left.mpr
     (hs.trans (add_le_add le_rfl (mul_le_of_le_one_left zero_le tsub_le_self))), hc⟩
 
