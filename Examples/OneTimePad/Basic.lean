@@ -9,7 +9,7 @@ public import VCVio.CryptoFoundations.SymmEncAlg
 public import VCVio.OracleComp.Constructions.BitVec
 public import VCVio.ProgramLogic.Tactics.Relational
 public import VCVio.OracleComp.Constructions.SampleableType.Basic
-public import VCVioWidgets.GameHop.Panel
+public import Examples.Widgets.GameHop.Panel
 
 /-!
 # One Time Pad

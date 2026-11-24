@@ -5,6 +5,8 @@ Authors: Quang Dao
 -/
 
 module
+public import QuantumFoundations.MatrixMap.BlockNorm
+public import QuantumFoundations.Oracle.Basis
 public import VCVio.Quantum.VC.Proof.Commutativity
 public import VCVio.Quantum.VC.Proof.Offline
 public import VCVio.Quantum.Oracle.Compressed.CollisionRuntime
@@ -14,7 +16,7 @@ public import VCVio.Quantum.Oracle.Compressed.CollisionRuntime
 
 Occupied commitment keys and database entries form a coherent joint grade. Summed branch Gram
 bounds give both directed square-root inequalities with the same source total weight.
-The recording swap follows Chiesa, Di, Hu and Zheng, ePrint 2025/2166, Definition 9.8 and
+The recording swap follows Chiesa, Di, Hu and Zheng, ePrint 2025/2166, Definition 9.9 and
 Lemmas 9.10–9.12, pp. 66–67. Ordinary coherent ports specialize to selected oracle mass.
 -/
 
@@ -330,7 +332,7 @@ theorem privateSwapEquiv_symm : (privateSwapEquiv (Cell := Cell) ME).symm =
     privateSwapEquiv ME := rfl
 variable [Fintype Cm] [∀ i, Fintype (Dm i)] [DecidableEq S] [DecidableEq Cell]
 /-- The unitary basis matrix of the private recording swap (ePrint 2025/2166,
-Definition 9.8, p. 66). -/
+Definition 9.9, p. 66). -/
 @[expose]
 noncomputable def swapUnitary : Matrix (S × RecReg k Cm Dm Cell)
     (S × RecReg k Cm Dm Cell) ℂ := basisMatrix (privateSwapEquiv ME)
@@ -369,7 +371,7 @@ theorem one_kronecker_swapUnitary (ME : MultiExtractor k Cm Dm S) :
     (1 : Matrix Yr Yr ℂ) ⊗ₖ RecReg.swapUnitary (Cell := Cell) ME =
       basisMatrix (Equiv.prodCongr (Equiv.refl Yr) (RecReg.privateSwapEquiv ME)) := by
   ext ⟨y, s, R⟩ ⟨z, r, R'⟩
-  simp only [RecReg.swapUnitary, kroneckerMap_apply, one_apply, basisMatrix_apply,
+  simp only [RecReg.swapUnitary, kroneckerMap_apply, Matrix.one_apply, basisMatrix_apply,
     Equiv.prodCongr_apply]
   split_ifs <;> simp_all
 
@@ -400,7 +402,7 @@ theorem extractUnitary_swap_conjugacy (ME : MultiExtractor k Cm Dm S)
   ext ⟨⟨q, y⟩, s, R⟩ ⟨⟨p, z⟩, r, R'⟩
   simp only [submatrix_apply, Equiv.prodCongr_apply, Prod.map_apply, Equiv.refl_apply,
     RecReg.privateSwapEquiv_apply, reindex_apply, Equiv.prodAssoc_symm_apply,
-    kroneckerMap_apply, extractUnitary_apply, one_apply]
+    kroneckerMap_apply, extractUnitary_apply, Matrix.one_apply]
   by_cases hs : s = r
   · subst r
     have hr : RecReg.swap ME s R = RecReg.swap ME s R' ↔ R = R' :=
@@ -409,14 +411,6 @@ theorem extractUnitary_swap_conjugacy (ME : MultiExtractor k Cm Dm S)
   · simp only [hs, and_false, ite_false, zero_mul]
 end
 
-section
-variable {A B : Type*}
-/-- Right multiplication by a permutation matrix relabels columns. -/
-theorem mul_basisMatrix_perm_apply [Fintype B] [DecidableEq B] (M : Matrix A B ℂ) (e : Equiv.Perm B)
-    (a : A) (b : B) :
-    (M * basisMatrix e) a b = M a (e b) := by
-  simp [mul_apply, basisMatrix_apply, mul_ite]
-end
 section
 variable {Q S R : Type*} [Fintype Q] [DecidableEq Q] [Fintype S] [DecidableEq S]
   [Fintype R] [DecidableEq R]
@@ -430,11 +424,11 @@ theorem controlledPermutation_commutator_apply
     (V * O - O * V) (q, s, v) (p, r, w) =
       M (q, s) (p, r) * ((if v = e s w then 1 else 0) - if v = e r w then 1 else 0) := by
   dsimp only
-  rw [Matrix.sub_apply, basisMatrix_equiv_mul_apply, mul_basisMatrix_perm_apply]
+  rw [Matrix.sub_apply, basisMatrix_equiv_mul_apply, mul_basisMatrix_apply]
   simp only [reindex_apply, submatrix_apply, Equiv.prodCongr_symm, Equiv.refl_symm,
     Equiv.prodCongr_apply, Prod.map_apply, Equiv.refl_apply, Equiv.prodCongrRight_symm,
     Equiv.prodCongrRight_apply, Function.comp_apply, Equiv.prodAssoc_symm_apply,
-    kroneckerMap_apply, one_apply, Equiv.symm_apply_eq, mul_sub]
+    kroneckerMap_apply, Matrix.one_apply, Equiv.symm_apply_eq, mul_sub]
 end
 
 namespace RecReg
@@ -520,16 +514,16 @@ theorem labelControlled_permutation_commutator_apply (π : S → ι)
       (fun l ↦ (1 : Matrix (Q × S) (Q × S) ℂ) ⊗ₖ basisMatrix (e l)) =
       basisMatrix (Equiv.prodCongrRight fun a : Q × S ↦ e (π a.2)) := by
     ext ⟨a, r⟩ ⟨b, s⟩
-    simp only [labelControlled_apply, kroneckerMap_apply, one_apply, basisMatrix_apply,
+    simp only [labelControlled_apply, kroneckerMap_apply, Matrix.one_apply, basisMatrix_apply,
       Equiv.prodCongrRight_apply, Prod.mk.injEq]
     by_cases h : a = b
     · subst b
       simp
     · simp [h]
   dsimp only
-  rw [hl, Matrix.sub_apply, basisMatrix_equiv_mul_apply, mul_basisMatrix_perm_apply]
+  rw [hl, Matrix.sub_apply, basisMatrix_equiv_mul_apply, mul_basisMatrix_apply]
   simp only [Equiv.prodCongrRight_symm, Equiv.prodCongrRight_apply, Function.comp_apply,
-    kroneckerMap_apply, one_apply, Equiv.symm_apply_eq, mul_sub]
+    kroneckerMap_apply, Matrix.one_apply, Equiv.symm_apply_eq, mul_sub]
 end
 
 section
@@ -601,19 +595,6 @@ theorem l2_opNorm_recordingDefect_le
     rw [he]
     exact (l2_opNorm_submatrix_le_of_injective K Subtype.val_injective
       Subtype.val_injective).trans (hlocal keys)
-end
-section
-variable {m n m' n' : Type*} [Fintype m] [Fintype n] [Fintype m'] [Fintype n']
-  [DecidableEq n] [DecidableEq n']
-/-- Restricting rows and columns and applying a contractive source mask preserves a norm bound. -/
-theorem l2_opNorm_submatrix_mul_mask_le (M : Matrix m n ℂ) (f : m' → m) (g : n' → n)
-    (hf : Function.Injective f) (hg : Function.Injective g) (p : n' → ℂ)
-    (hp : ∀ a, ‖p a‖ ≤ 1) : ‖M.submatrix f g * diagonal p‖ ≤ ‖M‖ := by
-  have hd : ‖diagonal p‖ ≤ 1 := by
-    rw [l2_opNorm_diagonal]
-    exact (pi_norm_le_iff_of_nonneg zero_le_one).mpr hp
-  exact ((l2_opNorm_mul _ _).trans (mul_le_of_le_one_right (norm_nonneg _) hd)).trans
-    (l2_opNorm_submatrix_le_of_injective M hf hg)
 end
 section
 variable {X Y R : Type} {k : ℕ} [Fintype X] [DecidableEq X]
@@ -692,7 +673,7 @@ theorem l2_opNorm_familyDefect_source_le (i : Fin k)
       · simp [hg]
     rw [he]
     apply le_trans ?_ (hlocal fix)
-    apply l2_opNorm_submatrix_mul_mask_le K f f hf hf
+    apply Matrix.l2_opNorm_submatrix_mul_mask_le K f f hf hf
     intro a
     split_ifs <;> norm_num
 end
@@ -1190,7 +1171,7 @@ theorem tsum_rpow_queryWeight_le_of_total_grade
       rw [← ENNReal.mul_rpow_of_nonneg _ _ (by norm_num : (0 : ℝ) ≤ 2⁻¹)]
       apply ENNReal.rpow_le_rpow _ (by norm_num)
       gcongr
-      exact ENNReal.sum_le_tsum _
+      exact sum_le_tsum _
 
 end QuantumRuntime
 

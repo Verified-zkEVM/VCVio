@@ -12,10 +12,13 @@ import VCVio.CryptoFoundations.GroupModel.LinearFunctional.LazyCover
 
 /-! # Tight algebraic security of BLS
 
-This follows Gurkan's linear-functional proof of BLS security in the algebraic group model
-of Fuchsbauer, Kiltz and Loss (CRYPTO 2018). A finite cover exists for every adaptive execution
-family but is used only in the proof. Both reductions execute the original chronological
-adversary with a lazy cache over arbitrary messages.
+This ports Kobi Gurkan's linear-functional proof of BLS security in the algebraic group model of
+Fuchsbauer, Kiltz and Loss (CRYPTO 2018), from zkSecurity's `signature-security-lean`
+(https://github.com/zksecurity/signature-security-lean, commit `3eaa8c4`, Apache-2.0). The
+reductions are to the (1,1)-discrete-logarithm problem of Bauer, Fuchsbauer and Loss
+(CRYPTO 2020). A finite cover exists for every adaptive execution family but is used only in the
+proof. Both reductions execute the original chronological adversary with a lazy cache over
+arbitrary messages.
 -/
 
 public section
@@ -96,9 +99,10 @@ private theorem goodReduction_table {F M G₁ G₂ Gₜ : Type}
   simpa only [BLS.goodReduction, bind_pure_comp, map_bind, map_pure, Functor.map_map, view, table,
     goodRep, Function.comp_def, smul_smul, mul_comm] using h
 
-private theorem pair_tables {F ι : Type} [SampleableType F] [Fintype ι] [DecidableEq ι] :
+private theorem pair_tables {F ι : Type} [SampleableType F] [Fintype ι] :
     (do let a ← $ᵗ (ι → F); let b ← $ᵗ (ι → F); return fun i => (a i, b i)) =ᵈ
       ($ᵗ (ι → F × F) : ProbComp _) := by
+  classical
   apply SampleableType.evalDistEq_uniformSample_pair_of_bijective
   constructor
   · intro ⟨a, b⟩ ⟨c, d⟩ h
@@ -179,7 +183,7 @@ end BLS.AGM
 
 namespace BLS
 
-/-- BLS is tightly EUF-CMA secure against the shared algebraic adversary in the random-oracle
+/-- BLS is tightly EUF-CMA secure against every algebraic adversary in the random-oracle
 model under the two explicit (1,1)-discrete-logarithm reductions. The single field-sized loss
 is the collision probability of a hidden affine slope. Messages and query counts are unrestricted.
 -/
@@ -190,13 +194,15 @@ theorem unforgeableAdvantage_le_of_algebraic {F M G₁ G₂ Gₜ : Type}
     [DecidableEq Gₜ] [DecidableEq M]
     {e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ} {g₁ : G₁} {g₂ : G₂}
     (A : AlgebraicAdversary F M G₁ G₂ e g₁ g₂)
-    (hg₁ : Function.Bijective (· • g₁ : F → G₁)) (he : e g₁ g₂ ≠ 0) :
+    (hg₁ : Function.Surjective (· • g₁ : F → G₁)) (he : e g₁ g₂ ≠ 0) :
     SignatureAlg.unforgeableAdvantage (ProbCompRuntime.rom (M →ₒ G₁))
       A.toUnforgeableAdversary ≤
       Pr{let b ← DLog11.experiment g₁ g₂ (goodReduction A)}[b = true] +
       Pr{let b ← DLog11.experiment g₁ g₂ (badReduction A)}[b = true] +
       1 / Fintype.card F := by
   classical
+  have hg₁ : Function.Bijective (· • g₁ : F → G₁) :=
+    ⟨smul_left_injective F fun h0 => he (by simp [h0]), hg₁⟩
   obtain ⟨S, hS⟩ := exists_interface_cover (fun out => out.value.data)
     (fun κ : F => AGM.rawMain A (κ • g₁, κ • g₂))
   let pub := fun ρ : S → F => do
@@ -230,7 +236,7 @@ theorem unforgeableAdvantage_le_of_algebraic {F M G₁ G₂ Gₜ : Type}
   have hgood : Pr{let b ← DLog11.experiment g₁ g₂ (goodReduction A)}[b = true] =
       Pr{let z ← game}[good z] := by
     rw [← horder.prEvent_eq good]
-    simp only [DLog11.experiment, prEvent_norm, decide_eq_true_eq]
+    simp only [DLog11.experiment_eq, prEvent_norm, decide_eq_true_eq]
     let : MeasurableSpace F := ⊤
     rw [prEvent_bind_of_discrete, prEvent_bind_of_discrete]
     apply MeasureTheory.lintegral_congr
@@ -284,7 +290,7 @@ theorem unforgeableAdvantage_le_of_algebraic {F M G₁ G₂ Gₜ : Type}
          let z ← pub (fun i => a i * α + b i)}[
         ((AGM.functional S z.2).1 - ∑ i, AGM.gap S z.2 i * b i) /
           (∑ i, AGM.gap S z.2 i * a i) = α] := by
-    simp only [DLog11.experiment, prEvent_norm, decide_eq_true_eq]
+    simp only [DLog11.experiment_eq, prEvent_norm, decide_eq_true_eq]
     let : MeasurableSpace F := ⊤
     rw [prEvent_bind_of_discrete, prEvent_bind_of_discrete]
     apply MeasureTheory.lintegral_congr

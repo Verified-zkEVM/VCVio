@@ -52,15 +52,16 @@ theorem clampStep_val {digit : Nat} (hdigit : digit < w - 1) :
   simp only [clampStep, w, winternitzBits] at *
   omega
 
-variable [HasQuery HashSpec Id]
+variable {hash : HasQuery HashSpec Id}
 
 /-- The position the forgery's chain value at the layer reached after `i` steps sits at. -/
-@[expose] def forgedStep (publicSeed : Digest) (remaining : Nat)
+@[expose] def forgedStep (hash : HasQuery HashSpec Id)
+    (publicSeed : Digest) (remaining : Nat)
     (signatures : Fin remaining → XmssSignature) (layer tree : Nat)
     (leaf : SLHDSA.SHAKE128s.Hypertree.LeafIndex) (message : Digest) (i : Nat)
     (chain : Fin chains) : Fin (w - 1) :=
   clampStep (Checksum.encode
-    (forgedAt publicSeed remaining signatures layer tree leaf message i) chain).val
+    (forgedAt hash publicSeed remaining signatures layer tree leaf message i) chain).val
 
 /-- **On the chain the residue names, the clamp changes nothing.** -/
 theorem forgedStep_val (publicSeed : Digest) (remaining : Nat)
@@ -68,19 +69,21 @@ theorem forgedStep_val (publicSeed : Digest) (remaining : Nat)
     (leaf : SLHDSA.SHAKE128s.Hypertree.LeafIndex) (message : Digest) (i : Nat)
     (chain : Fin chains) (bound : Nat) (hbound : bound ≤ w - 1)
     (hdigit : (Checksum.encode
-      (forgedAt publicSeed remaining signatures layer tree leaf message i) chain).val < bound) :
-    (forgedStep publicSeed remaining signatures layer tree leaf message i chain).val =
+      (forgedAt hash publicSeed remaining signatures layer tree leaf message i) chain).val <
+        bound) :
+    (forgedStep hash publicSeed remaining signatures layer tree leaf message i chain).val =
       (Checksum.encode
-        (forgedAt publicSeed remaining signatures layer tree leaf message i) chain).val :=
+        (forgedAt hash publicSeed remaining signatures layer tree leaf message i) chain).val :=
   clampStep_val (by omega)
 
 /-- The record's position function, read off the forgery: the hypertree runs from layer zero at
 the subtree and leaf its digest selects, starting from the FORS public key it recovers. -/
-@[expose] def forgedSteps (publicSeed : Digest) (signature : Signature) (tree : Nat)
+@[expose] def forgedSteps (hash : HasQuery HashSpec Id)
+    (publicSeed : Digest) (signature : Signature) (tree : Nat)
     (leaf : SLHDSA.SHAKE128s.Hypertree.LeafIndex) (forsKey : Digest) :
     Fin layers → Fin chains → Fin (w - 1) :=
   fun layer chain =>
-    forgedStep publicSeed layers signature.hypertree 0 tree leaf forsKey layer.val chain
+    forgedStep hash publicSeed layers signature.hypertree 0 tree leaf forsKey layer.val chain
 
 /-- **The claimed chain value really sits at the position the record names.** -/
 theorem sensitive_forgedClaim (publicSeed : Digest) {State : Type}
@@ -92,16 +95,17 @@ theorem sensitive_forgedClaim (publicSeed : Digest) {State : Type}
     (leaf : SLHDSA.SHAKE128s.Hypertree.LeafIndex) (message : Digest) (i : Nat)
     (value : SensitiveQuery.Cell)
     (hdigit : (Checksum.encode
-      (forgedAt publicSeed remaining signatures layer tree leaf message i) chain).val <
+      (forgedAt hash publicSeed remaining signatures layer tree leaf message i) chain).val <
       revealed key chain)
     (hvalue : value = table (.structural (wotsPosition key chain
       (Checksum.encode
-        (forgedAt publicSeed remaining signatures layer tree leaf message i) chain)))) :
+        (forgedAt hash publicSeed remaining signatures layer tree leaf message i) chain)))) :
     SensitiveQuery.Sensitive (GraphStakes.stakes publicSeed)
       (GraphStakes.unavailableAt revealed signedAt) table state
       (GraphStakes.inputOf publicSeed
         (GraphStakes.wotsHashNode key chain
-          (forgedStep publicSeed remaining signatures layer tree leaf message i chain)) value) := by
+          (forgedStep hash publicSeed remaining signatures layer tree leaf message i chain))
+          value) := by
   have hclamp := forgedStep_val publicSeed remaining signatures layer tree leaf message i chain
     (revealed key chain) (hrevealed key chain) hdigit
   refine GraphStakes.sensitive_wotsClaim publicSeed revealed signedAt table state key chain _
@@ -127,14 +131,15 @@ the residue threads, so the record is determined rather than quantified. -/
 
 /-- **The record the charge takes, as a function of the run's own result.** -/
 @[expose]
-def claimedCandidatesOf (publicSeed : Digest) (cache : QueryCache HashSpec) (pk : PublicKey)
+def claimedCandidatesOf (hash : HasQuery HashSpec Id)
+    (publicSeed : Digest) (cache : QueryCache HashSpec) (pk : PublicKey)
     (message : Bytes) (parsed : Signature) : List Bytes :=
   GraphStakes.claimedCandidates publicSeed
     (SplitCharged.forsKeyOfDigest (VerifierProbes.digestOf cache pk message parsed))
     (MessageDigest.forsIndices (VerifierProbes.digestOf cache pk message parsed)) parsed
     (forgedKey (MessageDigest.treeIndex (VerifierProbes.digestOf cache pk message parsed)).toFin
       (MessageDigest.leafIndex (VerifierProbes.digestOf cache pk message parsed)).toFin)
-    (forgedSteps publicSeed parsed
+    (forgedSteps hash publicSeed parsed
       (MessageDigest.treeIndex (VerifierProbes.digestOf cache pk message parsed)).toNat
       (MessageDigest.leafIndex (VerifierProbes.digestOf cache pk message parsed)).toFin
       (VerifierProbes.forsKeyOf cache pk message parsed))

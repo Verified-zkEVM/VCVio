@@ -8,13 +8,14 @@ module
 public import VCVio.OracleComp.QueryTracking.RandomOracle.DependentTable
 public import VCVio.OracleComp.QueryTracking.RandomOracle.LoggedRun
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Simulation
-import VCVio.OracleComp.QueryTracking.RandomOracle.ExpectedFreshQuery
 
-/-! # Deferred tables for adaptive algebraic reductions
+/-! # Completed tables for fixed-table runs
 
-This follows Gurkan's linear-functional proof of BLS security in the algebraic group model
-of Fuchsbauer, Kiltz and Loss (CRYPTO 2018). A single table interprets the entire adaptive
-execution and its final extraction lookups. Ordinary random queries remain independent.
+Forgetting the cache and log of a fixed-table execution whose table completes the initial cache
+gives direct interpretation of the program by that table
+(`fixedTableLoggedRun_completeTable_project`). Together with
+`evalDist_simulateQ_romImpl_run'_eq_completeTable`, one sampled table then interprets an entire
+adaptive execution, including later extraction lookups, while uniform queries stay independent.
 -/
 
 public section
@@ -57,20 +58,5 @@ theorem fixedTableLoggedRun_completeTable_project {D α : Type} {R : D → Type}
               have hval : completeTable c g d = r := by simp [completeTable, hc]
               rw [hval, pure_bind]
               exact ih r c
-
-/-- An entire lazy execution, including adaptive extraction lookups, has the law obtained by
-sampling a full table first. The initial cache overrides the sampled table. -/
-theorem simulateQ_romImpl_evalDistEq_table {D R α : Type} [DecidableEq D] [Finite D]
-    [SampleableType R] [SampleableType (D → R)]
-    (oa : OracleComp (unifSpec + (D →ₒ R)) α) (c : (D →ₒ R).QueryCache) :
-    (simulateQ (D →ₒ R).romImpl oa).run' c =ᵈ
-      (do
-        let table ← $ᵗ (D → R)
-        simulateQ (unifFwdAnswerImpl (QueryImpl.ofFn (completeTable c table))) oa) := by
-  let : MeasurableSpace ((α × QueryLog (D →ₒ R)) × (D →ₒ R).QueryCache) := ⊤
-  have h := (EvalDistEq.of_evalDist_eq
-    (evalDist_randomOracleLoggedRun_eq_fixedTable_finite oa c)).map (fun z => z.1.1)
-  simp only [StateT.run'_eq, ← randomOracleLoggedRun_project, Functor.map_map]
-  simpa only [map_bind, fixedTableLoggedRun_completeTable_project] using h
 
 end GroupModel.LinearFunctional

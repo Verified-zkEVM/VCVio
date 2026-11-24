@@ -89,7 +89,7 @@ the walk drew and its root is the walk's own cell at the top node. So it is the 
 theorem value_replay_walk_eq_cells
     {walk : ((Digest × Digest × Digest) × Cells) × QueryCache HashSpec}
     (hwalk : walk ∈ support graphWalk) :
-    @CanonicalGraph.value (CacheReplay.replayQuery walk.2) walk.1.1.1 walk.1.1.2.2 =
+    CanonicalGraph.value (CacheReplay.replayQuery walk.2) walk.1.1.1 walk.1.1.2.2 =
       walk.1.2 := by
   obtain ⟨outputs, hcells, hcache⟩ := mem_support_graphWalk hwalk
   rw [hcells]

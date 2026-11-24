@@ -46,6 +46,4 @@ theorem available_mono_signed (revealed : WotsKey → Fin chains → Nat)
     | forsTree key height index => exact True.intro
     | forsRoots key => exact True.intro
 
-variable [HasQuery HashSpec Id]
-
 end SLHDSA.SHAKE128s.ServedDisclosure

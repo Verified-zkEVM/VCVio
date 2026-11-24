@@ -500,7 +500,7 @@ private lemma prEvent_idealFlagged_good_le_cpaGame (adv : CPA_Adversary PK Rand 
       fun h _ => ?_
     simp only [QueryCache.isCached, Option.isSome_eq_false_iff, Option.isNone_iff_eq_none]
     simpa only [prEvent_def, map_eq_bind_pure_comp, Function.comp_def] using
-      roSim.prEvent_run_uncached_le_run_cacheQuery _ r h (fun b' => E (b == b')) choice.2 hcr
+      roSim.prEvent_run_uncached_le_run_cacheQuery _ r h (fun b' => E (b == b')) choice.2
 
 /-- Both one-sided up-to-bad bounds between the real game and Game 1, as event masses. -/
 private lemma evalDist_cpaGame_game1_le_badEventExperiment (adv : CPA_Adversary PK Rand M) :
@@ -541,7 +541,7 @@ theorem cpaGame_gap_le_badEvent (adv : CPA_Adversary PK Rand M) :
 /-- Uniform masking step for any lawful measure semantics that interprets the challenge mask
 uniformly. -/
 theorem evalDist_game1_eq_game2 [MeasurableSpace M] [DiscreteMeasurableSpace M]
-    [MeasurableSingletonClass M] [EvalDistSemantics ProbComp]
+    [MeasurableSingletonClass M] {semantics : EvalDistSemantics ProbComp}
     [LawfulEvalDistSemantics ProbComp]
     (hM : 𝒟[($ᵗ M : ProbComp M)] = ProbabilityTheory.uniformOn Set.univ)
     (adv : CPA_Adversary PK Rand M) :
@@ -582,7 +582,7 @@ private lemma tdpExperiment_eq_observation [Inhabited Rand] (adv : CPA_Adversary
 /-- The bad-event experiment observes the shared challenge transcript under any lawful
 measure semantics. Only independent challenge draws are reordered. -/
 private theorem measure_badEventExperiment_eq_observation
-    [EvalDistSemantics ProbComp] [LawfulEvalDistSemantics ProbComp]
+    {semantics : EvalDistSemantics ProbComp} [LawfulEvalDistSemantics ProbComp]
     (adv : CPA_Adversary PK Rand M) :
     𝒟[badEventExperiment tdp adv] = 𝒟[(fun x : PK × Rand × QueryLog (Rand →ₒ M) =>
       x.2.2.wasQueried x.2.1) <$> challengeTranscriptExperiment (tdp := tdp) adv] := by
@@ -602,7 +602,7 @@ private theorem measure_badEventExperiment_eq_observation
 /-- Bad BR93 challenge transcripts are a subevent of successful trapdoor inversion.
 The proof uses the shared transcript's measure and pointwise event inclusion. -/
 theorem measure_badEventExperiment_le_tdpExperiment [Inhabited Rand]
-    [EvalDistSemantics ProbComp] [LawfulEvalDistSemantics ProbComp]
+    {semantics : EvalDistSemantics ProbComp} [LawfulEvalDistSemantics ProbComp]
     (adv : CPA_Adversary PK Rand M) :
     𝒟[badEventExperiment tdp adv] {true} ≤ 𝒟[tdpExperiment tdp (inverter tdp adv)] {true} := by
   let : MeasurableSpace (PK × Rand × QueryLog (Rand →ₒ M)) := ⊤

@@ -9,12 +9,36 @@ public import VCVio.CryptoFoundations.SecExp.Measure
 public import VCVio.OracleComp.Constructions.SampleableType.Measure
 public import VCVio.OracleComp.ProbComp.Basic
 public import VCVio.OracleComp.ProbCompLift
+public import VCVio.CryptoFoundations.LeftOrRight
+public import VCVio.OracleComp.SimSemantics.Append
+public import VCVio.OracleComp.QueryTracking.SubSpec
+public import VCVio.CryptoFoundations.SymmEncAlg.INDCPA
 
 /-!
 # Data Encapsulation Mechanisms
 
-This file defines data encapsulation mechanisms (DEMs), their correctness notion, and the
-one-time IND-CPA game used by the KEM+DEM composition theorem.
+This file defines data encapsulation mechanisms (DEMs), their correctness notion, and two
+left-or-right IND-CPA games under a uniform key.
+
+* The one-time game `DEMScheme.IND_CPA_OneTime_Game`, used by the KEM+DEM composition theorem:
+  a two-phase adversary chooses two messages and receives the encryption of one of them.
+* The multi-query game `DEMScheme.IND_CPA_Game`: the adversary keeps the DEM's own oracles and
+  gains the left-or-right challenge oracle `LeftOrRight.oracle` of
+  `VCVio.CryptoFoundations.LeftOrRight`, which encrypts under the hidden key every admissible
+  pair it is asked, and a leakage function decides which pairs are admissible. Query budgets are
+  predicates on the adversary (`DEMScheme.IND_CPA_Adversary.MakesAtMostQueries`).
+
+`DEMScheme.IND_CPA_OneTime_Advantage_eq_IND_CPA_Advantage` relates the two: the one-time
+advantage of an adversary is the multi-query advantage, without leakage, of
+`DEMScheme.IND_CPA_OneTime_Adversary.toMultiQuery`, which makes a single challenge query.
+
+The multi-query game is the left-or-right CPA game `SymmEncAlg.IND_CPA_Game` of the symmetric
+encryption scheme `DEMScheme.toSymmEncAlg`, whose key generation samples a uniform key
+(`DEMScheme.IND_CPA_Advantage_toSymmEncAlg`). The adversary types and query budgets of the two
+games are the same.
+
+`DEMScheme.comap f` changes the key type of a DEM along a function `f`, so that a DEM under a key
+is also a DEM under any data from which the key is read off.
 -/
 
 @[expose] public section
@@ -53,13 +77,38 @@ def PerfectlyCorrect (runtime : ProbCompRuntime m) : Prop :=
 
 end Correct
 
-section IND_CPA
+/-! ## Changing the key -/
+
+section comap
+
+variable {K' : Type}
+
+/-- The DEM keyed by `K'` that encrypts and decrypts under the image of its key by `f`. A DEM
+keyed by the whole output of a key encapsulation, such as a time-lock puzzle together with its
+key, is `dem.comap Prod.snd` when it uses the key alone. -/
+def comap (f : K' → K) : DEMScheme m K' M C where
+  encrypt k msg := dem.encrypt (f k) msg
+  decrypt k c := dem.decrypt (f k) c
+
+@[simp]
+lemma comap_encrypt (f : K' → K) (k : K') : (dem.comap f).encrypt k = dem.encrypt (f k) := rfl
+
+@[simp]
+lemma comap_decrypt (f : K' → K) (k : K') : (dem.comap f).decrypt k = dem.decrypt (f k) := rfl
+
+/-- A DEM pulled back along `f` runs the correctness experiment under the key's image. -/
+lemma correctnessExperiment_comap [DecidableEq M] (f : K' → K) (k : K') (msg : M) :
+    (dem.comap f).correctnessExperiment k msg = dem.correctnessExperiment (f k) msg := rfl
+
+end comap
+
+section IND_CPA_OneTime
 
 variable {ι : Type} {spec : OracleSpec ι} [SampleableType K]
 
 /-- Two-phase one-time IND-CPA adversary for a DEM. The key is hidden, so the message-selection
 phase receives no public input. -/
-structure IND_CPA_Adversary (_dem : DEMScheme (OracleComp spec) K M C) where
+structure IND_CPA_OneTime_Adversary (_dem : DEMScheme (OracleComp spec) K M C) where
   /-- The state the adversary carries from the message-choice phase to the guessing phase. -/
   State : Type
   /-- Choose the two challenge messages together with the state to pass to `distinguish`. -/
@@ -70,18 +119,18 @@ structure IND_CPA_Adversary (_dem : DEMScheme (OracleComp spec) K M C) where
 
 /-- Fixed-branch one-time IND-CPA experiment for a DEM, matching the source proof-ladders
 `DEM_1CPA_Exp.run(b)` presentation. -/
-noncomputable def IND_CPA_Experiment {dem : DEMScheme (OracleComp spec) K M C}
+noncomputable def IND_CPA_OneTime_Experiment {dem : DEMScheme (OracleComp spec) K M C}
     (runtime : ProbCompRuntime (OracleComp spec))
-    (adversary : dem.IND_CPA_Adversary) (b : Bool) : OracleComp spec Bool := do
+    (adversary : dem.IND_CPA_OneTime_Adversary) (b : Bool) : OracleComp spec Bool := do
   let k ← runtime.liftProbComp ($ᵗ K)
   let (m₀, m₁, st) ← adversary.chooseMessages
   let c ← dem.encrypt k (if b then m₁ else m₀)
   adversary.distinguish st c
 
 /-- Game-form one-time IND-CPA experiment for a DEM. -/
-noncomputable def IND_CPA_Game {dem : DEMScheme (OracleComp spec) K M C}
+noncomputable def IND_CPA_OneTime_Game {dem : DEMScheme (OracleComp spec) K M C}
     (runtime : ProbCompRuntime (OracleComp spec))
-    (adversary : dem.IND_CPA_Adversary) : OracleComp spec Bool := do
+    (adversary : dem.IND_CPA_OneTime_Adversary) : OracleComp spec Bool := do
   let b ← runtime.liftProbComp ($ᵗ Bool)
   let k ← runtime.liftProbComp ($ᵗ K)
   let (m₀, m₁, st) ← adversary.chooseMessages
@@ -90,18 +139,200 @@ noncomputable def IND_CPA_Game {dem : DEMScheme (OracleComp spec) K M C}
   return (b == b')
 
 /-- One-time IND-CPA advantage for a DEM, defined canonically as the bias of the single game. -/
-noncomputable def IND_CPA_Advantage {dem : DEMScheme (OracleComp spec) K M C}
+noncomputable def IND_CPA_OneTime_Advantage {dem : DEMScheme (OracleComp spec) K M C}
     (runtime : ProbCompRuntime (OracleComp spec))
-    (adversary : dem.IND_CPA_Adversary) : ℝ≥0∞ :=
-  (runtime.evalDist (IND_CPA_Game runtime adversary)).boolBias
+    (adversary : dem.IND_CPA_OneTime_Adversary) : ℝ≥0∞ :=
+  (runtime.evalDist (IND_CPA_OneTime_Game runtime adversary)).boolBias
 
 /-- The canonical one-time IND-CPA advantage is definitionally the bias of the single game. -/
-theorem IND_CPA_Advantage_eq_game_bias {dem : DEMScheme (OracleComp spec) K M C}
+theorem IND_CPA_OneTime_Advantage_eq_game_bias {dem : DEMScheme (OracleComp spec) K M C}
     (runtime : ProbCompRuntime (OracleComp spec))
+    (adversary : dem.IND_CPA_OneTime_Adversary) :
+    dem.IND_CPA_OneTime_Advantage runtime adversary =
+      (runtime.evalDist (dem.IND_CPA_OneTime_Game runtime adversary)).boolBias := rfl
+
+end IND_CPA_OneTime
+
+section IND_CPA
+
+variable {ι : Type} {spec : OracleSpec ι}
+
+/-- Multi-query IND-CPA adversary for a DEM: a computation with the DEM's own oracles `spec` and
+the left-or-right challenge oracle `LeftOrRight.spec M C`, returning a guess of the hidden bit.
+The key is hidden, so the adversary receives no input. -/
+abbrev IND_CPA_Adversary (_dem : DEMScheme (OracleComp spec) K M C) :=
+  OracleComp (spec + LeftOrRight.spec M C) Bool
+
+/-- A multi-query IND-CPA adversary `MakesAtMostQueries q` when it makes at most `q` queries to
+the challenge oracle. Queries to the DEM's own oracles are unrestricted. -/
+def IND_CPA_Adversary.MakesAtMostQueries {dem : DEMScheme (OracleComp spec) K M C}
+    (adversary : dem.IND_CPA_Adversary) (q : ℕ) : Prop :=
+  OracleComp.IsQueryBoundP adversary (· matches .inr _) q
+
+variable [SampleableType K] {Λ : Type} [DecidableEq Λ]
+
+/-- Fixed-branch multi-query IND-CPA experiment for a DEM at hidden bit `b`, for the leakage
+function `leak`: sample a uniform key `k`, then run the adversary with its queries to `spec`
+forwarded and its challenge queries answered by `LeftOrRight.oracle (dem.encrypt k) leak b`. -/
+noncomputable def IND_CPA_Experiment (dem : DEMScheme (OracleComp spec) K M C)
+    (runtime : ProbCompRuntime (OracleComp spec)) (leak : M → Λ)
+    (adversary : dem.IND_CPA_Adversary) (b : Bool) : OracleComp spec Bool := do
+  let k ← runtime.liftProbComp ($ᵗ K)
+  simulateQ (QueryImpl.id' spec + LeftOrRight.oracle (dem.encrypt k) leak b) adversary
+
+/-- Game-form multi-query IND-CPA experiment for a DEM: sample a hidden bit, run the
+fixed-branch experiment at that bit, and return whether the adversary guessed it. -/
+noncomputable def IND_CPA_Game (dem : DEMScheme (OracleComp spec) K M C)
+    (runtime : ProbCompRuntime (OracleComp spec)) (leak : M → Λ)
+    (adversary : dem.IND_CPA_Adversary) : OracleComp spec Bool := do
+  let b ← runtime.liftProbComp ($ᵗ Bool)
+  let b' ← dem.IND_CPA_Experiment runtime leak adversary b
+  return (b == b')
+
+/-- Multi-query IND-CPA advantage for a DEM, defined canonically as the bias of the single
+game. -/
+noncomputable def IND_CPA_Advantage (dem : DEMScheme (OracleComp spec) K M C)
+    (runtime : ProbCompRuntime (OracleComp spec)) (leak : M → Λ)
+    (adversary : dem.IND_CPA_Adversary) : ℝ≥0∞ :=
+  (runtime.evalDist (dem.IND_CPA_Game runtime leak adversary)).boolBias
+
+/-- The canonical multi-query IND-CPA advantage is definitionally the bias of the single game. -/
+theorem IND_CPA_Advantage_eq_game_bias (dem : DEMScheme (OracleComp spec) K M C)
+    (runtime : ProbCompRuntime (OracleComp spec)) (leak : M → Λ)
     (adversary : dem.IND_CPA_Adversary) :
-    dem.IND_CPA_Advantage runtime adversary =
-      (runtime.evalDist (dem.IND_CPA_Game runtime adversary)).boolBias := rfl
+    dem.IND_CPA_Advantage runtime leak adversary =
+      (runtime.evalDist (dem.IND_CPA_Game runtime leak adversary)).boolBias := rfl
 
 end IND_CPA
+
+/-! ## One-time adversaries as multi-query adversaries -/
+
+section OneTimeToMultiQuery
+
+variable {ι : Type} {spec : OracleSpec ι} {dem : DEMScheme (OracleComp spec) K M C}
+
+/-- The multi-query adversary that runs a one-time adversary: it chooses the two messages, makes
+one challenge query on them, and distinguishes on the answer. A `none` answer, which the
+challenge oracle without leakage never gives, is met with the guess `false`. -/
+def IND_CPA_OneTime_Adversary.toMultiQuery (adversary : dem.IND_CPA_OneTime_Adversary) :
+    dem.IND_CPA_Adversary := do
+  let (m₀, m₁, st) ← liftM adversary.chooseMessages
+  let c? : Option C ← (spec + LeftOrRight.spec M C).query (.inr (m₀, m₁))
+  match c? with
+  | some c => liftM (adversary.distinguish st c)
+  | none => pure false
+
+/-- `IND_CPA_OneTime_Adversary.toMultiQuery` makes one challenge query. -/
+theorem IND_CPA_OneTime_Adversary.toMultiQuery_makesAtMostQueries
+    (adversary : dem.IND_CPA_OneTime_Adversary) :
+    adversary.toMultiQuery.MakesAtMostQueries 1 := by
+  have hlift {α : Type} (oa : OracleComp spec α) :
+      OracleComp.IsQueryBoundP (liftM oa : OracleComp (spec + LeftOrRight.spec M C) α)
+        (· matches .inr _) 0 := by
+    rw [← OracleComp.liftComp_eq_liftM]
+    exact OracleComp.IsQueryBoundP.liftComp_subSpec (p := fun _ => False)
+      (fun t => by simp [SubSpec.onQuery]) (OracleComp.isQueryBoundP_false oa 0)
+  rw [IND_CPA_Adversary.MakesAtMostQueries, toMultiQuery, ← zero_add 1]
+  refine OracleComp.isQueryBoundP_bind (hlift _) fun ⟨m₀, m₁, st⟩ _ => ?_
+  refine (OracleComp.isQueryBoundP_query_bind_iff _ _ _ _).2 ⟨Or.inr Nat.one_pos, ?_⟩
+  rintro (_ | c)
+  · exact OracleComp.isQueryBoundP_pure _ _ _
+  · exact hlift _
+
+/-- Simulating `IND_CPA_OneTime_Adversary.toMultiQuery` against the challenge oracle without
+leakage runs the one-time adversary on the encryption of the message that the hidden bit
+selects. -/
+theorem IND_CPA_OneTime_Adversary.simulateQ_toMultiQuery
+    (adversary : dem.IND_CPA_OneTime_Adversary) (k : K) (b : Bool) :
+    simulateQ (QueryImpl.id' spec + LeftOrRight.oracle (dem.encrypt k) (fun _ => ()) b)
+        adversary.toMultiQuery = (do
+      let (m₀, m₁, st) ← adversary.chooseMessages
+      let c ← dem.encrypt k (if b then m₁ else m₀)
+      adversary.distinguish st c) := by
+  rw [toMultiQuery, simulateQ_bind, QueryImpl.simulateQ_add_liftM_left, simulateQ_id']
+  refine bind_congr fun ⟨m₀, m₁, st⟩ => ?_
+  rw [QueryImpl.simulateQ_add_query_bind_right]
+  simp [QueryImpl.simulateQ_add_liftM_left]
+
+variable [SampleableType K]
+
+/-- The fixed-branch multi-query experiment of `IND_CPA_OneTime_Adversary.toMultiQuery` without
+leakage is the fixed-branch one-time experiment. -/
+theorem IND_CPA_Experiment_toMultiQuery (runtime : ProbCompRuntime (OracleComp spec))
+    (adversary : dem.IND_CPA_OneTime_Adversary) (b : Bool) :
+    dem.IND_CPA_Experiment runtime (fun _ => ()) adversary.toMultiQuery b =
+      IND_CPA_OneTime_Experiment runtime adversary b := by
+  simp only [IND_CPA_Experiment, IND_CPA_OneTime_Adversary.simulateQ_toMultiQuery,
+    IND_CPA_OneTime_Experiment]
+
+/-- The multi-query game of `IND_CPA_OneTime_Adversary.toMultiQuery` without leakage is the
+one-time game. -/
+theorem IND_CPA_Game_toMultiQuery (runtime : ProbCompRuntime (OracleComp spec))
+    (adversary : dem.IND_CPA_OneTime_Adversary) :
+    dem.IND_CPA_Game runtime (fun _ => ()) adversary.toMultiQuery =
+      IND_CPA_OneTime_Game runtime adversary := by
+  simp only [IND_CPA_Game, IND_CPA_Experiment_toMultiQuery, IND_CPA_OneTime_Experiment,
+    IND_CPA_OneTime_Game, bind_assoc]
+
+/-- The one-time IND-CPA advantage of an adversary is the multi-query IND-CPA advantage, without
+leakage, of `IND_CPA_OneTime_Adversary.toMultiQuery`, which makes one challenge query
+(`IND_CPA_OneTime_Adversary.toMultiQuery_makesAtMostQueries`). No runtime hypotheses are needed,
+because the two games coincide as computations. -/
+theorem IND_CPA_OneTime_Advantage_eq_IND_CPA_Advantage
+    (runtime : ProbCompRuntime (OracleComp spec)) (adversary : dem.IND_CPA_OneTime_Adversary) :
+    dem.IND_CPA_OneTime_Advantage runtime adversary =
+      dem.IND_CPA_Advantage runtime (fun _ => ()) adversary.toMultiQuery := by
+  rw [IND_CPA_OneTime_Advantage, IND_CPA_Advantage, IND_CPA_Game_toMultiQuery]
+
+end OneTimeToMultiQuery
+
+/-! ## The DEM as a symmetric encryption scheme under a uniform key -/
+
+section toSymmEncAlg
+
+variable {ι : Type} {spec : OracleSpec ι} [SampleableType K]
+
+/-- The symmetric encryption scheme of a DEM under a uniform key: key generation samples `$ᵗ K`
+through `runtime`, encryption is the DEM's, and decryption never fails. -/
+def toSymmEncAlg (dem : DEMScheme (OracleComp spec) K M C)
+    (runtime : ProbCompRuntime (OracleComp spec)) : SymmEncAlg (OracleComp spec) M K C where
+  keygen := runtime.liftProbComp ($ᵗ K)
+  encrypt := dem.encrypt
+  decrypt k c := some <$> dem.decrypt k c
+
+variable (dem : DEMScheme (OracleComp spec) K M C) (runtime : ProbCompRuntime (OracleComp spec))
+
+/-- A CPA adversary against `dem.toSymmEncAlg runtime` makes at most `q` challenge queries exactly
+when it does as an adversary against `dem`. -/
+theorem IND_CPA_Adversary.makesAtMostQueries_toSymmEncAlg_iff
+    (adversary : dem.IND_CPA_Adversary) (q : ℕ) :
+    SymmEncAlg.IND_CPA_Adversary.MakesAtMostQueries
+        (encAlg := dem.toSymmEncAlg runtime) adversary q ↔
+      adversary.MakesAtMostQueries q := by
+  unfold SymmEncAlg.IND_CPA_Adversary.MakesAtMostQueries IND_CPA_Adversary.MakesAtMostQueries
+  congr! 2 with t
+  rcases t with t | t <;> rfl
+
+variable {Λ : Type} [DecidableEq Λ]
+
+/-- The fixed-bit CPA experiment of `dem.toSymmEncAlg runtime` is the multi-query experiment of
+`dem`. -/
+theorem IND_CPA_Experiment_toSymmEncAlg (leak : M → Λ) (adversary : dem.IND_CPA_Adversary)
+    (b : Bool) :
+    (dem.toSymmEncAlg runtime).IND_CPA_Experiment leak adversary b =
+      dem.IND_CPA_Experiment runtime leak adversary b := rfl
+
+/-- The CPA game of `dem.toSymmEncAlg runtime` is the multi-query game of `dem`. -/
+theorem IND_CPA_Game_toSymmEncAlg (leak : M → Λ) (adversary : dem.IND_CPA_Adversary) :
+    (dem.toSymmEncAlg runtime).IND_CPA_Game runtime leak adversary =
+      dem.IND_CPA_Game runtime leak adversary := rfl
+
+/-- The CPA advantage against `dem.toSymmEncAlg runtime` is the multi-query advantage against
+`dem`. -/
+theorem IND_CPA_Advantage_toSymmEncAlg (leak : M → Λ) (adversary : dem.IND_CPA_Adversary) :
+    (dem.toSymmEncAlg runtime).IND_CPA_Advantage runtime leak adversary =
+      dem.IND_CPA_Advantage runtime leak adversary := rfl
+
+end toSymmEncAlg
 
 end DEMScheme

@@ -8,8 +8,7 @@ module
 public import VCVio.Schemes.BLS.Abort
 public import VCVio.Schemes.BLS.Execution
 public import VCVio.CryptoFoundations.HardnessAssumptions.CoCDH
-public import VCVio.OracleComp.QueryTracking.QueryBound.Basic
-import VCVio.OracleComp.Constructions.SampleableType.Measure
+public import VCVio.CryptoFoundations.SignatureAlg.RomQueryCount
 
 /-! # The BLS index-guessing co-CDH solver
 
@@ -26,21 +25,10 @@ namespace BLS
 
 variable {F G₁ G₂ Gₜ M : Type}
 
-/-- Separate structural budgets for direct hash and signing queries, uniformly over public
-keys. Uniform-sampling queries are unrestricted. -/
-@[expose] def QueryBound [Field F] [SampleableType F]
-    [AddCommGroup G₁] [Module F G₁] [AddCommGroup G₂] [Module F G₂]
-    [AddCommGroup Gₜ] [Module F Gₜ] [DecidableEq Gₜ]
-    {e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ} {g₁ : G₁} {g₂ : G₂}
-    (A : SignatureAlg.UnforgeableAdversary (scheme (M := M) e g₁ g₂))
-    (qH qS : ℕ) : Prop :=
-  ∀ pk, (A.main pk).IsQueryBoundP (· matches .inl (.inr _)) qH ∧
-    (A.main pk).IsQueryBoundP (· matches .inr _) qS
-
 /-- Run the co-CDH solver with a fixed insertion-index guess. The final hash lookup ensures
 that an output message not queried by the adversary can still occupy the guessed slot.
 An aborted run or a forgery away from the guessed slot returns zero. -/
-@[expose] def reductionAt [Field F] [SampleableType F]
+@[expose] def coCDHReductionAt [Field F] [SampleableType F]
     [AddCommGroup G₁] [Module F G₁] [AddCommGroup G₂] [Module F G₂]
     [AddCommGroup Gₜ] [Module F Gₜ] [DecidableEq Gₜ] [DecidableEq M]
     {e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ} {g₁ : G₁} {g₂ : G₂}
@@ -58,7 +46,7 @@ An aborted run or a forgery away from the guessed slot returns zero. -/
 /-- The index-guessing co-CDH reduction. The guess is uniform among `qH + qS + 1` slots,
 including hashes introduced by signing and final verification. The co-CDH experiment applies
 its ordinary equality test to the output, including the zero fallback on abort. -/
-@[expose] def reduction [Field F] [SampleableType F]
+@[expose] def coCDHReduction [Field F] [SampleableType F]
     [AddCommGroup G₁] [Module F G₁] [AddCommGroup G₂] [Module F G₂]
     [AddCommGroup Gₜ] [Module F Gₜ] [DecidableEq Gₜ] [DecidableEq M]
     {e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ} {g₁ : G₁} {g₂ : G₂}
@@ -66,20 +54,6 @@ its ordinary equality test to the output, including the zero fallback on abort. 
     (qH qS : ℕ) : CoCDH.Adversary F G₁ G₂ :=
   fun gen₁ gen₂ X₁ X₂ h => do
     let j ← $ᵗ Fin (qH + qS + 1)
-    reductionAt A j.val gen₁ gen₂ X₁ X₂ h
-
-/-- Scalar sampling produces the same hash distribution as a uniform group sample whenever
-the generator parametrizes the first source group bijectively. -/
-theorem smul_uniformSample_evalDistEq [Field F] [SampleableType F]
-    [AddCommGroup G₁] [Module F G₁] [SampleableType G₁]
-    (g₁ : G₁) (hg₁ : Function.Bijective (· • g₁ : F → G₁)) :
-    ((· • g₁) <$> ($ᵗ F : ProbComp F)) =ᵈ ($ᵗ G₁ : ProbComp G₁) :=
-  SampleableType.map_uniformSample_evalDistEq_of_bijective hg₁
-
-/-- The signature computed from a cached scalar and the first public-key component is the
-honest signature of the simulated hash. -/
-theorem simulated_signature_eq [Field F] [AddCommGroup G₁] [Module F G₁]
-    (g₁ : G₁) (x ρ : F) : ρ • (x • g₁) = x • (ρ • g₁) :=
-  smul_comm ρ x g₁
+    coCDHReductionAt A j.val gen₁ gen₂ X₁ X₂ h
 
 end BLS

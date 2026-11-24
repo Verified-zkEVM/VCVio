@@ -73,6 +73,8 @@ patched on the steps that raise `bad` and from bad states, where it follows `imp
 - `QueryImpl.AgreeUntilBad.extendState`: agreement until `bad` under a shared passive extension.
 - `QueryImpl.IntertwinesOn.prEvent_simulateQ_run_le_or_bad`: an intertwining followed by
   agreement until `bad` bounds an event of the intertwined run by the event or `bad`.
+- `OracleComp.map_run_simulateQ_evalDistEq_of_eq_until_stopped`: two handlers that agree until
+  a stopping state, after which each freezes an observation, give the observation the same law.
 
 A state-separating-package form of the same idea is in
 `VCVio/StateSeparating/IdenticalUntilBad.lean`.
@@ -333,3 +335,72 @@ theorem IntertwinesOn.prEvent_simulateQ_run_le_or_bad {σB : Type}
     (fun _ _ _ _ _ ↦ trivial) hbad oa s trivial fun z ↦ P z.1
 
 end QueryImpl
+
+namespace QueryImpl.DominatedUntilBad
+
+variable {ι : Type} {spec : OracleSpec ι} {σ₁ σ₂ : Type}
+  {impl₁ : QueryImpl spec (StateT σ₁ ProbComp)} {impl₂ : QueryImpl spec (StateT σ₂ ProbComp)}
+  {f : σ₁ → σ₂} {inv bad : σ₁ → Prop}
+
+/-- `impl₁` is dominated by `impl₂` until `bad` through `f` if, from every state satisfying `inv`
+and not `bad`, each step of `impl₁` with its post-state mapped through `f` is equal in distribution
+to the step of `impl₂` from the mapped state, or has only bad post-states. -/
+theorem of_evalDistEq_or_bad (h : ∀ t s, inv s → ¬bad s →
+      (fun z => (z.1, f z.2)) <$> (impl₁ t).run s =ᵈ (impl₂ t).run (f s) ∨
+        ∀ z ∈ support ((impl₁ t).run s), bad z.2) :
+    DominatedUntilBad impl₁ impl₂ f inv bad := by
+  intro t s hs hb Q
+  rcases h t s hs hb with he | hbad
+  · refine (prEvent_and_le_left _ _ _).trans (le_of_eq ?_)
+    rw [← he.prEvent_eq, prEvent_map]
+  · rw [prEvent_eq_zero_of_forall_mem_support _ _ fun z hz hz' => hz'.2 (hbad z hz)]
+    exact zero_le
+
+end QueryImpl.DominatedUntilBad
+
+/-! ## Stopping a simulation -/
+
+namespace OracleComp
+
+variable {ι : Type} {spec : OracleSpec ι} {σ β : Type}
+
+/-- From a stopped state, a handler that keeps the state stopped and its observation fixed ends
+every run with the same observation. -/
+theorem map_run_simulateQ_evalDistEq_pure_of_stopped (impl : QueryImpl spec (StateT σ ProbComp))
+    (stopped : σ → Prop) (obs : σ → β)
+    (h : ∀ t s, stopped s → ∀ z ∈ support ((impl t).run s), stopped z.2 ∧ obs z.2 = obs s)
+    {α : Type} (oa : OracleComp spec α) {s : σ} (hs : stopped s) :
+    (fun z => obs z.2) <$> (simulateQ impl oa).run s =ᵈ (pure (obs s) : ProbComp β) := by
+  have hinv := OracleComp.simulateQ_run_preserves_inv_of_query impl
+    (fun s' => stopped s' ∧ obs s' = obs s) (fun t s' hs' z hz => ⟨(h t s' hs'.1 z hz).1,
+      (h t s' hs'.1 z hz).2.trans hs'.2⟩) oa s ⟨hs, rfl⟩
+  have hmap : (fun z => obs z.2) <$> (simulateQ impl oa).run s =ᵈ
+      (fun _ => obs s) <$> (simulateQ impl oa).run s := by
+    rw [map_eq_bind_pure_comp, map_eq_bind_pure_comp]
+    exact OracleComp.EvalDistEq.bind_congr_of_support _ fun z hz => by
+      simp [(hinv z hz).2]
+  exact hmap.trans (OracleComp.EvalDistEq.map_const _ _)
+
+/-- **Stopping.** Two handlers that agree on every state that is not stopped, and that each keep a
+stopped state stopped and its observation fixed, give every run the same distribution of the
+final observation. Unlike `QueryImpl.AgreeUntilBad`, the handlers may disagree arbitrarily once
+the state is stopped. -/
+theorem map_run_simulateQ_evalDistEq_of_eq_until_stopped
+    (impl₁ impl₂ : QueryImpl spec (StateT σ ProbComp)) (stopped : σ → Prop) (obs : σ → β)
+    (hagree : ∀ t s, ¬stopped s → (impl₁ t).run s = (impl₂ t).run s)
+    (h₁ : ∀ t s, stopped s → ∀ z ∈ support ((impl₁ t).run s), stopped z.2 ∧ obs z.2 = obs s)
+    (h₂ : ∀ t s, stopped s → ∀ z ∈ support ((impl₂ t).run s), stopped z.2 ∧ obs z.2 = obs s)
+    {α : Type} (oa : OracleComp spec α) (s : σ) :
+    (fun z => obs z.2) <$> (simulateQ impl₁ oa).run s =ᵈ
+      (fun z => obs z.2) <$> (simulateQ impl₂ oa).run s := by
+  induction oa using OracleComp.inductionOn generalizing s with
+  | pure x => exact EvalDistEq.rfl
+  | query_bind t k ih =>
+    by_cases hs : stopped s
+    · exact (map_run_simulateQ_evalDistEq_pure_of_stopped impl₁ stopped obs h₁ _ hs).trans
+        (map_run_simulateQ_evalDistEq_pure_of_stopped impl₂ stopped obs h₂ _ hs).symm
+    · simp only [simulateQ_bind, simulateQ_query, OracleQuery.input_query,
+        OracleQuery.cont_query, id_map, StateT.run_bind, map_bind, hagree t s hs]
+      exact EvalDistEq.bind_right _ fun p => ih p.1 p.2
+
+end OracleComp

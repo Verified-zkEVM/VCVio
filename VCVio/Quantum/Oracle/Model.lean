@@ -6,7 +6,6 @@ Authors: Quang Dao
 
 module
 public import ToMathlib.MeasureTheory.Measure.UniformTable
-public import VCVio.OracleComp.Constructions.SampleableType.Measure
 public import VCVio.Quantum.Comp.QueryBound
 public import VCVio.Quantum.Comp.Simulation
 public import QuantumFoundations.Oracle.Unitary
@@ -58,7 +57,8 @@ parameter type `Ω` and family of runtimes `R ω`, which may have private memory
 the discrete measurable structure and may lie in any universe; its uniform measure is
 `uniformOn Set.univ`, which is the zero measure unless `Ω` is finite and nonempty. The definitions
 assume nothing about `Ω`; each theorem assumes the finiteness it uses. For a `SampleableType Ω`
-in `Type`, this agrees with `𝒟[$ᵗ Ω]`. The QROM is the instance `R = additiveOracleRuntime`.
+in `Type`, this agrees with `𝒟[$ᵗ Ω]` (`VCVio.Quantum.Oracle.UniformSample`). The QROM is the
+instance `R = additiveOracleRuntime`.
 Showing that two implementations of an oracle are indistinguishable is an equation between two
 values of `sampledEvalDist`.
 
@@ -160,7 +160,7 @@ theorem sampledEvalDistMap_eq_sum [Fintype Ω]
     sampledEvalDistMap R I x ρ f =
       (Fintype.card Ω : ℝ≥0∞)⁻¹ • ∑ ω, (R ω).evalDistMap I x ρ (f ω) := by
   refine Measure.ext fun s hs ↦ ?_
-  rw [sampledEvalDistMap_apply _ _ _ _ _ hs, Measure.smul_apply, Measure.coe_finsetSum,
+  rw [sampledEvalDistMap_apply _ _ _ _ _ hs, smul_apply, FunLike.coe_sum,
     Finset.sum_apply, smul_eq_mul, Finset.mul_sum]
 
 /-- The distribution of a measurable set of leaves averages, over the sampled values, its measure
@@ -180,7 +180,7 @@ theorem sampledEvalDist_eq_sum [Fintype Ω]
     (I : L.Interp) (x : QuantumComp L spec W A) (ρ : SubState A) :
     sampledEvalDist R I x ρ = (Fintype.card Ω : ℝ≥0∞)⁻¹ • ∑ ω, (R ω).evalDist I x ρ := by
   refine Measure.ext fun s hs ↦ ?_
-  rw [sampledEvalDist_apply _ _ _ _ hs, Measure.smul_apply, Measure.coe_finsetSum, Finset.sum_apply,
+  rw [sampledEvalDist_apply _ _ _ _ hs, smul_apply, FunLike.coe_sum, Finset.sum_apply,
     smul_eq_mul, Finset.mul_sum]
 
 /-- When every run is lossless and every initial substate has trace `c`, the distribution has total
@@ -268,7 +268,7 @@ theorem sampledEvalDistMap₂_eq_sum [Fintype Ω]
     sampledEvalDistMap₂ R I x ρ f =
       (Fintype.card Ω : ℝ≥0∞)⁻¹ • ∑ ω, (R ω).evalDist₂ I (x.map (f ω)) ρ := by
   refine Measure.ext fun s hs ↦ ?_
-  rw [sampledEvalDistMap₂_apply _ _ _ _ _ hs, Measure.smul_apply, Measure.coe_finsetSum,
+  rw [sampledEvalDistMap₂_apply _ _ _ _ _ hs, smul_apply, FunLike.coe_sum,
     Finset.sum_apply, smul_eq_mul, Finset.mul_sum]
 
 /-- The distribution of a measurable set of values averages, over the sampled values, its measure
@@ -287,7 +287,7 @@ theorem sampledEvalDist₂_eq_sum [Fintype Ω]
     (x : QuantumComp₂ L spec A B α) (ρ : SubState A) :
     sampledEvalDist₂ R I x ρ = (Fintype.card Ω : ℝ≥0∞)⁻¹ • ∑ ω, (R ω).evalDist₂ I x ρ := by
   refine Measure.ext fun s hs ↦ ?_
-  rw [sampledEvalDist₂_apply _ _ _ _ hs, Measure.smul_apply, Measure.coe_finsetSum,
+  rw [sampledEvalDist₂_apply _ _ _ _ hs, smul_apply, FunLike.coe_sum,
     Finset.sum_apply,
     smul_eq_mul, Finset.mul_sum]
 
@@ -306,56 +306,6 @@ theorem sampledEvalDist₂_apply_univ [Finite Ω] [Nonempty Ω]
     one_mul]
 
 end sampled
-
-/-! ### Agreement with classical uniform sampling -/
-
-section sampleable
-
-variable {Ω : Type} [SampleableType Ω]
-
-/-- For a classical uniform sampler, the observed finite mixture agrees with binding its
-output measure to the observed runtime distributions. -/
-theorem sampledEvalDistMap_eq_bind_uniformSample [MeasurableSpace β]
-    (R : Ω → QuantumRuntime spec) (I : L.Interp) (x : QuantumComp L spec W A) (ρ : SubState A)
-    (f : Ω → (Σ u, W u) → β) :
-    sampledEvalDistMap R I x ρ f =
-      letI : MeasurableSpace Ω := ⊤
-      (𝒟[$ᵗ Ω]).bind fun ω ↦ (R ω).evalDistMap I x ρ (f ω) := by
-  let : MeasurableSpace Ω := ⊤
-  rw [sampledEvalDistMap, SampleableType.evalDist_uniformSample]
-
-/-- For a classical uniform sampler, the leaf mixture agrees with binding its output measure
-to the runtime leaf distributions. -/
-theorem sampledEvalDist_eq_bind_uniformSample [MeasurableSpace (Σ u, W u)]
-    (R : Ω → QuantumRuntime spec) (I : L.Interp) (x : QuantumComp L spec W A) (ρ : SubState A) :
-    sampledEvalDist R I x ρ =
-      letI : MeasurableSpace Ω := ⊤
-      (𝒟[$ᵗ Ω]).bind fun ω ↦ (R ω).evalDist I x ρ := by
-  let : MeasurableSpace Ω := ⊤
-  rw [sampledEvalDist, SampleableType.evalDist_uniformSample]
-
-/-- The observed fixed-register mixture agrees with the classical uniform sampler followed
-by the relabelled runtime distributions. -/
-theorem sampledEvalDistMap₂_eq_bind_uniformSample [MeasurableSpace β]
-    (R : Ω → QuantumRuntime spec) (I : L.Interp) (x : QuantumComp₂ L spec A B α) (ρ : SubState A)
-    (f : Ω → α → β) :
-    sampledEvalDistMap₂ R I x ρ f =
-      letI : MeasurableSpace Ω := ⊤
-      (𝒟[$ᵗ Ω]).bind fun ω ↦ (R ω).evalDist₂ I (x.map (f ω)) ρ := by
-  let : MeasurableSpace Ω := ⊤
-  rw [sampledEvalDistMap₂_eq_bind, SampleableType.evalDist_uniformSample]
-
-/-- The fixed-register mixture agrees with the classical uniform sampler followed by the
-runtime output distributions. -/
-theorem sampledEvalDist₂_eq_bind_uniformSample [MeasurableSpace α]
-    (R : Ω → QuantumRuntime spec) (I : L.Interp) (x : QuantumComp₂ L spec A B α) (ρ : SubState A) :
-    sampledEvalDist₂ R I x ρ =
-      letI : MeasurableSpace Ω := ⊤
-      (𝒟[$ᵗ Ω]).bind fun ω ↦ (R ω).evalDist₂ I x ρ := by
-  let : MeasurableSpace Ω := ⊤
-  rw [sampledEvalDist₂_eq_bind, SampleableType.evalDist_uniformSample]
-
-end sampleable
 
 /-! ## Guessing a value of a uniform function -/
 
@@ -398,7 +348,7 @@ theorem sum_tsum_guess {ι : Type*} (w : ι → ℝ≥0∞) (x : ι → X) (y : 
       congr 2
       by_cases h : y i = H (x i) <;> simp [h]
   simp only [← ENNReal.tsum_mul_left]
-  rw [← Summable.tsum_finsetSum fun _ _ ↦ ENNReal.summable]
+  rw [← Summable.tsum_finsetSum fun _ _ ↦ CompleteLattice.summable]
   simp only [hterm]
   rw [ENNReal.tsum_mul_right, div_eq_mul_inv]
 
@@ -415,7 +365,7 @@ theorem sum_outcomeMeasure_map_guess {M N : Type*} [Fintype M] [Fintype N]
       ∑' a, ENNReal.ofReal (P.branch a ρ.matrix).trace.re *
         Set.indicator {True} 1 (y a = H (x a)) := fun H ↦ by
     rw [DSubInstrument.outcomeMeasure_map, Measure.sum_apply _ (MeasurableSet.singleton True)]
-    simp only [Measure.smul_apply, Measure.dirac_apply' _ (MeasurableSet.singleton True),
+    simp only [smul_apply, Measure.dirac_apply' _ (MeasurableSet.singleton True),
       smul_eq_mul]
   simp only [hmeas]
   rw [sum_tsum_guess, DSubInstrument.trace_re_total_apply,

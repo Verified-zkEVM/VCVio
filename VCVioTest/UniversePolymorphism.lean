@@ -6,6 +6,8 @@ Authors: Devon Tuma
 
 module
 public import VCVio.OracleComp.SimSemantics.Append
+public import VCVio.OracleComp.QueryTracking.LoggingOracle.Relabel
+public import VCVio.CryptoFoundations.IncomparableEncoding.Retry.Basic
 
 /-!
 # Nonzero-Universe Consumer Canaries
@@ -115,5 +117,42 @@ example (impl : QueryImpl spec₁ target) (impl₂ : QueryImpl spec₂ target)
       (liftM (spec₃.query t) : OracleComp (spec₁ + (spec₂ + spec₃)) (spec₃.Range t)) =
       impl₃ t := by
   simp
+
+/-! ## Relabelling query logs -/
+
+-- relabelling a log keeps its responses at independent message and digest universes
+example {M : Type uι₁} {D : Type uι₂} {T : Type uQuery} (f : M → D) (msg : M) (τ : T) :
+    OracleSpec.QueryLog.relabel f ([⟨msg, τ⟩] : OracleSpec.QueryLog (M →ₒ T)) = [⟨f msg, τ⟩] :=
+  OracleSpec.QueryLog.relabel_singleton f msg τ
+
+-- mapping every log entry commutes with simulation at a nonzero response universe
+example {A B : Type uQuery} (e : A → B) (impl₁ : QueryImpl spec₁ (WriterT (List A) target))
+    (impl₂ : QueryImpl spec₁ (WriterT (List B) target))
+    (h : ∀ t, (impl₂ t).run = Prod.map id (List.map e) <$> (impl₁ t).run)
+    (oa : OracleComp spec₁ α) :
+    (simulateQ impl₂ oa).run = Prod.map id (List.map e) <$> (simulateQ impl₁ oa).run :=
+  QueryImpl.run_simulateQ_map_log e impl₁ impl₂ h oa
+
+-- translating the message oracle relabels the log at nonzero index and response universes
+example {M D T : Type uQuery} (tagFn : QueryImpl (D →ₒ T) (OracleComp spec₁))
+    (tagFn' : QueryImpl (M →ₒ T) (OracleComp spec₁)) (f : M → D)
+    (htag : ∀ msg, tagFn' msg = tagFn (f msg)) (oa : OracleComp (spec₁ + (M →ₒ T)) α) :
+    (simulateQ (spec₁.passthrough + tagFn.withLogging)
+        (oa.mapLens (OracleComp.translateLens spec₁ f))).run =
+      Prod.map id (OracleSpec.QueryLog.relabel f) <$>
+        (simulateQ (spec₁.passthrough + tagFn'.withLogging) oa).run :=
+  QueryImpl.run_simulateQ_withLogging_mapLens_translateLens tagFn tagFn' f htag oa
+
+/-! ## Encoding retries -/
+
+-- a retry draws its randomizer in the target monad at nonzero universes
+example {PP M E : Type uι₁} {R : Type uQuery} {n radix : ℕ}
+    (enc : IncomparableEncoding PP M R E n radix) (sample : target R) (pp : PP) (msg : M)
+    (ep : E) (k : ℕ) :
+    enc.retry sample pp msg ep (k + 1) =
+      sample >>= fun r => match enc.encode pp msg r ep with
+        | none => enc.retry sample pp msg ep k
+        | some word => pure (some (word, r)) :=
+  enc.retry_succ sample pp msg ep k
 
 end VCVioTest.UniversePolymorphism

@@ -7,7 +7,6 @@ Authors: Quang Dao
 module
 public import VCVio.Schemes.BLS.Basic
 public import VCVio.OracleComp.SimSemantics.StateT.UntilBad
-public import VCVio.OracleComp.QueryTracking.QueryBound.Basic
 
 /-! # Indexed oracle executions for BLS
 
@@ -90,7 +89,7 @@ are recorded independently of that response. -/
   (unif + ro) + signer
 
 /-- A public-randomness step leaves all oracle state unchanged. -/
-private theorem indexedOracle_run_unif {V M G : Type} [DecidableEq M] (draw : ℕ → ProbComp V)
+theorem indexedOracle_run_unif {V M G : Type} [DecidableEq M] (draw : ℕ → ProbComp V)
     (hash sign : V → G) (j : Option ℕ) (t : unifSpec.Domain) (s : OracleState V M) :
     (indexedOracle draw hash sign j (.inl (.inl t))).run s =
       (fun v => (v, s)) <$> (unifSpec.query t : ProbComp _) := rfl
