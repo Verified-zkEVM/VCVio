@@ -13,7 +13,9 @@ public import Mathlib.Algebra.Field.ZMod
 Concrete two-signer verification and duplicate-message rejection over `ZMod 101` with
 multiplication as the pairing. A separate two-dimensional second-source example records
 the distinction between a linear source map and compatibility with the pairing.
-A one-hash, one-sign adversary instantiates the Type 2 security theorem with loss four.
+A one-hash, one-sign adversary instantiates the Type 2 security theorem with loss four; its
+three budgets are tight, and it always wins, so the theorem bounds the named reduction's success
+below by `1 / 4`.
 -/
 
 public section
@@ -51,51 +53,120 @@ theorem duplicate_message_rejected :
     (toyScheme).aggregateVerify [(2, false), (3, false)] 35 = pure false := by
   exact BLS.Aggregate.aggregateVerify_eq_false_of_not_nodup _ _ _ _ (by simp)
 
-/-- The public identity source map gives the expected subtraction of the programmed mask. -/
-theorem identity_map_extracts (x r h : ZMod 101) :
-    x * (h + r) - r * x = x * h := by
-  simpa using BLS.Aggregate.sub_mask_eq (LinearMap.id (R := ZMod 101) (M := ZMod 101))
-    1 x r h
-
-/-- A zero-query adversary returning a singleton has explicit budgets zero, zero, and one. -/
+/-- A zero-query adversary returning a singleton has budgets zero, zero, and one. -/
 theorem zero_query_bound :
     let A : AggregateSignatureAlg.UnforgeableAdversary toyScheme :=
       ⟨fun pk => pure ([(pk, false)], 0)⟩
-    BLS.Aggregate.QueryBound A 0 0 1 := by
-  simp [BLS.Aggregate.QueryBound]
+    A.RomQueryBound 0 0 1 := by
+  simp [AggregateSignatureAlg.UnforgeableAdversary.RomQueryBound]
 
-/-- A concrete adversary hashes one message, signs the other, and returns a two-message
-aggregate. The named Type 2 reduction satisfies the factor-four bound, with both source
-generator conditions discharged for multiplication by one in `ZMod 101`. -/
+/-- Hash `true`, sign `false`, and return the aggregate of the honest signatures on both
+messages: the public key times the hash of `true`, plus the signature on `false`. -/
+@[expose] def adversary : AggregateSignatureAlg.UnforgeableAdversary toyScheme := ⟨fun pk => do
+  let h : ZMod 101 ←
+    ((unifSpec + (Bool →ₒ ZMod 101)) + (Bool →ₒ ZMod 101)).query (.inl (.inr true))
+  let σ : ZMod 101 ←
+    ((unifSpec + (Bool →ₒ ZMod 101)) + (Bool →ₒ ZMod 101)).query (.inr false)
+  return ([(pk, true), (pk, false)], pk * h + σ)⟩
+
+/-- The adversary makes one hash query and one signing query and names two pairs. -/
+theorem adversary_romQueryBound : adversary.RomQueryBound 1 1 2 := by
+  intro pk
+  refine ⟨?_, ?_, ?_⟩
+  · simp [adversary, isQueryBoundP_query_bind_iff, SignatureAlg.IsHashQuery]
+  · simp [adversary, isQueryBoundP_query_bind_iff, SignatureAlg.IsSignQuery]
+  · intro z hz
+    simp only [adversary, support_bind, support_query, Set.mem_iUnion, Set.mem_univ,
+      exists_true_left, support_pure, Set.mem_singleton_iff] at hz
+    obtain ⟨h, σ, rfl⟩ := hz
+    simp
+
+/-- The hash budget is tight. -/
+theorem not_adversary_romQueryBound_hash : ¬ adversary.RomQueryBound 0 1 2 := fun h => by
+  simpa [adversary, isQueryBoundP_query_bind_iff, SignatureAlg.IsHashQuery] using (h 0).1
+
+/-- The signing budget is tight. -/
+theorem not_adversary_romQueryBound_sign : ¬ adversary.RomQueryBound 1 0 2 := fun h => by
+  simpa [adversary, isQueryBoundP_query_bind_iff, SignatureAlg.IsHashQuery,
+    SignatureAlg.IsSignQuery] using (h 0).2.1
+
+/-- The forgery-length budget is tight: the adversary names two pairs. -/
+theorem not_adversary_romQueryBound_length : ¬ adversary.RomQueryBound 1 1 1 := fun h => by
+  have hz : (([(0, true), (0, false)], 0 * 0 + 0) : List (ZMod 101 × Bool) × ZMod 101) ∈
+      support (adversary.main 0) := by
+    simp only [adversary, support_bind, support_query, Set.mem_iUnion, Set.mem_univ,
+      exists_true_left, support_pure, Set.mem_singleton_iff]
+    exact ⟨0, 0, rfl⟩
+  simpa using (h 0).2.2 _ hz
+
+/-- The adversary meets every hypothesis of the Type 2 security theorem, which bounds its
+advantage by four times the success of the named reduction. -/
 theorem one_hash_one_sign_bound :
-    let A : AggregateSignatureAlg.UnforgeableAdversary toyScheme := ⟨fun pk => do
-      let h : ZMod 101 ←
-        ((unifSpec + (Bool →ₒ ZMod 101)) + (Bool →ₒ ZMod 101)).query (.inl (.inr true))
-      let σ : ZMod 101 ←
-        ((unifSpec + (Bool →ₒ ZMod 101)) + (Bool →ₒ ZMod 101)).query (.inr false)
-      return ([(pk, true), (pk, false)], pk * h + σ)⟩
-    BLS.Aggregate.QueryBound A 1 1 2 ∧
-      AggregateSignatureAlg.unforgeableAdvantage (ProbCompRuntime.rom (Bool →ₒ ZMod 101)) A ≤
-        4 * Pr{let b ← CoCDH.isoExperiment 1
-                (BLS.Aggregate.coCDHReduction LinearMap.id A 1 1 2)}[b = true] := by
-  intro A
-  have hQ : BLS.Aggregate.QueryBound A 1 1 2 := by
-    intro pk
-    refine ⟨?_, ?_, ?_⟩
-    · simp [A, isQueryBoundP_query_bind_iff]
-    · simp [A, isQueryBoundP_query_bind_iff]
-    · intro z hz
-      simp only [A, support_bind, support_query, Set.mem_iUnion, Set.mem_univ, exists_true_left,
-        support_pure, Set.mem_singleton_iff] at hz
-      obtain ⟨h, σ, rfl⟩ := hz
-      simp
-  refine ⟨hQ, ?_⟩
-  have hg : Function.Bijective (· • (1 : ZMod 101) : ZMod 101 → ZMod 101) := by simp
+    AggregateSignatureAlg.unforgeableAdvantage (ProbCompRuntime.rom (Bool →ₒ ZMod 101))
+        adversary ≤
+      4 * Pr{let b ← CoCDH.isoExperiment 1
+              (BLS.Aggregate.coCDHReduction LinearMap.id adversary 1 1 2)}[b = true] := by
+  have hg : Function.Surjective (· • (1 : ZMod 101) : ZMod 101 → ZMod 101) :=
+    fun a => ⟨a, by simp⟩
   have h := BLS.Aggregate.unforgeableAdvantage_le
-    (LinearMap.id (R := ZMod 101) (M := ZMod 101)) A 1 1 2 hQ
-    (by simpa using hg.surjective) hg.surjective (by simp)
+    (LinearMap.id (R := ZMod 101) (M := ZMod 101)) adversary 1 1 2 adversary_romQueryBound
+    (by simpa using hg) hg (by simp)
   norm_num at h
   exact h
+
+/-- The adversary always forges: the pair `(pk, true)` was never signed, and its aggregate is the
+sum of the two honest signatures. -/
+theorem adversary_unforgeableAdvantage :
+    AggregateSignatureAlg.unforgeableAdvantage (ProbCompRuntime.rom (Bool →ₒ ZMod 101))
+      adversary = 1 := by
+  unfold AggregateSignatureAlg.unforgeableAdvantage
+  rw [ProbCompRuntime.rom_evalDist]
+  change 𝒟[_] {b | b = true} = 1
+  rw [evalDist_apply_setOf_simulateQ_romImpl_run'_eq_one_iff]
+  intro f _
+  rw [OracleComp.evalDist_apply_setOf_eq_one_iff_forall_mem_support]
+  intro b hb
+  simp only [AggregateSignatureAlg.unforgeableExperiment, BLS.Aggregate.scheme, smul_eq_mul,
+    mul_one, bind_pure_comp, LinearMap.mul_apply_apply, ite_not, LinearMap.mul_apply', adversary,
+    add_apply_inl, add_apply_inr, SignatureAlg.runWithSigningOracle_def,
+    SignatureAlg.signingOracle, QueryImpl.passthrough_add, simulateQ_bind, simulateQ_query,
+    OracleQuery.input_query, OracleQuery.cont_query, QueryImpl.add_apply_inl,
+    PFunctor.Handler.liftTarget_apply, ofPFunctor_toPFunctor, QueryImpl.id'_apply, id_map,
+    simulateQ_map, QueryImpl.add_apply_inr, QueryImpl.withLogging_apply, map_bind,
+    Functor.map_map, id_eq, WriterT.run_bind, WriterT.run_liftM, List.empty_eq, WriterT.run_map,
+    WriterT.run_tell, map_pure, List.nil_append, bind_map_left, bind_assoc, List.any_cons,
+    decide_true, ne_eq, Bool.false_eq_true, not_false_eq_true, QueryLog.wasQueried_cons_of_ne,
+    QueryLog.wasQueried_nil, Bool.not_false, Bool.and_self, QueryLog.wasQueried_cons_self,
+    Bool.not_true, Bool.and_false, List.any_nil, Bool.or_self, Bool.or_false, List.map_cons,
+    List.map_nil, List.nodup_cons, List.mem_cons, Bool.true_eq_false, List.not_mem_nil, or_self,
+    List.nodup_nil, and_self, ↓reduceIte, Bool.true_and, MonadAttach.support_bind,
+    MonadAttach.mem_support, MonadAttach.support_map, Set.mem_iUnion, Set.mem_image,
+    exists_prop] at hb
+  obtain ⟨i, -, i₁, hi₁, i₂, hi₂, x, hx, rfl⟩ := hb
+  have hq : ∀ msg, simulateQ (unifFwdAnswerImpl f) (liftM ((Bool →ₒ ZMod 101).query msg)) =
+      (pure (f msg) : ProbComp (ZMod 101)) := fun msg => by
+    change simulateQ (unifSpec.passthrough + f.liftTarget ProbComp)
+      (liftM ((Bool →ₒ ZMod 101).query msg)) = _
+    exact QueryImpl.simulateQ_add_liftM_query_right
+      (unifSpec.passthrough : QueryImpl unifSpec ProbComp) (f.liftTarget ProbComp) msg
+  rw [hq] at hi₂
+  change MonadAttach.CanReturn (pure (f true) : ProbComp (ZMod 101)) i₁ at hi₁
+  have hq2 : ∀ msg, simulateQ (unifFwdAnswerImpl f)
+      (liftM (liftM ((Bool →ₒ ZMod 101).query msg) : OracleComp (Bool →ₒ ZMod 101) (ZMod 101))) =
+      (pure (f msg) : ProbComp (ZMod 101)) := fun msg => hq msg
+  simp only [BLS.Aggregate.pairingSum, liftM_bind, liftM_pure, simulateQ_bind, simulateQ_pure,
+    hq2, pure_bind] at hx
+  simp only [MonadAttach.canReturn_pure_iff] at hi₁ hi₂ hx
+  subst hi₁ hi₂ hx
+  simp
+  ring
+
+/-- The bound is not vacuous here: the named Type 2 reduction solves co-CDH with probability
+at least `1 / 4`. -/
+theorem one_le_four_mul_prEvent_coCDHReduction :
+    1 ≤ 4 * Pr{let b ← CoCDH.isoExperiment 1
+                    (BLS.Aggregate.coCDHReduction LinearMap.id adversary 1 1 2)}[b = true] := by
+  simpa [adversary_unforgeableAdvantage] using one_hash_one_sign_bound
 
 /-- A linear source map can meet first-source generation and nondegeneracy without
 second-source cyclicity, yet fail the arbitrary-key identity needed to strip contributions.
