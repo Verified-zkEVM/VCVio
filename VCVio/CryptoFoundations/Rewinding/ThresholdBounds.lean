@@ -8,13 +8,15 @@ module
 public import VCVio.CryptoFoundations.Rewinding.Finder
 public import Mathlib.Data.Fin.Tuple.Basic
 public import Mathlib.Data.Fintype.BigOperators
+public import ToMathlib.Data.ENNReal.Gauss
 
 /-!
 # Finite averages and threshold error
 
 Acceptance rates decompose along the first challenge coordinate. The complement of the threshold
 error is multiplicative over rounds, yielding the affine recursion for successive extraction steps.
-The threshold error is at most the sum of the per-round errors (`thresholdError_le_sum`).
+The threshold error is at most the sum of the per-round errors (`thresholdError_le_sum`). The
+generic `ℝ≥0∞` identities behind these recursions live in `ToMathlib.Data.ENNReal.Gauss`.
 -/
 
 public section
@@ -84,52 +86,11 @@ theorem one_sub_thresholdError_cons {n : ℕ} (C : Fin (n + 1) → Type)
         (1 - thresholdError (fun i : Fin n => C i.succ) (fun i => k i.succ)) := by
   rw [one_sub_thresholdError, Fin.prod_univ_succ, one_sub_thresholdError]
 
-/-- The union-error identity for two numbers between zero and one. -/
-theorem one_sub_mul_one_sub {a b : ℝ≥0∞} (ha : a ≤ 1) (hb : b ≤ 1) :
-    1 - (1 - a) * (1 - b) = a + (1 - a) * b := by
-  apply ENNReal.sub_eq_of_eq_add' (by finiteness)
-  symm
-  calc
-    _ = a + (1 - a) * (b + (1 - b)) := by ring
-    _ = 1 := by rw [add_tsub_cancel_of_le hb, mul_one, add_tsub_cancel_of_le ha]
-
-/-- The union bound for a product of complements: `1 - ∏ r ∈ s, (1 - a r) ≤ ∑ r ∈ s, a r`. -/
-theorem one_sub_prod_one_sub_le_sum {R : Type*} (s : Finset R) (a : R → ℝ≥0∞) :
-    1 - ∏ r ∈ s, (1 - a r) ≤ ∑ r ∈ s, a r := by
-  classical
-  induction s using Finset.induction_on with
-  | empty => simp
-  | insert j s hj ih =>
-      rw [Finset.prod_insert hj, Finset.sum_insert hj]
-      by_cases ha : 1 ≤ a j
-      · rw [tsub_eq_zero_of_le ha, zero_mul, tsub_zero]
-        exact le_add_right ha
-      · have ha' : a j ≤ 1 := (not_le.mp ha).le
-        have hP : ∏ r ∈ s, (1 - a r) ≤ 1 := Finset.prod_le_one fun r _ => tsub_le_self
-        rw [tsub_le_iff_right]
-        calc 1 ≤ ∑ r ∈ s, a r + ∏ r ∈ s, (1 - a r) := tsub_le_iff_right.mp ih
-          _ = ∑ r ∈ s, a r + ((1 - a j) * ∏ r ∈ s, (1 - a r) + a j * ∏ r ∈ s, (1 - a r)) := by
-              rw [← add_mul, tsub_add_cancel_of_le ha', one_mul]
-          _ ≤ ∑ r ∈ s, a r + ((1 - a j) * ∏ r ∈ s, (1 - a r) + a j) := by
-              gcongr
-              exact mul_le_of_le_one_right zero_le hP
-          _ = a j + ∑ r ∈ s, a r + (1 - a j) * ∏ r ∈ s, (1 - a r) := by ring
-
 /-- The threshold error is at most the sum of the per-round errors `(k r - 1) / |C r|`. -/
 theorem thresholdError_le_sum {R : Type} [Fintype R] (C : R → Type) [∀ r, Fintype (C r)]
     (k : R → ℕ) :
     thresholdError C k ≤ ∑ r, ((k r - 1 : ℕ) : ℝ≥0∞) / Fintype.card (C r) :=
-  one_sub_prod_one_sub_le_sum Finset.univ _
-
-/-- The complement of the affine union error is the product of the two complements. -/
-theorem one_sub_affine_error {a b : ℝ≥0∞} (ha : a ≤ 1) (hb : b ≤ 1) :
-    1 - (a + (1 - a) * b) = (1 - a) * (1 - b) := by
-  rw [← one_sub_mul_one_sub ha hb]
-  apply ENNReal.sub_sub_cancel (by finiteness)
-  calc
-    _ ≤ (1 : ℝ≥0∞) * 1 :=
-      mul_le_mul' (show 1 - a ≤ 1 from tsub_le_self) (show 1 - b ≤ 1 from tsub_le_self)
-    _ = 1 := one_mul 1
+  ENNReal.one_sub_prod_one_sub_le_sum Finset.univ _
 
 /-- Per-round threshold error is at most one when the requested threshold fits the challenge
 set. -/
@@ -150,7 +111,7 @@ theorem thresholdError_cons {n : ℕ} (C : Fin (n + 1) → Type)
       (1 - ((k 0 - 1 : ℕ) : ℝ≥0∞) / Fintype.card (C 0)) *
         thresholdError (fun i : Fin n => C i.succ) (fun i => k i.succ) := by
   rw [thresholdError, Fin.prod_univ_succ, ← one_sub_thresholdError]
-  exact one_sub_mul_one_sub (thresholdError_ratio_le_one hk0 hk)
+  exact ENNReal.one_sub_one_sub_mul_one_sub_eq_add_one_sub_mul (thresholdError_ratio_le_one hk0 hk)
     (thresholdError_le_one _ _)
 
 /-- Affine success estimates compose with the same multiplicative error complement. -/
@@ -158,9 +119,10 @@ theorem affine_error_compose {a b p ε : ℝ≥0∞} (ha : a ≤ 1) (hb : b ≤ 
     (h : ε ≤ b + (1 - b) * (a + (1 - a) * p)) :
     ε ≤ (a + (1 - a) * b) + (1 - (a + (1 - a) * b)) * p := by
   apply h.trans_eq
-  rw [one_sub_affine_error ha hb, mul_add, ← add_assoc]
+  rw [ENNReal.one_sub_add_one_sub_mul ha hb, mul_add, ← add_assoc]
   have hab : b + (1 - b) * a = a + (1 - a) * b := by
-    rw [← one_sub_mul_one_sub hb ha, mul_comm, one_sub_mul_one_sub ha hb]
+    rw [← ENNReal.one_sub_one_sub_mul_one_sub_eq_add_one_sub_mul hb ha, mul_comm,
+      ENNReal.one_sub_one_sub_mul_one_sub_eq_add_one_sub_mul ha hb]
   rw [hab]
   ring
 
