@@ -70,8 +70,9 @@ chosen enumeration. Completeness holds because every element a permutation can m
     (nodup_permsOfList FinEnum.nodup_toList)
 
 /-- Computable enumeration of embeddings `β ↪ α` between `FinEnum` types, transported from the
-`FinEnum` on the subtype of injective functions `{f : β → α // Function.Injective f}`. Enumerating the domain
-and comparing images using decidable equality on the codomain decides injectivity. -/
+`FinEnum` on the subtype of injective functions `{f : β → α // Function.Injective f}`.
+Enumerating the domain and comparing images using decidable equality on the codomain
+decides injectivity. -/
 @[reducible] def Function.Embedding.finEnum {β α : Type u} [FinEnum β] [FinEnum α] :
     FinEnum (β ↪ α) :=
   FinEnum.ofEquiv { f : β → α // Function.Injective f }
