@@ -425,10 +425,9 @@ and cost bounds to an acceptance oracle implemented by such reruns, with the acc
 as the prover's honest acceptance probability averaged over challenges (`finder_bounds_honest`).
 So `isFinder_coordFinder` already bounds Figure 11 against a real prover.
 
-What is not yet a library construction is the last step of extraction: a finder returns
-challenges, and a witness extractor needs the prover's responses on them. Replaying the found
-challenges against the same frozen world returns the responses of the runs the finder saw, by the
-policy's `frozen` law (`Rewinding.ResetPolicy.frozen_run`). That transcript-recovery layer is
-generic over finders, so it serves the threshold finder as well, and is planned as its own change.
-Until it lands, `CoordinateFork/Extraction.lean` extracts in the table model, where the responses
-are a table.
+The last step of extraction is transcript recovery: a finder returns challenges, and a witness
+extractor needs the prover's responses on them. `Rewinding.recover` runs any finder against frozen
+reruns, caches the output of every run it makes, and hands the extractor the transcripts at the
+points of the finder's output (`Rewinding.ResetPolicy.recover_bounds_honest`).
+[rewinding.md](rewinding.md) describes it. `CoordinateFork/Extraction.lean` still extracts in the
+table model, where the responses are a table.

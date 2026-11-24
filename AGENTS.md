@@ -465,6 +465,7 @@ Before working in a specific area, read the relevant guide in `docs/agents/`:
 - **Converting code written against the removed discrete `Pr[…]` API**: [`docs/agents/probability-migration.md`](docs/agents/probability-migration.md)
 - **Crypto primitives and reductions**: [`docs/agents/crypto.md`](docs/agents/crypto.md)
 - **Forking lemmas and black-box finders (seeded / replay / coordinate-wise / threshold)**: [`docs/agents/forking.md`](docs/agents/forking.md)
+- **Rewinding: reset policies, finders against frozen reruns, transcript recovery, query cost**: [`docs/agents/rewinding.md`](docs/agents/rewinding.md)
 - **End-to-end crypto examples**: [`docs/agents/end-to-end-examples.md`](docs/agents/end-to-end-examples.md)
 - **Program logic tactics**: [`docs/agents/program-logic.md`](docs/agents/program-logic.md)
 - **All notation**: [`docs/agents/notation.md`](docs/agents/notation.md)
