@@ -23,9 +23,10 @@ output's points (`Rewinding.run_simulateQ_counted_recover`), so they are exactly
 verdicts the finder saw. Against frozen reruns, the eager representation
 (`Rewinding.ResetPolicy.attempt_eagerTable`) carries this over
 (`Rewinding.ResetPolicy.attempt_recover`). A sound finder queries every point it vouches for
-(`Rewinding.IsFinder.mem_log_of_mem_support`), so there are no misses, and the finder's success
-and cost bounds become an extractor's with no further complete runs
-(`Rewinding.ResetPolicy.recover_bounds`).
+(`Rewinding.IsFinder.mem_log_of_mem_support`), so there are no misses: on every outcome, recovery
+makes exactly the finder's complete runs (`Rewinding.IsFinder.snd_eq_of_mem_support_recoverFrom`).
+The finder's success and cost bounds therefore become an extractor's
+(`Rewinding.ResetPolicy.recover_bounds_honest`).
 
 An extractor usually needs the recovered transcripts to agree on the messages sent before the
 challenges where they branch, as the commitment of a Σ-protocol.
@@ -43,12 +44,16 @@ give this for every table in the eager table's support.
 
 * `Rewinding.run_simulateQ_counted_caching`: against a fixed table, the caching finder is the
   logged finder, its cache holding the table's entries at the logged vectors.
+* `Rewinding.IsFinder.snd_eq_of_mem_support_recoverFrom`: recovery adds no complete run to the
+  finder's.
 * `Rewinding.ResetPolicy.attempt_recover`: against frozen reruns, recovery is the logged finder
   against the verdicts of an eager table, followed by extraction from the same table.
-* `Rewinding.ResetPolicy.recover_bounds`: the finder's affine success bound and its cost transfer
-  to the extractor.
-* `Rewinding.ResetPolicy.recover_bounds_charged`: in addition, the expected oracle-query cost of
-  the complete runs is at most `c * T` when each complete run costs at most `c`.
+* `Rewinding.ResetPolicy.valid_of_mem_support_attempt_recover`: every returned witness is valid.
+* `Rewinding.ResetPolicy.recover_bounds_honest`: the finder's affine success bound, read with the
+  honest acceptance probability, and its cost bound transfer to the extractor.
+  `Rewinding.ResetPolicy.recover_tree_bounds_honest` is the case of a tree finder.
+* `Rewinding.ResetPolicy.recover_bounds_honest_charged`: in addition, the expected oracle-query
+  cost of the complete runs is at most `c * T` when each complete run costs at most `c`.
 -/
 
 public section
@@ -66,9 +71,6 @@ variable {Q α : Type}
 @[expose] def logRun {β : Type} (g : Q → Bool)
     (find : OracleComp (unifSpec + rerunSpec Q Bool) β) : ProbComp (β × (Set Q × ℕ)) :=
   (simulateQ (coins (S := Set Q × ℕ) + logCounted g) find).run (∅, 0)
-
-/-- Group a logged run's output with its log, leaving its counter. -/
-@[expose] def regroup {β S : Type} (z : β × (S × ℕ)) : (β × S) × ℕ := ((z.1, z.2.1), z.2.2)
 
 open Classical in
 /-- The cache holding a table's entries at the vectors of a log. -/
@@ -141,14 +143,15 @@ theorem run_simulateQ_counted_lookupAll (F : Q → α) (L : Set Q) {m : ℕ} (qs
       funext i
       exact Fin.cases rfl (fun _ => rfl) i
 
-/-- The recovery step against a fixed table: on a successful output, the extractor receives the
-table's entries at its points, and the counter grows by one complete run per point missing from
-the log. The points are looked up in the order of the enumeration of their index type. -/
+/-- The recovery step against a fixed table, after a logged run `z` of the finder: on a successful
+output, the extractor receives the table's entries at its points, and the counter grows by one
+complete run per point missing from the log. The points are looked up in the order of the
+enumeration of their index type. -/
 @[expose] noncomputable def recoverFrom {Out W I : Type} [FinEnum I] (F : Q → α)
     (points : Out → I → Q) (ext : Out → (I → α) → ProbComp W)
-    (z : (Option Out × Set Q) × ℕ) : ProbComp (Option W × ℕ) :=
-  z.1.1.elim (pure (none, z.2)) fun o =>
-    (fun w => (some w, z.2 + missCount z.1.2 fun j => points o (FinEnum.equiv.symm j))) <$>
+    (z : Option Out × (Set Q × ℕ)) : ProbComp (Option W × ℕ) :=
+  z.1.elim (pure (none, z.2.2)) fun o =>
+    (fun w => (some w, z.2.2 + missCount z.2.1 fun j => points o (FinEnum.equiv.symm j))) <$>
       ext o fun i => F (points o i)
 
 variable [DecidableEq Q]
@@ -221,9 +224,9 @@ theorem run_simulateQ_counted_recover {Out W I : Type} [FinEnum I] (accept : Q �
     (F : Q → α) (find : OracleComp (unifSpec + rerunSpec Q Bool) (Option Out))
     (points : Out → I → Q) (ext : Out → (I → α) → ProbComp W) :
     (simulateQ (coins (S := ℕ) + counted F) (recover accept find points ext)).run 0 =
-      regroup <$> logRun (fun q => accept q (F q)) find >>= recoverFrom F points ext := by
+      logRun (fun q => accept q (F q)) find >>= recoverFrom F points ext := by
   simp only [recover, simulateQ_bind, StateT.run_bind]
-  rw [← cacheOf_empty F, run_simulateQ_counted_caching, bind_map_left, logRun, bind_map_left]
+  rw [← cacheOf_empty F, run_simulateQ_counted_caching, bind_map_left, logRun]
   refine bind_congr fun z => ?_
   obtain ⟨o?, L, n⟩ := z
   cases o? with
@@ -231,7 +234,7 @@ theorem run_simulateQ_counted_recover {Out W I : Type} [FinEnum I] (accept : Q �
   | some o =>
     simp only [Option.elim, simulateQ_bind, StateT.run_bind, run_simulateQ_counted_lookupAll,
       pure_bind, simulateQ_map, StateT.run_map, QueryImpl.simulateQ_add_liftComp_left,
-      recoverFrom, regroup, Equiv.symm_apply_apply]
+      recoverFrom, Equiv.symm_apply_apply]
     simp [coins]
 
 end Cache
@@ -241,6 +244,29 @@ theorem runFinder_eq_map_logRun {R : Type} {C : R → Type} {β : Type}
     (find : OracleComp (unifSpec + accSpec C) β) (g : ((r : R) → C r) → Bool) :
     runFinder find g = (fun z => (z.1, z.2.2)) <$> logRun g find :=
   (map_run_simulateQ_logCounted g find ∅ 0).symm
+
+/-- Recovery adds no complete run to the finder's: if every good output accepts at its points,
+then after every logged run of the finder, every outcome of the recovery step has the run's
+count. -/
+theorem IsFinder.snd_eq_of_mem_support_recoverFrom {R : Type} {C : R → Type} [Fintype R]
+    [DecidableEq R] [∀ r, Fintype (C r)] {α Out W : Type}
+    {good : (((r : R) → C r) → Bool) → Out → Prop}
+    {find : OracleComp (unifSpec + accSpec C) (Option Out)} {κ T : ℝ≥0∞}
+    (h : IsFinder good find κ T) {I : Type} [FinEnum I] (points : Out → I → ((r : R) → C r))
+    (hpts : ∀ f o, good f o → ∀ i, f (points o i) = true) (g : ((r : R) → C r) → Bool)
+    (F : ((r : R) → C r) → α) (ext : Out → (I → α) → ProbComp W)
+    {z : Option Out × (Set ((r : R) → C r) × ℕ)} (hz : z ∈ support (logRun g find))
+    {y : Option W × ℕ} (hy : y ∈ support (recoverFrom F points ext z)) : y.2 = z.2.2 := by
+  obtain ⟨o?, L, n⟩ := z
+  cases o? with
+  | none =>
+    simp only [recoverFrom, Option.elim, support_pure, Set.mem_singleton_iff] at hy
+    rw [hy]
+  | some o =>
+    simp only [recoverFrom, Option.elim, support_map, Set.mem_image] at hy
+    obtain ⟨w, -, rfl⟩ := hy
+    rw [missCount_eq_zero L _ fun j => h.mem_log_of_mem_support points hpts g _ hz o rfl _,
+      Nat.add_zero]
 
 /-- If on every outcome the first counter is at most `c` times the second, the expected first
 counter is at most `c` times the expected second counter. -/
@@ -270,15 +296,48 @@ theorem attempt_recover {Q α Out W I : Type} [Finite Q] [DecidableEq Q] [FinEnu
     (points : Out → I → Q) (ext : Out → (I → α) → ProbComp W) :
     P.attempt run (recover accept find points ext) =ᵈ
       (do let F ← P.eagerTable run
-          regroup <$> logRun (fun q => accept q (F q)) find >>= recoverFrom F points ext) := by
+          logRun (fun q => accept q (F q)) find >>= recoverFrom F points ext) := by
   simpa only [run_simulateQ_counted_recover] using
     P.attempt_eagerTable run (recover accept find points ext)
 
-/-- A finder's affine success bound and its cost transfer to recovery against frozen reruns, with
-no further complete runs: every point of a good output was queried, so its transcript is cached.
-If the extractor returns a valid witness from every good output's transcripts, a valid witness
-comes back with the finder's success guarantee. -/
-theorem recover_bounds [Fintype R] [DecidableEq R] [∀ r, Fintype (C r)]
+/-- Every witness that recovery returns against frozen reruns is valid, if the extractor returns
+valid witnesses from the transcripts of every good output. This uses only the soundness of the
+finder, not its success or cost bounds. -/
+theorem valid_of_mem_support_attempt_recover [Fintype R] [DecidableEq R] [∀ r, Fintype (C r)]
+    [DecidableEq ((r : R) → C r)] {α Out W : Type}
+    (run : ((r : R) → C r) → OracleComp spec α) (accept : ((r : R) → C r) → α → Bool)
+    {good : (((r : R) → C r) → Bool) → Out → Prop}
+    {find : OracleComp (unifSpec + accSpec C) (Option Out)} {κ T : ℝ≥0∞}
+    (h : IsFinder good find κ T) {I : Type} [FinEnum I] (points : Out → I → ((r : R) → C r))
+    (ext : Out → (I → α) → ProbComp W) (valid : W → Prop)
+    (hext : ∀ F ∈ support (P.eagerTable run), ∀ o, good (fun c => accept c (F c)) o →
+      ∀ w ∈ support (ext o fun i => F (points o i)), valid w)
+    {z : Option W × ℕ} (hz : z ∈ support (P.attempt run (recover accept find points ext)))
+    {w : W} (hw : z.1 = some w) : valid w := by
+  rw [support_eq_of_evalDistEq (P.attempt_recover run accept find points ext)] at hz
+  obtain ⟨F, hF, hz⟩ := (mem_support_bind_iff _ _ _).1 hz
+  obtain ⟨⟨o?, L, n⟩, hl, hz⟩ := (mem_support_bind_iff _ _ _).1 hz
+  cases o? with
+  | none =>
+    simp only [recoverFrom, Option.elim, support_pure, Set.mem_singleton_iff] at hz
+    simp [hz] at hw
+  | some o =>
+    simp only [recoverFrom, Option.elim, support_map, Set.mem_image] at hz
+    obtain ⟨w', hw', rfl⟩ := hz
+    obtain rfl : w' = w := Option.some_injective _ hw
+    have hcount : (some o, n) ∈ support (runFinder find fun c => accept c (F c)) := by
+      rw [runFinder_eq_map_logRun, support_map]
+      exact ⟨_, hl, rfl⟩
+    exact hext F hF o (h.sound _ _ hcount o rfl) w' hw'
+
+/-- A finder's affine success bound and its cost bound transfer to recovery against frozen reruns.
+The success bound reads the acceptance rate as the honest acceptance probability, averaged over
+complete challenge vectors. Every point of a good output was queried, so its transcript is cached,
+and recovery makes exactly the finder's complete runs
+(`Rewinding.IsFinder.snd_eq_of_mem_support_recoverFrom`). If the extractor returns a valid witness
+from every good output's transcripts, a valid witness comes back with the finder's success
+guarantee. -/
+theorem recover_bounds_honest [Fintype R] [DecidableEq R] [∀ r, Fintype (C r)]
     [DecidableEq ((r : R) → C r)] {α Out W : Type}
     (run : ((r : R) → C r) → OracleComp spec α) (accept : ((r : R) → C r) → α → Bool)
     {good : (((r : R) → C r) → Bool) → Out → Prop}
@@ -315,7 +374,7 @@ theorem recover_bounds [Fintype R] [DecidableEq R] [∀ r, Fintype (C r)]
           ∃ w, z.1 = some w ∧ valid w] := by
     rw [hlaw.prEvent_eq, bind_map_left]
     refine prEvent_bind_mono_of_forall_le_of_support _ _ _ _ _ fun F hF => ?_
-    rw [runFinder_eq_map_logRun, prEvent_map, bind_map_left]
+    rw [runFinder_eq_map_logRun, prEvent_map]
     refine prEvent_le_prEvent_bind_of_support _ _ _ _ fun z hz hsome => ?_
     obtain ⟨o, ho⟩ := Option.isSome_iff_exists.mp hsome
     have hcount : (z.1, z.2.2) ∈ support (runFinder find (fun c => accept c (F c))) := by
@@ -327,7 +386,7 @@ theorem recover_bounds [Fintype R] [DecidableEq R] [∀ r, Fintype (C r)]
     obtain ⟨o?, L, n⟩ := z
     simp only at ho
     subst ho
-    simp only [regroup, recoverFrom, Option.elim, support_map, Set.mem_image] at hy
+    simp only [recoverFrom, Option.elim, support_map, Set.mem_image] at hy
     obtain ⟨w, hw, rfl⟩ := hy
     exact ⟨w, rfl, hext F hF o hgood w hw⟩
   have hcost : expectedCalls (P.attempt run (recover accept find points ext)) ≤ T := by
@@ -335,32 +394,24 @@ theorem recover_bounds [Fintype R] [DecidableEq R] [∀ r, Fintype (C r)]
     let : MeasurableSpace (((r : R) → C r) → α) := ⊤
     rw [expectedCalls_bind]
     calc
-      (∫⁻ F, expectedCalls (regroup <$> logRun (fun q => accept q (F q)) find >>=
+      (∫⁻ F, expectedCalls (logRun (fun q => accept q (F q)) find >>=
             recoverFrom F points ext) ∂𝒟[P.eagerTable run]) ≤
           ∫⁻ _F, T ∂𝒟[P.eagerTable run] := by
         refine lintegral_mono fun F => ?_
+        have hsplit : logRun (fun q => accept q (F q)) find >>= recoverFrom F points ext =
+            (fun z => ((z.1, z.2.1), z.2.2)) <$> logRun (fun q => accept q (F q)) find >>=
+              fun z => recoverFrom F points ext (z.1.1, z.1.2, z.2) := by
+          rw [bind_map_left]
+        rw [hsplit]
         refine (expectedCalls_bind_le_add _ _ 0 fun z hz y hy => ?_).trans ?_
         · rw [support_map] at hz
-          obtain ⟨z', hz', rfl⟩ := hz
-          obtain ⟨o?, L, n⟩ := z'
-          cases o? with
-          | none =>
-            simp only [regroup, recoverFrom, Option.elim, support_pure,
-              Set.mem_singleton_iff] at hy
-            simp [hy, regroup]
-          | some o =>
-            simp only [regroup, recoverFrom, Option.elim, support_map,
-              Set.mem_image] at hy
-            obtain ⟨w, -, rfl⟩ := hy
-            rw [missCount_eq_zero L _
-              fun j => h.mem_log_of_mem_support points hpts _ _ hz' o rfl _]
-            simp [regroup]
+          obtain ⟨⟨o?, L, n⟩, hz', rfl⟩ := hz
+          simpa using (h.snd_eq_of_mem_support_recoverFrom points hpts _ F ext hz' hy).le
         · rw [Nat.cast_zero, add_zero, ← expectedCalls_map_output Prod.fst]
           have hmap : (fun y => (y.1.1, y.2)) <$>
-              (regroup <$> logRun (fun q => accept q (F q)) find) =
+              ((fun z => ((z.1, z.2.1), z.2.2)) <$> logRun (fun q => accept q (F q)) find) =
                 runFinder find fun c => accept c (F c) := by
             rw [runFinder_eq_map_logRun, Functor.map_map]
-            rfl
           rw [hmap]
           exact h.cost _
       _ = T * 𝒟[P.eagerTable run] Set.univ := lintegral_const _
@@ -375,8 +426,8 @@ theorem recover_bounds [Fintype R] [DecidableEq R] [∀ r, Fintype (C r)]
       h.average_success _
     _ ≤ _ := by gcongr
 
-/-- `ResetPolicy.recover_bounds` with the subtractive success bound. -/
-theorem recover_bounds_sub [Fintype R] [DecidableEq R] [∀ r, Fintype (C r)]
+/-- `ResetPolicy.recover_bounds_honest` with the subtractive success bound. -/
+theorem recover_bounds_honest_sub [Fintype R] [DecidableEq R] [∀ r, Fintype (C r)]
     [DecidableEq ((r : R) → C r)] {α Out W : Type}
     (run : ((r : R) → C r) → OracleComp spec α) (accept : ((r : R) → C r) → α → Bool)
     {good : (((r : R) → C r) → Bool) → Out → Prop}
@@ -391,16 +442,16 @@ theorem recover_bounds_sub [Fintype R] [DecidableEq R] [∀ r, Fintype (C r)]
       Pr{let z ← P.attempt run (recover accept find points ext)}[
         ∃ w, z.1 = some w ∧ valid w] ∧
     expectedCalls (P.attempt run (recover accept find points ext)) ≤ T := by
-  obtain ⟨hs, hc⟩ := P.recover_bounds run accept h points hpts ext valid hext
+  obtain ⟨hs, hc⟩ := P.recover_bounds_honest run accept h points hpts ext valid hext
   exact ⟨tsub_le_iff_left.mpr
     (hs.trans (add_le_add le_rfl (mul_le_of_le_one_left zero_le tsub_le_self))), hc⟩
 
-/-- `ResetPolicy.recover_bounds` in one charged attempt. Forgetting the accumulated query cost
-leaves the success bound and the complete-run bound `T`, and the expected accumulated query cost
-is at most `c * T` when every complete run of `run` has worst-case query cost at most `c` under
-`cm`. A complete run is `run q`, so it should include the verifier and everything the extractor
-reads (`Rewinding.ResetPolicy.chargedAttempt`). -/
-theorem recover_bounds_charged [Fintype R] [DecidableEq R] [∀ r, Fintype (C r)]
+/-- `ResetPolicy.recover_bounds_honest` in one charged attempt. Forgetting the accumulated query
+cost leaves the success bound and the complete-run bound `T`, and the expected accumulated query
+cost is at most `c * T` when every complete run of `run` has worst-case query cost at most `c`
+under `cm`. Only the queries of `run q` are charged, so `run q` should include the verifier and
+everything the extractor reads (`Rewinding.ResetPolicy.chargedAttempt`). -/
+theorem recover_bounds_honest_charged [Fintype R] [DecidableEq R] [∀ r, Fintype (C r)]
     [DecidableEq ((r : R) → C r)] {α Out W : Type}
     (run : ((r : R) → C r) → OracleComp spec α) (accept : ((r : R) → C r) → α → Bool)
     (cm : CostModel spec ℕ) (c : ℕ) (hc : ∀ q, WorstCaseCostBound (run q) cm c)
@@ -419,16 +470,16 @@ theorem recover_bounds_charged [Fintype R] [DecidableEq R] [∀ r, Fintype (C r)
       P.chargedAttempt run cm (recover accept find points ext)) ≤ T ∧
     expectedCalls (Prod.fst <$> P.chargedAttempt run cm (recover accept find points ext)) ≤
       c * T := by
-  have hb := P.recover_bounds run accept h points hpts ext valid hext
+  have hb := P.recover_bounds_honest run accept h points hpts ext valid hext
   rw [← P.map_chargedAttempt_eq_attempt run cm, prEvent_map] at hb
   refine ⟨hb.1, hb.2, (expectedCalls_fst_le_mul _ c
     (P.cost_le_mul_runs_of_mem_support_chargedAttempt run cm c hc _)).trans ?_⟩
   gcongr
   exact hb.2
 
-/-- `ResetPolicy.recover_bounds` for a tree finder, recovering the transcripts at the leaves of the
-returned tree. Every leaf of a returned tree accepts, so its transcript is cached. -/
-theorem recover_tree_bounds [Fintype R] [LinearOrder R] [∀ r, Fintype (C r)]
+/-- `ResetPolicy.recover_bounds_honest` for a tree finder, recovering the transcripts at the leaves
+of the returned tree. Every leaf of a returned tree accepts, so its transcript is cached. -/
+theorem recover_tree_bounds_honest [Fintype R] [LinearOrder R] [∀ r, Fintype (C r)]
     [DecidableEq ((r : R) → C r)] {k : R → ℕ} [FinEnum ((r : R) → Fin (k r))] {α W : Type}
     (run : ((r : R) → C r) → OracleComp spec α) (accept : ((r : R) → C r) → α → Bool)
     {nodeOk : (r : R) → (Fin (k r) → C r) → Prop}
@@ -443,7 +494,7 @@ theorem recover_tree_bounds [Fintype R] [LinearOrder R] [∀ r, Fintype (C r)]
       κ + (1 - κ) * Pr{let z ← P.attempt run (recover accept find VecTree.leaf ext)}[
         ∃ w, z.1 = some w ∧ valid w] ∧
     expectedCalls (P.attempt run (recover accept find VecTree.leaf ext)) ≤ T :=
-  P.recover_bounds run accept h.toIsFinder VecTree.leaf (fun _ _ ht p => ht.2 p) ext valid
+  P.recover_bounds_honest run accept h.toIsFinder VecTree.leaf (fun _ _ ht p => ht.2 p) ext valid
     fun F hF t ht => hext F hF t ht.1 ht.2
 
 end ResetPolicy
