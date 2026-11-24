@@ -100,32 +100,6 @@ theorem counted_fst {Q α β : Type} (f : Q → α)
         StateT.run_bind, counted, StateT.run_modify, StateT.run_pure, pure_bind]
       exact ih (f q) (count + 1)
 
-/-- An initial counter offset is added to the final counter without changing any answers. -/
-theorem counted_run_add {Q α β : Type} (f : Q → α)
-    (alg : OracleComp (unifSpec + rerunSpec Q α) β) (count offset : ℕ) :
-    (simulateQ (coins (S := ℕ) + counted f) alg).run (count + offset) =
-      (fun z => (z.1, z.2 + offset)) <$>
-        (simulateQ (coins (S := ℕ) + counted f) alg).run count := by
-  induction alg using OracleComp.inductionOn generalizing count with
-  | pure a => simp
-  | query_bind q next ih =>
-    cases q with
-    | inl q =>
-      simp only [coins] at ih
-      simp only [simulateQ_bind, simulateQ_spec_query, QueryImpl.add_apply_inl,
-        StateT.run_bind, coins, QueryImpl.liftTarget_apply_run, QueryImpl.ofLift_apply,
-        bind_map_left, map_bind, ih]
-    | inr q =>
-      simp only [simulateQ_bind, simulateQ_spec_query, QueryImpl.add_apply_inr,
-        StateT.run_bind, counted, StateT.run_modify, StateT.run_pure, pure_bind]
-      simpa only [Nat.add_right_comm count offset 1] using ih (f q) (count + 1)
-
-/-- Changing only the output preserves the expected complete-run counter. -/
-theorem expectedCalls_map_output {α β : Type} (g : α → β) (mx : ProbComp (α × ℕ)) :
-    expectedCalls ((fun z => (g z.1, z.2)) <$> mx) = expectedCalls mx := by
-  simp only [expectedCalls, AddWriterT.expectedCostNat, AddWriterT.expectedCost,
-    AddWriterT.costs_def, WriterT.run_mk, Functor.map_map]
-
 /-- Recursive tree finding commutes with interpretation of its sampling and acceptance effects.
 -/
 theorem map_thresholdProgram {m n : Type → Type} [Monad m] [LawfulMonad m]

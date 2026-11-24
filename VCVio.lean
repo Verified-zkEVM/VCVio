@@ -271,11 +271,13 @@ public import VCVio.CryptoFoundations.ReplayForkCost
 public import VCVio.CryptoFoundations.Rewinding.Basic
 public import VCVio.CryptoFoundations.Rewinding.Cost
 public import VCVio.CryptoFoundations.Rewinding.Eager
+public import VCVio.CryptoFoundations.Rewinding.Extraction
 public import VCVio.CryptoFoundations.Rewinding.Finder
 public import VCVio.CryptoFoundations.Rewinding.FinderBridge
 public import VCVio.CryptoFoundations.Rewinding.FixedTape
 public import VCVio.CryptoFoundations.Rewinding.Instances
 public import VCVio.CryptoFoundations.Rewinding.Laws
+public import VCVio.CryptoFoundations.Rewinding.QueriedPoints
 public import VCVio.CryptoFoundations.Rewinding.Threshold
 public import VCVio.CryptoFoundations.Rewinding.ThresholdAnalysis
 public import VCVio.CryptoFoundations.Rewinding.ThresholdBounds
@@ -310,6 +312,10 @@ public import VCVio.CryptoFoundations.SymmEncAlg.INDCCA
 public import VCVio.CryptoFoundations.SymmEncAlg.INDCPA
 public import VCVio.CryptoFoundations.SymmEncAlg.Measure
 public import VCVio.CryptoFoundations.SymmEncAlg.OneTimeINDCPA
+public import VCVio.CryptoFoundations.SyncSignatureAlg
+public import VCVio.CryptoFoundations.SyncSignatureAlg.Basic
+public import VCVio.CryptoFoundations.SyncSignatureAlg.Correctness
+public import VCVio.CryptoFoundations.SyncSignatureAlg.Unforgeability
 public import VCVio.CryptoFoundations.TimeLockPuzzle
 public import VCVio.CryptoFoundations.TimeLockPuzzle.Encoding
 public import VCVio.CryptoFoundations.TimeLockPuzzle.Hiding
@@ -508,6 +514,7 @@ public import VCVio.OracleComp.QueryTracking.RandomOracle.ReadSet
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Redirect
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Relabel
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Routing
+public import VCVio.OracleComp.QueryTracking.RandomOracle.RoutingLens
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Settled
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Simulation
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Tape

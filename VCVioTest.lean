@@ -235,6 +235,7 @@ public import VCVioTest.ReplayCheckpoint
 public import VCVioTest.ResumptionCompatibility
 public import VCVioTest.Rewinding
 public import VCVioTest.RewindingCost
+public import VCVioTest.RewindingExtraction
 public import VCVioTest.RoundByRound.OneRound
 public import VCVioTest.Runtime
 public import VCVioTest.SMDTDSPR
@@ -257,9 +258,11 @@ public import VCVioTest.Schemes.Schnorr.Transforms
 public import VCVioTest.Schemes.VectorPedersen
 public import VCVioTest.SeparatedOTP
 public import VCVioTest.SigmaProtocolMonad
+public import VCVioTest.SigningKernel
 public import VCVioTest.Smoke
 public import VCVioTest.StateSeparating.Measure
 public import VCVioTest.StateTLift
+public import VCVioTest.SyncSignatureAlg
 public import VCVioTest.Tactic.Expectation
 public import VCVioTest.Tactic.Finiteness
 public import VCVioTest.Tactic.FunProp
