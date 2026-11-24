@@ -50,16 +50,8 @@ theorem mul_prEvent_experiment_coCDHReduction {F G₁ G₂ Gₜ M : Type}
         Pr{let b ← CoCDH.experiment g₁ g₂ (coCDHReduction A qH qS)}[b = true] =
       ∑ j : Fin (qH + qS + 1),
         Pr{let b ← CoCDH.experiment g₁ g₂ (coCDHReductionAt A j.val)}[b = true] := by
-  rw [(experiment_reduction_evalDistEq A qH qS).prEvent_eq (· = true),
-    prEvent_bind_eq_sum_fintype]
-  simp only [SampleableType.prEvent_uniformSample_eq_singleton, Fintype.card_fin]
-  rw [Finset.mul_sum]
-  apply Finset.sum_congr rfl
-  intro j _
-  rw [← mul_assoc]
-  have hn : (↑(qH + qS + 1) : ℝ≥0∞) ≠ 0 := by simp
-  have ht : (↑(qH + qS + 1) : ℝ≥0∞) ≠ ⊤ := by simp
-  norm_cast
-  rw [ENNReal.mul_inv_cancel hn ht, one_mul]
+  rw [(experiment_reduction_evalDistEq A qH qS).prEvent_eq (· = true)]
+  simpa using SampleableType.natCast_card_mul_prEvent_uniformSample_bind
+    (fun j : Fin (qH + qS + 1) => CoCDH.experiment g₁ g₂ (coCDHReductionAt A j.val)) (· = true)
 
 end BLS
