@@ -8,7 +8,7 @@ module
 
 public import VCVio.CryptoFoundations.CoordinateFork.Operational
 public import VCVio.CryptoFoundations.Rewinding.FinderBridge
-public import VCVio.CryptoFoundations.Rewinding.ThresholdSemantics
+public import VCVio.CryptoFoundations.Rewinding.ThresholdRound
 
 /-!
 # Figure 11 of Fenzi–Moghaddas–Nguyen as a black-box finder
@@ -23,54 +23,6 @@ public section
 
 open Finset CoordinateWise OracleComp OracleSpec ProbComp
 open scoped ENNReal
-
-namespace Rewinding
-
-/-- Running a finite sequence of programs against a fixed acceptance function adds up their
-counters: each member runs from the counter its predecessors leave, and its law does not depend on
-that starting value except through the offset (`Rewinding.counted_run_add`). -/
-theorem counted_mOfFn {Q α β : Type} (f : Q → α) :
-    ∀ {n : ℕ} (g : Fin n → OracleComp (unifSpec + rerunSpec Q α) β) (count : ℕ),
-      (simulateQ (coins (S := ℕ) + counted f) (Fin.mOfFn n g)).run count =
-        (fun v : Fin n → β × ℕ => (fun i => (v i).1, count + ∑ i, (v i).2)) <$>
-          Fin.mOfFn n fun i => (simulateQ (coins (S := ℕ) + counted f) (g i)).run 0
-  | 0, g, count => by
-      simp only [Fin.mOfFn, simulateQ_pure, StateT.run_pure, map_pure, Finset.univ_eq_empty,
-        Finset.sum_empty, add_zero]
-      congr 2
-      funext i
-      exact i.elim0
-  | n + 1, g, count => by
-      have hrest := fun c => counted_mOfFn f (fun i : Fin n => g i.succ) c
-      simp only [Fin.mOfFn, simulateQ_bind, simulateQ_pure, StateT.run_bind, StateT.run_pure,
-        map_bind]
-      rw [show count = 0 + count from (zero_add count).symm, counted_run_add, zero_add,
-        bind_map_left]
-      refine bind_congr fun p => ?_
-      simp only [hrest, bind_map_left, map_pure]
-      refine bind_congr fun v => ?_
-      simp only [Fin.sum_univ_succ, Fin.cons_zero, Fin.cons_succ]
-      congr 2
-      · funext i
-        refine Fin.cases rfl (fun _ => rfl) i
-      · ring
-
-/-- `Rewinding.counted_mOfFn` over a finite index type. -/
-theorem counted_mPi {Q α β : Type} (f : Q → α) {ι : Type} [Fintype ι]
-    (g : ι → OracleComp (unifSpec + rerunSpec Q α) β) (count : ℕ) :
-    (simulateQ (coins (S := ℕ) + counted f) (Fintype.mPi g)).run count =
-      (fun v : ι → β × ℕ => (fun i => (v i).1, count + ∑ i, (v i).2)) <$>
-        Fintype.mPi fun i => (simulateQ (coins (S := ℕ) + counted f) (g i)).run 0 := by
-  simp only [Fintype.mPi, simulateQ_map, StateT.run_map, counted_mOfFn, Functor.map_map]
-  congr 1
-  funext v
-  simp only [Equiv.arrowCongr_apply, Equiv.refl_apply, Function.comp_apply, Prod.mk.injEq]
-  refine ⟨rfl, ?_⟩
-  congr 1
-  rw [Equiv.symm_symm]
-  exact (Equiv.sum_comp (Fintype.equivFin ι) fun k => (v k).2).symm
-
-end Rewinding
 
 namespace OracleComp
 
