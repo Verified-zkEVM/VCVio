@@ -16,6 +16,7 @@ of genuine acceptance-oracle calls, and its guarantees transfer to frozen reruns
 | **Replay** (cursor-native) | only the forked oracle family | `acc²/q − acc/h` | [`VCVio/CryptoFoundations/ReplayFork.lean`](../../VCVio/CryptoFoundations/ReplayFork.lean) |
 | **Coordinate-wise** (table model) | the whole acceptance table | `ε − κ ≤ p`, `κ = ℓ(k−1)/N` | [`VCVio/CryptoFoundations/CoordinateFork.lean`](../../VCVio/CryptoFoundations/CoordinateFork.lean) |
 | **Coordinate-wise** (finder) | nothing: a black-box finder | `ε ≤ κ + (1 − κ) p`, `κ = ℓ(k−1)/N` | [`VCVio/CryptoFoundations/CoordinateFork/Finder.lean`](../../VCVio/CryptoFoundations/CoordinateFork/Finder.lean) |
+| **Block** (finder, alphabet and threshold per coordinate) | nothing: a black-box finder | `ε ≤ κ + (1 − κ) p`, `κ = ∑ⱼ (kⱼ−1)/Nⱼ` | [`VCVio/CryptoFoundations/CoordinateFork/BlockFinder.lean`](../../VCVio/CryptoFoundations/CoordinateFork/BlockFinder.lean) |
 | **Threshold tree** (Attema–Cramer–Kohl) | nothing: a black-box finder | `ε ≤ κ + (1 − κ) p`, `κ = 1 − ∏(1 − (kᵣ−1)/Nᵣ)` | [`VCVio/CryptoFoundations/Rewinding/ThresholdFinder.lean`](../../VCVio/CryptoFoundations/Rewinding/ThresholdFinder.lean) |
 
 Seeded and replay share a generic core in
@@ -32,6 +33,23 @@ extractor; the present formalization proves all three of its clauses — the out
 probability and the expected number of oracle calls — of the paper's own algorithm, against a
 fixed acceptance table. Stated as a finder (`OracleComp.isFinder_coordFinder`), the success and
 cost clauses transfer to frozen reruns of a prover (`Rewinding.ResetPolicy.finder_bounds`).
+
+## Block forking
+
+`OracleComp.blockFinder` is Figure 11 for a challenge `(j : ι) → S j` with an alphabet `S j` and a
+threshold `k j` at every coordinate. It draws the neighbours of a uniform center at each coordinate
+without replacement with `coordNeighbours`, as `coordFinder` does, and returns a block star
+(`CoordinateWise.IsBlockSpecialSound`): a center and, at every `j`, `k j - 1` accepted challenges
+that differ from it at `j` and nowhere else. `OracleComp.isFinder_blockFinder` gives the finder
+contract at error `∑ j, (k j - 1) / |S j|` and cost `1 + ∑ j, (k j - 1)`. The counting lives in
+[`ToMathlib/Combinatorics/CoordinateWise.lean`](../../ToMathlib/Combinatorics/CoordinateWise.lean),
+whose column counts take an alphabet per coordinate: a column that holds fewer than `k j` accepted
+challenges holds at most `k j - 1` of them, and all of its challenges are outside the good set
+(`CoordinateWise.div_card_filter_le_affine_pi`). The bounds for one alphabet and one threshold are
+its constant case, and so is the loop: `OracleComp.blockForkOpAt_const` and
+`OracleComp.runFinder_blockFinder_const` identify the block loop and finder with `coordForkOpAt`
+and `coordFinder`. The sampler for the whole challenge is an argument:
+`SampleableType.piOfFintype` supplies it for a dependent product.
 
 ## Quadratic forks: seeded vs replay
 
