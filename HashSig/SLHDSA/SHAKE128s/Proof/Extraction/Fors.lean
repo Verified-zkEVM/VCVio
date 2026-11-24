@@ -32,7 +32,7 @@ open OracleComp OracleSpec
 
 namespace SLHDSA.SHAKE128s.Extraction.Fors
 
-variable [HasQuery HashSpec Id]
+variable {hash : HasQuery HashSpec Id}
 
 /-- The global node index of the selected leaf in FORS tree `i`. -/
 @[expose] def leafIndex (indices : SLHDSA.SHAKE128s.Fors.Indices) (i : Fin forsTrees) : Nat :=
@@ -43,7 +43,8 @@ variable [HasQuery HashSpec Id]
   if h : height < forsHeight then (signature i).authentication ⟨height, h⟩ else 0
 
 /-- The recovered leaf of FORS tree `i`: the compression of the revealed secret. -/
-@[expose] def recoveredLeaf (signature : ForsSignature) (indices : SLHDSA.SHAKE128s.Fors.Indices)
+@[expose] def recoveredLeaf (hash : HasQuery HashSpec Id)
+    (signature : ForsSignature) (indices : SLHDSA.SHAKE128s.Fors.Indices)
     (publicSeed : Digest) (address : Address) (i : Fin forsTrees) : Digest :=
   Hashing.tweakable (m := Id) publicSeed
     (SLHDSA.SHAKE128s.Fors.nodeAddress address 0 (leafIndex indices i))
@@ -51,7 +52,8 @@ variable [HasQuery HashSpec Id]
 
 /-- The recovered root of FORS tree `i`, exactly as computed inside Algorithm 17
 before the fourteen roots are compressed. -/
-@[expose] def recoveredRoot (signature : ForsSignature) (indices : SLHDSA.SHAKE128s.Fors.Indices)
+@[expose] def recoveredRoot (hash : HasQuery HashSpec Id)
+    (signature : ForsSignature) (indices : SLHDSA.SHAKE128s.Fors.Indices)
     (publicSeed : Digest) (address : Address) (i : Fin forsTrees) : Digest :=
   (List.finRange forsHeight).foldl (fun value j =>
     let payload := if (indices i).val / 2 ^ j.val % 2 = 0 then
@@ -60,7 +62,7 @@ before the fourteen roots are compressed. -/
     Hashing.tweakable (m := Id) publicSeed
       (SLHDSA.SHAKE128s.Fors.nodeAddress address (j.val + 1)
         (leafIndex indices i / 2 ^ (j.val + 1))) payload)
-    (recoveredLeaf signature indices publicSeed address i)
+    (recoveredLeaf hash signature indices publicSeed address i)
 
 set_option maxRecDepth 10000 in
 -- `congr 1` on the twelve-step verifier fold recurses past the default depth
@@ -70,7 +72,7 @@ siblings are exactly the genuine values. -/
 theorem root_eq_canonical_or_collision (secretSeed publicSeed : Digest)
     (address : Address) (indices : SLHDSA.SHAKE128s.Fors.Indices) (signature : ForsSignature)
     (i : Fin forsTrees)
-    (hroot : recoveredRoot signature indices publicSeed address i =
+    (hroot : recoveredRoot hash signature indices publicSeed address i =
       SLHDSA.SHAKE128s.Fors.node (m := Id) secretSeed publicSeed address forsHeight i.val) :
     let nodes : Nat → Nat → Digest :=
       SLHDSA.SHAKE128s.Fors.node (m := Id) secretSeed publicSeed address
@@ -78,7 +80,7 @@ theorem root_eq_canonical_or_collision (secretSeed publicSeed : Digest)
       Hashing.tweakable (m := Id) publicSeed
         (SLHDSA.SHAKE128s.Fors.nodeAddress address height nodeIndex)
         (BinaryPath.pairBytes (left, right))
-    let leaf : Digest := recoveredLeaf signature indices publicSeed address i
+    let leaf : Digest := recoveredLeaf hash signature indices publicSeed address i
     (leaf = nodes 0 (leafIndex indices i) ∧ ∀ j, (signature i).authentication j =
       nodes j.val (Nat.xor (leafIndex indices i / 2 ^ j.val) 1)) ∨
     ∃ j < forsHeight,
@@ -91,10 +93,10 @@ theorem root_eq_canonical_or_collision (secretSeed publicSeed : Digest)
     Hashing.tweakable (m := Id) publicSeed
       (SLHDSA.SHAKE128s.Fors.nodeAddress address height nodeIndex)
       (BinaryPath.pairBytes (left, right))
-  let leaf : Digest := recoveredLeaf signature indices publicSeed address i
+  let leaf : Digest := recoveredLeaf hash signature indices publicSeed address i
   -- The verifier fold equals the generic binary-path value function.
   have hfold : BinaryPath.value combine index leaf (siblings signature i) forsHeight =
-      recoveredRoot signature indices publicSeed address i := by
+      recoveredRoot hash signature indices publicSeed address i := by
     rw [BinaryPath.value_eq_fold]
     simp only [recoveredRoot, ← hindex]
     congr 1
@@ -125,7 +127,8 @@ theorem root_eq_canonical_or_collision (secretSeed publicSeed : Digest)
   { address.setTypeAndClear .forsRoots with keyPair := address.keyPair }
 
 /-- The canonical root of each of the fourteen FORS trees under the genuine seeds. -/
-@[expose] def canonicalRoots (secretSeed publicSeed : Digest) (address : Address) :
+@[expose] def canonicalRoots (hash : HasQuery HashSpec Id)
+    (secretSeed publicSeed : Digest) (address : Address) :
     Fin forsTrees → Digest := fun i =>
   SLHDSA.SHAKE128s.Fors.node (m := Id) secretSeed publicSeed address forsHeight i.val
 
@@ -134,14 +137,15 @@ theorem publicKeyFromSignature_eq (signature : ForsSignature)
     (indices : SLHDSA.SHAKE128s.Fors.Indices) (publicSeed : Digest) (address : Address) :
     SLHDSA.SHAKE128s.Fors.publicKeyFromSignature (m := Id) signature indices publicSeed address =
       Hashing.tweakable (m := Id) publicSeed (rootAddress address)
-        (digestArrayBytes (recoveredRoot signature indices publicSeed address)) := by
+        (digestArrayBytes (recoveredRoot hash signature indices publicSeed address)) := by
   simp only [SLHDSA.SHAKE128s.Fors.publicKeyFromSignature, Correctness.sequenceFin_id, bind,
     Correctness.foldlM_id, rootAddress]
   rfl
 
 /-- A collision at the final FORS root-compression call: two different root
 tuples whose full oracle inputs are distinct but compress identically. -/
-@[expose] def CompressionCollision (actualRoots canonicalRoots : Fin forsTrees → Digest)
+@[expose] def CompressionCollision (hash : HasQuery HashSpec Id)
+    (actualRoots canonicalRoots : Fin forsTrees → Digest)
     (publicSeed : Digest) (address : Address) : Prop :=
   let actualInput := Hashing.tweakableInput publicSeed (rootAddress address)
     (digestArrayBytes actualRoots)
@@ -158,14 +162,14 @@ theorem publicKey_eq_canonical_roots_or_collision (secretSeed publicSeed : Diges
     (hpk : SLHDSA.SHAKE128s.Fors.publicKeyFromSignature (m := Id) signature indices publicSeed
         address =
       Hashing.tweakable (m := Id) publicSeed (rootAddress address)
-        (digestArrayBytes (canonicalRoots secretSeed publicSeed address))) :
-    recoveredRoot signature indices publicSeed address =
-        canonicalRoots secretSeed publicSeed address ∨
-      CompressionCollision (recoveredRoot signature indices publicSeed address)
-        (canonicalRoots secretSeed publicSeed address) publicSeed address := by
+        (digestArrayBytes (canonicalRoots hash secretSeed publicSeed address))) :
+    recoveredRoot hash signature indices publicSeed address =
+        canonicalRoots hash secretSeed publicSeed address ∨
+      CompressionCollision hash (recoveredRoot hash signature indices publicSeed address)
+        (canonicalRoots hash secretSeed publicSeed address) publicSeed address := by
   rw [publicKeyFromSignature_eq] at hpk
-  by_cases hroots : recoveredRoot signature indices publicSeed address =
-      canonicalRoots secretSeed publicSeed address
+  by_cases hroots : recoveredRoot hash signature indices publicSeed address =
+      canonicalRoots hash secretSeed publicSeed address
   · exact Or.inl hroots
   · refine Or.inr ⟨fun hinput => hroots ?_, hpk⟩
     exact SLHDSA.SHAKE128s.Extraction.Wots.digestArrayBytes_injective forsTrees
@@ -181,9 +185,9 @@ theorem publicKey_canonical_decomposition (secretSeed publicSeed : Digest) (addr
     (hpk : SLHDSA.SHAKE128s.Fors.publicKeyFromSignature (m := Id) signature indices publicSeed
         address =
       Hashing.tweakable (m := Id) publicSeed (rootAddress address)
-        (digestArrayBytes (canonicalRoots secretSeed publicSeed address))) :
-    CompressionCollision (recoveredRoot signature indices publicSeed address)
-        (canonicalRoots secretSeed publicSeed address) publicSeed address ∨
+        (digestArrayBytes (canonicalRoots hash secretSeed publicSeed address))) :
+    CompressionCollision hash (recoveredRoot hash signature indices publicSeed address)
+        (canonicalRoots hash secretSeed publicSeed address) publicSeed address ∨
     ∀ i : Fin forsTrees,
       let nodes : Nat → Nat → Digest :=
         SLHDSA.SHAKE128s.Fors.node (m := Id) secretSeed publicSeed address
@@ -191,7 +195,7 @@ theorem publicKey_canonical_decomposition (secretSeed publicSeed : Digest) (addr
         Hashing.tweakable (m := Id) publicSeed
           (SLHDSA.SHAKE128s.Fors.nodeAddress address height nodeIndex)
           (BinaryPath.pairBytes (left, right))
-      let leaf : Digest := recoveredLeaf signature indices publicSeed address i
+      let leaf : Digest := recoveredLeaf hash signature indices publicSeed address i
       (leaf = nodes 0 (leafIndex indices i) ∧ ∀ j, (signature i).authentication j =
         nodes j.val (Nat.xor (leafIndex indices i / 2 ^ j.val) 1)) ∨
       ∃ j < forsHeight,
@@ -205,7 +209,8 @@ theorem publicKey_canonical_decomposition (secretSeed publicSeed : Digest) (addr
 
 /-- A collision at a FORS leaf compression: the forged secret and the honest secret are
 distinct but hash to the same leaf under the same leaf address. -/
-@[expose] def LeafCollision (secretSeed publicSeed : Digest) (address : Address) (index : Nat)
+@[expose] def LeafCollision (hash : HasQuery HashSpec Id)
+    (secretSeed publicSeed : Digest) (address : Address) (index : Nat)
     (forgedSecret : Digest) : Prop :=
   let honestSecret := SLHDSA.SHAKE128s.Fors.secret (m := Id) secretSeed publicSeed address index
   forgedSecret ≠ honestSecret ∧
@@ -221,11 +226,12 @@ collision resistance is assumed. -/
 theorem recoveredLeaf_canonical_secret_or_collision (secretSeed publicSeed : Digest)
     (address : Address) (indices : SLHDSA.SHAKE128s.Fors.Indices) (signature : ForsSignature)
     (i : Fin forsTrees)
-    (hleaf : recoveredLeaf signature indices publicSeed address i =
+    (hleaf : recoveredLeaf hash signature indices publicSeed address i =
       SLHDSA.SHAKE128s.Fors.node (m := Id) secretSeed publicSeed address 0 (leafIndex indices i)) :
     (signature i).secret =
         SLHDSA.SHAKE128s.Fors.secret (m := Id) secretSeed publicSeed address (leafIndex indices i) ∨
-      LeafCollision secretSeed publicSeed address (leafIndex indices i) (signature i).secret := by
+      LeafCollision hash secretSeed publicSeed address (leafIndex indices i)
+        (signature i).secret := by
   by_cases hsecret : (signature i).secret =
       SLHDSA.SHAKE128s.Fors.secret (m := Id) secretSeed publicSeed address (leafIndex indices i)
   · exact Or.inl hsecret

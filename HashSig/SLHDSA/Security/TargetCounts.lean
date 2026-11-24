@@ -7,7 +7,6 @@ Authors: Nicolas Consigny, Alexander Hicks
 module
 public import HashSig.SLHDSA.Params
 public import Mathlib.Algebra.BigOperators.Fin
-import Mathlib.Algebra.Ring.GeomSum
 
 /-!
 # SLH-DSA security target roles and formula-derived target counts

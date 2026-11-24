@@ -28,7 +28,7 @@ theorem evalDist_uniformMaskedCipher_bind_dist_indep
     {m : Type → Type} [Monad m] [LawfulMonad m]
     [EvalDistSemantics m] [LawfulEvalDistSemantics m] {β : Type}
     [MeasurableSpace M] [DiscreteMeasurableSpace M] [MeasurableSingletonClass M]
-    [Finite M] [Nonempty M] [MeasurableSpace β]
+    [MeasurableSpace β]
     (draw : m M) (huniform : 𝒟[draw] = ProbabilityTheory.uniformOn Set.univ)
     (head : A) (m₁ m₂ : M) (cont : A × M → m β) :
     𝒟[do let y ← draw; cont (head, m₁ + y)] =

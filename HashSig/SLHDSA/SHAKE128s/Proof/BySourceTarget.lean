@@ -135,7 +135,7 @@ theorem answerBound (q : Nat) (adversary : Adversary) (hbudget : TailBudgetW adv
     exact mul_le_mul' le_rfl (AnswerFired.second_order_fits q (by omega))
   have hsum : (∑' z, Pr{let x ← split}[x = z] * freshMass (Deviating walk) walk.2 z.1.2.1) +
         (∑' z, Pr{let x ← split}[x = z] * (z.1.2.2.2.length : ℝ≥0∞)) ≤ (q : ℝ≥0∞) := by
-    rw [← ENNReal.tsum_add]
+    rw [← tsum_add]
     simp_rw [← mul_add]
     exact tsum_mul_le_const split _ _ hpath
   rw [hevent]

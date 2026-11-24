@@ -6,7 +6,9 @@ Authors: Devon Tuma
 
 module
 public import VCVio.EvalDist.Monad.Option
-public import VCVio.EvalDist.Defs.Measure.ExceptT
+public import PolyFun.Control.Monad.Measure.ExceptT
+public import VCVio.EvalDist.Defs.Measure.Core
+public import ToMathlib.MeasureTheory.Measure.GiryMonad
 public import VCVio.EvalDist.ProbabilityBounds
 
 /-!

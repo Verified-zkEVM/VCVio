@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S uv run --no-project --python 3.12 python
 """Exercise library import boundaries, including Lean import modifiers."""
 
 from pathlib import Path

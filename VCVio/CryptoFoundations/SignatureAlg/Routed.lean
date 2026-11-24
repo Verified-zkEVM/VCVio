@@ -135,17 +135,6 @@ answered by `ro` on the first. -/
   | .inr (.inr x) => StateT.mk fun p =>
       (fun z => (z.1.1, (z.2, z.1.2))) <$> (simulateQ ro ((R x).run p.2)).run p.1
 
-/-- A probabilistic computation lifted to `unifSpec + hs` makes no query to `hs`. -/
-theorem isQueryBoundP_liftM_isRight {α : Type} (oa : ProbComp α) :
-    IsQueryBoundP (liftM oa : OracleComp (unifSpec + hs) α) (fun t => t.isRight) 0 := by
-  induction oa using OracleComp.inductionOn with
-  | pure a => trivial
-  | query_bind n k ih =>
-    simp only [liftM_bind]
-    exact isQueryBoundP_bind_zero _ _
-      ((isQueryBoundP_query_iff (spec := unifSpec + hs) _ (.inl n) 0).2 fun h => by
-        simp at h) ih
-
 /-- A probabilistic computation lifted to `unifSpec + hs` makes sampling queries only. -/
 theorem allQueriesSatisfy_liftM_sum_elim {α : Type} (oa : ProbComp α) (P : ι → Prop) :
     AllQueriesSatisfy (liftM oa : OracleComp (unifSpec + hs) α) (Sum.elim (fun _ => True) P) := by

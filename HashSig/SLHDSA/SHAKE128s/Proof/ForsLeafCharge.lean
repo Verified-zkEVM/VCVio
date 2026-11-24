@@ -58,7 +58,7 @@ theorem deviatingCollision_of_leafCollision {α : Type} (publicSeed secretSeed :
         (bytesBE n (@SLHDSA.SHAKE128s.Fors.secret Id _ (CacheReplay.replayQuery cache)
           secretSeed publicSeed address index)))
     -- the collision, and the cache entry its own query left behind
-    (hcollision : @Fors.LeafCollision (CacheReplay.replayQuery cache) secretSeed publicSeed
+    (hcollision : Fors.LeafCollision (CacheReplay.replayQuery cache) secretSeed publicSeed
       address index forgedSecret)
     (result : α × QueryCache HashSpec) (output : HashOutput)
     (hcache : result.2 = cache)
@@ -89,7 +89,7 @@ supply but the collision and the cache entry it left behind. -/
 theorem deviatingCollision_of_leafCollision_canonical {α : Type}
     (secretSeed publicSeed : Digest) (cache : QueryCache HashSpec) (key : ForsKey)
     (index : Fin (forsTrees * 2 ^ forsHeight)) (forgedSecret : Digest)
-    (hcollision : @Fors.LeafCollision (CacheReplay.replayQuery cache) secretSeed publicSeed
+    (hcollision : Fors.LeafCollision (CacheReplay.replayQuery cache) secretSeed publicSeed
       key.address index.val forgedSecret)
     (result : α × QueryCache HashSpec) (output : HashOutput)
     (hcache : result.2 = cache)
@@ -97,11 +97,11 @@ theorem deviatingCollision_of_leafCollision_canonical {α : Type}
       (SLHDSA.SHAKE128s.Fors.nodeAddress key.address 0 index.val)
       (bytesBE n forgedSecret)) = some output) :
     StructuralTerm.DeviatingCollision publicSeed
-      (@value (CacheReplay.replayQuery cache) secretSeed publicSeed) result := by
+      (value (CacheReplay.replayQuery cache) secretSeed publicSeed) result := by
   have hindex : index.val < forsTrees * 2 ^ (forsHeight - (0 : Fin (forsHeight + 1)).val) := by
     simp
   refine deviatingCollision_of_leafCollision publicSeed secretSeed
-    (@value (CacheReplay.replayQuery cache) secretSeed publicSeed) cache
+    (value (CacheReplay.replayQuery cache) secretSeed publicSeed) cache
     (.forsTree key 0 ⟨index.val, hindex⟩) (.structural (.forsPrf key index))
     key.address index.val forgedSecret ?_ rfl rfl ?_ hcollision result output hcache hentry
   · simp [StructuralNode.children]

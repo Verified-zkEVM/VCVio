@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S uv run --no-project --python 3.12 python
 """Extract structured documentation fragments from the VCVio codebase.
 
 Generates markdown tables for:
@@ -7,8 +7,8 @@ Generates markdown tables for:
 3. Simp lemma catalog (from EvalDist/Monad/)
 
 Usage:
-  python scripts/extract-doc-fragments.py           # print fragments
-  python scripts/extract-doc-fragments.py --check    # check if docs are up to date
+  uv run --no-project --python 3.12 python scripts/extract-doc-fragments.py           # print fragments
+  uv run --no-project --python 3.12 python scripts/extract-doc-fragments.py --check    # check if docs are up to date
 """
 
 from __future__ import annotations
@@ -169,7 +169,7 @@ def main():
         print(f"Auto-generated sections are stale in {len(drifted)} file(s):")
         for f in drifted:
             print(f"  - {f}")
-        print("\nRun `python scripts/extract-doc-fragments.py` to see current values.")
+        print("\nRun `uv run --no-project --python 3.12 python scripts/extract-doc-fragments.py` to see current values.")
         sys.exit(1)
     else:
         print("All auto-generated doc sections are up to date.")

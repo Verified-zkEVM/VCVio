@@ -152,10 +152,9 @@ theorem run_eq_replay {α : Type} (computation : OracleComp HashSpec α)
 
 /-! ## Reading the extraction chain's `Id`-level hashes out of the cache
 
-The extraction chain states its collisions with `Hashing.tweakable (m := Id)`, under the
-`[HasQuery HashSpec Id]` the development carries as a variable. `replayQuery` is the instance
-that answers from a finished cache, and the two lemmas below say what that answers with: a
-hash call is the cache's value, and a tweakable call is its truncation.
+The extraction chain states its collisions with `Hashing.tweakable (m := Id)` for a handler
+`hash : HasQuery HashSpec Id`. The handler `replayQuery` answers a hash call with its cached
+value and a tweakable call with its truncation.
 
 With these, every `Id`-level equation the extraction produces becomes a statement about cache
 entries, which is what the structural charge quantifies over — so an accepted forgery's
