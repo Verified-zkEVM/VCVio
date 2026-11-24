@@ -17,12 +17,12 @@ The spike is additive: existing probability declarations and crypto proofs remai
 
 | File | Content |
 |---|---|
-| [`ToMathlib/MeasureTheory/DiscreteInstances.lean`](../../ToMathlib/MeasureTheory/DiscreteInstances.lean) | Discrete measurable-space instances for `BitVec n` |
-| [`ToMathlib/MeasureTheory/MeasurableSpace/Option.lean`](../../ToMathlib/MeasureTheory/MeasurableSpace/Option.lean) | Coproduct measurable space for `Option` |
-| [`ToMathlib/MeasureTheory/MeasurableSpace/Except.lean`](../../ToMathlib/MeasureTheory/MeasurableSpace/Except.lean) | Coproduct measurable space for `Except` |
-| [`ToMathlib/MeasureTheory/Measure/Option.lean`](../../ToMathlib/MeasureTheory/Measure/Option.lean) | Success-only `Measure.dropNone` observer |
+| [`ToMathlib/MeasureTheory/DiscreteInstances.lean`](https://github.com/Verified-zkEVM/VCVio/blob/64d416837721aadba4a6918fad79e8248465e33a/ToMathlib/MeasureTheory/DiscreteInstances.lean) | Discrete measurable-space instances for `BitVec n` |
+| [`ToMathlib/MeasureTheory/MeasurableSpace/Option.lean`](https://github.com/Verified-zkEVM/VCVio/blob/64d416837721aadba4a6918fad79e8248465e33a/ToMathlib/MeasureTheory/MeasurableSpace/Option.lean) | Coproduct measurable space for `Option` |
+| [`ToMathlib/MeasureTheory/MeasurableSpace/Except.lean`](https://github.com/Verified-zkEVM/VCVio/blob/64d416837721aadba4a6918fad79e8248465e33a/ToMathlib/MeasureTheory/MeasurableSpace/Except.lean) | Coproduct measurable space for `Except` |
+| [`ToMathlib/MeasureTheory/Measure/Option.lean`](https://github.com/Verified-zkEVM/VCVio/blob/64d416837721aadba4a6918fad79e8248465e33a/ToMathlib/MeasureTheory/Measure/Option.lean) | Success-only `Measure.dropNone` observer |
 | `ToMathlib/Probability/ProbabilityMassFunction/Measure.lean` (since removed) | `PMF.toMeasure_bind` |
-| `VCVio/EvalDist/PFunctorMeasure.lean` (now [`VCVio/EvalDist/PFunctorMeasure/Core.lean`](../../VCVio/EvalDist/PFunctorMeasure/Core.lean); the event and PMF agreement was removed) | `IsMeasureSpec`, `FreeM.denote`, discrete monad laws, probability preservation, event and PMF agreement |
+| `VCVio/EvalDist/PFunctorMeasure.lean` (now [`VCVio/EvalDist/PFunctorMeasure/Core.lean`](https://github.com/Verified-zkEVM/VCVio/blob/64d416837721aadba4a6918fad79e8248465e33a/VCVio/EvalDist/PFunctorMeasure/Core.lean); the event and PMF agreement was removed) | `IsMeasureSpec`, `FreeM.denote`, discrete monad laws, probability preservation, event and PMF agreement |
 | [`VCVio/EvalDist/MeasureSemantics.lean`](../../VCVio/EvalDist/MeasureSemantics.lean) | Effect-preserving transformer measures and reader/state Markov kernels |
 | [`VCVio/EvalDist/ResumptionMeasure.lean`](../../VCVio/EvalDist/ResumptionMeasure.lean) | Total truncation measures and success-only output submeasures |
 | [`VCVioTest/MeasureSemantics.lean`](../../VCVioTest/MeasureSemantics.lean) | Continuous, discrete, transformer, kernel, and resumption gates |

@@ -66,6 +66,13 @@ theorem expectedCalls_eq_lintegral_counter {β : Type} (mx : ProbComp (β × ℕ
   simp only [WriterT.run_mk, Functor.map_map]
   rfl
 
+/-- A pure outcome has its counter as its expected counter. -/
+@[simp]
+theorem expectedCalls_pure {β : Type} (b : β) (n : ℕ) :
+    expectedCalls (pure (b, n) : ProbComp (β × ℕ)) = n := by
+  rw [expectedCalls_eq_lintegral_counter]
+  simp
+
 /-- The complete-run expectation integrates the counter projection of the joint law. -/
 theorem expectedCalls_eq_lintegral {β : Type} [MeasurableSpace β]
     (mx : ProbComp (β × ℕ)) : expectedCalls mx = ∫⁻ z, (z.2 : ℝ≥0∞) ∂𝒟[mx] := by

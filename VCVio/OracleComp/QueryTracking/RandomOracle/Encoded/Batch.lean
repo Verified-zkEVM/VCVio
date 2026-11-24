@@ -143,17 +143,6 @@ def onlineImpl : QueryImpl (unifSpec + (D →ₒ M).batch)
 
 /-! ### Budgets -/
 
-omit [∀ t, SampleableType (spec.Range t)] in
-lemma isQueryBoundP_liftM_probComp {α : Type} (oa : ProbComp α) :
-    IsQueryBoundP (liftM oa : OracleComp (unifSpec + spec) α) (·.isRight) 0 := by
-  induction oa using OracleComp.inductionOn with
-  | pure x => exact isQueryBoundP_pure _ _ _
-  | query_bind t k ih =>
-      change IsQueryBoundP (liftComp (liftM (unifSpec.query t) >>= k) (unifSpec + spec))
-        (·.isRight) 0
-      rw [liftComp_bind, liftComp_query]
-      exact (isQueryBoundP_query_bind_iff _ _ _ _).2 ⟨by simp, fun u => by simpa using ih u⟩
-
 lemma isQueryBoundP_preprocessImpl (t : (unifSpec + (D →ₒ M)).Domain)
     (s : (D →ₒ M).QueryCache) :
     IsQueryBoundP ((E.preprocessImpl t).run s) (·.isRight) (if t.isRight then 1 else 0) := by
@@ -162,7 +151,7 @@ lemma isQueryBoundP_preprocessImpl (t : (unifSpec + (D →ₒ M)).Domain)
     exact isQueryBoundP_bind_zero _ _ (by simp) fun _ => isQueryBoundP_pure _ _ _
   · simp only [preprocessImpl, Sum.isRight_inr, ↓reduceIte, StateT.run_bind]
     rw [← Nat.zero_add 1]
-    refine isQueryBoundP_bind (isQueryBoundP_liftM_probComp _) fun z _ => ?_
+    refine isQueryBoundP_bind (isQueryBoundP_liftM_isRight _) fun z _ => ?_
     rcases E.route x with _ | q
     · exact (isQueryBoundP_pure _ _ _)
     · simp only [StateT.run_map, StateT.run_lift, isQueryBoundP_map_iff]

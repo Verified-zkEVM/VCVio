@@ -535,7 +535,7 @@ lemma IND_CPA_OneTime_DDHReduction_intrinsicProfile_pathwiseCostEqOnSupport
         | OneTimeINDCPACapability.distinguish =>
             ResourceProfile.ofIntrinsic (κ := κ) distinguishCost)
       adv g A B T using 1
-  all_goals ext <;> simp [add_assoc]
+  ext <;> simp [add_assoc]
 
 /-- Cost-aware reduction packaging for the one-time ElGamal DDH reduction.
 

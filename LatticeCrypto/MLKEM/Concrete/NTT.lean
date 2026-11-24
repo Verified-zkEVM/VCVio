@@ -103,12 +103,8 @@ the NTT correctness argument. -/
 theorem zeta_isPrimitiveRoot : IsPrimitiveRoot (zeta : Coeff) 256 := by
   change IsPrimitiveRoot (17 : ZMod 3329) 256
   rw [IsPrimitiveRoot.iff_orderOf]
-  refine orderOf_eq_of_pow_and_pow_div_prime (by norm_num) (by reduce_mod_char) ?_
-  intro p hp hdvd
-  obtain rfl : p = 2 := (Nat.prime_dvd_prime_iff_eq hp Nat.prime_two).mp
-    (hp.dvd_of_dvd_pow (show p ∣ 2 ^ 8 by simpa using hdvd))
-  reduce_mod_char
-  decide
+  exact orderOf_eq_prime_pow (p := 2) (n := 7)
+    (by reduce_mod_char; decide) (by reduce_mod_char)
 
 /-- The twiddle used by a forward butterfly and the complementary twiddle
 used by its matching inverse butterfly multiply to `-1`. -/

@@ -232,6 +232,22 @@ theorem forall_isSome_of_mem_support_run_simulateQ_romImpl {P : ι → Prop}
 
 end Provenance
 
+/-- A program that avoids one random-oracle input leaves its cache entry unchanged, including
+when private sampling and repeated queries at other inputs are interleaved. -/
+theorem snd_apply_eq_of_mem_support_run_romImpl [∀ t, SampleableType (spec.Range t)]
+    (target : ι) {oa : OracleComp (unifSpec + spec) α}
+    (havoid : AllQueriesSatisfy oa (Sum.elim (fun _ => True) (· ≠ target)))
+    {cache : spec.QueryCache} {z : α × spec.QueryCache}
+    (hz : z ∈ support ((simulateQ spec.romImpl oa).run cache)) :
+    z.2 target = cache target := by
+  apply havoid.holds_of_mem_support_run_simulateQ (fun c => c target = cache target) ?_ rfl hz
+  rintro (n | t) ht c hc result hresult
+  · rw [unifFwdImpl.snd_eq_of_mem_support_run n c hresult]
+    exact hc
+  · rw [QueryImpl.withCaching_run_eq_cacheQuery uniformSampleImpl hresult,
+      QueryCache.cacheQuery_of_ne _ _ ht.symm]
+    exact hc
+
 section Sum
 
 variable {ι₁ ι₂ : Type} [DecidableEq ι₁] [DecidableEq ι₂] {spec₁ : OracleSpec ι₁}
@@ -274,25 +290,19 @@ theorem snd_apply_inl_eq_none_of_mem_support_run_romImpl {K : ι₁ → Prop}
     (hz : z ∈ support ((simulateQ (spec₁ + spec₂).romImpl (simulateQ (HasQuery.toQueryImpl
       (spec := spec₁) (m := OracleComp (unifSpec + (spec₁ + spec₂)))) oa)).run cache)) :
     ∀ t, K t → z.2 (.inl t) = none := by
-  induction oa using OracleComp.inductionOn generalizing cache with
-  | pure x =>
-    rw [simulateQ_pure, simulateQ_pure, StateT.run_pure, support_pure, Set.mem_singleton_iff] at hz
-    exact hz ▸ hc
-  | query_bind t k ih =>
-    rw [allQueriesSatisfy_query_bind_iff] at hoa
-    rw [simulateQ_bind, simulateQ_spec_query, simulateQ_bind, StateT.run_bind,
-      mem_support_bind_iff] at hz
-    obtain ⟨⟨u, c₁⟩, h₁, h₂⟩ := hz
-    rw [show (HasQuery.toQueryImpl (spec := spec₁)
-        (m := OracleComp (unifSpec + (spec₁ + spec₂))) t) =
-        liftM ((unifSpec + (spec₁ + spec₂)).query (.inr (.inl t))) from rfl,
-      simulateQ_spec_query] at h₁
-    have hc₁ := QueryImpl.withCaching_run_eq_cacheQuery
-      (uniformSampleImpl (spec := spec₁ + spec₂)) h₁
-    refine ih u (hoa.2 u) (fun t' ht' => ?_) h₂
-    simp only at hc₁
-    have hne : (.inl t' : ι₁ ⊕ ι₂) ≠ .inl t := fun h => hoa.1 (Sum.inl.inj h ▸ ht')
-    rw [hc₁, QueryCache.cacheQuery_of_ne _ _ hne, hc t' ht']
+  intro t ht
+  have havoid : AllQueriesSatisfy
+      (simulateQ (HasQuery.toQueryImpl
+        (spec := spec₁) (m := OracleComp (unifSpec + (spec₁ + spec₂)))) oa)
+      (Sum.elim (fun _ => True) (· ≠ Sum.inl t)) := by
+    apply hoa.simulateQ
+    intro q hq
+    change AllQueriesSatisfy
+      (liftM ((unifSpec + (spec₁ + spec₂)).query (.inr (.inl q)))) _
+    simp only [allQueriesSatisfy_query_iff, Sum.elim_inr, ne_eq, Sum.inl.injEq]
+    intro heq
+    exact hq (heq ▸ ht)
+  exact (snd_apply_eq_of_mem_support_run_romImpl (.inl t) havoid hz).trans (hc t ht)
 
 end Sum
 

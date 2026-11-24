@@ -329,7 +329,7 @@ theorem krausWeight_le {D : QReg}
     {σ : Matrix (spec.In i × D) (spec.In i × D) ℂ} (hσ : σ.PosSemidef) :
     krausWeight F i σ ≤ (∑' r, ENNReal.ofReal (‖F i r‖ ^ 2)) * ENNReal.ofReal σ.trace.re := by
   rw [krausWeight, ← ENNReal.tsum_mul_right]
-  refine ENNReal.tsum_le_tsum fun r ↦ ?_
+  refine tsum_le_tsum fun r ↦ ?_
   rw [← ENNReal.ofReal_mul (sq_nonneg _)]
   exact ENNReal.ofReal_le_ofReal (MatrixMap.re_trace_conj_le _ hσ)
 
@@ -361,7 +361,7 @@ theorem tsum_rpow_inv_two_queryWeight_le_of_isQueryBound (R : QuantumRuntime spe
         norm_num
     _ ≤ _ := by
         gcongr
-        exact ENNReal.sum_le_tsum _
+        exact sum_le_tsum _
 
 /-! ## The controlled runtime -/
 
@@ -497,7 +497,7 @@ theorem rpow_inv_two_tsum_dist_run_le (x : QuantumComp L spec X A)
         (fun b ↦ ((ctrlRuntime σ hU hW).run I (k b)).isCPTNIFamily) p).summable_apply Γ)
         fun b ↦ ((ctrlRuntime σ hU hW).run I (k b)).posSemidef_branch_apply p (hΓb b)
     simp only [hL, queryWeight_primBind]
-    rw [ENNReal.tsum_comm]
+    rw [tsum_comm]
     refine (rpow_inv_two_tsum_le_of_le_add_tsum fun b ↦ ih b (hΓb b)).trans
       (add_le_add (ENNReal.rpow_le_rpow ?_ (by norm_num)) (le_of_eq ?_))
     · calc ∑' b, branchDist (((I o).frame (ctrlRuntime σ hU hW).D).branch b Γ)
@@ -532,9 +532,10 @@ theorem rpow_inv_two_tsum_dist_run_le (x : QuantumComp L spec X A)
       rw [conj_sel, conj_sel]
       exact h.symm
     simp only [hL]
-    rw [ENNReal.tsum_comm]
+    rw [tsum_comm]
     refine (rpow_inv_two_tsum_le_of_le_add_tsum fun r ↦ ih r (hΓr r)).trans ?_
-    conv_rhs => rw [tsum_eq_zero_add' ENNReal.summable, queryWeight_queryBind_zero, ← add_assoc]
+    conv_rhs =>
+      rw [tsum_eq_zero_add' CompleteLattice.summable, queryWeight_queryBind_zero, ← add_assoc]
     simp only [queryWeight_queryBind_succ, hsel]
     exact add_le_add (tsum_dist_queryStep_le σ hU hW i E ℓ hΓ) le_rfl
 
@@ -551,6 +552,22 @@ variable {D : QReg} {s₀ s₁ : ∀ i, SubInstrument (spec.In i × D) (spec.Out
   (σ₀ σ₁ : SubState D)
   (hU : ∀ i r, (s₀ i).branch r = MatrixMap.conj (U i r))
   (hW : ∀ i r, (s₁ i).branch r = MatrixMap.conj (W i r))
+
+/-- The observable of a set of leaves: the identity on the leaves observed in `s`, zero on the
+others. -/
+private theorem ofReal_trace_mul_indicator {γ : Type*} (f : (Σ u, X u) → γ) (s : Set γ)
+    [DecidablePred (· ∈ s)] (p : Σ u, X u) (M : Matrix (p.1 × D) (p.1 × D) ℂ) :
+    ENNReal.ofReal M.trace.re * s.indicator 1 (f p) =
+      ENNReal.ofReal (MatrixMap.conj
+        (if f p ∈ s then (1 : Matrix (p.1 × D) (p.1 × D) ℂ) else 0) M).trace.re := by
+  by_cases h : f p ∈ s <;> simp [h]
+
+private theorem posSemidef_one_sub_indicator {γ : Type*} (f : (Σ u, X u) → γ) (s : Set γ)
+    [DecidablePred (· ∈ s)] (p : Σ u, X u) :
+    (1 - (if f p ∈ s then (1 : Matrix (p.1 × D) (p.1 × D) ℂ) else 0)ᴴ *
+      (if f p ∈ s then (1 : Matrix (p.1 × D) (p.1 × D) ℂ) else 0)).PosSemidef := by
+  by_cases h : f p ∈ s <;> simp [h, Matrix.PosSemidef.one, Matrix.PosSemidef.zero]
+
 include hU hW
 
 /-- The zero substate, the initial state of the controlled runtime in the proofs: it is never
@@ -650,26 +667,9 @@ theorem rpow_inv_two_tsum_trace_conj_run_le_mass (x : QuantumComp L spec X A)
         ∑' j, (∑' i, (∑' r, ENNReal.ofReal (‖U i r - W i r‖ ^ 2)) *
           (QuantumRuntime.mk D σ₀ s₀).queryMassAt I x ρ i j) ^ (2⁻¹ : ℝ) :=
   (rpow_inv_two_tsum_trace_conj_run_le I σ₀ σ₁ hU hW x O hO hρ).trans <| add_le_add le_rfl <|
-    ENNReal.tsum_le_tsum fun j ↦ ENNReal.rpow_le_rpow
+    tsum_le_tsum fun j ↦ ENNReal.rpow_le_rpow
       ((QuantumRuntime.mk D σ₀ s₀).queryWeight_le_tsum_mul_queryMassAt I _
         (fun i _ hσ ↦ krausWeight_le _ i hσ) x hρ j) (by norm_num)
-
-omit hU hW in
-/-- The observable of a set of leaves: the identity on the leaves observed in `s`, zero on the
-others. -/
-private theorem ofReal_trace_mul_indicator {γ : Type*} (f : (Σ u, X u) → γ) (s : Set γ)
-    [DecidablePred (· ∈ s)] (p : Σ u, X u) (M : Matrix (p.1 × D) (p.1 × D) ℂ) :
-    ENNReal.ofReal M.trace.re * s.indicator 1 (f p) =
-      ENNReal.ofReal (MatrixMap.conj
-        (if f p ∈ s then (1 : Matrix (p.1 × D) (p.1 × D) ℂ) else 0) M).trace.re := by
-  by_cases h : f p ∈ s <;> simp [h]
-
-omit hU hW in
-private theorem posSemidef_one_sub_indicator {γ : Type*} (f : (Σ u, X u) → γ) (s : Set γ)
-    [DecidablePred (· ∈ s)] (p : Σ u, X u) :
-    (1 - (if f p ∈ s then (1 : Matrix (p.1 × D) (p.1 × D) ℂ) else 0)ᴴ *
-      (if f p ∈ s then (1 : Matrix (p.1 × D) (p.1 × D) ℂ) else 0)).PosSemidef := by
-  by_cases h : f p ∈ s <;> simp [h, Matrix.PosSemidef.one, Matrix.PosSemidef.zero]
 
 /-- **The square-root hybrid bound for events** (ePrint 2025/2166, Lemma 5.7, for general
 programs). Two runtimes with the same register and initial state `σ` and steps the Kraus maps

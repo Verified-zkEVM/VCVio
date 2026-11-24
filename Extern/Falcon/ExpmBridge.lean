@@ -50,8 +50,8 @@ statement closed at `log 2` would apply to one.
 Both sides of the `ccs` restriction are load-bearing. `expm_p63` reads its operands through a
 fixed-point conversion that keeps `⌊2 ^ 63 * ccs⌋` in 63 bits and drops the sign bit, so the scale
 factor must be a nonnegative fraction below one. At `ccs = 1` the conversion wraps to `0`, and with
-it the whole product, for every `x` in range — against a true value of `Real.exp (-(toReal x))`,
-never below one half. Above `1` the claim fails outright: the returned `UInt64` read at scale
+it the whole product. Already at `x = 0` the true value is `exp 0 = 1`.
+Above `1` the claim fails outright: the returned `UInt64` read at scale
 `2 ^ 63` is smaller than `2`, while `toReal ccs * Real.exp (-(toReal x))` grows without bound.
 
 The `2 ^ (-51)` is very nearly saturated, and by the approximation rather than the arithmetic

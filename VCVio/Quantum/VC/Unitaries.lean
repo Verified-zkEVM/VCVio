@@ -13,15 +13,15 @@ public import VCVio.Quantum.Oracle.Emulated
 /-!
 # The purified extractor and the record unitaries
 
-The unitaries of Def 7.2 of Chiesa, Di, Hu and Zheng (ePrint 2025/2166, §7, pp. 49–50):
+The unitaries of Chiesa, Di, Hu and Zheng (ePrint 2025/2166, §7, pp. 49–50):
 
 * `U_MultiExtract` (p. 49) on `(TpIC × Z) × S`: controlled on a commitment tuple `tic` and a
   basis state `s` of the oracle's private register, it adds an encoding of `MultiExtract(tic, s)`
   to the output register `Z` (`Quantum.extractUnitary`);
-* `Record(U)` (pp. 49–50) on `(TpIC × Yr) × (S × R)`: controlled on `tic`, it applies `U`
+* `Record(U)` (Def 7.2, pp. 49–50) on `(TpIC × Yr) × (S × R)`: controlled on `tic`, it applies `U`
   to `Yr` and the cell `R_tic` of the recording register (`Quantum.recordUnitary`);
-* `Record(MultiExtract, U)` (p. 50): controlled on `tic` and `s`, it applies `U` to `Yr` and
-  the cell `R_(tic, MultiExtract(tic, s))` (`Quantum.recordMEUnitary`).
+* `Record(MultiExtract, U)` (Def 7.2, p. 50): controlled on `tic` and `s`, it applies `U` to `Yr`
+  and the cell `R_(tic, MultiExtract(tic, s))` (`Quantum.recordMEUnitary`).
 
 ## Encodings
 
@@ -74,7 +74,7 @@ def onFactor (e : n ≃ A × R) (M : Matrix A A ℂ) : Matrix n n ℂ :=
 /-- The entries of `onFactor e M`. -/
 theorem onFactor_apply (e : n ≃ A × R) (M : Matrix A A ℂ) (a b : n) :
     onFactor e M a b = if (e a).2 = (e b).2 then M (e a).1 (e b).1 else 0 := by
-  simp [onFactor, one_apply]
+  simp [onFactor, Matrix.one_apply]
 
 /-- `onFactor e M` does not change the rest of the register. -/
 theorem eq_of_onFactor_apply_ne_zero {e : n ≃ A × R} {M : Matrix A A ℂ} {a b : n}
@@ -194,7 +194,7 @@ theorem extractPerm_apply (tic : TpIC k Cm) (z : Z) (s : S) :
 
 variable [DecidableEq Cm] [DecidableEq S] [DecidableEq Z]
 
-/-- **`U_MultiExtract`** (ePrint 2025/2166, Def 7.2, p. 49), the basis matrix of
+/-- **`U_MultiExtract`** (ePrint 2025/2166, §7, p. 49), the basis matrix of
 `Quantum.extractPerm`. -/
 @[expose]
 noncomputable def extractUnitary : Matrix ((TpIC k Cm × Z) × S) ((TpIC k Cm × Z) × S) ℂ :=
@@ -242,7 +242,7 @@ theorem extractUnitary_eq_sum_labelControlled [Fintype Cm] :
     simp [extractRegroup, hb]) (by simp)]
   simp only [extractUnitary, basisMatrix_apply, extractPerm_apply, reindex_apply,
     submatrix_apply, extractRegroup, Equiv.coe_fn_symm_mk, kroneckerMap_apply, single_apply,
-    extractBlock, labelControlled_apply, one_apply, xorShift_apply, Prod.mk.injEq]
+    extractBlock, labelControlled_apply, Matrix.one_apply, xorShift_apply, Prod.mk.injEq]
   by_cases ht : t = t'
   · subst ht
     by_cases hs : s = s'

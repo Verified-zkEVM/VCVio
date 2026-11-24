@@ -560,7 +560,7 @@ lemma evalDist_simulateQ_multipleBadQueryImpl_run_eq_tableExtending [SampleableT
     [Fintype Nonce] [Finite Digest]
     [MeasurableSpace Digest] [MeasurableSingletonClass Digest]
     [MeasurableSpace (Bool × UnlinkBadState TagId Nonce Digest)]
-    [EvalDistSemantics ProbComp] [LawfulEvalDistSemantics ProbComp]
+    {semantics : EvalDistSemantics ProbComp} [LawfulEvalDistSemantics ProbComp]
     (hDigest : 𝒟[$ᵗ Digest] = uniformOn Set.univ)
     (hTable : 𝒟[$ᵗ (TagId × Nonce → Digest)] = uniformOn Set.univ)
     (oa : UnlinkAdversary TagId Nonce Digest)
@@ -884,7 +884,7 @@ lemma simulateQ_multipleBadTableHandlerFine_forget_cacheBad_eq
 /-- Sampling an auxiliary fine table only contributes its success mass to the original
 handler's observation measure. The sampler need not be uniform or lossless. -/
 lemma evalDist_simulateQ_multipleBadTableHandlerFine_forget_cacheBad
-    [EvalDistSemantics ProbComp] [LawfulEvalDistSemantics ProbComp]
+    {semantics : EvalDistSemantics ProbComp} [LawfulEvalDistSemantics ProbComp]
     [MeasurableSpace (((TagId × Fin sessionsPerTag) × Nonce) → Digest)]
     {α : Type} [MeasurableSpace (α × UnlinkState TagId × UnlinkBadState TagId Nonce Digest)]
     (sampleFine : ProbComp (((TagId × Fin sessionsPerTag) × Nonce) → Digest))

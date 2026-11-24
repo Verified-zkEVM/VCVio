@@ -6,7 +6,7 @@ Authors: Devon Tuma
 
 module
 
-public import VCVio.CryptoFoundations.Asymptotics.ComputationalComplexity
+public import VCVio.CryptoFoundations.Asymptotics.PathSemantics
 public import PolyFun.Realizability.Quantitative.Closure
 public import Mathlib.MeasureTheory.Measure.Dirac.Basic
 
@@ -28,6 +28,18 @@ open PFunctor.DynSystem.DynComputation
 open PFunctor.DynSystem.DynComputation.QuantitativeRealization
 
 namespace OracleComp.Complexity.SoundnessTest
+
+/-! ## Output measures of free programs -/
+
+example {p : PFunctor.{u, v}} {α : Type*} [MeasurableSpace α] [∀ a, MeasurableSpace (p.B a)]
+    [p.AnswerMeasure] (program : FreeM p α) : 𝒟[program] = FreeM.denote program :=
+  FreeM.evalDist_eq_denote program
+
+noncomputable example {p : PFunctor.{u, v}} {α : Type*} [MeasurableSpace α]
+    [∀ a, MeasurableSpace (p.B a)] [p.AnswerMeasure] [∀ a, DiscreteMeasurableSpace (p.B a)]
+    (program : FreeM p α) :
+    MeasureTheory.ProbabilityMeasure α :=
+  ⟨𝒟[program], inferInstance⟩
 
 variable {p : PFunctor.{u, u}} {C : StepClass.{u, v}}
   [C.HasProd] [C.HasSum] [C.HasOption] [DecidableEq p.A]
@@ -128,16 +140,16 @@ theorem pure_function_of_explicit_realizer
 section FairCoin
 
 variable {coinInput coinOutput : Type} {CoinClass : StepClass}
-  [CoinClass.HasProd] [CoinClass.HasSum] [CoinClass.HasOption]
   (CoinQ : QuantitativeStepClass CoinClass)
   (coinBoundary : Boundary CoinClass coinSpec.toPFunctor coinInput coinOutput)
 
-omit [CoinClass.HasProd] [CoinClass.HasSum] [CoinClass.HasOption] in
 /-- The canonical fair-coin contract admits both Boolean replies. -/
 theorem fair_coin_allows_both_answers :
     (fairCoinResourceModel CoinQ coinBoundary.interface).allows PUnit.unit false ∧
       (fairCoinResourceModel CoinQ coinBoundary.interface).allows PUnit.unit true := by
   simp
+
+variable [CoinClass.HasProd] [CoinClass.HasSum] [CoinClass.HasOption]
 
 /-- The `true` trace remains charged under the fair-coin answer contract even if an independent
 semantics assigns all mass to `false`. This gives a concrete zero-probability instantiation of the

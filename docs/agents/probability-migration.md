@@ -25,6 +25,12 @@ record is `docs/reading/denotational-probability-semantics.md`.
 3. Build. Work through the reported sites and the remaining errors with the *Symptoms* table.
 4. Check that definitions fix their σ-algebras (see *Semantic contract*).
 
+The codemod leaves statistical-distance names for manual review. For recognized qualified
+spellings, including `Measure` and `Kernel` forms, it suggests the corresponding VCVio
+declaration. Check which declaration the proof uses, especially for unqualified names, dot
+notation, and references inside string interpolations. VCVio’s `Measure.statEDist` takes the supremum over measurable events. Mathlib’s
+`MeasureTheory.etvDist` measures total variation.
+
 The codemod is textual: it never needs a build and is idempotent, so it can be rerun after a
 further repin. It does not convert proofs; a proof that computed with `probOutput` sums, `SPMF`
 equalities or `tvDist` follows the *Standard proof conversion* table of the roadmap.
@@ -44,7 +50,8 @@ remaining build errors by kind, file scope and whether the codemod knows the nam
 | `Pr{mx}[= a]` (earlier measure API) | `Pr{let x ← mx}[x = a]` |
 | `Pr{x ← mx}[p x]` (a bare draw) | `Pr{let x ← mx}[p x]`: the braces hold an ordinary `do` sequence |
 | `evalSPMF mx`, `𝒮[mx]`, `SPMF α` | `𝒟[mx] : Measure α`; `evalDistWithFailure mx : Measure (Option α)` records the failure mass at `none` |
-| `tvDist mx my` | `measureTVDist mx my` (real) or `measureETVDist mx my` (`ℝ≥0∞`); `Measure.tvDist` and `Measure.etvDist` on measures |
+| `tvDist mx my` | `measureTVDist mx my` (real) or `measureETVDist mx my` (`ℝ≥0∞`); `Measure.statDist` and `Measure.statEDist` on measures |
+| `Measure.tvDist_triangle`, `Measure.etvDist_bind_bind_le_lintegral` | `Measure.statDist_triangle`, `Measure.statEDist_bind_bind_le_lintegral` |
 | `expectedValue mx f` | `∫⁻ x, f x ∂𝒟[mx]` |
 | `NeverFail mx` | nothing on `OracleComp`; `IsProbabilityMeasure 𝒟[mx]` for failing monads |
 | `RelTriple'` | `RelTriple` |
@@ -181,7 +188,7 @@ callers restate the hypotheses they supply.
 | Uncharged steps of the same bounds | `∀ p, (h₀ t).run p = (h₁ t).run p` | `∀ s, (h₀ t).run (s, false) = (h₁ t).run (s, false)`: only good states are compared |
 | `expectedQuerySlack` step | `∑'`-weighted continuation | the unary expectation `wp` of the continuation |
 | Rényi divergence of programs (`renyiDiv a mx my`, `PMF.renyiDiv`) | on `SPMF` or `PMF` | `InformationTheory.renyiDiv a 𝒟[mx] 𝒟[my]` on the output measures, with `⊤` fixed on the output inside definitions |
-| Rényi bounds | `PMF.renyiDiv_prob_bound`, `renyiDiv_le_of_pointwise_le`, `renyiDiv_prod`, `maxDiv`, `etvDist_le_of_maxDiv`, `etvDist_sq_le_of_renyiDiv` | `measure_rpow_div_renyiDiv_le` (an event `s` instead of a predicate), `renyiDiv_le_of_le_smul` (`μ ≤ c • ν`), `renyiDiv_prod` (absolutely continuous factors), `maxDiv`, `etvDist_le_one_sub_inv_maxDiv`, `etvDist_rpow_two_le_one_sub_inv_renyiDiv` |
+| Rényi bounds | `PMF.renyiDiv_prob_bound`, `renyiDiv_le_of_pointwise_le`, `renyiDiv_prod`, `maxDiv`, `etvDist_le_of_maxDiv`, `etvDist_sq_le_of_renyiDiv` | `measure_rpow_div_renyiDiv_le` (an event `s` instead of a predicate), `renyiDiv_le_of_le_smul` (`μ ≤ c • ν`), `renyiDiv_prod` (absolutely continuous factors), `maxDiv`, `statEDist_le_one_sub_inv_maxDiv`, `statEDist_rpow_two_le_one_sub_inv_renyiDiv` |
 | Randomized oracles and executable responders (`ProbHandler`, `ProbResponder.IsExecutable.answerSPMF`, `ofSPMF`, `ofStateQueryImpl`) | `SPMF`-valued, with `𝒮` transport from `ProbComp` handlers | `ProbComp`-valued: `answerComp` whose `𝒟` is the kernel, `ofQueryImpl` from `StateT σ ProbComp`; the run bridge is `rfl`, and the executable layer lives in `Type` |
 | `discreteGaussianDist σ μ hσ : PMF ℤ` | pointwise mass | `discreteGaussianMeasure σ μ : Measure ℤ`, with `discreteGaussianMeasure_singleton` and `isProbabilityMeasure_discreteGaussianMeasure` |
 
@@ -201,11 +208,11 @@ pass `ENNReal.ofReal ζ_zk` to `HVZK`, as `FiatShamirWithAbort.euf_cma_to_nma` d
 | `ToMathlib.Probability.ProbabilityMassFunction.Lemmas` | `Mathlib.Probability.Distributions.Uniform` |
 | `VCVio.EvalDist.Defs.Basic` | `VCVio.EvalDist.Defs.Measure`, `VCVio.EvalDist.ProbabilityNotation` |
 | `VCVio.EvalDist.Defs.AlternativeMonad`, `VCVio.EvalDist.Defs.NeverFails` | `VCVio.EvalDist.Defs.Support.Failure`, `VCVio.EvalDist.ProbabilityNotation` |
-| `VCVio.EvalDist.FailureMeasure` | `VCVio.EvalDist.Defs.Measure` (`OptionT.evalDist_eq_dropNone`), `VCVio.EvalDist.WithFailure` |
-| `VCVio.EvalDist.Bool`, `VCVio.EvalDist.BitVec`, `VCVio.EvalDist.Option` | `VCVio.EvalDist.Monad.Map`; event laws live in `VCVio.EvalDist.ProbabilityNotation` |
+| `VCVio.EvalDist.FailureMeasure` | `VCVio.EvalDist.Defs.Measure` (`OptionT.evalDist_eq_dropNone`), `PolyFun.Control.Monad.Measure.WithFailure` |
+| `VCVio.EvalDist.Bool`, `VCVio.EvalDist.BitVec`, `VCVio.EvalDist.Option` | `VCVio.EvalDist.Monad.Map`; event laws live in `PolyFun.Control.Monad.Measure.Event`, and `VCVio.EvalDist.ProbabilityNotation` adds the `Pr{…}[…]` notation |
 | `VCVio.EvalDist.Fintype` | `VCVio.EvalDist.Monad.Basic` |
 | `VCVio.EvalDist.PFunctor` | `VCVio.EvalDist.PFunctorSupport` |
-| `VCVio.EvalDist.PFunctorMeasure` | `VCVio.EvalDist.PFunctorMeasure.Core` |
+| `VCVio.EvalDist.PFunctorMeasure` | `PolyFun.PFunctor.Free.Measure.EvalDist`, with `VCVio.EvalDist.Defs.Measure.Core` for `𝒟[…]` |
 | `VCVio.OracleComp.EvalDist.UniformCompatibility` | `VCVio.OracleComp.EvalDist.Measure`, `VCVio.OracleComp.EvalDist.AnswerMeasure` |
 | `VCVio.OracleComp.Constructions.SampleableType.MeasureCompatibility`, `VCVio.OracleComp.Constructions.SampleableType.NativeMeasure` | `VCVio.OracleComp.Constructions.SampleableType.Measure` |
 | `VCVio.Native` | `VCVio.Foundations` |
@@ -222,7 +229,7 @@ pass `ENNReal.ofReal ζ_zk` to `HVZK`, as `FiatShamirWithAbort.euf_cma_to_nma` d
 | `VCVio.EvalDist.TVDist`, `VCVio.EvalDist.MeasureTVDist` | `VCVio.EvalDist.MeasureTVDist.Basic` (with `.Bind` and `.Event` for composition rules) |
 | `VCVio.EvalDist.TVDist.Positivity` | `VCVio.EvalDist.MeasureTVDist.Positivity` (`positivity` on `measureTVDist`) |
 | `VCVio.ProgramLogic.Relational.SimulateQ.Epsilon` | `VCVio.ProgramLogic.Relational.SimulateQ.UntilBad` |
-| `VCVio.EvalDist.Expectation`, `VCVio.EvalDist.ExpectationMeasure` | `VCVio.ProgramLogic.Unary.HoareTriple` (`wp`) or `VCVio.EvalDist.Defs.Measure.Core` (`∫⁻` laws) |
+| `VCVio.EvalDist.Expectation`, `VCVio.EvalDist.ExpectationMeasure` | `VCVio.ProgramLogic.Unary.HoareTriple` (`wp`) or `PolyFun.Control.Monad.Measure` (`∫⁻` laws) |
 | `VCVio.EvalDist.RenyiDivergence`, `ToMathlib.Probability.ProbabilityMassFunction.RenyiDivergence`, `ToMathlib.Probability.Divergence.RenyiDiscrete`, `ToMathlib.Probability.ProbabilityMassFunction.RadonNikodym` | `ToMathlib.Probability.Divergence.Renyi` |
 | `ToMathlib.Probability.ProbabilityMassFunction.TotalVariation` | `ToMathlib.MeasureTheory.Measure.TotalVariation`; `ToMathlib.Probability.Divergence.RenyiTotalVariation` for the Rényi comparisons |
 | `VCVio.StateSeparating.Advantage` | `VCVio.StateSeparating.Advantage.Measure` |
@@ -230,13 +237,49 @@ pass `ENNReal.ofReal ζ_zk` to `HVZK`, as `FiatShamirWithAbort.euf_cma_to_nma` d
 | `VCVio.EvalDist.Instances.FinRatPMF`, `ToMathlib.ProbabilityTheory.FinRatPMF.PMF` | `ToMathlib.ProbabilityTheory.FinRatPMF.Measure` |
 | `VCVio.EvalDist.Instances.ReaderT` | `VCVio.EvalDist.MeasureSemantics` (`readerTKernel`) |
 | `VCVio.EvalDist.Defs.Semantics` | `VCVio.EvalDist.MeasureSemantics` |
-| `ToMathlib.ProbabilityTheory.Coupling`, `ToMathlib.ProbabilityTheory.OptimalCoupling` | `ToMathlib.MeasureTheory.Measure.Coupling`, `ToMathlib.MeasureTheory.Measure.Coupling.Maximal` |
+| `ToMathlib.ProbabilityTheory.Coupling`, `ToMathlib.ProbabilityTheory.OptimalCoupling` | `ToCslib.MeasureTheory.Measure.Coupling`, `ToMathlib.MeasureTheory.Measure.Coupling.Maximal` |
 | `VCVio.ProgramLogic.Relational.Measure.Oracle` | `VCVio.ProgramLogic.Relational.Basic` |
 | `VCVio.ProgramLogic.Relational.SimulateQ.Basic` | `VCVio.ProgramLogic.Relational.SimulateQ.Coupling`, `VCVio.ProgramLogic.Relational.SimulateQ.UntilBad` |
 | `VCVio.ProgramLogic.Relational.WP.Coherence` | `VCVio.ProgramLogic.Relational.WP.Quantitative` |
 | `VCVio.Prelude` | the modules it re-exported, e.g. `VCVio.Prelude.Core` |
 
-A removed module may have re-exported other modules; add the imports the build then asks for.
+### Measure imports on Lean v4.36
+
+The codemod expands each removed import to the direct imports in the table and preserves
+public re-exports. Clients that use only the underlying declarations can import their defining
+module alone.
+
+| Removed module | Import instead |
+|---|---|
+| `ToMathlib.MeasureTheory.DiscreteInstances` | `ToCslib.MeasureTheory.MeasurableSpace.Instances` |
+| `ToMathlib.MeasureTheory.Function.AEMeasurable` | `ToCslib.MeasureTheory.Function.AEMeasurable` |
+| `ToMathlib.MeasureTheory.MeasurableSpace.Except` | `ToCslib.MeasureTheory.MeasurableSpace.Except` |
+| `ToMathlib.MeasureTheory.MeasurableSpace.Option` | `ToCslib.MeasureTheory.MeasurableSpace.Option` |
+| `ToMathlib.MeasureTheory.Measure.Coupling` | `ToCslib.MeasureTheory.Measure.Coupling` |
+| `ToMathlib.MeasureTheory.Measure.Coupling.Bind` | `ToCslib.MeasureTheory.Measure.Coupling.Bind`, `ToCslib.MeasureTheory.Function.AEMeasurable`, `ToMathlib.MeasureTheory.Measure.GiryMonad`, `ToMathlib.MeasureTheory.Measure.Monotone` |
+| `ToMathlib.MeasureTheory.Measure.Except` | `ToCslib.MeasureTheory.Measure.Except`, `ToMathlib.MeasureTheory.Measure.GiryMonad` |
+| `ToMathlib.MeasureTheory.Measure.Option` | `ToCslib.MeasureTheory.Measure.Option`, `ToMathlib.MeasureTheory.Measure.GiryMonad` |
+| `ToMathlib.MeasureTheory.Measure.Prop` | `ToCslib.MeasureTheory.Measure.Prop` |
+| `ToMathlib.MeasureTheory.Measure.Subprobability` | `ToCslib.MeasureTheory.Measure.Subprobability` |
+| `ToMathlib.Probability.Kernel.Subprobability` | `ToCslib.Probability.Kernel.Subprobability` |
+| `ToMathlib.Probability.UniformOn` | `ToCslib.Probability.UniformOn` |
+| `VCVio.EvalDist.Defs.Measure.Deterministic` | `PolyFun.Control.Monad.Measure.Deterministic`, `ToMathlib.Control.Except`, `ToMathlib.Control.Option`, `VCVio.EvalDist.ProbabilityNotation` |
+| `VCVio.EvalDist.Defs.Measure.ExceptT` | `PolyFun.Control.Monad.Measure.ExceptT`, `ToMathlib.MeasureTheory.Measure.GiryMonad`, `VCVio.EvalDist.Defs.Measure.Core` |
+| `VCVio.EvalDist.Defs.Measure.Failure` | `PolyFun.Control.Monad.Measure.Failure`, `VCVio.EvalDist.Defs.Measure.Core` |
+| `VCVio.EvalDist.Defs.Measure.OptionT` | `PolyFun.Control.Monad.Measure.OptionT`, `ToMathlib.MeasureTheory.Measure.GiryMonad`, `VCVio.EvalDist.Defs.Measure.Core` |
+| `VCVio.EvalDist.Defs.Semantics.Core` | `PolyFun.Control.Monad.Measure.SemanticsVia`, `ToMathlib.MeasureTheory.Measure.GiryMonad`, `VCVio.EvalDist.Defs.Measure.Core` |
+| `VCVio.EvalDist.Lossless` | `PolyFun.Control.Monad.Measure.Lossless`, `Mathlib.MeasureTheory.Measure.ProbabilityMeasure`, `VCVio.EvalDist.Defs.Measure.Core` |
+| `VCVio.EvalDist.Monad.Failure` | `PolyFun.Control.Monad.Measure.Failure`, `VCVio.EvalDist.ProbabilityNotation` |
+| `VCVio.EvalDist.PFunctorKernel` | `PolyFun.PFunctor.Free.Measure.Kernel`, `ToCslib.MeasureTheory.Function.AEMeasurable`, `ToCslib.MeasureTheory.Measure.Coupling.Bind`, `ToMathlib.MeasureTheory.Measure.GiryMonad`, `ToMathlib.MeasureTheory.Measure.Monotone` |
+| `VCVio.EvalDist.PFunctorKernelTransport` | `PolyFun.PFunctor.Free.Measure.Kernel.Transport`, `ToCslib.MeasureTheory.Function.AEMeasurable`, `ToCslib.MeasureTheory.Measure.Coupling.Bind`, `ToMathlib.MeasureTheory.Measure.GiryMonad`, `ToMathlib.MeasureTheory.Measure.Monotone` |
+| `VCVio.EvalDist.PFunctorMeasure.Core` | `PolyFun.PFunctor.Free.Measure.EvalDist`, `Mathlib.MeasureTheory.Measure.ProbabilityMeasure`, `VCVio.EvalDist.Defs.Measure.Core` |
+| `VCVio.EvalDist.PFunctorPath` | `PolyFun.PFunctor.Free.Measure.Path`, `Mathlib.MeasureTheory.Measure.ProbabilityMeasure`, `PolyFun.PFunctor.Free.Measure.EvalDist`, `VCVio.EvalDist.Defs.Measure.Core` |
+| `VCVio.EvalDist.WiringKernel` | `PolyFun.PFunctor.Wiring.Measure`, `ToCslib.MeasureTheory.Function.AEMeasurable`, `ToCslib.MeasureTheory.Measure.Coupling.Bind`, `ToMathlib.MeasureTheory.Measure.GiryMonad`, `ToMathlib.MeasureTheory.Measure.Monotone` |
+| `VCVio.EvalDist.WithFailure` | `PolyFun.Control.Monad.Measure.WithFailure`, `ToMathlib.MeasureTheory.Measure.GiryMonad`, `VCVio.EvalDist.ProbabilityNotation` |
+| `VCVio.ProgramLogic.Relational.Measure` | `PolyFun.Control.Monad.Measure.Relational`, `VCVio.EvalDist.Defs.Measure.Core` |
+| `VCVio.ProgramLogic.Relational.Measure.Bind` | `PolyFun.Control.Monad.Measure.Relational.Bind`, `ToMathlib.MeasureTheory.Measure.GiryMonad`, `ToMathlib.MeasureTheory.Measure.Monotone`, `VCVio.EvalDist.Defs.Measure.Core` |
+| `VCVio.ProgramLogic.Relational.Measure.Deterministic` | `PolyFun.Control.Monad.Measure.Relational.Deterministic`, `ToMathlib.Control.Except`, `ToMathlib.Control.Option`, `VCVio.EvalDist.ProbabilityNotation` |
+
 The hubs `VCVio.OracleComp.EvalDist`, `VCVio.OracleComp.ProbComp`,
 `VCVio.OracleComp.Coercions.SubSpec` and `VCVio.OracleComp.Constructions.SampleableType` remain
 and import the measure semantics of their area. `import VCVio.Foundations` is an entry point for

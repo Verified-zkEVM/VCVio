@@ -21,7 +21,6 @@ semantic objects consumed by the spec-level KeyGen, Sign, and Verify algorithms.
 
 @[expose] public section
 
-
 namespace MLDSA
 
 /-- Encoding and decoding operations used by the ML-DSA pseudocode. -/
@@ -44,38 +43,5 @@ structure Encoding (p : Params) (prims : Primitives p) where
   sigEncode : CommitHashBytes p → RqVec p.l → Vector prims.Hint p.k → EncodedSig
   /-- `sigDecode(σ)` (Algorithm 27). Returns `none` if the hint is malformed. -/
   sigDecode : EncodedSig → Option (CommitHashBytes p × RqVec p.l × Vector prims.Hint p.k)
-
-namespace Encoding
-
-variable {p : Params} {prims : Primitives p} (enc : Encoding p prims)
-
-/-- Roundtrip laws for the encoding operations. -/
-structure Laws : Prop where
-  pkDecode_pkEncode :
-    ∀ (rho : Bytes 32) (t1 : Vector prims.Power2High p.k),
-      enc.pkDecode (enc.pkEncode rho t1) = (rho, t1)
-  skDecode_skEncode :
-    ∀ (rho K : Bytes 32) (tr : Bytes 64) (s1 : RqVec p.l) (s2 t0 : RqVec p.k),
-      enc.skDecode (enc.skEncode rho K tr s1 s2 t0) = (rho, K, tr, s1, s2, t0)
-  sigDecode_sigEncode :
-    ∀ (cTilde : CommitHashBytes p) (z : RqVec p.l) (h : Vector prims.Hint p.k),
-      enc.sigDecode (enc.sigEncode cTilde z h) = some (cTilde, z, h)
-
-/-- Extended laws including hash/encoding coherence for the FIPS 204 pipeline.
-
-These laws connect the abstract primitives to the encoding layer, ensuring that
-decoded signatures always satisfy the semantic side conditions required by the
-specification. -/
-structure CoherenceLaws : Prop where
-  /-- Encoding roundtrips. -/
-  encoding : enc.Laws
-  /-- Signature decoding rejects hints with weight exceeding `ω`. -/
-  sigDecode_rejects_bad_hints :
-    ∀ (encoded : enc.EncodedSig),
-      match enc.sigDecode encoded with
-      | some (_, _, h) => prims.hintWeight h ≤ p.omega
-      | none => True
-
-end Encoding
 
 end MLDSA

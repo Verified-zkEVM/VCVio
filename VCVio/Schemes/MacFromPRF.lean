@@ -16,7 +16,7 @@ public import VCVio.OracleComp.ProbComp.Basic
 public import VCVio.OracleComp.SimSemantics.SimulateQ
 public import VCVio.OracleComp.Constructions.UniformFinMeasure
 public import VCVio.EvalDist.Monad.UniformTable
-public import ToMathlib.Probability.UniformOn
+public import ToCslib.Probability.UniformOn
 public import ToMathlib.Data.FinEnum
 public import Init.Data.UInt.Lemmas
 public import Mathlib.Data.FinEnum
@@ -323,14 +323,15 @@ private theorem log_cache_invariant_step_query [SampleableType R]
   erw [simulateQ_bind] at hro
   by_cases heq : msg = msg'
   · subst heq; right
-    simp only [StateT.run_bind, support_bind, Set.mem_iUnion, exists_prop] at hro
+    simp only [StateT.run_bind, support_bind, Set.mem_iUnion, exists_prop, simulateQ_pure,
+      StateT.run_pure, mem_support_pure_iff] at hro
     obtain ⟨⟨_, _⟩, _, ⟨⟨rfl, rfl⟩, _⟩⟩ := hro
     exact QueryLog.wasQueried_cons_self
   · simp only [StateT.run_bind] at hro
     erw [simulateQ_prfIdealQueryImpl_inr] at hro
     simp only [support_bind, Set.mem_iUnion, exists_prop] at hro
     obtain ⟨⟨q_val, q_cache⟩, hro_q, hmem2⟩ := hro
-    dsimp only at hmem2
+    simp only [simulateQ_pure, StateT.run_pure, mem_support_pure_iff] at hmem2
     obtain ⟨⟨rfl, rfl⟩, rfl⟩ := hmem2
     rw [randomOracle.apply_eq] at hro_q
     simp only [StateT.run_bind, StateT.run_get, pure_bind] at hro_q
@@ -367,7 +368,7 @@ private theorem log_cache_invariant_aux [SampleableType R]
     cache₀ msg ≠ none ∨ QueryLog.wasQueried z.1.2 msg = true := by
   induction oa using OracleComp.inductionOn generalizing cache₀ z with
   | pure x =>
-    simp only [simulateQ_pure, WriterT.run_pure'] at hmem
+    simp only [simulateQ_pure, WriterT.run_pure', StateT.run_pure, mem_support_pure_iff] at hmem
     subst hmem; exact Or.inl hcache
   | query_bind t f ih =>
     cases t with
