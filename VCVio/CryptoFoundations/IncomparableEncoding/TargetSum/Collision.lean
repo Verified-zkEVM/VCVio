@@ -9,55 +9,53 @@ public import VCVio.CryptoFoundations.IncomparableEncoding.TargetSum.Basic
 public import VCVio.CryptoFoundations.IncomparableEncoding.TargetCollisionReduction
 
 /-!
-# TargetSum encoding collision transport
+# Target-collision resistance of the target-sum encoding
 
-The concrete encoding bridge preserves the actual message-hash seed sampler, target cap and
-retry cap. The generic reduction supplies its unconditioned native advantage bound.
+`bridge` connects the target-sum encoding to its message hash: the encoding accepts a hash output
+when its digit sum is `target`, and the word is the hash output itself. `advantage_le_hash` then
+bounds the target-collision advantage against the encoding by the SM-DT-rTCR advantage against the
+message hash (Lemma 8 of DKKW25). The bound uses the hash's own seed sampler `thf.seedGen` and the
+same record and retry capacities, including zero. A challenge whose retries all fail still uses up
+a record.
+
+## References
+
+- Drake, Khovratovich, Kudinov and Wagner, *Hash-Based Multi-Signatures for Post-Quantum Ethereum*,
+  [ePrint 2025/055](https://eprint.iacr.org/2025/055), Construction 6 and Lemma 8. The statement of
+  Lemma 8 names Construction 5, but the lemma is about the target-sum encoding, Construction 6.
 -/
 
 public section
 
-namespace IncomparableEncoding.TargetSumCollision
+namespace IncomparableEncoding.TargetSum
 
-open IncomparableEncoding
-
-open TargetCollisionReduction
+open IncomparableEncoding TargetCollisionReduction
 
 variable {PP M R E Tweak : Type} {v w target : ℕ}
 
-/-- The target-sum predicate tests the challenged hash word itself. -/
-@[expose] def accepts (word : Codeword v (2 ^ w)) : Bool :=
-  decide (∑ i : Fin v, (word i).val = target)
-
-/-- The accepted target-sum encoding instantiates the shared bridge. -/
-@[expose] def bridge (params : TargetSum.Parameters PP M R E Tweak v w target)
+/-- The target-sum encoding as a `Bridge`: a hash output is accepted when its digit sum is
+`target`, and its word is the hash output itself. -/
+@[expose] def bridge (params : Parameters PP M R E Tweak v w target)
     (hEpoch : Function.Injective params.epochToTweak) :
     Bridge PP M R E Tweak (Codeword v (2 ^ w)) v (2 ^ w) where
-  enc := TargetSum.encoding params
+  enc := encoding params
   th := params.thf
   epochToTweak := params.epochToTweak
   epochToTweak_injective := hEpoch
-  accepts := accepts (target := target)
+  accepts := accepts target
   word := id
   word_injective := Function.injective_id
-  value_eq := by
+  encode_eq := by
     intro pp msg r ep
-    by_cases h : (∑ i : Fin v,
-        (params.thf.eval pp (params.epochToTweak ep) (msg, r) i).val) = target
-    · simp [TargetSum.encoding, IncomparableEncoding.value, accepts, h]
-    · simp [TargetSum.encoding, IncomparableEncoding.value, accepts, h]
+    simp [encoding, accepts]
 
-/-- Identification with a uniformly sampled paper parameter requires this separate seed law. -/
-@[expose] def UniformSeedLaw [Fintype PP]
-    (params : TargetSum.Parameters PP M R E Tweak v w target) : Prop :=
-  UniformSampler ProbCompRuntime.probComp params.thf.seedGen
-
-/-- The target-sum collision game transfers to SM-DT-rTCR with the hash-word digit-sum
-predicate and the same capacities, including zero. Returned sum failures remain occupied slots. -/
+/-- Lemma 8 of DKKW25: a target-collision adversary against the target-sum encoding gives an
+SM-DT-rTCR adversary against the message hash, with predicate `accepts target`, with at least the
+same advantage, at the same record and retry capacities. -/
 theorem advantage_le_hash [SampleableType R]
     [DecidableEq M] [DecidableEq R] [DecidableEq E] [DecidableEq Tweak]
     [DecidableEq (Codeword v (2 ^ w))]
-    (params : TargetSum.Parameters PP M R E Tweak v w target)
+    (params : Parameters PP M R E Tweak v w target)
     (hEpoch : Function.Injective params.epochToTweak) (p K : ℕ)
     (source : TargetCollisionResistance.Adversary
       (encodingProblem (bridge params hEpoch) p K)) :
@@ -66,4 +64,4 @@ theorem advantage_le_hash [SampleableType R]
         (reduction (bridge params hEpoch) p K source) :=
   TargetCollisionReduction.advantage_le_hash (bridge params hEpoch) p K source
 
-end IncomparableEncoding.TargetSumCollision
+end IncomparableEncoding.TargetSum

@@ -6,13 +6,22 @@ Authors: Matthias Meijers
 
 module
 public import VCVio.CryptoFoundations.IncomparableEncoding.TargetSum.Basic
-public import Mathlib.Algebra.Polynomial.Basic
+public import Mathlib.Algebra.Polynomial.Coeff
 
 /-!
 # Target-sum acceptance counts
 
-Finite word enumeration agrees with the coefficient of the digit generating polynomial.
-Two-position words give a sufficient code-size bound, and complementary counts give rejection mass.
+`acceptedCount v w target` counts the words with digit sum `target`.
+`coefficient_eq_acceptedCount` shows that it equals the coefficient `η_T` of `X^target` in
+`(1 + X + ⋯ + X^(2^w-1))^v`, the quantity in Lemma 7 of DKKW25. Under the uniform distribution on
+words, `uniformRejected_eq_uniformRejectionMass` gives the rejection probability
+`1 - η_T / 2^(wv)`. `acceptedCount_two_le_of_small_target` gives a simple condition for the code
+to have at least two words.
+
+## References
+
+- Drake, Khovratovich, Kudinov and Wagner, *Hash-Based Multi-Signatures for Post-Quantum Ethereum*,
+  [ePrint 2025/055](https://eprint.iacr.org/2025/055), Construction 6 and Lemma 7.
 -/
 
 public section
@@ -29,11 +38,11 @@ open ENNReal
 
 /-- The coefficient `η_T` in `(1 + X + ⋯ + X^(2^w-1))^v`. -/
 @[expose] noncomputable def coefficient (v w target : ℕ) : ℕ :=
-  Polynomial.coeff (digitPolynomial w ^ v) target
+  (digitPolynomial w ^ v).coeff target
 
 /-- The finite set of all target-sum words. -/
 @[expose] def acceptedWords (v w target : ℕ) : Finset (Codeword v (2 ^ w)) :=
-  Finset.univ.filter fun x => (∑ i : Fin v, (x i).val) = target
+  Finset.univ.filter fun x => digitSum x = target
 
 /-- The exact finite acceptance count, including empty and impossible codes. -/
 @[expose] def acceptedCount (v w target : ℕ) : ℕ :=
@@ -104,8 +113,8 @@ private noncomputable def wordPolynomial (v w : ℕ) : Polynomial ℕ :=
 
 /-- A generating-function monomial records the natural digit sum of a word. -/
 private theorem coeff_wordPolynomial (v w target : ℕ) :
-    Polynomial.coeff (wordPolynomial v w) target = acceptedCount v w target := by
-  simp [wordPolynomial, acceptedCount, acceptedWords, Polynomial.coeff_X_pow, eq_comm]
+    (wordPolynomial v w).coeff target = acceptedCount v w target := by
+  simp [wordPolynomial, acceptedCount, acceptedWords, digitSum, Polynomial.coeff_X_pow, eq_comm]
 
 /-- Enumerating all length-`v` words multiplies the digit polynomial `v` times. -/
 private theorem wordPolynomial_eq_pow (v w : ℕ) :
@@ -140,7 +149,7 @@ theorem coefficient_eq_acceptedCount (v w target : ℕ) :
 
 /-- The finite complement of the accepted target-sum words. -/
 @[expose] def rejectedWords (v w target : ℕ) : Finset (Codeword v (2 ^ w)) :=
-  Finset.univ.filter fun x => (∑ i : Fin v, (x i).val) ≠ target
+  Finset.univ.filter fun x => digitSum x ≠ target
 
 /-- Accepted and rejected words partition the full finite output alphabet. -/
 theorem rejected_add_accepted_count (v w target : ℕ) :
@@ -150,7 +159,7 @@ theorem rejected_add_accepted_count (v w target : ℕ) :
   simpa [rejectedWords, acceptedWords, acceptedCount, eq_comm, add_comm] using
     (Finset.card_filter_add_card_filter_not
       (s := (Finset.univ : Finset (Codeword v (2 ^ w))))
-      (p := fun x => (∑ i : Fin v, (x i).val) ≠ target))
+      (p := fun x => digitSum x ≠ target))
 
 /-- Uniform mass of a finite output event. -/
 @[expose] noncomputable def uniformEventMass (v w : ℕ)
@@ -166,7 +175,7 @@ theorem card_output (v w : ℕ) :
     Fintype.card (Codeword v (2 ^ w)) = 2 ^ (w * v) := by
   simp [Codeword, pow_mul]
 
-/-- Counting rejection gives `1 - η_T / 2^(wv)`, as in Lemma 7 of ePrint 2025/055. -/
+/-- A uniform word is rejected with probability `1 - η_T / 2^(wv)`, as in Lemma 7 of DKKW25. -/
 theorem uniformRejected_eq_uniformRejectionMass (v w target : ℕ) :
     uniformEventMass v w (rejectedWords v w target) =
       uniformRejectionMass v w target := by

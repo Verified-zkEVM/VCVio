@@ -9,58 +9,54 @@ public import VCVio.CryptoFoundations.IncomparableEncoding.Winternitz.Encoding
 public import VCVio.CryptoFoundations.IncomparableEncoding.TargetCollisionReduction
 
 /-!
-# Winternitz encoding collision transport
+# Target-collision resistance of the Winternitz encoding
 
-The concrete encoding bridge preserves the actual message-hash seed sampler, target cap and
-retry cap. The generic reduction supplies its unconditioned native advantage bound.
+`bridge` connects the Winternitz encoding to its message hash, with every hash output accepted.
+`advantage_le_hash` then bounds the target-collision advantage against the encoding by the
+SM-DT-rTCR advantage against the message hash (Lemma 6 of DKKW25). The bound uses the hash's own
+seed sampler `thf.seedGen` and the same record and retry capacities, including zero.
+
+## References
+
+- Drake, Khovratovich, Kudinov and Wagner, *Hash-Based Multi-Signatures for Post-Quantum Ethereum*,
+  [ePrint 2025/055](https://eprint.iacr.org/2025/055), Construction 5 and Lemma 6.
 -/
 
 public section
 
-namespace IncomparableEncoding.WinternitzCollision
+namespace IncomparableEncoding.Winternitz
 
-open IncomparableEncoding
-
-open TargetCollisionReduction
+open IncomparableEncoding TargetCollisionReduction
 
 variable {PP M R E Tweak : Type} {n₀ w : ℕ}
 
-/-- The full checksum word uniquely determines its hash payload. -/
-theorem word_injective (hw : 0 < w) :
-    Function.Injective (Winternitz.word (n₀ := n₀) hw) := by
+/-- The checksum word determines its payload. -/
+theorem word_injective : Function.Injective (word (n₀ := n₀) (w := w)) := by
   intro x y h
   funext i
-  have hi := congrFun h (Fin.castAdd (Winternitz.checksumWidth n₀ w) i)
-  simpa [Winternitz.word] using hi
+  simpa [word] using congrFun h (Fin.castAdd (checksumWidth n₀ w) i)
 
-/-- The accepted checksum encoding instantiates the shared bridge without a failure predicate. -/
-@[expose] def bridge (params : Winternitz.Parameters PP M R E Tweak n₀ w)
+/-- The Winternitz encoding as a `Bridge`: every hash output is accepted, and its word is the
+payload followed by its checksum digits. -/
+@[expose] def bridge (params : Parameters PP M R E Tweak n₀ w)
     (hEpoch : Function.Injective params.epochToTweak) :
-    Bridge PP M R E Tweak (Codeword n₀ (2 ^ w))
-      (n₀ + Winternitz.checksumWidth n₀ w) (2 ^ w) where
-  enc := Winternitz.encoding params
+    Bridge PP M R E Tweak (Codeword n₀ (2 ^ w)) (n₀ + checksumWidth n₀ w) (2 ^ w) where
+  enc := encoding params
   th := params.thf
   epochToTweak := params.epochToTweak
   epochToTweak_injective := hEpoch
   accepts := fun _ => true
-  word := Winternitz.word params.digitWidthPositive
-  word_injective := word_injective params.digitWidthPositive
-  value_eq := by
-    intro pp msg r ep
-    simp [Winternitz.value_eq_some]
+  word := word
+  word_injective := word_injective
+  encode_eq _ _ _ _ := rfl
 
-/-- Identification with a uniformly sampled paper parameter requires this separate seed law. -/
-@[expose] def UniformSeedLaw [Fintype PP]
-    (params : Winternitz.Parameters PP M R E Tweak n₀ w) : Prop :=
-  UniformSampler ProbCompRuntime.probComp params.thf.seedGen
-
-/-- A checksum-word collision adversary transfers to the pinned SM-DT-rTCR game at the same
-record and retry capacities, including zero. This native bound uses `thf.seedGen` directly and
-does not require the separate uniform seed law. -/
+/-- Lemma 6 of DKKW25: a target-collision adversary against the Winternitz encoding gives an
+SM-DT-rTCR adversary against the message hash with at least the same advantage, at the same
+record and retry capacities. -/
 theorem advantage_le_hash [SampleableType R]
     [DecidableEq M] [DecidableEq R] [DecidableEq E] [DecidableEq Tweak]
     [DecidableEq (Codeword n₀ (2 ^ w))]
-    (params : Winternitz.Parameters PP M R E Tweak n₀ w)
+    (params : Parameters PP M R E Tweak n₀ w)
     (hEpoch : Function.Injective params.epochToTweak) (p K : ℕ)
     (source : TargetCollisionResistance.Adversary
       (encodingProblem (bridge params hEpoch) p K)) :
@@ -69,4 +65,4 @@ theorem advantage_le_hash [SampleableType R]
         (reduction (bridge params hEpoch) p K source) :=
   TargetCollisionReduction.advantage_le_hash (bridge params hEpoch) p K source
 
-end IncomparableEncoding.WinternitzCollision
+end IncomparableEncoding.Winternitz
