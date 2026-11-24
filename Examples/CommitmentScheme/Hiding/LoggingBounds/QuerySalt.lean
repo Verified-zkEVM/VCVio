@@ -175,7 +175,7 @@ lemma log_length_le_of_mem_support_counting_simulate_run_logging [Fintype M] [Fi
                   (⟨t, u⟩ : (i : (CMOracle M S C).Domain) × (CMOracle M S C).Range i) ::
                     zz.1.2), zz.2)) <$>
               countingOracle.simulate ((simulateQ loggingOracle (mx u)).run) 0 := by
-        simp [countingOracle.simulate, Prod.map, simulateQ_map]
+        simp [countingOracle.simulate, Prod.map]
       rw [hmap, support_map] at hz
       obtain ⟨w, hzu, hzEq⟩ := hz
       rcases w with ⟨⟨zu, logu⟩, qcu⟩
@@ -267,7 +267,7 @@ theorem run_cached_logging_proj_eq_cachingOracle
       (simulateQ cachingOracle oa).run cache₀ := by
   induction oa using OracleComp.inductionOn generalizing cache₀ with
   | pure x =>
-      simp [simulateQ_pure]
+      simp
   | query_bind t mx ih =>
       rw [OracleComp.run_simulateQ_loggingOracle_query_bind]
       rw [simulateQ_query_bind, StateT.run_bind, simulateQ_query_bind, StateT.run_bind]
@@ -597,7 +597,7 @@ lemma wp_querySaltIndicator_cached_logging_cacheQuery_eq_of_no_other_salt_entrie
           (0 < QueryLog.countQ z.1.2 (fun t : (CMOracle M S C).Domain => t.2 = s))) := by
   induction oa using OracleComp.inductionOn generalizing cache₀ with
   | pure x =>
-      simp [simulateQ_pure, QueryLog.countQ]
+      simp [QueryLog.countQ]
   | query_bind t mx ih =>
       rw [OracleComp.run_simulateQ_loggingOracle_query_bind]
       simp only [simulateQ_query_bind, OracleQuery.input_query, StateT.run_bind]

@@ -49,6 +49,11 @@ charged on separate ledgers: an answer half at `q / 2 ^ 128 + 2 ^ -126`
 message-PRF key (`Share*`); `WorkTarget` sums them to `q / 2 ^ 127`. Below 569 counted calls nothing
 wins, since verifying an accepted forgery alone costs that many (`WorkFinal.advantage_eq_zero`).
 
+For a fixed deterministic hash, `CanonicalGraph.value hash secretSeed publicSeed` evaluates every
+cell using the supplied `hash : HasQuery HashSpec Id`. The extraction uses the same handler for
+its deterministic component computations. Passing `CacheReplay.replayQuery cache` specializes
+the equations to the answers recorded by a run.
+
 **The bridge** (`Bridge/`). `Bridge.model` is the transcription as a `Game.ExternalScheme`, whose
 game is the transcription's game by definition (`PaperGame.lean`). `Transfer.lean` proves that
 `HasSecurityBits` transfers along a `SchemeBridge`: a bijection of oracle answers that maps the

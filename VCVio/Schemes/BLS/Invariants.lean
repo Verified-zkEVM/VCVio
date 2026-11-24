@@ -218,38 +218,23 @@ theorem simulateQ_indexedOracle_count_le {V M G α : Type} [DecidableEq M]
     (z : α × OracleState V M)
     (hz : z ∈ support ((simulateQ (indexedOracle draw hash sign j) oa).run s)) :
     z.2.count ≤ s.count + qH + qS := by
-  induction oa using OracleComp.inductionOn generalizing s qH qS z with
-  | pure a =>
-    simp only [simulateQ_pure, StateT.run_pure, support_pure, Set.mem_singleton_iff] at hz
-    subst z
-    change s.count ≤ s.count + qH + qS
-    omega
-  | query_bind t k ih =>
-    rw [isQueryBoundP_query_bind_iff] at hH hS
-    simp only [simulateQ_bind, simulateQ_spec_query, StateT.run_bind] at hz
-    obtain ⟨⟨a, st⟩, ha, hz⟩ := mem_support_bind_peel _ _ hz
-    rcases t with (t | msg) | msg
-    · change (a, st) ∈ support
-        ((fun v => (v, s)) <$> (unifSpec.query t : ProbComp _)) at ha
-      obtain ⟨v, _, he⟩ := mem_support_map_peel _ _ ha
-      have he' : st = s := congrArg Prod.snd he
-      subst st
-      exact ih a s qH qS (by simpa using hH.2 a) (by simpa using hS.2 a) z hz
-    · rw [indexedOracle_run_hash] at ha
-      obtain ⟨w, hw, he⟩ := mem_support_map_peel _ _ ha
-      have hc := indexedEntry_count_le draw j msg s w hw
-      have he' : st.count = w.2.count := congrArg (fun z => z.2.count) he
-      have hb := ih a st (qH - 1) qS (by simpa using hH.2 a)
-        (by simpa using hS.2 a) z hz
-      have hpos : 0 < qH := by simpa using hH.1
-      omega
-    · rw [indexedOracle_run_sign] at ha
-      obtain ⟨w, hw, he⟩ := mem_support_map_peel _ _ ha
-      have hc := indexedEntry_count_le draw j msg s w hw
-      have he' : st.count = w.2.count := congrArg (fun z => z.2.count) he
-      have hb := ih a st qH (qS - 1) (by simpa using hH.2 a)
-        (by simpa using hS.2 a) z hz
-      have hpos : 0 < qS := by simpa using hS.1
-      omega
+  have h := (hH.or hS).cost_le_of_mem_support_run_simulateQ OracleState.count
+    (fun t ht st w hw => by
+      rcases t with (t | msg) | msg
+      · simp at ht
+      · rw [indexedOracle_run_hash] at hw
+        obtain ⟨w', hw', rfl⟩ := mem_support_map_peel _ _ hw
+        exact indexedEntry_count_le draw j msg st w' hw'
+      · rw [indexedOracle_run_sign] at hw
+        obtain ⟨w', hw', rfl⟩ := mem_support_map_peel _ _ hw
+        exact indexedEntry_count_le draw j msg st w' hw')
+    (fun t ht st w hw => by
+      rcases t with (t | msg) | msg
+      · rw [indexedOracle_run_unif] at hw
+        obtain ⟨v, _, rfl⟩ := mem_support_map_peel _ _ hw
+        exact le_rfl
+      · simp at ht
+      · simp at ht) s z hz
+  omega
 
 end BLS

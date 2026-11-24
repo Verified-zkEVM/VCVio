@@ -5,6 +5,7 @@ Authors: Devon Tuma
 -/
 
 module
+public import ToMathlib.Data.List.Count
 public import ToMathlib.Probability.NegativeHypergeometric
 public import VCVio.OracleComp.ProbComp.Basic
 public import VCVio.OracleComp.Constructions.UniformFinMeasure
@@ -49,17 +50,6 @@ theorem countP_eraseIdx_of_pos {l : List α} {i : ℕ} (hi : i < l.length) (hp :
     countP_cons, hp]
   simp
   omega
-
-/-- `countP` as a sum of indicators, the form that matches `Finset.card_filter`. -/
-theorem countP_eq_sum_map (l : List α) (p : α → Bool) :
-    l.countP p = (l.map fun x => if p x then 1 else 0).sum := by
-  induction l with
-  | nil => simp
-  | cons x xs ih =>
-      rw [countP_cons, map_cons, sum_cons, ih]
-      cases p x
-      · simp
-      · simp; omega
 
 /-- In a duplicate-free list, deleting a position removes that value entirely. -/
 theorem getElem_notMem_eraseIdx {l : List α} (hl : l.Nodup) {i : ℕ} (hi : i < l.length) :
@@ -130,6 +120,49 @@ theorem drawUntil_cons (accept : S → Bool) (r : ℕ) (x : S) (xs : List S) :
           drawUntil accept (if accept y then r else r + 1) ((x :: xs).eraseIdx i)) := by
   rw [drawUntil]
 
+/-- A uniform draw from `Fin (a + 1)` can be read as one from `Fin (b + 1)` when `a = b`. Stated
+with free bounds so that the cast can be moved past a dependent continuation. -/
+theorem uniformFin_bind_congr {α : Type} {a b : ℕ} (h : a = b) (f : Fin (a + 1) → ProbComp α) :
+    ($[0..a] >>= f) = $[0..b] >>= fun i => f (Fin.cast (by omega) i) := by
+  subst h
+  rfl
+
+/-- Relabelling the pool relabels the run. The loop samples positions, never values, so any map of
+the pool commutes with it, injective or not. -/
+theorem drawUntil_map {T : Type} (g : S → T) (accept : T → Bool) (n : ℕ) :
+    ∀ (r : ℕ) (l : List S), l.length = n →
+      drawUntil accept r (l.map g) = List.map g <$> drawUntil (accept ∘ g) r l := by
+  induction n with
+  | zero =>
+      intro r l hl
+      obtain rfl := List.length_eq_zero_iff.mp hl
+      simp
+  | succ n ih =>
+      intro r l hl
+      cases r with
+      | zero => simp
+      | succ r =>
+          obtain ⟨x, xs, rfl⟩ := List.exists_cons_of_length_eq_add_one hl
+          rw [List.map_cons, drawUntil_cons, drawUntil_cons, map_bind,
+            uniformFin_bind_congr (List.length_map g)]
+          refine bind_congr fun i => ?_
+          simp only [Fin.val_cast]
+          have hxs : xs.length = n := by simpa using hl
+          rcases Fin.eq_zero_or_eq_succ i with rfl | ⟨j, rfl⟩
+          · simp only [Fin.val_zero, List.getElem_cons_zero, List.eraseIdx_cons_zero,
+              Function.comp_apply]
+            rw [ih _ _ hxs]
+            simp only [Functor.map_map, Function.comp_def]
+            rfl
+          · have hj : (j : ℕ) < xs.length := by simp
+            have hlen : (x :: xs.eraseIdx j).length = n := by
+              rw [List.length_cons, List.length_eraseIdx_of_lt hj]
+              omega
+            simp only [Fin.val_succ, List.getElem_cons_succ, List.eraseIdx_cons_succ,
+              List.getElem_map, List.eraseIdx_map, Function.comp_apply]
+            simp only [← List.map_cons, ih _ _ hlen]
+            simp only [Functor.map_map, Function.comp_def]
+            rfl
 
 /-! ## What the loop returns
 

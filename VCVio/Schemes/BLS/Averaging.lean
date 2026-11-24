@@ -28,10 +28,10 @@ private theorem experiment_reduction_evalDistEq {F G₁ G₂ Gₜ M : Type}
     [AddCommGroup Gₜ] [Module F Gₜ] [DecidableEq Gₜ] [DecidableEq M]
     {e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ} {g₁ : G₁} {g₂ : G₂}
     (A : SignatureAlg.UnforgeableAdversary (scheme (M := M) e g₁ g₂)) (qH qS : ℕ) :
-    CoCDH.experiment g₁ g₂ (reduction A qH qS) =ᵈ
+    CoCDH.experiment g₁ g₂ (coCDHReduction A qH qS) =ᵈ
       (do let j ← ($ᵗ Fin (qH + qS + 1) : ProbComp _)
-          CoCDH.experiment g₁ g₂ (reductionAt A j.val)) := by
-  unfold CoCDH.experiment reduction
+          CoCDH.experiment g₁ g₂ (coCDHReductionAt A j.val)) := by
+  unfold CoCDH.experiment coCDHReduction
   simp only [bind_assoc]
   refine EvalDistEq.trans ?_ (OracleComp.EvalDistEq.bind_bind_swap _ _ _)
   apply EvalDistEq.bind_right
@@ -40,26 +40,18 @@ private theorem experiment_reduction_evalDistEq {F G₁ G₂ Gₜ M : Type}
 
 /-- Multiplying the guessed reduction's success probability by the number of possible slots
 recovers the sum of fixed-slot success probabilities. -/
-theorem mul_prEvent_experiment_reduction {F G₁ G₂ Gₜ M : Type}
+theorem mul_prEvent_experiment_coCDHReduction {F G₁ G₂ Gₜ M : Type}
     [Field F] [SampleableType F] [AddCommGroup G₁] [Module F G₁]
     [SampleableType G₁] [DecidableEq G₁] [AddCommGroup G₂] [Module F G₂]
     [AddCommGroup Gₜ] [Module F Gₜ] [DecidableEq Gₜ] [DecidableEq M]
     {e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ} {g₁ : G₁} {g₂ : G₂}
     (A : SignatureAlg.UnforgeableAdversary (scheme (M := M) e g₁ g₂)) (qH qS : ℕ) :
     (qH + qS + 1 : ℝ≥0∞) *
-        Pr{let b ← CoCDH.experiment g₁ g₂ (reduction A qH qS)}[b = true] =
+        Pr{let b ← CoCDH.experiment g₁ g₂ (coCDHReduction A qH qS)}[b = true] =
       ∑ j : Fin (qH + qS + 1),
-        Pr{let b ← CoCDH.experiment g₁ g₂ (reductionAt A j.val)}[b = true] := by
-  rw [(experiment_reduction_evalDistEq A qH qS).prEvent_eq (· = true),
-    prEvent_bind_eq_sum_fintype]
-  simp only [SampleableType.prEvent_uniformSample_eq_singleton, Fintype.card_fin]
-  rw [Finset.mul_sum]
-  apply Finset.sum_congr rfl
-  intro j _
-  rw [← mul_assoc]
-  have hn : (↑(qH + qS + 1) : ℝ≥0∞) ≠ 0 := by simp
-  have ht : (↑(qH + qS + 1) : ℝ≥0∞) ≠ ⊤ := by simp
-  norm_cast
-  rw [ENNReal.mul_inv_cancel hn ht, one_mul]
+        Pr{let b ← CoCDH.experiment g₁ g₂ (coCDHReductionAt A j.val)}[b = true] := by
+  rw [(experiment_reduction_evalDistEq A qH qS).prEvent_eq (· = true)]
+  simpa using SampleableType.natCast_card_mul_prEvent_uniformSample_bind
+    (fun j : Fin (qH + qS + 1) => CoCDH.experiment g₁ g₂ (coCDHReductionAt A j.val)) (· = true)
 
 end BLS

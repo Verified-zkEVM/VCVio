@@ -13,7 +13,9 @@ public import VCVio.OracleComp.QueryTracking.QueryCost
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Simulation
 public import VCVio.OracleComp.ProbCompLift
-public import VCVio.EvalDist.Defs.Semantics.Core
+public import PolyFun.Control.Monad.Measure.SemanticsVia
+public import VCVio.EvalDist.Defs.Measure.Core
+public import ToMathlib.MeasureTheory.Measure.GiryMonad
 
 /-!
 # Fujisaki-Okamoto T Transform
@@ -259,7 +261,7 @@ Defined as the conjunction of three predicate-targeted query bounds `IsQueryBoun
 counted oracle. Because the three index predicates are pairwise disjoint, this conjunction is
 equivalent to a single-vector `IsQueryBound` over the combined per-oracle budget. -/
 def OW_PCVA_Adversary.MakesAtMostQueries
-    {M PK SK R C : Type} [DecidableEq M] [DecidableEq C] [SampleableType R]
+    {M PK SK R C : Type} [DecidableEq C]
     {pke : AsymmEncAlg.ExplicitCoins ProbComp M PK SK R C}
     (adversary : OW_PCVA_Adversary
       (TTransform (m := OracleComp (TTransform.oracleSpec M R)) pke)) (qH qP qV : ℕ) : Prop :=

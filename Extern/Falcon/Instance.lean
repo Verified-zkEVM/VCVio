@@ -39,6 +39,8 @@ function for testing.
    the reference implementation signs in floating point (`sign_fpr.c`) and uses
    32.32 fixed point only inside key generation (`kgen_fxp.c`). Relating that
    floating-point pipeline to the exact one is the remaining bridge obligation.
+   `concretePrimitives` satisfies `Primitives.StructuralLaws` for `logn ≤ 11`
+   (`concretePrimitives_structuralLaws`).
 
 ## Kernel correctness
 
@@ -96,10 +98,13 @@ def pairL2NormSqU32 {n : ℕ} (s₁ s₂ : Rq n) : Nat := Id.run do
   return sqn.toNat
 
 /-- Standalone executable Falcon verification using the concrete hash, codec, and arithmetic
-implementations. -/
+implementations. As in the reference verifier, the public key must start with the header byte
+`logn` (`concreteVerify_eq_false_of_header_ne`) and its body must have exactly the `7n/4` bytes of
+the packed encoding (`pkDecode_eq_none_of_size_ne`). -/
 def concreteVerify (p : Params) (pk : ByteArray) (msg : List Byte)
     (sig : ByteArray) : Bool := Id.run do
   let logn := p.logn
+  if pk[0]! != publicKeyHeader logn then return false
   match sigDecode sig logn with
   | none => return false
   | some (salt, compSig) =>
@@ -118,6 +123,12 @@ def concreteVerify (p : Params) (pk : ByteArray) (msg : List Byte)
     (p : Params) (pk : ByteArray) (salt : Bytes 40) (msg : List Byte) :
     concreteVerify p pk msg (sigEncode salt [] p.logn) = false := by
   simp [concreteVerify]
+
+/-- `concreteVerify` rejects every public key whose first byte is not the header byte `logn`. -/
+theorem concreteVerify_eq_false_of_header_ne (p : Params) {pk : ByteArray}
+    (hpk : pk[0]! ≠ publicKeyHeader p.logn) (msg : List Byte) (sig : ByteArray) :
+    concreteVerify p pk msg sig = false := by
+  simp [concreteVerify, hpk]
 
 /-! ## Kernel correctness
 
@@ -778,6 +789,24 @@ theorem concretePrimitives_exactFFT (p : Params) (hn : p.n = 2 ^ p.logn)
     (h : 2 * 2 ^ p.fftDepth = p.n) : (concretePrimitives p hn).ExactFFT h :=
   Primitives.exactFFT_of_eq _ h rfl rfl
 
+private theorem nttRingLaws_cast {n m : ℕ} (h : n = m) {ops : NTTRingOps m}
+    (hops : NTTRingLaws ops) : NTTRingLaws (show NTTRingOps n from h ▸ ops) := by
+  subst h
+  exact hops
+
+/-- The `nttOps` field of `concretePrimitives` satisfies `NTTRingLaws` (the
+`Primitives.StructuralLaws.transform` field) for `n = 2^logn ≤ 2048`. -/
+theorem concretePrimitives_transform (p : Params) (hn : p.n = 2 ^ p.logn) (h : p.logn ≤ 11) :
+    NTTRingLaws (concretePrimitives p hn).nttOps :=
+  nttRingLaws_cast hn (concreteNTTRingLaws p.logn h)
+
+/-- The concrete bundle satisfies the structural laws: the codec round-trips
+(`decompress_compress`) and the NTT satisfies `NTTRingLaws` (`concretePrimitives_transform`). -/
+theorem concretePrimitives_structuralLaws (p : Params) (hn : p.n = 2 ^ p.logn)
+    (h : p.logn ≤ 11) : (concretePrimitives p hn).StructuralLaws :=
+  ⟨fun s slen bytes hc => decompress_compress p.n s slen bytes hc,
+    concretePrimitives_transform p hn h⟩
+
 /-- `hashToPointForPublicKey` for `concretePrimitives` unfolds to the concrete FN-DSA hash path. -/
 @[simp] theorem concretePrimitives_hashToPointForPublicKey_eq
     (p : Params) (hn : p.n = 2 ^ p.logn) (h : Rq p.n)
@@ -794,5 +823,21 @@ noncomputable def falcon512Primitives : Primitives falcon512 :=
 /-- Concrete primitives specialized to Falcon-1024. -/
 noncomputable def falcon1024Primitives : Primitives falcon1024 :=
   concretePrimitives falcon1024 rfl
+
+/-- The NTT of `falcon512Primitives` satisfies `NTTRingLaws`. -/
+theorem falcon512Primitives_transform : NTTRingLaws falcon512Primitives.nttOps :=
+  concretePrimitives_transform falcon512 rfl (by decide)
+
+/-- The NTT of `falcon1024Primitives` satisfies `NTTRingLaws`. -/
+theorem falcon1024Primitives_transform : NTTRingLaws falcon1024Primitives.nttOps :=
+  concretePrimitives_transform falcon1024 rfl (by decide)
+
+/-- `falcon512Primitives` satisfies the structural laws. -/
+theorem falcon512Primitives_structuralLaws : falcon512Primitives.StructuralLaws :=
+  concretePrimitives_structuralLaws falcon512 rfl (by decide)
+
+/-- `falcon1024Primitives` satisfies the structural laws. -/
+theorem falcon1024Primitives_structuralLaws : falcon1024Primitives.StructuralLaws :=
+  concretePrimitives_structuralLaws falcon1024 rfl (by decide)
 
 end Falcon.Concrete

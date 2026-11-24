@@ -24,7 +24,7 @@ open OracleComp OracleSpec
 namespace FiatShamir
 
 variable {Stmt Wit Commit PrvState Chal Resp : Type} {rel : Stmt → Wit → Bool}
-variable (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
+variable (σ : SigmaProtocol ProbComp Stmt Wit Commit PrvState Chal Resp rel)
   (hr : GenerableRelation Stmt Wit rel) (M : Type)
 variable [DecidableEq M] [DecidableEq Commit]
 
@@ -167,7 +167,7 @@ theorem knowledgeVerifyRun_eq_trace [SampleableType Chal]
         Fork.runTrace σ hr M (proverWithFinalQuery σ hr M prover msg) pk := by
   rw [runTrace_proverWithFinalQuery]
   simp [knowledgeVerifyRun, finishTrace, FiatShamir, StateT.run'_eq, StateT.run_bind,
-    simulateQ_bind, HasQuery.query, QueryImpl.simulateQ_add_liftM_query_right, monad_norm]
+    HasQuery.query, QueryImpl.simulateQ_add_liftM_query_right, monad_norm]
 
 /-- Every supported wrapped trace has a usable fork point exactly when its verifier accepts.
 The bound includes the appended verifier slot, including a cache miss at that slot. -/

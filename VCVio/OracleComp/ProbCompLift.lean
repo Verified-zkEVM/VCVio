@@ -7,7 +7,9 @@ Authors: Quang Dao
 module
 public import VCVio.OracleComp.ProbComp.Basic
 public import VCVio.OracleComp.EvalDist.AnswerMeasure
-public import VCVio.EvalDist.Defs.Semantics.Core
+public import PolyFun.Control.Monad.Measure.SemanticsVia
+public import VCVio.EvalDist.Defs.Measure.Core
+public import ToMathlib.MeasureTheory.Measure.GiryMonad
 public import PolyFun.Control.Monad.Hom
 import VCVio.EvalDist.Monad.Measure
 

@@ -38,4 +38,18 @@ example : ∀ z : ℤ, (fun n : ℕ => (ENNReal.ofReal ((1 / 2 : ℝ) ^ n)).toRe
 example {f g : ℕ → ℝ≥0∞} (hg : negligible g) (h : ∀ n ≥ 5, f n ≤ g n) : negligible f :=
   negligible_of_eventuallyLE (Filter.eventually_atTop.2 ⟨5, h⟩) hg
 
+/-- Infinity at the first parameter does not affect decay. -/
+example : negligible (fun n : ℕ => if n = 0 then ⊤ else 0) := by
+  apply (negligible_iff_eventually_ne_top_and_toNNReal _).mpr
+  refine ⟨(eventually_ge_atTop 1).mono fun n hn => ?_, ?_⟩
+  · simp [Nat.ne_of_gt hn]
+  · simpa only [apply_ite ENNReal.toNNReal, ENNReal.toNNReal_top, ENNReal.toNNReal_zero, ite_self]
+      using Cslib.Crypto.negligible_zero
+
+/-- Projecting a constantly infinite loss to zero loses the finiteness requirement. -/
+example : ¬ negligible (fun _ : ℕ => ⊤) := by
+  intro h
+  obtain ⟨_, hn⟩ := ((negligible_iff_eventually_ne_top_and_toNNReal _).mp h).1.exists
+  exact hn rfl
+
 end VCVioTest.Negligible

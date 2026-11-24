@@ -37,7 +37,7 @@ The README and large amounts of commented-out code use `++ₒ` for combining ora
 Do not keep large commented-out Lean blocks around as reference material,
 especially if they use obsolete patterns (`Pr[= x | ...]`, `[= x | ...]`, `++ₒ`, `simulate'`,
 `getM`, `guard` via `Alternative`). Delete them instead. This is distinct from
-unfinished live proof attempts, which should be preserved with `stop`.
+unfinished live proof attempts on a working branch, which should be preserved with `stop`.
 Use `Examples/OneTimePad/Basic.lean` as the canonical reference for current style.
 
 ## Type System
@@ -241,6 +241,28 @@ that differs syntactically from `Monad.toBind`. This means `pure_bind`, `bind_as
 expose that instance with `show`/`change`, so that the `LawfulMonad` laws `pure_bind`,
 `bind_assoc` and `bind_pure` match the desugared binds.
 
+### 13b. Membership in `support` does not run the computation
+
+On `OracleComp`, `support mx` is `{a | CanReturn mx a}`, and the return predicate is PolyFun's
+inductive `PFunctor.FreeM.CanReturn`. Neither the kernel nor the elaborator reduces an inductive
+predicate. Comparing `x ∈ support mx` with `x ∈ support my` therefore compares `mx` with `my`, and
+neither computation runs. A proof can unfold a definition under `support`, rewrite a `do` block
+with `mem_support_bind_iff` and `support_pure` (entry 13), and pass a hypothesis
+`h : x ∈ support mx` to a lemma, even when `mx` samples `$ᵗ BitVec (2 ^ 32)`.
+`VCVioTest/OracleComp/SupportKernel.lean` checks these cases.
+
+The structural equations of the support on the free monad are theorems, not definitional
+unfoldings: `PFunctor.FreeM.support_liftBind`, `PFunctor.FreeM.mem_support_liftBind` and the
+generic `support_pure`. Rewrite with them instead of `change` or `rfl`. To take a membership apart,
+use `PFunctor.FreeM.canReturn_pure_iff` and `PFunctor.FreeM.canReturn_liftBind_iff`, or `cases` on
+the constructors `PFunctor.FreeM.CanReturn.pure` and `PFunctor.FreeM.CanReturn.liftBind`.
+
+The hazard remains for other sets defined by recursion over a computation. Mathlib's `Set` is a
+structure (mathlib4#41506), so `x ∈ s` unfolds to the applied projection `s.Mem x`. Before the
+kernel compares two such memberships, it reduces `s` to a constructor (leanprover/lean4#16613).
+When `s` is computed by recursion over a program, that reduction runs the program. Define such a
+notion as an inductive predicate `P`, and take the set as `{a | P a}`, as `support` does.
+
 ### 14. Hypothesis satisfiability is a proof obligation
 
 A conditional theorem whose hypotheses are jointly uninhabitable is vacuously true, and
@@ -257,6 +279,13 @@ Two failure classes recur:
   or be uniformly distributed on — a strictly larger space. A hypothesis asserting such an
   equality or uniformity is false at every parameter where the strict cardinality inequality
   holds.
+- **Bounds over every adversary**: a hypothesis `∀ adv, Adv adv ≤ ε` over an adversary type is
+  satisfiable only at `ε` as large as exhaustive search achieves, query budgets notwithstanding,
+  so the theorem is empty at real parameters. Assume the bound for the named distinguisher
+  ([crypto.md](crypto.md#name-the-reduction-in-the-theorem-statement)). The exception is security
+  that is statistical in the pure random oracle model, where the adversary's only access to the
+  secrets is through its bounded oracle queries, as for Merkle-tree commitments
+  (`VCVio/CryptoFoundations/VectorCommitment/Hiding.lean`).
 
 **Fix**: when compatibility of a new hypothesis bundle is not immediate, ship a kernel-checked
 witness for the whole bundle (or at least each nontrivial compatibility pair) in the same PR.
@@ -283,14 +312,16 @@ ToMathlib → Prelude → EvalDist/Defs → OracleComp core → EvalDist bridge
 
 ### 16. Preserve partial proof attempts with `stop`
 
-When a proof attempt is not finished or is currently broken, insert a local `stop` marker instead of deleting large proof blocks. This preserves search context for later agents.
+When a proof attempt on a working branch is not finished or is currently broken, insert a local `stop` marker instead of deleting large proof blocks. This preserves search context for later agents. A `stop` leaves the proof incomplete, so the branch cannot merge until it is gone: `main` carries no `sorry` (see *Building* in `AGENTS.md`).
 
 ### 17. `OracleComp.inductionOn` is the canonical eliminator
 
-Pattern: `| pure x => ... | query_bind t oa ih => ...`. Use `simulateQ_bind`,
-`simulateQ_query`, `simulateQ_pure` simp lemmas in the `query_bind` case.
-See `simulateQ_id'` in `VCVio/OracleComp/SimSemantics/SimulateQ.lean` for a
-clean example.
+Pattern: `| pure x => ... | query_bind t oa ih => ...`. In the `query_bind` case, `simp`
+distributes `simulateQ` with the `@[simp]` lemmas `simulateQ_bind`, `simulateQ_query` and
+`simulateQ_pure`, and `rw [simulateQ_bind, simulateQ_spec_query]` lands on `impl t` directly.
+`simulateQ` is semireducible, so CSLib's `PFunctor.FreeM.liftM` simp lemmas do not rewrite it:
+the pieces stay `simulateQ`-headed after `simp`, and a later `rw [simulateQ_*]` still matches.
+See `simulateQ_id'` in `VCVio/OracleComp/SimSemantics/SimulateQ.lean` for a clean example.
 
 ### 18. Full cutover, no backward-compatibility shims
 
@@ -305,7 +336,7 @@ specific submodule it actually uses.
 
 **Allowed umbrellas** (strictly top-level roots only): root imports such as
 `VCVio.lean`, `ToMathlib.lean`, `Extern.lean`, `HashSig.lean`, `Examples.lean`,
-`LatticeCrypto.lean`, `Interop.lean`, `VCVioWidgets.lean`, `VCVioTest.lean`, and
+`LatticeCrypto.lean`, `VCVioTest.lean`, and
 `LatticeCryptoTest.lean`.
 When a new top-level root is added, extend this list alongside it.
 
@@ -388,10 +419,10 @@ and remaining migrations by their effect on callers.
 
 This regenerates the active module root files covered by the build import check:
 `ToMathlib.lean`, `VCVio.lean`, `LatticeCrypto.lean`, `Extern.lean`,
-`HashSig.lean`, `Examples.lean`, `VCVioWidgets.lean`, and `VCVioTest.lean`.
-It also updates the legacy `Interop.lean` umbrella without enabling module mode.
+`HashSig.lean`, `Examples.lean`, and `VCVioTest.lean`.
 CI runs `scripts/check-imports.sh`, which regenerates the umbrellas and fails if any differs
-from the committed file; `Interop` remains dormant and is migrated separately.
+from the committed file. The `Interop/` package lists its library roots in `Interop/lakefile.toml`
+and has no generated umbrella.
 
 ### 25. Active Lean sources use explicit module scopes
 
@@ -405,14 +436,14 @@ use opaque `public section` when downstream code does not need definitional unfo
 `backward.proofsInPublic`; make helper visibility explicit or give proof terms enough type
 information to avoid public metavariables.
 
-The dormant `Interop` library is intentionally excluded until its separate migration.
+The `Interop/` package builds separately; its unported hax examples are not built.
 `LatticeCryptoTest.lean` remains a curated umbrella and `HashSigTest` has no root umbrella because
 their executable modules contain colliding root-level `main` declarations.
 
 ### 26. Lean toolchain and Mathlib version must stay in sync
 
-Both currently `v4.35.0`: `lean-toolchain` pins `leanprover/lean4:v4.35.0` and
-`lakefile.lean` has `require "leanprover-community" / "mathlib" @ git "v4.35.0"`.
+Both currently `v4.36.0`: `lean-toolchain` pins `leanprover/lean4:v4.36.0` and
+`lakefile.lean` has `require "leanprover-community" / "mathlib" @ git "v4.36.0"`.
 When upgrading, update both lines simultaneously.
 
 ### 27. Use public references in shared docs

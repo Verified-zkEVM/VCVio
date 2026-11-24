@@ -112,6 +112,8 @@ mirroring how the probability of `bad` absorbs the tag-side nonce-collision mass
 Lives in this module (rather than `DirectCoupling.Compose`) so that the instrumented fine handler
 `multipleBadTableHandlerFine` defined below can reach it without inducing an import cycle. -/
 
+/-- Whether some slot-positive cell of the fine table `T` at the nonce of the reader
+transcript `t` already holds its authenticator `t.auth`. -/
 def cacheBadReader
     (T : ((TagId × Fin sessionsPerTag) × Nonce) → Digest)
     (t : TagTranscript Nonce Digest) : Bool :=
@@ -462,6 +464,9 @@ The per-step uniform-table bound `prEvent_cacheBadReader_uniformSample_le` below
 the probability that a single reader step of this handler flips `cacheBad` at a freshly
 sampled fine table. -/
 
+/-- The eager handler `multipleBadTableHandler g` with the fine table `gFine` threaded
+through reader queries, each of which ORs `cacheBadReader gFine` into the `cacheBad` flag
+through `multipleBadReaderAdvance`. -/
 noncomputable def multipleBadTableHandlerFine
     (g : TagId × Nonce → Digest)
     (gFine : ((TagId × Fin sessionsPerTag) × Nonce) → Digest) :
@@ -555,7 +560,7 @@ lemma evalDist_simulateQ_multipleBadQueryImpl_run_eq_tableExtending [SampleableT
     [Fintype Nonce] [Finite Digest]
     [MeasurableSpace Digest] [MeasurableSingletonClass Digest]
     [MeasurableSpace (Bool × UnlinkBadState TagId Nonce Digest)]
-    [EvalDistSemantics ProbComp] [LawfulEvalDistSemantics ProbComp]
+    {semantics : EvalDistSemantics ProbComp} [LawfulEvalDistSemantics ProbComp]
     (hDigest : 𝒟[$ᵗ Digest] = uniformOn Set.univ)
     (hTable : 𝒟[$ᵗ (TagId × Nonce → Digest)] = uniformOn Set.univ)
     (oa : UnlinkAdversary TagId Nonce Digest)
@@ -879,7 +884,7 @@ lemma simulateQ_multipleBadTableHandlerFine_forget_cacheBad_eq
 /-- Sampling an auxiliary fine table only contributes its success mass to the original
 handler's observation measure. The sampler need not be uniform or lossless. -/
 lemma evalDist_simulateQ_multipleBadTableHandlerFine_forget_cacheBad
-    [EvalDistSemantics ProbComp] [LawfulEvalDistSemantics ProbComp]
+    {semantics : EvalDistSemantics ProbComp} [LawfulEvalDistSemantics ProbComp]
     [MeasurableSpace (((TagId × Fin sessionsPerTag) × Nonce) → Digest)]
     {α : Type} [MeasurableSpace (α × UnlinkState TagId × UnlinkBadState TagId Nonce Digest)]
     (sampleFine : ProbComp (((TagId × Fin sessionsPerTag) × Nonce) → Digest))

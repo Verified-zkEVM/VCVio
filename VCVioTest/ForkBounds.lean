@@ -59,4 +59,44 @@ example [∀ t, DecidableEq (spec.Range t)]
 
 end replay
 
+section replayUniformAt
+
+/-- Answer measures on `Bool →ₒ Bool`: query `true` is a fair coin and query `false` always
+answers `true`. -/
+@[reducible]
+noncomputable def coinOrTrue : AnswerMeasure (Bool →ₒ Bool) :=
+  @PFunctor.AnswerMeasure.mk (Bool →ₒ Bool).toPFunctor (fun _ ↦ ⊤)
+    (fun
+      | true => @ProbabilityTheory.uniformOn Bool ⊤ Set.univ
+      | false => @Measure.dirac Bool ⊤ true)
+    (fun
+      | true => inferInstanceAs (IsProbabilityMeasure (ProbabilityTheory.uniformOn Set.univ))
+      | false => inferInstanceAs (IsProbabilityMeasure (Measure.dirac true)))
+
+attribute [local instance] coinOrTrue
+
+local instance : AnswerMeasure.IsUniformAt (Bool →ₒ Bool) true := ⟨rfl⟩
+
+/-- The answer measure of query `false` is not uniform. -/
+example : ¬ AnswerMeasure.IsUniformAt (Bool →ₒ Bool) false := fun h => by
+  have h' := congrArg (· {false}) h.toMeasure_eq_uniformOn
+  change Measure.dirac true {false} = ProbabilityTheory.uniformOn Set.univ {false} at h'
+  rw [ProbabilityTheory.uniformOn_univ] at h'
+  simp at h'
+  exact ENNReal.inv_ne_zero.2 (by simp) h'.symm
+
+/-- The replay forking bound at the uniform query of a specification whose answer measure is
+not uniform at every query. -/
+example {α : Type} (main : OracleComp (Bool →ₒ Bool) α) (qb : Bool → ℕ)
+    (cf : α → Option (Fin (qb true + 1)))
+    (hreach : OracleComp.PathCfReachable main qb true cf) :
+    (let acc : ℝ≥0∞ := ∑ s, Pr{let x ← main}[cf x = some s]
+     let h : ℝ≥0∞ := Fintype.card Bool
+     let q := qb true + 1
+     acc * (acc / q - h⁻¹)) ≤
+      Pr{let r ← OracleComp.contextFork main qb true cf}[r.isSome] :=
+  OracleComp.le_prEvent_isSome_contextFork main qb true cf hreach
+
+end replayUniformAt
+
 end VCVioTest.ForkBounds

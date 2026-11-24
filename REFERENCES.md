@@ -93,6 +93,35 @@ Used in:
 - `VCVio/CryptoFoundations/HardnessAssumptions/TweakableHash/SMDTUD.lean`
 - `VCVio/CryptoFoundations/HardnessAssumptions/TweakableHash/SMDTUDFinalValidity.lean`
 
+### AFR23
+
+Thomas Attema, Serge Fehr, and Nicolas Resch.
+*A Generalized Special-Soundness Notion and its Knowledge Extractors*.
+Cryptology ePrint Archive, Paper 2023/818.
+Preprint: <https://eprint.iacr.org/2023/818>
+(Later revisions are titled *Generalized Special-Sound Interactive Proofs and their Knowledge
+Soundness*.) Their Lemma 5 bounds the generic `Γ`-out-of-`C` extractor's expected queries **above**
+by `2·t_Γ − 1`; the paper states no lower bound on extraction cost.
+
+Used in:
+- `docs/agents/forking.md`
+- `ToMathlib/Combinatorics/MonotoneStructure.lean`
+
+### FMN23
+
+Giacomo Fenzi, Hossein Moghaddas, and Ngoc Khanh Nguyen.
+*Lattice-Based Polynomial Commitments: Towards Asymptotic and Concrete Efficiency*.
+Cryptology ePrint Archive, Paper 2023/846.
+Preprint: <https://eprint.iacr.org/2023/846>
+
+§2.9 defines coordinate-wise special soundness `SS(S, ℓ, k)`; §7 proves that it implies knowledge
+soundness, with Figure 11 the single-round extractor and Lemma 7.1 its three clauses.
+
+Used in:
+- `docs/agents/forking.md`
+- `ToMathlib/Combinatorics/CoordinateWise.lean`
+- `VCVio/CryptoFoundations/CoordinateFork.lean`
+
 ### GHHM21
 
 Alex B. Grilo, Kathrin Hövelmanns, Andreas Hülsing, and Christian Majenz.
@@ -125,6 +154,123 @@ Used in:
 - `VCVio/CryptoFoundations/HardnessAssumptions/TweakableHash/SMDTUDFinalValidity.lean`
 - `VCVio/CryptoFoundations/HardnessAssumptions/TweakableHash/ToFinalValidity.lean`
 - `VCVio/CryptoFoundations/HardnessAssumptions/TweakableHash/ToFinalValidity/Core.lean`
+
+### CO25
+
+Alessandro Chiesa and Michele Orrù.
+*A Fiat–Shamir Transformation From Duplex Sponges*.
+Cryptology ePrint Archive, Paper 2025/536, 2025.
+Version of March 27, 2026; Claim 7.9 (pp. 56–57).
+Preprint: <https://eprint.iacr.org/2025/536>
+
+Used in:
+- `VCVio/OracleComp/Constructions/UniformPreimage.lean`
+
+### CY24
+
+Alessandro Chiesa and Eylon Yogev.
+*Building Cryptographic Proofs from Hash Functions*.
+Version 1.2, 2024.
+Public book: <https://snargsbook.org/>
+Pinned source (commit 305fa3d9):
+<https://github.com/hash-based-snargs-book/hash-based-snargs-book/blob/305fa3d9d19ee6dba135de64b3156d1760df8426/snargs-book.tex>
+
+Used in:
+- `VCVio/CryptoFoundations/MerkleTree/Extractability.lean`
+- `VCVio/CryptoFoundations/MerkleTree/Inductive/Batch/Defs.lean`
+- `VCVio/CryptoFoundations/VectorCommitment/Basic.lean`
+- `VCVio/CryptoFoundations/VectorCommitment/Hiding.lean`
+- `VCVio/CryptoFoundations/VectorCommitment/PositionBinding.lean`
+- `VCVio/EvalDist/DiscreteTVDist.lean`
+- `docs/agents/crypto.md`
+
+### CDHZ25
+
+Alessandro Chiesa, Zijing Di, Zihan Hu, and Yuxi Zheng.
+*How to Prove Post-Quantum Security for Succinct Non-Interactive Reductions*.
+Cryptology ePrint Archive, Paper 2025/2166, 2025.
+Revision of March 2, 2026.
+Preprint: <https://eprint.iacr.org/2025/2166>
+
+Used in:
+- `VCVio/CryptoFoundations/MerkleTree/Instability.lean`
+- `VCVio/CryptoFoundations/MerkleTree/Salted/Commutativity.lean`
+- `VCVio/CryptoFoundations/MerkleTree/Salted/Conditions.lean`
+- `VCVio/CryptoFoundations/MerkleTree/Salted/Defs.lean`
+- `VCVio/CryptoFoundations/MerkleTree/Salted/Extract.lean`
+- `VCVio/CryptoFoundations/MerkleTree/Salted/Extraction.lean`
+- `VCVio/CryptoFoundations/MerkleTree/Salted/HalfPreimage.lean`
+- `VCVio/CryptoFoundations/MerkleTree/Salted/Instability.lean`
+- `VCVio/CryptoFoundations/VectorCommitment/Basic.lean`
+- `VCVio/CryptoFoundations/VectorCommitment/Completeness.lean`
+- `VCVio/CryptoFoundations/VectorCommitment/NonadaptiveCheck.lean`
+- `VCVio/OracleComp/QueryTracking/Instability/Basic.lean`
+- `VCVio/OracleComp/QueryTracking/Instability/Collision.lean`
+- `VCVio/OracleComp/QueryTracking/QueryLogCheck.lean`
+- `VCVio/Quantum/Comp/Combinators.lean`
+- `VCVio/Quantum/Comp/Hybrid.lean`
+- `VCVio/Quantum/Comp/HybridIndex.lean`
+- `VCVio/Quantum/Comp/HybridMeasure.lean`
+- `VCVio/Quantum/Comp/HybridProjected.lean`
+- `VCVio/Quantum/Comp/Potential.lean`
+- `VCVio/Quantum/Comp/QueryMass.lean`
+- `VCVio/Quantum/Oracle/Classical.lean`
+- `VCVio/Quantum/Oracle/ClassicalCalls.lean`
+- `VCVio/Quantum/Oracle/ClassicalRepeatability.lean`
+- `VCVio/Quantum/Oracle/Compressed/Basic.lean`
+- `VCVio/Quantum/Oracle/Compressed/BinaryPartition.lean`
+- `VCVio/Quantum/Oracle/Compressed/Collision.lean`
+- `VCVio/Quantum/Oracle/Compressed/CollisionBlocks.lean`
+- `VCVio/Quantum/Oracle/Compressed/CollisionPotential.lean`
+- `VCVio/Quantum/Oracle/Compressed/CollisionRuntime.lean`
+- `VCVio/Quantum/Oracle/Compressed/CommutatorBound.lean`
+- `VCVio/Quantum/Oracle/Compressed/CommutatorSharp.lean`
+- `VCVio/Quantum/Oracle/Compressed/Consistency.lean`
+- `VCVio/Quantum/Oracle/Compressed/Equivalence.lean`
+- `VCVio/Quantum/Oracle/Compressed/Instability.lean`
+- `VCVio/Quantum/Oracle/Compressed/LocalPotential.lean`
+- `VCVio/Quantum/Oracle/Compressed/Measurement.lean`
+- `VCVio/Quantum/Oracle/Compressed/Phase.lean`
+- `VCVio/Quantum/Oracle/Compressed/ProjectorEvent.lean`
+- `VCVio/Quantum/Oracle/Compressed/Size.lean`
+- `VCVio/Quantum/Oracle/Compressed/Truncation.lean`
+- `VCVio/Quantum/Oracle/Emulated.lean`
+- `VCVio/Quantum/Oracle/EmulatedTensor.lean`
+- `VCVio/Quantum/VC/Compressed.lean`
+- `VCVio/Quantum/VC/Conditions.lean`
+- `VCVio/Quantum/VC/Emulated.lean`
+- `VCVio/Quantum/VC/Merkle/MultiExtractable.lean`
+- `VCVio/Quantum/VC/Merkle/Online.lean`
+- `VCVio/Quantum/VC/MultiExtractable.lean`
+- `VCVio/Quantum/VC/MultiExtractor.lean`
+- `VCVio/Quantum/VC/Proof/Commutativity.lean`
+- `VCVio/Quantum/VC/Proof/Extraction.lean`
+- `VCVio/Quantum/VC/Proof/Offline.lean`
+- `VCVio/Quantum/VC/Proof/Online.lean`
+- `VCVio/Quantum/VC/Proof/OnlineSecurity.lean`
+- `VCVio/Quantum/VC/Proof/Repeatability.lean`
+- `VCVio/Quantum/VC/Tuples.lean`
+- `VCVio/Quantum/VC/Unitaries.lean`
+- `VCVioTest/Quantum/Compressed.lean`
+- `VCVioTest/Quantum/Hybrid.lean`
+- `VCVioTest/Quantum/InstabilityBound.lean`
+- `VCVioTest/Quantum/MultiExtractableModule.lean`
+- `VCVioTest/Quantum/VCCompressed.lean`
+- `VCVioTest/Quantum/VCProof.lean`
+- `VCVioTest/Quantum/VectorCommitmentQuantum.lean`
+- `VCVioTest/SaltedMerkle.lean`
+
+### HHK17
+
+Dennis Hofheinz, Kathrin Hövelmanns, and Eike Kiltz.
+*A Modular Analysis of the Fujisaki-Okamoto Transformation*.
+In *Theory of Cryptography — TCC 2017*.
+Cryptology ePrint Archive, Report 2017/604, version of November 2, 2021; Definition 2.1 and
+Figure 3 (p. 8).
+Preprint: <https://eprint.iacr.org/2017/604>
+
+Used in:
+- `VCVio/CryptoFoundations/FujisakiOkamoto/Defs.lean`
 
 ## Projects and Repositories
 
