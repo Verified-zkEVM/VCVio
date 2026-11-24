@@ -6,7 +6,9 @@ Authors: Alexander Hicks
 
 module
 
-public import VCVio.EvalDist.Lossless
+public import PolyFun.Control.Monad.Measure.Lossless
+public import Mathlib.MeasureTheory.Measure.ProbabilityMeasure
+public import VCVio.EvalDist.Defs.Measure.Core
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Simulation
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Tape
 

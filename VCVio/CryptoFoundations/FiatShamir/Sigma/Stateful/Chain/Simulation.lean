@@ -44,7 +44,7 @@ attribute [fs_simp]
   simulatedNmaImpl
 
 variable {Stmt Wit Commit PrvState Chal Resp : Type} {rel : Stmt → Wit → Bool}
-variable (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
+variable (σ : SigmaProtocol ProbComp Stmt Wit Commit PrvState Chal Resp rel)
   (hr : GenerableRelation Stmt Wit rel) (M : Type)
 
 /-- The challenge oracle of the forkable experiment answers uniformly. -/
@@ -218,7 +218,7 @@ private abbrev SimLoggedState (M Commit Chal : Type)
   (fsRoSpec M Commit Chal).QueryCache × List M
 
 @[fs_simp] private noncomputable def simLoggedVerifyFreshComp
-    (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
+    (σ : SigmaProtocol ProbComp Stmt Wit Commit PrvState Chal Resp rel)
     (pk : Stmt) (x : M × (Commit × Resp))
     (s : SimLoggedState M Commit Chal) : ProbComp Bool := do
   let msg := x.1
@@ -459,7 +459,7 @@ private lemma cmaSimLoggedLeft_preserves_inv
           all_goals
             simp only [htarget, support_pure, Set.mem_singleton_iff, Prod.mk.injEq,
               Bool.false_eq_true, Bool.true_eq_false, and_false, and_true, true_and] at hu
-          all_goals exact hu.2.trans hxkey
+          exact hu.2.trans hxkey
       · have hxinner := state_eq true hxmem
         have hxkey : xKeypair = some (pk, sk) :=
           congrArg (fun state => state.2.1) hxinner

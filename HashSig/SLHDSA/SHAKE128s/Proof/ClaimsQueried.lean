@@ -140,7 +140,7 @@ queried, whenever that digit is below the top. -/
 theorem queriesUnder_root_chain (cache : QueryCache HashSpec) (publicSeed : Digest) :
     ∀ (remaining : Nat) (signatures : Fin remaining → XmssSignature) (layer tree : Nat)
       (leaf : Hypertree.LeafIndex) (message : Digest) (i : Fin remaining) (chain : Fin chains),
-      (Checksum.encode (@forgedAt (replayQuery cache) publicSeed remaining signatures layer tree
+      (Checksum.encode (forgedAt (replayQuery cache) publicSeed remaining signatures layer tree
           leaf message i.val) chain).val < w - 1 →
       QueriesUnder cache
         (Hypertree.rootFromSignature (m := OracleComp HashSpec) publicSeed remaining signatures
@@ -150,7 +150,7 @@ theorem queriesUnder_root_chain (cache : QueryCache HashSpec) (publicSeed : Dige
                 (leafAt leaf tree i.val).val with
               chainOrHeight := BitVec.ofNat 32 chain.val } with
             hashOrIndex := BitVec.ofNat 32
-              ((Checksum.encode (@forgedAt (replayQuery cache) publicSeed remaining signatures
+              ((Checksum.encode (forgedAt (replayQuery cache) publicSeed remaining signatures
                 layer tree leaf message i.val) chain).val + 0) }
           (bytesBE n ((signatures i).wots chain))) := by
   intro remaining
@@ -184,7 +184,7 @@ theorem queriesUnder_verify_wotsClaim (cache : QueryCache HashSpec) (pk : Public
     (request : Message) (wire message : Bytes) (parsed : Signature)
     (hframe : request.frame = some message) (hparsed : Signature.fromBytes? wire = some parsed)
     (layer : Fin layers) (chain : Fin chains)
-    (hdigit : (Checksum.encode (@forgedAt (replayQuery cache) pk.seed layers parsed.hypertree 0
+    (hdigit : (Checksum.encode (forgedAt (replayQuery cache) pk.seed layers parsed.hypertree 0
         (MessageDigest.treeIndex (digestOf cache pk message parsed)).toNat
         (MessageDigest.leafIndex (digestOf cache pk message parsed)).toFin
         (forsKeyOf cache pk message parsed) layer.val) chain).val < w - 1) :
@@ -193,18 +193,18 @@ theorem queriesUnder_verify_wotsClaim (cache : QueryCache HashSpec) (pk : Public
         (GraphStakes.wotsHashNode
           (forgedKey (MessageDigest.treeIndex (digestOf cache pk message parsed)).toFin
             (MessageDigest.leafIndex (digestOf cache pk message parsed)).toFin layer) chain
-          (@forgedSteps (replayQuery cache) pk.seed parsed
+          (forgedSteps (replayQuery cache) pk.seed parsed
             (MessageDigest.treeIndex (digestOf cache pk message parsed)).toNat
             (MessageDigest.leafIndex (digestOf cache pk message parsed)).toFin
             (forsKeyOf cache pk message parsed) layer chain))
         ((parsed.hypertree layer).wots chain)) := by
   have h := queriesUnder_root_chain cache pk.seed layers parsed.hypertree 0 _ _ _ layer chain
     hdigit
-  have hstep : (@forgedSteps (replayQuery cache) pk.seed parsed
+  have hstep : (forgedSteps (replayQuery cache) pk.seed parsed
       (MessageDigest.treeIndex (digestOf cache pk message parsed)).toNat
       (MessageDigest.leafIndex (digestOf cache pk message parsed)).toFin
       (forsKeyOf cache pk message parsed) layer chain).val =
-      (Checksum.encode (@forgedAt (replayQuery cache) pk.seed layers parsed.hypertree 0
+      (Checksum.encode (forgedAt (replayQuery cache) pk.seed layers parsed.hypertree 0
         (MessageDigest.treeIndex (digestOf cache pk message parsed)).toNat
         (MessageDigest.leafIndex (digestOf cache pk message parsed)).toFin
         (forsKeyOf cache pk message parsed) layer.val) chain).val :=
@@ -223,7 +223,7 @@ takes no chain step. -/
 theorem card_unqueried_claims_le (cache : QueryCache HashSpec) (pk : PublicKey)
     (request : Message) (wire message : Bytes) (parsed : Signature)
     (hframe : request.frame = some message) (hparsed : Signature.fromBytes? wire = some parsed) :
-    ((@ClaimedProbes.claimedCandidatesOf (CacheReplay.replayQuery cache) pk.seed cache pk message
+    ((ClaimedProbes.claimedCandidatesOf (CacheReplay.replayQuery cache) pk.seed cache pk message
         parsed).filter fun candidate =>
       decide (¬ CacheReplay.QueriesUnder cache
         (Scheme.verify (m := OracleComp HashSpec) pk request wire) candidate)).length ≤ 231 := by
@@ -249,17 +249,17 @@ theorem card_unqueried_claims_le (cache : QueryCache HashSpec) (pk : PublicKey)
   obtain ⟨layer, -, rfl⟩ := List.mem_map.mp hcount
   simp only [Function.comp_apply, List.countP_map]
   refine le_trans (List.countP_mono_left fun chain _ hchain => ?_)
-    (countP_top_le (@forgedAt (replayQuery cache) pk.seed layers parsed.hypertree 0
+    (countP_top_le (forgedAt (replayQuery cache) pk.seed layers parsed.hypertree 0
       (MessageDigest.treeIndex (digestOf cache pk message parsed)).toNat
       (MessageDigest.leafIndex (digestOf cache pk message parsed)).toFin
       (forsKeyOf cache pk message parsed) layer.val))
   simp only [Function.comp_apply, decide_eq_true_eq] at hchain ⊢
   by_contra hne
-  have hlt : (Checksum.encode (@forgedAt (replayQuery cache) pk.seed layers parsed.hypertree 0
+  have hlt : (Checksum.encode (forgedAt (replayQuery cache) pk.seed layers parsed.hypertree 0
       (MessageDigest.treeIndex (digestOf cache pk message parsed)).toNat
       (MessageDigest.leafIndex (digestOf cache pk message parsed)).toFin
       (forsKeyOf cache pk message parsed) layer.val) chain).val < w - 1 := by
-    have := (Checksum.encode (@forgedAt (replayQuery cache) pk.seed layers parsed.hypertree 0
+    have := (Checksum.encode (forgedAt (replayQuery cache) pk.seed layers parsed.hypertree 0
       (MessageDigest.treeIndex (digestOf cache pk message parsed)).toNat
       (MessageDigest.leafIndex (digestOf cache pk message parsed)).toFin
       (forsKeyOf cache pk message parsed) layer.val) chain).isLt

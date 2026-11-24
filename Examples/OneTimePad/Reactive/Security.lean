@@ -88,7 +88,7 @@ theorem conversation_idealOperations (env : Environment Message Cipher Memory)
 section measureSemantics
 
 /-- A terminal acceptance event is exactly the acceptance event of the executed conversation. -/
-theorem tokenLaw_apply_returned [MeasurableSpace (Option (Outcome Bool))]
+theorem tokenLaw_apply_returned {outcomeSpace : MeasurableSpace (Option (Outcome Bool))}
     [MeasurableSingletonClass (Option (Outcome Bool))]
     {S : Type} (env : Environment Message Cipher Memory) (ops : Operations Message Cipher S)
     (setup : ProbComp S) (verdict : Bool) :
@@ -132,7 +132,7 @@ theorem conversation_simulation (system : CipherSystem Message Cipher Key)
   rw [evalDist_bind_of_discrete, secret, ← evalDist_bind_of_discrete]
 
 /-- Perfect simulation observes actual terminal outcomes after token execution. -/
-theorem tokenLaw_simulation [MeasurableSpace (Option (Outcome Bool))]
+theorem tokenLaw_simulation {outcomeSpace : MeasurableSpace (Option (Outcome Bool))}
     (system : CipherSystem Message Cipher Key) (setup : ProbComp Key) (draw : ProbComp Cipher)
     (correct : ∀ key message, system.decrypt key (system.encrypt key message) = message)
     (secret : ∀ message,
@@ -161,7 +161,7 @@ end measureSemantics
 the environment. -/
 theorem oneTimePad_simulation (width : ℕ)
     [MeasurableSpace (BitVec width)] [MeasurableSingletonClass (BitVec width)]
-    [MeasurableSpace (Option (Outcome Bool))]
+    {outcomeSpace : MeasurableSpace (Option (Outcome Bool))}
     (adversary : BitVec width → ProbComp Bool) (Memory : Type) [MeasurableSpace Memory]
     [Countable Memory] [MeasurableSingletonClass Memory]
     (env : Environment (BitVec width) (BitVec width) Memory) :
@@ -184,7 +184,8 @@ theorem oneTimePad_simulation (width : ℕ)
         fun key => by simp [BitVec.xor_assoc], fun key => by simp [BitVec.xor_assoc]⟩
     simpa only [oneTimePad, e, Equiv.coe_fn_mk] using
       (evalDist_map_equiv_of_uniform ($ᵗ BitVec width) SampleableType.evalDist_uniformSample e)
-  have ht := tokenLaw_simulation (oneTimePad width) ($ᵗ BitVec width) ($ᵗ BitVec width)
+  have ht := tokenLaw_simulation (outcomeSpace := outcomeSpace)
+    (oneTimePad width) ($ᵗ BitVec width) ($ᵗ BitVec width)
     (fun key message => by simp [oneTimePad]) secret adversary env 0
   refine ⟨ht, ?_⟩
   simpa only [fifoLaw_eq_evalDist, fifoExperiment_eq_tokenExperiment,

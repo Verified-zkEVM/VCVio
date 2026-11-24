@@ -75,11 +75,8 @@ attribute [vcspec_simp]
   OracleComp.Lower.wp_ReaderT_pure
   OracleComp.Lower.wp_ReaderT_read
   Std.WP.WPMonad.wp_monadLift_ReaderT_apply_eq
-  OracleComp.Lower.WriterT.wp_bind
-  OracleComp.Lower.WriterT.wp_pure
   OracleComp.Lower.WriterT.wp_tell
   OracleComp.Lower.WriterT.wp_monadLift
-  OracleComp.Lower.WriterT.wp_map
   -- VCVio transformer-internal layer lemmas from `Unary.Internals.Rules`
   OracleComp.ProgramLogic.TacticInternals.Unary.wp_StateT_get_layer
   OracleComp.ProgramLogic.TacticInternals.Unary.wp_StateT_get_layer'

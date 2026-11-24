@@ -8,6 +8,7 @@ module
 
 public import HashSig.SLHDSA.SHAKE128s.Proof.Checksum
 public import Mathlib.Data.BitVec
+public import VCVio.Algorithms.ComplementaryChecksum.Basic
 
 /-!
 # The WOTS+ encoding is an antichain
@@ -83,26 +84,14 @@ theorem eq_of_encode_le {left right : Digest}
     have hi := hle (Fin.castAdd checksumDigits i)
     rw [encode_messageDigit, encode_messageDigit] at hi
     exact Fin.le_def.mp hi
-  have hdown : checksum (messageDigit right) ≤ checksum (messageDigit left) :=
-    Finset.sum_le_sum fun i _ => Nat.sub_le_sub_left (hmessage i) _
   have hup : checksum (messageDigit left) ≤ checksum (messageDigit right) := by
     apply checksum_le_of_digits_le
       ((checksum_le _).trans_lt (by decide)) ((checksum_le _).trans_lt (by decide))
     intro i
     simpa only [encode_checksumDigit] using hle (Fin.natAdd messageDigits i)
-  have hsum := le_antisymm hdown hup
-  have hterms := (Finset.sum_eq_sum_iff_of_le
-    (fun i (_ : i ∈ Finset.univ) => Nat.sub_le_sub_left (hmessage i) (w - 1))).mp hsum
   apply messageDigit_injective
-  funext i
-  apply Fin.ext
-  have heq := hterms i (Finset.mem_univ i)
-  have hl := (messageDigit left i).isLt
-  have hr := (messageDigit right i).isLt
-  change (messageDigit left i).val < 16 at hl
-  change (messageDigit right i).val < 16 at hr
-  change 15 - (messageDigit right i).val = 15 - (messageDigit left i).val at heq
-  omega
+  exact VCVio.Algorithms.ComplementaryChecksum.fin_eq_of_le_of_value_le
+    (messageDigit left) (messageDigit right) hmessage hup
 
 /-- A different WOTS message necessarily needs an earlier value on some chain. -/
 theorem exists_decreased_digit {signed forged : Digest} (hne : signed ≠ forged) :

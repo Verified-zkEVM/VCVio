@@ -24,7 +24,7 @@ open OracleComp OracleSpec
 
 namespace SLHDSA.SHAKE128s.Extraction.Merkle
 
-variable [HasQuery HashSpec Id]
+variable {hash : HasQuery HashSpec Id}
 
 /-- The authentication siblings of an XMSS signature, padded with zero past the subtree height. -/
 @[expose] def siblings (signature : XmssSignature) (height : Nat) : Digest :=

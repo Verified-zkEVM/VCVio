@@ -62,6 +62,11 @@ example (post : Nat → Nat → ℝ≥0∞) :
 noncomputable local instance : WPMonad (WriterT (List Nat) ProbComp) (List Nat → ℝ≥0∞) EStack⟨⟩ :=
   WriterT.wpMonadOf [] (· ++ ·) List.append_nil List.append_assoc
 
+example (x : WriterT (List Nat) ProbComp Nat) (post : Nat → List Nat → ℝ≥0∞) :
+    wp (x >>= fun a => Nat.succ <$> (pure a : WriterT (List Nat) ProbComp Nat)) post estack⟨⟩ =
+      wp x (fun a => post a.succ) estack⟨⟩ := by
+  simp only [ExactWPMonad.wp_bind, ExactWPMonad.wp_map, ExactWPMonad.wp_pure]
+
 example (post : PUnit.{1} → List Nat → ℝ≥0∞) :
     ⦃ fun log => post ⟨⟩ (log ++ [1, 2]) ⦄
       (do tell [1]; tell [2] : WriterT (List Nat) ProbComp PUnit)

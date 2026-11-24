@@ -93,6 +93,9 @@ theorem cellView_of_getElem? {tape : List HashOutput} {index : Nat} {answer : Ha
   rw [List.getD_eq_getElem?_getD, h]
   rfl
 
+attribute [local irreducible] WarmedGame.afterSeeds Scheme.verify Scheme.keygenInternal
+  Scheme.sign Security.signingOracle Security.countQueries
+
 open scoped Classical in
 /-- **The coverage charge with fired witnesses, at the carrier tail.** -/
 theorem prob_carrierTail_firedCovered_le (adversary : Adversary) (walk : Walk)
@@ -219,9 +222,6 @@ theorem prob_carrierTail_firedCovered_le (adversary : Adversary) (walk : Walk)
     refine le_trans hcharge (le_of_eq ?_)
     rw [mul_add, add_assoc, mul_assoc (rightLength : ℝ≥0∞),
       mul_left_comm _ (rightLength : ℝ≥0∞)]
-
-attribute [local irreducible] WarmedGame.afterSeeds Scheme.verify Scheme.keygenInternal
-  Scheme.sign Security.signingOracle Security.countQueries
 
 /-! ## The join -/
 

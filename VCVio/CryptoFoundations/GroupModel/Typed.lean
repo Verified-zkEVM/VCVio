@@ -195,6 +195,7 @@ theorem Adversary.run_basis
   generalize input.groups = basis at hz ⊢
   induction program using OracleComp.inductionOn generalizing basis z with
   | pure out =>
+      simp only [simulateQ_pure, StateT.run_pure, support_pure, Set.mem_singleton_iff] at hz
       simpa only [simulateQ_pure, StateT.run_pure, support_pure, Set.mem_singleton_iff]
         using congrArg Prod.snd hz
   | query_bind q next ih =>

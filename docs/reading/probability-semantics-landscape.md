@@ -5,7 +5,8 @@
 > [`docs/agents/probability.md`](../agents/probability.md).
 >
 > Current v4.35 implementation: Loom2 has been removed; unary carriers use core WP,
-> shared algebra/transformer constructions come from PolyFun, and coupling remains local.
+> shared algebra/transformer constructions come from PolyFun, and so do the generic measure
+> semantics and couplings, from PolyFun's measure companions.
 > See [upstream alignment](upstream-alignment.md) and the
 > [program-logic guide](../agents/program-logic.md) for the implemented boundary.
 >
@@ -172,7 +173,7 @@ acknowledges measure semantics.
 
 ### 2.2 `SemanticsVia` is an existing abstraction seam
 
-[`VCVio/EvalDist/Defs/Semantics/Core.lean`](../../VCVio/EvalDist/Defs/Semantics/Core.lean)
+[`VCVio/EvalDist/Defs/Semantics/Core.lean`](https://github.com/Verified-zkEVM/VCVio/blob/64d416837721aadba4a6918fad79e8248465e33a/VCVio/EvalDist/Defs/Semantics/Core.lean)
 defines `SemanticsVia m Obs`. It separates:
 
 - an internal semantic monad `Sem`;
@@ -218,7 +219,7 @@ where that theory now lives.
 | Independent products | [`EvalDist/IndepProduct.lean`](../../VCVio/EvalDist/IndepProduct.lean) | Product distributions and factorization |
 | Total variation | [`EvalDist/MeasureTVDist/Basic.lean`](../../VCVio/EvalDist/MeasureTVDist/Basic.lean) | Total variation of output measures |
 | Rényi divergence | [`Divergence/Renyi.lean`](../../ToMathlib/Probability/Divergence/Renyi.lean) | Measure-level, via `Measure.rnDeriv` |
-| Couplings | [`ToMathlib/MeasureTheory/Measure/Coupling.lean`](../../ToMathlib/MeasureTheory/Measure/Coupling.lean) | A joint measure with fixed marginals |
+| Couplings | [`ToMathlib/MeasureTheory/Measure/Coupling.lean`](https://github.com/Verified-zkEVM/VCVio/blob/64d416837721aadba4a6918fad79e8248465e33a/ToMathlib/MeasureTheory/Measure/Coupling.lean) | A joint measure with fixed marginals |
 | Expected query cost | [`QueryCost.lean`](../../VCVio/OracleComp/QueryTracking/QueryCost.lean) and [`WriterCost.lean`](../../VCVio/OracleComp/QueryTracking/WriterCost.lean) | Expectations of instrumented runs |
 | Relational logic | [`ProgramLogic/Relational`](../../VCVio/ProgramLogic/Relational) | Coupling existence and quantitative relational WP |
 | Executable finite distributions | [`FinRatPMF.lean`](../../ToMathlib/ProbabilityTheory/FinRatPMF.lean), [`FinRatPMF/Measure.lean`](../../ToMathlib/ProbabilityTheory/FinRatPMF/Measure.lean) | Array-backed `Raw` representation and its `SameDist` quotient |
@@ -1344,13 +1345,13 @@ users retain ordinary discrete probability notation.
 
 ### VCVio and examples
 
-- [`VCVio/EvalDist/Defs/Semantics/Core.lean`](../../VCVio/EvalDist/Defs/Semantics/Core.lean)
+- [`VCVio/EvalDist/Defs/Semantics/Core.lean`](https://github.com/Verified-zkEVM/VCVio/blob/64d416837721aadba4a6918fad79e8248465e33a/VCVio/EvalDist/Defs/Semantics/Core.lean)
 - [`VCVio/EvalDist/Defs/Support.lean`](../../VCVio/EvalDist/Defs/Support.lean)
 - [`VCVio/OracleComp/EvalDist.lean`](../../VCVio/OracleComp/EvalDist.lean)
 - [`VCVio/ProgramLogic/Unary/HoareTriple.lean`](../../VCVio/ProgramLogic/Unary/HoareTriple.lean)
 - [`VCVio/EvalDist/MeasureTVDist/Basic.lean`](../../VCVio/EvalDist/MeasureTVDist/Basic.lean)
 - [`ToMathlib/Probability/Divergence/Renyi.lean`](../../ToMathlib/Probability/Divergence/Renyi.lean)
-- [`ToMathlib/MeasureTheory/Measure/Coupling.lean`](../../ToMathlib/MeasureTheory/Measure/Coupling.lean)
+- [`ToMathlib/MeasureTheory/Measure/Coupling.lean`](https://github.com/Verified-zkEVM/VCVio/blob/64d416837721aadba4a6918fad79e8248465e33a/ToMathlib/MeasureTheory/Measure/Coupling.lean)
 - [`ToMathlib/ProbabilityTheory/FinRatPMF.lean`](../../ToMathlib/ProbabilityTheory/FinRatPMF.lean)
 - [`ToMathlib/ProbabilityTheory/FinRatPMF/Measure.lean`](../../ToMathlib/ProbabilityTheory/FinRatPMF/Measure.lean)
 - [`ToMathlib/MeasureTheory/Measure/TotalVariation.lean`](../../ToMathlib/MeasureTheory/Measure/TotalVariation.lean)

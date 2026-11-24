@@ -78,20 +78,19 @@ namespace Quantum
 
 section uniform
 
-variable (X Y : Type*) [Fintype X] [DecidableEq X] [Fintype Y] [DecidableEq Y]
+variable (X Y : Type*) [Fintype X] [DecidableEq X] [Fintype Y]
 
 /-- The uniform superposition `|Y|^(-|X|/2) ∑ H, |H⟩` over the functions `X → Y`, as a column. -/
 @[expose]
 noncomputable def uniformColumn : Matrix (X → Y) Unit ℂ :=
   Matrix.of fun _ _ ↦ cellAmp Y ^ Fintype.card X
 
-omit [DecidableEq X] [DecidableEq Y] in
+omit [DecidableEq X] in
 @[simp]
 theorem uniformColumn_apply (H : X → Y) (u : Unit) :
     uniformColumn X Y H u = cellAmp Y ^ Fintype.card X :=
   rfl
 
-omit [DecidableEq Y] in
 /-- For nonempty `Y`, the uniform superposition over functions is a unit vector. -/
 theorem conjTranspose_uniformColumn_mul_self [Nonempty Y] :
     (uniformColumn X Y)ᴴ * uniformColumn X Y = 1 := by
@@ -109,7 +108,6 @@ noncomputable def uniformFunctionState [Nonempty Y] : SubState (X → Y) :=
   (SubInstrument.ofIsometry (uniformColumn X Y) (conjTranspose_uniformColumn_mul_self X Y)).post
     (SubState.basis ()) ()
 
-omit [DecidableEq Y] in
 theorem matrix_uniformFunctionState [Nonempty Y] :
     (uniformFunctionState X Y).matrix =
       MatrixMap.conj (uniformColumn X Y) (Matrix.single () () 1) := by
@@ -118,7 +116,7 @@ theorem matrix_uniformFunctionState [Nonempty Y] :
 
 /-- Tabulating the uniform superposition over functions gives the empty database with every cell
 compressed: `E |φ⟩ = S^{⊗X} |∅⟩`. -/
-theorem basisMatrix_ofFun_mul_uniformColumn :
+theorem basisMatrix_ofFun_mul_uniformColumn [DecidableEq Y] :
     basisMatrix (Database.ofFun : (X → Y) → Database X Y) * uniformColumn X Y =
       compressAll X Y * basisMatrix fun _ : Unit ↦ (Database.empty : Database X Y) := by
   ext D u
@@ -410,11 +408,11 @@ theorem outcomeLawWith_purifiedRuntime {γ : Type*} [MeasurableSpace γ] (I : L.
     (x : QuantumComp L (qromSpec X Y) W A) (ρ : SubState A) (f : (Σ u, W u) → γ) :
     (purifiedRuntime X Y).evalDistMap I x ρ f = qromEvalDistMap I x ρ fun _ ↦ f := by
   refine Measure.ext fun s hs ↦ ?_
-  rw [qromEvalDistMap_eq_sum, Measure.smul_apply, Measure.coe_finsetSum, Finset.sum_apply,
+  rw [qromEvalDistMap_eq_sum, smul_apply, FunLike.coe_sum, Finset.sum_apply,
     smul_eq_mul, QuantumRuntime.evalDistMap_apply _ _ _ _ _ hs]
   simp only [QuantumRuntime.evalDistMap_apply _ _ _ _ _ hs,
     ofReal_trace_jointPost_purifiedRuntime, Finset.sum_mul, mul_assoc]
-  rw [Summable.tsum_finsetSum fun _ _ ↦ ENNReal.summable, Finset.mul_sum]
+  rw [Summable.tsum_finsetSum fun _ _ ↦ CompleteLattice.summable, Finset.mul_sum]
   simp only [ENNReal.tsum_mul_left]
 
 end purifiedQromRuntime

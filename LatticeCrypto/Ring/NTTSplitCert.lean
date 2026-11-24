@@ -301,8 +301,8 @@ theorem eq_of_X_sq_sub_C_dvd {γ a0 a1 b0 b1 : R}
   have h0 : C (a1 - b1) * X + C (a0 - b0) = 0 := by
     by_contra hne
     exact (monic_X_pow_sub_C γ (by norm_num : 2 ≠ 0)).not_dvd_of_degree_lt hne hdeg h
-  have hc0 := congrArg (coeff · 0) h0
-  have hc1 := congrArg (coeff · 1) h0
+  have hc0 := congrArg (fun f : R[X] => f.coeff 0) h0
+  have hc1 := congrArg (fun f : R[X] => f.coeff 1) h0
   simp only [coeff_add, coeff_C_mul_X, coeff_C, coeff_zero] at hc0 hc1
   refine ⟨?_, ?_⟩
   · simpa [sub_eq_zero] using hc0

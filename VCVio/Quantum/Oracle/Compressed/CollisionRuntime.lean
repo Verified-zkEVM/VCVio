@@ -85,8 +85,8 @@ theorem coherentBlocks_database (A : Matrix D D ℂ) :
   ext ⟨⟨p, a⟩, d⟩ ⟨⟨p', a'⟩, d'⟩
   by_cases h : p = p'
   · subst p'
-    simp [coherentBlocks, blockDiagonal'_apply_eq, one_apply]
-  · simp [coherentBlocks, blockDiagonal'_apply_ne _ _ _ h, one_apply, h]
+    simp [coherentBlocks, blockDiagonal'_apply_eq, Matrix.one_apply]
+  · simp [coherentBlocks, blockDiagonal'_apply_ne _ _ _ h, h]
 
 /-- The coherent unitary is the coherent assembly of the individual port unitaries. -/
 theorem coherentBlocks_unitary (E : EmulatedOracle P In) :
@@ -224,7 +224,7 @@ theorem tsum_queryWeight_selectedMass (E : EmulatedOracle P In) {L : LocalSig}
     funext i σ
     exact (tsum_fintype _).symm
   simp_rw [hw]
-  rw [ENNReal.tsum_comm, tsum_fintype]
+  rw [tsum_comm, tsum_fintype]
   apply Finset.sum_congr rfl
   intro p _
   cases hp : selected p
@@ -256,7 +256,7 @@ theorem sum_queryWeight_selectedMass_le (E : EmulatedOracle P In) {L : LocalSig}
       E.coherent.toRuntime.queryWeight I (fun _ σ ↦ E.selectedMass selected σ) x ρ n) ≤
       E.selectedTotalMass I selected x ρ := by
     rw [← E.tsum_queryWeight_selectedMass I selected x ρ]
-    exact ENNReal.sum_le_tsum _
+    exact sum_le_tsum _
   exact le_min hs (hs.trans hm)
 
 /-- Portwise squared operator bounds lift to coherent selected mass on a supported input.

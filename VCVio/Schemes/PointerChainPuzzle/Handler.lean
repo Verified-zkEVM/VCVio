@@ -692,7 +692,17 @@ variable [DecidableEq S] [DecidableEq L] [DecidableEq Salt] [DecidableEq Ctx]
   [SampleableType S] [SampleableType L] {Out : Type}
   (adv : TimeLockPuzzle.TwoPhaseAdversary unifSpec (oracleSpec n S L Salt Ctx) (Puzzle n S L Salt)
     Out)
-  (m : ℕ) (mkCtx : Salt → Ctx) (initAcc : Ctx → S) [NeZero n] [AddCommGroup L]
+
+/-- The online phase run in the random oracle model from a cache `c` is the lazy random oracle
+answering each round point by point. -/
+lemma onlineRun_eq_map_run (σ : adv.State) (P : Puzzle n S L Salt) (key : S)
+    (c : (oracleSpec n S L Salt Ctx).QueryCache) :
+    onlineRun adv σ P key c = (fun z => (z.1, key)) <$>
+      (simulateQ (unifFwdImpl (oracleSpec n S L Salt Ctx) +
+        QueryImpl.batch (oracleSpec n S L Salt Ctx).randomOracle) (adv.online σ P)).run c := by
+  simp [onlineRun, OracleSpec.simulateQ_romImpl_simulateQ_unbatch, StateT.run'_eq]
+
+variable (m : ℕ) (mkCtx : Salt → Ctx) (initAcc : Ctx → S) [NeZero n] [AddCommGroup L]
 
 /-- The online phase of the ideal experiment after the seed `s`, for an online phase with outputs
 of any type: the online phase of the adversary runs under the ideal handler for the puzzle and the
@@ -711,16 +721,6 @@ preprocessing phase (`seedOf`), then run the online phase under the ideal handle
 @[expose]
 def idealOutcomeExperiment [SampleableType Salt] : ProbComp (IdealOutcome Out S) :=
   seedOf adv.preprocess m >>= idealOutcomeRest adv m mkCtx initAcc
-
-omit [NeZero n] [AddCommGroup L] in
-/-- The online phase run in the random oracle model from a cache `c` is the lazy random oracle
-answering each round point by point. -/
-lemma onlineRun_eq_map_run (σ : adv.State) (P : Puzzle n S L Salt) (key : S)
-    (c : (oracleSpec n S L Salt Ctx).QueryCache) :
-    onlineRun adv σ P key c = (fun z => (z.1, key)) <$>
-      (simulateQ (unifFwdImpl (oracleSpec n S L Salt Ctx) +
-        QueryImpl.batch (oracleSpec n S L Salt Ctx).randomOracle) (adv.online σ P)).run c := by
-  simp [onlineRun, OracleSpec.simulateQ_romImpl_simulateQ_unbatch, StateT.run'_eq]
 
 /-- **Until Bad, after the seed, for any event.** For a preprocessing cache `c`, a puzzle `P` and
 labels `ℓ`, an event of the output of the online phase and the key label holds from the programmed
@@ -790,7 +790,19 @@ section Experiment
 variable [DecidableEq S] [DecidableEq L] [DecidableEq Salt] [DecidableEq Ctx]
   [SampleableType S] [SampleableType L]
   (adv : TimeLockPuzzle.Adversary (oracleSpec n S L Salt Ctx) (Puzzle n S L Salt) S)
-  (m : ℕ) (mkCtx : Salt → Ctx) (initAcc : Ctx → S) [NeZero n] [AddCommGroup L]
+
+/-- Winning in the online phase of the programmed experiment, from a cache `c`, is the event that
+the lazy random oracle answering each round point by point leads the online phase to `key`. -/
+lemma prEvent_onlineWin (σ : adv.State) (P : Puzzle n S L Salt) (key : S)
+    (c : (oracleSpec n S L Salt Ctx).QueryCache) :
+    Pr{let b ← onlineWin adv σ P key c}[b = true] =
+      Pr{let z ← (simulateQ (unifFwdImpl (oracleSpec n S L Salt Ctx) +
+          QueryImpl.batch (oracleSpec n S L Salt Ctx).randomOracle) (adv.online σ P)).run c}[
+        z.1 = key] := by
+  rw [onlineWin, onlineRun_eq_map_run, Functor.map_map, prEvent_map]
+  simp only [decide_eq_true_eq]
+
+variable (m : ℕ) (mkCtx : Salt → Ctx) (initAcc : Ctx → S) [NeZero n] [AddCommGroup L]
 
 /-- The online phase of the ideal experiment after the seed `s`, summarized
 (`IdealOutcome.toResult` of `idealOutcomeRest`): the online phase of the adversary runs under the
@@ -813,18 +825,6 @@ theorem idealExperiment_eq_map_toResult [SampleableType Salt] :
       IdealOutcome.toResult <$> idealOutcomeExperiment adv m mkCtx initAcc := by
   rw [idealOutcomeExperiment, map_bind]
   rfl
-
-omit [NeZero n] [AddCommGroup L] in
-/-- Winning in the online phase of the programmed experiment, from a cache `c`, is the event that
-the lazy random oracle answering each round point by point leads the online phase to `key`. -/
-lemma prEvent_onlineWin (σ : adv.State) (P : Puzzle n S L Salt) (key : S)
-    (c : (oracleSpec n S L Salt Ctx).QueryCache) :
-    Pr{let b ← onlineWin adv σ P key c}[b = true] =
-      Pr{let z ← (simulateQ (unifFwdImpl (oracleSpec n S L Salt Ctx) +
-          QueryImpl.batch (oracleSpec n S L Salt Ctx).randomOracle) (adv.online σ P)).run c}[
-        z.1 = key] := by
-  rw [onlineWin, onlineRun_eq_map_run, Functor.map_map, prEvent_map]
-  simp only [decide_eq_true_eq]
 
 /-- **Until Bad, after the seed.** For a preprocessing cache `c`, a puzzle `P` and labels `ℓ`, the
 online phase wins from the programmed cache with probability at most that of winning, online Bad
