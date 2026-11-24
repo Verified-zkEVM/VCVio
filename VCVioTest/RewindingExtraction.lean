@@ -51,14 +51,14 @@ response to the challenge. -/
   fun j => t.leaf fun _ => j
 
 /-- The Σ-protocol's extractor on the transcripts at the two leaves. -/
-@[expose] def sigmaExt (σ : SigmaProtocol Stmt Wit Commit St Chal Resp rel)
+@[expose] def sigmaExt (σ : SigmaProtocol ProbComp Stmt Wit Commit St Chal Resp rel)
     (t : VecTree (chals Chal) two) (ts : Fin 2 → Commit × Resp) : ProbComp Wit :=
   σ.extract (leafPoints t 0 0) (ts 0).2 (leafPoints t 1 0) (ts 1).2
 
 /-- The extractor: the threshold finder with two branches against verdicts of complete reruns,
 then recovery of the two transcripts and the Σ-protocol's extractor. -/
 @[expose] def sigmaRecover [SampleableType Chal] [DecidableEq Chal]
-    (σ : SigmaProtocol Stmt Wit Commit St Chal Resp rel) (x : Stmt) :
+    (σ : SigmaProtocol ProbComp Stmt Wit Commit St Chal Resp rel) (x : Stmt) :
     OracleComp (unifSpec + rerunSpec ((i : Fin 1) → chals Chal i) (Commit × Resp)) (Option Wit) :=
   recover (fun c t => σ.verify x t.1 (c 0) t.2) (thresholdFinder (chals Chal) two) leafPoints
     (sigmaExt σ)
@@ -78,7 +78,8 @@ theorem leafPoints_eq_siblings (t : VecTree (chals Chal) two) (j : Fin 2) :
 /-- The two transcripts at the leaves of a good tree share the commitment and accept at distinct
 challenges, so the Σ-protocol's extractor returns a valid witness. -/
 theorem sigmaExt_valid [Finite Chal]
-    (σ : SigmaProtocol Stmt Wit Commit St Chal Resp rel) (x : Stmt) (hss : σ.SpeciallySoundAt x)
+    (σ : SigmaProtocol ProbComp Stmt Wit Commit St Chal Resp rel) (x : Stmt)
+    (hss : σ.SpeciallySoundAt x)
     (commit : ProbComp (Commit × St)) (respond : St → Chal → ProbComp Resp)
     (F : ((i : Fin 1) → chals Chal i) → Commit × Resp)
     (hF : F ∈ support (fixedTape.eagerTable (proverRun commit respond)))
@@ -106,7 +107,7 @@ theorem sigmaExt_valid [Finite Chal]
 witness with probability at least the prover's acceptance probability, averaged over challenges,
 minus the threshold error, after at most four complete runs in expectation. -/
 theorem sigma_recover [Fintype Chal] [SampleableType Chal] [DecidableEq Chal]
-    (σ : SigmaProtocol Stmt Wit Commit St Chal Resp rel) (x : Stmt)
+    (σ : SigmaProtocol ProbComp Stmt Wit Commit St Chal Resp rel) (x : Stmt)
     (hss : σ.SpeciallySoundAt x) (hc : 2 ≤ Fintype.card Chal)
     (commit : ProbComp (Commit × St)) (respond : St → Chal → ProbComp Resp) :
     (∑ c, Pr{let t ← proverRun commit respond c}[σ.verify x t.1 (c 0) t.2 = true]) /
@@ -126,7 +127,7 @@ theorem sigma_recover [Fintype Chal] [SampleableType Chal] [DecidableEq Chal]
 
 /-- The extractor that recovers the two transcripts from a cache of the finder's runs. -/
 @[expose] def sigmaRecoverCached [SampleableType Chal] [DecidableEq Chal]
-    (σ : SigmaProtocol Stmt Wit Commit St Chal Resp rel) (x : Stmt) :
+    (σ : SigmaProtocol ProbComp Stmt Wit Commit St Chal Resp rel) (x : Stmt) :
     OracleComp (unifSpec + rerunSpec ((i : Fin 1) → chals Chal i) (Commit × Resp)) (Option Wit) :=
   recoverCached (fun c t => σ.verify x t.1 (c 0) t.2) (thresholdFinder (chals Chal) two)
     leafPoints (sigmaExt σ)
@@ -135,7 +136,7 @@ theorem sigma_recover [Fintype Chal] [SampleableType Chal] [DecidableEq Chal]
 a valid witness with the same probability as `sigma_recover`, after at most two complete runs in
 expectation: the finder's own. -/
 theorem sigma_recoverCached [Fintype Chal] [SampleableType Chal] [DecidableEq Chal]
-    (σ : SigmaProtocol Stmt Wit Commit St Chal Resp rel) (x : Stmt)
+    (σ : SigmaProtocol ProbComp Stmt Wit Commit St Chal Resp rel) (x : Stmt)
     (hss : σ.SpeciallySoundAt x) (hc : 2 ≤ Fintype.card Chal)
     (commit : ProbComp (Commit × St)) (respond : St → Chal → ProbComp Resp) :
     (∑ c, Pr{let t ← proverRun commit respond c}[σ.verify x t.1 (c 0) t.2 = true]) /
