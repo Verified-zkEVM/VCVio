@@ -18,10 +18,10 @@ public import VCVio.OracleComp.ProbCompLift
 
 Definition 14 of ePrint 2025/055 (printed page 17) fixes every public parameter, message and
 epoch and samples only the randomness. `ErrorAtMost` includes losslessness of that sampler.
-`failureMass` alone records returned encoding failure; `FirstSuccess.missingMass` separately
-records sampler divergence. The Boolean observation maps a returned randomizer to whether its
-attempt fails, preserving missing mass. `UniformSampler` and `UniformErrorAtMost` state the
-finite uniform specialization without imposing finiteness on `IncomparableEncoding`.
+`failureMass` records only returned encoding failure; `FirstSuccess.missingMass` separately
+records sampler divergence. Both one-draw masses are the `FirstSuccess` masses of `enc.attempt`.
+`UniformSampler` and `UniformErrorAtMost` state the finite uniform specialization without
+imposing finiteness on `IncomparableEncoding`.
 -/
 
 public section
@@ -54,27 +54,17 @@ theorem uniformSampler_uniformSample (α : Type) [Fintype α] [SampleableType α
     rw [ProbCompRuntime.probComp_evalDist, ← prEvent_eq_evalDist_map]
     exact SampleableType.prEvent_uniformSample_eq_singleton x
 
-/-- A returned randomizer is observed as encoding failure exactly when no word is returned. -/
-@[expose] def failed (enc : IncomparableEncoding PP M R E n radix) (pp : PP) (msg : M) (ep : E)
-    (r : R) : Bool := (enc.value pp msg r ep).isNone
-
-/-- The measure of the encoding-failure indicator after interpreting the randomizer sampler.
-`true` denotes returned encoding failure and `false` denotes a returned codeword. Mapping with
-`<$>` classifies returned randomizers; `𝒟` converts the resulting subdistribution to a measure.
-Missing sampler mass remains missing, independently of the returned encoding-failure mass. -/
-@[expose] noncomputable def failureIndicatorDist (enc : IncomparableEncoding PP M R E n radix)
-    (runtime : ProbCompRuntime m) (sample : m R) (pp : PP) (msg : M) (ep : E) :
-    MeasureTheory.Measure Bool := runtime.evalDist (enc.failed pp msg ep <$> sample)
-
-/-- The probability of returned encoding failure, before any conditioning on termination. -/
+/-- The probability that one draw from `sample` fails to encode. This is
+`FirstSuccess.failureMass` with acceptance function `enc.attempt`, so the `FirstSuccess` retry
+laws apply to it directly. Missing sampler mass is not counted as failure. -/
 @[expose] noncomputable def failureMass (enc : IncomparableEncoding PP M R E n radix)
     (runtime : ProbCompRuntime m) (sample : m R) (pp : PP) (msg : M) (ep : E) : ℝ≥0∞ :=
-  enc.failureIndicatorDist runtime sample pp msg ep {true}
+  VCVio.Algorithms.FirstSuccess.failureMass runtime sample (enc.attempt pp msg ep)
 
-/-- The probability of successful encoding from the same unnormalized observation. -/
+/-- The probability that one draw from `sample` encodes successfully. -/
 @[expose] noncomputable def successMass (enc : IncomparableEncoding PP M R E n radix)
     (runtime : ProbCompRuntime m) (sample : m R) (pp : PP) (msg : M) (ep : E) : ℝ≥0∞ :=
-  enc.failureIndicatorDist runtime sample pp msg ep {false}
+  VCVio.Algorithms.FirstSuccess.successMass runtime sample (enc.attempt pp msg ep)
 
 /-- Definition 14's pointwise error bound for a lossless explicit randomizer sampler. -/
 @[expose] def ErrorAtMost (enc : IncomparableEncoding PP M R E n radix)
@@ -87,32 +77,13 @@ Missing sampler mass remains missing, independently of the returned encoding-fai
     (runtime : ProbCompRuntime m) (sample : m R) (δ : ℝ≥0∞) : Prop :=
   UniformSampler runtime sample ∧ enc.ErrorAtMost runtime sample δ
 
-/-- The error measure agrees with the Boolean output probability of the observation. -/
+/-- One-draw failure mass is the probability that the drawn randomizer fails to encode. -/
 theorem failureMass_eq_probability (enc : IncomparableEncoding PP M R E n radix)
     (runtime : ProbCompRuntime m) (sample : m R) (pp : PP) (msg : M) (ep : E) :
     enc.failureMass runtime sample pp msg ep =
-      runtime.evalDist (enc.failed pp msg ep <$> sample) {true} := rfl
-
-/-- Returned error and successful encoding together retain precisely the returned sampler mass. -/
-theorem failureMass_add_successMass (enc : IncomparableEncoding PP M R E n radix)
-    (runtime : ProbCompRuntime m) (sample : m R) (pp : PP) (msg : M) (ep : E) :
-    enc.failureMass runtime sample pp msg ep + enc.successMass runtime sample pp msg ep =
-      1 - VCVio.Algorithms.FirstSuccess.missingMass runtime sample := by
-  change runtime.evalDist (enc.failed pp msg ep <$> sample) {true} +
-      runtime.evalDist (enc.failed pp msg ep <$> sample) {false} =
-    1 - (1 - runtime.evalDist ((fun _ => true) <$> sample) {true})
-  let : MeasurableSpace R := ⊤
-  rw [runtime.evalDist_map (enc.failed pp msg ep) Measurable.of_discrete sample,
-    MeasureTheory.Measure.apply_true_add_apply_false,
-    runtime.evalDist_map (fun _ : R => true) Measurable.of_discrete sample]
-  simp only [MeasureTheory.Measure.map_apply Measurable.of_discrete MeasurableSet.univ,
-    Set.preimage_univ,
-    MeasureTheory.Measure.map_apply Measurable.of_discrete (MeasurableSet.singleton true)]
-  have hpreimage : (fun _ : R => true) ⁻¹' ({true} : Set Bool) = Set.univ := by
-    ext
-    simp
-  rw [hpreimage]
-  rw [ENNReal.sub_sub_cancel ENNReal.one_ne_top (runtime.evalDist_apply_univ_le_one sample)]
+      runtime.evalDist ((fun r => (enc.encode pp msg r ep).isNone) <$> sample) {true} := by
+  simp only [failureMass, VCVio.Algorithms.FirstSuccess.failureMass,
+    VCVio.Algorithms.FirstSuccess.failureIndicatorDist, isNone_attempt]
 
 /-- Canonical pointwise failure bound, with only the encoding randomizer sampled. -/
 @[expose] def CanonicalErrorAtMost [SampleableType R]

@@ -140,7 +140,7 @@ example {PP M E : Type uι₁} {R : Type uQuery} {n radix : ℕ}
     (enc : IncomparableEncoding PP M R E n radix) (sample : target R) (pp : PP) (msg : M)
     (ep : E) (k : ℕ) :
     enc.retry sample pp msg ep (k + 1) =
-      sample >>= fun r => match enc.value pp msg r ep with
+      sample >>= fun r => match enc.encode pp msg r ep with
         | none => enc.retry sample pp msg ep k
         | some word => pure (some (word, r)) :=
   enc.retry_succ sample pp msg ep k

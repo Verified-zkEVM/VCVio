@@ -27,11 +27,6 @@ universe u
 
 variable {PP M E : Type*} {R : Type u} {n radix : ℕ} {m : Type u → Type*} [Monad m]
 
-/-- Classify one randomizer, retaining it alongside any successfully encoded word. -/
-@[expose] def attempt (enc : IncomparableEncoding PP M R E n radix)
-    (pp : PP) (msg : M) (ep : E) (r : R) : Option (Codeword n radix × R) :=
-  (enc.value pp msg r ep).map (fun word => (word, r))
-
 /-- Optional payload observation of bounded first-success encoding. -/
 @[expose] def retry (enc : IncomparableEncoding PP M R E n radix) (sample : m R)
     (pp : PP) (msg : M) (ep : E) (budget : ℕ) : m (Option (Codeword n radix × R)) :=
@@ -47,12 +42,12 @@ variable {PP M E : Type*} {R : Type u} {n radix : ℕ} {m : Type u → Type*} [M
 theorem retryIndexed_id_succ (enc : IncomparableEncoding PP M R E n radix)
     (pp : PP) (msg : M) (ep : E) (k : ℕ) (sample : Fin (k + 1) → Id R) :
     enc.retryIndexed pp msg ep (k + 1) sample =
-      match enc.value pp msg (sample 0) ep with
+      match enc.encode pp msg (sample 0) ep with
       | some word => FirstSuccess.Result.success (word, sample 0) 1 [sample 0]
       | none => (enc.retryIndexed pp msg ep k (fun i => sample i.succ)).prepend (sample 0) := by
   rw [retryIndexed, FirstSuccess.indexed_id_succ]
   unfold attempt
-  cases enc.value pp msg (sample 0) ep <;> rfl
+  cases enc.encode pp msg (sample 0) ep <;> rfl
 
 /-- Zero retries perform no draw and return exhaustion. -/
 theorem retry_zero (enc : IncomparableEncoding PP M R E n radix) (sample : m R)
@@ -62,14 +57,14 @@ theorem retry_zero (enc : IncomparableEncoding PP M R E n radix) (sample : m R)
 theorem retry_succ (enc : IncomparableEncoding PP M R E n radix) (sample : m R)
     (pp : PP) (msg : M) (ep : E) (k : ℕ) :
     enc.retry sample pp msg ep (k + 1) =
-      sample >>= fun r => match enc.value pp msg r ep with
+      sample >>= fun r => match enc.encode pp msg r ep with
         | none => enc.retry sample pp msg ep k
         | some word => pure (some (word, r)) := by
   rw [retry, FirstSuccess.runWith_succ]
   congr 1
   funext r
   unfold attempt
-  cases enc.value pp msg r ep <;> rfl
+  cases enc.encode pp msg r ep <;> rfl
 
 /-- One attempt returns the optional word paired with that attempt's randomizer. -/
 theorem retry_one (enc : IncomparableEncoding PP M R E n radix) (sample : m R)
@@ -79,7 +74,7 @@ theorem retry_one (enc : IncomparableEncoding PP M R E n radix) (sample : m R)
   congr 1
   funext r
   unfold attempt
-  cases enc.value pp msg r ep <;> rfl
+  cases enc.encode pp msg r ep <;> rfl
 
 /-- Fixed-sampler retries have exactly the optional-output observation of indexed retries. -/
 theorem retry_eq_indexed_constant [LawfulMonad m]
@@ -92,11 +87,11 @@ theorem retry_eq_indexed_constant [LawfulMonad m]
 namespace Retry
 
 /-- Every returned word retains a randomizer that actually encodes that word. -/
-theorem value_eq_some_of_mem_retry [LawfulMonad m] [MonadAttach m] [LawfulMonadAttach m]
+theorem encode_eq_some_of_mem_retry [LawfulMonad m] [MonadAttach m] [LawfulMonadAttach m]
     (enc : IncomparableEncoding PP M R E n radix) (sample : m R)
     (pp : PP) (msg : M) (ep : E) (k : ℕ) (word : Codeword n radix) (r : R)
     (hs : some (word, r) ∈ MonadAttach.support (enc.retry sample pp msg ep k)) :
-    enc.value pp msg r ep = some word := by
+    enc.encode pp msg r ep = some word := by
   induction k with
   | zero =>
     have heq := LawfulMonadAttach.eq_of_canReturn_pure hs
@@ -104,7 +99,7 @@ theorem value_eq_some_of_mem_retry [LawfulMonad m] [MonadAttach m] [LawfulMonadA
   | succ k ih =>
     rw [retry_succ] at hs
     obtain ⟨r', _, hs⟩ := LawfulMonadAttach.canReturn_bind_imp' hs
-    cases hv : enc.value pp msg r' ep with
+    cases hv : enc.encode pp msg r' ep with
     | none => exact ih (by simpa [hv] using hs)
     | some word' =>
       have hpure := LawfulMonadAttach.eq_of_canReturn_pure (by simpa [hv] using hs)

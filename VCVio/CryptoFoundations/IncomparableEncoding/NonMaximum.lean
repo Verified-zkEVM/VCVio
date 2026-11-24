@@ -24,7 +24,7 @@ variable {PP M R E : Type*} {n radix : ℕ}
 
 /-- Every emitted word has a coordinate strictly below the greatest digit. -/
 @[expose] def NoMaximumOutput (enc : IncomparableEncoding PP M R E n radix) : Prop :=
-  ∀ pp msg randomizer ep word, enc.value pp msg randomizer ep = some word →
+  ∀ pp msg randomizer ep word, enc.encode pp msg randomizer ep = some word →
     ∃ i : Fin n, (word i).val < radix - 1
 
 /-- Two distinct members of a global incomparable code exclude maximum emitted words. -/
@@ -33,7 +33,7 @@ theorem noMaximumOutput_of_two_codewords (enc : IncomparableEncoding PP M R E n 
     enc.NoMaximumOutput := by
   obtain ⟨x, y, hx, hy, hxy⟩ := htwo
   intro pp msg randomizer ep word hword
-  have hw : word ∈ enc.code := enc.mem_code_of_value_eq_some pp msg randomizer ep hword
+  have hw : word ∈ enc.code := enc.mem_code_of_encode_eq_some hword
   have hother : ∃ z : Codeword n radix, z ∈ enc.code ∧ word ≠ z := by
     by_cases h : word = x
     · exact ⟨y, hy, by simpa [h] using hxy⟩

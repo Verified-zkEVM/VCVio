@@ -46,27 +46,28 @@ theorem pair_incomparable : IncomparableCode ({first, second} : Set (Codeword 2 
 @[expose] def enc : IncomparableEncoding Bool Bool Bool Bool 2 2 where
   code := {first, second}
   incomparable := pair_incomparable
-  encode p _ r _ := if r then
-    if p then some ⟨second, by simp⟩ else some ⟨first, by simp⟩
-    else none
+  encode p _ r _ := if r then (if p then some second else some first) else none
+  mem_code_of_encode_eq_some := by
+    intro p _ r _ x h
+    cases r <;> cases p <;> simp_all [eq_comm]
 
-/-- Returned encoding failure remains `none` after observing its value. -/
-theorem failed_encoding : enc.value false true false true = none := by rfl
+/-- Randomizer `false` returns encoding failure. -/
+theorem failed_encoding : enc.encode false true false true = none := by rfl
 
 /-- Distinct inputs can produce the two distinct successful words. -/
 theorem distinct_successes :
-    enc.value false false true false = some first ∧
-    enc.value true true true true = some second := by exact ⟨rfl, rfl⟩
+    enc.encode false false true false = some first ∧
+    enc.encode true true true true = some second := by exact ⟨rfl, rfl⟩
 
 /-- The successful pair has strict coordinates in both directions. -/
 theorem successful_pair_incomparable : IncomparableWords first second := by
-  exact enc.incomparableWords_of_successes false true false true true true false true
-    distinct_successes.1 distinct_successes.2 first_ne_second
+  exact enc.incomparableWords_of_successes distinct_successes.1 distinct_successes.2
+    first_ne_second
 
 /-- Distinct messages can successfully encode to the identical value. -/
 theorem distinct_messages_same_value :
-    (false : Bool) ≠ true ∧ enc.value false false true false = some first ∧
-    enc.value false true true false = some first := by decide
+    (false : Bool) ≠ true ∧ enc.encode false false true false = some first ∧
+    enc.encode false true true false = some first := by decide
 
 /-- Identical successful output words are not incomparable. -/
 theorem identical_success_not_incomparable : ¬ IncomparableWords first first := by
@@ -79,6 +80,9 @@ theorem identical_success_not_incomparable : ¬ IncomparableWords first first :=
   code := ∅
   incomparable := by simp [IncomparableCode]
   encode _ _ _ _ := none
+  mem_code_of_encode_eq_some := by
+    intro _ _ _ _ _ h
+    cases h
 
 /-- Encodings with an empty code return failure even for a nonempty length and empty alphabet. -/
 theorem empty_code_failure : (emptyCode 1 0).encode () () () () = none := by rfl
@@ -92,18 +96,22 @@ theorem empty_code_failure : (emptyCode 1 0).encode () () () () = none := by rfl
   incomparable := by
     intro x hx y hy hne
     exact (hne (Subsingleton.elim _ _)).elim
-  encode _ _ _ _ := some ⟨emptyWord, by simp⟩
+  encode _ _ _ _ := some emptyWord
+  mem_code_of_encode_eq_some := by
+    intro _ _ _ _ _ h
+    cases h
+    rfl
 
 /-- The empty-word singleton returns a successful empty word. -/
 theorem zero_length_zero_radix_success :
-    emptyWordSuccess.value () () () () = some emptyWord := by rfl
+    emptyWordSuccess.encode () () () () = some emptyWord := by rfl
 
 /-- A nonempty word over an empty alphabet cannot be returned by any encoding. -/
 theorem positive_length_zero_radix_failure (enc : IncomparableEncoding Unit Unit Unit Unit 1 0) :
     enc.encode () () () () = none := by
   cases enc.encode () () () () with
   | none => rfl
-  | some x => exact Fin.elim0 (x.val 0)
+  | some x => exact Fin.elim0 (x 0)
 
 /-- Incomparability alone permits an emitted empty word and does not imply nonmaximum output. -/
 theorem empty_success_not_nonMaximum : ¬ emptyWordSuccess.NoMaximumOutput := by

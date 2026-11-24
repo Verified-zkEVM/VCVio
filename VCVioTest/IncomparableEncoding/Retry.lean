@@ -30,7 +30,10 @@ open IncomparableEncoding VCVio.Algorithms
   incomparable := by
     intro x hx y hy hne
     exact (hne ((Set.mem_singleton_iff.mp hx).trans (Set.mem_singleton_iff.mp hy).symm)).elim
-  encode _ _ r _ := if r then some ⟨word, by simp⟩ else none
+  encode _ _ r _ := if r then some word else none
+  mem_code_of_encode_eq_some := by
+    intro _ _ r _ x h
+    cases r <;> simp_all [eq_comm]
 
 /-- A stream sampler exposes precisely which draws are consumed. -/
 @[expose] def draw : StateM (List Bool) Bool := fun s =>
@@ -136,20 +139,22 @@ theorem abort_missing_mass :
 
 /-- Zero retries return exhaustion without evaluating the always-aborting sampler. -/
 theorem retry_zero_abort_missing_mass :
-    Retry.missingMass enc optionalRuntime (failure : OptionT ProbComp Bool) () () () 0 = 0 :=
-  Retry.missingMass_zero enc optionalRuntime optional_sampling_laws
-    (failure : OptionT ProbComp Bool) () () ()
+    FirstSuccess.missingMass optionalRuntime
+      (enc.retry (failure : OptionT ProbComp Bool) () () () 0) = 0 :=
+  FirstSuccess.missingMass_runWith_zero optionalRuntime optional_sampling_laws
+    (failure : OptionT ProbComp Bool) (enc.attempt () () ())
 
 /-- A nonempty retry budget preserves the missing mass of an always-aborting sampler. -/
 theorem retry_abort_missing_mass :
-    Retry.missingMass enc optionalRuntime (failure : OptionT ProbComp Bool) () () () 1 = 1 := by
-  rw [Retry.missingMass_eq_mul_sum enc optionalRuntime optional_sampling_laws]
+    FirstSuccess.missingMass optionalRuntime
+      (enc.retry (failure : OptionT ProbComp Bool) () () () 1) = 1 := by
+  rw [retry, FirstSuccess.missingMass_runWith_eq_mul_sum optionalRuntime optional_sampling_laws]
   simp [abort_missing_mass]
 
 /-- A singleton nonmaximum code satisfies the conditional output premise without two words. -/
 theorem singleton_nonMaximum : enc.NoMaximumOutput := by
   intro pp msg r ep result hresult
-  have hmem := enc.mem_code_of_value_eq_some pp msg r ep hresult
+  have hmem := enc.mem_code_of_encode_eq_some hresult
   have heq : result = word := by simpa [enc] using hmem
   subst result
   exact ⟨0, by decide⟩
@@ -162,14 +167,13 @@ theorem singleton_not_two :
   have hy' : y = word := by simpa [enc] using hy
   exact hne (hx'.trans hy'.symm)
 
-/-- Canonical randomizers have pointwise returned encoding failure at most one half. -/
-theorem canonical_half : enc.CanonicalErrorAtMost (2⁻¹) := by
-  intro pp msg ep
-  have hclass : enc.failed pp msg ep = fun r : Bool => !r := by
+/-- One canonical draw fails to encode with probability exactly one half. -/
+theorem canonical_failureMass (pp : Unit) (msg : Unit) (ep : Unit) :
+    enc.failureMass ProbCompRuntime.probComp ($ᵗ Bool) pp msg ep = 2⁻¹ := by
+  have hclass : (fun r : Bool => (enc.encode pp msg r ep).isNone) = fun r => !r := by
     funext r
     cases r <;> rfl
-  change ProbCompRuntime.probComp.evalDist (enc.failed pp msg ep <$> ($ᵗ Bool)) {true} ≤ 2⁻¹
-  rw [hclass, ProbCompRuntime.probComp_evalDist,
+  rw [failureMass_eq_probability, hclass, ProbCompRuntime.probComp_evalDist,
     evalDist_map _ Measurable.of_discrete,
     MeasureTheory.Measure.map_apply Measurable.of_discrete (MeasurableSet.singleton true)]
   have hpre : (fun r : Bool => !r) ⁻¹' ({true} : Set Bool) = {false} := by
@@ -178,13 +182,32 @@ theorem canonical_half : enc.CanonicalErrorAtMost (2⁻¹) := by
   rw [hpre]
   simp
 
+/-- Canonical randomizers have pointwise returned encoding failure at most one half. -/
+theorem canonical_half : enc.CanonicalErrorAtMost (2⁻¹) := fun pp msg ep =>
+  (canonical_failureMass pp msg ep).le
+
 /-- The uniform presentation is exactly the canonical pointwise error bound. -/
 theorem uniform_half : enc.UniformErrorAtMost ProbCompRuntime.probComp ($ᵗ Bool) (2⁻¹) :=
   (enc.uniformErrorAtMost_uniformSample_iff (2⁻¹)).2 canonical_half
 
 /-- Canonical pointwise error bounds retry exhaustion without an extra uniformity argument. -/
 theorem canonical_retry_bound (k : ℕ) :
-    Retry.failureMass enc ProbCompRuntime.probComp ($ᵗ Bool) () () () k ≤ (2⁻¹) ^ k :=
-  Retry.failureMass_uniformSample_le_pow enc (2⁻¹) canonical_half () () () k
+    Retry.exhaustionMass enc ProbCompRuntime.probComp ($ᵗ Bool) () () () k ≤ (2⁻¹) ^ k := by
+  rw [Retry.exhaustionMass_eq_pow enc _ ProbCompRuntime.samplingLaws_probComp]
+  exact pow_le_pow_left' (canonical_half () () ()) k
+
+/-- Two canonical retries are both exhausted with probability exactly one quarter. -/
+theorem canonical_exhaustion_two :
+    Retry.exhaustionMass enc ProbCompRuntime.probComp ($ᵗ Bool) () () () 2 = 4⁻¹ := by
+  rw [Retry.exhaustionMass_eq_pow enc _ ProbCompRuntime.samplingLaws_probComp,
+    canonical_failureMass, ← ENNReal.inv_pow]
+  norm_num
+
+/-- Two canonical retries succeed with probability exactly three quarters. -/
+theorem canonical_success_two :
+    Retry.successMass enc ProbCompRuntime.probComp ($ᵗ Bool) () () () 2 = 1 - 4⁻¹ := by
+  rw [Retry.successMass_eq_one_sub_pow enc _ ProbCompRuntime.samplingLaws_probComp _
+    (uniformSampler_uniformSample Bool).1, canonical_failureMass, ← ENNReal.inv_pow]
+  norm_num
 
 end VCVioTest.IncomparableEncodingRetry
