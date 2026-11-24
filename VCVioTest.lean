@@ -61,6 +61,9 @@ public import VCVioTest.FirstSuccess
 public import VCVioTest.FischlinExpectedCost
 public import VCVioTest.FischlinExtraction
 public import VCVioTest.ForkBounds
+public import VCVioTest.Forking.CoordSpecialSoundness
+public import VCVioTest.Forking.CoordinateFinder
+public import VCVioTest.Forking.CoordinateFork
 public import VCVioTest.Forking.WithoutReplacement
 public import VCVioTest.Foundations
 public import VCVioTest.GrindFailFast
