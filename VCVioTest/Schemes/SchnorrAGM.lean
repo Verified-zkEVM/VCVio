@@ -11,7 +11,8 @@ public import Mathlib.Algebra.Field.ZMod
 /-! # Algebraic Schnorr fixtures over the field of order 101
 
 A certified adversary requests a signature on `false` and hashes the zero commitment on
-`true`. It computes the response using the transparent scalar model of the test group.
+`true`. It computes the response using the transparent scalar model of the test group, so it
+forges on every run, and the theorem bounds the named reduction's success below by `97 / 101`.
 Sampling uses `Fin 101`, avoiding enumeration during module initialization.
 -/
 
@@ -105,33 +106,75 @@ theorem oneHashOneSign_raw (pk : K) :
   intro sig
   rfl
 
-/-- The averaged extractor bound specializes to the explicit one-hash, one-sign fixture. -/
-theorem oneHashOneSign_extraction_bound :
-    Pr{let x ← $ᵗ K; let p ← (Schnorr.AGM.Reduction.run 1
-      (x • (1 : K)) oneHashOneSign)}[p.1.1 = true] ≤
-      Pr{let b ← (DiffieHellman.dlogExperiment (1 : K)
-        (Schnorr.agmReduction 1 oneHashOneSign))}[b = true] + (2 / 101 : ℝ≥0∞) := by
-  have h := run_success_le_dlogExperiment (1 : K)
-    (by intro a b hab; simpa using hab) oneHashOneSign 1 oneHashOneSign_hash_bound
-  simpa [div_eq_mul_inv, show (1 + 1 : ℝ≥0∞) = 2 from by norm_num] using h
+/-- With no signing request the fixture exceeds the signing budget `0`. -/
+theorem not_oneHashOneSign_sign_bound_zero :
+    ¬ IsQueryBoundP (oneHashOneSign.main (initial 1 0)) (fun q => signRequest q = true) 0 := by
+  simp [oneHashOneSign, isQueryBoundP_query_bind_iff, signRequest]
 
-/-- The original Schnorr EUF-CMA theorem instantiated with one signing and one hash request. -/
-theorem oneHashOneSign_security :
-    SignatureAlg.unforgeableAdvantage
-        (FiatShamir.runtime (Commit := K) (Chal := K) Bool)
-        (oneHashOneSign.toUnforgeableAdversary 1) ≤
-      Pr{let b ← (DiffieHellman.dlogExperiment (1 : K)
-        (Schnorr.agmReduction 1 oneHashOneSign))}[b = true] +
-        (2 / 101 : ℝ≥0∞) + (2 / 101 : ℝ≥0∞) := by
-  have hg : Function.Bijective (fun x : K => x • (1 : K)) := by
-    constructor
-    · intro a b hab
-      simpa using hab
-    · intro b
-      exact ⟨b, by simp⟩
-  simpa [show (1 + 1 : ℝ≥0∞) = 2 from by norm_num] using
-    Schnorr.unforgeableAdvantage_le_of_algebraic (1 : K) hg
-    oneHashOneSign 1 1 oneHashOneSign_sign_bound oneHashOneSign_hash_bound
+/-- The fixture exceeds the hash budget `0`. -/
+theorem not_oneHashOneSign_hash_bound_zero :
+    ¬ IsQueryBoundP (oneHashOneSign.main (initial 1 0)) (fun q => hashRequest q = true) 0 := by
+  simp only [oneHashOneSign, zeroPoint, Explained.ofVectors, List.getD_eq_getElem?_getD,
+    List.map_cons, List.ofFn_const, List.map_nil, bind_pure_comp, hashRequest,
+    isQueryBoundP_query_bind_iff, Bool.false_eq_true, not_false_eq_true, lt_self_iff_false,
+    or_false, ↓reduceIte, isQueryBoundP_map_iff, isQueryBoundP_query_iff, imp_false,
+    not_true_eq_false, true_and, not_forall, exists_const_iff, and_true]
+  exact ⟨⟨(0 : K), fun _ => []⟩⟩
+
+/-- The fixture forges on every run: `true` is never signed, and the response `c * pk` verifies
+against the zero commitment because the generator is one. -/
+theorem unforgeableAdvantage_oneHashOneSign :
+    SignatureAlg.unforgeableAdvantage (FiatShamir.runtime (Commit := K) (Chal := K) Bool)
+      (oneHashOneSign.toUnforgeableAdversary 1) = 1 := by
+  unfold SignatureAlg.unforgeableAdvantage
+  rw [FiatShamir.runtime_eq_runtimeWithCache_empty, FiatShamir.runtimeWithCache_evalDist,
+    show ({true} : Set Bool) = {b | b = true} by ext; simp]
+  convert (evalDist_apply_setOf_simulateQ_romImpl_run'_eq_one_iff
+    (SignatureAlg.unforgeableExperiment (oneHashOneSign.toUnforgeableAdversary 1)) ∅
+    (fun b => b = true)).2 ?_
+  intro f _
+  rw [OracleComp.evalDist_apply_setOf_eq_one_iff_forall_mem_support]
+  intro b hb
+  simp only [SignatureAlg.unforgeableExperiment, oneHashOneSign_raw] at hb
+  simp only [Schnorr.signature, FiatShamir, smul_eq_mul, DiffieHellman.dlogGenerable, mul_one,
+    bind_pure_comp, liftM_map, Schnorr.sigma, HasQuery.instOfMonadLift_query, liftM_pure, map_pure,
+    bind_map_left, add_apply_inr, add_apply_inl, SignatureAlg.runWithSigningOracle_def,
+    SignatureAlg.signingOracle, QueryImpl.passthrough_add, simulateQ_bind, simulateQ_query,
+    OracleQuery.input_query, OracleQuery.cont_query, QueryImpl.add_apply_inr,
+    QueryImpl.withLogging_apply, map_bind, Functor.map_map, id_eq, simulateQ_map,
+    QueryImpl.add_apply_inl, PFunctor.Handler.liftTarget_apply, ofPFunctor_toPFunctor,
+    QueryImpl.id'_apply, id_map, bind_assoc, WriterT.run_bind, WriterT.run_liftM, List.empty_eq,
+    WriterT.run_tell, WriterT.run_map, List.append_nil, pure_bind, List.nil_append, ne_eq,
+    Bool.false_eq_true, not_false_eq_true, QueryLog.wasQueried_cons_of_ne,
+    QueryLog.wasQueried_nil, Bool.not_false, zero_add, mul_eq_mul_right_iff, Bool.decide_or,
+    Bool.true_and, MonadAttach.support_bind, MonadAttach.mem_support, MonadAttach.support_map,
+    Set.mem_iUnion, Set.mem_image, exists_prop, exists_and_right] at hb
+  obtain ⟨sk, -, r, -, -, i, hi, x, hx, rfl⟩ := hb
+  have hq : simulateQ (unifFwdAnswerImpl f) (liftM ((Bool × K →ₒ K).query (true, 0))) =
+      (pure (f (true, 0)) : ProbComp K) := by
+    change simulateQ (unifSpec.passthrough + f.liftTarget ProbComp)
+      (liftM ((Bool × K →ₒ K).query (true, 0))) = _
+    exact QueryImpl.simulateQ_add_liftM_query_right
+      (unifSpec.passthrough : QueryImpl unifSpec ProbComp) (f.liftTarget ProbComp) (true, 0)
+  rw [hq] at hx
+  change MonadAttach.CanReturn (pure (f (true, 0)) : ProbComp K) i at hi
+  simp only [MonadAttach.canReturn_pure_iff] at hi hx
+  subst hi hx
+  simp
+
+/-- The bound is not vacuous here: the named reduction solves discrete log with probability at
+least `97 / 101`. -/
+theorem one_le_prEvent_agmReduction_add :
+    1 ≤ Pr{let b ← (DiffieHellman.dlogExperiment (1 : K)
+      (Schnorr.agmReduction 1 oneHashOneSign))}[b = true] + 4 / 101 := by
+  have hg : Function.Bijective (fun x : K => x • (1 : K)) :=
+    ⟨fun a b hab => by simpa using hab, fun b => ⟨b, by simp⟩⟩
+  have h := Schnorr.unforgeableAdvantage_le_of_algebraic (1 : K) hg oneHashOneSign 1 1
+    oneHashOneSign_sign_bound oneHashOneSign_hash_bound
+  rw [unforgeableAdvantage_oneHashOneSign] at h
+  refine h.trans (le_of_eq ?_)
+  rw [ZMod.card, add_assoc, ENNReal.div_add_div_same]
+  norm_num
 
 private theorem oneHashOneSign_run (pk : K) :
     run 1 pk oneHashOneSign = (do
