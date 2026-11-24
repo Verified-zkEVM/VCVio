@@ -62,6 +62,15 @@ carries both logs as a product. -/
     let ((a, w₁), w₂) ← (impl t).run.run
     pure (a, (w₁, w₂))
 
+/-- Read a handler over `StateT σ (WriterT ω m)` as a handler over the product state `σ × ω`:
+each query appends the log it writes to the second component. This is the state-over-writer
+analogue of `flattenStateT`. -/
+@[expose] def flattenStateTWriterT {ι : Type _} {spec : OracleSpec ι}
+    {m : Type u → Type v} [Functor m] {σ ω : Type u} [Append ω]
+    (impl : QueryImpl spec (StateT σ (WriterT ω m))) :
+    QueryImpl spec (StateT (σ × ω) m) := fun t =>
+  StateT.mk fun p => (fun z => (z.1.1, (z.1.2, p.2 ++ z.2))) <$> ((impl t).run p.1).run
+
 end QueryImpl
 
 namespace OracleComp
@@ -119,5 +128,37 @@ theorem simulateQ_WriterT_compose {ι₁ ι₂ : Type*} {spec₁ : OracleSpec ι
   | query_bind t f ih =>
     simp only [simulateQ_bind, WriterT.run_bind', simulateQ_spec_query, bridge t, simulateQ_map]
     exact bind_congr fun p => by rw [ih p.1]
+
+end OracleComp
+
+namespace OracleComp
+
+variable {ι : Type*} {spec : OracleSpec ι} {m : Type u → Type v} [Monad m] [LawfulMonad m]
+  {σ ω : Type u} [EmptyCollection ω] [Append ω] [LawfulAppend ω]
+
+/-- Running a handler over `StateT σ (WriterT ω m)` under its flattened handler from `(s, w₀)` is
+running it from `s` and appending its log to `w₀`. -/
+theorem simulateQ_flattenStateTWriterT_run (impl : QueryImpl spec (StateT σ (WriterT ω m)))
+    {α : Type u} (oa : OracleComp spec α) (s : σ) (w₀ : ω) :
+    (simulateQ impl.flattenStateTWriterT oa).run (s, w₀) =
+      (fun z : (α × σ) × ω => (z.1.1, (z.1.2, w₀ ++ z.2))) <$> ((simulateQ impl oa).run s).run := by
+  induction oa using OracleComp.inductionOn generalizing s w₀ with
+  | pure x => simp
+  | query_bind t k ih =>
+    simp only [simulateQ_bind, simulateQ_spec_query, StateT.run_bind, WriterT.run_bind',
+      map_bind, QueryImpl.flattenStateTWriterT, StateT.run_mk, bind_map_left]
+    refine bind_congr fun z => ?_
+    rw [ih z.1.1 z.1.2 (w₀ ++ z.2)]
+    simp [Functor.map_map, LawfulAppend.append_assoc]
+
+/-- The run of a handler over `StateT σ (WriterT ω m)` from the empty log, read off the run of its
+flattened handler. -/
+theorem run_simulateQ_eq_map_flattenStateTWriterT
+    (impl : QueryImpl spec (StateT σ (WriterT ω m))) {α : Type u} (oa : OracleComp spec α)
+    (s : σ) :
+    ((simulateQ impl oa).run s).run =
+      (fun w => ((w.1, w.2.1), w.2.2)) <$> (simulateQ impl.flattenStateTWriterT oa).run (s, ∅) := by
+  rw [simulateQ_flattenStateTWriterT_run, Functor.map_map]
+  simp
 
 end OracleComp

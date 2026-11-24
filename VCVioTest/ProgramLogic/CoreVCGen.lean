@@ -56,6 +56,14 @@ open scoped OracleComp.Lower
 
 variable {ι : Type} {spec : OracleSpec ι} [OracleSpec.AnswerMeasure spec]
 
+/-- Integrate the continuations of a query, even when its eventual results have no chosen
+measurable space. -/
+example {α : Type} (t : spec.Domain) (k : spec.Range t → OracleComp spec α) (post : α → ℝ≥0∞) :
+    OracleComp.ProgramLogic.wp (queryBind t k) post =
+      ∫⁻ u, OracleComp.ProgramLogic.wp (k u) post ∂OracleSpec.AnswerMeasure.toMeasure t := by
+  simp only [wp_eq_wpFold]
+  exact PFunctor.FreeM.wpFold_liftBind (P := spec.toPFunctor) _ t k post
+
 example (t : spec.Domain) (p : spec.Range t → Prop) :
     ⦃ ∫⁻ u, propInd (p u) ∂OracleSpec.AnswerMeasure.toMeasure t ⦄
       (do let u ← (query t : OracleComp spec _); pure u)
