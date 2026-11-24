@@ -107,17 +107,40 @@ structure Adversary (spec : OracleSpec ι) (PK E M S : Type) where
   /-- The program receives the public key; its scheme instance fixes public configuration. -/
   forge : PK → OracleComp (spec + signingSpec E M S) (Forgery E M S)
 
-/-- Reject duplicate epochs without invoking signing; returned failure records and continues. -/
-@[expose] def signingOracle [DecidableEq E]
-    {m : Type → Type v} [Monad m]
-    (alg : SyncSignatureAlg m M PK SK S E) (sk : SK) :
+/-- Run a supplied signing callback only for an unused epoch, recording its optional result. -/
+@[expose] def signingKernelOracle [DecidableEq E]
+    {m : Type → Type v} [Monad m] (kernel : E → M → m (Option S)) :
     QueryImpl (signingSpec E M S) (StateT (History E M S) m) :=
   fun ⟨ep, msg⟩ history =>
     match history ep with
     | some _ => pure (none, history)
     | none => do
-      let answer ← alg.sign sk ep msg
+      let answer ← kernel ep msg
       pure (answer, record history ep msg answer)
+
+/-- A consumed epoch rejects before invoking the supplied signing callback. -/
+theorem signingKernelOracle_used [DecidableEq E]
+    {m : Type → Type v} [Monad m] (kernel : E → M → m (Option S))
+    (history : History E M S) (ep : E) (msg first : M) (answer : Option S)
+    (h : history ep = some (first, answer)) :
+    signingKernelOracle kernel (ep, msg) history = pure (none, history) := by
+  simp [signingKernelOracle, h]
+
+/-- A first request invokes the actual callback and records success or returned failure. -/
+theorem signingKernelOracle_unused [DecidableEq E]
+    {m : Type → Type v} [Monad m] (kernel : E → M → m (Option S))
+    (history : History E M S) (ep : E) (msg : M) (h : history ep = none) :
+    signingKernelOracle kernel (ep, msg) history = (do
+      let answer ← kernel ep msg
+      pure (answer, Function.update history ep (some (msg, answer)))) := by
+  simp [signingKernelOracle, record, h]
+
+/-- Reject duplicate epochs without invoking signing; returned failure records and continues. -/
+@[expose] def signingOracle [DecidableEq E]
+    {m : Type → Type v} [Monad m]
+    (alg : SyncSignatureAlg m M PK SK S E) (sk : SK) :
+    QueryImpl (signingSpec E M S) (StateT (History E M S) m) :=
+  signingKernelOracle (alg.sign sk)
 
 /-- The signing oracle at a used epoch returns failure and the unchanged history. -/
 theorem signingOracle_used [DecidableEq E]
@@ -126,7 +149,7 @@ theorem signingOracle_used [DecidableEq E]
     (history : History E M S) (ep : E) (msg first : M) (answer : Option S)
     (h : history ep = some (first, answer)) :
     signingOracle alg sk (ep, msg) history = pure (none, history) := by
-  simp [signingOracle, h]
+  simp [signingOracle, signingKernelOracle, h]
 
 /-- The signing oracle at an unused epoch runs signing once and records its optional result. -/
 theorem signingOracle_unused [DecidableEq E]
@@ -136,26 +159,39 @@ theorem signingOracle_unused [DecidableEq E]
     signingOracle alg sk (ep, msg) history = (do
       let answer ← alg.sign sk ep msg
       pure (answer, Function.update history ep (some (msg, answer)))) := by
-  simp [signingOracle, record, h]
+  simp [signingOracle, signingKernelOracle, record, h]
 
 /-- Every issued signing request counts, including repeated epochs and returned failures. -/
 @[expose] def SigningQueryBound {ι : Type} {spec : OracleSpec ι} (qs : ℕ)
     (adv : Adversary spec PK E M S) : Prop :=
   ∀ pk, (adv.forge pk).IsQueryBoundP (fun q => q.isRight = true) qs
 
+/-- Forward ambient queries and execute the supplied signing callback with shared history. -/
+@[expose] def oraclesWithSigningKernel [DecidableEq E]
+    (kernel : E → M → OracleComp spec (Option S)) :
+    QueryImpl (spec + signingSpec E M S) (StateT (History E M S) (OracleComp spec)) :=
+  (HasQuery.toQueryImpl (spec := spec) (m := OracleComp spec)).liftTarget
+    (StateT (History E M S) (OracleComp spec)) + signingKernelOracle kernel
+
+/-- Run a program through the actual signing callback from an explicit first-request history. -/
+@[expose] def runWithSigningKernel [DecidableEq E]
+    (kernel : E → M → OracleComp spec (Option S))
+    {A : Type} (program : OracleComp (spec + signingSpec E M S) A)
+    (history : History E M S) : OracleComp spec (A × History E M S) :=
+  (simulateQ (oraclesWithSigningKernel kernel) program).run history
+
 /-- Forward ambient queries and answer signing requests with a persistent first-request history. -/
 @[expose] def oracles [DecidableEq E]
     (alg : SyncSignatureAlg (OracleComp spec) M PK SK S E) (sk : SK) :
     QueryImpl (spec + signingSpec E M S) (StateT (History E M S) (OracleComp spec)) :=
-  (HasQuery.toQueryImpl (spec := spec) (m := OracleComp spec)).liftTarget
-    (StateT (History E M S) (OracleComp spec)) + signingOracle alg sk
+  oraclesWithSigningKernel (alg.sign sk)
 
 /-- Run an ambient/signing program from an explicit first-request history. -/
 @[expose] def runWithSigningOracle [DecidableEq E]
     (alg : SyncSignatureAlg (OracleComp spec) M PK SK S E) (sk : SK)
     {A : Type} (program : OracleComp (spec + signingSpec E M S) A)
     (history : History E M S) : OracleComp spec (A × History E M S) :=
-  (simulateQ (oracles alg sk) program).run history
+  runWithSigningKernel (alg.sign sk) program history
 
 /-- Every successful first signing record satisfies the supplied output predicate. -/
 @[expose] def SuccessfulHistorySatisfies (P : E → M → S → Prop)
@@ -187,20 +223,20 @@ theorem SuccessfulHistorySatisfies.record [DecidableEq E] {P : E → M → S →
   · rw [record_used _ _ _ _ hfresh] at hentry
     exact h ep' msg' sig' hentry
 
-/-- The honest signing handler retains every successful-record support invariant. -/
-theorem signingOracle_preserves_successfulHistorySatisfies [DecidableEq E]
-    (alg : SyncSignatureAlg (OracleComp spec) M PK SK S E) (sk : SK)
+/-- Every returned success of the actual callback satisfies the retained history predicate. -/
+theorem signingKernelOracle_preserves_successfulHistorySatisfies [DecidableEq E]
+    (kernel : E → M → OracleComp spec (Option S))
     (P : E → M → S → Prop)
-    (hsign : ∀ ep msg sig, some sig ∈ support (alg.sign sk ep msg) → P ep msg sig)
+    (hsign : ∀ ep msg sig, some sig ∈ support (kernel ep msg) → P ep msg sig)
     (q : E × M) (history : History E M S) (hinv : SuccessfulHistorySatisfies P history)
     (out : Option S × History E M S)
-    (hout : out ∈ support ((signingOracle alg sk q).run history)) :
+    (hout : out ∈ support ((signingKernelOracle kernel q).run history)) :
     SuccessfulHistorySatisfies P out.2 := by
   rcases q with ⟨ep, msg⟩
-  change out ∈ support (signingOracle alg sk (ep, msg) history) at hout
+  change out ∈ support (signingKernelOracle kernel (ep, msg) history) at hout
   cases hused : history ep with
   | none =>
-    rw [signingOracle_unused _ _ _ _ _ hused, mem_support_bind_iff] at hout
+    rw [signingKernelOracle_unused _ _ _ _ hused, mem_support_bind_iff] at hout
     obtain ⟨answer, hanswer, hreturn⟩ := hout
     simp only [support_pure, Set.mem_singleton_iff] at hreturn
     subst out
@@ -208,11 +244,43 @@ theorem signingOracle_preserves_successfulHistorySatisfies [DecidableEq E]
       hsign ep msg sig (heq ▸ hanswer))
     simpa only [record_eq_update _ _ _ _ hused] using hrecord
   | some entry =>
-    rw [signingOracle_used _ _ _ _ _ entry.1 entry.2 hused, support_pure,
+    rw [signingKernelOracle_used _ _ _ _ entry.1 entry.2 hused, support_pure,
       Set.mem_singleton_iff] at hout
     exact hout ▸ hinv
 
-/-- Running the common handler retains predicates of all successful first signing records. -/
+/-- Running a callback handler retains full predicates of all successful first records. -/
+theorem runWithSigningKernel_preserves_successfulHistorySatisfies [DecidableEq E]
+    (kernel : E → M → OracleComp spec (Option S))
+    (P : E → M → S → Prop)
+    (hsign : ∀ ep msg sig, some sig ∈ support (kernel ep msg) → P ep msg sig)
+    {A : Type} (program : OracleComp (spec + signingSpec E M S) A)
+    (history : History E M S) (hinv : SuccessfulHistorySatisfies P history)
+    (out : A × History E M S) (hout : out ∈ support
+      (runWithSigningKernel kernel program history)) : SuccessfulHistorySatisfies P out.2 := by
+  apply OracleComp.simulateQ_run_preservesInv (oraclesWithSigningKernel kernel)
+    (SuccessfulHistorySatisfies P) ?_ program history hinv out hout
+  rintro (q | q) state hs result hresult
+  · simp only [oraclesWithSigningKernel, QueryImpl.add_apply_inl, QueryImpl.liftTarget_apply,
+      StateT.run_liftM, support_bind, Set.mem_iUnion, support_pure,
+      Set.mem_singleton_iff] at hresult
+    obtain ⟨answer, _, rfl⟩ := hresult
+    exact hs
+  · exact signingKernelOracle_preserves_successfulHistorySatisfies kernel P hsign q state hs
+      result hresult
+
+/-- The scheme signing handler retains every successful-record support invariant. -/
+theorem signingOracle_preserves_successfulHistorySatisfies [DecidableEq E]
+    (alg : SyncSignatureAlg (OracleComp spec) M PK SK S E) (sk : SK)
+    (P : E → M → S → Prop)
+    (hsign : ∀ ep msg sig, some sig ∈ support (alg.sign sk ep msg) → P ep msg sig)
+    (q : E × M) (history : History E M S) (hinv : SuccessfulHistorySatisfies P history)
+    (out : Option S × History E M S)
+    (hout : out ∈ support ((signingOracle alg sk q).run history)) :
+    SuccessfulHistorySatisfies P out.2 :=
+  signingKernelOracle_preserves_successfulHistorySatisfies (alg.sign sk) P hsign
+    q history hinv out hout
+
+/-- Running a scheme's actual signing callback retains full predicates of successful records. -/
 theorem runWithSigningOracle_preserves_successfulHistorySatisfies [DecidableEq E]
     (alg : SyncSignatureAlg (OracleComp spec) M PK SK S E) (sk : SK)
     (P : E → M → S → Prop)
@@ -220,17 +288,9 @@ theorem runWithSigningOracle_preserves_successfulHistorySatisfies [DecidableEq E
     {A : Type} (program : OracleComp (spec + signingSpec E M S) A)
     (history : History E M S) (hinv : SuccessfulHistorySatisfies P history)
     (out : A × History E M S) (hout : out ∈ support
-      (runWithSigningOracle alg sk program history)) : SuccessfulHistorySatisfies P out.2 := by
-  apply OracleComp.simulateQ_run_preservesInv (oracles alg sk)
-    (SuccessfulHistorySatisfies P) ?_ program history hinv out hout
-  rintro (q | q) state hs result hresult
-  · simp only [oracles, QueryImpl.add_apply_inl, QueryImpl.liftTarget_apply,
-      StateT.run_liftM, support_bind, Set.mem_iUnion, support_pure,
-      Set.mem_singleton_iff] at hresult
-    obtain ⟨answer, _, rfl⟩ := hresult
-    exact hs
-  · exact signingOracle_preserves_successfulHistorySatisfies alg sk P hsign q state hs
-      result hresult
+      (runWithSigningOracle alg sk program history)) : SuccessfulHistorySatisfies P out.2 :=
+  runWithSigningKernel_preserves_successfulHistorySatisfies (alg.sign sk) P hsign
+    program history hinv out hout
 
 /-- Generate keys and run the adaptive adversary from empty signing history.
 Ambient queries are forwarded; signing queries update the history through the signing handler.
