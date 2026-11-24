@@ -24,18 +24,6 @@ namespace BLS.Aggregate
 
 variable {F G₁ G₂ Gₜ M : Type}
 
-/-- Direct hash and signing budgets, and a bound on the length of every supported forgery.
-Uniform-sampling queries are unrestricted, and all premises hold for every public key. -/
-@[expose] def QueryBound [Field F] [SampleableType F]
-    [AddCommGroup G₁] [Module F G₁] [AddCommGroup G₂] [Module F G₂]
-    [AddCommGroup Gₜ] [Module F Gₜ] [DecidableEq Gₜ] [DecidableEq M]
-    {e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ} {g₂ : G₂}
-    (A : AggregateSignatureAlg.UnforgeableAdversary (scheme (M := M) e g₂))
-    (qH qS N : ℕ) : Prop :=
-  ∀ pk, (A.main pk).IsQueryBoundP (· matches .inl (.inr _)) qH ∧
-    (A.main pk).IsQueryBoundP (· matches .inr _) qS ∧
-    ∀ z ∈ support (A.main pk), z.1.length ≤ N
-
 /-- Query every final message so the extraction cache includes messages first used in the
 forgery. This adds at most the length of the output list to the hash budget. -/
 @[expose] def withFinalHashes
@@ -102,17 +90,6 @@ The maximum with one makes the sampling type inhabited even for zero budgets. -/
     let j ← $ᵗ Fin (max 1 (qH + qS + N))
     coCDHReductionAt ψ A j.val gen₂ pk h
 
-/-- Uniform scalar masking of a fixed challenge is a uniform group sample whenever
-scalar multiplication by the image of the generator is bijective. -/
-theorem masked_uniformSample_evalDistEq [Field F] [SampleableType F]
-    [AddCommGroup G₁] [Module F G₁] [SampleableType G₁]
-    [AddCommGroup G₂] [Module F G₂]
-    (ψ : G₂ →ₗ[F] G₁) (g₂ : G₂) (h : G₁)
-    (hg : Function.Bijective (· • ψ g₂ : F → G₁)) :
-    ((fun r => h + r • ψ g₂) <$> ($ᵗ F : ProbComp F)) =ᵈ ($ᵗ G₁ : ProbComp G₁) := by
-  apply SampleableType.map_uniformSample_evalDistEq_of_bijective
-  exact (Equiv.addLeft h).bijective.comp hg
-
 /-- The scalar-based signing answer is honest at every unprogrammed message. -/
 theorem simulated_signature_eq [Field F]
     [AddCommGroup G₁] [Module F G₁] [AddCommGroup G₂] [Module F G₂]
@@ -120,12 +97,5 @@ theorem simulated_signature_eq [Field F]
     r • ψ (x • g₂) = x • (r • ψ g₂) := by
   rw [map_smul]
   exact smul_comm r x (ψ g₂)
-
-/-- Subtracting the selected hash's mask from an honest signature extracts the co-CDH answer. -/
-theorem sub_mask_eq [Field F]
-    [AddCommGroup G₁] [Module F G₁] [AddCommGroup G₂] [Module F G₂]
-    (ψ : G₂ →ₗ[F] G₁) (g₂ : G₂) (x r : F) (h : G₁) :
-    x • (h + r • ψ g₂) - r • ψ (x • g₂) = x • h := by
-  rw [simulated_signature_eq, smul_add, add_sub_cancel_right]
 
 end BLS.Aggregate

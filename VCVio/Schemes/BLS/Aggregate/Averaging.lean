@@ -6,7 +6,6 @@ Authors: Quang Dao
 
 module
 public import VCVio.Schemes.BLS.Aggregate.Reduction
-public import VCVio.Schemes.BLS.Averaging
 
 /-! # Averaging the aggregate BLS insertion-index guess
 

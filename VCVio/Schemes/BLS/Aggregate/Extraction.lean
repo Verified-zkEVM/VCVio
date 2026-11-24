@@ -50,7 +50,7 @@ theorem programmed_extraction [Field F] [SampleableType F]
   have ht := simulateQ_run_preservesInv _ _
     (indexedOracle_preserves_challengeInv hash sign j)
     (withFinalPairings e oa) OracleState.empty
-    (by simp [OracleState.empty]) z hz
+    (by simp [ChallengeInv, OracleState.empty]) z hz
   apply aggregate_sub_eq ψ e g₂ hg₁ hg₂ he (cachedHash hash z.2) (cachedScalar mask z.2)
     z.1.1.1 x msg h z.1.1.2 hd hm
   · simp [cachedHash, cachedScalar, hc, hash]

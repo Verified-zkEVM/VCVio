@@ -6,6 +6,7 @@ Authors: Quang Dao
 
 module
 public import VCVio.CryptoFoundations.SignatureAlg
+public import VCVio.CryptoFoundations.SignatureAlg.RomQueryCount
 
 /-! # Aggregate signatures and chosen-key unforgeability
 
@@ -42,6 +43,17 @@ structure UnforgeableAdversary
     (_sigAlg : AggregateSignatureAlg (OracleComp spec) M PK SK S) where
   /-- Produce the aggregate forgery after interacting with the ambient and signing oracles. -/
   main (pk : PK) : OracleComp (spec + (M →ₒ S)) (List (PK × M) × S)
+
+/-- In the random-oracle model, the adversary makes, on every path and for every public key, at
+most `qH` hash queries and at most `qS` signing queries, and every forgery it can output names at
+most `N` key–message pairs. This is `SignatureAlg.UnforgeableAdversary.RomQueryBound` with a bound
+on the forgery's length. -/
+@[expose] def UnforgeableAdversary.RomQueryBound {ι : Type} {hs : OracleSpec ι}
+    {sigAlg : AggregateSignatureAlg (OracleComp (unifSpec + hs)) M PK SK S}
+    (adv : UnforgeableAdversary sigAlg) (qH qS N : ℕ) : Prop :=
+  ∀ pk, IsQueryBoundP (adv.main pk) (SignatureAlg.IsHashQuery (hs := hs) (M := M) (S := S)) qH ∧
+    IsQueryBoundP (adv.main pk) (SignatureAlg.IsSignQuery (hs := hs) (M := M) (S := S)) qS ∧
+    ∀ z ∈ support (adv.main pk), z.1.length ≤ N
 
 open scoped Classical in
 /-- The BGLS chosen-key experiment. Acceptance requires a valid aggregate containing

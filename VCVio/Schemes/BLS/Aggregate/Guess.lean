@@ -32,7 +32,7 @@ theorem prEvent_winning_le_sum_coCDHReductionAt {F G₁ G₂ Gₜ M : Type}
     (A : AggregateSignatureAlg.UnforgeableAdversary (scheme (M := M) e g₂))
     (hg₁ : Function.Bijective (· • ψ g₂ : F → G₁))
     (hg₂ : Function.Surjective (· • g₂ : F → G₂)) (he : e (ψ g₂) g₂ ≠ 0)
-    (x : F) (qH qS N : ℕ) (hQ : QueryBound A qH qS N) :
+    (x : F) (qH qS N : ℕ) (hQ : A.RomQueryBound qH qS N) :
     Pr{let z ← (simulateQ (indexedOracle (fun _ => $ᵗ F) (· • ψ g₂)
         (fun r => x • (r • ψ g₂)) none)
         (withFinalPairings e (A.main (x • g₂)))).run OracleState.empty}[
@@ -61,8 +61,13 @@ theorem prEvent_winning_le_sum_coCDHReductionAt {F G₁ G₂ Gₜ M : Type}
     obtain ⟨⟨msg, hm, hf⟩, hd, hv⟩ := hw
     obtain ⟨v, i, hc, hi⟩ := withFinalPairings_support_index_lt e (fun _ => $ᵗ F)
       (· • ψ g₂) (fun r => x • (r • ψ g₂)) none (A.main (x • g₂))
-      qH qS N (hQ _).1 (hQ _).2.1 (hQ _).2.2 z hz (x • g₂, msg) hm
-    exact ⟨⟨i, hi⟩, ⟨hd, hv⟩, msg, hm, hf, v, hc⟩
+      qH qS N
+      ((hQ _).1.of_imp fun t ht => by
+        rcases t with ((_ | _) | _) <;> simp_all [SignatureAlg.IsHashQuery])
+      ((hQ _).2.1.of_imp fun t ht => by
+        rcases t with ((_ | _) | _) <;> simp_all [SignatureAlg.IsSignQuery])
+      (hQ _).2.2 z hz (x • g₂, msg) hm
+    exact ⟨⟨i, lt_of_lt_of_le hi (le_max_right _ _)⟩, ⟨hd, hv⟩, msg, hm, hf, v, hc⟩
   refine hsum.trans (Finset.sum_le_sum fun j _ => ?_)
   rw [prEvent_freshTarget_eraseSelection]
   exact prEvent_freshTarget_le_reductionAt ψ A hg₁ hg₂ he x j.val

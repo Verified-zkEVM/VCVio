@@ -112,7 +112,7 @@ private theorem pairingSum_sign_bound [Field F]
       simpa [bind_pure_comp, isQueryBoundP_map_iff] using ih
 
 /-- Final verification adds at most the forgery-length budget to the direct hash budget. -/
-theorem withFinalPairings_hash_bound [Field F]
+private theorem withFinalPairings_hash_bound [Field F]
     [AddCommGroup G₁] [Module F G₁] [AddCommGroup G₂] [Module F G₂]
     [AddCommGroup Gₜ] [Module F Gₜ]
     (e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ)
@@ -124,11 +124,9 @@ theorem withFinalPairings_hash_bound [Field F]
   intro out hout
   rw [bind_pure_comp, isQueryBoundP_map_iff]
   convert (pairingSum_hash_bound e out.1).mono (hN out hout) using 1
-  funext t
-  rcases t with (t | msg) | msg <;> rfl
 
 /-- Final aggregate verification makes no signing queries. -/
-theorem withFinalPairings_sign_bound [Field F]
+private theorem withFinalPairings_sign_bound [Field F]
     [AddCommGroup G₁] [Module F G₁] [AddCommGroup G₂] [Module F G₂]
     [AddCommGroup Gₜ] [Module F Gₜ]
     (e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ)
@@ -140,8 +138,6 @@ theorem withFinalPairings_sign_bound [Field F]
     intro out _
     rw [bind_pure_comp, isQueryBoundP_map_iff]
     convert pairingSum_sign_bound e out.1 using 1
-    funext t
-    rcases t with (t | msg) | msg <;> rfl
   exact hb.mono (Nat.add_zero qS).le
 
 /-- Interpret a cached entry as a hash answer, with zero for messages not yet cached. -/
@@ -255,8 +251,7 @@ theorem withFinalPairings_support_index_lt {V : Type} [Field F]
     (z : ((List (G₂ × M) × G₁) × Gₜ) × OracleState V M)
     (hz : z ∈ support ((simulateQ (indexedOracle draw hash sign j)
       (withFinalPairings e oa)).run OracleState.empty)) :
-    ∀ p ∈ z.1.1.1, ∃ v i, z.2.cache p.2 = some (v, i) ∧
-      i < max 1 (qH + qS + N) := by
+    ∀ p ∈ z.1.1.1, ∃ v i, z.2.cache p.2 = some (v, i) ∧ i < qH + qS + N := by
   obtain ⟨hi, hall, _⟩ := withFinalPairings_support e draw hash sign j oa _ (indexInv_empty j) z hz
   have hb := simulateQ_indexedOracle_count_le draw hash sign j (withFinalPairings e oa)
     OracleState.empty (qH + N) qS (withFinalPairings_hash_bound e oa qH N hH hN)
