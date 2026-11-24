@@ -117,20 +117,20 @@ def sampleShortVecIO (k eta : ℕ) : IO (RqVec k) :=
   OracleComp.runIO (NMA.sampleShortVec k eta)
 
 /-- The short-model key generation as an executable `IO` action. -/
-def keygenShortIO (p : Params) (prims : Primitives p) [NTTRingOps] :
+def keygenShortIO (p : Params) (prims : Primitives p) (nttOps : NTTRingOps) :
     IO (PublicKey p prims × SecretKey p) :=
-  OracleComp.runIO (NMA.keygenShort p prims)
+  OracleComp.runIO (NMA.keygenShort p prims nttOps)
 
 /-- The identification scheme with `t₀` in the statement. -/
-def identificationSchemeFullCompiled (p : Params) (prims : Primitives p) [NTTRingOps]
+def identificationSchemeFullCompiled (p : Params) (prims : Primitives p) (nttOps : NTTRingOps)
     [DecidableEq prims.High] [NeZero p.gamma1] :=
-  identificationSchemeFull p prims
+  identificationSchemeFull p prims nttOps
 
 /-- The HVZK simulator as an executable `IO` action. -/
-def hvzkSimulatorIO (p : Params) (prims : Primitives p) [NTTRingOps]
+def hvzkSimulatorIO (p : Params) (prims : Primitives p) (nttOps : NTTRingOps)
     [SampleableType (CommitHashBytes p)] [NeZero p.gamma1] (fpk : FullPublicKey p prims) :
     IO (Option (Commitment p prims × CommitHashBytes p × Response p prims)) :=
-  OracleComp.runIO (hvzkSimulator p prims fpk)
+  OracleComp.runIO (hvzkSimulator p prims nttOps fpk)
 
 private lemma half_lt_of_lt_two_mul {a b : ℕ} (hb : 0 < b) (h : b < 2 * a) :
     (1 / 2 : ℝ≥0∞) < (a : ℝ≥0∞) / b := by
@@ -179,20 +179,19 @@ theorem half_lt_gate_mldsa87 : (1 / 2 : ℝ≥0∞) <
 
 /-- The statement of `identificationSchemeFull` must carry the secret key's `t₀`: any other `t₀` is
 rejected, whatever the public key. -/
-example (p : Params) (prims : Primitives p) [NTTRingOps] (pk : PublicKey p prims)
+example (p : Params) (prims : Primitives p) (nttOps : NTTRingOps) (pk : PublicKey p prims)
     (sk : SecretKey p) (t0 : RqVec p.k) (h : t0 ≠ sk.t0) :
-    validFullKeyPair p prims ⟨pk, t0⟩ sk = false := by
+    validFullKeyPair p prims nttOps ⟨pk, t0⟩ sk = false := by
   simp [validFullKeyPair, h]
 
+open MLDSA.Concrete in
 /-- `identificationSchemeFull_perfectHVZK` at the concrete FIPS 204 primitives for ML-DSA-44. -/
 theorem perfectHVZK_concretePrimitives
-    [DecidableEq (MLDSA.Concrete.concretePrimitives mldsa44).High] :
-    letI : NTTRingOps := MLDSA.Concrete.concreteNTTRingOps
-    (identificationSchemeFull mldsa44 (MLDSA.Concrete.concretePrimitives mldsa44)).PerfectHVZK
-      (hvzkSimulator mldsa44 (MLDSA.Concrete.concretePrimitives mldsa44)) :=
-  letI : NTTRingOps := MLDSA.Concrete.concreteNTTRingOps
-  identificationSchemeFull_perfectHVZK mldsa44 (MLDSA.Concrete.concretePrimitives mldsa44)
-    (MLDSA.Concrete.concretePrimitives_laws mldsa44 (.inl rfl))
-    (MLDSA.Concrete.approved_gamma1_width mldsa44 (.inl rfl)).2
+    [DecidableEq (concretePrimitives mldsa44).High] :
+    (identificationSchemeFull mldsa44 (concretePrimitives mldsa44) concreteNTTRingOps).PerfectHVZK
+      (hvzkSimulator mldsa44 (concretePrimitives mldsa44) concreteNTTRingOps) :=
+  identificationSchemeFull_perfectHVZK mldsa44 (concretePrimitives mldsa44) concreteNTTRingOps
+    (concretePrimitives_laws mldsa44 (.inl rfl))
+    (approved_gamma1_width mldsa44 (.inl rfl)).2
 
 end MLDSA.BoxSamplingTest

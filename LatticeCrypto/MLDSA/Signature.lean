@@ -42,7 +42,7 @@ variable (p : Params) (prims : Primitives p)
 
 section Scheme
 
-variable [nttOps : NTTRingOps]
+variable (nttOps : NTTRingOps)
 
 /-- The FIPS 204 signature format: `(c̃, z, h)`. -/
 structure FIPSSignature where
@@ -60,7 +60,7 @@ structure FIPSSignature where
 /-- ML-DSA.KeyGen (Algorithm 1 / Algorithm 6): sample a random seed and generate keys. -/
 def fipsKeyGen : ProbComp (PublicKey p prims × SecretKey p) := do
   let seed ← $ᵗ (Bytes 32)
-  return keyGenFromSeed p prims seed
+  return keyGenFromSeed p prims nttOps seed
 
 /-! ### Signing -/
 
@@ -98,7 +98,7 @@ def fipsSignLoop
     (mu : Bytes 64) (rhoDoublePrime : Bytes 64) (maxAttempts : ℕ) :
     Option (FIPSSignature p prims) :=
   (List.range maxAttempts).findSome? fun i =>
-    fipsSignAttempt p prims sk aHat mu rhoDoublePrime (i * p.l)
+    fipsSignAttempt p prims nttOps sk aHat mu rhoDoublePrime (i * p.l)
 
 /-- ML-DSA.Sign (Algorithm 2 / Algorithm 7): sign a message.
 
@@ -116,7 +116,7 @@ def fipsSign (pk : PublicKey p prims) (sk : SecretKey p)
   let rnd ← $ᵗ (Bytes 32)
   let rhoDoublePrime := prims.hashPrivateSeed sk.key rnd mu
   let aHat := prims.expandA pk.rho
-  return fipsSignLoop p prims sk aHat mu rhoDoublePrime maxAttempts
+  return fipsSignLoop p prims nttOps sk aHat mu rhoDoublePrime maxAttempts
 
 /-! ### Verification -/
 
@@ -134,7 +134,7 @@ def fipsVerify (pk : PublicKey p prims) (msg : List Byte)
   let tr := prims.hashPublicKey pk.rho pk.t1
   let mu := prims.hashMessage tr msg
   let c := prims.sampleInBall sig.cTilde
-  let wApprox := computeWApprox p prims aHat c sig.z pk.t1
+  let wApprox := computeWApprox p prims nttOps aHat c sig.z pk.t1
   let w1' := prims.useHintVec sig.h wApprox
   let cTildeRecomputed := prims.hashCommitment mu (prims.w1Encode w1')
   decide (polyVecNorm sig.z < p.gamma1 - p.beta) &&
@@ -248,7 +248,7 @@ lemma useHintVec_makeHintVec_eq_highBitsVec
     rw [show cs2[j] = cs2.get jj by rfl, hnorm]
     exact h_cs2_bound jj
 
-variable [nttOps : NTTRingOps]
+variable (nttOps : NTTRingOps)
 
 /-! ### Correctness -/
 
@@ -256,16 +256,16 @@ private lemma fipsSignLoop_exists
     (sk : SecretKey p) (aHat : TqMatrix p.k p.l)
     (mu : Bytes 64) (rhoDoublePrime : Bytes 64) (maxAttempts : ℕ)
     (sig : FIPSSignature p prims)
-    (h : fipsSignLoop p prims sk aHat mu rhoDoublePrime maxAttempts = some sig) :
+    (h : fipsSignLoop p prims nttOps sk aHat mu rhoDoublePrime maxAttempts = some sig) :
     ∃ i ∈ List.range maxAttempts,
-      fipsSignAttempt p prims sk aHat mu rhoDoublePrime (i * p.l) = some sig :=
+      fipsSignAttempt p prims nttOps sk aHat mu rhoDoublePrime (i * p.l) = some sig :=
   List.exists_of_findSome?_eq_some h
 
 private lemma fipsSignAttempt_spec
     (sk : SecretKey p) (aHat : TqMatrix p.k p.l)
     (mu : Bytes 64) (rhoDoublePrime : Bytes 64) (kappa : ℕ)
     (sig : FIPSSignature p prims)
-    (h : fipsSignAttempt p prims sk aHat mu rhoDoublePrime kappa = some sig) :
+    (h : fipsSignAttempt p prims nttOps sk aHat mu rhoDoublePrime kappa = some sig) :
     let y := prims.expandMask rhoDoublePrime kappa
     let w := aHat * y
     let w1 := prims.highBitsVec w
@@ -296,7 +296,7 @@ theorem fipsSign_fipsVerify_correct'
     (pk : PublicKey p prims) (sk : SecretKey p)
     (msg : List Byte) (sig : FIPSSignature p prims)
     (rhoDoublePrime : Bytes 64) (maxAttempts : ℕ)
-    (h_valid : validKeyPair p prims pk sk = true)
+    (h_valid : validKeyPair p prims nttOps pk sk = true)
     (h_useHint_makeHint : ∀ z r : Rq,
       polyNorm z ≤ p.gamma2 →
       prims.useHint (prims.makeHint z r) r = prims.highBits (r + z))
@@ -305,27 +305,27 @@ theorem fipsSign_fipsVerify_correct'
       polyNorm (prims.lowBits r) + b < p.gamma2 →
       prims.highBits (r + s) = prims.highBits r)
     (h_wApprox_eq : ∀ (c : Rq) (y : RqVec p.l),
-      computeWApprox p prims (prims.expandA pk.rho) c
+      computeWApprox p prims nttOps (prims.expandA pk.rho) c
         (y + c • sk.s1) pk.t1 =
       (prims.expandA pk.rho) * y - c • sk.s2 + c • sk.t0)
     (h_cs2_bound : ∀ (j : Fin p.k),
       LatticeCrypto.cInfNorm ((prims.sampleInBall sig.cTilde • sk.s2).get j) ≤ p.beta)
-    (h_sign : fipsSignLoop p prims sk
+    (h_sign : fipsSignLoop p prims nttOps sk
       (prims.expandA pk.rho) (prims.hashMessage sk.tr msg)
       rhoDoublePrime maxAttempts = some sig) :
-    fipsVerify p prims pk msg sig = true := by
+    fipsVerify p prims nttOps pk msg sig = true := by
   classical
   -- Recover the honest seed so the public-key / secret-key fields line up.
-  obtain ⟨seed, hkeygen⟩ := (validKeyPair_eq_true_iff p prims pk sk).mp h_valid
+  obtain ⟨seed, hkeygen⟩ := (validKeyPair_eq_true_iff p prims nttOps pk sk).mp h_valid
   -- The transcript hash `tr` stored in `sk` equals `H(pk.ρ, pk.t₁)` used by `verify`.
   have h_tr : sk.tr = prims.hashPublicKey pk.rho pk.t1 := by
     simp only [keyGenFromSeed, Prod.mk.injEq] at hkeygen
     obtain ⟨hpk, hsk⟩ := hkeygen
     subst hpk hsk; rfl
   -- Extract the successful signing attempt and all its structural data and bounds.
-  obtain ⟨i, -, h_attempt⟩ := fipsSignLoop_exists p prims sk _ _ _ _ _ h_sign
+  obtain ⟨i, -, h_attempt⟩ := fipsSignLoop_exists p prims nttOps sk _ _ _ _ _ h_sign
   obtain ⟨h_cTilde, h_z, h_h, h_zNorm, h_r0Norm, h_ct0Norm, h_weight⟩ :=
-    fipsSignAttempt_spec p prims sk _ _ _ _ _ h_attempt
+    fipsSignAttempt_spec p prims nttOps sk _ _ _ _ _ h_attempt
   -- Names for the attempt-local quantities.
   set y := prims.expandMask rhoDoublePrime (i * p.l) with hy_def
   set aHat := prims.expandA pk.rho with haHat_def
@@ -344,7 +344,7 @@ theorem fipsSign_fipsVerify_correct'
     rw [h_z]; exact h_zNorm
   · -- RO consistency: the recomputed commitment hash equals `sig.cTilde`.
     -- `wApprox = A·y - c·s₂ + c·t₀` via the key identity (with `z = y + c·s₁`).
-    have hwa : computeWApprox p prims aHat c sig.z pk.t1
+    have hwa : computeWApprox p prims nttOps aHat c sig.z pk.t1
         = aHat * y - c • sk.s2 + c • sk.t0 := by
       rw [h_z]
       exact h_wApprox_eq c y
@@ -371,14 +371,14 @@ theorem fipsSign_fipsVerify_correct
     (pk : PublicKey p prims) (sk : SecretKey p)
     (msg : List Byte) (sig : FIPSSignature p prims)
     (rhoDoublePrime : Bytes 64) (maxAttempts : ℕ)
-    (h_valid : validKeyPair p prims pk sk = true)
+    (h_valid : validKeyPair p prims nttOps pk sk = true)
     (h_laws : Primitives.Laws prims nttOps)
-    (h_sign : fipsSignLoop p prims sk
+    (h_sign : fipsSignLoop p prims nttOps sk
       (prims.expandA pk.rho) (prims.hashMessage sk.tr msg)
       rhoDoublePrime maxAttempts = some sig) :
-    fipsVerify p prims pk msg sig = true := by
+    fipsVerify p prims nttOps pk msg sig = true := by
   classical
-  obtain ⟨seed, hkeygen⟩ := (validKeyPair_eq_true_iff p prims pk sk).mp h_valid
+  obtain ⟨seed, hkeygen⟩ := (validKeyPair_eq_true_iff p prims nttOps pk sk).mp h_valid
   -- Honest secret vector `s₂` is `η`-bounded, so the challenge product is `β`-bounded.
   have hs2_bound : polyVecBounded sk.s2 p.eta := by
     have h := congrArg Prod.snd hkeygen
@@ -387,9 +387,9 @@ theorem fipsSign_fipsVerify_correct
     exact (h_laws.expandS_bound _).2
   have hcs2_norm : polyVecNorm (prims.sampleInBall sig.cTilde • sk.s2) ≤ p.beta :=
     h_laws.sampleInBall_smul_bound sig.cTilde sk.s2 hs2_bound
-  refine fipsSign_fipsVerify_correct' p prims pk sk msg sig rhoDoublePrime maxAttempts
+  refine fipsSign_fipsVerify_correct' p prims nttOps pk sk msg sig rhoDoublePrime maxAttempts
     h_valid h_laws.useHint_makeHint h_laws.hide_low
-    (keyGenFromSeed_wApprox_eq p prims h_laws seed hkeygen) ?_ h_sign
+    (keyGenFromSeed_wApprox_eq p prims nttOps h_laws seed hkeygen) ?_ h_sign
   -- Componentwise: each component of `c·s₂` is bounded by the vector norm bound `β`.
   intro j
   have hj : polyNorm ((prims.sampleInBall sig.cTilde • sk.s2).get j) ≤ p.beta :=

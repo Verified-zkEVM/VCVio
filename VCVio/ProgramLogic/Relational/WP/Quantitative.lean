@@ -42,7 +42,7 @@ variable [OracleSpec.AnswerMeasure spec₁] [OracleSpec.AnswerMeasure spec₂]
 /-- Quantitative `VCVio.ProgramLogic.RelWP` interpretation of pairs of `OracleComp`
 programs valued in `ℝ≥0∞`.
 
-The `rwpTrans` is the existing `eRelWP` (the supremum over couplings
+The `trans` is the existing `eRelWP` (the supremum over couplings
 of expected values); the two `EStack⟨⟩` arguments are ignored since
 neither side of an `OracleComp` pair has a first-class exception slot.
 The three `RelWP` axioms reduce to the existing `eRelWP_pure`,
@@ -50,17 +50,17 @@ The three `RelWP` axioms reduce to the existing `eRelWP_pure`,
 noncomputable scoped instance instRelWP :
     VCVio.ProgramLogic.RelWP (OracleComp spec₁) (OracleComp spec₂) ℝ≥0∞
       EStack⟨⟩ EStack⟨⟩ where
-  rwpTrans oa ob post _epost₁ _epost₂ :=
+  trans oa ob post _epost₁ _epost₂ :=
     OracleComp.ProgramLogic.Relational.eRelWP oa ob post
-  rwp_trans_pure a b := by
+  trans_pure a b := by
     intro post _epost₁ _epost₂
     exact OracleComp.ProgramLogic.Relational.eRelWP_pure_le
       (spec₁ := spec₁) (spec₂ := spec₂) a b post
-  rwp_trans_bind_le {α β γ δ} oa ob f g := by
+  trans_bind_le {α β γ δ} oa ob f g := by
     intro post _epost₁ _epost₂
     exact OracleComp.ProgramLogic.Relational.eRelWP_bind_le
       (spec₁ := spec₁) (spec₂ := spec₂) oa ob f g post
-  rwp_trans_monotone {α β} oa ob post post' _epost₁ _epost₁' _epost₂ _epost₂' := by
+  trans_monotone {α β} oa ob post post' _epost₁ _epost₁' _epost₂ _epost₂' := by
     intro _h₁ _h₂ hpost
     exact OracleComp.ProgramLogic.Relational.eRelWP_mono
       (spec₁ := spec₁) (spec₂ := spec₂) hpost

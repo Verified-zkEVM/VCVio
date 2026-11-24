@@ -169,7 +169,7 @@ theorem outcomeMeasure_run₂_toQuantumAt_coinImpl {α : Type} [MeasurableSpace 
       ENNReal.ofReal ρ.matrix.trace.re • 𝒟[oa] := by
   classical
   ext s hs
-  rw [DSubInstrument.outcomeMeasure_apply _ _ hs, MeasureTheory.Measure.smul_apply, smul_eq_mul]
+  rw [DSubInstrument.outcomeMeasure_apply _ _ hs, smul_apply, smul_eq_mul]
   simp_rw [branch_run₂_toQuantumAt_coinImpl, LinearMap.smul_apply, LinearMap.id_apply,
     Matrix.trace_smul, smul_eq_mul, Complex.re_ofReal_mul,
     ENNReal.ofReal_mul ENNReal.toReal_nonneg, ENNReal.ofReal_toReal (prEvent_ne_top _)]
@@ -191,7 +191,7 @@ theorem outcomeMeasure_run₂_toQuantumAt_coinImpl_apply_singleton {α : Type}
     (ρ : SubState (B × R.D)) (a : α) :
     (R.run₂ .instruments (oa.toQuantumAt (QComp.coinImpl spec B))).outcomeMeasure ρ {a} =
       Pr{let x ← oa}[x = a] * ENNReal.ofReal ρ.matrix.trace.re := by
-  rw [outcomeMeasure_run₂_toQuantumAt_coinImpl, MeasureTheory.Measure.smul_apply,
+  rw [outcomeMeasure_run₂_toQuantumAt_coinImpl, smul_apply,
     smul_eq_mul, ← prEvent_eq_evalDist_singleton, mul_comm]
 
 namespace LocalSig

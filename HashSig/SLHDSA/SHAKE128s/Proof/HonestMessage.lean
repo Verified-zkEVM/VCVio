@@ -55,14 +55,14 @@ theorem treeAt_succ_add_leafAt (tree : Nat) :
 
 attribute [local irreducible] Extraction.HypertreeChain.honestNode CanonicalGraph.value
 
-variable [HasQuery HashSpec Id]
+variable {hash : HasQuery HashSpec Id}
 
 /-- **The message the residue threads at step `i + 1`** is the honest node of the subtree the
 previous step was looking at. -/
 theorem revealedAt_succ (secretSeed publicSeed : Digest) :
     ∀ (i : Nat) (expectedInput : Digest) (layer tree : Nat),
-      revealedAt secretSeed publicSeed expectedInput layer tree (i + 1) =
-        Extraction.HypertreeChain.honestNode secretSeed publicSeed (layerAt layer i)
+      revealedAt hash secretSeed publicSeed expectedInput layer tree (i + 1) =
+        Extraction.HypertreeChain.honestNode hash secretSeed publicSeed (layerAt layer i)
           (treeAt tree i) := by
   intro i
   induction i with
@@ -71,9 +71,9 @@ theorem revealedAt_succ (secretSeed publicSeed : Digest) :
     simp only [revealedAt, layerAt, treeAt]
   | succ i ih =>
     intro expectedInput layer tree
-    rw [show revealedAt secretSeed publicSeed expectedInput layer tree (i + 1 + 1) =
-        revealedAt secretSeed publicSeed
-          (Extraction.HypertreeChain.honestNode secretSeed publicSeed layer tree) (layer + 1)
+    rw [show revealedAt hash secretSeed publicSeed expectedInput layer tree (i + 1 + 1) =
+        revealedAt hash secretSeed publicSeed
+          (Extraction.HypertreeChain.honestNode hash secretSeed publicSeed layer tree) (layer + 1)
           (tree / 2 ^ subtreeHeight) (i + 1) from rfl,
       ih _ (layer + 1) (tree / 2 ^ subtreeHeight)]
     simp only [layerAt, treeAt]
@@ -82,8 +82,8 @@ theorem revealedAt_succ (secretSeed publicSeed : Digest) :
 coordinates name. -/
 theorem honestMessage_succ (secretSeed publicSeed : Digest) (key : WotsKey) (layer : Nat)
     (hlayer : key.tree.layer.val = layer + 1) :
-    GraphStakes.honestMessage secretSeed publicSeed key =
-      Extraction.HypertreeChain.honestNode secretSeed publicSeed layer
+    GraphStakes.honestMessage hash secretSeed publicSeed key =
+      Extraction.HypertreeChain.honestNode hash secretSeed publicSeed layer
         (key.tree.tree.val * 2 ^ subtreeHeight + key.leaf.val) := by
   rw [GraphStakes.honestMessage, hlayer]
 
@@ -93,8 +93,8 @@ theorem honestMessage_eq_revealedAt (secretSeed publicSeed expectedInput : Diges
     (hlayer : key.tree.layer.val = layerAt layer (i + 1))
     (htree : key.tree.tree.val = treeAt tree (i + 1))
     (hleaf : key.leaf.val = (leafAt leaf tree (i + 1)).val) :
-    GraphStakes.honestMessage secretSeed publicSeed key =
-      revealedAt secretSeed publicSeed expectedInput layer tree (i + 1) := by
+    GraphStakes.honestMessage hash secretSeed publicSeed key =
+      revealedAt hash secretSeed publicSeed expectedInput layer tree (i + 1) := by
   rw [honestMessage_succ secretSeed publicSeed key (layerAt layer i) (by
       rw [hlayer, layerAt_eq, layerAt_eq]; omega),
     revealedAt_succ secretSeed publicSeed i expectedInput layer tree, htree, hleaf,
@@ -108,8 +108,8 @@ theorem honestRevealed_eq (secretSeed publicSeed expectedInput : Digest)
     (hlayer : key.tree.layer.val = layerAt layer (i + 1))
     (htree : key.tree.tree.val = treeAt tree (i + 1))
     (hleaf : key.leaf.val = (leafAt leaf tree (i + 1)).val) (chain : Fin chains) :
-    GraphStakes.honestRevealed secretSeed publicSeed key chain =
-      (Checksum.encode (revealedAt secretSeed publicSeed expectedInput layer tree (i + 1))
+    GraphStakes.honestRevealed hash secretSeed publicSeed key chain =
+      (Checksum.encode (revealedAt hash secretSeed publicSeed expectedInput layer tree (i + 1))
         chain).val := by
   rw [GraphStakes.honestRevealed,
     honestMessage_eq_revealedAt secretSeed publicSeed expectedInput layer tree leaf i key

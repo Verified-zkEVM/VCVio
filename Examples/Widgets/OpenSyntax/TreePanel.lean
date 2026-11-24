@@ -18,8 +18,9 @@ public meta section
 namespace VCVioWidgets
 namespace OpenSyntax
 
-open Lean Meta Server ProofWidgets
-open scoped ProofWidgets.Jsx
+open Lean hiding Html
+open Meta Server ProofWidgets
+open ProofWidgets (Html)
 
 /-!
 # Variant B: Computed tree layout for composition diagrams
@@ -246,21 +247,21 @@ private def css (entries : List (String × String)) : Json :=
 namespace TreePanelWidget
 
 private def emptyHtml : Html :=
-  <details «open»={true}>
+  jsx%{<details open={true}>
     <summary className="mv2 pointer">Tree Layout</summary>
     <div>{.text "No @[show_composition] definitions found."}</div>
-  </details>
+  </details>}
 
 private def renderOneDef (declName : Name) : MetaM Html := do
   let some info := (← getEnv).find? declName
-    | return <div>{.text s!"Definition `{declName}` not found."}</div>
+    | return jsx%{<div>{.text s!"Definition `{declName}` not found."}</div>}
   let value ← match info with
     | .defnInfo defn => pure defn.value
     | .thmInfo thm => pure thm.value
-    | _ => return <div>{.text s!"`{declName}` is not a definition."}</div>
+    | _ => return jsx%{<div>{.text s!"`{declName}` is not a definition."}</div>}
   let tree ← extractCompTree value
   let rendered := renderTreeSvg tree
-  return <div style={css [
+  return jsx%{<div style={css [
     ("display", "flex"),
     ("flexDirection", "column"),
     ("gap", "8px"),
@@ -272,7 +273,7 @@ private def renderOneDef (declName : Name) : MetaM Html := do
       ("fontFamily", "var(--vscode-editor-font-family)")
     ]}>{.text (toString declName)}</div>
     <div style={css [("overflowX", "auto")]}>{rendered}</div>
-  </div>
+  </div>}
 
 private def renderAll (snap : Snapshots.Snapshot) (modName : Name) : RequestM Html := do
   let names ← RequestM.runTermElabM snap do
@@ -280,7 +281,7 @@ private def renderAll (snap : Snapshots.Snapshot) (modName : Name) : RequestM Ht
   if names.isEmpty then return emptyHtml
   let items ← names.mapM fun declName => do
     RequestM.runTermElabM snap do renderOneDef declName
-  return <details «open»={true}>
+  return jsx%{<details open={true}>
     <summary className="mv2 pointer">Tree Layout</summary>
     <div className="ml1" style={css [
       ("display", "flex"),
@@ -290,7 +291,7 @@ private def renderAll (snap : Snapshots.Snapshot) (modName : Name) : RequestM Ht
     ]}>
       {...items}
     </div>
-  </details>
+  </details>}
 
 private def latestReadySnap?
     (snaps : Lean.AsyncList IO.Error Snapshots.Snapshot) :

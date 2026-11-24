@@ -6,8 +6,9 @@ Authors: Devon Tuma
 
 module
 public import ToMathlib.MeasureTheory.Integral.Bounds
-public import ToMathlib.MeasureTheory.Measure.Subprobability
+public import ToCslib.MeasureTheory.Measure.Subprobability
 public import Mathlib.Probability.UniformOn
+public import ToCslib.Probability.UniformOn
 
 /-!
 # Event bounds for subprobability measures
@@ -110,14 +111,5 @@ theorem bind_apply_le_add_of_disagree (μ : Measure α) [IsSubprobabilityMeasure
 end MeasureTheory.Measure
 
 namespace ProbabilityTheory
-
-/-- The uniform measure of a predicate on a finite type is its normalized cardinality. -/
-theorem uniformOn_univ_apply_setOf {α : Type*} [MeasurableSpace α]
-    [MeasurableSingletonClass α] [Fintype α] (p : α → Prop) [DecidablePred p] :
-    (uniformOn Set.univ : Measure α) {x | p x} =
-      ((Finset.univ.filter p).card : ENNReal) / Fintype.card α := by
-  rw [uniformOn_univ]
-  have hset : {x | p x} = (↑(Finset.univ.filter p) : Set α) := by ext; simp
-  rw [hset, Measure.count_apply_finset]
 
 end ProbabilityTheory

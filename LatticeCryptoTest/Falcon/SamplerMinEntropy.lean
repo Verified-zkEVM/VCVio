@@ -188,7 +188,7 @@ private theorem dirac_round_le_smul {σmin σmax σ : ℝ} (h0 : 0 < σmin) (h1 
           rw [mul_right_comm, ← Real.exp_add]; congr 2; field_simp; ring
       _ ≤ _ := by gcongr
   refine Measure.le_iff.2 fun s hs => ?_
-  rw [Measure.smul_apply, Measure.dirac_apply' _ hs, ENNReal.smul_def, smul_eq_mul]
+  rw [smul_apply, Measure.dirac_apply' _ hs, ENNReal.smul_def, smul_eq_mul]
   by_cases hm : round μ ∈ s
   · rw [Set.indicator_of_mem hm, Pi.one_apply]
     calc (1 : ℝ≥0∞) ≤ ENNReal.ofReal (C * discreteGaussianPMF σ μ (round μ)) :=

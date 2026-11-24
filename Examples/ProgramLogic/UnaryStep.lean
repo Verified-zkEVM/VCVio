@@ -350,6 +350,7 @@ example (impl : QueryImpl spec (OracleComp spec))
 
 /-! ## Registered `@[vcspec]` theorems -/
 
+/-- An irreducible wrapper around `pure true`, used to test `@[vcspec]` lookup. -/
 @[irreducible] def wrappedTrue : OracleComp spec Bool := pure true
 
 @[local vcspec] theorem triple_wrappedTrue :
@@ -391,6 +392,8 @@ example :
       Std.WP.wp (wrappedTrue (spec := spec)) (fun _ => (1 : ℝ≥0∞)) estack⟨⟩ := by
   vcstep
 
+/-- An irreducible wrapper around `pure true`, used to test a `@[vcspec]` theorem with an
+auxiliary hypothesis. -/
 @[irreducible] def wrappedTrueStep : OracleComp spec Bool := pure true
 
 @[local vcspec] theorem triple_wrappedTrueStep (_haux : True) :

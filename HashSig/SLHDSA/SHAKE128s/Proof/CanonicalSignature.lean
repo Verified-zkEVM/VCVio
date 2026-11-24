@@ -46,7 +46,7 @@ open OracleComp OracleSpec
 
 namespace SLHDSA.SHAKE128s.CanonicalSignature
 
-variable [HasQuery HashSpec Id]
+variable {hash : HasQuery HashSpec Id}
 
 /-- **A parse whose three parts are canonical is the signature the signer writes.** -/
 theorem eq_signInternal (sk : SecretKey) (message : Bytes) (parsed : Signature)

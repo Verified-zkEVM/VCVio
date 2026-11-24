@@ -8,7 +8,6 @@ module
 
 public import VCVio.CryptoFoundations.HardnessAssumptions.KeyedHash.Covering
 public import Mathlib.Data.NNRat.Lemmas
-import Mathlib.Data.Rat.Cast.CharZero
 
 /-!
 # Executable coverage coefficients
