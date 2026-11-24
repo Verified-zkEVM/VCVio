@@ -20,8 +20,8 @@ been used (the canonical "bad event" of the identical-until-bad pattern).
 - `OracleSpec.ProgrammingPolicy spec` — partial function `t ↦ Option (programmed answer)`.
 - `OracleSpec.ProgrammingPolicy.empty` — the all-`none` policy (no programming).
 - `QueryImpl.withRedirect so redirect` — replace every query with a user-supplied callback.
-- `QueryImpl.withProgramming so policy` — wrap `so` in `StateT (QueryCache × Bool)` so that
-  policy hits override the underlying impl, set the bad flag, and are cached for consistency.
+- `QueryImpl.withProgramming so policy` — reuse cached answers. On a miss, cache the
+  policy's answer and set the bad flag if it supplies one, or query `so` and cache its answer.
 
 ## Design notes
 
@@ -62,8 +62,8 @@ namespace OracleSpec
 
 /-- A programming policy: a partial assignment of programmed answers to oracle inputs.
 
-`policy t = some v` means "force the oracle to return `v` when queried at `t`".
-`policy t = none` means "leave the oracle unchanged at `t`". -/
+On a cache miss at `t`, `withProgramming` returns `v` if `policy t = some v` and
+queries the underlying oracle if `policy t = none`. -/
 def ProgrammingPolicy (spec : OracleSpec ι) : Type _ :=
   (t : spec.Domain) → Option (spec.Range t)
 
@@ -88,12 +88,8 @@ variable {m : Type u → Type v}
 
 /-! ## Redirect -/
 
-/-- Redirect every oracle query to a user-supplied callback. The base impl `so` is **discarded**
-on every query, and `redirect t : m (spec.Range t)` is consulted instead.
-
-`withRedirect so redirect = redirect` definitionally; the named wrapper exists to expose intent
-at call sites and to compose with `withProgramming` (which uses `withRedirect` internally for the
-"programmed branch" of each query). -/
+/-- Redirect every query to the supplied callback. `so.withRedirect redirect` is
+definitionally equal to `redirect`. -/
 def withRedirect (_so : QueryImpl spec m)
     (redirect : (t : spec.Domain) → m (spec.Range t)) :
     QueryImpl spec m :=
@@ -117,8 +113,8 @@ State: `StateT (spec.QueryCache × Bool) m`.
   * `policy t = some v` → return `v`, cache it, **set the bad flag**.
   * `policy t = none` → fall through to `so t`, cache the result, leave the flag untouched.
 
-Specialising to `policy = ProgrammingPolicy.empty` recovers `withCaching` lifted via
-`extendState`; see `withProgramming_empty_run_proj_eq`. -/
+For `ProgrammingPolicy.empty`, projecting away the flag gives the same result and final
+cache as `withCaching` (`withProgramming_empty_run_proj_eq`). -/
 def withProgramming
     (so : QueryImpl spec m) (policy : ProgrammingPolicy spec) :
     QueryImpl spec (StateT (spec.QueryCache × Bool) m) :=
