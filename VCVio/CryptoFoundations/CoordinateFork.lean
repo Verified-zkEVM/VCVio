@@ -177,8 +177,10 @@ end Averaging
 /-! ## The deterministic core -/
 
 /-- The replacements available at coordinate `j`: values other than the one `c₀` already uses that
-keep the challenge accepting. -/
-@[expose] def hitSet (ρ : (ι → S) → Bool) (c₀ : ι → S) (j : ι) : Finset S :=
+keep the challenge accepting. Coordinate `i` may range over its own alphabet `S i`. -/
+@[expose] def hitSet {ι : Type} [DecidableEq ι] {S : ι → Type} [∀ i, DecidableEq (S i)]
+    [∀ i, Fintype (S i)] (ρ : ((i : ι) → S i) → Bool) (c₀ : (i : ι) → S i) (j : ι) :
+    Finset (S j) :=
   (Finset.univ.erase (c₀ j)).filter fun x => ρ (Function.update c₀ j x)
 
 /-- The `k - 1` replacements the table core keeps at coordinate `j`. Any choice would do; this one
@@ -197,15 +199,15 @@ takes the first `k - 1` in enumeration order. -/
 
 /-! ### The core's success condition -/
 
-omit [Fintype ι] in
 /-- An accepting challenge occupies one slot of each of its own columns, so the remaining
 replacements number one fewer than the column count. -/
-theorem card_hitSet_succ (hacc : ρ c₀) (j : ι) :
-    (hitSet ρ c₀ j).card + 1 = columnCount (fun c => ρ c = true) j c₀ := by
+theorem card_hitSet_succ {ι : Type} [DecidableEq ι] {S : ι → Type} [∀ i, DecidableEq (S i)]
+    [∀ i, Fintype (S i)] {ρ : ((i : ι) → S i) → Bool} {c₀ : (i : ι) → S i} (hacc : ρ c₀)
+    (j : ι) : (hitSet ρ c₀ j).card + 1 = columnCount (fun c => ρ c = true) j c₀ := by
   classical
-  have hmem : c₀ j ∈ Finset.univ.filter fun x : S => ρ (Function.update c₀ j x) :=
+  have hmem : c₀ j ∈ Finset.univ.filter fun x : S j => ρ (Function.update c₀ j x) :=
     mem_filter_coord_self (accept := fun c => ρ c = true) hacc j
-  have hpos : 0 < (Finset.univ.filter fun x : S => ρ (Function.update c₀ j x)).card :=
+  have hpos : 0 < (Finset.univ.filter fun x : S j => ρ (Function.update c₀ j x)).card :=
     Finset.card_pos.mpr ⟨_, hmem⟩
   rw [hitSet, Finset.filter_erase, Finset.card_erase_of_mem hmem]
   simp only [columnCount]

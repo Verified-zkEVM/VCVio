@@ -28,14 +28,12 @@ namespace OracleComp
 
 variable {ι S : Type} [DecidableEq ι] [Fintype ι] [DecidableEq S] [Fintype S]
 
-/-- The coordinate-`j` neighbours of `c₀`: the challenges that replace `c₀ j` by another value. -/
-@[expose] noncomputable def neighbourPool (c₀ : ι → S) (j : ι) : List (ι → S) :=
-  (altPool c₀ j).map (Function.update c₀ j)
-
 /-- Ask the acceptance oracle about coordinate-`j` neighbours of `c₀`, drawn without replacement,
-until `k - 1` of them accept or they run out, and return the accepting ones. -/
-@[expose] noncomputable def coordNeighbours (k : ℕ) (c₀ : ι → S) (j : ι) :
-    OracleComp (unifSpec + Rewinding.accSpec (fun _ : ι => S)) (List (ι → S)) :=
+until `k - 1` of them accept or they run out, and return the accepting ones. Coordinate `i` may
+range over its own alphabet `S i`. -/
+@[expose] noncomputable def coordNeighbours {ι : Type} [DecidableEq ι] {S : ι → Type}
+    [∀ i, DecidableEq (S i)] [∀ i, Fintype (S i)] (k : ℕ) (c₀ : (i : ι) → S i) (j : ι) :
+    OracleComp (unifSpec + Rewinding.accSpec S) (List ((i : ι) → S i)) :=
   Rewinding.collectChildren (fun n => (unifSpec.query n)) Rewinding.acceptanceChild (k - 1)
     (neighbourPool c₀ j)
 
