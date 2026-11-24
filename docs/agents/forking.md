@@ -165,8 +165,8 @@ identifies the accepting ratio the table bound consumes with `ε_V(A)`, the adve
 probability on a uniform challenge. The transfer is cheap precisely because
 `le_lintegral_card_goodSet` reads only the *marginals* of the table distribution, so realizing some
 distribution with the adversary's marginals is all it needs. No side condition appears: a
-`ProbComp` always carries full mass (`prEvent_true_probComp`), so the hypothesis the general
-marginal lemma requires is automatic.
+`ProbComp` always carries full mass (`OracleComp.prEvent_true_eq_one`), so the hypothesis the
+general marginal lemma requires is automatic.
 
 **`indepTable` is not a rewound prover, and the file does not claim it is.** A prover holding one
 coin tape answers two challenges with values that share those coins; `Fintype.mPi` gives the two

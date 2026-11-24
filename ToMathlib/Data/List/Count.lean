@@ -16,7 +16,8 @@ public import Mathlib.Data.Nat.Cast.Basic
 /-!
 # Counting predicates over lists, `Fin`, and arrays
 
-`List.countP` as a sum over indices, the `Fin` form, and the `Array` corollary.
+`List.countP` as a sum over indices, the `Fin` form, the `Array` corollary, and a `Finset`'s
+count through its list.
 -/
 
 public section
@@ -59,3 +60,13 @@ theorem countP_eq_sum_map {α : Type*} (l : List α) (p : α → Bool) :
       · simp; omega
 
 end List
+
+namespace Finset
+
+/-- Counting a `Finset`'s elements through its list is filtering it. -/
+theorem countP_toList {α : Type*} (s : Finset α) (p : α → Bool) :
+    s.toList.countP p = (s.filter fun x => p x).card := by
+  classical
+  rw [List.countP_eq_sum_map, Finset.sum_map_toList, Finset.card_filter]
+
+end Finset
