@@ -12,7 +12,7 @@ public import VCVio.OracleComp.QueryTracking.QueryBound.Weighted
 
 Two copies of the uniform oracle give two kinds independently of their query arguments.
 The handler test charges three target queries for the left kind and none for the right. A query
-with no possible answer separates the structural budget from the completed-path bound.
+with no possible answer separates the weighted budget from the completed-path bound.
 -/
 
 public section
@@ -58,8 +58,11 @@ theorem three_zero_handler_bound :
       pure ()
     IsQueryBoundP ((simulateQ h A).run 7) (fun _ => True) 6 := by
   dsimp only
-  apply IsQueryBound.simulateQ_run_weighted (w := fun t => if t.isLeft then 3 else 0)
-  · have h := isQueryBound_weighted_of_per_kind (spec := unifSpec + unifSpec)
+  refine (isQueryBoundP_iff_isChargeBound _ _ _).2 <| isChargeBound_run_simulateQ
+    (c := fun t => if t.isLeft then 3 else 0)
+    (fun t s => (isQueryBoundP_iff_isChargeBound _ _ _).1 ?_) ?_ 7
+  · rcases t with n | n <;> simp [StateT.run]
+  · have h := isChargeBound_of_per_kind (spec := unifSpec + unifSpec)
       Sum.isLeft (fun k => if k then 3 else 0) (fun k => if k then 2 else 1)
       (oa := do
         let _ ← (unifSpec + unifSpec).query (.inl 1)
@@ -68,9 +71,8 @@ theorem three_zero_handler_bound :
         pure ()) (by intro k; cases k <;> simp)
     convert h using 1
     simp
-  · rintro (n | n) s <;> simp [StateT.run]
 
-/-- Indicator weights recover the unit-step stateful transfer, with no answer assumptions. -/
+/-- Indicator charges recover the unit-step stateful transfer, with no answer assumptions. -/
 theorem unit_weight_transfer {ι ι' : Type u} {spec : OracleSpec.{u, u} ι}
     {spec' : OracleSpec.{u, u} ι'} {α σ : Type u}
     {p : ι → Prop} [DecidablePred p] {q : ι' → Prop} [DecidablePred q]
@@ -80,28 +82,30 @@ theorem unit_weight_transfer {ι ι' : Type u} {spec : OracleSpec.{u, u} ι}
     (hp : ∀ t, p t → ∀ s, IsQueryBoundP ((impl t).run s) q 1)
     (hnp : ∀ t, ¬ p t → ∀ s, IsQueryBoundP ((impl t).run s) q 0) (s : σ) :
     IsQueryBoundP ((simulateQ impl A).run s) q n := by
-  apply ((isQueryBoundP_iff_weighted A n).mp hA).simulateQ_run_weighted _ s
-  intro t st
+  rw [isQueryBoundP_iff_isChargeBound] at hA ⊢
+  refine isChargeBound_run_simulateQ (fun t st => ?_) hA s
+  rw [← isQueryBoundP_iff_isChargeBound]
   by_cases ht : p t
   · simpa [ht] using hp t ht st
   · simpa [ht] using hnp t ht st
 
 /-- A query with no possible answer completes no path, so its worst-case cost is `0`, but it still
-spends its weight: the structural budget `0` fails. So `WorstCaseCostBound` does not supply the
-structural premise of `IsQueryBound.simulateQ_run_weighted`. -/
+spends its weight: the weighted budget `0` fails. So `WorstCaseCostBound` does not supply the
+weighted premise of `isChargeBound_run_simulateQ`. -/
 theorem empty_answer_separates :
     let spec : OracleSpec Unit := fun _ => Empty
     let A : OracleComp spec Unit := do
       let _ ← spec.query ()
       pure ()
     WorstCaseCostBound A ⟨fun _ => 1⟩ 0 ∧
-      ¬ IsQueryBound A 0 (fun _ b => 1 ≤ b) (fun _ b => b - 1) := by
+      ¬ PFunctor.FreeM.IsChargeBound A (fun _ => 1) 0 := by
   dsimp only
   refine ⟨?_, ?_⟩
   · rw [worstCaseCostBound_query_bind_iff]
     intro a
     exact a.elim
-  · rw [isQueryBound_query_bind_iff]
+  · rw [PFunctor.FreeM.isChargeBound_iff_isRollBound_nat, ← isQueryBound_iff_isRollBound,
+      isQueryBound_query_bind_iff]
     simp
 
 end VCVioTest.WeightedQueryBound

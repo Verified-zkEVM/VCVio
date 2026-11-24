@@ -8,6 +8,7 @@ module
 
 public import VCVio.CryptoFoundations.GroupModel.Virtualize
 public import VCVio.OracleComp.QueryTracking.QueryBound.Weighted
+public import PolyFun.PFunctor.Handler.Stateful.Charge
 
 /-! # Group-operation certificates for reduction handlers
 
@@ -18,6 +19,10 @@ per-kind costs times query budgets. Setup may produce the initial handler state.
 Equality tests are free for the adversary. A handler that spends a group operation on each
 equality test therefore has no bound in the adversary's group operations alone: it needs a
 separate equality-query budget. This is the counting part of the design note's T5 transfer.
+
+A certificate is PolyFun's stateful charge certificate `PFunctor.Handler.Stateful.WithinCharge` at
+the indicator charge of group operations (`costCertificate_iff_withinCharge`), so certified
+handlers compose along `Stateful.link` by `WithinCharge.link`.
 -/
 
 public section
@@ -35,14 +40,26 @@ variable {F S : Type} {σ : Sig S} {ι ι' : Type}
     (c : (spec F σ + Γ).Domain → ℕ) : Prop :=
   ∀ t s, IsQueryBoundP ((h t).run s) (fun i => isGroupOp i = true) (c t)
 
-/-- A certified handler turns an adversary's structural weighted budget into group work. -/
+/-- A cost certificate is PolyFun's stateful charge certificate at the indicator charge of group
+operations. -/
+theorem costCertificate_iff_withinCharge
+    (h : QueryImpl (spec F σ + Γ) (StateT τ (OracleComp (spec F σ + Γ'))))
+    (c : (spec F σ + Γ).Domain → ℕ) :
+    CostCertificate h c ↔
+      PFunctor.Handler.Stateful.WithinCharge (E := (spec F σ + Γ).toPFunctor)
+        (M := (spec F σ + Γ').toPFunctor) h (fun i => if isGroupOp i = true then 1 else 0) c := by
+  unfold CostCertificate PFunctor.Handler.Stateful.WithinCharge
+  simp only [isQueryBoundP_iff_isChargeBound]
+
+/-- A certified handler turns an adversary's weighted budget into group work. -/
 theorem CostCertificate.simulateQ_run
     {h : QueryImpl (spec F σ + Γ) (StateT τ (OracleComp (spec F σ + Γ')))}
     {c : (spec F σ + Γ).Domain → ℕ} (hc : CostCertificate h c)
     {A : OracleComp (spec F σ + Γ) α} {W : ℕ}
-    (hA : IsQueryBound A W (fun t b => c t ≤ b) (fun t b => b - c t)) (s : τ) :
+    (hA : PFunctor.FreeM.IsChargeBound A c W) (s : τ) :
     IsQueryBoundP ((simulateQ h A).run s) (fun i => isGroupOp i = true) W :=
-  hA.simulateQ_run_weighted hc s
+  (isQueryBoundP_iff_isChargeBound _ _ _).2 <| isChargeBound_run_simulateQ
+    (fun t s => (isQueryBoundP_iff_isChargeBound _ _ _).1 (hc t s)) hA s
 
 /-- Setup and finalization add their combined allowance to the handler's per-kind budget. -/
 theorem CostCertificate.transfer_per_kind
@@ -62,7 +79,7 @@ theorem CostCertificate.transfer_per_kind
       let s ← setup
       let (a, st) ← (simulateQ h A).run s
       finish a st) (fun i => isGroupOp i = true) (c₀ + ∑ k, c k * n k) := by
-  have hw := isQueryBound_weighted_of_per_kind κ c n hA
+  have hw := isChargeBound_of_per_kind κ c n hA
   have hb := isQueryBoundP_bind hsetup fun s _ =>
     isQueryBoundP_bind (hc.simulateQ_run hw s) fun z _ => hfinish z.1 z.2
   exact hb.mono (by omega)

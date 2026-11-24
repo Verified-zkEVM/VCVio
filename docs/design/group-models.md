@@ -601,7 +601,7 @@ top of the group oracle. Then:
   for setup and the final step. Then `reduction A` makes at most `c₀ + Σ_t c_t · q_t` group
   operations, where `q_t` bounds `A`'s queries of kind `t`. This counting half is
   `GroupModel.CostCertificate.transfer_per_kind` (`GroupModel/Certificate.lean`). It goes through
-  `IsQueryBound.simulateQ_run_weighted` (`VCVio/OracleComp/QueryTracking/QueryBound/Weighted.lean`),
+  `OracleComp.isChargeBound_run_simulateQ` (`VCVio/OracleComp/QueryTracking/QueryBound/Weighted.lean`),
   a weighted form of `IsQueryBoundP.simulateQ_run_of_step` with per-step bounds as hypotheses in
   the same way, and `costCertificate_virtualizeImpl` certifies virtualization at one for each group
   operation and zero for equality tests and coins. T4 then gives the unconditional bound
