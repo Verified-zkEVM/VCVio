@@ -549,15 +549,13 @@ most `δ`. -/
 theorem OW_PCVA_DecryptionError_toAsymmEncAlg_le {δ : ℝ≥0∞} (hδ : pke.deltaCorrect δ)
     (adversary : OW_PCVA_Adversary (pke.toAsymmEncAlg ProbCompRuntime.probComp)) :
     OW_PCVA_DecryptionError ProbCompRuntime.probComp adversary ≤ δ := by
-  have hlift : ∀ {α : Type} (x : ProbComp α),
-      ProbCompRuntime.probComp.liftProbComp.toFun α x = x := fun _ => rfl
   rw [OW_PCVA_DecryptionError, ProbCompRuntime.probComp_evalDist,
     ← prEvent_eq_evalDist_singleton]
   refine le_of_eq_of_le ?_ (pke.prEvent_decrypt_ne_le hδ fun ks msg r =>
     simulateQ (OW_PCVA_queryImpl (pke.toAsymmEncAlg ProbCompRuntime.probComp) ks.2
       (pke.encrypt ks.1 msg r)) (adversary ks.1 (pke.encrypt ks.1 msg r)))
-  simp only [OW_PCVA_DecryptionErrorExperiment, toAsymmEncAlg, hlift, prEvent_norm,
-    decide_eq_true_eq]
+  simp only [OW_PCVA_DecryptionErrorExperiment, toAsymmEncAlg,
+    ProbCompRuntime.probComp_liftProbComp, prEvent_norm, decide_eq_true_eq]
 
 /-- **HHK17, p. 8 (OW-PCVA).** For a `δ`-correct scheme, the usual OW-PCVA advantage against the
 induced randomized scheme is at most its OW-PCVA advantage of HHK17, Definition 2.1, plus `δ`. -/
