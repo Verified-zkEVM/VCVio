@@ -1223,7 +1223,7 @@ are equal, free equality tests find them, and their difference is a relation.
 | KZG evaluation binding and function binding, unconditional | for a generic adversary, at most the generic `t`-SDH and ARSDH bounds at a counted number of operations | ArkLib `KZG.CommitmentScheme.binding` with `bindingReduction`, `KZG.CommitmentScheme.function_binding` with `reduction` |  |
 | KZG extraction | a named straight-line extractor; `Pr[accept ∧ p(z) ≠ v] ≤` the `t`-SDH advantage of a named reduction | ArkLib `Commitment.extractability`, today a placeholder, once its game says what the extractor receives (below) | Marlin, Theorem B.12 |
 | uber family from `q`-DLog, algebraic adversaries | a reduction that factors `W` |  | Bauer, Fuchsbauer, Loss; Rotem |
-| BLS and aggregate BLS under co-CDH | Type 3: EUF-CMA advantage at most `qH + qS + 1` times the co-CDH advantage of the named reduction (`BLS.unforgeableAdvantage_le`, `BLS.coCDHReduction`). Aggregate BLS, Type 2 with `ψ`, is a target | milestone 4 | Boneh, Lynn, Shacham; Boneh, Gentry, Lynn, Shacham |
+| BLS and aggregate BLS under co-CDH | Type 3: EUF-CMA advantage at most `qH + qS + 1` times the co-CDH advantage of the named reduction (`BLS.unforgeableAdvantage_le`, `BLS.coCDHReduction`). Aggregate BLS, Type 2 with `ψ`: chosen-key advantage at most `max 1 (qH + qS + N)` times the Type 2 co-CDH advantage of the named reduction (`BLS.Aggregate.unforgeableAdvantage_le`, `BLS.Aggregate.coCDHReduction`), an index-guessing loss weaker than BGLS's `e · (qS + N)` | milestone 4 | Boneh, Lynn, Shacham; Boneh, Gentry, Lynn, Shacham |
 | Groth16 knowledge soundness | algebraic, from `q`-DLog; then generic by T5 | no Groth16 in ArkLib yet | Groth; Fuchsbauer, Kiltz, Loss |
 
 Two results need a change in ArkLib first.
@@ -1329,7 +1329,7 @@ against the paper before a theorem cites it).
 | Boneh, Boyen, *Short signatures without random oracles* (2004) | `t`-SDH and its generic bound (T8) | target | recalled; the assumption as restated in Marlin was read |
 | Boneh, Boyen, Goh, ePrint 2005/015; Boyen, *The uber-assumption family* (2008) | T7; the independence condition as equality of relation kernels | T6 proved; T7 proved at `discreteSig S` | recalled |
 | Galbraith, Paterson, Smart, ePrint 2006/165 | the three pairing signatures; hashing per sort | library target | abstract |
-| Boneh, Gentry, Lynn, Shacham, *Aggregate and verifiably encrypted signatures from bilinear maps* (2003) | `pairingIsoSig`; co-CDH | library target | read |
+| Boneh, Gentry, Lynn, Shacham, *Aggregate and verifiably encrypted signatures from bilinear maps* (2003) | `pairingIsoSig`; co-CDH; aggregate BLS | proved (`BLS.Aggregate.unforgeableAdvantage_le`) | read |
 | Jager, Rupp, *The semi-generic group model and applications to pairing-based cryptography* (2010) | a per-sort choice of knobs (Section 6.6) | target | abstract |
 | Groth, ePrint 2016/260 | knowledge soundness in the generic bilinear group model (Section 8.3) | not planned yet | abstract |
 | Chiesa, Hu, Maller, Mishra, Vesely, Ward, *Marlin*, ePrint 2019/1047, Appendices A.4 and B.3 | pairing as a query; KZG extraction from the adversary's representations | target | read |

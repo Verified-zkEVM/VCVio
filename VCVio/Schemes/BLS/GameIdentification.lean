@@ -21,7 +21,8 @@ open OracleComp OracleSpec
 
 namespace BLS
 
-private theorem realOracle_run_hash {F G M : Type} [SMul F G]
+/-- A direct hash query preserves the signing log and uses the shared random-oracle cache. -/
+theorem realOracle_run_hash {F G M : Type} [SMul F G]
     [SampleableType G] [DecidableEq M] (x : F) (msg : M)
     (s : List M × (M →ₒ G).QueryCache) :
     (realOracle x (.inl (.inr msg))).run s =

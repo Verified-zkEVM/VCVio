@@ -22,7 +22,7 @@ open OracleComp OracleSpec
 namespace BLS
 
 /-- Every challenge tag in the cache belongs to the guessed insertion index. -/
-private def ChallengeInv {V M : Type} (j : ℕ) (s : OracleState (Option V) M) : Prop :=
+@[expose] def ChallengeInv {V M : Type} (j : ℕ) (s : OracleState (Option V) M) : Prop :=
   ∀ msg i, s.cache msg = some (none, i) → i = j
 
 /-- The empty scalar-tag cache satisfies challenge-index consistency. -/
@@ -69,7 +69,7 @@ private theorem indexedEntry_support_challengeInv {V M : Type}
     exact ⟨challengeInv_insert hs msg v ht, ht⟩
 
 /-- Challenge-index consistency is preserved by every hash and signing query. -/
-private theorem indexedOracle_preserves_challengeInv {V M G : Type}
+theorem indexedOracle_preserves_challengeInv {V M G : Type}
     [SampleableType V] [DecidableEq M] (hash sign : Option V → G) (j : ℕ) :
     QueryImpl.PreservesInv (indexedOracle (M := M) (tagDraw j) hash sign (some j))
       (ChallengeInv j) := by
