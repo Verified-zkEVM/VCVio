@@ -31,7 +31,9 @@ namespace BLS.Aggregate
 
 /-- BGLS chosen-key advantage under the shared lazy random oracle is at most
 `max 1 (qH + qS + N)` times the success probability of the named Type 2 co-CDH solver.
-The budgets bound direct hashes, signing requests, and final aggregate length.
+The budgets bound direct hashes, signing requests, and final aggregate length. The factor is
+that of guessing one insertion index, so it depends on `qH`; BGLS's Theorem 3.2 loses
+`e · (qS + N)` instead, by Coron's technique.
 Surjectivity of second-source scalar multiplication expresses that `g₂` generates the
 whole second source; it makes the public map compatible with every adversarial key's
 pairing contribution, as required when extracting from an accepted aggregate. -/
@@ -41,7 +43,7 @@ theorem unforgeableAdvantage_le {F G₁ G₂ Gₜ M : Type}
     [AddCommGroup Gₜ] [Module F Gₜ] [DecidableEq Gₜ] [DecidableEq M]
     (ψ : G₂ →ₗ[F] G₁) {e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ} {g₂ : G₂}
     (A : AggregateSignatureAlg.UnforgeableAdversary (scheme (M := M) e g₂))
-    (qH qS N : ℕ) (hQ : QueryBound A qH qS N)
+    (qH qS N : ℕ) (hQ : A.RomQueryBound qH qS N)
     (hg₁ : Function.Surjective (· • ψ g₂ : F → G₁))
     (hg₂ : Function.Surjective (· • g₂ : F → G₂)) (he : e (ψ g₂) g₂ ≠ 0) :
     AggregateSignatureAlg.unforgeableAdvantage (ProbCompRuntime.rom (M →ₒ G₁)) A ≤

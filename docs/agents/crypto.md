@@ -44,6 +44,13 @@ Fiat-Shamir transform → managed-RO NMA → replay forking → DLog), see
 The Schnorr-specific σ-protocol facts that feed in live in
 [`VCVio/Schemes/Schnorr/SigmaProtocol.lean`](../../VCVio/Schemes/Schnorr/SigmaProtocol.lean).
 
+`AggregateSignatureAlg` extends `SignatureAlg` with `aggregate` and `aggregateVerify` over
+key–message lists, the interface of Boneh, Gentry, Lynn and Shacham. Its chosen-key game
+(`AggregateSignatureAlg.unforgeableExperiment`, `unforgeableAdvantage`) accepts a valid aggregate
+that names the honest key with a message never signed under it; in the random-oracle model,
+`UnforgeableAdversary.RomQueryBound` adds a bound on the forgery's length to the hash and signing
+budgets. Aggregate BLS (`VCVio/Schemes/BLS/Aggregate/`) instantiates it.
+
 ### Commitment schemes (`CommitmentScheme`)
 
 ```lean
