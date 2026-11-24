@@ -36,20 +36,25 @@ cost clauses transfer to frozen reruns of a prover (`Rewinding.ResetPolicy.finde
 
 ## Block forking
 
-`OracleComp.blockFinder` is Figure 11 for a challenge `(j : ι) → S j` with an alphabet `S j` and a
-threshold `k j` at every coordinate. It draws the neighbours of a uniform center at each coordinate
-without replacement with `coordNeighbours`, as `coordFinder` does, and returns a block star
-(`CoordinateWise.IsBlockSpecialSound`): a center and, at every `j`, `k j - 1` accepted challenges
+`OracleComp.blockFinder` is a generalization of Figure 11 to a challenge `(j : ι) → S j` with an
+alphabet `S j` and a threshold `k j` at every coordinate. It draws the neighbours of a uniform
+centre at each coordinate without replacement (`Rewinding.blockChildren`, run on
+`OracleComp.neighbourPool`), and returns a block star
+(`CoordinateWise.IsBlockSpecialSound`): a centre and, at every `j`, `k j - 1` accepted challenges
 that differ from it at `j` and nowhere else. `OracleComp.isFinder_blockFinder` gives the finder
 contract at error `∑ j, (k j - 1) / |S j|` and cost `1 + ∑ j, (k j - 1)`. The counting lives in
 [`ToMathlib/Combinatorics/CoordinateWise.lean`](../../ToMathlib/Combinatorics/CoordinateWise.lean),
 whose column counts take an alphabet per coordinate: a column that holds fewer than `k j` accepted
 challenges holds at most `k j - 1` of them, and all of its challenges are outside the good set
 (`CoordinateWise.div_card_filter_le_affine_pi`). The bounds for one alphabet and one threshold are
-its constant case, and so is the loop: `OracleComp.blockForkOpAt_const` and
-`OracleComp.runFinder_blockFinder_const` identify the block loop and finder with `coordForkOpAt`
-and `coordFinder`. The sampler for the whole challenge is an argument:
-`SampleableType.piOfFintype` supplies it for a dependent product.
+its constant case, and so is the loop: `OracleComp.coordFinder k` is the block finder at one
+alphabet and the constant threshold `k`, `OracleComp.blockForkOpAt_const` identifies the block loop
+with `coordForkOpAt`, and the success and cost results of `coordForkOp` and the contract
+`OracleComp.isFinder_coordFinder` are derived from the block ones. A call site with one alphabet
+names it, as in `blockFinder (S := fun _ => S)`, since Lean does not infer a constant family.
+At width one, the round of `blockChildren` is the threshold round of Attema–Cramer–Kohl
+(`Rewinding.thresholdChildren_eq_blockChildren`). The sampler for the whole challenge is an
+argument: `SampleableType.piOfFintype` supplies it for a dependent product.
 
 ## Quadratic forks: seeded vs replay
 
@@ -225,8 +230,8 @@ What is **not** covered:
 - **No transcript extraction against a rewound prover.** The finder's calls are genuine
   acceptance-oracle calls (`OracleComp.runFinder_coordFinder` identifies them with the loop's
   lookups), and frozen reruns carry its success and cost to a prover. Recovering the prover's
-  *responses* on the found challenges, by replaying them against the frozen world, is not yet a
-  library construction; see *Against a rewound prover* below.
+  *responses* on the found challenges is `Rewinding.recover`, which is generic in the finder and
+  is not specialized here; see *Against a rewound prover* below.
 - **No security parameter.** `CoordSpeciallySoundAt` is the extensional, fixed-statement clause of
   Definition 2.29 — no polynomial-time requirement, no joint bad event, no asymptotics. So this is
   not Definition 2.28.
