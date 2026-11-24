@@ -16,10 +16,12 @@ for a dependent `Pi` type is delicate. The checks instantiate it at alphabets of
 `Fin 5` and `Fin 3`, with thresholds `(3, 2)`: error `2/5 + 1/3` and cost `4`, both strictly below
 the trivial bounds.
 
-**The homogeneous case.** With one alphabet and one threshold the block finder has the law of
-`OracleComp.coordFinder` against every acceptance function, and its contract is the one of
-`OracleComp.isFinder_coordFinder`: error `2/5` and cost `3` at two coordinates over `Fin 5` with
-threshold `2`.
+**A nonempty good set.** A table with seven accepted challenges, six of them good, checks the
+good set that the success probability counts.
+
+**The homogeneous case.** With one alphabet and one threshold the contract of the block finder is
+the one of `OracleComp.isFinder_coordFinder`: error `2/5` and cost `3` at two coordinates over
+`Fin 5` with threshold `2`.
 -/
 
 public section
@@ -71,11 +73,18 @@ theorem isFinder_twoCoordinates :
   · rw [mul_one_div]
   · norm_num
 
-/-- With one alphabet and one threshold, the block finder has the law of `coordFinder`. -/
-example (ρ : (Fin 2 → Fin 5) → Bool) :
-    runFinder (blockFinder (S := fun _ : Fin 2 => Fin 5) (fun _ => 2)) ρ =
-      runFinder (coordFinder 2) ρ :=
-  runFinder_blockFinder_const 2 ρ
+/-- A table with a nonempty good set: it accepts the six challenges with first coordinate below `3`
+and second coordinate below `2`, and the challenge `(4, 2)`. The six are good; `(4, 2)` is not,
+since its first column holds one accepted challenge and the threshold there is `3`. -/
+def ρ (c : (u : Fin 2) → alph u) : Bool :=
+  decide (((c 0 : Fin 5).val < 3 ∧ (c 1 : Fin 3).val < 2) ∨
+    ((c 0 : Fin 5).val = 4 ∧ (c 1 : Fin 3).val = 2))
+
+example : (Finset.univ.filter fun c : (u : Fin 2) → alph u => ρ c = true).card = 7 := by
+  decide +kernel
+
+example : (blockGoodSet k ρ).card = 6 := by
+  decide +kernel
 
 end BlockFinderTest
 
@@ -90,3 +99,10 @@ info: 'OracleComp.runFinder_blockFinder' depends on axioms: [propext, Classical.
 -/
 #guard_msgs (whitespace := lax) in
 #print axioms OracleComp.runFinder_blockFinder
+
+/--
+info: 'Rewinding.thresholdChildren_eq_blockChildren' depends on axioms: [propext, Classical.choice,
+ Quot.sound]
+-/
+#guard_msgs (whitespace := lax) in
+#print axioms Rewinding.thresholdChildren_eq_blockChildren

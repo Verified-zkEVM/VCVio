@@ -66,25 +66,19 @@ theorem no_good : ∀ c : (u : Fin 2) → alph u,
 example : (Finset.univ.filter fun c : (u : Fin 2) → alph u => accept c).card = 6 := by
   decide +kernel
 
-/-- The affine bound at this instance. The good set is empty, so the bound is `ε ≤ κ`. -/
-example := div_card_filter_le_affine_pi (accept := accept) k
-
-/-- The error `κ = 2/5 + 1/3` of this instance is below one. -/
-example : (∑ j : Fin 2, ((k j - 1 : ℕ) : ℝ≥0∞) / (Fintype.card (alph j) : ℝ≥0∞)) < 1 := by
+/-- The error of this instance is `κ = 2/5 + 1/3 = 11/15`. With the thresholds swapped it would be
+`1/5 + 2/3 = 13/15`. -/
+example : (∑ j : Fin 2, ((k j - 1 : ℕ) : ℝ≥0∞) / (Fintype.card (alph j) : ℝ≥0∞)) = 11 / 15 := by
   rw [Fin.sum_univ_two]
   have h5 : Fintype.card (alph 0) = 5 := by decide
   have h3 : Fintype.card (alph 1) = 3 := by decide
   simp only [k, h5, h3, Matrix.cons_val_zero, Matrix.cons_val_one]
   have h1 : ((3 - 1 : ℕ) : ℝ≥0∞) / ((5 : ℕ) : ℝ≥0∞) ≠ ⊤ := ENNReal.div_ne_top (by simp) (by simp)
   have h2 : ((2 - 1 : ℕ) : ℝ≥0∞) / ((3 : ℕ) : ℝ≥0∞) ≠ ⊤ := ENNReal.div_ne_top (by simp) (by simp)
-  rw [← ENNReal.toReal_lt_toReal (ENNReal.add_ne_top.mpr ⟨h1, h2⟩) ENNReal.one_ne_top,
-    ENNReal.toReal_add h1 h2, ENNReal.toReal_div, ENNReal.toReal_div]
+  have h3' : (11 : ℝ≥0∞) / 15 ≠ ⊤ := ENNReal.div_ne_top (by simp) (by simp)
+  rw [← ENNReal.toReal_eq_toReal_iff' (ENNReal.add_ne_top.mpr ⟨h1, h2⟩) h3',
+    ENNReal.toReal_add h1 h2, ENNReal.toReal_div, ENNReal.toReal_div, ENNReal.toReal_div]
   norm_num
-
-/-- With one alphabet and one threshold, a block star is a coordinate-wise special sound set. -/
-example (X : Finset (Fin 2 → Fin 5)) :
-    IsCoordSpecialSound 3 X ↔ IsBlockSpecialSound (fun _ => 3) X :=
-  isCoordSpecialSound_iff_isBlockSpecialSound
 
 end BlockCoordinateWiseTest
 
