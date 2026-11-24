@@ -10,8 +10,9 @@ public import VCVio.Schemes.BLS.Programming
 /-! # The BLS signing-abort comparison
 
 Honest signing and scalar-derived signing agree until the challenge-tagged message is
-signed. The persistent abort flag permits a whole-execution comparison using the existing
-stateful domination theorem, as in the Boneh–Lynn–Shacham index-guessing reduction.
+signed. The persistent abort flag permits a whole-execution comparison by stateful domination
+until the flag is raised (`QueryImpl.DominatedUntilBad`), as in the Boneh–Lynn–Shacham
+index-guessing reduction.
 -/
 
 public section

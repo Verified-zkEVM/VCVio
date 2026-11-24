@@ -309,7 +309,7 @@ before the adversary runs.
 
 **Derived normal forms, not presentations.** Fixed-slot coefficient outputs, such as the signature
 repository's `(β, γ, ξ)` over (generator, hash replies, signing replies), are a regrouping of (E)'s
-basis list. They arrive with the BLS port.
+basis list. They arrive with the port of BLS against algebraic adversaries.
 
 ### 4.5 Knobs
 
