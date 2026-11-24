@@ -7,9 +7,8 @@ Authors: Minhyuk Hwang
 module
 
 public import VCVio.OracleComp.QueryTracking.LoggingOracle.Core
-public import VCVio.OracleComp.SimSemantics.QueryImpl.Compose
 public import VCVio.OracleComp.MapLens
-public import VCVio.OracleComp.QueryTracking.RandomOracle.Routing
+public import VCVio.OracleComp.QueryTracking.RandomOracle.RoutingLens
 
 /-!
 # Relabelling logged queries
@@ -19,7 +18,7 @@ transporting it (`OracleComp.mapLens`) along the lens `OracleComp.translateLens 
 sends each query `msg` to the query `f msg` and leaves `spec` alone. The resulting log records the
 translated inputs `f msg`; running the program directly against the logging handler for the
 composite `msg ↦ tagFn (f msg)` records the original inputs instead. The two runs agree up to
-relabelling every log entry by `f` (`QueryImpl.run_simulateQ_withLogging_mapLens`).
+relabelling every log entry by `f` (`QueryImpl.run_simulateQ_withLogging_mapLens_translateLens`).
 
 This is the simulation step of domain-extension reductions such as hash-and-MAC and hash-and-sign,
 where the reduction hashes each chosen-message query before forwarding it. The other step is
@@ -170,8 +169,9 @@ variable {ι : Type*} {spec : OracleSpec.{_, u} ι} {α : Type u} {M D T : Type 
 `msg` to the query `f msg`, against a logging handler for `tagFn` is the run against the logging
 handler for any `tagFn'` that answers `msg` as `tagFn` answers `f msg`, with its log relabelled by
 `f`. -/
-theorem run_simulateQ_withLogging_mapLens (tagFn : QueryImpl (D →ₒ T) (OracleComp spec))
-    (tagFn' : QueryImpl (M →ₒ T) (OracleComp spec)) (f : M → D)
+theorem run_simulateQ_withLogging_mapLens_translateLens
+    (tagFn : QueryImpl (D →ₒ T) (OracleComp spec)) (tagFn' : QueryImpl (M →ₒ T) (OracleComp spec))
+    (f : M → D)
     (htag : ∀ msg, tagFn' msg = tagFn (f msg)) (oa : OracleComp (spec + (M →ₒ T)) α) :
     (simulateQ (spec.passthrough + tagFn.withLogging)
         (oa.mapLens (translateLens spec f))).run =

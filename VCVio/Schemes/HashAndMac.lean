@@ -101,7 +101,7 @@ theorem runWithTaggingOracle_macReduction (mac : MacAlg ProbComp D K T)
       let s ← H.keygen
       let ((msg, τ), log) ← (scheme mac H).runWithTaggingOracle (k, s) adversary.main
       return ((H.hash s msg, τ), QueryLog.relabel (H.hash s) log)) := by
-  have htr := fun s => QueryImpl.run_simulateQ_withLogging_mapLens (mac.tag k)
+  have htr := fun s => QueryImpl.run_simulateQ_withLogging_mapLens_translateLens (mac.tag k)
     ((scheme mac H).tag (k, s)) (H.hash s) (fun _ => rfl) adversary.main
   have hkey := QueryImpl.run_simulateQ_passthrough_add_liftM (QueryImpl.withLogging (mac.tag k))
     H.keygen

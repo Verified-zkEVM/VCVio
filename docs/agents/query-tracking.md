@@ -127,7 +127,10 @@ no running-time claim about association-list lookup or the network schedule.
 [`RandomOracle/Routing.lean`](../../VCVio/OracleComp/QueryTracking/RandomOracle/Routing.lean)
 proves that injective input encodings preserve the full output measure of every adaptive
 client of an initially empty finite random oracle. The eager-table and lazy-cache forms
-share the same structural routing operation. Disjoint injective encodings of two domains
+share the same structural routing operation, `RandomOracleRouting.route` along
+`RandomOracleRouting.lens`, which
+[`RandomOracle/RoutingLens.lean`](../../VCVio/OracleComp/QueryTracking/RandomOracle/RoutingLens.lean)
+defines with only the lens API. Disjoint injective encodings of two domains
 use Mathlib's `Function.Injective.sumElim` to discharge the routing condition.
 
 [`Examples/ProgramLogic/RandomOracleRouting.lean`](../../Examples/ProgramLogic/RandomOracleRouting.lean)
