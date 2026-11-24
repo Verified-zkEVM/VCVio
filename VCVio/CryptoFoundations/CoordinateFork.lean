@@ -43,8 +43,11 @@ at the data level it contains `ℓ(k-1)+1` accepting transcripts whose challenge
 Collecting replacements is a *total* lookup here: which `k - 1` accepting values a coordinate
 contributes is irrelevant to the counting argument, so the core takes the first `k - 1` in
 enumeration order. This is not the paper's oracle algorithm: the entire table is already available,
-and neither query order, exhaustion, repeated execution, nor expected cost is represented. The
-paper's expected-query clause therefore remains unproved.
+and neither query order, exhaustion, repeated execution, nor expected cost is represented. Only
+this total-table core leaves cost out. The paper's algorithm is the resampling loop `coordForkOp`
+in `CoordinateFork/Operational.lean`, and `lintegral_cost_coordForkOp_le` proves its expected-query
+clause: at most `1 + ℓ(k - 1)` lookups. `isFinder_coordFinder` in `CoordinateFork/Finder.lean`
+states the same bound as the cost clause of a black-box finder.
 -/
 
 public section
@@ -391,7 +394,8 @@ Because `GoodOutput` constrains the payload, the bound is sensitive to what the 
 actually returns — one emitting `some (ρ, ∅)` would fail it.
 
 Not proved here: existence of the paper's oracle extractor or its expected-query clause. This
-object consumes a pre-sampled acceptance table rather than querying an adversary. -/
+object consumes a pre-sampled acceptance table rather than querying an adversary. For Figure 11's
+resampling loop, `lintegral_cost_coordForkOp_le` proves the expected-query clause. -/
 theorem sub_div_le_prEvent_goodOutput_coordFork [Nonempty S] (k : ℕ)
     (D : ProbComp ((ι → S) → Bool)) :
     acceptRatio D - (Fintype.card ι : ℝ≥0∞) * (k - 1 : ℕ) / Fintype.card S

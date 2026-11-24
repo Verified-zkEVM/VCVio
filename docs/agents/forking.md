@@ -14,7 +14,8 @@ of genuine acceptance-oracle calls, and its guarantees transfer to frozen reruns
 |---|---|---|---|
 | **Seeded** (Bellare–Neven) | every oracle answer, into a `QuerySeed` | `acc²/q − acc/h` | [`VCVio/CryptoFoundations/SeededFork.lean`](../../VCVio/CryptoFoundations/SeededFork.lean) |
 | **Replay** (cursor-native) | only the forked oracle family | `acc²/q − acc/h` | [`VCVio/CryptoFoundations/ReplayFork.lean`](../../VCVio/CryptoFoundations/ReplayFork.lean) |
-| **Coordinate-wise** | the whole acceptance table | `ε ≤ κ + (1 − κ) p`, `κ = ℓ(k−1)/N` | [`VCVio/CryptoFoundations/CoordinateFork.lean`](../../VCVio/CryptoFoundations/CoordinateFork.lean), [`CoordinateFork/Finder.lean`](../../VCVio/CryptoFoundations/CoordinateFork/Finder.lean) |
+| **Coordinate-wise** (table model) | the whole acceptance table | `ε − κ ≤ p`, `κ = ℓ(k−1)/N` | [`VCVio/CryptoFoundations/CoordinateFork.lean`](../../VCVio/CryptoFoundations/CoordinateFork.lean) |
+| **Coordinate-wise** (finder) | nothing: a black-box finder | `ε ≤ κ + (1 − κ) p`, `κ = ℓ(k−1)/N` | [`VCVio/CryptoFoundations/CoordinateFork/Finder.lean`](../../VCVio/CryptoFoundations/CoordinateFork/Finder.lean) |
 | **Threshold tree** (Attema–Cramer–Kohl) | nothing: a black-box finder | `ε ≤ κ + (1 − κ) p`, `κ = 1 − ∏(1 − (kᵣ−1)/Nᵣ)` | [`VCVio/CryptoFoundations/Rewinding/ThresholdFinder.lean`](../../VCVio/CryptoFoundations/Rewinding/ThresholdFinder.lean) |
 
 Seeded and replay share a generic core in
@@ -110,7 +111,8 @@ states the fixed-statement, extensional clause of Definition 2.29 against a `Sig
 challenge type is `ι → S`:
 
 ```lean
-def CoordSpeciallySoundAt (σ : SigmaProtocol Stmt Wit Commit PrvState (ι → S) Resp rel) (k : ℕ)
+def CoordSpeciallySoundAt
+    (σ : SigmaProtocol ProbComp Stmt Wit Commit PrvState (ι → S) Resp rel) (k : ℕ)
     (ext : Stmt → Commit → Finset ((ι → S) × Resp) → ProbComp Wit) (x : Stmt) : Prop :=
   ∀ pc T, (∀ p ∈ T, σ.verify x pc p.1 p.2 = true) →
     IsCoordSpecialSound k (T.image Prod.fst) → ∀ w ∈ support (ext x pc T), rel x w = true
@@ -122,7 +124,9 @@ a `k`-ary extractor cannot be one. `HVZK` takes `simTranscript` as a parameter f
 through a pair.
 
 [`CoordinateFork/Extraction.lean`](../../VCVio/CryptoFoundations/CoordinateFork/Extraction.lean)
-composes that with the fork to give **Lemma 2.31 at `μ = 1`**. The extractor it names is
+composes that with the fork to give **the table-model form of Lemma 2.31 at `μ = 1`**: the prover
+enters as a distribution of response tables, not as a rewound prover (see
+[Against a rewound prover](#against-a-rewound-prover)). The extractor it names is
 `coordExtractOp`: run Figure 11 carrying the prover's responses (`OracleComp.coordForkOpT`), then
 hand the accepting transcripts to `ext`. All three of Lemma 7.1's clauses are about that one
 computation —
@@ -161,8 +165,8 @@ identifies the accepting ratio the table bound consumes with `ε_V(A)`, the adve
 probability on a uniform challenge. The transfer is cheap precisely because
 `le_lintegral_card_goodSet` reads only the *marginals* of the table distribution, so realizing some
 distribution with the adversary's marginals is all it needs. No side condition appears: a
-`ProbComp` always carries full mass (`prEvent_true_probComp`), so the hypothesis the general
-marginal lemma requires is automatic.
+`ProbComp` always carries full mass (`OracleComp.prEvent_true_eq_one`), so the hypothesis the
+general marginal lemma requires is automatic.
 
 **`indepTable` is not a rewound prover, and the file does not claim it is.** A prover holding one
 coin tape answers two challenges with values that share those coins; `Fintype.mPi` gives the two
