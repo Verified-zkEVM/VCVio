@@ -55,8 +55,6 @@ end Finset
 
 namespace ProbComp
 
--- Every statement below observes the drawn list itself, so the pool's alphabet carries the
--- discrete measurable structure of `ToMathlib.MeasureTheory.DiscreteInstances`.
 variable {S : Type}
 
 /-! The laws below observe whole draws, so they take a discrete σ-algebra on lists as a hypothesis
