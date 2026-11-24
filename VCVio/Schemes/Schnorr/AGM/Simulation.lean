@@ -26,7 +26,7 @@ namespace Schnorr
 /-- Erasing explanations forwards exactly the counted signing and hash requests. -/
 theorem AlgebraicAdversary.toUnforgeableAdversary_queryBound {F G M : Type}
     [Field F] [SampleableType F] [AddCommGroup G] [Module F G] [DecidableEq G]
-    [SampleableType G] [DecidableEq M] (A : AlgebraicAdversary F G M) (g pk : G)
+    [SampleableType G] (A : AlgebraicAdversary F G M) (g pk : G)
     (qS qH : ℕ)
     (hS : IsQueryBoundP (A.main (AGM.initial g pk))
       (fun q => AGM.signRequest q = true) qS)
