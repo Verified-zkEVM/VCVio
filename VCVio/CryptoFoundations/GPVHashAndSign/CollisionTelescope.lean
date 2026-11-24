@@ -330,7 +330,7 @@ theorem tsum_prEvent_uniformSample_ite (s : Finset Salt) (q : ℝ≥0∞) :
           + (if x ∈ s then 0 else Pr{let y ← ($ᵗ Salt : ProbComp Salt)}[y = x] * q) := by
     intro x; by_cases hx : x ∈ s <;> simp [hx]
   simp_rw [hsplit]
-  rw [ENNReal.tsum_add]
+  rw [tsum_add]
   congr 1
   · rw [← OracleComp.prEvent_eq_tsum_ite]; exact hmem
   · have hre : ∀ x : Salt,

@@ -253,12 +253,12 @@ theorem full_cache_lookup (publicSeed secretSeed : Digest) (outputs : Outputs)
 /-- Every completion of the programmed byte cache evaluates the actual component
 algorithms to the sampled cells. Cache agreement is a deterministic consistency
 condition, not an assumed component distribution or security property. -/
-theorem value_eq_of_cache_agreement [HasQuery HashSpec Id]
+theorem value_eq_of_cache_agreement {hash : HasQuery HashSpec Id}
     (publicSeed secretSeed : Digest) (outputs : Outputs)
     (hagrees : ∀ input output,
       cacheFrom publicSeed (cellsOfOutputs secretSeed outputs) outputs order ∅ input =
         some output → Hashing.hash (m := Id) input = output) :
-    value secretSeed publicSeed = cellsOfOutputs secretSeed outputs := by
+    value hash secretSeed publicSeed = cellsOfOutputs secretSeed outputs := by
   apply value_unique
   · rfl
   · intro parent

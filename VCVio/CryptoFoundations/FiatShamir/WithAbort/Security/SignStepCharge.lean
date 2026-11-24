@@ -167,9 +167,9 @@ theorem ghostSignDrawBody_succ_charge {γ : Type}
                     ((z.2.2.count ws.1 : ℕ) : ℝ≥0∞)) := by
           -- Fully distribute the probability weights, reorder `ws` innermost, recombine.
           simp_rw [← ENNReal.tsum_mul_left]
-          rw [ENNReal.tsum_comm]
+          rw [tsum_comm]
           refine tsum_congr fun rws => ?_
-          rw [ENNReal.tsum_comm]
+          rw [tsum_comm]
           refine tsum_congr fun z => ?_
           refine tsum_congr fun ws => by ring
       _ ≤ ∑' rws : (Option (Commit × Resp) × List Commit) × (M × Commit →ₒ Chal).QueryCache,
@@ -177,9 +177,9 @@ theorem ghostSignDrawBody_succ_charge {γ : Type}
               ∑' z : γ × DeferredReadState M Commit Chal,
                 Pr{let x ← ((simulateQ (deferredDrawReadImpl ids M maxAttempts pk sk)
                     (ob rws.1.1)).run ((((rws.2, sgn), dr), bad), rl))}[x = z] * L₀ := by
-          refine ENNReal.tsum_le_tsum fun rws => ?_
+          refine tsum_le_tsum fun rws => ?_
           refine mul_le_mul' le_rfl ?_
-          refine ENNReal.tsum_le_tsum fun z => ?_
+          refine tsum_le_tsum fun z => ?_
           rcases eq_or_ne Pr{let x ← ((simulateQ (deferredDrawReadImpl ids M maxAttempts pk sk)
               (ob rws.1.1)).run ((((rws.2, sgn), dr), bad), rl))}[x = z] 0 with hz | hz
           · rw [hz]; simp
@@ -335,7 +335,7 @@ theorem ghostSignDrawBody_succ_charge {γ : Type}
                             (ob rws.1.1)).run
                             ((((rws.2, sgn), (dr ++ [ws.1]) ++ rws.1.2), bad), rl))}[x = z] *
                           ((rws.1.2.map (fun w => z.2.2.count w)).sum : ℝ≥0∞) from by
-                rw [← ENNReal.tsum_add]; exact tsum_congr fun z => by rw [mul_add]]
+                rw [← tsum_add]; exact tsum_congr fun z => by rw [mul_add]]
               -- Head: value-substitute the drawn list from `(dr ++ [ws.1]) ++ rws.1.2` to `dr`.
               congr 1
               exact deferredDrawRead_run_count_dl_invariant ids M maxAttempts pk sk (ob rws.1.1)
@@ -344,7 +344,7 @@ theorem ghostSignDrawBody_succ_charge {γ : Type}
             -- `∑' rws, Pr{let x ← …}[x = rws]·(head + rec) ≤ H ws + L₀·Rr`.
             simp only [Function.comp]
             simp_rw [hsplit, mul_add]
-            rw [ENNReal.tsum_add]
+            rw [tsum_add]
             -- The head sum *is* `H ws`; the recursive sum is bounded by the inductive hypothesis.
             refine add_le_add (le_of_eq ?_) ?_
             · rw [hH]
@@ -368,7 +368,7 @@ theorem ghostSignDrawBody_succ_charge {γ : Type}
                       ((alc.1.2.map (fun w => z.2.2.count w)).sum : ℝ≥0∞))
           ≤ ∑' oz : Option Resp, Pr{let x ← ids.respond pk sk ws.2 ch}[x = oz] *
               (if oz = none then H ws + L₀ * Rr else 0) :=
-            ENNReal.tsum_le_tsum fun oz => by gcongr; exact h_oz oz
+            tsum_le_tsum fun oz => by gcongr; exact h_oz oz
         _ = Pr{let x ← ids.respond pk sk ws.2 ch}[x = none] * (H ws + L₀ * Rr) := by
             rw [tsum_eq_single (none : Option Resp) fun oz hoz => by
               rw [ite_eq_right hoz, mul_zero], ite_eq_left rfl]
@@ -386,7 +386,7 @@ theorem ghostSignDrawBody_succ_charge {γ : Type}
                     ((alc.1.2.map (fun w => z.2.2.count w)).sum : ℝ≥0∞))
         ≤ ∑' ch : Chal, Pr{let x ← uniformSample Chal}[x = ch] *
             (Pr{let x ← ids.respond pk sk ws.2 ch}[x = none] * (H ws + L₀ * Rr)) :=
-          ENNReal.tsum_le_tsum fun ch => by gcongr; exact h_ch ch
+          tsum_le_tsum fun ch => by gcongr; exact h_ch ch
       _ = (∑' ch : Chal, Pr{let x ← uniformSample Chal}[x = ch] *
             Pr{let x ← ids.respond pk sk ws.2 ch}[x = none]) * (H ws + L₀ * Rr) := by
           rw [← ENNReal.tsum_mul_right]; exact tsum_congr fun ch => (mul_assoc _ _ _).symm
@@ -444,7 +444,7 @@ theorem ghostSignDrawBody_succ_charge {γ : Type}
                 | some z => pure ((some (ws.1, z), []), re.cacheQuery (msg, ws.1) ch)
                 | none => (fun rws => ((rws.1.1, ws.1 :: rws.1.2), rws.2)) <$>
                     (ghostSignDrawBody ids M pk sk msg n).run re)}[x = alc] from by
-      rw [← ENNReal.tsum_add]; exact tsum_congr fun alc => by rw [mul_add, mul_one]]
+      rw [← tsum_add]; exact tsum_congr fun alc => by rw [mul_add, mul_one]]
     rw [hmass]
   calc (∑' ws : Commit × PrvState, Pr{let x ← ids.commit pk sk}[x = ws] *
           ∑' alc : (Option (Commit × Resp) × List Commit) × (M × Commit →ₒ Chal).QueryCache,
@@ -459,10 +459,10 @@ theorem ghostSignDrawBody_succ_charge {γ : Type}
                     (ob alc.1.1)).run ((((alc.2, sgn), dr ++ alc.1.2), bad), rl))}[x = z] *
                   ((alc.1.2.map (fun w => z.2.2.count w)).sum : ℝ≥0∞))
         ≤ ∑' ws : Commit × PrvState, Pr{let x ← ids.commit pk sk}[x = ws] * (H ws + L₀ * R ws) :=
-          ENNReal.tsum_le_tsum fun ws => by gcongr; exact h_ws ws
+          tsum_le_tsum fun ws => by gcongr; exact h_ws ws
       _ = (∑' ws : Commit × PrvState, Pr{let x ← ids.commit pk sk}[x = ws] * H ws)
             + ∑' ws : Commit × PrvState, Pr{let x ← ids.commit pk sk}[x = ws] * (L₀ * R ws) := by
-          rw [← ENNReal.tsum_add]; exact tsum_congr fun ws => by rw [mul_add]
+          rw [← tsum_add]; exact tsum_congr fun ws => by rw [mul_add]
       _ ≤ L₀ + ∑' ws : Commit × PrvState, Pr{let x ← ids.commit pk sk}[x = ws] * (L₀ * R ws) := by
           gcongr
       _ = L₀ * ∑' ws : Commit × PrvState, Pr{let x ← ids.commit pk sk}[x = ws] *
@@ -478,7 +478,7 @@ theorem ghostSignDrawBody_succ_charge {γ : Type}
               1 :=
             OracleComp.tsum_prEvent_eq_one _
           simp_rw [hRinner, mul_add, mul_one]
-          rw [ENNReal.tsum_add, hcommitMass, mul_add, mul_one,
+          rw [tsum_add, hcommitMass, mul_add, mul_one,
             show (∑' ws : Commit × PrvState, Pr{let x ← ids.commit pk sk}[x = ws] * (L₀ * R ws))
               = L₀ * ∑' ws : Commit × PrvState, Pr{let x ← ids.commit pk sk}[x = ws] * R ws from by
               rw [← ENNReal.tsum_mul_left]; exact tsum_congr fun ws => by ring, add_comm]
@@ -698,7 +698,7 @@ theorem signStep_pair_charge {γ : Type}
     rw [ENNReal.tsum_mul_left]; exact congrArg (L₀ * ·) (OracleComp.tsum_prEvent_map_mul _ _ _)
   -- Rewrite all three sums to body averages; the RHS is `(pre-existing) + L₀ · (slack)`.
   rw [hLHS]
-  rw [ENNReal.tsum_add]
+  rw [tsum_add]
   conv_rhs => rw [show (∑' x : (((unifSpec + (M × Commit →ₒ Chal)) +
         (M →ₒ Option (Commit × Resp))).Range (Sum.inr msg)) × DeferredReadState M Commit Chal,
         ENNReal.ofReal ε * ((s.2.length + qH : ℕ) : ℝ≥0∞) *
@@ -763,7 +763,7 @@ theorem signStep_pair_charge {γ : Type}
             Pr{let x ← ((simulateQ (deferredDrawReadImpl ids M maxAttempts pk sk) (ob alc.1.1)).run
                 ((((alc.2, msg :: s.1.1.1.2), s.1.1.2 ++ alc.1.2), s.1.2), s.2))}[x = z]) *
             ((alc.1.2.length + 1 : ℕ) : ℝ≥0∞) from by rw [hcontMass alc, one_mul]]
-    rw [← ENNReal.tsum_mul_right, ← ENNReal.tsum_add]
+    rw [← ENNReal.tsum_mul_right, ← tsum_add]
     refine tsum_congr fun z => ?_
     by_cases hz : z ∈ support ((simulateQ (deferredDrawReadImpl ids M maxAttempts pk sk)
         (ob alc.1.1)).run ((((alc.2, msg :: s.1.1.1.2), s.1.1.2 ++ alc.1.2), s.1.2), s.2))
@@ -809,7 +809,7 @@ theorem signStep_pair_charge {γ : Type}
     congr 1
     -- Pre-existing drawn count `(s.drawn ++ alc.1.2).count` splits into `s.drawn.count` plus the
     -- body coincidence (via the bilinear count swap).
-    rw [← ENNReal.tsum_add]
+    rw [← tsum_add]
     refine tsum_congr fun z => ?_
     rw [← mul_add]
     congr 1
@@ -821,9 +821,9 @@ theorem signStep_pair_charge {γ : Type}
     rw [List.sum_map_add, sum_map_count_comm alc.1.2 z.2.2]
   -- Assemble: sum the per-`alc` bound, split into pre-existing + body-coincidence + ih-slack, then
   -- recombine the slack via `hslack` (the `#attempts + 1` gap) and the coincidence via `hbody`.
-  refine le_trans (ENNReal.tsum_le_tsum fun alc => mul_le_mul' le_rfl (h_alc alc)) ?_
+  refine le_trans (tsum_le_tsum fun alc => mul_le_mul' le_rfl (h_alc alc)) ?_
   simp_rw [mul_add]
-  rw [ENNReal.tsum_add, ENNReal.tsum_add, add_assoc]
+  rw [tsum_add, tsum_add, add_assoc]
   refine add_le_add le_rfl ?_
   -- The body coincidence plus the post-body inductive slack equal `L₀ · (the full RHS slack)`.
   have hslackSum :
@@ -846,7 +846,7 @@ theorem signStep_pair_charge {γ : Type}
                     s.2))}[x = z] *
                 (((z.2.1.1.2.length - s.1.1.2.length)
                   + (z.2.1.1.1.2.length - s.1.1.1.2.length) : ℕ) : ℝ≥0∞) := by
-    rw [← ENNReal.tsum_mul_left, ← ENNReal.tsum_mul_left, ← ENNReal.tsum_add]
+    rw [← ENNReal.tsum_mul_left, ← ENNReal.tsum_mul_left, ← tsum_add]
     refine tsum_congr fun alc => ?_
     rw [hslack alc, mul_add, add_comm]
     ring

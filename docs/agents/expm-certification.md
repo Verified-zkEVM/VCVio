@@ -35,8 +35,9 @@ Two things about the domain are worth knowing.
 
 `ccs < 1` is load-bearing on both sides. The routine reads its operands through a fixed-point
 conversion that keeps `⌊2 ^ 63 · ccs⌋` in 63 bits and drops the sign bit. At `ccs = 1` the
-conversion wraps to `0` and the whole product with it, for every `x` in range, against a true
-value never below one half. Above `1` the claim fails outright: the returned `UInt64` read at
+conversion wraps to `0` and the whole product with it. At `x = 0` the true value is `1`.
+At the representable input `x = 355/512`, the true value is already below one half, as
+`exists_expm_argument_exp_lt_half` proves. Above `1` the returned `UInt64` read at
 scale `2 ^ 63` is below `2`, while `ccs · exp (-x)` grows without bound.
 
 `x ≤ 0.694` rather than `x < log 2` is deliberate. `0.694` is the smallest constant above `log 2`

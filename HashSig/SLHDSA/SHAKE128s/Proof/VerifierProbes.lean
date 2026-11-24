@@ -197,14 +197,14 @@ theorem simulateQ_forsTreeRoot (cache : QueryCache HashSpec) (signature : ForsSi
     (i : Fin forsTrees) :
     (simulateQ (CacheReplay.replay cache)
         (forsTreeRoot signature indices publicSeed address i) : Id Digest) =
-      @Extraction.Fors.recoveredRoot (CacheReplay.replayQuery cache) signature indices publicSeed
+      Extraction.Fors.recoveredRoot (CacheReplay.replayQuery cache) signature indices publicSeed
         address i := by
   rw [forsTreeRoot]
   simp only [simulateQ_bind, VerifierNaturality.foldlM_simulate (CacheReplay.replay cache),
     Correctness.foldlM_id]
   simp only [Extraction.Fors.recoveredRoot]
   refine congrArg (fun body => (List.finRange forsHeight).foldl body
-    (@Extraction.Fors.recoveredLeaf (CacheReplay.replayQuery cache) signature indices publicSeed
+    (Extraction.Fors.recoveredLeaf (CacheReplay.replayQuery cache) signature indices publicSeed
       address i)) (funext fun value => funext fun step => ?_)
   rw [← fors_pathInput signature indices publicSeed address i value step]
   rfl
@@ -215,7 +215,7 @@ theorem simulateQ_forsTrees (cache : QueryCache HashSpec) (signature : ForsSigna
     (simulateQ (CacheReplay.replay cache)
         (sequenceFin forsTrees (forsTreeRoot signature indices publicSeed address)) :
           Id (Fin forsTrees → Digest)) =
-      @Extraction.Fors.recoveredRoot (CacheReplay.replayQuery cache) signature indices publicSeed
+      Extraction.Fors.recoveredRoot (CacheReplay.replayQuery cache) signature indices publicSeed
         address := by
   rw [VerifierNaturality.sequenceFin_simulate (CacheReplay.replay cache),
     Correctness.sequenceFin_id]
@@ -243,7 +243,7 @@ theorem queriesUnder_fors_compression (cache : QueryCache HashSpec) (signature :
       (SLHDSA.SHAKE128s.Fors.publicKeyFromSignature (m := OracleComp HashSpec) signature indices
         publicSeed address)
       (Hashing.tweakableInput publicSeed (Extraction.Fors.rootAddress address)
-        (digestArrayBytes (@Extraction.Fors.recoveredRoot (CacheReplay.replayQuery cache)
+        (digestArrayBytes (Extraction.Fors.recoveredRoot (CacheReplay.replayQuery cache)
           signature indices publicSeed address))) := by
   rw [fors_eq_trees_bind_compression, ← simulateQ_forsTrees]
   exact queriesUnder_compression cache _ publicSeed _ digestArrayBytes
@@ -274,7 +274,7 @@ theorem queriesUnder_fors_path (cache : QueryCache HashSpec) (signature : ForsSi
         (BinaryPath.value
           (PathEntry.pathCombine cache publicSeed (SLHDSA.SHAKE128s.Fors.nodeAddress address))
           (Extraction.Fors.leafIndex indices i)
-          (@Extraction.Fors.recoveredLeaf (CacheReplay.replayQuery cache) signature indices
+          (Extraction.Fors.recoveredLeaf (CacheReplay.replayQuery cache) signature indices
             publicSeed address i)
           (Extraction.Fors.siblings signature i) step.val) step) := by
   refine queriesUnder_fors_tree cache signature indices publicSeed address i _ ?_
@@ -284,7 +284,7 @@ theorem queriesUnder_fors_path (cache : QueryCache HashSpec) (signature : ForsSi
       (Hashing.tweakableInput publicSeed
         (SLHDSA.SHAKE128s.Fors.nodeAddress address 0 (Extraction.Fors.leafIndex indices i))
         (bytesBE n (signature i).secret))) : Id Digest) =
-      @Extraction.Fors.recoveredLeaf (CacheReplay.replayQuery cache) signature indices publicSeed
+      Extraction.Fors.recoveredLeaf (CacheReplay.replayQuery cache) signature indices publicSeed
         address i from rfl]
   exact PathEntry.queriesUnder_pathInput cache publicSeed _ _ _ _ step
 
@@ -305,7 +305,7 @@ theorem cached_fors_compression_probe (cache initialCache : QueryCache HashSpec)
       (Scheme.verify (m := OracleComp HashSpec) pk request signature)).run initialCache)) :
     cache (Hashing.tweakableInput pk.seed
       (Extraction.Fors.rootAddress (Scheme.forsAddress (digestOf cache pk message parsed)))
-      (digestArrayBytes (@Extraction.Fors.recoveredRoot (CacheReplay.replayQuery cache)
+      (digestArrayBytes (Extraction.Fors.recoveredRoot (CacheReplay.replayQuery cache)
         parsed.fors (MessageDigest.forsIndices (digestOf cache pk message parsed)) pk.seed
         (Scheme.forsAddress (digestOf cache pk message parsed))))) ≠ none :=
   cached_of_queriesUnder _ initialCache cache verified _
@@ -329,7 +329,7 @@ theorem cached_fors_path_probe (cache initialCache : QueryCache HashSpec)
         (PathEntry.pathCombine cache pk.seed (SLHDSA.SHAKE128s.Fors.nodeAddress
           (Scheme.forsAddress (digestOf cache pk message parsed))))
         (Extraction.Fors.leafIndex (MessageDigest.forsIndices (digestOf cache pk message parsed)) i)
-        (@Extraction.Fors.recoveredLeaf (CacheReplay.replayQuery cache) parsed.fors
+        (Extraction.Fors.recoveredLeaf (CacheReplay.replayQuery cache) parsed.fors
           (MessageDigest.forsIndices (digestOf cache pk message parsed)) pk.seed
           (Scheme.forsAddress (digestOf cache pk message parsed)) i)
         (Extraction.Fors.siblings parsed.fors i) step.val) step) ≠ none :=
@@ -370,14 +370,14 @@ theorem deviatingCollision_or_residue_of_verified {α : Type} (secretSeed : Dige
     (hmem : (verified, cache) ∈ support ((simulateQ randomOracle
       (Scheme.verify (m := OracleComp HashSpec) pk request signature)).run initialCache))
     (result : α × QueryCache HashSpec) (hcache : result.2 = cache)
-    (hfault : @Extraction.HypertreeChain.HypertreeFault (CacheReplay.replayQuery cache)
+    (hfault : Extraction.HypertreeChain.HypertreeFault (CacheReplay.replayQuery cache)
       secretSeed pk.seed layers parsed.hypertree 0
       (MessageDigest.treeIndex (digestOf cache pk message parsed)).toNat
       (MessageDigest.leafIndex (digestOf cache pk message parsed)).toFin
       (forsKeyOf cache pk message parsed) expectedInput) :
     StructuralTerm.DeviatingCollision pk.seed
-        (@value (CacheReplay.replayQuery cache) secretSeed pk.seed) result ∨
-      @FaultCharge.WotsResidue (CacheReplay.replayQuery cache) secretSeed pk.seed layers
+        (value (CacheReplay.replayQuery cache) secretSeed pk.seed) result ∨
+      FaultCharge.WotsResidue (CacheReplay.replayQuery cache) secretSeed pk.seed layers
         parsed.hypertree 0 (MessageDigest.treeIndex (digestOf cache pk message parsed)).toNat
         (MessageDigest.leafIndex (digestOf cache pk message parsed)).toFin
         (forsKeyOf cache pk message parsed) expectedInput :=
@@ -405,10 +405,10 @@ theorem deviatingCollision_or_secrets_of_verified {α : Type} (secretSeed : Dige
         (MessageDigest.forsIndices (digestOf cache pk message parsed)) pk.seed key.address =
       @Hashing.tweakable Id Id.instMonad (CacheReplay.replayQuery cache) pk.seed
         (Extraction.Fors.rootAddress key.address)
-        (digestArrayBytes (@Extraction.Fors.canonicalRoots (CacheReplay.replayQuery cache)
+        (digestArrayBytes (Extraction.Fors.canonicalRoots (CacheReplay.replayQuery cache)
           secretSeed pk.seed key.address))) :
     StructuralTerm.DeviatingCollision pk.seed
-        (@value (CacheReplay.replayQuery cache) secretSeed pk.seed) result ∨
+        (value (CacheReplay.replayQuery cache) secretSeed pk.seed) result ∨
       ∀ i : Fin forsTrees, (parsed.fors i).secret =
         @SLHDSA.SHAKE128s.Fors.secret Id Id.instMonad (CacheReplay.replayQuery cache)
           secretSeed pk.seed key.address
@@ -448,10 +448,10 @@ theorem deviatingCollision_or_canonical_of_verified {α : Type} (secretSeed : Di
         (MessageDigest.forsIndices (digestOf cache pk message parsed)) pk.seed key.address =
       @Hashing.tweakable Id Id.instMonad (CacheReplay.replayQuery cache) pk.seed
         (Extraction.Fors.rootAddress key.address)
-        (digestArrayBytes (@Extraction.Fors.canonicalRoots (CacheReplay.replayQuery cache)
+        (digestArrayBytes (Extraction.Fors.canonicalRoots (CacheReplay.replayQuery cache)
           secretSeed pk.seed key.address))) :
     StructuralTerm.DeviatingCollision pk.seed
-        (@value (CacheReplay.replayQuery cache) secretSeed pk.seed) result ∨
+        (value (CacheReplay.replayQuery cache) secretSeed pk.seed) result ∨
       parsed.fors = @SLHDSA.SHAKE128s.Fors.sign Id Id.instMonad (CacheReplay.replayQuery cache)
         (MessageDigest.forsIndices (digestOf cache pk message parsed)) secretSeed pk.seed
         key.address :=

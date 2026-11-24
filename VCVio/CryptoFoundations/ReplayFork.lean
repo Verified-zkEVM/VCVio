@@ -65,9 +65,7 @@ open OracleSpec OracleComp ENNReal Function Finset
 open scoped OracleSpec.PrimitiveQuery
 open scoped PFunctor
 
-/- Replay logs and intrinsic paths meet through their list and dependent-pair
-presentations; these two reducers are needed only while matching that seam. -/
-attribute [local implicit_reducible] FreeMonoid PFunctor.Idx
+attribute [local implicit_reducible] PFunctor.Idx
 
 namespace OracleComp
 
@@ -149,7 +147,7 @@ its focused answer. -/
 lemma getQueryValue?_completion_path_eq_answer [DecidableEq ι] {main : OracleComp spec α} {i : ι}
     {n : Nat} (occurrence : PFunctor.FreeM.Cursor.Occurrence i main n)
     (completion : occurrence.Completion) :
-    QueryLog.getQueryValue? (PFunctor.FreeM.Path.trace main completion.path) i n =
+    QueryLog.getQueryValue? (PFunctor.FreeM.Path.trace main completion.path).toList i n =
       some completion.answer := by
   rw [QueryLog.getQueryValue?_eq_getAt?]
   exact occurrence.getAt?_trace_completion_path completion
@@ -183,9 +181,11 @@ theorem CfReachable.toPathCfReachable [DecidableEq ι] {main : OracleComp spec �
     PathCfReachable main qb i cf := by
   intro path s hcf
   rw [PFunctor.FreeM.Cursor.locateAt?_isSome_iff_lt_occurrences,
-    ← PFunctor.TraceList.getAt?_isSome_iff_lt_occurrences, ← QueryLog.getQueryValue?_eq_getAt?]
-  exact hreach (replayPathResult_mem_support_replayFirstRun main path
+    ← PFunctor.TraceList.getAt?_isSome_iff_lt_occurrences]
+  have h := hreach (replayPathResult_mem_support_replayFirstRun main path
     (mem_support_replayFirstPath main path)) s (by simpa [replayPathResult] using hcf)
+  rw [QueryLog.getQueryValue?_eq_getAt?] at h
+  exact h
 
 /-! ## Intrinsic quantitative games -/
 
@@ -432,8 +432,8 @@ theorem contextFork_propertyTransfer [DecidableEq ι] [∀ t, DecidableEq (spec.
         QueryLog.getQueryValue? log₂ i s := by
   obtain ⟨path, s, located, second, hpath, hcf₁, _hsecond,
       hne, hcf₂, hx₁, hx₂⟩ := contextFork_success main qb i cf h
-  let log₁ : QueryLog spec := PFunctor.FreeM.Path.trace main path
-  let log₂ : QueryLog spec := PFunctor.FreeM.Path.trace main second.path
+  let log₁ : QueryLog spec := (PFunctor.FreeM.Path.trace main path).toList
+  let log₂ : QueryLog spec := (PFunctor.FreeM.Path.trace main second.path).toList
   have hlookup₁ : QueryLog.getQueryValue? log₁ i s = some located.completion.answer := by
     simpa [log₁] using congrArg (PFunctor.FreeM.Path.trace main) located.path_eq ▸
       getQueryValue?_completion_path_eq_answer located.occurrence located.completion

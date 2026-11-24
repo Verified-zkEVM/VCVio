@@ -129,7 +129,7 @@ theorem prEvent_seqLeft [MeasurableSpace β] (mx : m α) (my : m β) (p : α →
     Pr{let x ← mx <* my}[p x] = 𝒟[my] Set.univ * Pr{let x ← mx}[p x] := by
   have h : p <$> (mx <* my) = (p <$> mx) <* my := by
     simp [seqLeft_eq_bind]
-  rw [prEvent_def, h, evalDist_seqLeft, Measure.smul_apply, smul_eq_mul]
+  rw [prEvent_def, h, evalDist_seqLeft, smul_apply, smul_eq_mul]
   rfl
 
 /-- A final event about the second result retains the first computation's successful mass.
@@ -137,7 +137,7 @@ The retained result type needs no measurable-space argument. -/
 @[simp, grind norm]
 theorem prEvent_seqRight [MeasurableSpace α] (mx : m α) (my : m β) (p : β → Prop) :
     Pr{let y ← mx *> my}[p y] = 𝒟[mx] Set.univ * Pr{let y ← my}[p y] := by
-  rw [prEvent_def, seqRight_eq_bind, map_bind, evalDist_bind_const, Measure.smul_apply,
+  rw [prEvent_def, seqRight_eq_bind, map_bind, evalDist_bind_const, smul_apply,
     smul_eq_mul]
   rfl
 

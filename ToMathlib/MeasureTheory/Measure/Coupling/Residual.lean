@@ -5,7 +5,9 @@ Authors: Devon Tuma
 -/
 
 module
-public import ToMathlib.MeasureTheory.Measure.Coupling.Bind
+public import ToCslib.MeasureTheory.Measure.Coupling.Bind
+public import ToMathlib.MeasureTheory.Measure.GiryMonad
+public import ToMathlib.MeasureTheory.Measure.Monotone
 
 /-!
 # Subcouplings with explicit unmatched mass
@@ -87,7 +89,8 @@ theorem event_le (hc : IsSubcouplingWithResidual c r μ ν)
   have hmatched : c.fst s ≤ c.snd t + c bad := by
     rw [Measure.fst, Measure.snd, map_apply measurable_fst hs,
       map_apply measurable_snd ht]
-    exact (measure_mono_ae h).trans (measure_union_le _ _)
+    exact (measure_mono_ae (s := Prod.fst ⁻¹' s) (t := (Prod.snd ⁻¹' t) ∪ bad) h).trans
+      (measure_union_le _ _)
   rw [← hc.fst_add_residual, add_apply]
   exact add_le_add (hmatched.trans (add_le_add (hc.snd_le t) le_rfl))
     (measure_mono (Set.subset_univ s))

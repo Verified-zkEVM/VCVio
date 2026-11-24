@@ -94,14 +94,14 @@ theorem readRecord_expected_pairs_general {γ : Type}
         id_map, StateT.run_bind]
       rw [OracleComp.tsum_prEvent_bind_mul, OracleComp.tsum_prEvent_bind_mul,
           OracleComp.tsum_prEvent_bind_mul,
-        ← ENNReal.tsum_mul_left, ← ENNReal.tsum_add]
+        ← ENNReal.tsum_mul_left, ← tsum_add]
       rcases t with (n | mc) | msg
       · -- UNIFORM: the step is deterministic in the state (`x.2 = s`); factor per step output and
         -- apply the inductive hypothesis directly (drawn / signed / read lists unchanged, budget
         -- unchanged: uniform queries are not read queries).
         have hQ2' : ∀ u, (ob u).IsQueryBoundP (· matches Sum.inl (Sum.inr _)) qH := by
           intro u; exact hQ2 u
-        refine ENNReal.tsum_le_tsum fun x => ?_
+        refine tsum_le_tsum fun x => ?_
         by_cases hx : x ∈ support ((deferredDrawReadImpl ids M maxAttempts pk sk
             (Sum.inl (Sum.inl n))).run s)
         · have hxs : x ∈ support ((fun u => (u, s)) <$>
@@ -122,7 +122,7 @@ theorem readRecord_expected_pairs_general {γ : Type}
         have hQ2' : ∀ cu : Chal × (M × Commit →ₒ Chal).QueryCache,
             (ob cu.1).IsQueryBoundP (· matches Sum.inl (Sum.inr _)) (qH - 1) := by
           intro cu; exact hQ2 cu.1
-        refine ENNReal.tsum_le_tsum fun x => ?_
+        refine tsum_le_tsum fun x => ?_
         by_cases hx : x ∈ support ((deferredDrawReadImpl ids M maxAttempts pk sk
             (Sum.inl (Sum.inr mc))).run s)
         · have hxs : x ∈ support ((fun cu : Chal × (M × Commit →ₒ Chal).QueryCache =>
@@ -263,7 +263,7 @@ theorem readRecord_expected_coincidences_le {γ : Type}
           (z.2.2.countP (fun rc => decide (rc ∈ z.2.1.1.2)) : ℝ≥0∞))
         ≤ ∑' z : γ × DeferredReadState M Commit Chal, Pr{let x ← run}[x = z] *
             ((z.2.2.map (fun rc => z.2.1.1.2.count rc)).sum : ℝ≥0∞) := by
-    refine ENNReal.tsum_le_tsum fun z => ?_
+    refine tsum_le_tsum fun z => ?_
     gcongr
     exact_mod_cast countP_mem_le_sum_count z.2.2 z.2.1.1.2
   -- Step 3 (the atom): the expected pair count is `≤ ε · qH · E[#attempts]`, where the read-list

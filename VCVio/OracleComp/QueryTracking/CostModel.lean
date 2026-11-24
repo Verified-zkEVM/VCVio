@@ -155,7 +155,7 @@ theorem support_costDist_eq_range_path [AddCommMonoid ω] (oa : OracleComp spec 
       (PFunctor.FreeM.output oa p,
         Multiplicative.ofAdd (PFunctor.FreeM.Path.charge cm.queryCost oa p)) := by
   rw [costDist, instrumentedRun, QueryImpl.withAddCost_eq_withChargeW]
-  exact PFunctor.Handler.supp_run_liftM_id_withChargeW cm.queryCost oa
+  exact PFunctor.Handler.support_run_liftM_id_withChargeW cm.queryCost oa
 
 
 /-! ## Expected Cost -/

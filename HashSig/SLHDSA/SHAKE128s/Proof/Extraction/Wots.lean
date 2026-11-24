@@ -25,11 +25,11 @@ open OracleComp OracleSpec
 
 namespace SLHDSA.SHAKE128s.Extraction.Wots
 
-variable [HasQuery HashSpec Id]
+variable {hash : HasQuery HashSpec Id}
 
 /-- A collision at chain step `start + offset`: advancing `actual` and `canonical` by `offset`
 steps gives distinct values whose next chain step hashes them to the same output. -/
-@[expose] def ChainCollision (publicSeed : Digest) (address : Address)
+@[expose] def ChainCollision (hash : HasQuery HashSpec Id) (publicSeed : Digest) (address : Address)
     (start : Nat) (actual canonical : Digest) (offset : Nat) : Prop :=
   let actualValue := SLHDSA.SHAKE128s.Wots.chain (m := Id) publicSeed address start offset actual
   let canonicalValue :=
@@ -46,29 +46,21 @@ theorem chain_eq_or_collision (publicSeed : Digest) (address : Address)
     (hend : SLHDSA.SHAKE128s.Wots.chain (m := Id) publicSeed address start steps actual =
       SLHDSA.SHAKE128s.Wots.chain (m := Id) publicSeed address start steps canonical) :
     actual = canonical ∨ ∃ offset < steps,
-      ChainCollision publicSeed address start actual canonical offset := by
+      ChainCollision hash publicSeed address start actual canonical offset := by
   classical
-  induction steps generalizing start actual canonical with
-  | zero => exact Or.inl hend
-  | succ steps ih =>
-      by_cases heq : actual = canonical
-      · exact Or.inl heq
-      let next : Digest → Digest := fun value => Hashing.tweakable (m := Id) publicSeed
-        { address with hashOrIndex := BitVec.ofNat 32 start } (bytesBE n value)
-      have hnext : SLHDSA.SHAKE128s.Wots.chain (m := Id) publicSeed address (start + 1) steps
-          (next actual) =
-        SLHDSA.SHAKE128s.Wots.chain (m := Id) publicSeed address (start + 1) steps
-          (next canonical) := hend
-      rcases ih (start + 1) (next actual) (next canonical) hnext with
-        hmerge | ⟨offset, hoffset, hcollision⟩
-      · exact Or.inr ⟨0, by omega, by
-          simpa only [ChainCollision, SLHDSA.SHAKE128s.Wots.chain, pure, Nat.add_zero]
-            using And.intro heq hmerge⟩
-      · refine Or.inr ⟨offset + 1, by omega, ?_⟩
-        simpa only [ChainCollision, SLHDSA.SHAKE128s.Wots.chain, bind, Nat.add_assoc,
-          Nat.add_comm 1 offset, next] using hcollision
+  by_cases heq : actual = canonical
+  · exact Or.inl heq
+  · have hend' := hend
+    simp only [SLHDSA.SHAKE128s.Wots.chain_eq_indexedChain] at hend'
+    obtain ⟨offset, hne, hmerge⟩ := VCVio.Algorithms.IndexedChain.exists_merge (H := Digest)
+      (fun j x => Hashing.tweakable (m := Id) publicSeed
+        { address with hashOrIndex := BitVec.ofNat 32 j } (bytesBE n x))
+      start steps actual canonical heq hend'
+    refine Or.inr ⟨offset, offset.isLt, ?_⟩
+    simp only [VCVio.Algorithms.IndexedChain.chain_succ] at hmerge
+    simpa only [ChainCollision, SLHDSA.SHAKE128s.Wots.chain_eq_indexedChain,
+      VCVio.Algorithms.IndexedChain.chain] using And.intro hne hmerge
 
-omit [HasQuery HashSpec Id] in
 /-- The concatenated byte encoding of a digest array is injective. -/
 theorem digestArrayBytes_injective (size : Nat) :
     Function.Injective (digestArrayBytes (size := size)) := by
@@ -85,7 +77,8 @@ theorem digestArrayBytes_injective (size : Nat) :
 
 /-- The chain endpoints recomputed by WOTS verification: each signature value advanced from its
 message digit to the end of its chain. -/
-@[expose] def endpoints (signature : WotsSignature) (message publicSeed : Digest)
+@[expose] def endpoints (hash : HasQuery HashSpec Id)
+    (signature : WotsSignature) (message publicSeed : Digest)
     (address : Address) : Fin chains → Digest := fun i =>
   SLHDSA.SHAKE128s.Wots.chain (m := Id) publicSeed
     { address with chainOrHeight := BitVec.ofNat 32 i.val }
@@ -96,20 +89,21 @@ theorem publicKeyFromSignature_eq (signature : WotsSignature) (message publicSee
     (address : Address) :
     SLHDSA.SHAKE128s.Wots.publicKeyFromSignature (m := Id) signature message publicSeed address =
       Hashing.tweakable (m := Id) publicSeed (SLHDSA.SHAKE128s.Wots.publicKeyAddress address)
-        (digestArrayBytes (endpoints signature message publicSeed address)) := by
+        (digestArrayBytes (endpoints hash signature message publicSeed address)) := by
   simp only [SLHDSA.SHAKE128s.Wots.publicKeyFromSignature, Correctness.sequenceFin_id, bind]
   rfl
 
 /-- A collision at the final WOTS public-key compression: the two endpoint tuples give distinct
 oracle inputs that hash to the same output. -/
-@[expose] def CompressionCollision (actual canonical : WotsSignature) (message publicSeed : Digest)
+@[expose] def CompressionCollision (hash : HasQuery HashSpec Id)
+    (actual canonical : WotsSignature) (message publicSeed : Digest)
     (address : Address) : Prop :=
   let actualInput :=
     Hashing.tweakableInput publicSeed (SLHDSA.SHAKE128s.Wots.publicKeyAddress address)
-      (digestArrayBytes (endpoints actual message publicSeed address))
+      (digestArrayBytes (endpoints hash actual message publicSeed address))
   let canonicalInput :=
     Hashing.tweakableInput publicSeed (SLHDSA.SHAKE128s.Wots.publicKeyAddress address)
-      (digestArrayBytes (endpoints canonical message publicSeed address))
+      (digestArrayBytes (endpoints hash canonical message publicSeed address))
   actualInput ≠ canonicalInput ∧
     Hashing.shortHash (m := Id) actualInput = Hashing.shortHash (m := Id) canonicalInput
 
@@ -123,9 +117,10 @@ theorem publicKey_eq_canonical_or_collision (signature : WotsSignature)
       SLHDSA.SHAKE128s.Wots.publicKey (m := Id) secretSeed publicSeed address) :
     let canonical : WotsSignature := SLHDSA.SHAKE128s.Wots.sign (m := Id)
       message secretSeed publicSeed address
-    signature = canonical ∨ CompressionCollision signature canonical message publicSeed address ∨
+    signature = canonical ∨
+      CompressionCollision hash signature canonical message publicSeed address ∨
       ∃ i : Fin chains, ∃ offset < w - 1 - (Checksum.encode message i).val,
-        ChainCollision publicSeed { address with chainOrHeight := BitVec.ofNat 32 i.val }
+        ChainCollision hash publicSeed { address with chainOrHeight := BitVec.ofNat 32 i.val }
           (Checksum.encode message i).val (signature i) (canonical i) offset := by
   classical
   dsimp only
@@ -133,14 +128,14 @@ theorem publicKey_eq_canonical_or_collision (signature : WotsSignature)
     message secretSeed publicSeed address
   have houtputs : Hashing.tweakable (m := Id) publicSeed
       (SLHDSA.SHAKE128s.Wots.publicKeyAddress address)
-      (digestArrayBytes (endpoints signature message publicSeed address)) =
+      (digestArrayBytes (endpoints hash signature message publicSeed address)) =
     Hashing.tweakable (m := Id) publicSeed (SLHDSA.SHAKE128s.Wots.publicKeyAddress address)
-      (digestArrayBytes (endpoints canonical message publicSeed address)) := by
+      (digestArrayBytes (endpoints hash canonical message publicSeed address)) := by
     rw [← publicKeyFromSignature_eq, ← publicKeyFromSignature_eq]
     exact hpk.trans (Correctness.Wots.publicKeyFromSignature_sign
       message secretSeed publicSeed address).symm
-  by_cases hendpoints : endpoints signature message publicSeed address =
-      endpoints canonical message publicSeed address
+  by_cases hendpoints : endpoints hash signature message publicSeed address =
+      endpoints hash canonical message publicSeed address
   · by_cases hsignature : signature = canonical
     · exact Or.inl hsignature
     · obtain ⟨i, hi⟩ := Function.ne_iff.mp hsignature

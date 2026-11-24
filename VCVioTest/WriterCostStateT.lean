@@ -86,8 +86,8 @@ theorem ordered_word_cost {σ U : Type}
 /-- The warm word followed by charges one and two differs from their reversal. -/
 theorem noncommutative_control :
     FreeAddMonoid.ofList [99, 1, 2] ≠ FreeAddMonoid.ofList [99, 2, 1] := by
-  change ([99, 1, 2] : List Nat) ≠ [99, 2, 1]
-  decide
+  intro h
+  exact (by decide : ([99, 1, 2] : List Nat) ≠ [99, 2, 1]) (congrArg FreeAddMonoid.toList h)
 
 /-- An outer failure of the base monad creates no returned state or fabricated cost log. -/
 theorem outer_failure {σ C : Type} [AddMonoid C]

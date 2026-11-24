@@ -184,7 +184,7 @@ or `VCVioTest/`. This contract is enforced by
 
 10. **Probability is `Measure`/`Kernel`, never `PMF`.** Semantic code uses `𝒟[…]`, `Pr{…}[…]`, `=ᵈ`, Mathlib measures and kernels. Mathlib owns `PMF`, so VCVio cannot deprecate it; the environment linter `ToMathlib.Lint.usesPMF` reports any declaration that uses it directly, and `scripts/nolints.json` holds no exceptions for it. Code written against VCVio's removed discrete API (`SPMF`, `Pr[= x | mx]`, `IsUniformSpec`, …) converts with the codemod and guide in [`docs/agents/probability-migration.md`](docs/agents/probability-migration.md). See `docs/reading/denotational-probability-semantics.md`.
 
-11. **Name the reduction in security theorems.** Write `bound ≤ Pr{let b ← exp (myReduction adv)}[b = true]`, never `∃ B, bound ≤ Pr{let b ← exp B}[b = true]`. Adversary types such as `X → ProbComp W` carry no resource bound, and `Classical.choice` can pick a witness directly, so the existential form holds for every scheme and passes the axiom sweep. The same applies to simulators (`∃ sim ζ, HVZK sim ζ` holds with `ζ := 1`), extractors, and distinguishers. If the reduction does not exist yet, the theorem stays on its branch: a `sorry` placeholder does not pass the axiom sweep. See [`docs/agents/crypto.md`](docs/agents/crypto.md#name-the-reduction-in-the-theorem-statement).
+11. **Name the reduction in security theorems.** Write `bound ≤ Pr{let b ← exp (myReduction adv)}[b = true]`, never `∃ B, bound ≤ Pr{let b ← exp B}[b = true]`. Adversary types such as `X → ProbComp W` carry no resource bound, and `Classical.choice` can pick a witness directly, so the existential form holds for every scheme and passes the axiom sweep. The same applies to simulators (`∃ sim ζ, HVZK sim ζ` holds with `ζ := 1`), extractors, and distinguishers, and to hypotheses: `∀ adv, Adv adv ≤ ε` over an adversary type holds only at trivial `ε`, even under query budgets, so assume the bound for the named distinguisher instead. The exception is security that is statistical in the pure random oracle model: when the oracle is sampled as the experiment runs, the adversary's only access to the secrets is through oracle queries (and its own coins), and those queries are bounded, as for Merkle-tree commitments, a bound over every query-bounded adversary is meaningful (`VCVio/CryptoFoundations/VectorCommitment/Hiding.lean`). Computational assumptions still need the named reduction. If the reduction does not exist yet, the theorem stays on its branch: a `sorry` placeholder does not pass the axiom sweep. See [`docs/agents/crypto.md`](docs/agents/crypto.md#name-the-reduction-in-the-theorem-statement).
 
 12. **No global instance may conclude `C spec.Domain` or `C (spec.Range t)` for a generic `spec`.** `Domain` and `Range` are reducible, so such an instance is indexed as `C ι`, respectively `C (?spec ?t)`, and becomes a candidate for every `C _` goal with `spec` undetermined; search then invents a specification through `ofFn` and either times out or routes ordinary `DecidableEq`/`Fintype`/`Inhabited` instances through oracle data (#772). Write `[DecidableEq ι]` for index equality and `[DecidableEq (spec.Range t)]`, `[Fintype (spec.Range t)]`, `[Inhabited (spec.Range t)]` (quantified over `t` only when a statement ranges over arbitrary queries) for answer types; concrete specifications reduce to their answer types. `VCVioTest/OracleComp/SpecInstanceSearch.lean` guards this.
 
@@ -235,6 +235,7 @@ Security notions, experiments, games, and advantages follow
 - Query enforcement: `VCVio/OracleComp/QueryTracking/Enforcement.lean`
 - Seeded (Bellare-Neven) forking lemma: `VCVio/CryptoFoundations/SeededFork.lean`
 - Replay-based forking lemma: `VCVio/CryptoFoundations/ReplayFork.lean`
+- Coordinate-wise special soundness and its single-round rewinding extractor (eprint 2023/846 §2.9 and §7.1): `VCVio/CryptoFoundations/CoordinateFork.lean`, `VCVio/CryptoFoundations/CoordinateFork/Operational.lean`, `VCVio/CryptoFoundations/CoordinateFork/Realizability.lean`, `VCVio/CryptoFoundations/CoordinateFork/SpecialSoundness.lean`, `VCVio/CryptoFoundations/CoordinateFork/Extraction.lean`, `VCVio/CryptoFoundations/CoordinateFork/Finder.lean`, over the combinatorics in `ToMathlib/Combinatorics/CoordinateWise.lean`
 - Independent products of computations: `VCVio/EvalDist/IndepProduct.lean`
 - Drawing without replacement and its expected draw count: `VCVio/OracleComp/Constructions/WithoutReplacement.lean`, `ToMathlib/Probability/NegativeHypergeometric.lean`
 - Expected values of `ℝ≥0∞`-valued functionals (`wp` and `∫⁻` against `𝒟[mx]`): `VCVio/ProgramLogic/Unary/HoareTriple.lean`
@@ -339,7 +340,10 @@ is a policy error rather than an allowlist, and `lake exe axiomsweep --update-ba
 refuses to write one. `Interop/` (the declared TCB) is excluded — its boundary is enforced by
 the import-isolation gate instead. The `VCVioAxiomSweepTestFixtures` library carries
 synthetic taint for the tool's own tests and is deliberately excluded from every
-aggregate.
+aggregate. Pull-request and merge-queue runs skip the tool's self-test, and the init sweep's,
+unless `scripts/`, the toolchain, the manifest, the lakefile or the build workflow changed: their
+fixtures depend on nothing else, so the result is the one the last `main` run recorded. `main`,
+the nightly and manual runs always run them; the sweeps themselves run everywhere.
 
 `uv run --no-project --python 3.12 python ./scripts/check-comment-fences.py` enforces one rule over every Lean source the
 repository tracks or would track — tracked files plus untracked ones that are not ignored, the
@@ -435,7 +439,7 @@ with the occurrences of each in the current tree.
 After adding new `.lean` files: `./scripts/update-lib.sh` (CI's `scripts/check-imports.sh`
 fails when a regenerated umbrella would differ from the committed one).
 
-Lean toolchain and Mathlib must stay in sync (both currently `v4.35.0`); the bump procedure
+Lean toolchain and Mathlib must stay in sync (both currently `v4.36.0`); the bump procedure
 is in `CONTRIBUTING.md`. Mathlib's file-length linter is enabled at 1500 lines. Split
 files by responsibility before crossing that limit; retain an import façade when an existing
 module path forms part of the public API.
@@ -460,6 +464,8 @@ Before working in a specific area, read the relevant guide in `docs/agents/`:
 - **Probability reasoning (EvalDist, ProbComp)**: [`docs/agents/probability.md`](docs/agents/probability.md)
 - **Converting code written against the removed discrete `Pr[…]` API**: [`docs/agents/probability-migration.md`](docs/agents/probability-migration.md)
 - **Crypto primitives and reductions**: [`docs/agents/crypto.md`](docs/agents/crypto.md)
+- **Forking lemmas and black-box finders (seeded / replay / coordinate-wise / threshold)**: [`docs/agents/forking.md`](docs/agents/forking.md)
+- **Rewinding: reset policies, finders against frozen reruns, transcript recovery, query cost**: [`docs/agents/rewinding.md`](docs/agents/rewinding.md)
 - **End-to-end crypto examples**: [`docs/agents/end-to-end-examples.md`](docs/agents/end-to-end-examples.md)
 - **Program logic tactics**: [`docs/agents/program-logic.md`](docs/agents/program-logic.md)
 - **All notation**: [`docs/agents/notation.md`](docs/agents/notation.md)

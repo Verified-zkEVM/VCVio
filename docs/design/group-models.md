@@ -899,8 +899,11 @@ T3 on each side and T6 (`SameKernel.runGen_fst_eq`) in the middle.
 `measureETVDist_runGen_sameKernel_uniform_le` specializes it to uniform points. Its test shows
 that neither clause of `SameKernel` can be dropped: over `ZMod 17` the tables `[1, X₀, X₀]` and
 `[1, X₀, X₁]` have equal lengths and degree one, and one free equality test separates their runs
-by at least `16/17`, above the `12/17` the bound would give. The per-sort form and T7 at the
-pairing signatures remain targets.
+by at least `16/17`, above the `12/17` the bound would give. At the Type 3 signature
+`pairingSig`, `DecisionalPairing.lean` proves T7 in the per-sort form above as
+`measureETVDist_runGen_pairing_sameKernel_le`, with per-sort append budgets and degree bounds
+closed under the pairing. The per-sort form at `discreteSig S` and T7 at the Type 1 and Type 2
+signatures remain targets.
 
 Three instances show what the hypothesis means.
 
@@ -1211,7 +1214,7 @@ are equal, free equality tests find them, and their difference is a relation.
 |---|---|---|---|
 | generic `(q₁, q₂)`-DLog; co-CDH in both forms | T8. The `(q₁, q₂)`-DLog bound is proved as `PairingDLog.experiment_ofGeneric_le`: with `n₁`, `n₂` and `nₜ` appends to the three sorts, `((q₁ + n₁ + 2).choose 2 · q₁ + (q₂ + n₂ + 2).choose 2 · q₂ + (nₜ + 1).choose 2 · (q₁ + q₂) + 1)/\|F\|`, for generators whose pairing is nonzero; `PairingDLog.experiment_ofGeneric_le_of_total` takes one total budget. Co-CDH is a target | the signature repository's `dlog11Exp` and `coCDHExp` (the Type 3 form) | Bauer, Fuchsbauer, Loss; Boneh, Gentry, Lynn, Shacham |
 | generic `t`-SDH and ARSDH | T8, for ArkLib's experiments: `tSdhExperiment D (ofGeneric A)` and `arsdhExperiment D (ofGeneric A)` | ArkLib `KZG/HardnessAssumptions.lean` | Boneh, Boyen; Chiesa, Guan, Knabenhans, Yu, Definition 9.6 |
-| SXDH; decisional uber | T7, with the accessible span of the signature at hand |  | Boneh, Boyen, Goh; Boyen |
+| XDH; SXDH; decisional uber | T7, with the accessible span of the signature at hand. XDH (DDH in the first source group, with `g₂` and the pairing public) is proved as `XDH.advantage_ofGeneric_le`: with `n₁`, `n₂` and `nₜ` appends to the three sorts, `3 · ((n₁ + 5).choose 2 + (nₜ + 1).choose 2)/\|F\|`, for generators whose pairing is nonzero. SXDH and decisional uber are targets |  | Boneh, Boyen, Goh; Boyen |
 | KZG evaluation binding and function binding, unconditional | for a generic adversary, at most the generic `t`-SDH and ARSDH bounds at a counted number of operations | ArkLib `KZG.CommitmentScheme.binding` with `bindingReduction`, `KZG.CommitmentScheme.function_binding` with `reduction` |  |
 | KZG extraction | a named straight-line extractor; `Pr[accept ∧ p(z) ≠ v] ≤` the `t`-SDH advantage of a named reduction | ArkLib `Commitment.extractability`, today a placeholder, once its game says what the extractor receives (below) | Marlin, Theorem B.12 |
 | uber family from `q`-DLog, algebraic adversaries | a reduction that factors `W` |  | Bauer, Fuchsbauer, Loss; Rotem |
@@ -1431,12 +1434,14 @@ T7 is proved in `Decisional.lean` as `measureETVDist_runGen_sameKernel_le`, at `
 with one total group-operation budget `q` and one degree bound for each table, rather than the
 per-sort form of Section 6.5. Its event form is `prEvent_runGen_sameKernel_le_add`, and its
 Schwartz–Zippel specialization for uniform points is
-`measureETVDist_runGen_sameKernel_uniform_le`.
+`measureETVDist_runGen_sameKernel_uniform_le`. At `pairingSig`, T7 is proved per sort in
+`DecisionalPairing.lean` as `measureETVDist_runGen_pairing_sameKernel_le`, and generic XDH follows
+as `XDH.advantage_ofGeneric_le`.
 
 Everything else is a paper argument or theorem target: T5 and its cost certificate, T7 in its
-per-sort form and at the pairing signatures, T8 for problems other than `(q₁, q₂)`-DLog, S1–S3,
+per-sort form at `discreteSig S` and at the Type 1 and Type 2 signatures, T8 for problems other than `(q₁, q₂)`-DLog, S1–S3,
 P1–P3, restriction along a map of signatures, the invariant at the target sort over `CoeffsT`,
 the free and tracking models for Types 1 and 2, the accessible spans, the polynomial-table
 instance of T6, and the numeric constants in Section 8 other than those of T4, T7, the relation
-problem and `(q₁, q₂)`-DLog. The trilemma in
+problem, `(q₁, q₂)`-DLog and XDH. The trilemma in
 Section 3 and the argument about ArkLib's KZG hypotheses in Section 8.3 are paper arguments.

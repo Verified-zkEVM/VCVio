@@ -39,6 +39,8 @@ import re
 import sys
 from pathlib import Path
 
+from lean_source_tokens import token_matches
+
 GUIDE = "docs/agents/probability-migration.md"
 
 # Declarations renamed between the discrete API and the measure API, keyed by the old name.
@@ -389,10 +391,10 @@ MODULES: dict[str, list[str]] = {
     "VCVio.EvalDist.Instances.ReaderT": ["VCVio.EvalDist.MeasureSemantics"],
     "VCVio.EvalDist.Defs.Semantics": ["VCVio.EvalDist.MeasureSemantics"],
     "ToMathlib.ProbabilityTheory.Coupling":
-        ["ToMathlib.MeasureTheory.Measure.Coupling",
+        ["ToCslib.MeasureTheory.Measure.Coupling",
          "ToMathlib.MeasureTheory.Measure.Coupling.Maximal"],
     "ToMathlib.ProbabilityTheory.OptimalCoupling":
-        ["ToMathlib.MeasureTheory.Measure.Coupling",
+        ["ToCslib.MeasureTheory.Measure.Coupling",
          "ToMathlib.MeasureTheory.Measure.Coupling.Maximal"],
     "VCVio.ProgramLogic.Relational.Measure.Oracle": ["VCVio.ProgramLogic.Relational.Basic"],
     "VCVio.ProgramLogic.Relational.SimulateQ.Basic":
@@ -405,6 +407,127 @@ MODULES: dict[str, list[str]] = {
     "VCVio.StateSeparating.MeasureDistEquiv": ["VCVio.StateSeparating.DistEquiv"],
     "VCVio.ProgramLogic.Unary.WP.Qualitative": ["VCVio.ProgramLogic.Unary.WP.Necessary"],
     "VCVio.ProgramLogic.Unary.WP.Quantitative": ["VCVio.ProgramLogic.Unary.WP.Lower"],
+    # The public imports of the former probability forwarding modules.
+    "ToMathlib.MeasureTheory.DiscreteInstances": [
+        "ToCslib.MeasureTheory.MeasurableSpace.Instances",
+    ],
+    "ToMathlib.MeasureTheory.Function.AEMeasurable": [
+        "ToCslib.MeasureTheory.Function.AEMeasurable",
+    ],
+    "ToMathlib.MeasureTheory.MeasurableSpace.Except": [
+        "ToCslib.MeasureTheory.MeasurableSpace.Except",
+    ],
+    "ToMathlib.MeasureTheory.MeasurableSpace.Option": [
+        "ToCslib.MeasureTheory.MeasurableSpace.Option",
+    ],
+    "ToMathlib.MeasureTheory.Measure.Coupling": ["ToCslib.MeasureTheory.Measure.Coupling"],
+    "ToMathlib.MeasureTheory.Measure.Coupling.Bind": [
+        "ToCslib.MeasureTheory.Measure.Coupling.Bind",
+        "ToCslib.MeasureTheory.Function.AEMeasurable",
+        "ToMathlib.MeasureTheory.Measure.GiryMonad",
+        "ToMathlib.MeasureTheory.Measure.Monotone",
+    ],
+    "ToMathlib.MeasureTheory.Measure.Except": [
+        "ToCslib.MeasureTheory.Measure.Except",
+        "ToMathlib.MeasureTheory.Measure.GiryMonad",
+    ],
+    "ToMathlib.MeasureTheory.Measure.Option": [
+        "ToCslib.MeasureTheory.Measure.Option",
+        "ToMathlib.MeasureTheory.Measure.GiryMonad",
+    ],
+    "ToMathlib.MeasureTheory.Measure.Prop": ["ToCslib.MeasureTheory.Measure.Prop"],
+    "ToMathlib.MeasureTheory.Measure.Subprobability": [
+        "ToCslib.MeasureTheory.Measure.Subprobability",
+    ],
+    "ToMathlib.Probability.Kernel.Subprobability": ["ToCslib.Probability.Kernel.Subprobability"],
+    "ToMathlib.Probability.UniformOn": ["ToCslib.Probability.UniformOn"],
+    "VCVio.EvalDist.Defs.Measure.Deterministic": [
+        "PolyFun.Control.Monad.Measure.Deterministic",
+        "ToMathlib.Control.Except",
+        "ToMathlib.Control.Option",
+        "VCVio.EvalDist.ProbabilityNotation",
+    ],
+    "VCVio.EvalDist.Defs.Measure.ExceptT": [
+        "PolyFun.Control.Monad.Measure.ExceptT",
+        "ToMathlib.MeasureTheory.Measure.GiryMonad",
+        "VCVio.EvalDist.Defs.Measure.Core",
+    ],
+    "VCVio.EvalDist.Defs.Measure.Failure": [
+        "PolyFun.Control.Monad.Measure.Failure",
+        "VCVio.EvalDist.Defs.Measure.Core",
+    ],
+    "VCVio.EvalDist.Defs.Measure.OptionT": [
+        "PolyFun.Control.Monad.Measure.OptionT",
+        "ToMathlib.MeasureTheory.Measure.GiryMonad",
+        "VCVio.EvalDist.Defs.Measure.Core",
+    ],
+    "VCVio.EvalDist.Defs.Semantics.Core": [
+        "PolyFun.Control.Monad.Measure.SemanticsVia",
+        "ToMathlib.MeasureTheory.Measure.GiryMonad",
+        "VCVio.EvalDist.Defs.Measure.Core",
+    ],
+    "VCVio.EvalDist.Lossless": [
+        "PolyFun.Control.Monad.Measure.Lossless",
+        "Mathlib.MeasureTheory.Measure.ProbabilityMeasure",
+        "VCVio.EvalDist.Defs.Measure.Core",
+    ],
+    "VCVio.EvalDist.Monad.Failure": [
+        "PolyFun.Control.Monad.Measure.Failure",
+        "VCVio.EvalDist.ProbabilityNotation",
+    ],
+    "VCVio.EvalDist.PFunctorKernel": [
+        "PolyFun.PFunctor.Free.Measure.Kernel",
+        "ToCslib.MeasureTheory.Function.AEMeasurable",
+        "ToCslib.MeasureTheory.Measure.Coupling.Bind",
+        "ToMathlib.MeasureTheory.Measure.GiryMonad",
+        "ToMathlib.MeasureTheory.Measure.Monotone",
+    ],
+    "VCVio.EvalDist.PFunctorKernelTransport": [
+        "PolyFun.PFunctor.Free.Measure.Kernel.Transport",
+        "ToCslib.MeasureTheory.Function.AEMeasurable",
+        "ToCslib.MeasureTheory.Measure.Coupling.Bind",
+        "ToMathlib.MeasureTheory.Measure.GiryMonad",
+        "ToMathlib.MeasureTheory.Measure.Monotone",
+    ],
+    "VCVio.EvalDist.PFunctorMeasure.Core": [
+        "PolyFun.PFunctor.Free.Measure.EvalDist",
+        "Mathlib.MeasureTheory.Measure.ProbabilityMeasure",
+        "VCVio.EvalDist.Defs.Measure.Core",
+    ],
+    "VCVio.EvalDist.PFunctorPath": [
+        "PolyFun.PFunctor.Free.Measure.Path",
+        "Mathlib.MeasureTheory.Measure.ProbabilityMeasure",
+        "PolyFun.PFunctor.Free.Measure.EvalDist",
+        "VCVio.EvalDist.Defs.Measure.Core",
+    ],
+    "VCVio.EvalDist.WiringKernel": [
+        "PolyFun.PFunctor.Wiring.Measure",
+        "ToCslib.MeasureTheory.Function.AEMeasurable",
+        "ToCslib.MeasureTheory.Measure.Coupling.Bind",
+        "ToMathlib.MeasureTheory.Measure.GiryMonad",
+        "ToMathlib.MeasureTheory.Measure.Monotone",
+    ],
+    "VCVio.EvalDist.WithFailure": [
+        "PolyFun.Control.Monad.Measure.WithFailure",
+        "ToMathlib.MeasureTheory.Measure.GiryMonad",
+        "VCVio.EvalDist.ProbabilityNotation",
+    ],
+    "VCVio.ProgramLogic.Relational.Measure": [
+        "PolyFun.Control.Monad.Measure.Relational",
+        "VCVio.EvalDist.Defs.Measure.Core",
+    ],
+    "VCVio.ProgramLogic.Relational.Measure.Bind": [
+        "PolyFun.Control.Monad.Measure.Relational.Bind",
+        "ToMathlib.MeasureTheory.Measure.GiryMonad",
+        "ToMathlib.MeasureTheory.Measure.Monotone",
+        "VCVio.EvalDist.Defs.Measure.Core",
+    ],
+    "VCVio.ProgramLogic.Relational.Measure.Deterministic": [
+        "PolyFun.Control.Monad.Measure.Relational.Deterministic",
+        "ToMathlib.Control.Except",
+        "ToMathlib.Control.Option",
+        "VCVio.EvalDist.ProbabilityNotation",
+    ],
     # The discrete layer itself.
     "ToMathlib.ProbabilityTheory.SPMF": [],
     "ToMathlib.Probability.ProbabilityMassFunction.Lemmas":
@@ -416,13 +539,17 @@ MODULES: dict[str, list[str]] = {
         ["VCVio.EvalDist.Defs.Support.Failure", "VCVio.EvalDist.ProbabilityNotation"],
     "VCVio.EvalDist.Defs.NeverFails":
         ["VCVio.EvalDist.Defs.Support.Failure", "VCVio.EvalDist.Monad.Seq"],
-    "VCVio.EvalDist.FailureMeasure": ["VCVio.EvalDist.Defs.Measure", "VCVio.EvalDist.WithFailure"],
+    "VCVio.EvalDist.FailureMeasure":
+        ["VCVio.EvalDist.Defs.Measure", "PolyFun.Control.Monad.Measure.WithFailure",
+         "ToMathlib.MeasureTheory.Measure.GiryMonad", "VCVio.EvalDist.ProbabilityNotation"],
     "VCVio.EvalDist.Bool": ["VCVio.EvalDist.Monad.Map"],
     "VCVio.EvalDist.BitVec": ["VCVio.EvalDist.Monad.Map"],
     "VCVio.EvalDist.Option": ["VCVio.EvalDist.Monad.Map"],
     "VCVio.EvalDist.Fintype": ["VCVio.EvalDist.Monad.Basic"],
     "VCVio.EvalDist.PFunctor": ["VCVio.EvalDist.PFunctorSupport"],
-    "VCVio.EvalDist.PFunctorMeasure": ["VCVio.EvalDist.PFunctorMeasure.Core"],
+    "VCVio.EvalDist.PFunctorMeasure":
+        ["PolyFun.PFunctor.Free.Measure.EvalDist", "VCVio.EvalDist.Defs.Measure.Core",
+         "Mathlib.MeasureTheory.Measure.ProbabilityMeasure"],
     "VCVio.OracleComp.EvalDist.UniformCompatibility":
         ["VCVio.OracleComp.EvalDist.Measure", "VCVio.OracleComp.EvalDist.AnswerMeasure"],
     "VCVio.OracleComp.Constructions.SampleableType.MeasureCompatibility":
@@ -527,7 +654,6 @@ LEGACY_TOKENS: list[tuple[str, str]] = [
     (r"(?<![\w'])evalSPMF(?![\w'])|𝒮\[", "`𝒟[mx]`; see *Notation and definitions*"),
     (r"(?<![\w'.])probOutput(?![\w'])", "`Pr{let y ← mx}[y = x]` or `𝒟[mx] {x}`"),
     (r"(?<![\w'.])probEvent(?![\w'])", "`Pr{let x ← mx}[p x]`"),
-    (r"(?<![\w'.])tvDist(?![\w'])", "`measureTVDist` (real) or `measureETVDist` (`ℝ≥0∞`)"),
     (r"(?<![\w'.])expectedValue(?![\w'])", "`∫⁻ x, f x ∂𝒟[mx]`"),
     (r"(?<![\w'.])NeverFail(?![\w'])", "nothing on `OracleComp`; see *Classes and binders*"),
     (r"EvalDistCompatible", "operational support lemmas; see *Classes and binders*"),
@@ -541,8 +667,15 @@ LEGACY_TOKENS: list[tuple[str, str]] = [
     (r"@(?:OracleSpec\.)?UniformAnswerMeasure\.ofFiniteNonempty\b",
      "takes the specification and its `Finite` and `Nonempty` instances only"),
     (r"(?<![\w'.])SPMF(?![\w'])", "`Measure`; see *Notation and definitions*"),
-    (r"(?<![\w'.])(?![\w'.]*Measure\.e?tvDist)[\w'.]*?(?:evalSPMF|probOutput|probEvent|probFailure|"
-     r"(?<!e)tvDist)_[\w'.]*",
+    (r"(?<![\w'.])[\w'.]*?(?:evalSPMF|probOutput|probEvent|probFailure)_[\w'.]*",
+     "a legacy lemma name; see *Lemma names*"),
+]
+
+# The same patterns check retired names in documentation. In source they apply only
+# to complete identifier tokens, since a Lean literal can contain an old spelling.
+LEGACY_DISTANCE_TOKENS = [
+    (r"(?<![\w'.])tvDist(?![\w'])", "`measureTVDist` (real) or `measureETVDist` (`ℝ≥0∞`)"),
+    (r"(?<![\w'.])(?![\w'.]*MeasureTheory\.e?tvDist)[\w'.]*?(?<!e)tvDist_[\w'.]*",
      "a legacy lemma name; see *Lemma names*"),
 ]
 
@@ -997,6 +1130,112 @@ EXPLICIT_COMPUTATION_PATTERNS = [(rename_pattern(old), new)
                                  for old, new in EXPLICIT_COMPUTATION_RENAMES.items()]
 
 
+# VCVio's sup-event statistical distance has different normalization from Mathlib's
+# total variation. Only these declaration names appear in the manual migration hints.
+STAT_DISTANCE_RENAMES: dict[str, str] = {}
+for namespaces, current_names in (
+    (("MeasureTheory.Measure", "Measure"), (
+        "absDiff_apply_le_statEDist",
+        "absDiff_lintegral_le_statEDist",
+        "lintegral_le_add_statEDist",
+        "statDist",
+        "statDist_bind_bind_le_lintegral",
+        "statDist_bind_le",
+        "statDist_comm",
+        "statDist_dirac_dirac_of_ne",
+        "statDist_eq_half_sum_abs",
+        "statDist_eq_zero_iff",
+        "statDist_le_one",
+        "statDist_le_tvDist",
+        "statDist_map_le",
+        "statDist_nonneg",
+        "statDist_punit",
+        "statDist_self",
+        "statDist_triangle",
+        "statEDist",
+        "statEDist_bind_bind_le_add_lintegral",
+        "statEDist_bind_bind_le_add_lintegral_of_bad",
+        "statEDist_bind_bind_le_lintegral",
+        "statEDist_bind_bind_le_of_bad",
+        "statEDist_bind_le",
+        "statEDist_comm",
+        "statEDist_dirac_dirac_of_ne",
+        "statEDist_eq_max_of_isHahnDecomposition",
+        "statEDist_eq_one_sub_sum_min",
+        "statEDist_eq_sum_tsub",
+        "statEDist_eq_zero_iff",
+        "statEDist_le_etvDist",
+        "statEDist_le_one",
+        "statEDist_le_one_sub_of_le",
+        "statEDist_map_le",
+        "statEDist_ne_top",
+        "statEDist_nonneg",
+        "statEDist_self",
+        "statEDist_triangle",
+        "two_mul_statDist_eq_tvDist_add_abs",
+        "two_mul_statEDist_eq_etvDist_add_absDiff",
+    )),
+    (("MeasureTheory",), (
+        "etvDist_eq_two_mul_statEDist",
+        "tvDist_eq_two_mul_statDist",
+    )),
+    (("InformationTheory",), (
+        "statEDist_le_lintegral_absDiff_rnDeriv_div_two",
+        "statEDist_le_one_sub_inv_maxDiv",
+        "statEDist_rpow_two_le_one_sub_inv_renyiDiv",
+        "statEDist_rpow_two_le_one_sub_renyiMGF_half",
+    )),
+    (("ProbabilityTheory.Kernel", "Kernel"), (
+        "statEDist_comp_comp_le_add_lintegral",
+        "statEDist_comp_comp_le_lintegral",
+        "statEDist_comp_comp_le_of_bad",
+        "statEDist_comp_le",
+    )),
+    (("Interaction.UC.ReactiveSecurity",), (
+        "advantage_eq_statEDist",
+    )),
+    (("OracleComp.ProgramLogic.Relational",), (
+        "approxRelTriple_eqRel_iff_statEDist_le",
+        "statEDist_eq_one_sub_eRelWP_eqRel",
+    )),
+):
+    for namespace in namespaces:
+        for current in current_names:
+            old = current.replace("statEDist", "etvDist").replace("statDist", "tvDist")
+            STAT_DISTANCE_RENAMES[f"{namespace}.{old}"] = f"{namespaces[0]}.{current}"
+
+
+def report_stat_distance(text: str, report: Report, path: str) -> None:
+    if "tvDist" not in text:
+        return
+    for match in token_matches(text):
+        token = match[0]
+        if "tvDist" not in token:
+            continue
+        name = token.removeprefix("_root_.")
+        if match.start() and text[match.start() - 1] in ".«»":
+            continue
+        if text[match.end():match.end() + 1] in {".", "!", "?", "«", "»"}:
+            continue
+        # A single backtick constructs a Name as data. Two backticks resolve a declaration.
+        if match.start() and text[match.start() - 1] == "`" and not text.startswith(
+                "``", max(0, match.start() - 2)):
+            continue
+        if name in STAT_DISTANCE_RENAMES:
+            target = STAT_DISTANCE_RENAMES[name]
+            hint = f"if this denotes VCVio's statistical distance, use `{target}`"
+        else:
+            namespace, _, leaf = name.rpartition(".")
+            if namespace not in ("", "OracleComp") or "statDist" in leaf:
+                continue
+            hint = next((hint for pattern, hint in LEGACY_DISTANCE_TOKENS
+                         if re.fullmatch(pattern, leaf)), None)
+            if hint is None:
+                continue
+            hint = LEGACY_HINTS.get(leaf, hint)
+        report.add(path, text, match.start(), f"`{token}`: {hint}")
+
+
 def rewrite_names(text: str) -> str:
     for pattern, new in RENAME_PATTERNS:
         text = pattern.sub(new, text)
@@ -1014,24 +1253,48 @@ def text_at(m: re.Match[str], ch: str) -> bool:
     return m.string[m.end():m.end() + 1] == ch
 
 
-IMPORT_LINE = re.compile(r"(?m)^((?:public\s+)?(?:meta\s+)?import(?:\s+all)?\s+)(\S+)[ \t]*$")
+IMPORT_LINE = re.compile(
+    r"^(?P<public>public[ \t]+)?(?P<kind>(?:meta[ \t]+)?import(?:[ \t]+all)?)[ \t]+"
+    r"(?P<module>[^ \t]+)[ \t]*$"
+)
 
 
 def rewrite_imports(text: str) -> str:
-    """Replace imports of removed modules, skipping a target the file already imports."""
+    """Expand old imports in place, preserving visibility, meta imports and `import all`."""
     lines = text.split("\n")
-    imported = {m.group(2) for line in lines if (m := IMPORT_LINE.match(line))}
-    out: list[str] = []
-    for line in lines:
-        m = IMPORT_LINE.match(line)
-        if not m or m.group(2) not in MODULES:
-            out.append(line)
+    moves = []
+    # A normal import, a meta import and an `import all` grant different access.
+    # Keep an existing destination at its original position, preferring a public copy.
+    slots: dict[tuple[str, str], tuple[int, int]] = {}
+    for i, line in enumerate(lines):
+        match = IMPORT_LINE.fullmatch(line)
+        if not match:
             continue
-        for target in MODULES[m.group(2)]:
-            if target not in imported:
-                imported.add(target)
-                out.append(m.group(1) + target)
-    return "\n".join(out)
+        module = match["module"]
+        kind = " ".join(match["kind"].split())
+        public = bool(match["public"])
+        if module in MODULES:
+            moves.append((i, kind, public, MODULES[module]))
+        elif public or (module, kind) not in slots:
+            slots[module, kind] = (i, 0)
+    if not moves:
+        return text
+
+    # Each original line can expand to several imports. Remember the exact output slot so
+    # a later public reexport can upgrade an earlier private one, including a generated one.
+    output = [[line] for line in lines]
+    for i, kind, public, targets in moves:
+        output[i] = []
+        for target in targets:
+            key = (target, kind)
+            if key in slots:
+                row, col = slots[key]
+                if public and not output[row][col].startswith("public"):
+                    output[row][col] = "public " + output[row][col]
+            else:
+                slots[key] = i, len(output[i])
+                output[i].append(("public " if public else "") + kind + " " + target)
+    return "\n".join(line for group in output for line in group)
 
 
 OPEN_LINE = re.compile(r"^([ \t]*open(?:[ \t]+scoped)?)[ \t]+(.*?)([ \t]+in)?[ \t]*$")
@@ -1058,6 +1321,7 @@ def rewrite_opens(text: str) -> str:
 
 
 def report_legacy(text: str, report: Report, path: str) -> None:
+    report_stat_distance(text, report, path)
     spans = comment_spans(text)
     for regex, hint in LEGACY_TOKENS:
         for m in re.finditer(regex, text):

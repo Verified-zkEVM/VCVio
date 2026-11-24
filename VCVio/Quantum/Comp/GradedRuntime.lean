@@ -170,7 +170,7 @@ theorem queryWeight_mono_of_grade
   | pure _ _ => simp
   | primBind _ o k ih =>
     simp only [queryWeight_primBind]
-    exact ENNReal.tsum_le_tsum fun b ↦
+    exact tsum_le_tsum fun b ↦
       ih b (((I o).frame R.D).posSemidef_branch_apply b hρ) t j
         (hgrade.amplify_snd _) hw
   | queryBind _ i E ℓ k ih =>
@@ -179,7 +179,7 @@ theorem queryWeight_mono_of_grade
       exact hw i _ (posSemidef_callInput ℓ hρ) (by simpa using hgrade.callInput ℓ)
     | succ j =>
       simp only [queryWeight_queryBind_succ]
-      refine ENNReal.tsum_le_tsum fun r ↦
+      refine tsum_le_tsum fun r ↦
         ih r ((R.queryStep i E ℓ).posSemidef_branch_apply r hρ) (t + 1) j
           (QuerySupportedOn.queryStep_of_step R g hR i E ℓ r hgrade) ?_
       simpa only [Nat.add_assoc, Nat.add_comm 1] using hw
@@ -203,7 +203,6 @@ theorem querySupportedOn_toRuntime_step
   exact QuerySupportedOn.conj hσ fun m' m hK hm ↦
     (hF i m.1 m'.1 m.2 m'.2 hK).trans (Nat.add_le_add_right hm 1)
 
-omit F g in
 /-- The coherent unitary raises the grade by at most one when every port does. -/
 theorem coherent_U_grade {P : Type} [Fintype P] [DecidableEq P] {In : P → QReg}
     (F : EmulatedOracle P In) (g : F.S → ℕ)

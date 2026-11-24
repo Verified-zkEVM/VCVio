@@ -69,4 +69,17 @@ example : Pr{let b ← $ᵗ Bool}[(b || true) = true] = 1 := by
   pvcgen
   exact triple_ofLE (by simp)
 
+section
+
+open scoped OracleComp.ProgramLogic Std.WP OracleComp.Lower
+
+-- With the automatic constant rule disabled, the residual expectation needs an explicit proof.
+attribute [-simp] ExpectationWP.Lower.wp_const_of_oracle in
+example {α : Type} (oa : OracleComp spec α) (n : ℕ) (I : ℝ≥0∞) :
+    ⦃ I ⦄ oa.replicate n ⦃ fun _ => I ⦄ := by
+  pvcgen
+  exact (wp_const (oa.replicate n) I).ge
+
+end
+
 end VCVioTest.ProgramLogic.VCGenCoreDelegation

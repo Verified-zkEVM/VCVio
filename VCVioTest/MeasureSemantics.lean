@@ -9,17 +9,18 @@ public import VCVio.EvalDist.ResumptionMeasure
 public import VCVio.EvalDist.Divergence.KLDivergence
 public import VCVio.EvalDist.MeasureTVDist.Basic
 public import VCVio.OracleComp.EvalDist.Measure
-public import VCVio.ProgramLogic.Relational.Measure
+public import PolyFun.Control.Monad.Measure.Relational
+public import VCVio.EvalDist.Defs.Measure.Core
 public import ToMathlib.Probability.Divergence.RenyiTotalVariation
 public import Mathlib.Probability.Distributions.Gaussian.Real
-public import ToMathlib.MeasureTheory.DiscreteInstances
+public import ToCslib.MeasureTheory.MeasurableSpace.Instances
 public import Examples.OneTimePad.Basic
 
 /-!
 # Canaries for the measure denotation
 
-Checks on the measure denotation of `VCVio.EvalDist.PFunctorMeasure.Core`, kept in the test
-library so they stay out of the timed build.
+Checks on the measure denotation of `PolyFun.PFunctor.Free.Measure`, kept in the test library so
+they stay out of the timed build.
 
 The continuous oracle is the capability check. Its answers are drawn from
 `ProbabilityTheory.gaussianReal`, which has no atoms, so no countably supported distribution can
@@ -308,8 +309,8 @@ example (a : ℝ) : renyiMGF a (gaussianReal 0 1) (gaussianReal 0 1) = 1 := reny
 Cauchy-Schwarz against the Hellinger affinity and log-convexity of the Rényi MGF, reduce to the
 same Mathlib inequality, `ENNReal.lintegral_mul_norm_pow_le`. -/
 example (n : ℕ) (a : ℝ) (ha : 1 < a) (mx my : ProbComp (BitVec n)) :
-    𝒟[mx].etvDist 𝒟[my] ^ (2 : ℝ) ≤ 1 - (renyiDiv a 𝒟[mx] 𝒟[my])⁻¹ :=
-  etvDist_rpow_two_le_one_sub_inv_renyiDiv ha _ _
+    𝒟[mx].statEDist 𝒟[my] ^ (2 : ℝ) ≤ 1 - (renyiDiv a 𝒟[mx] 𝒟[my])⁻¹ :=
+  statEDist_rpow_two_le_one_sub_inv_renyiDiv ha _ _
 
 /-- **Probability preservation**, the form security reductions consume: an event of one program
 keeps probability under a program at bounded Rényi divergence. -/
