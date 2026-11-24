@@ -5,7 +5,7 @@ Authors: Devon Tuma
 -/
 module
 
-public import VCVio.CryptoFoundations.Rewinding.FinderBridge
+public import VCVio.CryptoFoundations.Rewinding.Cost
 public import VCVio.CryptoFoundations.Rewinding.QueriedPoints
 public import VCVio.CryptoFoundations.Rewinding.ThresholdSemantics
 public import Mathlib.Data.FinEnum
@@ -49,6 +49,8 @@ and cost bounds become an extractor's with no further complete runs
   against the verdicts of an eager table, followed by extraction from the same table.
 * `Rewinding.ResetPolicy.recover_bounds`: the finder's affine success bound and its cost transfer
   to the extractor.
+* `Rewinding.ResetPolicy.recover_bounds_charged`: in addition, the expected oracle-query cost of
+  the complete runs is at most `c * T` when each complete run costs at most `c`.
 -/
 
 public section
@@ -345,6 +347,20 @@ theorem runFinder_eq_map_logRun {R : Type} {C : R → Type} {β : Type}
     runFinder find g = (fun z => (z.1, z.2.2)) <$> logRun g find :=
   (map_run_simulateQ_logCounted g find ∅ 0).symm
 
+/-- If on every outcome the first counter is at most `c` times the second, the expected first
+counter is at most `c` times the expected second counter. -/
+private theorem expectedCalls_fst_le_mul {β : Type} (mx : ProbComp ((β × ℕ) × ℕ)) (c : ℕ)
+    (hc : ∀ z ∈ support mx, z.1.2 ≤ c * z.2) :
+    expectedCalls (Prod.fst <$> mx) ≤ c * expectedCalls ((fun z => (z.1.1, z.2)) <$> mx) := by
+  let : MeasurableSpace ((β × ℕ) × ℕ) := ⊤
+  rw [expectedCalls_eq_lintegral_counter, expectedCalls_eq_lintegral_counter, Functor.map_map,
+    Functor.map_map, lintegral_evalDist_map_of_discrete, lintegral_evalDist_map_of_discrete,
+    ← lintegral_const_mul _ Measurable.of_discrete]
+  apply lintegral_mono_ae
+  apply evalDist.ae_of_forall_mem_support _ _ MeasurableSet.of_discrete
+  intro z hz
+  exact_mod_cast hc z hz
+
 namespace ResetPolicy
 
 variable {ι σ : Type} {spec : OracleSpec ι} {init : ProbComp σ}
@@ -484,6 +500,36 @@ theorem recover_bounds_sub [Fintype R] [DecidableEq R] [∀ r, Fintype (C r)]
   exact ⟨tsub_le_iff_left.mpr
     (hs.trans (add_le_add le_rfl (mul_le_of_le_one_left zero_le tsub_le_self))), hc⟩
 
+/-- `ResetPolicy.recover_bounds` in one charged attempt. Forgetting the accumulated query cost
+leaves the success bound and the complete-run bound `T`, and the expected accumulated query cost
+is at most `c * T` when every complete run of `run` has worst-case query cost at most `c` under
+`cm`. A complete run is `run q`, so it should include the verifier and everything the extractor
+reads (`Rewinding.ResetPolicy.chargedAttempt`). -/
+theorem recover_bounds_charged [Fintype R] [DecidableEq R] [∀ r, Fintype (C r)]
+    [DecidableEq ((r : R) → C r)] {α Out W : Type}
+    (run : ((r : R) → C r) → OracleComp spec α) (accept : ((r : R) → C r) → α → Bool)
+    (cm : CostModel spec ℕ) (c : ℕ) (hc : ∀ q, WorstCaseCostBound (run q) cm c)
+    {good : (((r : R) → C r) → Bool) → Out → Prop}
+    {find : OracleComp (unifSpec + accSpec C) (Option Out)} {κ T : ℝ≥0∞}
+    (h : IsFinder good find κ T) {I : Type} [FinEnum I] (points : Out → I → ((r : R) → C r))
+    (hpts : ∀ f o, good f o → ∀ i, f (points o i) = true)
+    (ext : Out → (I → α) → ProbComp W) (valid : W → Prop)
+    (hext : ∀ F ∈ support (P.eagerTable run), ∀ o, good (fun c => accept c (F c)) o →
+      ∀ w ∈ support (ext o fun i => F (points o i)), valid w) :
+    (∑ c, Pr{let a ← (do (simulateQ impl (run c)).run' (← init))}[accept c a = true]) /
+        Fintype.card ((r : R) → C r) ≤
+      κ + (1 - κ) * Pr{let z ← P.chargedAttempt run cm (recover accept find points ext)}[
+        ∃ w, z.1.1 = some w ∧ valid w] ∧
+    expectedCalls ((fun z => (z.1.1, z.2)) <$>
+      P.chargedAttempt run cm (recover accept find points ext)) ≤ T ∧
+    expectedCalls (Prod.fst <$> P.chargedAttempt run cm (recover accept find points ext)) ≤
+      c * T := by
+  have hb := P.recover_bounds run accept h points hpts ext valid hext
+  rw [← P.map_chargedAttempt_eq_attempt run cm, prEvent_map] at hb
+  refine ⟨hb.1, hb.2, (expectedCalls_fst_le_mul _ c
+    (P.cost_le_mul_runs_of_mem_support_chargedAttempt run cm c hc _)).trans ?_⟩
+  gcongr
+  exact hb.2
 
 /-- `ResetPolicy.recover_bounds` for a tree finder, recovering the transcripts at the leaves of the
 returned tree. Every leaf of a returned tree accepts, so its transcript is cached. -/
