@@ -68,6 +68,7 @@ public import VCVioTest.Forking.WithoutReplacement
 public import VCVioTest.Foundations
 public import VCVioTest.GrindFailFast
 public import VCVioTest.GroupModel.Basic
+public import VCVioTest.GroupModel.Certificate
 public import VCVioTest.GroupModel.Collision
 public import VCVioTest.GroupModel.Cost
 public import VCVioTest.GroupModel.Decisional
@@ -286,4 +287,5 @@ public import VCVioTest.UniversePolymorphism
 public import VCVioTest.Unpredictability
 public import VCVioTest.UntilBadBind
 public import VCVioTest.VCGenAmbiguity
+public import VCVioTest.WeightedQueryBound
 public import VCVioTest.WriterCostStateT
