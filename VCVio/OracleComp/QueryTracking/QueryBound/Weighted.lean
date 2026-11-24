@@ -7,7 +7,7 @@ Authors: Quang Dao
 module
 
 public import VCVio.OracleComp.QueryTracking.CostModel
-public import VCVio.OracleComp.QueryTracking.QueryBound.Simulation
+public import VCVio.OracleComp.QueryTracking.QueryBound.Basic
 
 /-! # Weighted query bounds through handlers
 
@@ -16,6 +16,12 @@ This structural formulation counts prefixes even when a later query has no possi
 `WorstCaseCostBound` bounds completed paths only, so it cannot in general supply a structural
 budget. Structural weighted budgets do imply that semantic cost bound, and per-kind query
 bounds supply both formulations without assumptions on answer types.
+
+A weighted budget is PolyFun's prefix charge bound `PFunctor.FreeM.IsChargeBound oa w W`
+(`PFunctor.FreeM.isChargeBound_iff_isRollBound_nat`). The handler transfers are
+`IsChargeBound.run_liftM` and `IsChargeBound.liftM`, per-kind budgets are the pushforward of one
+vector charge along a weighted sum (`isChargeBound_pi_iff`, `IsChargeBound.map`), and the
+completed-path bound is `PFunctor.FreeM.Path.charge_le_of_isChargeBound`.
 -/
 
 public section
@@ -37,13 +43,10 @@ theorem IsQueryBound.simulateQ_run_weighted
     (h : IsQueryBound oa W (fun t b => w t ≤ b) (fun t b => b - w t))
     (hstep : ∀ t s, IsQueryBoundP ((impl t).run s) q (w t)) (s : σ) :
     IsQueryBoundP ((simulateQ impl oa).run s) q W := by
-  induction oa using OracleComp.inductionOn generalizing W s with
-  | pure a => simp
-  | query_bind t k ih =>
-    rw [isQueryBound_query_bind_iff] at h
-    simp only [simulateQ_bind, simulateQ_spec_query, StateT.run_bind]
-    simpa only [Nat.add_sub_of_le h.1] using
-      isQueryBoundP_bind (hstep t s) (fun z _ => ih z.1 (h.2 z.1) z.2)
+  rw [isQueryBoundP_iff_isChargeBound, simulateQ]
+  exact PFunctor.FreeM.IsChargeBound.run_liftM impl
+    (fun t s => (isQueryBoundP_iff_isChargeBound _ _ _).1 (hstep t s))
+    ((PFunctor.FreeM.isChargeBound_iff_isRollBound_nat oa w W).2 h) s
 
 /-- A stateless handler transfers a structural weighted budget to a target query budget. -/
 theorem IsQueryBound.simulateQ_weighted
@@ -53,26 +56,29 @@ theorem IsQueryBound.simulateQ_weighted
     (h : IsQueryBound oa W (fun t b => w t ≤ b) (fun t b => b - w t))
     (hstep : ∀ t, IsQueryBoundP (impl t) q (w t)) :
     IsQueryBoundP (simulateQ impl oa) q W := by
-  induction oa using OracleComp.inductionOn generalizing W with
-  | pure a => simp
-  | query_bind t k ih =>
-    rw [isQueryBound_query_bind_iff] at h
-    simp only [simulateQ_bind, simulateQ_spec_query]
-    simpa only [Nat.add_sub_of_le h.1] using
-      isQueryBoundP_bind (hstep t) (fun a _ => ih a (h.2 a))
+  rw [isQueryBoundP_iff_isChargeBound, simulateQ]
+  exact PFunctor.FreeM.IsChargeBound.liftM impl
+    (fun t => (isQueryBoundP_iff_isChargeBound _ _ _).1 (hstep t))
+    ((PFunctor.FreeM.isChargeBound_iff_isRollBound_nat oa w W).2 h)
 
 /-- Predicate-targeted counting is structural weighting by the predicate's indicator. -/
 theorem isQueryBoundP_iff_weighted {p : ι → Prop} [DecidablePred p]
     (oa : OracleComp spec α) (n : ℕ) :
     IsQueryBoundP oa p n ↔
       IsQueryBound oa n (fun t b => (if p t then 1 else 0) ≤ b)
-        (fun t b => b - (if p t then 1 else 0)) := by
-  rw [isQueryBoundP_def]
-  apply isQueryBound_congr
-  · intro t b
-    by_cases ht : p t <;> simp [ht, Nat.one_le_iff_ne_zero, Nat.pos_iff_ne_zero]
-  · intro t b
-    split_ifs <;> simp
+        (fun t b => b - (if p t then 1 else 0)) :=
+  (isQueryBoundP_iff_isChargeBound p oa n).trans
+    (PFunctor.FreeM.isChargeBound_iff_isRollBound_nat oa _ n)
+
+/-- The weighted sum `v ↦ ∑ k, c k * v k`, as a monotone additive map. -/
+private def weightedSum {K : Type v} [Fintype K] (c : K → ℕ) : (K → ℕ) →+o ℕ where
+  toFun v := ∑ k, c k * v k
+  map_zero' := by simp
+  map_add' v v' := by simp [mul_add, Finset.sum_add_distrib]
+  monotone' _ _ hv := Finset.sum_le_sum fun k _ => Nat.mul_le_mul_left _ (hv k)
+
+private theorem weightedSum_apply {K : Type v} [Fintype K] (c v : K → ℕ) :
+    weightedSum c v = ∑ k, c k * v k := rfl
 
 /-- Per-kind query budgets give the sum of the costs times their respective budgets. -/
 theorem isQueryBound_weighted_of_per_kind {K : Type v} [Fintype K] [DecidableEq K]
@@ -80,37 +86,11 @@ theorem isQueryBound_weighted_of_per_kind {K : Type v} [Fintype K] [DecidableEq 
     (h : ∀ k, IsQueryBoundP oa (fun t => κ t = k) (n k)) :
     IsQueryBound oa (∑ k, c k * n k)
       (fun t b => c (κ t) ≤ b) (fun t b => b - c (κ t)) := by
-  induction oa using OracleComp.inductionOn generalizing n with
-  | pure a => exact isQueryBound_pure _ _ _ _
-  | query_bind t f ih =>
-    have ht := (isQueryBoundP_query_bind_iff _ _ _ _).mp (h (κ t))
-    have hn : 0 < n (κ t) := ht.1.resolve_left (not_not_intro rfl)
-    let n' := Function.update n (κ t) (n (κ t) - 1)
-    have hsum : c (κ t) + ∑ k, c k * n' k = ∑ k, c k * n k := by
-      have he : (fun k => c k * n' k) =
-          Function.update (fun k => c k * n k) (κ t) (c (κ t) * (n (κ t) - 1)) := by
-        funext k
-        by_cases hk : k = κ t <;> simp [n', hk]
-      rw [he, Finset.sum_update_of_mem (Finset.mem_univ (κ t)),
-        Finset.sdiff_singleton_eq_erase,
-        ← Finset.add_sum_erase _ (fun k => c k * n k) (Finset.mem_univ (κ t))]
-      have heq : c (κ t) + c (κ t) * (n (κ t) - 1) = c (κ t) * n (κ t) := by
-        calc
-          _ = c (κ t) * (1 + (n (κ t) - 1)) := by simp [mul_add]
-          _ = _ := by rw [Nat.add_sub_of_le hn]
-      omega
-    rw [isQueryBound_query_bind_iff]
-    refine ⟨by omega, fun a => ?_⟩
-    have hc : ∀ k, IsQueryBoundP (f a) (fun t => κ t = k) (n' k) := by
-      intro k
-      have hk := ((isQueryBoundP_query_bind_iff _ _ _ _).mp (h k)).2 a
-      by_cases he : κ t = k
-      · subst k
-        simpa [n'] using hk
-      · simpa [n', Function.update_of_ne (Ne.symm he), he] using hk
-    have he : (∑ k, c k * n k) - c (κ t) = ∑ k, c k * n' k := by omega
-    rw [he]
-    exact ih a n' hc
+  have hv : PFunctor.FreeM.IsChargeBound oa (fun t k => if κ t = k then 1 else 0) n :=
+    PFunctor.FreeM.isChargeBound_pi_iff.2 fun k => (isQueryBoundP_iff_isChargeBound _ _ _).1 (h k)
+  rw [isQueryBound_iff_isRollBound, ← PFunctor.FreeM.isChargeBound_iff_isRollBound_nat]
+  simpa [weightedSum_apply, Function.comp_def, mul_ite, Finset.sum_ite_eq] using
+    hv.map (weightedSum c)
 
 /-- A structural weighted budget bounds all completed instrumented paths. -/
 theorem IsQueryBound.toWorstCaseCostBound_weighted
@@ -118,15 +98,10 @@ theorem IsQueryBound.toWorstCaseCostBound_weighted
     {oa : OracleComp spec α} {w : ι → ℕ} {W : ℕ}
     (h : IsQueryBound oa W (fun t b => w t ≤ b) (fun t b => b - w t)) :
     WorstCaseCostBound oa ⟨w⟩ W := by
-  induction oa using OracleComp.inductionOn generalizing W with
-  | pure a => simp
-  | query_bind t k ih =>
-    rw [isQueryBound_query_bind_iff] at h
-    rw [worstCaseCostBound_query_bind_iff]
-    intro a z hz
-    have hc := (worstCaseCostBound_iff_support_bound _ _ _).mp (ih a (h.2 a)) z hz
-    change w t + Multiplicative.toAdd z.2 ≤ W
-    omega
+  rw [worstCaseCostBound_iff_forall_charge_le]
+  intro p
+  simpa using PFunctor.FreeM.Path.charge_le_of_isChargeBound
+    ((PFunctor.FreeM.isChargeBound_iff_isRollBound_nat oa w W).2 h) p
 
 /-- Per-kind bounds imply the corresponding weighted worst-case cost bound. -/
 theorem worstCaseCostBound_of_per_kind
