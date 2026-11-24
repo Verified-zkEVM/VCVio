@@ -7,6 +7,7 @@ Authors: Quang Dao
 module
 public import VCVio.CryptoFoundations.Rewinding.Basic
 public import Mathlib.Data.Fintype.Pi
+public import ToMathlib.Control.Monad.Fold
 
 /-!
 # Black-box finders for accepting challenge trees
@@ -14,6 +15,11 @@ public import Mathlib.Data.Fintype.Pi
 Rounds are indexed by any finite linearly ordered type. A challenge tree assigns a vector to
 each branch path, with the challenge at a round depending only on the path through that round.
 The finder sees only a Boolean acceptance oracle and its own independent random coins.
+
+The file also collects the facts about the complete-run counter that finder analyses share.
+`Rewinding.expectedCalls_bind` and `Rewinding.expectedCalls_bind_le_add` bound the expected counter
+after a random choice. `Rewinding.counted_run_add`, `Rewinding.counted_mOfFn` and
+`Rewinding.counted_mPi` add up the counters of runs in sequence.
 
 ## References
 
@@ -94,6 +100,109 @@ theorem expectedCalls_bind {α β : Type} [MeasurableSpace α] [DiscreteMeasurab
   let : MeasurableSpace β := ⊤
   simp only [expectedCalls_eq_lintegral]
   exact lintegral_evalDist_bind_of_discrete mx f (Measurable.of_discrete.comp measurable_snd)
+
+open MeasureTheory in
+/-- A continuation that adds at most `B` to the counter adds at most `B` to the expected
+counter. -/
+theorem expectedCalls_bind_le_add {β γ : Type} (mx : ProbComp (β × ℕ))
+    (f : β × ℕ → ProbComp (γ × ℕ)) (B : ℕ)
+    (hf : ∀ z ∈ support mx, ∀ y ∈ support (f z), y.2 ≤ z.2 + B) :
+    expectedCalls (mx >>= f) ≤ expectedCalls mx + B := by
+  let : MeasurableSpace (β × ℕ) := ⊤
+  rw [expectedCalls_bind]
+  calc
+    (∫⁻ z, expectedCalls (f z) ∂𝒟[mx]) ≤ ∫⁻ z, ((z.2 : ℝ≥0∞) + B) ∂𝒟[mx] := by
+      apply lintegral_mono_ae
+      apply evalDist.ae_of_forall_mem_support _ _ MeasurableSet.of_discrete
+      intro z hz
+      rw [expectedCalls_eq_lintegral_counter]
+      calc
+        (∫⁻ n, (n : ℝ≥0∞) ∂𝒟[Prod.snd <$> f z]) ≤
+            ∫⁻ _n, ((z.2 : ℝ≥0∞) + B) ∂𝒟[Prod.snd <$> f z] := by
+          apply lintegral_mono_ae
+          apply evalDist.ae_of_forall_mem_support _ _ MeasurableSet.of_discrete
+          intro n hn
+          rw [support_map] at hn
+          obtain ⟨y, hy, rfl⟩ := hn
+          exact_mod_cast hf z hz y hy
+        _ = ((z.2 : ℝ≥0∞) + B) * 𝒟[Prod.snd <$> f z] Set.univ := lintegral_const _
+        _ ≤ (z.2 : ℝ≥0∞) + B := mul_le_of_le_one_right zero_le (evalDist_apply_univ_le_one _)
+    _ = (∫⁻ z, (z.2 : ℝ≥0∞) ∂𝒟[mx]) + B * 𝒟[mx] Set.univ := by
+      rw [lintegral_add_right _ measurable_const, lintegral_const]
+    _ ≤ expectedCalls mx + B := by
+      rw [expectedCalls_eq_lintegral_counter, lintegral_evalDist_map_of_discrete]
+      gcongr
+      exact mul_le_of_le_one_right zero_le (evalDist_apply_univ_le_one mx)
+
+/-- Changing only the output preserves the expected complete-run counter. -/
+theorem expectedCalls_map_output {α β : Type} (g : α → β) (mx : ProbComp (α × ℕ)) :
+    expectedCalls ((fun z => (g z.1, z.2)) <$> mx) = expectedCalls mx := by
+  simp only [expectedCalls, AddWriterT.expectedCostNat, AddWriterT.expectedCost,
+    AddWriterT.costs_def, WriterT.run_mk, Functor.map_map]
+
+/-- An initial counter offset is added to the final counter without changing any answers. -/
+theorem counted_run_add {Q α β : Type} (f : Q → α)
+    (alg : OracleComp (unifSpec + rerunSpec Q α) β) (count offset : ℕ) :
+    (simulateQ (coins (S := ℕ) + counted f) alg).run (count + offset) =
+      (fun z => (z.1, z.2 + offset)) <$>
+        (simulateQ (coins (S := ℕ) + counted f) alg).run count := by
+  induction alg using OracleComp.inductionOn generalizing count with
+  | pure a => simp
+  | query_bind q next ih =>
+    cases q with
+    | inl q =>
+      simp only [coins] at ih
+      simp only [simulateQ_bind, simulateQ_spec_query, QueryImpl.add_apply_inl,
+        StateT.run_bind, coins, QueryImpl.liftTarget_apply_run, QueryImpl.ofLift_apply,
+        bind_map_left, map_bind, ih]
+    | inr q =>
+      simp only [simulateQ_bind, simulateQ_spec_query, QueryImpl.add_apply_inr,
+        StateT.run_bind, counted, StateT.run_modify, StateT.run_pure, pure_bind]
+      simpa only [Nat.add_right_comm count offset 1] using ih (f q) (count + 1)
+
+/-- Running a finite sequence of programs against a fixed acceptance function adds up their
+counters: each member runs from the counter its predecessors leave, and its law does not depend on
+that starting value except through the offset (`Rewinding.counted_run_add`). -/
+theorem counted_mOfFn {Q α β : Type} (f : Q → α) :
+    ∀ {n : ℕ} (g : Fin n → OracleComp (unifSpec + rerunSpec Q α) β) (count : ℕ),
+      (simulateQ (coins (S := ℕ) + counted f) (Fin.mOfFn n g)).run count =
+        (fun v : Fin n → β × ℕ => (fun i => (v i).1, count + ∑ i, (v i).2)) <$>
+          Fin.mOfFn n fun i => (simulateQ (coins (S := ℕ) + counted f) (g i)).run 0
+  | 0, g, count => by
+      simp only [Fin.mOfFn, simulateQ_pure, StateT.run_pure, map_pure, Finset.univ_eq_empty,
+        Finset.sum_empty, add_zero]
+      congr 2
+      funext i
+      exact i.elim0
+  | n + 1, g, count => by
+      have hrest := fun c => counted_mOfFn f (fun i : Fin n => g i.succ) c
+      simp only [Fin.mOfFn, simulateQ_bind, simulateQ_pure, StateT.run_bind, StateT.run_pure,
+        map_bind]
+      rw [show count = 0 + count from (zero_add count).symm, counted_run_add, zero_add,
+        bind_map_left]
+      refine bind_congr fun p => ?_
+      simp only [hrest, bind_map_left, map_pure]
+      refine bind_congr fun v => ?_
+      simp only [Fin.sum_univ_succ, Fin.cons_zero, Fin.cons_succ]
+      congr 2
+      · funext i
+        refine Fin.cases rfl (fun _ => rfl) i
+      · ring
+
+/-- `Rewinding.counted_mOfFn` over a finite index type. -/
+theorem counted_mPi {Q α β : Type} (f : Q → α) {ι : Type} [Fintype ι]
+    (g : ι → OracleComp (unifSpec + rerunSpec Q α) β) (count : ℕ) :
+    (simulateQ (coins (S := ℕ) + counted f) (Fintype.mPi g)).run count =
+      (fun v : ι → β × ℕ => (fun i => (v i).1, count + ∑ i, (v i).2)) <$>
+        Fintype.mPi fun i => (simulateQ (coins (S := ℕ) + counted f) (g i)).run 0 := by
+  simp only [Fintype.mPi, simulateQ_map, StateT.run_map, counted_mOfFn, Functor.map_map]
+  congr 1
+  funext v
+  simp only [Equiv.arrowCongr_apply, Equiv.refl_apply, Function.comp_apply, Prod.mk.injEq]
+  refine ⟨rfl, ?_⟩
+  congr 1
+  rw [Equiv.symm_symm]
+  exact (Equiv.sum_comp (Fintype.equivFin ι) fun k => (v k).2).symm
 
 /-- Fraction of complete challenge vectors accepted by `f`. -/
 @[expose] noncomputable def acceptRate [Fintype R] [DecidableEq R] [∀ r, Fintype (C r)]

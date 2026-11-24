@@ -7,7 +7,6 @@ module
 
 public import VCVio.CryptoFoundations.Rewinding.Cost
 public import VCVio.CryptoFoundations.Rewinding.QueriedPoints
-public import VCVio.CryptoFoundations.Rewinding.ThresholdSemantics
 public import Mathlib.Data.FinEnum
 
 /-!
@@ -28,6 +27,11 @@ verdicts the finder saw. Against frozen reruns, the eager representation
 and cost bounds become an extractor's with no further complete runs
 (`Rewinding.ResetPolicy.recover_bounds`).
 
+An extractor usually needs the recovered transcripts to agree on the messages sent before the
+challenges where they branch, as the commitment of a Σ-protocol.
+`Rewinding.ResetPolicy.eagerTable_proj_eq_of_key_eq` and `Rewinding.ResetPolicy.eagerTable_fst_eq`
+give this for every table in the eager table's support.
+
 ## Main definitions
 
 * `Rewinding.cachingImpl`: answer an acceptance query by a complete rerun, cache its output, and
@@ -37,12 +41,6 @@ and cost bounds become an extractor's with no further complete runs
 
 ## Main results
 
-* `Rewinding.ResetPolicy.eagerTable_settled`: every table in the eager table's support is settled
-  in one world.
-* `Rewinding.ResetPolicy.eagerTable_proj_eq_of_key_eq`: runs whose first phase depends only on a
-  key give one public value whenever their keys agree, as the messages that sibling transcripts
-  of a tree share; `Rewinding.ResetPolicy.eagerTable_fst_eq` is the case of a constant key, as a
-  Σ-protocol's commitment.
 * `Rewinding.run_simulateQ_counted_caching`: against a fixed table, the caching finder is the
   logged finder, its cache holding the table's entries at the logged vectors.
 * `Rewinding.ResetPolicy.attempt_recover`: against frozen reruns, recovery is the logged finder
@@ -59,109 +57,6 @@ open OracleComp OracleSpec MeasureTheory
 open scoped ENNReal
 
 namespace Rewinding
-
-/-! ## Tables in the eager table's support -/
-
-namespace ResetPolicy
-
-variable {ι σ : Type} {spec : OracleSpec ι} {init : ProbComp σ}
-  {impl : QueryImpl spec (StateT σ ProbComp)} (P : ResetPolicy init impl)
-
-/-- Every table in the eager table's support is settled in one world: each complete rerun is a
-pure lookup of its entry there. -/
-theorem eagerTable_settled {Q α : Type} [Finite Q] (run : Q → OracleComp spec α) {F : Q → α}
-    (hF : F ∈ support (P.eagerTable run)) :
-    ∃ w, ∀ q, (P.runWorld run q).run w = pure (F q, w) := by
-  classical
-  let : Fintype Q := Fintype.ofFinite Q
-  simp only [eagerTable, support_map, Set.mem_image] at hF
-  obtain ⟨z, hz, rfl⟩ := hF
-  refine ⟨z.2, fun q => ?_⟩
-  simpa only [Equiv.symm_apply_apply] using
-    (P.draw_support run (Fintype.equivFin Q).symm P.empty z hz).2 (Fintype.equivFin Q q)
-
-/-- Prefix consistency: if `run q` first executes a phase that depends only on `key q`, and every
-output of the rest has the projection `pub s` of that phase's result `s`, then two inputs with the
-same key give one projection in every table of the eager table's support. For a multi-round
-prover, `key q` is the prefix of challenges up to a round and `proj` reads the messages sent
-before that round, so sibling transcripts in a tree share them. -/
-theorem eagerTable_proj_eq_of_key_eq {Q K S α A : Type} [Finite Q]
-    (run : Q → OracleComp spec α) (proj : α → A) (key : Q → K)
-    (pre : K → OracleComp spec S) (pub : S → A) (post : S → Q → OracleComp spec α)
-    (hrun : ∀ q, run q = pre (key q) >>= fun s => post s q)
-    (hpub : ∀ s q, ∀ y ∈ support (post s q), proj y = pub s)
-    {F : Q → α} (hF : F ∈ support (P.eagerTable run))
-    {q q' : Q} (hq : key q = key q') : proj (F q) = proj (F q') := by
-  obtain ⟨w, hw⟩ := P.eagerTable_settled run hF
-  have hkey : ∀ q, ∀ s ∈ support ((simulateQ P.answer (pre (key q))).run (w, P.begin)),
-      proj (F q) = pub s.1 := by
-    intro q s hs
-    obtain ⟨y, hy⟩ := support_nonempty ((simulateQ P.answer (post s.1 q)).run s.2)
-    have hmem : (y.1, y.2.1) ∈ support ((P.runWorld run q).run w) := by
-      simp only [runWorld, StateT.run_mk, hrun, simulateQ_bind, StateT.run_bind,
-        support_map, support_bind, Set.mem_image, Set.mem_iUnion]
-      exact ⟨y, ⟨s, hs, hy⟩, rfl⟩
-    rw [hw q, support_pure, Set.mem_singleton_iff, Prod.mk.injEq] at hmem
-    rw [← hmem.1]
-    exact hpub s.1 q y.1 (mem_support_of_mem_support_simulateQ_run _ _ _ hy)
-  obtain ⟨s, hs⟩ := support_nonempty ((simulateQ P.answer (pre (key q))).run (w, P.begin))
-  rw [hkey q s hs, hkey q' s (hq ▸ hs)]
-
-/-- Runs whose first phase depends only on `key q` and publishes `pub` of its result give one
-public value whenever their keys agree, in every table of the eager table's support. -/
-theorem eagerTable_fst_eq_of_key_eq {Q K S A B : Type} [Finite Q] (key : Q → K)
-    (pre : K → OracleComp spec S) (pub : S → A) (post : S → Q → OracleComp spec B)
-    {F : Q → A × B}
-    (hF : F ∈ support (P.eagerTable fun q => pre (key q) >>= fun s => (pub s, ·) <$> post s q))
-    {q q' : Q} (hq : key q = key q') : (F q).1 = (F q').1 :=
-  P.eagerTable_proj_eq_of_key_eq _ Prod.fst key pre pub (fun s q => (pub s, ·) <$> post s q)
-    (fun _ => rfl) (fun s q y hy => by
-      rw [support_map] at hy
-      obtain ⟨b, -, rfl⟩ := hy
-      rfl) hF hq
-
-/-- Runs that share a first phase `pre` and publish `pub` of its result give one public value in
-every table of the eager table's support. For a Σ-protocol prover, the first phase is the
-commitment, so every recovered transcript has the same commitment. -/
-theorem eagerTable_fst_eq {Q S A B : Type} [Finite Q] (pre : OracleComp spec S) (pub : S → A)
-    (post : S → Q → OracleComp spec B) {F : Q → A × B}
-    (hF : F ∈ support (P.eagerTable fun q => pre >>= fun s => (pub s, ·) <$> post s q))
-    (q q' : Q) : (F q).1 = (F q').1 :=
-  P.eagerTable_fst_eq_of_key_eq (fun _ => ()) (fun _ => pre) pub post hF rfl
-
-end ResetPolicy
-
-/-- A continuation that adds at most `B` to the counter adds at most `B` to the expected
-counter. -/
-theorem expectedCalls_bind_le_add {β γ : Type} (mx : ProbComp (β × ℕ))
-    (f : β × ℕ → ProbComp (γ × ℕ)) (B : ℕ)
-    (hf : ∀ z ∈ support mx, ∀ y ∈ support (f z), y.2 ≤ z.2 + B) :
-    expectedCalls (mx >>= f) ≤ expectedCalls mx + B := by
-  let : MeasurableSpace (β × ℕ) := ⊤
-  rw [expectedCalls_bind]
-  calc
-    (∫⁻ z, expectedCalls (f z) ∂𝒟[mx]) ≤ ∫⁻ z, ((z.2 : ℝ≥0∞) + B) ∂𝒟[mx] := by
-      apply lintegral_mono_ae
-      apply evalDist.ae_of_forall_mem_support _ _ MeasurableSet.of_discrete
-      intro z hz
-      rw [expectedCalls_eq_lintegral_counter]
-      calc
-        (∫⁻ n, (n : ℝ≥0∞) ∂𝒟[Prod.snd <$> f z]) ≤
-            ∫⁻ _n, ((z.2 : ℝ≥0∞) + B) ∂𝒟[Prod.snd <$> f z] := by
-          apply lintegral_mono_ae
-          apply evalDist.ae_of_forall_mem_support _ _ MeasurableSet.of_discrete
-          intro n hn
-          rw [support_map] at hn
-          obtain ⟨y, hy, rfl⟩ := hn
-          exact_mod_cast hf z hz y hy
-        _ = ((z.2 : ℝ≥0∞) + B) * 𝒟[Prod.snd <$> f z] Set.univ := lintegral_const _
-        _ ≤ (z.2 : ℝ≥0∞) + B := mul_le_of_le_one_right zero_le (evalDist_apply_univ_le_one _)
-    _ = (∫⁻ z, (z.2 : ℝ≥0∞) ∂𝒟[mx]) + B * 𝒟[mx] Set.univ := by
-      rw [lintegral_add_right _ measurable_const, lintegral_const]
-    _ ≤ expectedCalls mx + B := by
-      rw [expectedCalls_eq_lintegral_counter, lintegral_evalDist_map_of_discrete]
-      gcongr
-      exact mul_le_of_le_one_right zero_le (evalDist_apply_univ_le_one mx)
 
 section Cache
 
