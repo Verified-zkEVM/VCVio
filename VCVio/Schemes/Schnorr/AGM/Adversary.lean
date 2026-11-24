@@ -7,7 +7,6 @@ Authors: Kobi Gurkan, Quang Dao
 module
 public import VCVio.CryptoFoundations.GroupModel.Interaction
 public import VCVio.Schemes.Schnorr.Signature
-public import VCVio.OracleComp.Traversal
 
 /-! # Algebraic Schnorr adversaries
 
@@ -56,12 +55,6 @@ inductive Request (M : Type) where
 @[expose] def signingReply {F G : Type} (R : G) (z : F) : Message F (Group G) :=
   ⟨z, fun _ => [R]⟩
 
-/-- Hash requests carry exactly one commitment; other requests carry no group arguments. -/
-@[expose] def RequestShape {F M G : Type} (q : Explained F (Request M) (Group G)) : Prop :=
-  match q.value.data with
-  | .hash _ => (q.value.groups ()).length = 1
-  | _ => q.value.groups () = []
-
 /-- Signing requests, counted by the signing-query budget. -/
 @[expose] def signRequest {F M G : Type} (q : Explained F (Request M) (Group G)) : Bool :=
   match q.value.data with | .sign _ => true | _ => false
@@ -73,8 +66,8 @@ inductive Request (M : Type) where
 /-- The existing signature game's oracle family, including signing queries. -/
 abbrev rawSpec (F M G : Type) := (unifSpec + (M × G →ₒ F)) + (M →ₒ G × F)
 
-/-- Forward well-shaped requests to the original Schnorr oracles. The protocol certificate
-excludes the default commitment used to make malformed requests total. -/
+/-- Forward requests to the original Schnorr oracles. A hash request is hashed at its first
+commitment (`0` if it supplies none); group arguments of other requests are ignored. -/
 @[expose] def oracle {F M G : Type} [Zero G] :
     QueryImpl (plainSpec (Group G) (Request M) (Reply F M))
       (OracleComp (rawSpec F M G)) := by
@@ -99,13 +92,14 @@ end Schnorr.AGM
 
 namespace Schnorr
 
-/-- An algebraic Schnorr adversary with protocol shape certified on every reply path. -/
+/-- An algebraic adversary (`GroupModel.Interaction.Adversary`) specialized to Schnorr. The
+generator and public key are its initial group inputs, hash requests carry their commitment as a
+group argument, and it outputs a message and response with the commitment as a group element. No
+restriction on the shape of requests or outputs is needed: they are read at their first commitment,
+as the erasure reads them. -/
 structure AlgebraicAdversary (F G M : Type) [Field F] [AddCommGroup G] [Module F G]
     extends GroupModel.Interaction.Adversary F (AGM.Group G) Unit (AGM.Request M)
-      (AGM.Reply F M) (M × F) where
-  /-- Hash requests and final outputs contain exactly one commitment. -/
-  protocol : ∀ input, allPathsSatisfy AGM.RequestShape
-    (fun out => (out.value.groups ()).length = 1) (fun _ => Set.univ) (main input)
+      (AGM.Reply F M) (M × F)
 
 /-- Forget explanations and forward sampling, hashing, and signing to the existing
 `Schnorr.signature` unforgeability game without modifying any of its oracles. -/

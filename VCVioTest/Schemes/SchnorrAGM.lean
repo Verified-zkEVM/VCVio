@@ -62,15 +62,6 @@ abbrev Spec := explainedSpec K (Group K) (Request Bool) (Reply K Bool)
       · exact Explained.valid_ofVectors _ _ _
       · intro hash
         exact Explained.valid_ofVectors _ _ _
-  protocol input := by
-    rw [allPathsSatisfy_query_bind]
-    refine ⟨rfl, fun sig _ => ?_⟩
-    rw [allPathsSatisfy_query_bind]
-    refine ⟨?_, fun hash _ => ?_⟩
-    · change ((zeroPoint _ (Request.hash true)).value.groups ()).length = 1
-      rw [zeroPoint_groups]
-      rfl
-    · simp only [allPathsSatisfy_pure, zeroPoint_groups, List.length_singleton]
 
 /-- The concrete fixture obeys the explicit one-sign query budget on every reply path. -/
 theorem oneHashOneSign_sign_bound (pk : K) :
@@ -188,7 +179,7 @@ private theorem oneHashOneSign_run (pk : K) :
   conv_lhs =>
     enter [1]
     dsimp only [handler, StateT.run]
-  simp only [initial, ne_eq, not_true_eq_false, ite_false, bind_assoc, pure_bind]
+  simp only [initial, bind_assoc, pure_bind]
   apply bind_congr
   intro c
   apply bind_congr

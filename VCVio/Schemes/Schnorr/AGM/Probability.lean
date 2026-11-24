@@ -42,26 +42,19 @@ private theorem handler_bad [Field F] [AddCommGroup G] [Module F G]
       if hashRequest q then (Fintype.card F : ENNReal)⁻¹ else 0 := by
   rcases q with ⟨⟨request, groups⟩, coeffs⟩
   cases request with
-  | random n =>
-      by_cases he : groups () = [] <;>
-        simp [handler, StateT.run, hashRequest, he, rejected, hb]
+  | random n => simp [handler, StateT.run, hashRequest, hb]
   | hash m =>
       simp only [handler, StateT.run, hashRequest, ite_true]
-      split
-      · rename_i R coeff hR hcoeff
-        simpa only [bind_pure_comp, prEvent_map, Function.comp_def, StateT.run] using
-          read_bad s hb (m, R) (flatten coeff s.representations)
-      · simp [rejected, hb]
+      simpa only [bind_pure_comp, prEvent_map, Function.comp_def, StateT.run] using
+        read_bad s hb (m, (groups ()).headD 0) (flatten ((coeffs ()).headD []) s.representations)
   | sign m =>
-      by_cases he : groups () = []
-      · simp only [handler, StateT.run, hashRequest, he, ne_eq, not_true_eq_false, ite_false]
-        apply le_of_eq
-        apply prEvent_eq_zero_of_forall_mem_support
-        intro p hp hbad
-        simp only [mem_support_bind_iff, support_pure, Set.mem_singleton_iff] at hp
-        obtain ⟨c, _, z, _, rfl⟩ := hp
-        simp [signedState, hb] at hbad
-      · simp [handler, StateT.run, hashRequest, he, rejected, hb]
+      simp only [handler, StateT.run, hashRequest, Bool.false_eq_true, ite_false]
+      apply le_of_eq
+      apply prEvent_eq_zero_of_forall_mem_support
+      intro p hp hbad
+      simp only [mem_support_bind_iff, support_pure, Set.mem_singleton_iff] at hp
+      obtain ⟨c, _, z, _, rfl⟩ := hp
+      simp [signedState, hb] at hbad
 
 /-- The bound counts all hash calls, so it is valid under arbitrary adaptive repeats. -/
 private theorem simulate_bad [Field F] [AddCommGroup G] [Module F G]
@@ -102,12 +95,10 @@ private theorem finish_bad [Field F] [AddCommGroup G] [Module F G]
     Pr{let p ← (finish g pk out).run s}[p.2.bad = true] ≤
       (Fintype.card F : ENNReal)⁻¹ := by
   unfold finish
-  split
-  · rename_i R coeff hR hcoeff
-    simp only [StateT.run_bind, StateT.run_get, StateT.run_pure, pure_bind]
-    simpa only [bind_pure_comp, prEvent_map, Function.comp_def] using
-      read_bad s hb (out.value.data.1, R) (flatten coeff s.representations)
-  · simp [hb]
+  simp only [StateT.run_bind, StateT.run_get, StateT.run_pure, pure_bind]
+  simpa only [bind_pure_comp, prEvent_map, Function.comp_def] using
+    read_bad s hb (out.value.data.1, (out.value.groups ()).headD 0)
+      (flatten ((out.coefficients ()).headD []) s.representations)
 
 /-- The final verifier query adds one opportunity for the exceptional challenge. -/
 private theorem run_bad [Field F] [AddCommGroup G] [Module F G]

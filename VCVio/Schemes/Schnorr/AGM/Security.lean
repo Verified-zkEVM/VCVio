@@ -22,8 +22,9 @@ EUROCRYPT 2020, https://eprint.iacr.org/2019/877. The additive terms match
 `3eaa8c4`);
 that source's resource-indexed supremum is instantiated here by an explicit reduction.
 Both implementations sample nonces from the full field and hash `(message, commitment)`.
-The certified protocol shape excludes malformed requests. Bijective scalar multiplication
-by `g` and a group sampler supply the hypotheses of VCVio's signing-simulation theorem.
+The theorem covers every algebraic adversary: requests and forgeries of any shape are read at
+their first commitment, as the erasure reads them. Bijective scalar multiplication by `g` and a
+group sampler supply the hypotheses of VCVio's signing-simulation theorem.
 -/
 
 public section

@@ -31,8 +31,8 @@ structure Entry (F : Type) where
   /-- The first live explanation; absent for simulated signing entries. -/
   representation : Option (AffineForm F)
 
-/-- Reduction state: chronological input representations, first-explanation cache, and failure
-flags. -/
+/-- Reduction state: chronological input representations, first-explanation cache, signing
+history, and the exceptional-challenge flag. -/
 structure State (F G M : Type) [Field F] where
   /-- Affine representations of the chronological received basis. -/
   representations : List (AffineForm F) := initialRepresentations
@@ -40,8 +40,6 @@ structure State (F G M : Type) [Field F] where
   cache : M × G → Option (Entry F) := fun _ => none
   /-- Messages requested from the signing oracle. -/
   signed : List M := []
-  /-- Whether a malformed request was observed. -/
-  malformed : Bool := false
   /-- Whether a fresh challenge canceled its pre-query coefficient. -/
   bad : Bool := false
 
@@ -160,15 +158,9 @@ theorem signedState_basis [Field F] [AddCommGroup G] [Module F G] [DecidableEq G
         let c ← $ᵗ F
         pure (c, record s key a c)
 
-/-- Mark a malformed request permanently. -/
-@[expose] def rejected [Field F] (s : State F G M) : State F G M := { s with malformed := true }
-
-/-- Rejecting a request preserves the extraction invariant. -/
-theorem rejected_valid [Field F] [AddCommGroup G] [Module F G] (g pk : G) (s : State F G M)
-    (hs : s.Valid g pk) :
-    (rejected s).Valid g pk := hs
-
-/-- Simulate algebraic requests with uniform challenges and programmed signing commitments. -/
+/-- Simulate algebraic requests with uniform challenges and programmed signing commitments. Like
+the erasure, a hash request is read at its first commitment (`0` if it supplies none), explained
+by its first coefficient vector, and other requests ignore their group arguments. -/
 @[expose] def handler [Field F] [AddCommGroup G] [Module F G] [DecidableEq F] [DecidableEq G]
     [DecidableEq M] [SampleableType F] (g pk : G) :
     QueryImpl (explainedSpec F (Group G) (Request M) (Reply F M))
@@ -177,38 +169,32 @@ theorem rejected_valid [Field F] [AddCommGroup G] [Module F G] (g pk : G) (s : S
   cases request with
   | random n => exact fun s => do
       let v ← unifSpec.query n
-      pure (⟨v, fun _ => []⟩, if groups () = [] then s else rejected s)
-  | hash m => exact fun s =>
-      match groups (), coefficients () with
-      | [R], [coeff] => do
-          let (c, t) ← (read (m, R) (flatten coeff s.representations)).run s
-          pure (scalarReply c, t)
-      | _, _ => pure (scalarReply (0 : F), rejected s)
-  | sign m => exact fun s =>
-      if groups () ≠ [] then pure (scalarReply (0 : F), rejected s)
-      else
-        do
-        let c ← $ᵗ F
-        let z ← $ᵗ F
-        pure (signingReply (z • g - c • pk) z, signedState s g pk m c z)
+      pure (⟨v, fun _ => []⟩, s)
+  | hash m => exact fun s => do
+      let (c, t) ← (read (m, (groups ()).headD 0)
+        (flatten ((coefficients ()).headD []) s.representations)).run s
+      pure (scalarReply c, t)
+  | sign m => exact fun s => do
+      let c ← $ᵗ F
+      let z ← $ᵗ F
+      pure (signingReply (z • g - c • pk) z, signedState s g pk m c z)
 
 /-- The success flag is retained for the probability comparison; extraction uses
-the first cached representation, never a new coefficient chosen after hashing. -/
+the first cached representation, never a new coefficient chosen after hashing. The forgery's
+commitment is read as `forgery` reads it, at its first group element (`0` if none). -/
 @[expose] def finish [Field F] [AddCommGroup G] [Module F G] [DecidableEq F] [DecidableEq G]
     [DecidableEq M] [SampleableType F] (g pk : G) (out : Explained F (M × F) (Group G)) :
     StateT (State F G M) ProbComp (Bool × F) := do
-  match out.value.groups (), out.coefficients () with
-  | [R], [coeff] =>
-      let (m, z) := out.value.data
-      let s ← get
-      let c ← read (m, R) (flatten coeff s.representations)
-      let s ← get
-      let accepted := !s.malformed && decide (m ∉ s.signed ∧ z • g = R + c • pk)
-      let solution := match s.cache (m, R) with
-        | some ⟨_, some a⟩ => (z - a.const) / (a.lin + c)
-        | _ => 0
-      pure (accepted, solution)
-  | _, _ => pure (false, 0)
+  let R := (out.value.groups ()).headD 0
+  let (m, z) := out.value.data
+  let s ← get
+  let c ← read (m, R) (flatten ((out.coefficients ()).headD []) s.representations)
+  let s ← get
+  let accepted := decide (m ∉ s.signed ∧ z • g = R + c • pk)
+  let solution := match s.cache (m, R) with
+    | some ⟨_, some a⟩ => (z - a.const) / (a.lin + c)
+    | _ => 0
+  pure (accepted, solution)
 
 /-- Execute the algebraic adversary once, then verify and extract using the retained hash
 explanation. -/

@@ -78,23 +78,21 @@ private theorem evalPoint_flatten [Field F] [AddCommGroup G] [Module F G]
   rw [flatten, evalPoint_combine]
   simp [representedBasis, evaluate, List.mapIdx_eq_ofFn, List.map_ofFn, Function.comp_def]
 
-/-- A valid singleton group argument has one vector whose flattened form evaluates to it. -/
-theorem valid_singleton [Field F] [AddCommGroup G] [Module F G] {D : Type}
-    (g pk R : G) (reps : List (AffineForm F)) (out : Explained F D (Group G))
-    (hv : out.Valid (representedBasis g pk reps)) (hR : out.value.groups () = [R]) :
-    ∃ coeff : List F, out.coefficients () = [coeff] ∧ coeff.length = reps.length ∧
-      evalPoint (flatten coeff reps) g pk = R := by
+/-- The first outgoing element of a valid explanation is explained by its first coefficient
+vector. With no element there is no vector, and the empty vector explains the default `0`, so
+reading a request or forgery at `headD 0`, as the erasure does, always has an explanation. -/
+theorem evalPoint_flatten_headD [Field F] [AddCommGroup G] [Module F G] {D : Type}
+    (g pk : G) (reps : List (AffineForm F)) (out : Explained F D (Group G))
+    (hv : out.Valid (representedBasis g pk reps)) :
+    evalPoint (flatten ((out.coefficients ()).headD []) reps) g pk =
+      (out.value.groups ()).headD 0 := by
   have h := hv ()
-  rw [hR] at h
-  cases hc : out.coefficients () with
-  | nil => simp [hc] at h
-  | cons coeff rest =>
-      rw [hc] at h
-      cases h with
-      | cons hhead htail =>
-          cases htail
-          exact ⟨coeff, rfl, by simpa [representedBasis] using hhead.1,
-            (evalPoint_flatten g pk coeff reps).trans hhead.2⟩
+  rw [evalPoint_flatten]
+  generalize out.value.groups () = gs at h ⊢
+  generalize out.coefficients () = cs at h ⊢
+  cases h with
+  | nil => simp [evaluate, List.mapIdx_eq_ofFn]
+  | cons hhead _ => exact hhead.2
 
 /-- One accepting signature extracts its secret when the first hash explanation's
 linear coefficient does not cancel the challenge. -/
