@@ -39,8 +39,10 @@ and cost bounds become an extractor's with no further complete runs
 
 * `Rewinding.ResetPolicy.eagerTable_settled`: every table in the eager table's support is settled
   in one world.
-* `Rewinding.ResetPolicy.eagerTable_fst_eq`: runs that share a first phase give one public value
-  in every table, as a Σ-protocol's commitment.
+* `Rewinding.ResetPolicy.eagerTable_proj_eq_of_key_eq`: runs whose first phase depends only on a
+  key give one public value whenever their keys agree, as the messages that sibling transcripts
+  of a tree share; `Rewinding.ResetPolicy.eagerTable_fst_eq` is the case of a constant key, as a
+  Σ-protocol's commitment.
 * `Rewinding.run_simulateQ_counted_caching`: against a fixed table, the caching finder is the
   logged finder, its cache holding the table's entries at the logged vectors.
 * `Rewinding.ResetPolicy.attempt_recover`: against frozen reruns, recovery is the logged finder
@@ -76,26 +78,54 @@ theorem eagerTable_settled {Q α : Type} [Finite Q] (run : Q → OracleComp spec
   simpa only [Equiv.symm_apply_apply] using
     (P.draw_support run (Fintype.equivFin Q).symm P.empty z hz).2 (Fintype.equivFin Q q)
 
+/-- Prefix consistency: if `run q` first executes a phase that depends only on `key q`, and every
+output of the rest has the projection `pub s` of that phase's result `s`, then two inputs with the
+same key give one projection in every table of the eager table's support. For a multi-round
+prover, `key q` is the prefix of challenges up to a round and `proj` reads the messages sent
+before that round, so sibling transcripts in a tree share them. -/
+theorem eagerTable_proj_eq_of_key_eq {Q K S α A : Type} [Finite Q]
+    (run : Q → OracleComp spec α) (proj : α → A) (key : Q → K)
+    (pre : K → OracleComp spec S) (pub : S → A) (post : S → Q → OracleComp spec α)
+    (hrun : ∀ q, run q = pre (key q) >>= fun s => post s q)
+    (hpub : ∀ s q, ∀ y ∈ support (post s q), proj y = pub s)
+    {F : Q → α} (hF : F ∈ support (P.eagerTable run))
+    {q q' : Q} (hq : key q = key q') : proj (F q) = proj (F q') := by
+  obtain ⟨w, hw⟩ := P.eagerTable_settled run hF
+  have hkey : ∀ q, ∀ s ∈ support ((simulateQ P.answer (pre (key q))).run (w, P.begin)),
+      proj (F q) = pub s.1 := by
+    intro q s hs
+    obtain ⟨y, hy⟩ := support_nonempty ((simulateQ P.answer (post s.1 q)).run s.2)
+    have hmem : (y.1, y.2.1) ∈ support ((P.runWorld run q).run w) := by
+      simp only [runWorld, StateT.run_mk, hrun, simulateQ_bind, StateT.run_bind,
+        support_map, support_bind, Set.mem_image, Set.mem_iUnion]
+      exact ⟨y, ⟨s, hs, hy⟩, rfl⟩
+    rw [hw q, support_pure, Set.mem_singleton_iff, Prod.mk.injEq] at hmem
+    rw [← hmem.1]
+    exact hpub s.1 q y.1 (mem_support_of_mem_support_simulateQ_run _ _ _ hy)
+  obtain ⟨s, hs⟩ := support_nonempty ((simulateQ P.answer (pre (key q))).run (w, P.begin))
+  rw [hkey q s hs, hkey q' s (hq ▸ hs)]
+
+/-- Runs whose first phase depends only on `key q` and publishes `pub` of its result give one
+public value whenever their keys agree, in every table of the eager table's support. -/
+theorem eagerTable_fst_eq_of_key_eq {Q K S A B : Type} [Finite Q] (key : Q → K)
+    (pre : K → OracleComp spec S) (pub : S → A) (post : S → Q → OracleComp spec B)
+    {F : Q → A × B}
+    (hF : F ∈ support (P.eagerTable fun q => pre (key q) >>= fun s => (pub s, ·) <$> post s q))
+    {q q' : Q} (hq : key q = key q') : (F q).1 = (F q').1 :=
+  P.eagerTable_proj_eq_of_key_eq _ Prod.fst key pre pub (fun s q => (pub s, ·) <$> post s q)
+    (fun _ => rfl) (fun s q y hy => by
+      rw [support_map] at hy
+      obtain ⟨b, -, rfl⟩ := hy
+      rfl) hF hq
+
 /-- Runs that share a first phase `pre` and publish `pub` of its result give one public value in
 every table of the eager table's support. For a Σ-protocol prover, the first phase is the
 commitment, so every recovered transcript has the same commitment. -/
 theorem eagerTable_fst_eq {Q S A B : Type} [Finite Q] (pre : OracleComp spec S) (pub : S → A)
     (post : S → Q → OracleComp spec B) {F : Q → A × B}
     (hF : F ∈ support (P.eagerTable fun q => pre >>= fun s => (pub s, ·) <$> post s q))
-    (q q' : Q) : (F q).1 = (F q').1 := by
-  obtain ⟨w, hw⟩ := P.eagerTable_settled _ hF
-  have key : ∀ q, ∀ s ∈ support ((simulateQ P.answer pre).run (w, P.begin)), (F q).1 = pub s.1 := by
-    intro q s hs
-    obtain ⟨y, hy⟩ := support_nonempty ((simulateQ P.answer (post s.1 q)).run s.2)
-    have hmem : ((pub s.1, y.1), y.2.1) ∈ support ((P.runWorld (fun q =>
-        pre >>= fun s => (pub s, ·) <$> post s q) q).run w) := by
-      simp only [runWorld, StateT.run_mk, simulateQ_bind, simulateQ_map, StateT.run_bind,
-        StateT.run_map, support_map, support_bind, Set.mem_image, Set.mem_iUnion]
-      exact ⟨((pub s.1, y.1), y.2), ⟨s, hs, y, hy, rfl⟩, rfl⟩
-    rw [hw q, support_pure, Set.mem_singleton_iff, Prod.mk.injEq] at hmem
-    exact congrArg Prod.fst hmem.1.symm
-  obtain ⟨s, hs⟩ := support_nonempty ((simulateQ P.answer pre).run (w, P.begin))
-  rw [key q s hs, key q' s hs]
+    (q q' : Q) : (F q).1 = (F q').1 :=
+  P.eagerTable_fst_eq_of_key_eq (fun _ => ()) (fun _ => pre) pub post hF rfl
 
 end ResetPolicy
 
