@@ -122,13 +122,9 @@ backend names must be resolved in their owning environment. The reference audit 
 build commands, dependency versions, upstream citations and script/CI consumers of moved files.
 Generated guide fragments remain checked by `scripts/extract-doc-fragments.py --check`.
 
-## Review stack and provenance
+## Archived inputs
 
-The review order is repository groundwork, shared algorithms, Lean 4.35 compatibility,
-the remaining probability/program-logic work in PR #821, and Cryptol interop in PR #840.
-Scheme moves branch after the refreshed #821 and do not block Cryptol review.
-
-Preserved original inputs:
+The trees from before the consolidation are preserved:
 
 - Main: `afa6593f15e1e79ecb3cf22fc56191cecb452bb0`.
 - PR #821: `53e93b7679cc222c26ad1027779e4840a4262a93`.
@@ -136,9 +132,3 @@ Preserved original inputs:
 - Remote archive branches: `archive/main-before-consolidation-20261015`,
   `archive/measure-before-consolidation-20261015`, and
   `archive/cryptol-before-consolidation-20261015`.
-
-Extract the mixed commits by responsibility. The algorithm PR owns the native implementation,
-its pure helper decomposition and tests; Cryptol source imports, semantic models and conformance
-certificates stay in #840. The upgrade PR owns the dependency bump and required upstream API
-port; the larger notation and tactic redesign stays in #821. Validate each PR against its own
-base and pins, and compare the reconstructed combined tree against these preserved inputs.

@@ -80,23 +80,6 @@ theorem runGen_group_mapTbl_evalAt [Field F] [DecidableEq F] [AddCommGroup G] [M
       simpa only [Function.comp_apply, id_eq, evalAt_apply] using
         (smul_left_injective F hg).eq_iff) ProbComp]
 
-private theorem uniform_bool [SampleableType F] :
-    (do let a ← $ᵗ F; let b ← $ᵗ F; pure (fun i : Bool => if i then b else a)) =ᵈ
-      ($ᵗ (Bool → F) : ProbComp (Bool → F)) := by
-  have hb : Function.Bijective (Function.uncurry (fun (a b : F) (i : Bool) =>
-      if i then b else a)) := by
-    constructor
-    · intro a b h
-      apply Prod.ext
-      · simpa [Function.uncurry] using congrFun h false
-      · simpa [Function.uncurry] using congrFun h true
-    · intro f
-      exact ⟨(f false, f true), by funext i; cases i <;> rfl⟩
-  apply EvalDistEq.of_forall_prEvent_eq
-  intro p
-  simpa only [prEvent_norm] using
-    SampleableType.prEvent_uniformSample_pair_of_bijective hb p
-
 /-- Shoup's generic bound for discrete logarithms (Shoup 1997), in the model with untyped
 handles, free equality, counted `add` and `smul`, and free coins (Maurer 2005): a generic
 adversary using at most `q` group operations succeeds with probability at most
@@ -196,7 +179,16 @@ theorem cdhExperiment_ofGeneric_le [Field F] [Fintype F] [SampleableType F]
     exact runGen_group_mapTbl_evalAt g hg (fun i : Bool => if i then b else a) A tbl
   let E := fun (x : Bool → F) (z : Handle × Tbl (fun _ : Unit => MvPolynomial Bool F)) =>
     MvPolynomial.eval x (lookup z.2 () z.1) = x false * x true
-  have hs := (uniform_bool (F := F)).bind_left (fun x =>
+  have hb : Function.Bijective (Function.uncurry (fun (a b : F) (i : Bool) =>
+      if i then b else a)) := by
+    constructor
+    · intro a b h
+      apply Prod.ext
+      · simpa [Function.uncurry] using congrFun h false
+      · simpa [Function.uncurry] using congrFun h true
+    · intro f
+      exact ⟨(f false, f true), by funext i; cases i <;> rfl⟩
+  have hs := (SampleableType.evalDistEq_uniformSample_pair_of_bijective hb).bind_left (fun x =>
     E x <$> runGen (symbolic F groupSig Bool) (fun _ p => MvPolynomial.eval x p) A tbl)
   have he : Pr{let b ← (DiffieHellman.cdhExperiment g
       (CDHAdversary.ofGeneric (G := G) A))}[b = true] =

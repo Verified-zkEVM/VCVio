@@ -190,9 +190,8 @@ theorem discreteTVDist_bind_sampleUniformPreimage_uniform_eq_discreteTVDist_map
   have hc_pos : (0 : ℝ) < (Fintype.card (Preimage ψ a) : ℝ) := by
     have : Nonempty (Preimage ψ a) := preimage_nonempty ψ hψ a
     exact_mod_cast Fintype.card_pos
-  rw [← abs_of_pos hc_pos, ← abs_mul, mul_sub, abs_of_pos hc_pos]
-  rw [mul_left_comm _ (Fintype.card A : ℝ)⁻¹,
-    mul_inv_cancel₀ (ne_of_gt hc_pos), mul_one, abs_sub_comm]
+  rw [← abs_of_pos hc_pos, ← abs_mul, mul_sub, abs_of_pos hc_pos,
+    mul_left_comm _ (Fintype.card A : ℝ)⁻¹, mul_inv_cancel₀ hc_pos.ne', mul_one, abs_sub_comm]
 
 end FiberGrouping
 

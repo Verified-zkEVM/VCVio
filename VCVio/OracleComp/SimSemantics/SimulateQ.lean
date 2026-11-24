@@ -14,14 +14,18 @@ public import ToMathlib.Control.OptionT
 # Simulation Semantics for Oracles in a Computation
 
 `simulateQ impl` runs an oracle computation in the monad `r`, answering each query with `impl`.
-It is a reducible wrapper around the free-monad fold `PFunctor.FreeM.liftM impl`, so the
-`PFunctor.FreeM.liftM` lemmas of CSLib and PolyFun (`PFunctor.FreeM.liftM_bind`,
-`PFunctor.FreeM.liftM_map`, `PFunctor.FreeM.liftM_mapLens`, …) apply to `simulateQ` goals under
-`simp`. `rw` matches on the head constant without unfolding it, so the `simulateQ_*` lemmas below
-restate the structural cases with a `simulateQ`-headed left-hand side. `simulateQ_bind`,
-`simulateQ_map`, `simulateQ_seq`, `simulateQ_seqLeft` and `simulateQ_seqRight` are not `@[simp]`:
-CSLib's `@[simp]` lemmas `PFunctor.FreeM.liftM_bind`, `liftM_map`, `liftM_seq`, `liftM_seqLeft` and
-`liftM_seqRight` already rewrite those shapes.
+It is the free-monad fold `PFunctor.FreeM.liftM impl`, as a semireducible definition: `simp`
+normal forms stay `simulateQ`-headed, so `rw` with the `simulateQ_*` lemmas, or with hypotheses
+about `simulateQ`, still matches after a `simp` step. The structural equations `simulateQ_pure`,
+`simulateQ_bind`, `simulateQ_map`, `simulateQ_seq`, `simulateQ_seqLeft`, `simulateQ_seqRight` and
+`simulateQ_query` are `@[simp]`.
+
+`simulateQ_def` states the fold as `PFunctor.FreeM.liftMHom impl`, for transporting a
+`PFunctor.FreeM.liftM` fact of CSLib or PolyFun. The fold laws used most often have
+`simulateQ`-headed forms here and in sibling files: naturality along a monad morphism is
+`simulateQ_natural`, relabelling along a lens is `simulateQ_mapLens`, composition of
+implementations is `QueryImpl.simulateQ_compose`, and lifting the target monad is
+`simulateQ_liftTarget`.
 -/
 
 @[expose] public section
@@ -36,7 +40,7 @@ section simulateQ
 
 /-- Given an implementation of `spec` in the monad `r`, convert an `OracleComp spec α` to a
 implementation in `r α` by substituting `impl t` for `query t` throughout. -/
-@[reducible] def simulateQ {ι} {spec : OracleSpec ι} {r : Type u → Type _} [Monad r]
+def simulateQ {ι} {spec : OracleSpec ι} {r : Type u → Type _} [Monad r]
     (impl : QueryImpl spec r) {α : Type u} (mx : OracleComp spec α) : r α :=
   PFunctor.FreeM.liftM impl mx
 
@@ -47,7 +51,7 @@ variable {ι} {spec : OracleSpec ι} {r m n : Type u → Type*}
 lemma simulateQ_pure (x : α) :
     simulateQ impl (pure x : OracleComp spec α) = pure x := rfl
 
-@[grind =, game_rule]
+@[simp, grind =, game_rule]
 lemma simulateQ_bind [LawfulMonad r] (mx : OracleComp spec α) (my : α → OracleComp spec β) :
     simulateQ impl (mx >>= my) = simulateQ impl mx >>= fun x => simulateQ impl (my x) := by
   unfold simulateQ; exact PFunctor.FreeM.liftM_bind impl mx my
@@ -175,7 +179,7 @@ lemma simulateQ_query_bind [LawfulMonad r] (q : OracleQuery spec α)
     (ou : α → OracleComp spec β) : simulateQ impl (liftM q >>= ou) =
       liftM (impl q.input) >>= fun u => simulateQ impl (ou (q.cont u)) := by aesop
 
-@[grind =]
+@[simp, grind =]
 lemma simulateQ_map [LawfulMonad r] (mx : OracleComp spec α) (f : α → β) :
     simulateQ impl (f <$> mx) = f <$> simulateQ impl mx := by
   simp [monad_norm]
@@ -202,14 +206,17 @@ lemma simulateQ_bind_map_eq_of_body [LawfulMonad r]
   funext a
   exact (hBody a).trans (map_eq_bind_pure_comp _ _ _)
 
+@[simp]
 lemma simulateQ_seq [LawfulMonad r] (og : OracleComp spec (α → β)) (mx : OracleComp spec α) :
     simulateQ impl (og <*> mx) = simulateQ impl og <*> simulateQ impl mx := by
   simp [monad_norm]
 
+@[simp]
 lemma simulateQ_seqLeft [LawfulMonad r] (mx : OracleComp spec α) (my : OracleComp spec β) :
     simulateQ impl (mx <* my) = simulateQ impl mx <* simulateQ impl my := by
   simp [seqLeft_eq_bind]
 
+@[simp]
 lemma simulateQ_seqRight [LawfulMonad r] (mx : OracleComp spec α) (my : OracleComp spec β) :
     simulateQ impl (mx *> my) = simulateQ impl mx *> simulateQ impl my := by
   simp [seqRight_eq_bind]
@@ -235,6 +242,21 @@ lemma simulateQ_liftTarget {m : Type u → Type v} {n : Type u → Type w}
   induction comp using OracleComp.inductionOn with
   | pure x => simp [liftM_pure]
   | query_bind t k ih => simp [ih, liftM_bind]
+
+/-- Naturality of `simulateQ` along a monad morphism: applying `F` to the simulation by `impl` is
+the simulation by the post-composed implementation `fun t => F (impl t)`. -/
+lemma simulateQ_natural [Monad n] (F : r →ᵐ n) (mx : OracleComp spec α) :
+    F (simulateQ impl mx) = simulateQ (fun t => F (impl t)) mx :=
+  PFunctor.FreeM.liftM_natural (P := spec.toPFunctor) (m := r) impl F mx
+
+/-- Simulating a computation relabelled along a lens `l` answers each query `t` with the answer
+to `l.toFunA t`, translated back by `l.toFunB t`. -/
+lemma simulateQ_mapLens [LawfulMonad r] {ι' : Type*} {spec' : OracleSpec ι'}
+    (l : PFunctor.Lens spec.toPFunctor spec'.toPFunctor) (impl' : QueryImpl spec' r)
+    (mx : OracleComp spec α) :
+    simulateQ impl' (mx.mapLens l) =
+      simulateQ (fun t => l.toFunB t <$> impl' (l.toFunA t)) mx :=
+  PFunctor.FreeM.liftM_mapLens l impl' mx
 
 end simulateQ
 

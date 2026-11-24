@@ -6,6 +6,7 @@ Authors: Devon Tuma, Alexander Hicks
 
 module
 
+public import PolyFun.PFunctor.Free.Query
 public import VCVio.OracleComp.QueryTracking.QueryBound.Basic
 public import VCVio.OracleComp.QueryTracking.QueryBound.Simulation
 
@@ -26,3 +27,20 @@ The classical per-index and total query bounds are recovered by `IsPerIndexQuery
 and `IsTotalQueryBound`. `IsQueryBoundP` counts queries satisfying a predicate;
 `AllQueriesSatisfy` constrains the allowed indices without counting queries.
 -/
+
+public section
+
+universe u v
+
+namespace OracleComp
+
+/-- A structural query budget bounds the CSLib query count under each fixed deterministic oracle,
+uniformly over inputs up to a given size. -/
+theorem queryUpperBound_of_isTotalQueryBound {ι α : Type u} {X : Type v}
+    {spec : OracleSpec.{u, u} ι} (family : X → OracleComp spec α) {size : X → ℕ}
+    {bound : ℕ → ℕ} (hmono : Monotone bound)
+    (h : ∀ x, IsTotalQueryBound (family x) (bound (size x))) :
+    Cslib.Query.UpperBound (fun x => (family x).toQueryProgram) size bound :=
+  PFunctor.FreeM.queryUpperBound_of_isTotalRollBound (P := spec.toPFunctor) family hmono h
+
+end OracleComp

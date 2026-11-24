@@ -7,7 +7,9 @@ Authors: Devon Tuma, Quang Dao
 module
 
 public import ToMathlib.MeasureTheory.Measure.Bool
-public import VCVio.EvalDist.Defs.Semantics.Core
+public import PolyFun.Control.Monad.Measure.SemanticsVia
+public import VCVio.EvalDist.Defs.Measure.Core
+public import ToMathlib.MeasureTheory.Measure.GiryMonad
 public import VCVio.EvalDist.MeasureTVDist.Basic
 public import VCVio.EvalDist.Monad.Measure
 public import VCVio.EvalDist.Monad.Bool

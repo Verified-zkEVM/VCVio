@@ -237,7 +237,7 @@ theorem length_eq_of_childVals_eq_some {st : RelabelState pub X K R} {k : K} {vs
 /-- The children of `k` are all drawn exactly when each of them is. -/
 theorem isSome_childVals_iff {st : RelabelState pub X K R} {k : K} :
     (G.childVals st k).isSome ↔ ∀ c ∈ G.ch k, (st.2 c).isSome :=
-  List.isSome_mapM_iff
+  List.isSome_mapM
 
 /-- Children drawn at some values stay drawn at those values in every extension. -/
 theorem childVals_mono {st st' : RelabelState pub X K R} (hle : st ≤ st') {k : K}

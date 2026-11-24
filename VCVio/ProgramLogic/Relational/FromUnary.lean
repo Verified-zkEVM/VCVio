@@ -42,7 +42,7 @@ namespace OracleComp.ProgramLogic.Relational
 variable {ι₁ : Type u} {ι₂ : Type u}
 variable {spec₁ : OracleSpec.{u, 0} ι₁} {spec₂ : OracleSpec.{u, 0} ι₂}
 variable [OracleSpec.AnswerMeasure spec₁] [OracleSpec.AnswerMeasure spec₂]
-  [∀ t, Finite (spec₁.Range t)] [∀ t, Finite (spec₂.Range t)]
+  [∀ t, Countable (spec₁.Range t)] [∀ t, Countable (spec₂.Range t)]
 variable {α β : Type}
 
 /-- Necessary-weakest-precondition version of the product lift. -/

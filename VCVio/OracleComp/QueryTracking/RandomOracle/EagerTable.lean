@@ -85,7 +85,7 @@ uniform `u`, then a full uniform table `g`, and evaluating `ψ` on `Function.upd
 same distribution as evaluating `ψ` on a directly drawn uniform table. -/
 lemma evalDist_uniformSample_bind_update_map {α : Type}
     [MeasurableSpace R] [DiscreteMeasurableSpace R]
-    [MeasurableSpace α] [EvalDistSemantics ProbComp] [LawfulEvalDistSemantics ProbComp]
+    [MeasurableSpace α] {semantics : EvalDistSemantics ProbComp} [LawfulEvalDistSemantics ProbComp]
     (hValue : 𝒟[$ᵗ R] = ProbabilityTheory.uniformOn Set.univ)
     (hTable : 𝒟[$ᵗ (D → R)] = ProbabilityTheory.uniformOn Set.univ)
     (t : D) (ψ : (D → R) → α) :
@@ -109,7 +109,7 @@ Used at the slot-positive case of the DC unlinkability reduction to marginalize 
 uniforms, enabling the IH-rename closure without any per-step cacheBadReader charge. -/
 lemma evalDist_uniformSample_bind_update_two_map {α : Type}
     [MeasurableSpace R] [DiscreteMeasurableSpace R]
-    [MeasurableSpace α] [EvalDistSemantics ProbComp] [LawfulEvalDistSemantics ProbComp]
+    [MeasurableSpace α] {semantics : EvalDistSemantics ProbComp} [LawfulEvalDistSemantics ProbComp]
     (hValue : 𝒟[$ᵗ R] = ProbabilityTheory.uniformOn Set.univ)
     (hTable : 𝒟[$ᵗ (D → R)] = ProbabilityTheory.uniformOn Set.univ)
     {t₁ t₂ : D} (hne : t₁ ≠ t₂) (ψ : (D → R) → α) :

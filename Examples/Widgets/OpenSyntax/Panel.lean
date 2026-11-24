@@ -18,8 +18,9 @@ public meta section
 namespace VCVioWidgets
 namespace OpenSyntax
 
-open Lean Meta Server ProofWidgets
-open scoped ProofWidgets.Jsx
+open Lean hiding Html
+open Meta Server ProofWidgets
+open ProofWidgets (Html)
 
 /-!
 # Composition diagram widget for OpenSyntax.Raw expressions
@@ -118,37 +119,37 @@ private structure GraphState where
   nextId : Nat
 
 private def mkAtomLabel (label : String) : Html :=
-  <g>
+  jsx%{<g>
     <rect x="-52" y="-16" width="104" height="32" rx="6" ry="6"
       fill="#f0f4f8" stroke="#4c78a8" strokeWidth="1.5" />
     <text textAnchor="middle" dominantBaseline="central"
       fill="#333" fontSize="11" fontWeight="600"
       fontFamily="Helvetica, sans-serif">{.text label}</text>
-  </g>
+  </g>}
 
 private def mkOpaqueLabel (label : String) : Html :=
-  <g>
+  jsx%{<g>
     <rect x="-52" y="-16" width="104" height="32" rx="6" ry="6"
       fill="none" stroke="#888" strokeWidth="1" strokeDasharray="4,2" />
     <text textAnchor="middle" dominantBaseline="central"
       fill="#888" fontSize="10"
       fontFamily="Helvetica, sans-serif">{.text label}</text>
-  </g>
+  </g>}
 
 private def mkConnectiveLabel (label : String) (color : String) : Html :=
-  <g>
+  jsx%{<g>
     <circle r="5" fill={color} stroke="none" opacity="0.7" />
     <text textAnchor="middle" y="14"
       fill={color} fontSize="8" opacity="0.6"
       fontFamily="Helvetica, sans-serif">{.text label}</text>
-  </g>
+  </g>}
 
 private def mkEdgeLabel (label : String) (color : String) : Html :=
-  <g>
+  jsx%{<g>
     <circle r="9" fill="white" fillOpacity="0.9" stroke="none" />
     <text textAnchor="middle" dominantBaseline="central"
       fill={color} fontSize="10" fontWeight="700">{.text label}</text>
-  </g>
+  </g>}
 
 private partial def buildGraph (tree : CompTree) (st : GraphState) : String × GraphState :=
   let myId := s!"v{st.nextId}"
@@ -330,7 +331,7 @@ private def css (entries : List (String × String)) : Json :=
 namespace CompositionPanel
 
 private def emptyHtml (modName : Name) : Html :=
-  <details «open»={true}>
+  jsx%{<details open={true}>
     <summary className="mv2 pointer">Composition Diagram</summary>
     <div style={css [
       ("display", "flex"),
@@ -346,10 +347,10 @@ private def emptyHtml (modName : Name) : Html :=
         {.text s!"Current module: {modName}"}
       </div>
     </div>
-  </details>
+  </details>}
 
 private def errorHtml (modName : Name) (message : String) : Html :=
-  <details «open»={true}>
+  jsx%{<details open={true}>
     <summary className="mv2 pointer">Composition Diagram</summary>
     <div style={css [
       ("display", "flex"),
@@ -365,18 +366,18 @@ private def errorHtml (modName : Name) (message : String) : Html :=
         {.text s!"Current module: {modName}"}
       </div>
     </div>
-  </details>
+  </details>}
 
 private def renderOneDef (declName : Name) : MetaM Html := do
   let some info := (← getEnv).find? declName
-    | return <div>{.text s!"Definition `{declName}` not found."}</div>
+    | return jsx%{<div>{.text s!"Definition `{declName}` not found."}</div>}
   let value ← match info with
     | .defnInfo defn => pure defn.value
     | .thmInfo thm => pure thm.value
-    | _ => return <div>{.text s!"`{declName}` is not a definition."}</div>
+    | _ => return jsx%{<div>{.text s!"`{declName}` is not a definition."}</div>}
   let tree ← extractCompTree value
   let gProps := compTreeToGraph tree
-  return <div style={css [
+  return jsx%{<div style={css [
     ("display", "flex"),
     ("flexDirection", "column"),
     ("gap", "8px"),
@@ -394,7 +395,7 @@ private def renderOneDef (declName : Name) : MetaM Html := do
       forces={gProps.forces}
       showDetails={gProps.showDetails}
     />
-  </div>
+  </div>}
 
 private def renderAll (snap : Snapshots.Snapshot) (modName : Name) : RequestM Html := do
   let names ← RequestM.runTermElabM snap do
@@ -403,7 +404,7 @@ private def renderAll (snap : Snapshots.Snapshot) (modName : Name) : RequestM Ht
     return emptyHtml modName
   let items ← names.mapM fun declName => do
     RequestM.runTermElabM snap do renderOneDef declName
-  return <details «open»={true}>
+  return jsx%{<details open={true}>
     <summary className="mv2 pointer">Force-Directed Graph</summary>
     <div className="ml1" style={css [
       ("display", "flex"),
@@ -413,7 +414,7 @@ private def renderAll (snap : Snapshots.Snapshot) (modName : Name) : RequestM Ht
     ]}>
       {...items}
     </div>
-  </details>
+  </details>}
 
 private def latestReadySnap?
     (snaps : Lean.AsyncList IO.Error Snapshots.Snapshot) :

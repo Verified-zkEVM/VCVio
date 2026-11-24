@@ -179,7 +179,7 @@ theorem chainWith_labTriple (hd : core.KeyDiscipline vp) (pkSeed : core.PkSeed)
         fun y st ↦ CellHolds core st (wotsChainCell core (wotsInstanceAdrs pos) i (j + s)) y
   | 0, _ => QueryImpl.EqDistTriple.pure x fun _ h ↦ h
   | s + 1, hs => by
-    simp only [chainWith]
+    simp only [chainWith_succ]
     refine (chainWith_labTriple hd pkSeed pos i x j s (by omega)).bind fun y ↦ ?_
     exact f_labTriple core hd pkSeed
       (wotsChainAdrs_setHashAddress_mem_constructionAddresses pos i (t := j + s) (by omega))
@@ -195,13 +195,13 @@ theorem simulateQ_eagerImpl_labChain (adrs : Adrs) (i : ℕ) :
         let x ← labSecret core (wotsSkAdrs adrs i)
         chainWith (labF core) (wotsChainAdrs adrs i) x 0 s)
   | 0 => by
-    simp only [labChain, touchRead, touchUpTo, pure_bind, chainWith, bind_pure,
+    simp only [labChain, touchRead, touchUpTo, pure_bind, chainWith_zero, bind_pure,
       labSecret_of_isSecretKey core (Adrs.isSecretKey_wotsSkAdrs adrs i),
       pathCell_zero core (Adrs.isSecretKey_wotsSkAdrs adrs i)]
   | s + 1 => by
     rw [labChain, G.simulateQ_eagerImpl_touchRead_succ, ← labChain,
       simulateQ_eagerImpl_labChain adrs i s]
-    simp only [chainWith, simulateQ_bind, bind_assoc, Nat.zero_add]
+    simp only [chainWith_succ, simulateQ_bind, bind_assoc, Nat.zero_add]
     rfl
 
 /-- **A chain from its secret.** For a chain of a reachable instance and `s ≤ w - 1`, the honest

@@ -348,11 +348,12 @@ def tryCoreVCGen : TacticM Bool := withMainContext do
   let target ← instantiateMVars (← getMainTarget)
   let some (pre, comp, _) := tripleGoalParts? target | return false
   unless (← instantiateMVars (← inferType pre)).isConstOf ``ENNReal do return false
+  -- Core reads the WP instance from the goal. Only the pointwise spec catalogue is scoped.
   let stx ← if ← isProbabilityOne pre then
-      `(tactic| open scoped OracleComp.Lower OracleComp.Lower.Pointwise in
+      `(tactic| open scoped OracleComp.Lower.Pointwise in
           vcgen (errorOnMissingSpec := false))
     else
-      `(tactic| open scoped OracleComp.Lower in vcgen (errorOnMissingSpec := false))
+      `(tactic| vcgen (errorOnMissingSpec := false))
   let saved ← saveState
   try
     withOptions (fun o => o.setBool `experimental.vcgen true) (evalTactic stx)
@@ -445,11 +446,14 @@ def runVCGenPass : TacticM Bool := do
   let mut newGoals : Array MVarId := #[]
   for goal in goals do
     setGoals [goal]
+    let saved ← saveState
     if ← tryCoreVCGen <||> runVCGenStep then
       progress := true
       for newGoal in ← getGoals do
         newGoals := newGoals.push newGoal
     else
+      -- Normalization may assign the original goal to a new obligation before the step declines.
+      saved.restore
       newGoals := newGoals.push goal
   setGoals newGoals.toList
   return progress

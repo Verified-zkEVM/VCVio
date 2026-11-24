@@ -8,7 +8,6 @@ module
 public import VCVio.CryptoFoundations.GroupModel.Oracle
 public import VCVio.OracleComp.QueryTracking.CostModel
 public import VCVio.OracleComp.QueryTracking.QueryBound.Simulation
-import Mathlib.Data.List.GetD
 
 /-! # Group-operation costs and table growth
 

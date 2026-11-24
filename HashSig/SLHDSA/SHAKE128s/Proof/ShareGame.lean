@@ -249,7 +249,7 @@ noncomputable def verifyShare (pk : PublicKey) (forgery : Forgery) : OracleComp 
 noncomputable def claimsOf (setup : Setup) (state : St) (forgery : Forgery) : List Bytes :=
   match forgery.message.frame, Signature.fromBytes? forgery.signature with
   | some message, some parsed =>
-      @ClaimedProbes.claimedCandidatesOf (CacheReplay.replayQuery (visible setup state))
+      ClaimedProbes.claimedCandidatesOf (CacheReplay.replayQuery (visible setup state))
         setup.publicSeed (visible setup state) setup.pk message parsed
   | _, _ => []
 

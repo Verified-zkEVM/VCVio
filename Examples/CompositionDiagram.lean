@@ -45,10 +45,14 @@ show_panel_widgets [
 open Interaction Interaction.Open
 open Interaction.Open.OpenSyntax
 
--- Symmetric boundary where In = Out, so `swap bd = bd` definitionally.
+/-- The boundary of the parties, the channels, the ideal functionality and the simulator:
+one `Unit` port carrying `Unit` messages on each side. It is symmetric, `In = Out`, so
+`swap bd = bd` definitionally. -/
 abbrev bd : PortBoundary :=
   ⟨⟨Unit, fun _ => Unit⟩, ⟨Unit, fun _ => Unit⟩⟩
 
+/-- Two copies of `bd` side by side: the boundary of the adversary, the environment and the
+dummy channel. -/
 abbrev bd2 : PortBoundary := bd ⊗ᵇ bd
 
 /--
