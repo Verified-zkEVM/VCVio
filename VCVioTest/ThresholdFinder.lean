@@ -23,7 +23,8 @@ tree of accepting challenges exists, so it is never extracted and the scaled bou
 `ε ≤ κ + (1 − κ) p` holds with equality. This is checked for one round on the explicit pool and
 for the computable `thresholdFinder`, with its sampler-derived challenge pools, on two rounds of
 four challenges, where an acceptance function that accepts everything is always extracted with
-exactly four calls. A consumer instantiates the tree-finder contract and transfers it to frozen
+exactly four calls. On these two rounds, the sum of the per-round errors bounds the threshold
+error. A consumer instantiates the tree-finder contract and transfers it to frozen
 reruns.
 -/
 
@@ -173,6 +174,13 @@ theorem rate_guessZero : acceptRate guessZero = thresholdError fourChallenges tw
     ENNReal.toReal_sub_of_le hm ENNReal.one_ne_top, ENNReal.toReal_mul,
     ENNReal.toReal_sub_of_le h4 ENNReal.one_ne_top, ENNReal.toReal_inv, ENNReal.toReal_div]
   norm_num
+
+/-- The union bound `thresholdError_le_sum` on the two rounds is `1/4 + 1/4`, which is above the
+exact error `7/16` of `rate_guessZero`. -/
+example : thresholdError fourChallenges twoBranches ≤ 4⁻¹ + 4⁻¹ := by
+  refine (thresholdError_le_sum fourChallenges twoBranches).trans_eq ?_
+  rw [Fin.sum_univ_two]
+  norm_num [Fintype.card_fin]
 
 /-- Enumerate the computable finder's coins against both acceptance functions. Against `acceptAll`
 every outcome is a tree found with exactly four calls, the size of the tree. Against `guessZero`

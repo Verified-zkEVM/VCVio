@@ -7,6 +7,9 @@ The current design is intentionally **weighted-first**:
 - `QueryCost[...]` and `ExpectedQueryCost[...]` are the primary notions.
 - `Queries[...]` and `ExpectedQueries[...]` are the unit-cost specializations.
 
+For a stateful handler, `OracleComp.expectedSimulatedQueryCount_mono` lets `gcongr`
+and `apply_rw` lift an implication between charged-query predicates through the expected count.
+
 The stack is also intentionally split into:
 
 - a writer-cost layer for pathwise and expected-cost facts
@@ -18,6 +21,12 @@ The structural instrumentation owners are `Tracing.Core`, `CountingOracle.Core`,
 `LoggingOracle.Core`. Query bounds, cache/programming handlers, and enforcement build on the same
 handler machinery; their structural laws need no probability specification. `VCVio.Foundations`
 imports these owners together with the measure semantics.
+
+Import `VCVio.OracleComp.QueryTracking.QueryBound` to compare a structural budget with CSLib's
+deterministic oracle model. `OracleComp.queryUpperBound_of_isTotalQueryBound` turns a family of
+total query budgets into a `Cslib.Query.UpperBound` on `toQueryProgram` for a monotone size
+bound. Every fixed oracle follows one response path. A structural budget also covers response
+paths on which repeated queries to the same index receive different answers.
 
 Enforcement event laws use `Pr{...}[...]` and a chosen `AnswerMeasure`, with discrete query-answer
 spaces to interpret arbitrary oracle continuations. They do not require uniform sampling or
