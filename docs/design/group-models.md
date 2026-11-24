@@ -309,7 +309,7 @@ before the adversary runs.
 
 **Derived normal forms, not presentations.** Fixed-slot coefficient outputs, such as the signature
 repository's `(β, γ, ξ)` over (generator, hash replies, signing replies), are a regrouping of (E)'s
-basis list. They arrive with the BLS port.
+basis list. They arrive with the port of BLS against algebraic adversaries.
 
 ### 4.5 Knobs
 
@@ -599,10 +599,12 @@ top of the group oracle. Then:
   *cost certificate* bounds the handler's group operations by `c_t` for each of `A`'s queries of
   kind `t` (group operations, equality tests, and each scheme oracle, separately) and by `c₀`
   for setup and the final step. Then `reduction A` makes at most `c₀ + Σ_t c_t · q_t` group
-  operations, where `q_t` bounds `A`'s queries of kind `t`. This is a weighted form of
-  `IsQueryBoundP.simulateQ_run_of_step`
-  (`VCVio/OracleComp/QueryTracking/QueryBound/Simulation.lean`), which has per-step bounds as
-  hypotheses in the same way. T4 then gives the unconditional bound
+  operations, where `q_t` bounds `A`'s queries of kind `t`. This counting half is
+  `GroupModel.CostCertificate.transfer_per_kind` (`GroupModel/Certificate.lean`). It goes through
+  `OracleComp.isChargeBound_run_simulateQ` (`VCVio/OracleComp/QueryTracking/QueryBound/Weighted.lean`),
+  a weighted form of `IsQueryBoundP.simulateQ_run_of_step` with per-step bounds as hypotheses in
+  the same way, and `costCertificate_virtualizeImpl` certifies virtualization at one for each group
+  operation and zero for equality tests and coins. T4 then gives the unconditional bound
   `adv(A) ≤ bound_P(c₀ + Σ_t c_t · q_t) + ε`. A bound in `A`'s group operations alone needs
   `c_t = 0` for every other kind. Equality tests are free for `A`, so a handler that spends a
   group operation on each of them has no bound of that form.
@@ -1218,7 +1220,7 @@ are equal, free equality tests find them, and their difference is a relation.
 | KZG evaluation binding and function binding, unconditional | for a generic adversary, at most the generic `t`-SDH and ARSDH bounds at a counted number of operations | ArkLib `KZG.CommitmentScheme.binding` with `bindingReduction`, `KZG.CommitmentScheme.function_binding` with `reduction` |  |
 | KZG extraction | a named straight-line extractor; `Pr[accept ∧ p(z) ≠ v] ≤` the `t`-SDH advantage of a named reduction | ArkLib `Commitment.extractability`, today a placeholder, once its game says what the extractor receives (below) | Marlin, Theorem B.12 |
 | uber family from `q`-DLog, algebraic adversaries | a reduction that factors `W` |  | Bauer, Fuchsbauer, Loss; Rotem |
-| BLS and aggregate BLS under co-CDH | Type 3, and Type 2 with `ψ` | milestone 4 | Boneh, Gentry, Lynn, Shacham |
+| BLS and aggregate BLS under co-CDH | Type 3: EUF-CMA advantage at most `qH + qS + 1` times the co-CDH advantage of the named reduction (`BLS.unforgeableAdvantage_le`, `BLS.coCDHReduction`). Aggregate BLS, Type 2 with `ψ`, is a target | milestone 4 | Boneh, Lynn, Shacham; Boneh, Gentry, Lynn, Shacham |
 | Groth16 knowledge soundness | algebraic, from `q`-DLog; then generic by T5 | no Groth16 in ArkLib yet | Groth; Fuchsbauer, Kiltz, Loss |
 
 Two results need a change in ArkLib first.
@@ -1438,7 +1440,7 @@ Schwartz–Zippel specialization for uniform points is
 `DecisionalPairing.lean` as `measureETVDist_runGen_pairing_sameKernel_le`, and generic XDH follows
 as `XDH.advantage_ofGeneric_le`.
 
-Everything else is a paper argument or theorem target: T5 and its cost certificate, T7 in its
+Everything else is a paper argument or theorem target: T5 beyond its cost certificate, T7 in its
 per-sort form at `discreteSig S` and at the Type 1 and Type 2 signatures, T8 for problems other than `(q₁, q₂)`-DLog, S1–S3,
 P1–P3, restriction along a map of signatures, the invariant at the target sort over `CoeffsT`,
 the free and tracking models for Types 1 and 2, the accessible spans, the polynomial-table

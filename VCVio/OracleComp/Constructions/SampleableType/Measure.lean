@@ -24,8 +24,10 @@ fractions of the sample space reduce to comparisons of counts, probability one a
 universal and empty events, and independent uniform draws combined by a bijection are a single
 uniform draw. `natCast_mul_prEvent_le_sum_prEvent_of_le_card_filter` is the double-counting
 bound for uniform events: if every bad sample satisfies at least `k` of a finite family of
-events, then `k` times the bad probability is at most the sum of their probabilities. Every
-uniform sampler of a type denotes the same measure, so statements about `$ᵗ α`
+events, then `k` times the bad probability is at most the sum of their probabilities.
+`natCast_card_mul_prEvent_uniformSample_bind` averages over a uniform first draw: the number of
+draws times an event's probability after the draw is the sum of its probabilities after each draw.
+Every uniform sampler of a type denotes the same measure, so statements about `$ᵗ α`
 do not depend on the chosen sampler.
 
 There are two set-mass bounds for a uniform sample, and they differ in where the numerator comes
@@ -286,6 +288,17 @@ theorem natCast_mul_prEvent_le_sum_prEvent_of_le_card_filter {α ι : Type} [Sam
   rw [← Finset.sum_mul, ← mul_assoc]
   gcongr
   exact_mod_cast hc
+
+/-- Averaging over a uniform first draw: the number of possible draws times the probability of an
+event after the draw is the sum, over the draws, of the event's probability after each one. -/
+theorem natCast_card_mul_prEvent_uniformSample_bind {α β : Type} [SampleableType α]
+    [_root_.Fintype α] (oa : α → ProbComp β) (p : β → Prop) :
+    (Fintype.card α : ℝ≥0∞) * Pr{let y ← ($ᵗ α : ProbComp α) >>= oa}[p y] =
+      ∑ x, Pr{let y ← oa x}[p y] := by
+  rw [prEvent_bind_eq_sum_fintype, Finset.mul_sum]
+  refine Finset.sum_congr rfl fun x _ => ?_
+  rw [prEvent_uniformSample_eq_singleton, ← mul_assoc,
+    ENNReal.mul_inv_cancel (by simp) (by simp), one_mul]
 
 /-! ## Transport between uniform samples -/
 

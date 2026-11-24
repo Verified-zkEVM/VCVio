@@ -109,6 +109,7 @@ public import VCVio.CryptoFoundations.GPVHashAndSign.TapeFactorization
 public import VCVio.CryptoFoundations.GPVHashAndSign.TrapCount
 public import VCVio.CryptoFoundations.GPVHashAndSign.TrapProjection
 public import VCVio.CryptoFoundations.GPVHashAndSign.VerificationBridge
+public import VCVio.CryptoFoundations.GroupModel.Certificate
 public import VCVio.CryptoFoundations.GroupModel.Coins
 public import VCVio.CryptoFoundations.GroupModel.Collision
 public import VCVio.CryptoFoundations.GroupModel.Cost
@@ -477,6 +478,7 @@ public import VCVio.OracleComp.QueryTracking.QueryBound.Partition
 public import VCVio.OracleComp.QueryTracking.QueryBound.Simulation
 public import VCVio.OracleComp.QueryTracking.QueryBound.Tagged
 public import VCVio.OracleComp.QueryTracking.QueryBound.Truncate
+public import VCVio.OracleComp.QueryTracking.QueryBound.Weighted
 public import VCVio.OracleComp.QueryTracking.QueryCost
 public import VCVio.OracleComp.QueryTracking.QueryLog
 public import VCVio.OracleComp.QueryTracking.QueryLogCheck
@@ -684,6 +686,19 @@ public import VCVio.Quantum.VC.Proof.OnlineSecurity
 public import VCVio.Quantum.VC.Proof.Repeatability
 public import VCVio.Quantum.VC.Tuples
 public import VCVio.Quantum.VC.Unitaries
+public import VCVio.Schemes.BLS.Abort
+public import VCVio.Schemes.BLS.Averaging
+public import VCVio.Schemes.BLS.Basic
+public import VCVio.Schemes.BLS.Covariance
+public import VCVio.Schemes.BLS.Execution
+public import VCVio.Schemes.BLS.GameIdentification
+public import VCVio.Schemes.BLS.Games
+public import VCVio.Schemes.BLS.Guess
+public import VCVio.Schemes.BLS.Invariants
+public import VCVio.Schemes.BLS.Oracle
+public import VCVio.Schemes.BLS.Programming
+public import VCVio.Schemes.BLS.Reduction
+public import VCVio.Schemes.BLS.Security
 public import VCVio.Schemes.EncryptThenMac
 public import VCVio.Schemes.HashAndMac
 public import VCVio.Schemes.HashAndSign
