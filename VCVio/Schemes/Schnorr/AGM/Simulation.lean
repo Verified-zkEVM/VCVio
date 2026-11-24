@@ -6,7 +6,7 @@ Authors: Quang Dao
 
 module
 public import VCVio.Schemes.Schnorr.AGM.Probability
-import all VCVio.CryptoFoundations.FiatShamir.Sigma.Stateful.Chain.Reduction
+public import VCVio.CryptoFoundations.FiatShamir.Sigma.Stateful.Chain.Reduction
 
 /-! # Schnorr signing-simulation bounds
 
@@ -67,21 +67,14 @@ theorem unforgeableAdvantage_le_simulatedCma {F G M : Type}
           (FiatShamir.Stateful.signedFreshAdv (sigma F G g) (dlogGenerable F g) M
             (A.toUnforgeableAdversary g))}[b = true] +
         (qS : ℝ≥0∞) * (qS + qH) * (Fintype.card F : ℝ≥0∞)⁻¹ := by
-  classical
   have hQ := fun pk => A.toUnforgeableAdversary_queryBound g pk qS qH (hS pk) (hH pk)
-  have hc := FiatShamir.Stateful.signedFreshAdv_H3_bound
-    (sigma F G g) (dlogGenerable F g) M (A.toUnforgeableAdversary g)
-    (simTranscript F G g) 0 (Fintype.card F : ℝ≥0∞)⁻¹
+  have h := FiatShamir.unforgeableAdvantage_le_cmaSim_add
+    (sigma F G g) (dlogGenerable F g) M (simTranscript F G g) 0
     ((ChallengeVerifyProtocol.perfectHVZK_iff_hvzk_zero _ _).mp (sigma_hvzk F G g))
-    (sigma_simCommitPredictability F G g hg) qS qH hQ
-  have he := (FiatShamir.Stateful.unforgeableAdvantage_eq_statefulPostKeygenFreshAdvantage
-    (sigma F G g) (dlogGenerable F g) M (A.toUnforgeableAdversary g)).trans
-    (FiatShamir.Stateful.statefulPostKeygenFreshAdvantage_eq_cmaRealRunProb_signedFreshAdv
-      (sigma F G g) (dlogGenerable F g) M (A.toUnforgeableAdversary g))
-  erw [he, prEvent_eq_evalDist_singleton]
-  exact (MeasureTheory.Measure.apply_true_le_add_boolDist _ _).trans
-    (add_le_add le_rfl (by simpa only [FiatShamir.Stateful.cmaH3Advantage,
-      QueryImpl.Stateful.advantage, mul_zero, zero_add] using hc))
+    (Fintype.card F : ℝ≥0∞)⁻¹ (sigma_simCommitPredictability F G g hg)
+    (A.toUnforgeableAdversary g) qS qH hQ
+  simp only [mul_zero, zero_add] at h
+  exact h
 
 end Schnorr
 
@@ -103,21 +96,8 @@ private theorem simulatedCma_eq_normalForm {F G M : Type}
           (Resp := F) (Schnorr.simTranscript F G g) (x • g))
         ((A.toUnforgeableAdversary g).main (x • g))).run (∅, [])
       simLoggedVerifyFreshComp (M := M) (Schnorr.sigma F G g) (x • g) p.1 p.2) := by
-  erw [cmaSim_runProb_eq_nma_runProb_shiftLeft_cmaToNma,
-    nma_runProb_shiftLeft_signedFreshAdv_eq_forkH5Body]
-  simp only [forkH5Body, simulateQ_bind]
-  have hk : simulateQ (forkWrappedUniformImpl F)
-      (liftComp (dlogGenerable F g).gen (Fork.wrappedSpec F)) = (dlogGenerable F g).gen := by
-    simpa [forkWrappedUniformImpl] using QueryImpl.simulateQ_liftComp_left_eq_of_apply
-      (impl := forkWrappedUniformImpl F) (impl₁ := QueryImpl.id' unifSpec)
-      (h := fun _ => rfl) (oa := (dlogGenerable F g).gen)
-  rw [hk]
-  simp only [dlogGenerable, bind_assoc, pure_bind]
-  apply bind_congr
-  intro x
-  rw [forkLoggedProbImpl_run]
-  exact forkLoggedProbImpl_run_bind_verify_eq_simulatedNma_aux (M := M)
-    (Schnorr.sigma F G g) (Schnorr.simTranscript F G g) (x • g)
-    ((A.toUnforgeableAdversary g).main (x • g))
+  exact (cmaSim_runProb_signedFreshAdv_eq (σ := Schnorr.sigma F G g) (hr := dlogGenerable F g)
+    (M := M) (A.toUnforgeableAdversary g) (Schnorr.simTranscript F G g)).trans
+    (by simp [dlogGenerable])
 
 end Schnorr.AGM

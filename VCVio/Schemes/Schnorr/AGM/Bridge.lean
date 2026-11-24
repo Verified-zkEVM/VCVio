@@ -8,7 +8,6 @@ module
 public import VCVio.Schemes.Schnorr.AGM.Simulation
 import all VCVio.Schemes.Schnorr.AGM.Simulation
 import all VCVio.Schemes.Schnorr.AGM.Soundness
-import all VCVio.CryptoFoundations.FiatShamir.Sigma.Stateful.Chain.Simulation
 
 /-! # Erasing Schnorr extraction metadata
 
