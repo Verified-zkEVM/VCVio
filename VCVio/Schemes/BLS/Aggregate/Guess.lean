@@ -24,7 +24,7 @@ namespace BLS.Aggregate
 /-- For every fixed honest secret, the scalar-sampled aggregate game is bounded by the
 sum of fixed-index Type 2 solver success probabilities. Multiple honest positions cause
 no additional factor: any one of their insertion indices witnesses the union event. -/
-theorem prEvent_winning_le_sum_reductionAt {F G₁ G₂ Gₜ M : Type}
+theorem prEvent_winning_le_sum_coCDHReductionAt {F G₁ G₂ Gₜ M : Type}
     [Field F] [SampleableType F] [AddCommGroup G₁] [Module F G₁]
     [SampleableType G₁] [AddCommGroup G₂] [Module F G₂] [DecidableEq G₂]
     [AddCommGroup Gₜ] [Module F Gₜ] [DecidableEq Gₜ] [DecidableEq M]
@@ -39,7 +39,7 @@ theorem prEvent_winning_le_sum_reductionAt {F G₁ G₂ Gₜ M : Type}
       Winning e g₂ (x • g₂) z] ≤
     ∑ j : Fin (max 1 (qH + qS + N)),
       Pr{let h ← ($ᵗ G₁ : ProbComp G₁)
-         let y ← reductionAt ψ A j.val g₂ (x • g₂) h}[y = x • h] := by
+         let y ← coCDHReductionAt ψ A j.val g₂ (x • g₂) h}[y = x • h] := by
   let P : ((List (G₂ × M) × G₁) × Gₜ) → List M → Prop :=
     fun z _ => (z.1.1.map Prod.snd).Nodup ∧ e z.1.2 g₂ = z.2
   let eligible : ((List (G₂ × M) × G₁) × Gₜ) → M → Prop :=

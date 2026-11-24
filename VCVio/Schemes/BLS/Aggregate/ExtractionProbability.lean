@@ -39,7 +39,7 @@ private theorem prEvent_programmedTarget_le_reductionAtMask [Field F] [Sampleabl
       (withFinalPairings e (A.main (x • g₂)))).run OracleState.empty}[
       ProgrammedTarget (fun z _ => (z.1.1.map Prod.snd).Nodup ∧ e z.1.2 g₂ = z.2)
         (fun z msg => (x • g₂, msg) ∈ z.1.1) j z] ≤
-    Pr{let y ← reductionAtMask ψ A j mask g₂ (x • g₂) h}[y = x • h] := by
+    Pr{let y ← coCDHReductionAtMask ψ A j mask g₂ (x • g₂) h}[y = x • h] := by
   let impl := indexedOracle (M := M) (tagDraw (V := F) j)
     (fun tag => tag.elim (h + mask • ψ g₂) (· • ψ g₂))
     (fun tag => tag.elim 0 (· • ψ (x • g₂))) (some j)
@@ -49,7 +49,7 @@ private theorem prEvent_programmedTarget_le_reductionAtMask [Field F] [Sampleabl
     have hp := congrArg (fun oa => (simulateQ impl oa).run OracleState.empty)
       (withFinalPairings_map_fst e (A.main (x • g₂)))
     simpa only [simulateQ_map, StateT.run_map] using hp
-  unfold reductionAtMask
+  unfold coCDHReductionAtMask
   change _ ≤ Pr{let y ← ((simulateQ impl (withFinalHashes (A.main (x • g₂)))).run
     OracleState.empty >>= _)}[y = x • h]
   rw [← hproj, bind_map_left]
@@ -80,7 +80,7 @@ private theorem prEvent_freshTarget_le_reductionAtMask [Field F] [SampleableType
       FreshTarget (fun z _ => (z.1.1.map Prod.snd).Nodup ∧ e z.1.2 g₂ = z.2)
         (fun z msg => (x • g₂, msg) ∈ z.1.1) j z] ≤
     Pr{let h ← ($ᵗ G₁ : ProbComp G₁)
-       let y ← reductionAtMask ψ A j mask g₂ (x • g₂) h}[y = x • h] := by
+       let y ← coCDHReductionAtMask ψ A j mask g₂ (x • g₂) h}[y = x • h] := by
   have hp := prEvent_freshTarget_le_masked (· • ψ g₂) hg₁ (x • ·)
     (fun tag => tag.elim 0 (· • ψ (x • g₂)))
     (fun r => (simulated_signature_eq ψ g₂ x r).symm) j (mask • ψ g₂)
@@ -111,18 +111,18 @@ theorem prEvent_freshTarget_le_reductionAt [Field F] [SampleableType F]
       FreshTarget (fun z _ => (z.1.1.map Prod.snd).Nodup ∧ e z.1.2 g₂ = z.2)
         (fun z msg => (x • g₂, msg) ∈ z.1.1) j z] ≤
     Pr{let h ← ($ᵗ G₁ : ProbComp G₁)
-       let y ← reductionAt ψ A j g₂ (x • g₂) h}[y = x • h] := by
+       let y ← coCDHReductionAt ψ A j g₂ (x • g₂) h}[y = x • h] := by
   have havg := le_prEvent_bind_of_forall_le ($ᵗ F : ProbComp F) (by simp)
     (fun mask => do
       let h ← ($ᵗ G₁ : ProbComp G₁)
-      let y ← reductionAtMask ψ A j mask g₂ (x • g₂) h
+      let y ← coCDHReductionAtMask ψ A j mask g₂ (x • g₂) h
       pure (y = x • h)) id
     (fun mask => by
       simpa only [map_bind, map_pure, Functor.map_map, Function.comp_def, id_eq,
         bind_pure_comp] using
         prEvent_freshTarget_le_reductionAtMask ψ A hg₁ hg₂ he x j mask)
   simp only [map_bind, Functor.map_map, id_eq, bind_pure_comp] at havg
-  unfold reductionAt
+  unfold coCDHReductionAt
   simp only [map_bind]
   refine havg.trans_eq ?_
   exact OracleComp.prEvent_bind_bind_swap_of_uniform _ _ _

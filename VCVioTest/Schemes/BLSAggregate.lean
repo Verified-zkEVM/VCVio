@@ -77,7 +77,7 @@ theorem one_hash_one_sign_bound :
     BLS.Aggregate.QueryBound A 1 1 2 ∧
       AggregateSignatureAlg.unforgeableAdvantage (ProbCompRuntime.rom (Bool →ₒ ZMod 101)) A ≤
         4 * Pr{let b ← CoCDH.isoExperiment 1
-                (BLS.Aggregate.reduction LinearMap.id A 1 1 2)}[b = true] := by
+                (BLS.Aggregate.coCDHReduction LinearMap.id A 1 1 2)}[b = true] := by
   intro A
   have hQ : BLS.Aggregate.QueryBound A 1 1 2 := by
     intro pk
@@ -93,7 +93,7 @@ theorem one_hash_one_sign_bound :
   have hg : Function.Bijective (· • (1 : ZMod 101) : ZMod 101 → ZMod 101) := by simp
   have h := BLS.Aggregate.unforgeableAdvantage_le
     (LinearMap.id (R := ZMod 101) (M := ZMod 101)) A 1 1 2 hQ
-    (by simp) hg.surjective (by simp)
+    (by simpa using hg.surjective) hg.surjective (by simp)
   norm_num at h
   exact h
 

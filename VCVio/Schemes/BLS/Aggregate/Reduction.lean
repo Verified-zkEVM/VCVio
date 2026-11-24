@@ -58,7 +58,7 @@ The challenge slot uses its independently sampled mask; a missing cache entry co
 `h + mask • ψ gen₂`; other answers are `r • ψ gen₂`. Signing uses `r • ψ pk`.
 After an abort, duplicate messages, or absence of a fresh honest selected entry, it returns
 zero. Otherwise it strips every scalar contribution, including the selected entry's mask. -/
-@[expose] def reductionAtMask [Field F] [SampleableType F]
+@[expose] def coCDHReductionAtMask [Field F] [SampleableType F]
     [AddCommGroup G₁] [Module F G₁] [AddCommGroup G₂] [Module F G₂] [DecidableEq G₂]
     [AddCommGroup Gₜ] [Module F Gₜ] [DecidableEq Gₜ] [DecidableEq M]
     (ψ : G₂ →ₗ[F] G₁) {e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ} {g₂ : G₂}
@@ -78,7 +78,7 @@ zero. Otherwise it strips every scalar contribution, including the selected entr
     else return 0
 
 /-- Fixed-index solver with an independent uniform mask for the programmed hash. -/
-@[expose] def reductionAt [Field F] [SampleableType F]
+@[expose] def coCDHReductionAt [Field F] [SampleableType F]
     [AddCommGroup G₁] [Module F G₁] [AddCommGroup G₂] [Module F G₂] [DecidableEq G₂]
     [AddCommGroup Gₜ] [Module F Gₜ] [DecidableEq Gₜ] [DecidableEq M]
     (ψ : G₂ →ₗ[F] G₁) {e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ} {g₂ : G₂}
@@ -86,12 +86,12 @@ zero. Otherwise it strips every scalar contribution, including the selected entr
     (j : ℕ) : CoCDH.IsoAdversary F G₁ G₂ :=
   fun gen₂ pk h => do
     let mask ← $ᵗ F
-    reductionAtMask ψ A j mask gen₂ pk h
+    coCDHReductionAtMask ψ A j mask gen₂ pk h
 
 /-- BGLS's Type 2 solver with a uniform insertion-index guess. The guessing range has
 `max 1 (qH + qS + N)` slots: direct hashes, signing hashes, and final verification hashes.
 The maximum with one makes the sampling type inhabited even for zero budgets. -/
-@[expose] def reduction [Field F] [SampleableType F]
+@[expose] def coCDHReduction [Field F] [SampleableType F]
     [AddCommGroup G₁] [Module F G₁] [AddCommGroup G₂] [Module F G₂] [DecidableEq G₂]
     [AddCommGroup Gₜ] [Module F Gₜ] [DecidableEq Gₜ] [DecidableEq M]
     (ψ : G₂ →ₗ[F] G₁) {e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ} {g₂ : G₂}
@@ -100,7 +100,7 @@ The maximum with one makes the sampling type inhabited even for zero budgets. -/
   letI : NeZero (max 1 (qH + qS + N)) := ⟨by omega⟩
   fun gen₂ pk h => do
     let j ← $ᵗ Fin (max 1 (qH + qS + N))
-    reductionAt ψ A j.val gen₂ pk h
+    coCDHReductionAt ψ A j.val gen₂ pk h
 
 /-- Uniform scalar masking of a fixed challenge is a uniform group sample whenever
 scalar multiplication by the image of the generator is bijective. -/

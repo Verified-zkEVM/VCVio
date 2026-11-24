@@ -42,21 +42,24 @@ theorem unforgeableAdvantage_le {F G₁ G₂ Gₜ M : Type}
     (ψ : G₂ →ₗ[F] G₁) {e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ} {g₂ : G₂}
     (A : AggregateSignatureAlg.UnforgeableAdversary (scheme (M := M) e g₂))
     (qH qS N : ℕ) (hQ : QueryBound A qH qS N)
-    (hg₁ : Function.Bijective (· • ψ g₂ : F → G₁))
+    (hg₁ : Function.Surjective (· • ψ g₂ : F → G₁))
     (hg₂ : Function.Surjective (· • g₂ : F → G₂)) (he : e (ψ g₂) g₂ ≠ 0) :
     AggregateSignatureAlg.unforgeableAdvantage (ProbCompRuntime.rom (M →ₒ G₁)) A ≤
       (max 1 (qH + qS + N) : ℕ) *
-        Pr{let b ← CoCDH.isoExperiment g₂ (BLS.Aggregate.reduction ψ A qH qS N)}[b = true] := by
+        Pr{let b ← CoCDH.isoExperiment g₂
+                (BLS.Aggregate.coCDHReduction ψ A qH qS N)}[b = true] := by
+  have hg₁ : Function.Bijective (· • ψ g₂ : F → G₁) :=
+    ⟨smul_left_injective F fun h0 => he (by simp [h0]), hg₁⟩
   rw [unforgeableAdvantage_eq_indexed (ψ g₂) A hg₁,
-    mul_prEvent_isoExperiment_reduction]
+    mul_prEvent_isoExperiment_coCDHReduction]
   let : MeasurableSpace F := ⊤
   rw [prEvent_bind_of_discrete]
   calc
     _ ≤ ∫⁻ x : F, ∑ j : Fin (max 1 (qH + qS + N)),
         Pr{let h ← ($ᵗ G₁ : ProbComp G₁)
-           let y ← reductionAt ψ A j.val g₂ (x • g₂) h}[y = x • h]
+           let y ← coCDHReductionAt ψ A j.val g₂ (x • g₂) h}[y = x • h]
         ∂𝒟[($ᵗ F : ProbComp F)] :=
-      lintegral_mono fun x => prEvent_winning_le_sum_reductionAt ψ A hg₁ hg₂ he x qH qS N hQ
+      lintegral_mono fun x => prEvent_winning_le_sum_coCDHReductionAt ψ A hg₁ hg₂ he x qH qS N hQ
     _ = _ := by
       rw [lintegral_finsetSum _ (fun _ _ => Measurable.of_discrete)]
       apply Finset.sum_congr rfl
