@@ -12,8 +12,16 @@ public import Batteries.Control.OptionT
 /-!
 # Finite support of uniform sampling
 
-This module collects `VCVio.OracleComp.ProbComp.Basic` with the finite supports of the uniform
-sampling operations of `ProbComp`.
+For `c : ProbComp α` with `[DecidableEq α]`, `finSupport c` enumerates the reachable outputs
+by taking the union over the answers to each query. For a uniform draw, `ProbComp.support_uniformFin`
+gives the whole answer set. For a small closed computation, membership can also be proved by
+enumeration.
+
+```lean
+example : (1 : Fin 2) ∈ support (ProbComp.uniformFin 1) := by
+  apply mem_support_of_mem_finSupport
+  decide
+```
 -/
 
 @[expose] public section

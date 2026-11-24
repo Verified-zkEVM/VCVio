@@ -12,9 +12,8 @@ public import VCVio.OracleComp.Support
 /-!
 # Exact return predicates for oracle computations
 
-The polynomial free monad's exact `MonadAttach` return predicate agrees with the framework's
-syntactic support fold. This bridge allows generic progress and invariant theorems to use the
-same oracle-response paths as probability-facing support arguments.
+For an oracle program `mx`, `x ∈ support mx` is definitionally `MonadAttach.CanReturn mx x`.
+A proof about possible oracle outputs can therefore use the free program's return predicate directly.
 -/
 
 public section
