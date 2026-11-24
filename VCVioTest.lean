@@ -19,6 +19,7 @@ public import VCVioTest.CryptoFoundations.FiatShamirStateSteps
 public import VCVioTest.CryptoFoundations.FiatShamirWithAbortCanary
 public import VCVioTest.CryptoFoundations.FiatShamirWithAbortInstance
 public import VCVioTest.CryptoFoundations.FujisakiOkamotoOneWay
+public import VCVioTest.CryptoFoundations.KEMAno
 public import VCVioTest.CryptoFoundations.KeyedHashCovering
 public import VCVioTest.CryptoFoundations.LeftOrRight
 public import VCVioTest.CryptoFoundations.MerkleTreeCacheRefinement
@@ -61,6 +62,9 @@ public import VCVioTest.FirstSuccess
 public import VCVioTest.FischlinExpectedCost
 public import VCVioTest.FischlinExtraction
 public import VCVioTest.ForkBounds
+public import VCVioTest.Forking.CoordSpecialSoundness
+public import VCVioTest.Forking.CoordinateFinder
+public import VCVioTest.Forking.CoordinateFork
 public import VCVioTest.Forking.WithoutReplacement
 public import VCVioTest.Foundations
 public import VCVioTest.GrindFailFast
@@ -125,6 +129,7 @@ public import VCVioTest.OracleComp.MeasuredProgram
 public import VCVioTest.OracleComp.PreservesInv
 public import VCVioTest.OracleComp.Query
 public import VCVioTest.OracleComp.QueryAndHandlerLaws
+public import VCVioTest.OracleComp.QueryLogRelabel
 public import VCVioTest.OracleComp.QueryTracking.QueryLog
 public import VCVioTest.OracleComp.SchwartzZippel
 public import VCVioTest.OracleComp.SecurityFamily
@@ -143,6 +148,7 @@ public import VCVioTest.PRFNetworkKernel
 public import VCVioTest.PRFNetworkUnlinkability
 public import VCVioTest.PRFReductionBudgets
 public import VCVioTest.PerfectMerkleTree
+public import VCVioTest.PointerChainPuzzle.AsymptoticHiding
 public import VCVioTest.PointerChainPuzzle.Bad
 public import VCVioTest.PointerChainPuzzle.Basic
 public import VCVioTest.PointerChainPuzzle.Batch
@@ -250,6 +256,7 @@ public import VCVioTest.Schemes.Schnorr.ChallengeRestriction
 public import VCVioTest.Schemes.Schnorr.Transforms
 public import VCVioTest.Schemes.VectorPedersen
 public import VCVioTest.SeparatedOTP
+public import VCVioTest.SigmaProtocolMonad
 public import VCVioTest.Smoke
 public import VCVioTest.StateSeparating.Measure
 public import VCVioTest.StateTLift
