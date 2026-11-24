@@ -206,6 +206,10 @@ Encryption budgets are `DEMScheme.IND_CPA_Adversary.MakesAtMostQueries`.
 `IND_CPA_OneTime_Advantage_eq_IND_CPA_Advantage` is the exact equality between the one-time
 advantage and the multi-query advantage, without leakage, of the one-query adversary
 `IND_CPA_OneTime_Adversary.toMultiQuery`.
+`DEMScheme.toSymmEncAlg dem runtime` reads the DEM as a `SymmEncAlg` whose `keygen` samples the
+key uniformly. The multi-query game is the `SymmEncAlg` CPA game of this scheme: experiment, game
+and advantage agree by `rfl` (`IND_CPA_Advantage_toSymmEncAlg`), and so do the encryption budgets
+(`IND_CPA_Adversary.makesAtMostQueries_toSymmEncAlg_iff`).
 
 `VCVio.CryptoFoundations.DataEncapMech.RealOrRandom` defines the one-time real-or-random game
 `DEMScheme.oneTimeRealOrRandomGame`, which encrypts either the adversary's message or a uniform
