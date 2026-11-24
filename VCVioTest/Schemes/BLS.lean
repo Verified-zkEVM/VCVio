@@ -7,13 +7,13 @@ Authors: Quang Dao
 module
 public import VCVio.Schemes.BLS.Security
 public import Mathlib.Algebra.Field.ZMod
-import VCVio.EvalDist.ProbabilityBounds
 
 /-! # BLS over the field of order 101
 
 Concrete consumers of the Boneh–Lynn–Shacham scheme, with multiplication as the pairing
 and both generators equal to one. The adversary hashes `false`, signs `true`, and uses
-the scalar visible in this toy public key to forge on `false`.
+the scalar visible in this toy public key to forge on `false`. Its budget of one hash and one
+signing query is tight, and it meets every hypothesis of the security theorem.
 -/
 
 public section
@@ -33,7 +33,8 @@ local instance sampleField : SampleableType (ZMod 101) :=
 local notation "toyScheme" =>
   BLS.scheme (M := Bool) (LinearMap.mul (ZMod 101) (ZMod 101)) 1 1
 
-private def adversary : SignatureAlg.UnforgeableAdversary toyScheme where
+/-- Hash `false`, sign `true`, and forge on `false` with the scalar the toy public key shows. -/
+@[expose] def adversary : SignatureAlg.UnforgeableAdversary toyScheme where
   main pk := do
     let h : ZMod 101 ←
       ((unifSpec + (Bool →ₒ ZMod 101)) + (Bool →ₒ ZMod 101)).query (.inl (.inr false))
@@ -41,38 +42,30 @@ private def adversary : SignatureAlg.UnforgeableAdversary toyScheme where
       ((unifSpec + (Bool →ₒ ZMod 101)) + (Bool →ₒ ZMod 101)).query (.inr true)
     return (false, pk.2 * h)
 
-/-- Multiplication with unit generators instantiates the generic ROM completeness theorem. -/
-private theorem perfectlyComplete :
-    (toyScheme).PerfectlyComplete (ProbCompRuntime.rom (Bool →ₒ ZMod 101)) :=
-  BLS.perfectlyComplete _ _ _
-
 /-- The fixture uses one direct hash query and one signing query on every public key. -/
-private theorem queryBound : BLS.QueryBound adversary 1 1 := by
+theorem adversary_romQueryBound : adversary.RomQueryBound 1 1 := by
   intro pk
-  constructor <;> simp [adversary, isQueryBoundP_query_bind_iff]
+  constructor <;>
+    simp [adversary, isQueryBoundP_query_bind_iff, SignatureAlg.IsHashQuery,
+      SignatureAlg.IsSignQuery]
 
-/-- In the concrete pairing, every accepted signature equals the secret times the hash. -/
-private theorem verification_iff (x h σ : ZMod 101) : σ * 1 = h * (x * 1) ↔ σ = x * h := by
-  simpa using BLS.pairing_eq_iff (LinearMap.mul (ZMod 101) (ZMod 101)) 1 1
-    (by intro y; exact ⟨y, by simp⟩) (by simp) x h σ
+/-- The hash budget is tight: no public key admits a budget of zero direct hash queries. -/
+theorem not_adversary_romQueryBound_zero_one : ¬ adversary.RomQueryBound 0 1 := fun h => by
+  simpa [adversary, isQueryBoundP_query_bind_iff, SignatureAlg.IsHashQuery] using (h (0, 0)).1
 
-/-- A concrete one-hash, one-sign adversary satisfies the factor-three bound for the named
-index-guessing reduction, by instantiating the general EUF-CMA theorem. -/
+/-- The signing budget is tight: no public key admits a budget of zero signing queries. -/
+theorem not_adversary_romQueryBound_one_zero : ¬ adversary.RomQueryBound 1 0 := fun h => by
+  simpa [adversary, isQueryBoundP_query_bind_iff, SignatureAlg.IsHashQuery,
+    SignatureAlg.IsSignQuery] using (h (0, 0)).2
+
+/-- The one-hash, one-sign adversary meets every hypothesis of the security theorem, which then
+bounds its advantage by three times the success of the named co-CDH reduction. -/
 theorem one_hash_one_sign_bound :
-    let A : SignatureAlg.UnforgeableAdversary toyScheme := ⟨fun pk => do
-      let h : ZMod 101 ←
-        ((unifSpec + (Bool →ₒ ZMod 101)) + (Bool →ₒ ZMod 101)).query (.inl (.inr false))
-      let _ : ZMod 101 ←
-        ((unifSpec + (Bool →ₒ ZMod 101)) + (Bool →ₒ ZMod 101)).query (.inr true)
-      return (false, pk.2 * h)⟩
-    BLS.QueryBound A 1 1 ∧
-      SignatureAlg.unforgeableAdvantage (ProbCompRuntime.rom (Bool →ₒ ZMod 101)) A ≤
-        3 * Pr{let b ← CoCDH.experiment 1 1 (BLS.reduction A 1 1)}[b = true] := by
-  change BLS.QueryBound adversary 1 1 ∧ _
-  refine ⟨queryBound, ?_⟩
+    SignatureAlg.unforgeableAdvantage (ProbCompRuntime.rom (Bool →ₒ ZMod 101)) adversary ≤
+      3 * Pr{let b ← CoCDH.experiment 1 1 (BLS.coCDHReduction adversary 1 1)}[b = true] := by
   have hg : Function.Bijective (· • (1 : ZMod 101) : ZMod 101 → ZMod 101) := by
     simp
-  have h := BLS.unforgeableAdvantage_le adversary 1 1 queryBound hg (by simp)
+  have h := BLS.unforgeableAdvantage_le adversary 1 1 adversary_romQueryBound hg (by simp)
   norm_num at h
   exact h
 
