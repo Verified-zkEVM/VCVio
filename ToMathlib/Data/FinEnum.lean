@@ -19,8 +19,9 @@ of `FinEnum.toList α` comes from that choice. The instance for `Bool` enumerate
 `[true, false]`.
 
 `Sym.finEnum`, `Equiv.Perm.finEnum`, and `Function.Embedding.finEnum` are named definitions.
-Use `letI` to install one where its enumeration is needed. Local scope keeps the derived
-`Fintype` local as well, since Mathlib supplies a `Fintype` for each of these types.
+For example, `letI : FinEnum (Equiv.Perm α) := Equiv.Perm.finEnum` lets a caller enumerate
+permutations of a `FinEnum` type `α`. Installing the enumeration locally avoids adding a second
+global way to synthesize the `Fintype` that Mathlib already supplies.
 
 The multiset enumeration uses `List.sym`, with completeness given by `List.mem_sym`.
 Permutations use `permsOfList`, and embeddings use the subtype of injective functions.
