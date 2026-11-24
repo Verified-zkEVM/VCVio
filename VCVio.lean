@@ -257,8 +257,8 @@ public import VCVio.CryptoFoundations.MerkleTree.Salted.Instability
 public import VCVio.CryptoFoundations.PRF
 public import VCVio.CryptoFoundations.PRF.Asymptotic
 public import VCVio.CryptoFoundations.PRF.HiddenBit
-public import VCVio.CryptoFoundations.PRF.ProjectedQueries
 public import VCVio.CryptoFoundations.PRF.QuerySimulation
+public import VCVio.CryptoFoundations.PRF.ResponseQueries
 public import VCVio.CryptoFoundations.PRG
 public import VCVio.CryptoFoundations.ReplayFork
 public import VCVio.CryptoFoundations.ReplayForkCost
@@ -397,6 +397,7 @@ public import VCVio.OracleComp.Coinductive.SecurityFamily
 public import VCVio.OracleComp.Coinductive.WiredRun
 public import VCVio.OracleComp.Constructions.BitVec
 public import VCVio.OracleComp.Constructions.FirstSuccess.Distance
+public import VCVio.OracleComp.Constructions.FirstSuccess.Eager
 public import VCVio.OracleComp.Constructions.FirstSuccess.Measure
 public import VCVio.OracleComp.Constructions.Fork.Basic
 public import VCVio.OracleComp.Constructions.GenerateSeed

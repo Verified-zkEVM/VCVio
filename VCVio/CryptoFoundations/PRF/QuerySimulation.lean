@@ -11,16 +11,30 @@ public import VCVio.OracleComp.QueryTracking.RandomOracle.CachePartial
 public import VCVio.OracleComp.QueryTracking.QueryBound.FinMOfFn
 
 /-!
-# PRF query simulation through one full-response cache
+# Query facts for the ideal PRF handler
 
-Fresh finite inputs draw independent complete responses. Repeated inputs reuse their complete
-cached response, and avoided inputs retain their cached value across an adaptive program.
+The ideal PRF handler `PRFScheme.prfIdealQueryImpl` answers each function query with a lazily
+sampled random function. Its cache stores, at each queried input, the whole value the function
+returns there (the full response), so a later query at that input returns the same value. This
+file proves three facts about that handler:
+
+- a function query uses one query of the total query budget (`functionQuery_bound`);
+- queries at distinct inputs that are not yet cached return independent uniform responses
+  (`ideal_fin_queries_fresh`);
+- a program that never queries an input leaves the cache entry at that input unchanged
+  (`ideal_cache_frame`).
+
+## References
+
+- Drake, Khovratovich, Kudinov and Wagner, *Hash-Based Multi-Signatures for Post-Quantum Ethereum*,
+  [ePrint 2025/055](https://eprint.iacr.org/2025/055).
 -/
 
 public section
 namespace PRFScheme.QuerySimulation
 open OracleComp OracleSpec
-/-- One function query consumes one total oracle-query unit. -/
+
+/-- A function query makes one oracle query. -/
 theorem functionQuery_bound {D S : Type} (query : D) :
     IsTotalQueryBound (PRFScheme.functionQuery (R := S) query) 1 := by
   unfold PRFScheme.functionQuery
@@ -30,13 +44,8 @@ theorem functionQuery_bound {D S : Type} (query : D) :
   rw [isTotalQueryBound_query_bind_iff]
   exact ⟨by omega, fun _ => trivial⟩
 
-/-- Mapping the visible value commutes with discarding only the final state. -/
-theorem state_run'_map {S A B : Type} (f : A → B)
-    (x : StateT S ProbComp A) (s : S) :
-    (f <$> x).run' s = f <$> x.run' s := by
-  simp [StateT.run'_eq, StateT.run_map, Functor.map_map]
-
-/-- Distinct fresh PRF inputs return an ordered family of independent complete responses. -/
+/-- Querying distinct inputs that are not in the cache returns independent uniform responses, in
+input order. -/
 theorem ideal_fin_queries_fresh {D S : Type} [DecidableEq D] [SampleableType S]
     (n : ℕ) (q : Fin n → D) (hq : Function.Injective q)
     (cache : (D →ₒ S).QueryCache) (hfresh : ∀ i, cache (q i) = none) :
@@ -54,7 +63,8 @@ theorem ideal_fin_queries_fresh {D S : Type} [DecidableEq D] [SampleableType S]
   rw [hprogram]
   exact OracleComp.run'_fin_mOfFn_randomOracle_of_fresh n q hq cache hfresh
 
-/-- A PRF program avoiding one input preserves its entire cached response at that input. -/
+/-- If a program never queries the function at `target`, then every run of it under the ideal
+handler leaves the cache entry at `target` unchanged. -/
 theorem ideal_cache_frame {D S A : Type} [DecidableEq D] [SampleableType S]
     (target : D) (oa : OracleComp (PRFScheme.PRFOracleSpec D S) A)
     (havoid : AllQueriesSatisfy oa

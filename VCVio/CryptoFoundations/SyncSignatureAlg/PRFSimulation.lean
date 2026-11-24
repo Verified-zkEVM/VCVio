@@ -5,63 +5,69 @@ Authors: Matthias Meijers
 -/
 
 module
-public import VCVio.CryptoFoundations.PRF.ProjectedQueries
-public import VCVio.CryptoFoundations.SyncSignatureAlg
+public import VCVio.CryptoFoundations.PRF
+public import VCVio.CryptoFoundations.SyncSignatureAlg.Unforgeability
 public import VCVio.ProgramLogic.Relational.SimulateQ.Coupling
 
 /-!
-# Cached PRF simulation for synchronized signing
+# Answering signing queries with a signer that queries an ideal PRF
 
-One full-response cache and the actual first-request signing oracle transport adaptive programs.
-Per-call output laws and cache freshness invariants preserve complete histories, including failure.
+Some synchronized signature schemes derive their signing randomness from a PRF. This file models
+such a signer as a `SyncSignatureAlg` over `OracleComp (PRFScheme.PRFOracleSpec D Response)`: it
+may sample uniformly and query a function `D → Response`. When that function is a random function,
+the signer should behave like a direct signer that samples its randomness itself. This file states
+and proves that comparison for a whole unforgeability adversary, including repeated epochs and
+failed signatures.
+
+`signingHandler` answers the adversary's queries: it passes uniform sampling through and answers
+signing queries with the scheme's signing oracle `SyncSignatureAlg.signingOracle`, which records
+each epoch's first request in a `SyncSignatureAlg.History`. The signer's function queries are left
+open. `idealHandler` answers those function queries with the ideal PRF handler
+`PRFScheme.prfIdealQueryImpl` and keeps the signing history and the PRF cache as one state.
+`simulateQ_prfIdeal_signingHandler_run` relates it to running the two handlers one after the
+other.
+
+The ideal handler caches whole PRF responses, so a later function query at a cached input returns
+the same response. `idealHandler_run_evalDistEq` is the main result. It assumes that, while a
+freshness invariant on the history and cache holds, one signing call at an unused epoch has the
+distribution of the direct signer and keeps the invariant. It concludes that running any program
+with `idealHandler` and then dropping the cache has the distribution of
+`SyncSignatureAlg.runWithSigningOracle` with the direct signer.
+
+## References
+
+- Drake, Khovratovich, Kudinov and Wagner, *Hash-Based Multi-Signatures for Post-Quantum Ethereum*,
+  [ePrint 2025/055](https://eprint.iacr.org/2025/055), Definition 8 (SY-UF-CMA).
 -/
 
 public section
-namespace SyncSignatureUnforgeability.PRFSimulation
-open OracleComp OracleSpec ProbabilityTheory MeasureTheory
+namespace SyncSignatureAlg.PRFSimulation
+open OracleComp OracleSpec
 open OracleComp.ProgramLogic.Relational
-
-
-/-- Per-query couplings preserving a state relation transport the complete adaptive view. -/
-private theorem adaptiveRun_projected {ι A S T : Type} {spec : OracleSpec ι}
-    (left : QueryImpl spec (StateT S ProbComp))
-    (right : QueryImpl spec (StateT T ProbComp)) (project : S → T)
-    (relation : S → T → Prop)
-    (hproject : ∀ s t, relation s t → project s = t)
-    (hstep : ∀ q s t, relation s t → RelTriple ((left q).run s) ((right q).run t)
-      (fun a b => a.1 = b.1 ∧ relation a.2 b.2))
-    (program : OracleComp spec A) (s : S) (t : T) (hstate : relation s t) :
-    Prod.map id project <$> (simulateQ left program).run s =ᵈ
-      (simulateQ right program).run t := by
-  have hrel := relTriple_simulateQ_run left right relation program hstep s t hstate
-  have hmap := evalDistEq_map_of_relTriple
-    (f := Prod.map id project) (g := id) (by
-      apply relTriple_post_mono hrel
-      intro a b hab
-      exact Prod.ext hab.1 (hproject a.2 b.2 hab.2))
-  simpa only [id_map] using hmap
 
 variable {D Response M PK SK Sig E : Type} [DecidableEq E]
 
-/-- Forward ambient sampling and run the actual first-request signing oracle. -/
+/-- Answer the adversary's queries with a signer that queries a PRF. Uniform sampling passes
+through, and signing queries go to `alg.signingOracle sk`. The result still makes the signer's
+function queries. -/
 @[expose] def signingHandler
     (alg : SyncSignatureAlg (OracleComp (PRFScheme.PRFOracleSpec D Response)) M PK SK Sig E)
-    (sk : SK) : QueryImpl (unifSpec + SyncSignatureUnforgeability.signingSpec E M Sig)
-      (StateT (SyncSignatureUnforgeability.History E M Sig)
-        (OracleComp (PRFScheme.PRFOracleSpec D Response))) :=
+    (sk : SK) : QueryImpl (unifSpec + signingSpec E M Sig)
+      (StateT (History E M Sig) (OracleComp (PRFScheme.PRFOracleSpec D Response))) :=
   let forward : QueryImpl unifSpec (OracleComp (PRFScheme.PRFOracleSpec D Response)) :=
     fun q => liftM (OracleSpec.query (Sum.inl q) :
       OracleQuery (PRFScheme.PRFOracleSpec D Response) _)
-  forward.liftTarget (StateT (SyncSignatureUnforgeability.History E M Sig)
-    (OracleComp (PRFScheme.PRFOracleSpec D Response))) +
-    SyncSignatureUnforgeability.signingOracle alg sk
+  forward.liftTarget (StateT (History E M Sig)
+    (OracleComp (PRFScheme.PRFOracleSpec D Response))) + alg.signingOracle sk
 
-/-- Only a fresh signing request can incur its signer's function-query budget. -/
+/-- Only a signing query at an unused epoch runs the signer. So if each signer call makes at most
+`budget` function queries, one adversary query makes at most `budget` function queries when it is
+a signing query and none when it is a uniform-sampling query. -/
 theorem signingHandler_query_bound
     (alg : SyncSignatureAlg (OracleComp (PRFScheme.PRFOracleSpec D Response)) M PK SK Sig E)
-    (sk : SK) (budget : ℕ) (hsign : ∀ ep msg, IsTotalQueryBound (alg.sign sk ep msg) budget)
-    (query : (unifSpec + SyncSignatureUnforgeability.signingSpec E M Sig).Domain)
-    (history : SyncSignatureUnforgeability.History E M Sig) :
+    (sk : SK) (budget : ℕ)
+    (hsign : ∀ ep msg, IsQueryBoundP (alg.sign sk ep msg) (fun q => q.isRight = true) budget)
+    (query : (unifSpec + signingSpec E M Sig).Domain) (history : History E M Sig) :
     IsQueryBoundP ((signingHandler alg sk query).run history)
       (fun q => q.isRight = true) (if query.isRight then budget else 0) := by
   cases query with
@@ -71,266 +77,183 @@ theorem signingHandler_query_bound
       simp
   | inr request =>
       rcases request with ⟨ep, msg⟩
-      change IsQueryBoundP
-        (SyncSignatureUnforgeability.signingOracle alg sk (ep, msg) history)
+      change IsQueryBoundP (alg.signingOracle sk (ep, msg) history)
         (fun q => q.isRight = true) budget
       cases hused : history ep with
       | some previous =>
           rcases previous with ⟨first, answer⟩
-          rw [SyncSignatureUnforgeability.signingOracle_used (h := hused)]
+          rw [signingOracle_used (h := hused)]
           trivial
       | none =>
-          rw [SyncSignatureUnforgeability.signingOracle_unused (h := hused)]
+          rw [signingOracle_unused (h := hused)]
           change IsQueryBoundP (alg.sign sk ep msg >>= fun answer =>
             pure (answer, Function.update history ep (some (msg, answer))))
             (fun q => q.isRight = true) budget
-          simpa only [Nat.add_zero] using isQueryBoundP_bind
-            (hsign ep msg).isQueryBoundP (fun answer _ =>
-              (show IsQueryBoundP (pure
-                (answer, Function.update history ep (some (msg, answer))) :
-                  OracleComp (PRFScheme.PRFOracleSpec D Response) _)
-                (fun q => q.isRight = true) 0 from trivial))
+          simpa only [Nat.add_zero] using isQueryBoundP_bind (hsign ep msg) (fun answer _ =>
+            (show IsQueryBoundP (pure
+              (answer, Function.update history ep (some (msg, answer))) :
+                OracleComp (PRFScheme.PRFOracleSpec D Response) _)
+              (fun q => q.isRight = true) 0 from trivial))
 
-/-- Run signing and ambient calls with one persistent full-response cache and history. -/
+/-- Answer the adversary's queries with `signingHandler`, and the signer's function queries with
+the ideal PRF handler. The state is the signing history together with the PRF cache. -/
 @[expose] def idealHandler [DecidableEq D] [SampleableType Response]
     (alg : SyncSignatureAlg (OracleComp (PRFScheme.PRFOracleSpec D Response)) M PK SK Sig E)
-    (sk : SK) : QueryImpl (unifSpec + SyncSignatureUnforgeability.signingSpec E M Sig)
-      (StateT (SyncSignatureUnforgeability.History E M Sig ×
-        (D →ₒ Response).QueryCache) ProbComp) :=
-  fun query => StateT.mk fun state =>
-    (fun ⟨⟨answer, nextHistory⟩, nextCache⟩ => (answer, (nextHistory, nextCache))) <$>
-      (simulateQ (PRFScheme.prfIdealQueryImpl (D := D) (R := Response))
-        ((signingHandler alg sk query).run state.1)).run state.2
+    (sk : SK) : QueryImpl (unifSpec + signingSpec E M Sig)
+      (StateT (History E M Sig × (D →ₒ Response).QueryCache) ProbComp) :=
+  (PRFScheme.prfIdealQueryImpl.mapStateTBase (signingHandler alg sk)).flattenStateT
 
-/-- Run direct signing calls with the same first-request history. -/
-@[expose] def fixedHandler (alg : SyncSignatureAlg ProbComp M PK SK Sig E) (sk : SK) :
-    QueryImpl (unifSpec + SyncSignatureUnforgeability.signingSpec E M Sig)
-      (StateT (SyncSignatureUnforgeability.History E M Sig) ProbComp) :=
-  (HasQuery.toQueryImpl (spec := unifSpec) (m := ProbComp)).liftTarget
-    (StateT (SyncSignatureUnforgeability.History E M Sig) ProbComp) +
-    SyncSignatureUnforgeability.signingOracle alg sk
+section idealHandler
 
-private theorem idealHandler_uniform
-    [DecidableEq D] [SampleableType Response]
+variable [DecidableEq D] [SampleableType Response]
+
+/-- Running a program with `signingHandler` and then answering the remaining function queries
+with the ideal PRF handler gives the run with `idealHandler`, up to reassociating the state. -/
+theorem simulateQ_prfIdeal_signingHandler_run
     (alg : SyncSignatureAlg (OracleComp (PRFScheme.PRFOracleSpec D Response)) M PK SK Sig E)
-    (sk : SK)
-    (q : ℕ) (history : SyncSignatureUnforgeability.History (E) M
-      (Sig))
-    (cache : ((D) →ₒ Response).QueryCache) :
-    (idealHandler alg sk (Sum.inl q)).run
-      (history, cache) =
-    (fun response => (response, (history, cache))) <$>
-      (liftM (unifSpec.query q) : ProbComp (unifSpec.Range q)) := by
+    (sk : SK) {A : Type} (program : OracleComp (unifSpec + signingSpec E M Sig) A)
+    (history : History E M Sig) (cache : (D →ₒ Response).QueryCache) :
+    (simulateQ PRFScheme.prfIdealQueryImpl
+      ((simulateQ (signingHandler alg sk) program).run history)).run cache =
+      (fun z : A × (History E M Sig × (D →ₒ Response).QueryCache) =>
+        ((z.1, z.2.1), z.2.2)) <$>
+        (simulateQ (idealHandler alg sk) program).run (history, cache) :=
+  simulateQ_mapStateTBase_run_eq_map_flattenStateT _ _ program history cache
+
+/-- `simulateQ_prfIdeal_signingHandler_run` with the final cache dropped. -/
+theorem simulateQ_prfIdeal_signingHandler_run'
+    (alg : SyncSignatureAlg (OracleComp (PRFScheme.PRFOracleSpec D Response)) M PK SK Sig E)
+    (sk : SK) {A : Type} (program : OracleComp (unifSpec + signingSpec E M Sig) A)
+    (history : History E M Sig) (cache : (D →ₒ Response).QueryCache) :
+    (simulateQ PRFScheme.prfIdealQueryImpl
+      ((simulateQ (signingHandler alg sk) program).run history)).run' cache =
+      Prod.map id Prod.fst <$> (simulateQ (idealHandler alg sk) program).run (history, cache) := by
+  rw [StateT.run'_eq, simulateQ_prfIdeal_signingHandler_run, Functor.map_map]
+  rfl
+
+/-- A uniform-sampling query passes through `idealHandler` and changes neither state. -/
+theorem idealHandler_inl
+    (alg : SyncSignatureAlg (OracleComp (PRFScheme.PRFOracleSpec D Response)) M PK SK Sig E)
+    (sk : SK) (q : ℕ) (history : History E M Sig) (cache : (D →ₒ Response).QueryCache) :
+    (idealHandler alg sk (Sum.inl q)).run (history, cache) =
+      (fun response => (response, (history, cache))) <$>
+        (liftM (unifSpec.query q) : ProbComp (unifSpec.Range q)) := by
   simp [idealHandler, signingHandler, PRFScheme.prfIdealQueryImpl,
     QueryImpl.add_apply_inl, QueryImpl.liftTarget, unifFwdImpl]
 
-
-private theorem fixedHandler_uniform
-    (alg : SyncSignatureAlg ProbComp M PK SK Sig E) (sk : SK)
-    (q : ℕ) (history : SyncSignatureUnforgeability.History (E) M
-      (Sig)) :
-    (fixedHandler alg sk (Sum.inl q)).run history =
-    (fun response => (response, history)) <$>
-      (liftM (unifSpec.query q) : ProbComp (unifSpec.Range q)) := by
-  simp [fixedHandler, QueryImpl.add_apply_inl, QueryImpl.liftTarget]
-
-/-- A duplicate epoch triggers no oracle call and keeps both cache and history. -/
-private theorem idealHandler_used
-    [DecidableEq D] [SampleableType Response]
+/-- A signing query at a used epoch returns `none`, makes no PRF query and changes neither the
+history nor the cache. -/
+theorem idealHandler_used
     (alg : SyncSignatureAlg (OracleComp (PRFScheme.PRFOracleSpec D Response)) M PK SK Sig E)
-    (sk : SK)
-    (epoch : E) (message : M)
-    (history : SyncSignatureUnforgeability.History (E) M
-      (Sig))
-    (cache : ((D) →ₒ Response).QueryCache)
-    (first : M) (answer : Option (Sig))
+    (sk : SK) (epoch : E) (message : M) (history : History E M Sig)
+    (cache : (D →ₒ Response).QueryCache) (first : M) (answer : Option Sig)
     (hused : history epoch = some (first, answer)) :
-    (idealHandler alg sk (Sum.inr (epoch, message))).run
-      (history, cache) = pure (none, (history, cache)) := by
-  change (fun ⟨⟨answer, nextHistory⟩, nextCache⟩ =>
-      (answer, (nextHistory, nextCache))) <$>
-    (simulateQ (PRFScheme.prfIdealQueryImpl
-      (D := D) (R := Response))
-      (SyncSignatureUnforgeability.signingOracle
-        alg sk (epoch, message) history)).run cache = _
-  rw [SyncSignatureUnforgeability.signingOracle_used
-    alg sk history epoch message first answer hused]
+    (idealHandler alg sk (Sum.inr (epoch, message))).run (history, cache) =
+      pure (none, (history, cache)) := by
+  rw [idealHandler, QueryImpl.flattenStateT_mapStateTBase_apply_run]
+  change _ <$> (simulateQ PRFScheme.prfIdealQueryImpl
+    (alg.signingOracle sk (epoch, message) history)).run cache = _
+  rw [signingOracle_used alg sk history epoch message first answer hused]
   simp
 
-
-private theorem fixedHandler_used
-    (alg : SyncSignatureAlg ProbComp M PK SK Sig E) (sk : SK)
-    (epoch : E) (message : M)
-    (history : SyncSignatureUnforgeability.History (E) M
-      (Sig))
-    (first : M) (answer : Option (Sig))
-    (hused : history epoch = some (first, answer)) :
-    (fixedHandler alg sk (Sum.inr (epoch, message))).run history =
-      pure (none, history) := by
-  change SyncSignatureUnforgeability.signingOracle
-    alg sk (epoch, message) history = _
-  exact SyncSignatureUnforgeability.signingOracle_used
-    alg sk history epoch message first answer hused
-
-/-- An unused epoch runs one ideal signing computation and records its optional answer. -/
-private theorem idealHandler_unused
-    [DecidableEq D] [SampleableType Response]
+/-- A signing query at an unused epoch runs the signer once against the ideal PRF and records the
+first request and its answer, even when the answer is `none`. -/
+theorem idealHandler_unused
     (alg : SyncSignatureAlg (OracleComp (PRFScheme.PRFOracleSpec D Response)) M PK SK Sig E)
-    (sk : SK)
-    (epoch : E) (message : M)
-    (history : SyncSignatureUnforgeability.History (E) M
-      (Sig))
-    (cache : ((D) →ₒ Response).QueryCache)
-    (hunused : history epoch = none) :
-    (idealHandler alg sk (Sum.inr (epoch, message))).run
-      (history, cache) =
-    (fun result => (result.1,
-      (Function.update history epoch (some (message, result.1)), result.2))) <$>
-      (simulateQ (PRFScheme.prfIdealQueryImpl
-        (D := D) (R := Response))
-        (alg.sign sk epoch message)).run cache := by
-  change (fun ⟨⟨answer, nextHistory⟩, nextCache⟩ =>
-      (answer, (nextHistory, nextCache))) <$>
-    (simulateQ (PRFScheme.prfIdealQueryImpl
-      (D := D) (R := Response))
-      (SyncSignatureUnforgeability.signingOracle
-        alg sk (epoch, message) history)).run cache = _
-  rw [SyncSignatureUnforgeability.signingOracle_unused
-    alg sk history epoch message hunused]
-  rw [simulateQ_bind, StateT.run_bind]
-  simp only [simulateQ_pure, StateT.run_pure, bind_pure_comp]
-  simp only [Functor.map_map]
+    (sk : SK) (epoch : E) (message : M) (history : History E M Sig)
+    (cache : (D →ₒ Response).QueryCache) (hunused : history epoch = none) :
+    (idealHandler alg sk (Sum.inr (epoch, message))).run (history, cache) =
+      (fun result => ((result.1,
+        (Function.update history epoch (some (message, result.1)), result.2)) :
+          (unifSpec + signingSpec E M Sig).Range (Sum.inr (epoch, message)) ×
+            (History E M Sig × (D →ₒ Response).QueryCache))) <$>
+        (simulateQ PRFScheme.prfIdealQueryImpl (alg.sign sk epoch message)).run cache := by
+  rw [idealHandler, QueryImpl.flattenStateT_mapStateTBase_apply_run]
+  change _ <$> (simulateQ PRFScheme.prfIdealQueryImpl
+    (alg.signingOracle sk (epoch, message) history)).run cache = _
+  rw [signingOracle_unused alg sk history epoch message hunused, simulateQ_bind,
+    StateT.run_bind]
+  simp only [simulateQ_pure, StateT.run_pure, bind_pure_comp, Functor.map_map]
+
+end idealHandler
+
+section direct
+
+variable {SK' : Type}
+
+private theorem directHandler_inl (alg : SyncSignatureAlg ProbComp M PK SK' Sig E) (sk : SK')
+    (q : ℕ) (history : History E M Sig) :
+    ((unifSpec.passthrough + signingKernelOracle (alg.sign sk)) (Sum.inl q)).run history =
+      (fun response => (response, history)) <$>
+        (liftM (unifSpec.query q) : ProbComp (unifSpec.Range q)) := by
+  simp [QueryImpl.passthrough_add, QueryImpl.add_apply_inl]
+
+private theorem directHandler_inr (alg : SyncSignatureAlg ProbComp M PK SK' Sig E) (sk : SK')
+    (request : E × M) (history : History E M Sig) :
+    ((unifSpec.passthrough + signingKernelOracle (alg.sign sk)) (Sum.inr request)).run history =
+      alg.signingOracle sk request history := by
+  simp only [QueryImpl.passthrough_add, QueryImpl.add_apply_inr]
   rfl
 
+end direct
 
-private theorem fixedHandler_unused
-    (alg : SyncSignatureAlg ProbComp M PK SK Sig E) (sk : SK)
-    (epoch : E) (message : M)
-    (history : SyncSignatureUnforgeability.History (E) M
-      (Sig))
-    (hunused : history epoch = none) :
-    (fixedHandler alg sk (Sum.inr (epoch, message))).run history =
-    (fun answer => (answer, Function.update history epoch (some (message, answer)))) <$>
-      alg.sign sk epoch message := by
-  change SyncSignatureUnforgeability.signingOracle
-    alg sk (epoch, message) history = _
-  rw [SyncSignatureUnforgeability.signingOracle_unused
-    alg sk history epoch message hunused]
-  simp [map_eq_bind_pure_comp]
-  rfl
+/-- Running a program with `idealHandler` and dropping the final PRF cache has the distribution of
+running it against the direct signer's signing oracle, `directAlg.runWithSigningOracle`.
 
-
-private theorem projected_history_update_map
-    (history : SyncSignatureUnforgeability.History (E) M
-      (Sig))
-    (epoch : E) (message : M)
-    (computation : ProbComp (Option (Sig) ×
-      ((D) →ₒ Response).QueryCache)) :
-    Prod.map id Prod.fst <$>
-      ((fun result => (result.1,
-        (Function.update history epoch (some (message, result.1)), result.2))) <$>
-        computation) =
-    (fun result => (result.1,
-      Function.update history epoch (some (message, result.1)))) <$> computation := by
-  simp [Functor.map_map, Prod.map]
-
-private theorem mem_support_history_update_map
-    (history : SyncSignatureUnforgeability.History (E) M
-      (Sig))
-    (epoch : E) (message : M)
-    (computation : ProbComp (Option (Sig) ×
-      ((D) →ₒ Response).QueryCache))
-    (result : Option (Sig) ×
-      (SyncSignatureUnforgeability.History (E) M
-        (Sig) ×
-        ((D) →ₒ Response).QueryCache))
-    (hresult : result ∈ support
-      ((fun signed => (signed.1,
-        (Function.update history epoch (some (message, signed.1)), signed.2))) <$>
-        computation)) :
-    ∃ signed ∈ support computation,
-      result = (signed.1,
-        (Function.update history epoch (some (message, signed.1)), signed.2)) := by
-  rw [support_map] at hresult
-  obtain ⟨signed, hsigned, heq⟩ := hresult
-  exact ⟨signed, hsigned, heq.symm⟩
-
-
-/-- Lift one-call signing laws and freshness preservation through the whole adaptive interaction. -/
-theorem signingRun_projected {SK' A : Type} [DecidableEq D] [SampleableType Response]
+The hypotheses concern one signing call at an unused epoch, from a history and cache satisfying
+the invariant `fresh`: `hsign` says the PRF-based signer under the ideal PRF has the direct
+signer's distribution, and `hpreserve` says the call keeps `fresh`. Typically `fresh` says that the
+cache holds no response at the PRF inputs of any unused epoch. -/
+theorem idealHandler_run_evalDistEq {SK' A : Type} [DecidableEq D] [SampleableType Response]
     (oracleAlg : SyncSignatureAlg (OracleComp (PRFScheme.PRFOracleSpec D Response)) M PK SK Sig E)
     (directAlg : SyncSignatureAlg ProbComp M PK SK' Sig E) (osk : SK) (dsk : SK')
-    (fresh : SyncSignatureUnforgeability.History E M Sig → (D →ₒ Response).QueryCache → Prop)
+    (fresh : History E M Sig → (D →ₒ Response).QueryCache → Prop)
     (hsign : ∀ ep msg history cache, fresh history cache → history ep = none →
-      (simulateQ (PRFScheme.prfIdealQueryImpl (D := D) (R := Response))
-        (oracleAlg.sign osk ep msg)).run' cache =ᵈ directAlg.sign dsk ep msg)
+      (simulateQ PRFScheme.prfIdealQueryImpl (oracleAlg.sign osk ep msg)).run' cache =ᵈ
+        directAlg.sign dsk ep msg)
     (hpreserve : ∀ ep msg history cache, fresh history cache → history ep = none →
-      ∀ result ∈ support ((simulateQ (PRFScheme.prfIdealQueryImpl (D := D) (R := Response))
-        (oracleAlg.sign osk ep msg)).run cache),
+      ∀ result ∈ support
+        ((simulateQ PRFScheme.prfIdealQueryImpl (oracleAlg.sign osk ep msg)).run cache),
       fresh (Function.update history ep (some (msg, result.1))) result.2)
-    (program : OracleComp (unifSpec + SyncSignatureUnforgeability.signingSpec E M Sig) A)
-    (history : SyncSignatureUnforgeability.History E M Sig)
-    (cache : (D →ₒ Response).QueryCache) (hfresh : fresh history cache) :
+    (program : OracleComp (unifSpec + signingSpec E M Sig) A)
+    (history : History E M Sig) (cache : (D →ₒ Response).QueryCache)
+    (hfresh : fresh history cache) :
     Prod.map id Prod.fst <$>
       (simulateQ (idealHandler oracleAlg osk) program).run (history, cache) =ᵈ
-      (simulateQ (fixedHandler directAlg dsk) program).run history := by
-  let relation := fun (left : SyncSignatureUnforgeability.History E M Sig ×
-      (D →ₒ Response).QueryCache) (right : SyncSignatureUnforgeability.History E M Sig) =>
-    left.1 = right ∧ fresh left.1 left.2
-  apply adaptiveRun_projected _ _ Prod.fst relation (fun _ _ h => h.1) _
-    program (history, cache) history ⟨rfl, hfresh⟩
-  intro query left right hrelated
-  rcases left with ⟨hist, table⟩
-  rcases hrelated with ⟨rfl, htable⟩
-  apply OracleComp.ProgramLogic.Relational.relTriple_of_projected_eq _ _ Prod.fst relation
-  · cases query with
-    | inl q =>
-        rw [idealHandler_uniform, fixedHandler_uniform]
-        simp [Functor.map_map]
-    | inr request =>
-        rcases request with ⟨ep, msg⟩
-        cases hused : hist ep with
-        | some previous =>
-            rcases previous with ⟨first, answer⟩
-            rw [idealHandler_used oracleAlg osk ep msg hist table first answer hused,
-              fixedHandler_used directAlg dsk ep msg hist first answer hused]
-            simp
-        | none =>
-            rw [idealHandler_unused oracleAlg osk ep msg hist table hused,
-              fixedHandler_unused directAlg dsk ep msg hist hused]
-            calc
-              _ = (fun result => (result.1,
-                  Function.update hist ep (some (msg, result.1)))) <$>
-                  (simulateQ (PRFScheme.prfIdealQueryImpl (D := D) (R := Response))
-                    (oracleAlg.sign osk ep msg)).run table :=
-                projected_history_update_map hist ep msg _
-              _ =ᵈ _ := by
-                simpa only [StateT.run'_eq, Functor.map_map] using
-                  (hsign ep msg hist table htable hused).map
-                    (fun answer => (answer, Function.update hist ep (some (msg, answer))))
-  · intro result hresult
-    refine ⟨rfl, ?_⟩
-    cases query with
-    | inl q =>
-        rw [idealHandler_uniform] at hresult
-        rw [support_map] at hresult
-        obtain ⟨answer, _, heq⟩ := hresult
-        subst result
-        exact htable
-    | inr request =>
-        rcases request with ⟨ep, msg⟩
-        cases hused : hist ep with
-        | some previous =>
-            rcases previous with ⟨first, answer⟩
-            rw [idealHandler_used oracleAlg osk ep msg hist table first answer hused] at hresult
-            simp only [support_pure, Set.mem_singleton_iff] at hresult
-            subst result
-            exact htable
-        | none =>
-            rw [idealHandler_unused oracleAlg osk ep msg hist table hused] at hresult
-            obtain ⟨signed, hsigned, heq⟩ :=
-              mem_support_history_update_map hist ep msg _ result hresult
-            subst result
-            exact hpreserve ep msg hist table htable hused signed hsigned
+      directAlg.runWithSigningOracle dsk program history := by
+  unfold runWithSigningOracle runWithSigningKernel
+  refine evalDistEq_map_run_simulateQ_of_inv (idealHandler oracleAlg osk) _ Prod.fst
+    (fun state => fresh state.1 state.2) ?_ ?_ program (history, cache) hfresh
+  · rintro (q | ⟨ep, msg⟩) ⟨hist, table⟩ htable
+    · rw [idealHandler_inl, directHandler_inl]
+      simp [Functor.map_map]
+    · rw [directHandler_inr]
+      cases hused : hist ep with
+      | some previous =>
+          rw [idealHandler_used oracleAlg osk ep msg hist table previous.1 previous.2 hused,
+            signingOracle_used directAlg dsk hist ep msg previous.1 previous.2 hused]
+          simp
+      | none =>
+          rw [idealHandler_unused oracleAlg osk ep msg hist table hused,
+            signingOracle_unused directAlg dsk hist ep msg hused, Functor.map_map,
+            bind_pure_comp]
+          have hmap := (hsign ep msg hist table htable hused).map
+            (fun answer => (answer, Function.update hist ep (some (msg, answer))))
+          rw [StateT.run'_eq, Functor.map_map] at hmap
+          exact hmap
+  · rintro (q | ⟨ep, msg⟩) ⟨hist, table⟩ htable result hresult
+    · rw [idealHandler_inl, support_map] at hresult
+      obtain ⟨_, _, rfl⟩ := hresult
+      exact htable
+    · cases hused : hist ep with
+      | some previous =>
+          rw [idealHandler_used oracleAlg osk ep msg hist table previous.1 previous.2 hused,
+            support_pure, Set.mem_singleton_iff] at hresult
+          subst result
+          exact htable
+      | none =>
+          rw [idealHandler_unused oracleAlg osk ep msg hist table hused, support_map] at hresult
+          obtain ⟨signed, hsigned, rfl⟩ := hresult
+          exact hpreserve ep msg hist table htable hused signed hsigned
 
-end SyncSignatureUnforgeability.PRFSimulation
+end SyncSignatureAlg.PRFSimulation

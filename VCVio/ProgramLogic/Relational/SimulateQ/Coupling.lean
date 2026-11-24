@@ -410,6 +410,36 @@ theorem relTriple_simulateQ_run'_of_query_map_eq
       (EqRel α) :=
   relTriple_eqRel_of_eq <| OracleComp.run'_simulateQ_eq_of_query_map_eq impl₁ impl₂ proj hproj oa s
 
+/-- **Forgetting part of the state of a simulation, under an invariant.** Let `impl₁` keep more
+state than `impl₂`, and let `proj : σ₁ → σ₂` forget the extra part. Suppose that from every state
+satisfying `inv`, each query to `impl₁`, with its new state passed through `proj`, has the same
+distribution as the same query to `impl₂` from the projected state, and that `impl₁` keeps `inv`.
+Then simulating `oa` under `impl₁` from a state satisfying `inv` and projecting the final state has
+the same distribution as simulating `oa` under `impl₂` from the projected state.
+
+The invariant lets the per-query step use facts about the extra state, such as cache entries that
+are still empty. `OracleComp.evalDistEq_map_run_simulateQ_eq_of_query_evalDistEq_map_eq` is the
+version without an invariant. -/
+theorem evalDistEq_map_run_simulateQ_of_inv
+    {σ₁ σ₂ : Type}
+    (impl₁ : QueryImpl spec (StateT σ₁ (OracleComp spec₁)))
+    (impl₂ : QueryImpl spec (StateT σ₂ (OracleComp spec₂)))
+    (proj : σ₁ → σ₂) (inv : σ₁ → Prop)
+    (hstep : ∀ t s, inv s →
+      Prod.map id proj <$> (impl₁ t).run s =ᵈ (impl₂ t).run (proj s))
+    (hinv : ∀ t s, inv s → ∀ y ∈ support ((impl₁ t).run s), inv y.2)
+    (oa : OracleComp spec α) (s : σ₁) (hs : inv s) :
+    Prod.map id proj <$> (simulateQ impl₁ oa).run s =ᵈ (simulateQ impl₂ oa).run (proj s) := by
+  have hrel := relTriple_simulateQ_run impl₁ impl₂ (fun s₁ s₂ => inv s₁ ∧ proj s₁ = s₂) oa
+    (fun t s₁ s₂ hrelated => by
+      obtain ⟨hs₁, rfl⟩ := hrelated
+      exact relTriple_of_projected_eq _ _ proj (fun s₁ s₂ => inv s₁ ∧ proj s₁ = s₂)
+        (hstep t s₁ hs₁) fun y hy => ⟨hinv t s₁ hs₁ y hy, rfl⟩)
+    s (proj s) ⟨hs, rfl⟩
+  have hmap := evalDistEq_map_of_relTriple (f := Prod.map id proj) (g := id)
+    (relTriple_post_mono hrel fun a b hab => Prod.ext hab.1 hab.2.2)
+  simpa only [id_map] using hmap
+
 end coupling
 
 /-- Query-bounded exact-output transport for `simulateQ`.
