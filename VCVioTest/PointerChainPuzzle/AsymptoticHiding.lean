@@ -138,16 +138,17 @@ noncomputable abbrev toyGame :
     (fun _ => id) (fun _ _ => 0)
 
 /-- **Satisfiability of the hypotheses of asymptotic hiding.** For the toy family, budgets
-`Q_pre = Q_on = lam` and `q_enc = 0`, and the polynomial `X + 9`, every hypothesis of
+`Q_pre = Q_on = lam`, `q_enc = 0` and constant puzzle work, every hypothesis of
 `hidingSecurityGame_secureAgainst_of_card` holds, with the class of all distinguisher families as
 `isPPT'`. -/
 theorem toyGame_secureAgainst :
-    toyGame.secureAgainst (hidingAdversaryClass (fun _ => 1) id id (fun _ => 0) fun _ => True) :=
-  hidingSecurityGame_secureAgainst_of_card (p := Polynomial.X + Polynomial.C 9)
+    toyGame.secureAgainst (hidingAdversaryClass (fun _ => 1) id id (fun _ => 0) fun _ => True) := by
+  have hId : Cslib.PolynomiallyBounded id := Cslib.polynomiallyBounded_iff_le.2 ⟨1, 1, by simp⟩
+  exact hidingSecurityGame_secureAgainst_of_card
     (isPPT' := fun _ => True) _ _ _ _ _ (fun _ => toyPRF_uniformKey)
     (fun _ => Function.injective_id) negligible_inv_card_bytes negligible_inv_card_bytes
-    negligible_inv_card_bytes (fun _ => by simp [solvePoints]) (fun _ => by simp)
-    (fun _ => by simp) (fun _ => by simp) (fun _ _ => trivial)
+    negligible_inv_card_bytes (Cslib.polynomiallyBounded_iff_le.2 ⟨9, 0, by simp [solvePoints]⟩)
+    hId hId (Cslib.polynomiallyBounded_iff_le.2 ⟨0, 0, by simp⟩) (fun _ _ => trivial)
     (fun _ _ => negligible_of_zero fun _ => prfAdvantage_multiKey_of_eq_zero _ rfl _)
 
 /-- The idle family has negligible advantage, as a member of the class. -/

@@ -149,45 +149,39 @@ noncomputable def hidingStatisticalBound [∀ lam, Fintype (S lam)] [∀ lam, Fi
       (qEnc lam : ℝ≥0∞) ^ 2 / (2 * Fintype.card (N lam))
 
 /-- The statistical terms are negligible when the hash, link and nonce spaces grow
-superpolynomially, salts exist, and the budgets and the puzzle work `solvePoints` are bounded by a
-polynomial `p` in `lam`. Each term is a polynomial numerator over one of `|L|`, `|S|` and `|N|`;
-the salt factor only enlarges a denominator. -/
+superpolynomially, salts exist, and the budgets and the puzzle work `solvePoints` are each
+polynomially bounded. The denominators are at least the corresponding cardinalities of `L`, `S`
+and `N`. -/
 theorem negligible_hidingStatisticalBound [∀ lam, Fintype (S lam)] [∀ lam, Fintype (L lam)]
     [∀ lam, Fintype (Salt lam)] [∀ lam, Fintype (N lam)] [∀ lam, Nonempty (Salt lam)]
     (hS : negligible fun lam => (Fintype.card (S lam) : ℝ≥0∞)⁻¹)
     (hL : negligible fun lam => (Fintype.card (L lam) : ℝ≥0∞)⁻¹)
     (hN : negligible fun lam => (Fintype.card (N lam) : ℝ≥0∞)⁻¹)
-    {Qpre Qon qEnc : ℕ → ℕ} {p : Polynomial ℕ}
-    (hP : ∀ lam, solvePoints (n lam) (m lam) ≤ p.eval lam) (hQpre : ∀ lam, Qpre lam ≤ p.eval lam)
-    (hQon : ∀ lam, Qon lam ≤ p.eval lam) (hqEnc : ∀ lam, qEnc lam ≤ p.eval lam) :
+    {Qpre Qon qEnc : ℕ → ℕ}
+    (hP : Cslib.PolynomiallyBounded fun lam => solvePoints (n lam) (m lam))
+    (hQpre : Cslib.PolynomiallyBounded Qpre) (hQon : Cslib.PolynomiallyBounded Qon)
+    (hqEnc : Cslib.PolynomiallyBounded qEnc) :
     negligible (hidingStatisticalBound n m S L Salt N Qpre Qon qEnc) := by
   refine negligible_add (negligible_add (negligible_add ?_ ?_) ?_) ?_
-  · refine negligible_of_le (fun lam => ?_) (negligible_natMul_of_poly_bound hL hQon)
+  · refine negligible_of_le (fun lam => ?_) (hL.polynomiallyBounded_mul hQon)
     split_ifs
     · rw [div_eq_mul_inv]
     · exact zero_le
-  · refine negligible_of_le (fun lam => ?_) (negligible_natMul_of_poly_bound hL hQpre)
+  · refine negligible_of_le (fun lam => ?_) (hL.polynomiallyBounded_mul hQpre)
     rw [div_eq_mul_inv]
     gcongr
     exact le_mul_of_one_le_left zero_le (Nat.one_le_cast.2 Fintype.card_pos)
-  · refine negligible_of_le (fun lam => le_of_eq ?_) (negligible_natMul_of_poly_bound hS
-      (g := fun lam => (Qpre lam + Qon lam) * (solvePoints (n lam) (m lam) + 1) +
-        solvePoints (n lam) (m lam) ^ 2) (p := (p + p) * (p + 1) + p ^ 2) fun lam => ?_)
-    · push_cast
-      rw [div_eq_mul_inv]
-    · simp only [Polynomial.eval_add, Polynomial.eval_mul, Polynomial.eval_pow,
-        Polynomial.eval_one]
-      gcongr
-      · exact hQpre lam
-      · exact hQon lam
-      · exact hP lam
-      · exact hP lam
-  · refine negligible_of_le (fun lam => ?_) (negligible_natMul_of_poly_bound hN
-      (g := fun lam => qEnc lam ^ 2) (p := p ^ 2) fun lam => by
-        rw [Polynomial.eval_pow]
-        exact Nat.pow_le_pow_left (hqEnc lam) 2)
-    push_cast
-    rw [div_eq_mul_inv]
+  · have hWork := hS.polynomiallyBounded_mul hP
+    have hWorkSucc := negligible_add hWork hS
+    have hQueries := negligible_add (hWorkSucc.polynomiallyBounded_mul hQpre)
+      (hWorkSucc.polynomiallyBounded_mul hQon)
+    refine negligible_of_le (fun lam => le_of_eq ?_) (negligible_add hQueries
+      (hWork.polynomiallyBounded_mul hP))
+    simp only [div_eq_mul_inv, Pi.add_apply]
+    ring
+  · refine negligible_of_le (fun lam => ?_)
+      ((hN.polynomiallyBounded_mul hqEnc).polynomiallyBounded_mul hqEnc)
+    rw [div_eq_mul_inv, pow_two, ← mul_assoc]
     gcongr
     exact le_mul_of_one_le_left zero_le one_le_two
 
@@ -279,17 +273,18 @@ theorem hidingSecurityGame_secureAgainst [∀ lam, Fintype (Salt lam)]
     hsecure
 
 /-- **Asymptotic hiding from growth conditions.** If `|S lam|`, `|L lam|` and `|N lam|` grow
-superpolynomially, salts exist, and the budgets and the puzzle work `solvePoints` are bounded by a
-polynomial in `lam`, the statistical terms are negligible (`negligible_hidingStatisticalBound`),
+superpolynomially, salts exist, and the budgets and the puzzle work `solvePoints` are each
+polynomially bounded, the statistical terms are negligible (`negligible_hidingStatisticalBound`),
 and `hidingSecurityGame_secureAgainst` applies. -/
 theorem hidingSecurityGame_secureAgainst_of_card [∀ lam, Nonempty (Salt lam)]
     (hprf : ∀ lam, (prf lam).UniformKey) (hctx : ∀ lam, Function.Injective (mkCtx lam))
     (hS : negligible fun lam => (Fintype.card (S lam) : ℝ≥0∞)⁻¹)
     (hL : negligible fun lam => (Fintype.card (L lam) : ℝ≥0∞)⁻¹)
     (hN : negligible fun lam => (Fintype.card (N lam) : ℝ≥0∞)⁻¹)
-    {Qpre Qon qEnc : ℕ → ℕ} {p : Polynomial ℕ}
-    (hP : ∀ lam, solvePoints (n lam) (m lam) ≤ p.eval lam) (hQpre : ∀ lam, Qpre lam ≤ p.eval lam)
-    (hQon : ∀ lam, Qon lam ≤ p.eval lam) (hqEnc : ∀ lam, qEnc lam ≤ p.eval lam)
+    {Qpre Qon qEnc : ℕ → ℕ}
+    (hP : Cslib.PolynomiallyBounded fun lam => solvePoints (n lam) (m lam))
+    (hQpre : Cslib.PolynomiallyBounded Qpre) (hQon : Cslib.PolynomiallyBounded Qon)
+    (hqEnc : Cslib.PolynomiallyBounded qEnc)
     {isEff : HidingAdversaryFamily n S L Salt Ctx N K → Prop}
     {isPPT' : ((lam : ℕ) → PRFAdversary (Fin (2 * qEnc lam) × ByteArray) (Bytes 32)) → Prop}
     (hreduce : ∀ A, hidingAdversaryClass m Qpre Qon qEnc isEff A →
