@@ -12,11 +12,9 @@ public import PolyFun.Control.Monad.Support.Instances
 /-!
 # Support of a Monadic Computation
 
-This file defines `support mx` — the set of possible outputs of a monadic computation `mx`
-— as well as `HasEvalFinset`, a typeclass for assigning a finite version of the support.
-
-The support is the `Set`-valued view of `MonadAttach.CanReturn` provided by PolyFun.
-Finite support and decidable membership are optional refinements of that view.
+This module re-exports PolyFun's `MonadAttach.support`, the set of values a computation can
+return. `HasEvalFinset` enumerates that set for result types with decidable equality.
+`HasEvalSet.Decidable` supplies a membership decision for every result type.
 -/
 
 @[expose] public section
@@ -125,7 +123,7 @@ lemma finSupport_eqRec {m} [hms : MonadAttach m] [hmfs : HasEvalFinset m]
 
 section decidable
 
-/-- Membership in the support of computations in. -/
+/-- Decides membership in `support mx` for each result type `α` and computation `mx : m α`. -/
 protected class HasEvalSet.Decidable (m : Type u → Type v) [MonadAttach m] where
   /-- A decision procedure for whether a value is a possible output of `mx`. -/
   mem_support_decidable {α : Type u} (mx : m α) : DecidablePred (· ∈ support mx)
