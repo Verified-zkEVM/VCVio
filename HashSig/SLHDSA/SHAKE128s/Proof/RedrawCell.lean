@@ -209,7 +209,7 @@ theorem xmssSignature_eq {left right : XmssSignature} (hwots : left.wots = right
 /-- The cells the union cache computes, one node at a time. -/
 theorem value_unionCache (publicSeed : Digest) (table : Cells × Padding)
     (cache : QueryCache HashSpec) (node : CanonicalGraph.Node) :
-    @CanonicalGraph.value (CacheReplay.replayQuery (unionCache publicSeed table cache))
+    CanonicalGraph.value (CacheReplay.replayQuery (unionCache publicSeed table cache))
         (table.1 CanonicalGraph.Node.secretSeed) publicSeed node = table.1 node :=
   congrFun (replayCells_unionCache publicSeed table cache) node
 

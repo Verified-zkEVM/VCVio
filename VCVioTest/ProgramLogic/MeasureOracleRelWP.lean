@@ -6,7 +6,9 @@ Authors: Devon Tuma
 
 module
 
+public import VCVio.ProgramLogic.Relational.FromUnary
 public import VCVio.ProgramLogic.Relational.Quantitative
+public import VCVio.ProgramLogic.Relational.WP.Qualitative
 public import VCVio.OracleComp.ProbComp.Basic
 
 /-!
@@ -41,6 +43,23 @@ example (mx my : ProbComp ℝ) (f g : ℝ → ProbComp ℝ) (R : ℝ → ℝ →
     MAlgRelOrdered.RelWP (mx >>= f) (my >>= g) R :=
   MAlgRelOrdered.relWP_bind_le mx my f g R h
 
+/-- Sequential coupling works for countable answer spaces and arbitrary real-valued outputs. -/
+example {ι : Type} {spec : OracleSpec ι} [AnswerMeasure spec] [∀ t, Countable (spec.Range t)]
+    (mx my : OracleComp spec ℝ) (f g : ℝ → OracleComp spec ℝ) (R : ℝ → ℝ → Prop)
+    (h : CouplingPost mx my fun a b ↦ CouplingPost (f a) (g b) R) :
+    CouplingPost (mx >>= f) (my >>= g) R :=
+  h.bind
+
+open scoped OracleComp.Necessary OracleComp.Rel.Qualitative in
+/-- Two unary support guarantees give a qualitative triple over countable oracle answers. -/
+example {ι₁ ι₂ α β : Type} {spec₁ : OracleSpec ι₁} {spec₂ : OracleSpec ι₂}
+    [AnswerMeasure spec₁] [AnswerMeasure spec₂]
+    [∀ t, Countable (spec₁.Range t)] [∀ t, Countable (spec₂.Range t)]
+    (mx : OracleComp spec₁ α) (my : OracleComp spec₂ β) (P : α → Prop) (Q : β → Prop)
+    (hx : Std.WP.wp mx P Lean.Order.bot) (hy : Std.WP.wp my Q Lean.Order.bot) :
+    VCVio.ProgramLogic.RelTriple True mx my (fun a b ↦ P a ∧ Q b) Lean.Order.bot Lean.Order.bot :=
+  (OracleComp.Rel.Qualitative.relTriple_iff_relTriple_basic mx my _).2 (relTriple_prod_of_wp hx hy)
+
 /-- Equality couplings of real-valued computations identify every event probability. -/
 example (mx my : ProbComp ℝ) (h : RelTriple mx my (EqRel ℝ)) (p : ℝ → Prop) :
     Pr{let x ← mx}[p x] = Pr{let y ← my}[p y] :=
@@ -64,15 +83,15 @@ example (mx my : ProbComp ℝ) (f g : ℝ → ProbComp ℝ) (post : ℝ → ℝ 
 /-- Total variation between real-valued output measures is the complement of the best coupled
 probability of equal outputs. -/
 example (mx my : ProbComp ℝ) :
-    (letI : MeasurableSpace ℝ := ⊤; 𝒟[mx].etvDist 𝒟[my]) =
+    (letI : MeasurableSpace ℝ := ⊤; 𝒟[mx].statEDist 𝒟[my]) =
       1 - eRelWP mx my (RelPost.indicator (EqRel ℝ)) :=
-  etvDist_eq_one_sub_eRelWP_eqRel mx my
+  statEDist_eq_one_sub_eRelWP_eqRel mx my
 
 /-- A total variation bound on real-valued outputs is an approximate equality coupling. -/
 example (mx my : ProbComp ℝ) (ε : ENNReal)
-    (h : (letI : MeasurableSpace ℝ := ⊤; 𝒟[mx].etvDist 𝒟[my]) ≤ ε) :
+    (h : (letI : MeasurableSpace ℝ := ⊤; 𝒟[mx].statEDist 𝒟[my]) ≤ ε) :
     ApproxRelTriple ε mx my (EqRel ℝ) :=
-  approxRelTriple_eqRel_iff_etvDist_le.2 h
+  approxRelTriple_eqRel_iff_statEDist_le.2 h
 
 /-- A finite oracle whose true branch is operationally possible but has zero mass. -/
 abbrev weightedSpec : OracleSpec (Fin 1) := Fin 1 →ₒ Bool

@@ -29,7 +29,7 @@ example (pkSeed : prims.PkSeed) (adrs : Adrs) (x : prims.Y) (i : ℕ) :
         let y ← PublicHash.f prims.core pkSeed (adrs.setHashAddress i) x
         PublicHash.f prims.core pkSeed (adrs.setHashAddress (i + 1)) y :
         OracleComp (publicHashSpec prims.core) prims.Y) := by
-  simp [chainM, chainWith]
+  simp [chainM, chainWith_succ, chainWith_zero]
 
 example (msg : prims.Y) (sk : prims.SkSeed) (pk : prims.PkSeed) (adrs : Adrs) :
     wotsSignM prims.core msg sk pk adrs =

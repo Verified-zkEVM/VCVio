@@ -232,12 +232,12 @@ theorem queryWeight_eq_zero_of_isTotalQueryBound {x : QuantumComp L s X A} {n j 
   | pure _ _ => rfl
   | primBind _ o k ih =>
     rw [QuantumComp.isTotalQueryBound_primBind_iff] at hx
-    exact ENNReal.tsum_eq_zero.mpr fun b ↦ ih b (hx b) hj _
+    exact tsum_eq_zero_iff.mpr fun b ↦ ih b (hx b) hj _
   | queryBind _ i B e k ih =>
     rw [QuantumComp.isTotalQueryBound_queryBind_iff] at hx
     cases j with
     | zero => have := hx.1; omega
-    | succ j => exact ENNReal.tsum_eq_zero.mpr fun r ↦ ih r (hx.2 r) (by omega) _
+    | succ j => exact tsum_eq_zero_iff.mpr fun r ↦ ih r (hx.2 r) (by omega) _
 
 /-- Trace-bounded weights summed over a bounded program are at most budget times trace. -/
 theorem totalWeight_le_of_isTotalQueryBound
@@ -258,13 +258,13 @@ theorem tsum_queryMass_le_of_isTotalQueryBound
     {ρ : Matrix (A × R.D) (A × R.D) ℂ} (hρ : ρ.PosSemidef) :
     ∑' i, R.queryMass I x ρ i ≤ n * ENNReal.ofReal ρ.trace.re := by
   classical
-  simp only [queryMass, ENNReal.tsum_comm (f := fun i j ↦ R.queryMassAt I x ρ i j)]
+  simp only [queryMass, tsum_comm (f := fun i j ↦ R.queryMassAt I x ρ i j)]
   rw [tsum_eq_sum (s := Finset.range n) (fun j hj ↦ ?_)]
   · calc
       _ ≤ ∑ _j ∈ Finset.range n, ENNReal.ofReal ρ.trace.re :=
         Finset.sum_le_sum fun j _ ↦ R.tsum_queryMassAt_le I x hρ j
       _ = _ := by simp
-  · exact ENNReal.tsum_eq_zero.mpr fun i ↦
+  · exact tsum_eq_zero_iff.mpr fun i ↦
       R.queryWeight_eq_zero_of_isTotalQueryBound I hx (by simpa using hj) ρ
 
 end QuantumRuntime

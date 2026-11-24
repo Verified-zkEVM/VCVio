@@ -30,7 +30,7 @@ fixed-width base-`w` checksum digits used by `WotsChecksum`.
 
 namespace SLHDSA.WotsEncoding
 
-open WotsChecksum
+open WotsChecksum VCVio.Algorithms.RadixEncoding
 
 /-- Number of meaningful bits in the fixed-width WOTS+ checksum representation. -/
 def checksumBitLength (p : Params) : ℕ := p.len2 * p.lgw
@@ -110,21 +110,6 @@ theorem fullDigits_lt (p : Params) (digits : List ℕ)
   rcases List.mem_append.mp hd with hd | hd
   · exact hbound d hd
   · exact checksumDigits_lt p digits d hd
-
-private theorem digitsOfBaseW_eq_range (n w len : ℕ) :
-    digitsOfBaseW n w len =
-      (List.range len).map (fun i => n / w ^ (len - 1 - i) % w) := by
-  induction len with
-  | zero => simp [digitsOfBaseW]
-  | succ len ih =>
-      rw [digitsOfBaseW, List.range_succ_eq_map]
-      simp only [List.map_cons, List.map_map, ih, List.cons.injEq]
-      constructor
-      · congr 2
-      · apply List.map_congr_left
-        intro i hi
-        congr 3
-        omega
 
 private theorem shifted_fit {x b len : ℕ} (hfit : x < (2 ^ b) ^ len) :
     x * 2 ^ ((8 - (len * b) % 8) % 8) < 256 ^ ((len * b + 7) / 8) := by

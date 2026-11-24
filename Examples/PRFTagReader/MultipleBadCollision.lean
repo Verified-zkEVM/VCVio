@@ -80,7 +80,8 @@ lemma multipleBadStep_bad_le
     · obtain ⟨r, hr, hz⟩ := (mem_support_bind_iff _ _ _).mp hz
       obtain ⟨step, _, hr⟩ := (mem_support_bind_iff _ _ _).mp hr
       erw [support_pure, Set.mem_singleton_iff] at hr
-      subst hz hr
+      obtain rfl := eq_of_mem_support_pure hz
+      subst hr
       simp [multipleBadAdvance, hbad, Bool.eq_false_iff.mpr hcached]
     rw [add_zero]
     obtain ⟨S, hScard, hS⟩ := hbounded tag
@@ -112,21 +113,21 @@ lemma multipleBadStep_sessionsUsed_eq
   intro z hz
   rw [multipleBadQueryImpl_tag_run tag ((s, c), sB)] at hz
   obtain ⟨r, hr, hz⟩ := (mem_support_bind_iff _ _ _).mp hz
-  subst hz
+  obtain rfl := eq_of_mem_support_pure hz
   by_cases hslot : s.sessionsUsed tag < sessionsPerTag
   · rw [multipleIdealQueryImpl_tag_run_of_lt tag s c hslot] at hr
     set advU := ({ sessionsUsed :=
         Function.update s.sessionsUsed tag (s.sessionsUsed tag + 1) } : UnlinkState TagId)
     obtain ⟨nonce, _, hr⟩ := (mem_support_bind_iff _ _ _).mp hr
     obtain ⟨r', _, hr⟩ := (mem_support_bind_iff _ _ _).mp hr
-    subst hr
+    obtain rfl := eq_of_mem_support_pure hr
     simp only [multipleBadAdvance]
     funext t
     by_cases htag : t = tag
     · subst htag; simp [advU, Function.update_self, hsync]
     · simp [advU, Function.update_of_ne htag, hsync]
   · rw [multipleIdealQueryImpl_tag_run_of_not_lt tag s c hslot] at hr
-    subst hr
+    obtain rfl := eq_of_mem_support_pure hr
     simp [multipleBadAdvance, hsync]
 
 /-- Reader queries leave the bad-world component untouched: in any reachable state of
@@ -142,7 +143,7 @@ lemma multipleBadStep_reader_state_eq
   intro z hz
   rw [multipleBadQueryImpl_reader_run transcript ((s, c), sB)] at hz
   obtain ⟨r, _, hz⟩ := (mem_support_bind_iff _ _ _).mp hz
-  subst hz
+  obtain rfl := eq_of_mem_support_pure hz
   rfl
 
 /-- Cache-bounded and sessions-used invariants of the bad-world state are preserved by reachable
@@ -166,14 +167,14 @@ lemma multipleBadStep_preserves
     intro z hz
     rw [multipleBadQueryImpl_tag_run tag ((s, c), sB)] at hz
     obtain ⟨r, hr, hz⟩ := (mem_support_bind_iff _ _ _).mp hz
-    subst hz
+    obtain rfl := eq_of_mem_support_pure hz
     by_cases hslot : s.sessionsUsed tag < sessionsPerTag
     · rw [multipleIdealQueryImpl_tag_run_of_lt tag s c hslot] at hr
       set advU := ({ sessionsUsed :=
           Function.update s.sessionsUsed tag (s.sessionsUsed tag + 1) } : UnlinkState TagId)
       obtain ⟨nonce, _, hr⟩ := (mem_support_bind_iff _ _ _).mp hr
       obtain ⟨r', _, hr⟩ := (mem_support_bind_iff _ _ _).mp hr
-      subst hr
+      obtain rfl := eq_of_mem_support_pure hr
       have hsBslot : sB.sessionsUsed tag < sessionsPerTag := hsync ▸ hslot
       refine ⟨?_, ?_, ?_⟩
       · exact unlinkBadTagNext_cacheBounded tag sB nonce r'.1 hbounded
@@ -184,17 +185,17 @@ lemma multipleBadStep_preserves
         · subst htag; simp [advU, unlinkBadTagNext, Function.update_self, hsync]
         · simp [advU, unlinkBadTagNext, Function.update_of_ne htag, hsync]
     · rw [multipleIdealQueryImpl_tag_run_of_not_lt tag s c hslot] at hr
-      subst hr
+      obtain rfl := eq_of_mem_support_pure hr
       simp only [multipleBadAdvance]
       exact ⟨hbounded, hused, hsync⟩
   | inr transcript =>
     intro z hz
     rw [multipleBadQueryImpl_reader_run transcript ((s, c), sB)] at hz
     obtain ⟨r, hr, hz⟩ := (mem_support_bind_iff _ _ _).mp hz
-    subst hz
+    obtain rfl := eq_of_mem_support_pure hz
     rw [multipleIdealQueryImpl_reader_run transcript s c] at hr
     obtain ⟨rs, _, hr⟩ := (mem_support_bind_iff _ _ _).mp hr
-    subst hr
+    obtain rfl := eq_of_mem_support_pure hr
     exact ⟨hbounded, hused, hsync⟩
 
 /-- **Bad-event union bound for `multipleBadQueryImpl`.** Starting from a multiple-bad state
@@ -261,13 +262,13 @@ lemma simulateQ_multipleBad_prob_le
             -- The bad state advanced via `unlinkBadTagNext`; remaining drops by one.
             rw [multipleBadQueryImpl_tag_run tag ((s, c), sB)] at hp_real
             obtain ⟨r, hr, hp⟩ := (mem_support_bind_iff _ _ _).mp hp_real
-            subst hp
+            obtain rfl := eq_of_mem_support_pure hp
             rw [multipleIdealQueryImpl_tag_run_of_lt tag s c hslot] at hr
             set advU := ({ sessionsUsed :=
                 Function.update s.sessionsUsed tag (s.sessionsUsed tag + 1) } : UnlinkState TagId)
             obtain ⟨nonce, _, hr⟩ := (mem_support_bind_iff _ _ _).mp hr
             obtain ⟨r', _, hr⟩ := (mem_support_bind_iff _ _ _).mp hr
-            subst hr
+            obtain rfl := eq_of_mem_support_pure hr
             exact unlinkBadRemaining_tagNext (sessionsPerTag := sessionsPerTag)
               tag sB nonce r'.1 (hsync ▸ hslot)
           have hih :=

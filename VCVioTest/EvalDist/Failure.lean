@@ -6,9 +6,14 @@ Authors: Devon Tuma
 
 module
 public import VCVio.EvalDist.Defs.Support.Failure
-public import VCVio.EvalDist.Defs.Measure.Deterministic
-public import VCVio.EvalDist.Defs.Measure.OptionT
-public import VCVio.EvalDist.Monad.Failure
+public import PolyFun.Control.Monad.Measure.Deterministic
+public import VCVio.EvalDist.Defs.Measure.Core
+public import VCVio.EvalDist.ProbabilityNotation
+public import ToMathlib.Control.Except
+public import ToMathlib.Control.Option
+public import PolyFun.Control.Monad.Measure.OptionT
+public import ToMathlib.MeasureTheory.Measure.GiryMonad
+public import PolyFun.Control.Monad.Measure.Failure
 
 /-!
 # Operational and measure failure canaries

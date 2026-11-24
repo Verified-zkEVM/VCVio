@@ -106,17 +106,4 @@ noncomputable def signedAt (prfSeed : Digest) (pk : PublicKey) (cache : QueryCac
       ∃ tree : Fin forsTrees,
         GraphStakes.forsIndex (MessageDigest.forsIndices answer) tree = index
 
-attribute [local irreducible] signedAt
-
-/-! ## Availability -/
-
-variable [HasQuery HashSpec Id]
-
-/-! ## The handler keeps its entries
-
-The growth `signedAt` is monotone along is the growth a run of the lazy handler performs: a hash
-query either reads the cache, leaving it alone, or writes an input the cache had no entry at. -/
-
-open OpenCache
-
 end SLHDSA.SHAKE128s.CacheAvailability

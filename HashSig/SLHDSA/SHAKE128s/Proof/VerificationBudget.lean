@@ -151,14 +151,16 @@ theorem verification_accepted_count_bounds (pk : PublicKey) (request : Message) 
       exact verification_count_bounds pk request wire message signature hframe hparse cache result
         hresult
 
-/-- The concrete experiment cannot accept a final forgery with fewer than 569 charged hashes. -/
-theorem accepted_outcome_work (adversary : Adversary) (outcome : Outcome)
-    (houtcome : outcome ∈ support (Security.run adversary)) (haccept : outcome.verified = true) :
+private theorem accepted_work_after_keygen (adversary : Adversary)
+    (keygen : OracleComp OracleWorld (SecretKey × PublicKey)) (program : ProbComp Outcome)
+    (hprogram : program = RandomOracleModel.run (keygen >>= afterKeygen adversary))
+    (outcome : Outcome) (houtcome : outcome ∈ support program) (haccept : outcome.verified = true) :
     569 ≤ outcome.counts.work := by
-  unfold Security.run RandomOracleModel.run Security.experiment at houtcome
+  subst program
+  unfold RandomOracleModel.run at houtcome
   rw [simulateQ_bind, StateT.run'_bind', mem_support_bind_iff] at houtcome
   obtain ⟨⟨⟨sk, pk⟩, keygenCache⟩, _hkeygen, hafterKeygen⟩ := houtcome
-  dsimp only at hafterKeygen
+  dsimp only [afterKeygen] at hafterKeygen
   rw [simulateQ_bind, StateT.run'_bind', mem_support_bind_iff] at hafterKeygen
   obtain ⟨⟨⟨⟨forgery, adversaryCounts⟩, signed⟩, adversaryCache⟩, _hadversary, hafterAdversary⟩ :=
     hafterKeygen
@@ -181,5 +183,12 @@ theorem accepted_outcome_work (adversary : Adversary) (outcome : Outcome)
   change 569 ≤ (Multiplicative.toAdd adversaryCounts + verifierCounts).work
   simp only [Counts.work, Pi.add_apply]
   omega
+
+/-- The concrete experiment cannot accept a final forgery with fewer than 569 charged hashes. -/
+theorem accepted_outcome_work (adversary : Adversary) (outcome : Outcome)
+    (houtcome : outcome ∈ support (Security.run adversary)) (haccept : outcome.verified = true) :
+    569 ≤ outcome.counts.work := by
+  exact accepted_work_after_keygen adversary Scheme.keygen (Security.run adversary) rfl
+    outcome houtcome haccept
 
 end SLHDSA.SHAKE128s.VerificationBudget
