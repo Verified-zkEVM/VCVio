@@ -99,7 +99,7 @@ private theorem prEvent_targetWin_le_programmed {V M G : Type}
 
 /-- A fresh valid forgery at the fixed guessed slot yields a co-CDH solution from the named
 reduction at that slot, after averaging the independent challenge. -/
-private theorem prEvent_targetWin_le_reductionAt {F G₁ G₂ Gₜ M : Type}
+private theorem prEvent_targetWin_le_coCDHReductionAt {F G₁ G₂ Gₜ M : Type}
     [Field F] [SampleableType F] [AddCommGroup G₁] [Module F G₁] [SampleableType G₁]
     [AddCommGroup G₂] [Module F G₂] [AddCommGroup Gₜ] [Module F Gₜ]
     [DecidableEq Gₜ] [DecidableEq M]
@@ -111,7 +111,7 @@ private theorem prEvent_targetWin_le_reductionAt {F G₁ G₂ Gₜ M : Type}
         (withFinalHash (A.main (x • g₁, x • g₂)))).run OracleState.empty}[
       TargetWin (x • ·) j z] ≤
     Pr{let h ← ($ᵗ G₁ : ProbComp G₁)
-       let y ← reductionAt A j g₁ g₂ (x • g₁) (x • g₂) h}[y = x • h] := by
+       let y ← coCDHReductionAt A j g₁ g₂ (x • g₁) (x • g₂) h}[y = x • h] := by
   refine (prEvent_targetWin_le_programmed (· • g₁) hg₁ (x • ·) j
     (A.main (x • g₁, x • g₂))).trans ?_
   let : MeasurableSpace G₁ := ⊤
@@ -122,12 +122,12 @@ private theorem prEvent_targetWin_le_reductionAt {F G₁ G₂ Gₜ M : Type}
     (M := M) (fun tag : Option F => tag.elim h (· • g₁))
     (fun tag => x • tag.elim h (· • g₁))
     (fun tag => tag.elim 0 (· • (x • g₁)))
-    (fun ρ => (simulated_signature_eq g₁ x ρ).symm) j
+    (fun ρ => (smul_comm ρ x g₁).symm) j
     (withFinalHash (A.main (x • g₁, x • g₂)))
     (fun z => ExtractEvent (x • ·) j (z.1, z.2, h))
   simp only [ExtractEvent, and_assoc, and_self] at habort
   refine habort.trans ?_
-  unfold reductionAt
+  unfold coCDHReductionAt
   apply prEvent_le_prEvent_bind_of_support
   intro z _ hz
   obtain ⟨hv, hc, hb⟩ := hz
@@ -170,26 +170,29 @@ private theorem prEvent_targetWin_eraseSelection {V M G : Type} [DecidableEq M]
 
 /-- For each fixed secret key, the scalar-sampled real game is bounded by the sum of the
 success probabilities of the named reductions at individual guessed slots. -/
-theorem prEvent_winning_le_sum_reductionAt {F G₁ G₂ Gₜ M : Type}
+theorem prEvent_winning_le_sum_coCDHReductionAt {F G₁ G₂ Gₜ M : Type}
     [Field F] [SampleableType F] [AddCommGroup G₁] [Module F G₁] [SampleableType G₁]
     [AddCommGroup G₂] [Module F G₂] [AddCommGroup Gₜ] [Module F Gₜ]
     [DecidableEq Gₜ] [DecidableEq M]
     {e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ} {g₁ : G₁} {g₂ : G₂}
     (A : SignatureAlg.UnforgeableAdversary (scheme (M := M) e g₁ g₂))
     (hg₁ : Function.Bijective (· • g₁ : F → G₁)) (x : F) (qH qS : ℕ)
-    (hQ : QueryBound A qH qS) :
+    (hQ : A.RomQueryBound qH qS) :
     Pr{let z ← (simulateQ (indexedOracle (fun _ => $ᵗ F) (· • g₁)
         (fun ρ => x • (ρ • g₁)) none)
         (withFinalHash (A.main (x • g₁, x • g₂)))).run OracleState.empty}[Winning (x • ·) z] ≤
     ∑ j : Fin (qH + qS + 1),
       Pr{let h ← ($ᵗ G₁ : ProbComp G₁)
-         let y ← reductionAt A j.val g₁ g₂ (x • g₁) (x • g₂) h}[y = x • h] := by
+         let y ← coCDHReductionAt A j.val g₁ g₂ (x • g₁) (x • g₂) h}[y = x • h] := by
   refine (prEvent_winning_le_sum_targetWin (fun _ => $ᵗ F) (· • g₁)
     (fun ρ => x • (ρ • g₁)) (x • ·) (A.main (x • g₁, x • g₂)) qH qS
-    (hQ _).1 (hQ _).2).trans ?_
+    ((hQ _).1.of_imp fun t ht => by
+      rcases t with ((_ | _) | _) <;> simp_all [SignatureAlg.IsHashQuery])
+    ((hQ _).2.of_imp fun t ht => by
+      rcases t with ((_ | _) | _) <;> simp_all [SignatureAlg.IsSignQuery])).trans ?_
   apply Finset.sum_le_sum
   intro j _
   rw [prEvent_targetWin_eraseSelection]
-  exact prEvent_targetWin_le_reductionAt A hg₁ x j.val
+  exact prEvent_targetWin_le_coCDHReductionAt A hg₁ x j.val
 
 end BLS

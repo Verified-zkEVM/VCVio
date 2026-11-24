@@ -575,7 +575,7 @@ theorem simulateQ_cachingOracle_cache_le {α : Type u}
   induction oa using OracleComp.inductionOn generalizing cache₀ z with
   | pure a =>
       simp only [StateT.run, simulateQ_pure] at hmem
-      obtain rfl := hmem
+      obtain rfl := (mem_support_pure_iff _ _).mp hmem
       exact le_rfl
   | query_bind t mx ih =>
       simp only [simulateQ_query_bind, StateT.run_bind] at hmem
@@ -594,3 +594,24 @@ theorem cachingOracle_query_caches (t : spec.Domain)
   QueryImpl.withCaching_run_caches _ t cache₀ _ hmem
 
 end OracleComp
+
+namespace QueryImpl
+
+variable {m : Type u → Type v} [Monad m] [LawfulMonad m]
+
+/-- A map `g` of caches that leaves the entry at `t` of `cache` unchanged and commutes with caching
+an answer at `t` commutes with a `withCaching` step on `t` from `cache`: running the step and
+mapping the final cache through `g` is running the step from `g cache`. -/
+lemma map_withCaching_run_of_commute (so : QueryImpl spec m)
+    (g : spec.QueryCache → spec.QueryCache) {t : spec.Domain} {cache : spec.QueryCache}
+    (h₁ : g cache t = cache t) (h₂ : ∀ u, g (cache.cacheQuery t u) = (g cache).cacheQuery t u) :
+    Prod.map id g <$> (so.withCaching t).run cache = (so.withCaching t).run (g cache) := by
+  cases hc : cache t with
+  | some u =>
+    rw [withCaching_run_some so hc, withCaching_run_some so (h₁.trans hc), map_pure]
+    rfl
+  | none =>
+    rw [withCaching_run_none so hc, withCaching_run_none so (h₁.trans hc), Functor.map_map]
+    simp only [Prod.map_apply, id_eq, h₂]
+
+end QueryImpl

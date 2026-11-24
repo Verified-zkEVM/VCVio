@@ -99,6 +99,7 @@ public import HashSig.SLHDSA.SHAKE128s.Proof.CarrierTail
 public import HashSig.SLHDSA.SHAKE128s.Proof.CarrierTailRecordings
 public import HashSig.SLHDSA.SHAKE128s.Proof.CarrierThin
 public import HashSig.SLHDSA.SHAKE128s.Proof.CarrierThinStages
+public import HashSig.SLHDSA.SHAKE128s.Proof.Chain
 public import HashSig.SLHDSA.SHAKE128s.Proof.ChargedProbe
 public import HashSig.SLHDSA.SHAKE128s.Proof.Checksum
 public import HashSig.SLHDSA.SHAKE128s.Proof.ChecksumAntichain
@@ -315,6 +316,7 @@ public import HashSig.SLHDSA.Security.ForsWitnesses
 public import HashSig.SLHDSA.Security.HedgedKeyBound
 public import HashSig.SLHDSA.Security.HiddenCells
 public import HashSig.SLHDSA.Security.HiddenUndrawn
+public import HashSig.SLHDSA.Security.HintCache
 public import HashSig.SLHDSA.Security.HmsgWitnesses
 public import HashSig.SLHDSA.Security.HonestTransfer
 public import HashSig.SLHDSA.Security.HypertreeWitnesses

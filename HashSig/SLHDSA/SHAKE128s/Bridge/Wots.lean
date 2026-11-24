@@ -142,12 +142,7 @@ theorem chainWith_succ' {Y : Type} {m : Type → Type*} [Monad m] [LawfulMonad m
     (hash : Adrs → Y → m Y) (adrs : Adrs) (x : Y) (i s : ℕ) :
     chainWith hash adrs x i (s + 1) =
       hash (adrs.setHashAddress i) x >>= fun y => chainWith hash adrs y (i + 1) s := by
-  induction s generalizing x i with
-  | zero => simp [chainWith]
-  | succ s ih =>
-    rw [chainWith, ih, bind_assoc]
-    refine bind_congr fun y => ?_
-    rw [chainWith, Nat.add_right_comm i 1 s, Nat.add_assoc]
+  exact VCVio.Algorithms.IndexedChain.chainM_succ_left _ i s x
 
 /-- **WOTS+ chains.** The paper's chain of `steps` steps from index `start` is FIPS 205's
 `chainM`, provided every hash index fits its 32-bit field. -/

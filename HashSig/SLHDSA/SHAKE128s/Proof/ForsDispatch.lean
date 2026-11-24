@@ -145,7 +145,7 @@ for an arbitrary `nodes`. -/
 theorem value_forsChild (cache : QueryCache HashSpec) (secretSeed publicSeed : Digest)
     (key : ForsKey) (height : Fin (forsHeight + 1)) (hpos : 0 < height.val)
     (index : Fin (forsTrees * 2 ^ (forsHeight - height.val))) (side : Fin 2) :
-    @value (CacheReplay.replayQuery cache) secretSeed publicSeed
+    value (CacheReplay.replayQuery cache) secretSeed publicSeed
         (.structural (forsChild key height hpos index side)) =
       @SLHDSA.SHAKE128s.Fors.node Id _ (CacheReplay.replayQuery cache) secretSeed publicSeed
         key.address (height.val - 1) (2 * index.val + side.val) := rfl
@@ -183,11 +183,11 @@ theorem deviatingCollision_of_pathCollision_canonical {α : Type}
             (BinaryPath.value combine index leaf siblings pathHeight.val)
             (siblings pathHeight.val)))) = some output) :
     StructuralTerm.DeviatingCollision publicSeed
-      (@value (CacheReplay.replayQuery cache) secretSeed publicSeed) result := by
+      (value (CacheReplay.replayQuery cache) secretSeed publicSeed) result := by
   have hlt : pathHeight.val + 1 < forsHeight + 1 := Nat.succ_lt_succ pathHeight.isLt
   have hpos : 0 < (⟨pathHeight.val + 1, hlt⟩ : Fin (forsHeight + 1)).val := Nat.succ_pos _
   refine deviatingCollision_of_pathCollision publicSeed
-    (@value (CacheReplay.replayQuery cache) secretSeed publicSeed) cache key.address
+    (value (CacheReplay.replayQuery cache) secretSeed publicSeed) cache key.address
     (@SLHDSA.SHAKE128s.Fors.node Id _ (CacheReplay.replayQuery cache) secretSeed publicSeed
       key.address)
     index pathHeight.val leaf siblings
@@ -248,7 +248,7 @@ theorem deviatingCollision_of_pathBranch {α : Type} (secretSeed publicSeed : Di
               index leaf siblings pathHeight.val)
             (siblings pathHeight.val)))) = some output) :
     StructuralTerm.DeviatingCollision publicSeed
-      (@value (CacheReplay.replayQuery cache) secretSeed publicSeed) result := by
+      (value (CacheReplay.replayQuery cache) secretSeed publicSeed) result := by
   refine deviatingCollision_of_pathCollision_canonical secretSeed publicSeed cache key index
     pathHeight hbound leaf siblings _ ?_ ?_ hcollision result output hcache hentry
   · intro h i l r
@@ -262,11 +262,12 @@ The companion of `Extraction.Hypertree.LayerCollision` for the FORS side: the th
 FORS verification that reaches the genuine public key can fault. The second and third are
 reported per tree, since the decomposition splits the fourteen trees independently. -/
 
-variable [HasQuery HashSpec Id]
+variable {hash : HasQuery HashSpec Id}
 
 /-- A concrete collision inside one FORS verification: at the root compression, on one tree's
 authentication path, or at one tree's revealed leaf. -/
-@[expose] def ForsCollision (secretSeed publicSeed : Digest) (address : Address)
+@[expose] def ForsCollision (hash : HasQuery HashSpec Id)
+    (secretSeed publicSeed : Digest) (address : Address)
     (indices : SLHDSA.SHAKE128s.Fors.Indices) (signature : ForsSignature) : Prop :=
   let nodes : Nat → Nat → Digest :=
     SLHDSA.SHAKE128s.Fors.node (m := Id) secretSeed publicSeed address
@@ -274,15 +275,15 @@ authentication path, or at one tree's revealed leaf. -/
     Hashing.tweakable (m := Id) publicSeed
       (SLHDSA.SHAKE128s.Fors.nodeAddress address height nodeIndex)
       (BinaryPath.pairBytes (left, right))
-  Extraction.Fors.CompressionCollision
-      (Extraction.Fors.recoveredRoot signature indices publicSeed address)
-      (Extraction.Fors.canonicalRoots secretSeed publicSeed address) publicSeed address ∨
+  Extraction.Fors.CompressionCollision hash
+      (Extraction.Fors.recoveredRoot hash signature indices publicSeed address)
+      (Extraction.Fors.canonicalRoots hash secretSeed publicSeed address) publicSeed address ∨
     ∃ i : Fin forsTrees,
       (∃ j < forsHeight, BinaryPath.Collision nodes combine
           (Extraction.Fors.leafIndex indices i)
-          (Extraction.Fors.recoveredLeaf signature indices publicSeed address i)
+          (Extraction.Fors.recoveredLeaf hash signature indices publicSeed address i)
           (Extraction.Fors.siblings signature i) j) ∨
-        Extraction.Fors.LeafCollision secretSeed publicSeed address
+        Extraction.Fors.LeafCollision hash secretSeed publicSeed address
           (Extraction.Fors.leafIndex indices i) (signature i).secret
 
 /-! ## The FORS dichotomy
@@ -292,7 +293,6 @@ siblings — so a signature with no collision anywhere is the signature `Fors.si
 merely one whose secrets agree with it. Reading it that way is what lets a canonical FORS part
 be compared with the part a signing request returned. -/
 
-omit [HasQuery HashSpec Id] in
 /-- The honest authentication index, as the extraction names it and as the signer computes it:
 the sibling of the selected leaf at that height, offset by the tree. -/
 theorem fors_auth_index (indices : SLHDSA.SHAKE128s.Fors.Indices) (i : Fin forsTrees)
@@ -324,8 +324,8 @@ theorem forsCollision_or_canonical_signature (secretSeed publicSeed : Digest) (a
     (hpk : SLHDSA.SHAKE128s.Fors.publicKeyFromSignature (m := Id) signature indices publicSeed
         address =
       Hashing.tweakable (m := Id) publicSeed (Extraction.Fors.rootAddress address)
-        (digestArrayBytes (Extraction.Fors.canonicalRoots secretSeed publicSeed address))) :
-    ForsCollision secretSeed publicSeed address indices signature ∨
+        (digestArrayBytes (Extraction.Fors.canonicalRoots hash secretSeed publicSeed address))) :
+    ForsCollision hash secretSeed publicSeed address indices signature ∨
       signature = SLHDSA.SHAKE128s.Fors.sign (m := Id) indices secretSeed publicSeed address := by
   classical
   rcases Extraction.Fors.publicKey_canonical_decomposition secretSeed publicSeed address indices
@@ -359,8 +359,8 @@ theorem forsCollision_or_canonical_secrets (secretSeed publicSeed : Digest) (add
     (hpk : SLHDSA.SHAKE128s.Fors.publicKeyFromSignature (m := Id) signature indices publicSeed
         address =
       Hashing.tweakable (m := Id) publicSeed (Extraction.Fors.rootAddress address)
-        (digestArrayBytes (Extraction.Fors.canonicalRoots secretSeed publicSeed address))) :
-    ForsCollision secretSeed publicSeed address indices signature ∨
+        (digestArrayBytes (Extraction.Fors.canonicalRoots hash secretSeed publicSeed address))) :
+    ForsCollision hash secretSeed publicSeed address indices signature ∨
       ∀ i : Fin forsTrees, (signature i).secret =
         SLHDSA.SHAKE128s.Fors.secret (m := Id) secretSeed publicSeed address
           (Extraction.Fors.leafIndex indices i) :=
@@ -374,7 +374,6 @@ The one arithmetic fact the dispatch needs about FORS indices: the global leaf i
 `Fin` bounds demand. `Correctness.offset_div_pow` splits the division across the tree offset,
 and the rest is the leaf index being below `2 ^ forsHeight`. -/
 
-omit [HasQuery HashSpec Id] in
 /-- The global leaf index of FORS tree `i`, shifted down by `level`, lies inside the rectangle of
 nodes at that height. -/
 theorem leafIndex_div_lt (indices : SLHDSA.SHAKE128s.Fors.Indices) (i : Fin forsTrees)
@@ -408,18 +407,17 @@ a tree path is a fold, which is what `PathEntry.queriesUnder_pathInput` is for �
 hypothesis below is phrased with `PathEntry.pathInput` and `PathEntry.pathCombine`, as that
 lemma delivers it. -/
 
-omit [HasQuery HashSpec Id] in
 /-- **A FORS collision is a charged structural event.** -/
 theorem deviatingCollision_of_forsCollision {α : Type}
     (secretSeed publicSeed : Digest) (cache : QueryCache HashSpec) (key : ForsKey)
     (indices : SLHDSA.SHAKE128s.Fors.Indices) (signature : ForsSignature)
-    (hcollision : @ForsCollision (CacheReplay.replayQuery cache) secretSeed publicSeed
+    (hcollision : ForsCollision (CacheReplay.replayQuery cache) secretSeed publicSeed
       key.address indices signature)
     (result : α × QueryCache HashSpec) (hcache : result.2 = cache)
     -- the root compression's own query
     (hcompressionEntry : cache (Hashing.tweakableInput publicSeed
       (StructuralNode.forsRoots key).address
-      (digestArrayBytes (@Extraction.Fors.recoveredRoot (CacheReplay.replayQuery cache)
+      (digestArrayBytes (Extraction.Fors.recoveredRoot (CacheReplay.replayQuery cache)
         signature indices publicSeed key.address))) ≠ none)
     -- every path step's own query
     (hpathEntry : ∀ (i : Fin forsTrees) (step : Fin forsHeight),
@@ -429,7 +427,7 @@ theorem deviatingCollision_of_forsCollision {α : Type}
           (PathEntry.pathCombine cache publicSeed
             (SLHDSA.SHAKE128s.Fors.nodeAddress key.address))
           (Extraction.Fors.leafIndex indices i)
-          (@Extraction.Fors.recoveredLeaf (CacheReplay.replayQuery cache) signature indices
+          (Extraction.Fors.recoveredLeaf (CacheReplay.replayQuery cache) signature indices
             publicSeed key.address i)
           (Extraction.Fors.siblings signature i) step.val) step) ≠ none)
     -- every revealed leaf's own query
@@ -437,7 +435,7 @@ theorem deviatingCollision_of_forsCollision {α : Type}
       (SLHDSA.SHAKE128s.Fors.nodeAddress key.address 0 (Extraction.Fors.leafIndex indices i))
       (bytesBE n (signature i).secret)) ≠ none) :
     StructuralTerm.DeviatingCollision publicSeed
-      (@value (CacheReplay.replayQuery cache) secretSeed publicSeed) result := by
+      (value (CacheReplay.replayQuery cache) secretSeed publicSeed) result := by
   simp only [ForsCollision] at hcollision
   rcases hcollision with hcomp | ⟨i, hpath | hleaf⟩
   · -- The root compression.
@@ -449,7 +447,7 @@ theorem deviatingCollision_of_forsCollision {α : Type}
     obtain ⟨output, houtput⟩ := Option.ne_none_iff_exists'.mp (hpathEntry i ⟨step, hstep⟩)
     exact deviatingCollision_of_pathBranch secretSeed publicSeed cache key
       (Extraction.Fors.leafIndex indices i)
-      (@Extraction.Fors.recoveredLeaf (CacheReplay.replayQuery cache) signature indices
+      (Extraction.Fors.recoveredLeaf (CacheReplay.replayQuery cache) signature indices
         publicSeed key.address i)
       (Extraction.Fors.siblings signature i) ⟨step, hstep⟩
       (leafIndex_div_lt indices i (step + 1) hstep) hcollision result output hcache houtput

@@ -60,7 +60,7 @@ theorem ideal_conversation_accepts_half (sim : Simulator Bool) (initialMessage :
     _ = 1 / 2 := ProbComp.evalDist_decide_eq_uniformBool_half (fun _ => sim.ciphertext) rfl
 
 /-- The actual leaking network is distinguishable from every allowed simulator. -/
-theorem leaking_tokenLaw_ne [MeasurableSpace (Option (Outcome Bool))]
+theorem leaking_tokenLaw_ne {outcomeSpace : MeasurableSpace (Option (Outcome Bool))}
     [MeasurableSingletonClass (Option (Outcome Bool))] (sim : Simulator Bool) :
     tokenLaw (network Bool Bool Unit)
       (implementation leakEnvironment (realOperations leakingSystem (fun _ => pure false)))
@@ -78,7 +78,7 @@ theorem leaking_tokenLaw_ne [MeasurableSpace (Option (Outcome Bool))]
   exact (ne_of_gt hlt) event
 
 /-- The same attack distinguishes FIFO execution with all required deliveries present. -/
-theorem leaking_fifoLaw_ne [MeasurableSpace (Option (Outcome Bool))]
+theorem leaking_fifoLaw_ne {outcomeSpace : MeasurableSpace (Option (Outcome Bool))}
     [MeasurableSingletonClass (Option (Outcome Bool))] (sim : Simulator Bool) :
     fifoLaw (network Bool Bool Unit)
       (implementation leakEnvironment (realOperations leakingSystem (fun _ => pure false)))
@@ -86,19 +86,19 @@ theorem leaking_fifoLaw_ne [MeasurableSpace (Option (Outcome Bool))]
       fifoLaw (network Bool Bool Unit) (implementation leakEnvironment (idealOperations sim))
         (pure false) fifoSchedule := by
   simpa only [fifoLaw_eq_evalDist, fifoExperiment_eq_tokenExperiment,
-    ← tokenLaw_eq_evalDist] using leaking_tokenLaw_ne sim
+    ← tokenLaw_eq_evalDist] using leaking_tokenLaw_ne (outcomeSpace := outcomeSpace) sim
 
 /-- Reusing a one-bit pad on zero and a second message exposes their XOR relation. -/
 @[expose] def reusedPair (message : Bool) : ProbComp (Bool × Bool) :=
   (fun key => (key, key ^^ message)) <$> ($ᵗ Bool)
 
 /-- The first projection of a reused pad has the original key law. -/
-theorem evalDist_reusedPair_fst [EvalDistSemantics ProbComp] (message : Bool) :
+theorem evalDist_reusedPair_fst {semantics : EvalDistSemantics ProbComp} (message : Bool) :
     𝒟[Prod.fst <$> reusedPair message] = 𝒟[$ᵗ Bool] := by
   simp [reusedPair]
 
 /-- The second projection of a reused pad has the original key law when the key is uniform. -/
-theorem evalDist_reusedPair_snd_of_uniform [EvalDistSemantics ProbComp]
+theorem evalDist_reusedPair_snd_of_uniform {semantics : EvalDistSemantics ProbComp}
     [LawfulEvalDistSemantics ProbComp]
     (hcoin : 𝒟[$ᵗ Bool] = ProbabilityTheory.uniformOn Set.univ) (message : Bool) :
     𝒟[Prod.snd <$> reusedPair message] = 𝒟[$ᵗ Bool] := by
@@ -147,7 +147,7 @@ theorem ideal_wrongPlaintext_rejects (sim : Simulator Bool) :
   simp [← map_bind]
 
 /-- Dropping correctness from the simulation theorem is unsound even with uniform ciphertexts. -/
-theorem brokenDecoder_tokenLaw_ne [MeasurableSpace (Option (Outcome Bool))]
+theorem brokenDecoder_tokenLaw_ne {outcomeSpace : MeasurableSpace (Option (Outcome Bool))}
     [MeasurableSingletonClass (Option (Outcome Bool))] (sim : Simulator Bool) :
     tokenLaw (network Bool Bool Unit)
       (implementation wrongPlaintextEnvironment

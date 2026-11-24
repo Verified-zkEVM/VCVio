@@ -35,8 +35,8 @@ lemma support_map_const
 
 @[grind .]
 lemma finSupport_map_const
-    [DecidableEq α] [DecidableEq β] [HasEvalFinset m]
-    (hx : (finSupport mx).Nonempty) : finSupport ((fun _ => y) <$> mx) =
+    [DecidableEq α] [DecidableEq β] [HasEvalFinset m] :
+    finSupport ((fun _ => y) <$> mx) =
       if (finSupport mx).Nonempty then {y} else ∅ := by
   grind
 

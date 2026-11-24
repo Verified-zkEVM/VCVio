@@ -22,7 +22,9 @@ import Mathlib.Tactic.GRewrite
 # Measure-valued uniform oracle canaries
 
 The canonical concrete uniform response certificates are resolved by typeclass synthesis.
-Coin, finite-range, and bit-vector samplers exercise direct measure semantics.
+Coin, finite-range, and bit-vector samplers exercise direct measure semantics. Two injections of
+a uniform draw give one distribution to a continuation that ignores the points they do not both
+cover, and not otherwise.
 -/
 
 public section
@@ -126,5 +128,27 @@ end repeatedSampling
 example (g : Bool → ProbComp Bool) (i : Bool) :
     (𝒟[Fintype.mPi g]).map (Function.eval i) = 𝒟[g i] :=
   evalDist_map_eval_mPi g (fun j => OracleComp.evalDist_apply_univ_eq_one (g j)) i
+
+/-! ### Coupling uniform draws through two injections -/
+
+/-- The identity and negation on `Bool` both cover every point, so a continuation sees the same
+distribution through either. -/
+example (k : Bool → ProbComp Bool) :
+    (do let a ← $ᵗ Bool; k (id a)) =ᵈ (do let a ← $ᵗ Bool; k (!a)) :=
+  SampleableType.uniformSample_bind_evalDistEq_of_cover (S := Set.univ)
+    Function.injective_id (fun a b h => by simpa using h)
+    (fun b _ => ⟨b, rfl⟩) (fun b _ => ⟨!b, Bool.not_not b⟩) k (pure true)
+    (fun b hb => absurd (Set.mem_univ b) hb)
+
+/-- `SampleableType.uniformSample_bind_evalDistEq_of_cover` needs the continuation to ignore its
+argument outside the covered set. Both injections below, `a ↦ a.toNat` and `a ↦ a.toNat + 1`,
+cover `{1}`, but the continuation tests for `0`, which only the first reaches, and the two
+distributions differ. -/
+example :
+    Pr{let x ← (do let a ← $ᵗ Bool; pure (decide (a.toNat = 0)) : ProbComp Bool)}[x = true] ≠
+      Pr{let x ← (do
+        let a ← $ᵗ Bool
+        pure (decide (a.toNat + 1 = 0)) : ProbComp Bool)}[x = true] := by
+  simp [SampleableType.prEvent_uniformSample]
 
 end VCVioTest.UniformAnswerMeasure

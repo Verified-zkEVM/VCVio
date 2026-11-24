@@ -16,7 +16,7 @@ trap 'rm -rf "$FIXTURE_REPO"' EXIT
 
 mkdir -p "$FIXTURE_REPO/scripts" "$FIXTURE_REPO/Lib" "$FIXTURE_REPO/Other"
 cp "$CHECKER_SRC" "$FIXTURE_REPO/scripts/check-expose-boundary.sh"
-cp "$REPO_ROOT/scripts/count-expose-boundary.py" "$FIXTURE_REPO/scripts/"
+cp "$REPO_ROOT/scripts/count-expose-boundary.py" "$REPO_ROOT/scripts/lean_source_tokens.py" "$FIXTURE_REPO/scripts/"
 CHECKER="$FIXTURE_REPO/scripts/check-expose-boundary.sh"
 
 export EXPOSE_BOUNDARY_LIBS="Lib Other"

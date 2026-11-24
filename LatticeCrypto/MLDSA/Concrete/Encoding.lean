@@ -16,11 +16,11 @@ import Mathlib.Data.List.GetD
 Concrete FIPS 204 byte packing for ML-DSA public keys, secret keys, signatures, and the
 auxiliary `w1` commitment encoding.
 
-This file deliberately exposes standalone `ByteArray` codecs instead of forcing them
-immediately into the abstract `Encoding.Laws` surface. The concrete ML-DSA carriers
-(`High = Rq`, `Power2High = Rq`, `Hint = Vector Bool ringDegree`) admit values outside the
-FIPS-valid compressed ranges, while the standardized encodings are only injective on the
-well-formed subset actually produced by the concrete primitives.
+This file exposes standalone `ByteArray` codecs rather than an instance of the abstract
+`MLDSA.Encoding` interface. The concrete ML-DSA carriers (`High = Rq`, `Power2High = Rq`,
+`Hint = Vector Bool ringDegree`) admit values outside the FIPS-valid compressed ranges, while the
+standardized encodings are only injective on the well-formed subset actually produced by the
+concrete primitives, so any roundtrip law holds only on that subset.
 -/
 
 public section

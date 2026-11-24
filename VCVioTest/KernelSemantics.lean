@@ -7,7 +7,10 @@ module
 
 public import VCVio.OracleComp.Coinductive.Responder
 public import VCVio.EvalDist.Defs.Measure
-public import VCVio.EvalDist.WithFailure
+public import PolyFun.Control.Monad.Measure.WithFailure
+public import VCVio.EvalDist.Defs.Measure.Core
+public import ToMathlib.MeasureTheory.Measure.GiryMonad
+public import VCVio.EvalDist.ProbabilityNotation
 public import VCVioTest.MeasureSemantics
 public import Mathlib.MeasureTheory.Constructions.BorelSpace.Basic
 

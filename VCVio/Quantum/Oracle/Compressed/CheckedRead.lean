@@ -23,20 +23,45 @@ open scoped Kronecker
 
 namespace Quantum
 
-variable {X Y : Type*} [Fintype X] [DecidableEq X] [Fintype Y] [DecidableEq Y]
-  [AddCommGroup Y]
+variable {X Y : Type*}
+
+/-- The translation recording an answer and whether the cell is populated. -/
+@[expose]
+def checkedReadValue [AddCommGroup Y] : Option Y → Y × ZMod 2
+  | none => (0, 0)
+  | some y => (y, 1)
+
+/-- Encodings of distinct checked outcomes are distinct response basis vectors. -/
+theorem checkedReadValue_injective [AddCommGroup Y] :
+    Function.Injective (checkedReadValue (Y := Y)) := by
+  intro a b h
+  cases a <;> cases b <;> simp_all [checkedReadValue]
+
+variable [Fintype X] [DecidableEq X] [Fintype Y] [DecidableEq Y]
+
+/-- The outcome projector of the checked read at an address. -/
+noncomputable def checkedReadProjector (x : X) (a : Option Y) :
+    Matrix (Database X Y) (Database X Y) ℂ :=
+  compressAll X Y * diagonal (fun D ↦ if D x = a then 1 else 0) * compressAll X Y
+
+/-- A checked projector factors into one-cell sums. -/
+theorem checkedReadProjector_apply (x : X) (a : Option Y) (D D' : Database X Y) :
+    checkedReadProjector x a D D' =
+      ∏ i, ∑ z, (if i = x then (if z = a then 1 else 0) else 1) *
+        (cellCompress Y (D i) z * cellCompress Y z (D' i)) := by
+  rw [checkedReadProjector, Matrix.mul_apply]
+  simp only [mul_diagonal]
+  simpa only [compressAll, mul_left_comm, mul_assoc] using
+    sum_mul_piKron_mul_piKron (fun _ : X ↦ cellCompress Y)
+      (fun _ : X ↦ cellCompress Y) x (fun z ↦ if z = a then 1 else 0) D D'
+
+variable [AddCommGroup Y]
 
 /-- A table translation, conjugated by compression of the original database. -/
 noncomputable def compressedReadTranslation (f : Option Y → Y × ZMod 2) :
     Matrix ((X × (Y × ZMod 2)) × Database X Y)
       ((X × (Y × ZMod 2)) × Database X Y) ℂ :=
   (1 ⊗ₖ compressAll X Y) * tableOracle (fun D x ↦ f (D x)) * (1 ⊗ₖ compressAll X Y)
-
-/-- The translation recording an answer and whether the cell is populated. -/
-@[expose]
-def checkedReadValue : Option Y → Y × ZMod 2
-  | none => (0, 0)
-  | some y => (y, 1)
 
 /-- The proof-only checked-read dilation on the original database. -/
 noncomputable def checkedReadUnitary :
@@ -130,11 +155,6 @@ theorem checkedReadUnitary_mem_unitaryGroup :
     checkedReadUnitary (X := X) (Y := Y) ∈ unitaryGroup _ ℂ :=
   compressedReadTranslation_mem_unitaryGroup _
 
-/-- The outcome projector of the checked read at an address. -/
-noncomputable def checkedReadProjector (x : X) (a : Option Y) :
-    Matrix (Database X Y) (Database X Y) ℂ :=
-  compressAll X Y * diagonal (fun D ↦ if D x = a then 1 else 0) * compressAll X Y
-
 /-- A fresh response extracts the corresponding table-value projector. -/
 theorem compressedReadTranslation_fresh (f : Option Y → Y × ZMod 2)
     (x : X) (z : Y × ZMod 2) (D D' : Database X Y) :
@@ -168,12 +188,6 @@ theorem checkedReadUnitary_fresh_of_ne (x x' : X) (z : Y × ZMod 2)
     simp [kroneckerMap_apply, hm]
   · simp
 
-omit [Fintype Y] [DecidableEq Y] in
-/-- Encodings of distinct checked outcomes are distinct response basis vectors. -/
-theorem checkedReadValue_injective : Function.Injective (checkedReadValue (Y := Y)) := by
-  intro a b h
-  cases a <;> cases b <;> simp_all [checkedReadValue]
-
 /-- A filled fresh-response branch is precisely the prescribed-answer projector. -/
 theorem checkedReadUnitary_fresh_some (x : X) (y : Y) (D D' : Database X Y) :
     checkedReadUnitary ((x, (y, 1)), D) ((x, (0, 0)), D') =
@@ -195,18 +209,6 @@ theorem checkedReadUnitary_fresh_none (x : X) (D D' : Database X Y) :
     intro E
     cases hE : E x <;> simp [checkedReadValue]
   simp only [h]
-
-omit [AddCommGroup Y] in
-/-- A checked projector factors into one-cell sums. -/
-theorem checkedReadProjector_apply (x : X) (a : Option Y) (D D' : Database X Y) :
-    checkedReadProjector x a D D' =
-      ∏ i, ∑ z, (if i = x then (if z = a then 1 else 0) else 1) *
-        (cellCompress Y (D i) z * cellCompress Y z (D' i)) := by
-  rw [checkedReadProjector, Matrix.mul_apply]
-  simp only [mul_diagonal]
-  simpa only [compressAll, mul_left_comm, mul_assoc] using
-    sum_mul_piKron_mul_piKron (fun _ : X ↦ cellCompress Y)
-      (fun _ : X ↦ cellCompress Y) x (fun z ↦ if z = a then 1 else 0) D D'
 
 /-- A checked branch changes only the queried cell. -/
 theorem eq_update_of_checkedReadProjector_ne_zero (x : X) (a : Option Y)

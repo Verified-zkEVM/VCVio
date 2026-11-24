@@ -24,7 +24,7 @@ open OracleComp OracleSpec
 
 namespace SLHDSA.SHAKE128s.Correctness.Merkle
 
-variable [HasQuery HashSpec Id]
+variable {hash : HasQuery HashSpec Id}
 
 /-- Verifying an honest XMSS signature recovers the subtree root. -/
 theorem publicKeyFromSignature_sign (message secretSeed publicSeed : Digest)

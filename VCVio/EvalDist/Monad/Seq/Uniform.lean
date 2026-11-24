@@ -6,7 +6,7 @@ Authors: Devon Tuma
 
 module
 public import VCVio.EvalDist.Monad.Seq.Measure
-public import ToMathlib.Probability.UniformOn
+public import ToCslib.Probability.UniformOn
 
 /-!
 # Combining independent uniform draws
