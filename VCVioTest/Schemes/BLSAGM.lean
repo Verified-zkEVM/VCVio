@@ -101,7 +101,7 @@ in the concrete (1,1)-DLog experiment. -/
 theorem dlog11_identity_guess_probability :
     Pr{let b ← (DLog11.experiment (1 : ZMod 101) (1 : ZMod 101)
       (fun g _ _ _ => pure g))}[b = true] = (1 / 101 : ℝ≥0∞) := by
-  simp only [DLog11.experiment, prEvent_norm, decide_eq_true_eq]
+  simp only [DLog11.experiment_eq, prEvent_norm, decide_eq_true_eq]
   simpa [eq_comm] using
     SampleableType.prEvent_uniformSample_eq_singleton (1 : ZMod 101)
 

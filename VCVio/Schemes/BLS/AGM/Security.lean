@@ -231,7 +231,7 @@ theorem unforgeableAdvantage_le_of_algebraic {F M G₁ G₂ Gₜ : Type}
   have hgood : Pr{let b ← DLog11.experiment g₁ g₂ (goodReduction A)}[b = true] =
       Pr{let z ← game}[good z] := by
     rw [← horder.prEvent_eq good]
-    simp only [DLog11.experiment, prEvent_norm, decide_eq_true_eq]
+    simp only [DLog11.experiment_eq, prEvent_norm, decide_eq_true_eq]
     let : MeasurableSpace F := ⊤
     rw [prEvent_bind_of_discrete, prEvent_bind_of_discrete]
     apply MeasureTheory.lintegral_congr
@@ -285,7 +285,7 @@ theorem unforgeableAdvantage_le_of_algebraic {F M G₁ G₂ Gₜ : Type}
          let z ← pub (fun i => a i * α + b i)}[
         ((AGM.functional S z.2).1 - ∑ i, AGM.gap S z.2 i * b i) /
           (∑ i, AGM.gap S z.2 i * a i) = α] := by
-    simp only [DLog11.experiment, prEvent_norm, decide_eq_true_eq]
+    simp only [DLog11.experiment_eq, prEvent_norm, decide_eq_true_eq]
     let : MeasurableSpace F := ⊤
     rw [prEvent_bind_of_discrete, prEvent_bind_of_discrete]
     apply MeasureTheory.lintegral_congr
