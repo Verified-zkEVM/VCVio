@@ -23,10 +23,6 @@ namespace Schnorr.AGM.Reduction
 
 variable {F G M : Type}
 
-/-- Select the adversary's live hash calls for the explicit query budget. -/
-@[expose] def hashRequest (q : Explained F (Request M) (Group G)) : Bool :=
-  match q.value.data with | .hash _ => true | _ => false
-
 private theorem read_bad [Field F]
     [DecidableEq F] [DecidableEq G] [DecidableEq M] [SampleableType F] [Fintype F]
     (s : State F G M) (hb : s.bad = false) (key : M × G) (a : AffineForm F) :
@@ -35,7 +31,7 @@ private theorem read_bad [Field F]
   | some e => simp [read, StateT.run, hc, hb]
   | none =>
       simp only [read, StateT.run, hc, bind_pure_comp, prEvent_map,
-        record, hb, Bool.false_or, decide_eq_true_eq, bad_challenge_iff]
+        record, hb, Bool.false_or, decide_eq_true_eq, add_eq_zero_iff_eq_neg']
       exact (SampleableType.prEvent_uniformSample_eq_singleton (-a.lin)).le
 
 private theorem handler_bad [Field F] [AddCommGroup G] [Module F G]
@@ -114,7 +110,7 @@ private theorem finish_bad [Field F] [AddCommGroup G] [Module F G]
   · simp [hb]
 
 /-- The final verifier query adds one opportunity for the exceptional challenge. -/
-theorem run_bad [Field F] [AddCommGroup G] [Module F G]
+private theorem run_bad [Field F] [AddCommGroup G] [Module F G]
     [DecidableEq F] [DecidableEq G] [DecidableEq M] [SampleableType F] [Fintype F]
     (g pk : G) (adv : Schnorr.AlgebraicAdversary F G M) (qH : Nat)
     (hq : IsQueryBoundP (adv.main (initial g pk)) (fun q => hashRequest q = true) qH) :
@@ -132,7 +128,7 @@ theorem run_bad [Field F] [AddCommGroup G] [Module F G]
 
 /-- Accepted executions are bounded by correct extraction and one exceptional-challenge
 term per hash query, including the final verification query. -/
-theorem run_success_le [Field F] [AddCommGroup G] [Module F G]
+private theorem run_success_le [Field F] [AddCommGroup G] [Module F G]
     [DecidableEq F] [DecidableEq G] [DecidableEq M] [SampleableType F] [Fintype F]
     (g : G) (hg : Function.Injective (fun x : F => x • g))
     (x : F) (adv : Schnorr.AlgebraicAdversary F G M) (qH : Nat)

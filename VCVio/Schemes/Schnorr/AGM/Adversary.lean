@@ -62,6 +62,14 @@ inductive Request (M : Type) where
   | .hash _ => (q.value.groups ()).length = 1
   | _ => q.value.groups () = []
 
+/-- Signing requests, counted by the signing-query budget. -/
+@[expose] def signRequest {F M G : Type} (q : Explained F (Request M) (Group G)) : Bool :=
+  match q.value.data with | .sign _ => true | _ => false
+
+/-- The adversary's own hash requests, counted by the hash-query budget. -/
+@[expose] def hashRequest {F M G : Type} (q : Explained F (Request M) (Group G)) : Bool :=
+  match q.value.data with | .hash _ => true | _ => false
+
 /-- The existing signature game's oracle family, including signing queries. -/
 abbrev rawSpec (F M G : Type) := (unifSpec + (M × G →ₒ F)) + (M →ₒ G × F)
 

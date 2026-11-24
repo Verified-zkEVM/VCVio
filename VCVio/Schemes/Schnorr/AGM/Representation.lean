@@ -7,7 +7,6 @@ Authors: Kobi Gurkan, Quang Dao
 module
 public import VCVio.Schemes.Schnorr.AGM.Adversary
 public import VCVio.CryptoFoundations.GroupModel.LinearFunctional.Affine
-public import VCVio.CryptoFoundations.GroupModel.LinearFunctional.Interaction
 
 /-! # Schnorr affine representations
 
@@ -43,7 +42,7 @@ theorem evalPoint_signingRepresentation [Field F] [AddCommGroup G] [Module F G]
   ⟨(terms.map fun p => p.1 * p.2.const).sum, (terms.map fun p => p.1 * p.2.lin).sum⟩
 
 /-- Affine combination commutes with interpretation in the group. -/
-theorem evalPoint_combine [Field F] [AddCommGroup G] [Module F G]
+private theorem evalPoint_combine [Field F] [AddCommGroup G] [Module F G]
     (terms : List (F × AffineForm F)) (g pk : G) :
     evalPoint (combine terms) g pk = (terms.map fun p => p.1 • evalPoint p.2 g pk).sum := by
   induction terms with
@@ -73,7 +72,7 @@ theorem evalPoint_combine [Field F] [AddCommGroup G] [Module F G]
   combine (reps.mapIdx fun n a => ((coeff[n]?).getD 0, a))
 
 /-- Flattening preserves the group element described by the outgoing explanation. -/
-theorem evalPoint_flatten [Field F] [AddCommGroup G] [Module F G]
+private theorem evalPoint_flatten [Field F] [AddCommGroup G] [Module F G]
     (g pk : G) (coeff : List F) (reps : List (AffineForm F)) :
     evalPoint (flatten coeff reps) g pk = evaluate coeff (representedBasis g pk reps ()) := by
   rw [flatten, evalPoint_combine]
@@ -108,17 +107,5 @@ theorem extract [Field F] [AddCommGroup G] [Module F G]
   apply (div_eq_iff hne).2
   rw [hz]
   ring
-
-/-- Precisely one challenge cancels a fixed affine coefficient. -/
-theorem bad_challenge_iff [Field F] (a : AffineForm F) (c : F) :
-    a.lin + c = 0 ↔ c = -a.lin := by
-  constructor <;> intro h <;> linear_combination h
-
-/-- A coefficient fixed before a uniform challenge is exceptional with probability `1/|F|`. -/
-theorem bad_challenge_probability [Field F] [SampleableType F] [Fintype F]
-    (a : AffineForm F) :
-    Pr{let c ← $ᵗ F}[a.lin + c = 0] = (Fintype.card F : ENNReal)⁻¹ := by
-  simp only [bad_challenge_iff]
-  exact SampleableType.prEvent_uniformSample_eq_singleton (-a.lin)
 
 end Schnorr.AGM

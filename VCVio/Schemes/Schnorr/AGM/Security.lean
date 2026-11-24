@@ -39,9 +39,9 @@ theorem unforgeableAdvantage_le_of_algebraic {F G M : Type}
     (g : G) (hg : Function.Bijective (fun x : F => x • g))
     (A : AlgebraicAdversary F G M) (qS qH : ℕ)
     (hS : ∀ pk, IsQueryBoundP (A.main (AGM.initial g pk))
-      (fun q => AGM.Reduction.signRequest q = true) qS)
+      (fun q => AGM.signRequest q = true) qS)
     (hH : ∀ pk, IsQueryBoundP (A.main (AGM.initial g pk))
-      (fun q => AGM.Reduction.hashRequest q = true) qH) :
+      (fun q => AGM.hashRequest q = true) qH) :
     SignatureAlg.unforgeableAdvantage (FiatShamir.runtime (Commit := G) (Chal := F) M)
         (A.toUnforgeableAdversary g) ≤
       Pr{let b ← DiffieHellman.dlogExperiment g (agmReduction g A)}[b = true] +

@@ -21,14 +21,6 @@ public section
 open OracleComp OracleSpec GroupModel.Interaction DiffieHellman
 open scoped ENNReal
 
-namespace Schnorr.AGM.Reduction
-
-/-- Select signing requests for the explicit signing-query budget. -/
-@[expose] def signRequest {F M G : Type} (q : Explained F (Request M) (Group G)) : Bool :=
-  match q.value.data with | .sign _ => true | _ => false
-
-end Schnorr.AGM.Reduction
-
 namespace Schnorr
 
 /-- Erasing explanations forwards exactly the counted signing and hash requests. -/
@@ -37,25 +29,25 @@ theorem AlgebraicAdversary.toUnforgeableAdversary_queryBound {F G M : Type}
     [SampleableType G] [DecidableEq M] (A : AlgebraicAdversary F G M) (g pk : G)
     (qS qH : ℕ)
     (hS : IsQueryBoundP (A.main (AGM.initial g pk))
-      (fun q => AGM.Reduction.signRequest q = true) qS)
+      (fun q => AGM.signRequest q = true) qS)
     (hH : IsQueryBoundP (A.main (AGM.initial g pk))
-      (fun q => AGM.Reduction.hashRequest q = true) qH) :
+      (fun q => AGM.hashRequest q = true) qH) :
     FiatShamir.signHashQueryBound (M := M) (oa := (A.toUnforgeableAdversary g).main pk) qS qH := by
   constructor
   · apply (isQueryBoundP_map_iff _ _ _).mpr
     refine hS.simulateQ_of_step ?_ ?_
     · rintro ⟨⟨q, groups⟩, coeff⟩ hq
-      cases q <;> simp_all [AGM.Reduction.signRequest, AGM.oracle]
+      cases q <;> simp_all [AGM.signRequest, AGM.oracle]
     · rintro ⟨⟨q, groups⟩, coeff⟩ hq
-      cases q <;> simp_all [AGM.Reduction.signRequest, AGM.oracle,
+      cases q <;> simp_all [AGM.signRequest, AGM.oracle,
         isQueryBoundP_query_bind_iff, isQueryBoundP_pure]
   · apply (isQueryBoundP_map_iff _ _ _).mpr
     refine hH.simulateQ_of_step ?_ ?_
     · rintro ⟨⟨q, groups⟩, coeff⟩ hq
-      cases q <;> simp_all [AGM.Reduction.hashRequest, AGM.oracle,
+      cases q <;> simp_all [AGM.hashRequest, AGM.oracle,
         isQueryBoundP_query_bind_iff, isQueryBoundP_pure]
     · rintro ⟨⟨q, groups⟩, coeff⟩ hq
-      cases q <;> simp_all [AGM.Reduction.hashRequest, AGM.oracle]
+      cases q <;> simp_all [AGM.hashRequest, AGM.oracle]
 
 /-- The original Schnorr EUF-CMA advantage is bounded by the existing freshness-preserving
 Fiat-Shamir signing simulation and the standard programming-collision loss. -/
@@ -65,9 +57,9 @@ theorem unforgeableAdvantage_le_simulatedCma {F G M : Type}
     (g : G) (hg : Function.Bijective (fun x : F => x • g))
     (A : AlgebraicAdversary F G M) (qS qH : ℕ)
     (hS : ∀ pk, IsQueryBoundP (A.main (AGM.initial g pk))
-      (fun q => AGM.Reduction.signRequest q = true) qS)
+      (fun q => AGM.signRequest q = true) qS)
     (hH : ∀ pk, IsQueryBoundP (A.main (AGM.initial g pk))
-      (fun q => AGM.Reduction.hashRequest q = true) qH) :
+      (fun q => AGM.hashRequest q = true) qH) :
     SignatureAlg.unforgeableAdvantage (FiatShamir.runtime (Commit := G) (Chal := F) M)
         (A.toUnforgeableAdversary g) ≤
       Pr{let b ← (FiatShamir.Stateful.cmaSim M G F (dlogGenerable F g)
