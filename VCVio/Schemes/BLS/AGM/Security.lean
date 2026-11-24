@@ -96,9 +96,10 @@ private theorem goodReduction_table {F M G₁ G₂ Gₜ : Type}
   simpa only [BLS.goodReduction, bind_pure_comp, map_bind, map_pure, Functor.map_map, view, table,
     goodRep, Function.comp_def, smul_smul, mul_comm] using h
 
-private theorem pair_tables {F ι : Type} [SampleableType F] [Fintype ι] [DecidableEq ι] :
+private theorem pair_tables {F ι : Type} [SampleableType F] [Fintype ι] :
     (do let a ← $ᵗ (ι → F); let b ← $ᵗ (ι → F); return fun i => (a i, b i)) =ᵈ
       ($ᵗ (ι → F × F) : ProbComp _) := by
+  classical
   apply SampleableType.evalDistEq_uniformSample_pair_of_bijective
   constructor
   · intro ⟨a, b⟩ ⟨c, d⟩ h

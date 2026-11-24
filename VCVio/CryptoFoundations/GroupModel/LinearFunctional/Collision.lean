@@ -25,8 +25,9 @@ namespace GroupModel.LinearFunctional
 /-- A nonzero functional of an independent uniform vector hits a prescribed value with
 probability at most the reciprocal field cardinality. -/
 theorem prEvent_sum_mul_uniform_le {F ι : Type} [Field F] [Fintype F] [SampleableType F]
-    [Fintype ι] [DecidableEq ι] (L : ι → F) (j : ι) (hj : L j ≠ 0) (t : F) :
+    [Fintype ι] (L : ι → F) (j : ι) (hj : L j ≠ 0) (t : F) :
     Pr{let ρ ← $ᵗ (ι → F)}[∑ i, L i * ρ i = t] ≤ 1 / Fintype.card F := by
+  classical
   have hsum (g : ι → F) (u : F) :
       ∑ i, L i * Function.update g j u i =
         L j * u + ∑ i ∈ univ.erase j, L i * g i := by
@@ -43,11 +44,12 @@ theorem prEvent_sum_mul_uniform_le {F ι : Type} [Field F] [Fintype F] [Sampleab
 /-- Adaptive coefficients still obey the collision bound when their entire view is sampled
 before the independent uniform vector. -/
 theorem prEvent_adaptive_sum_mul_uniform_le {F ι γ : Type}
-    [Field F] [Fintype F] [SampleableType F] [Fintype ι] [DecidableEq ι]
+    [Field F] [Fintype F] [SampleableType F] [Fintype ι]
     (oa : ProbComp γ) (L : γ → ι → F) (j : γ → ι) (t : γ → F)
     (h : ∀ z ∈ support oa, L z (j z) ≠ 0) :
     Pr{let z ← oa; let ρ ← $ᵗ (ι → F)}[∑ i, L z i * ρ i = t z] ≤
       1 / Fintype.card F := by
+  classical
   have hb := prEvent_bind_le_of_forall_le_of_support oa
     (fun z => (fun ρ : ι → F => ∑ i, L z i * ρ i = t z) <$> ($ᵗ (ι → F))) id
     (ε := 1 / Fintype.card F) (fun z hz => by
