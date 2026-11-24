@@ -29,6 +29,8 @@ public import VCVio.CryptoFoundations.Asymptotics.ReductionCost
 public import VCVio.CryptoFoundations.Asymptotics.Security
 public import VCVio.CryptoFoundations.CommitmentScheme
 public import VCVio.CryptoFoundations.CoordinateFork
+public import VCVio.CryptoFoundations.CoordinateFork.BlockFinder
+public import VCVio.CryptoFoundations.CoordinateFork.BlockOperational
 public import VCVio.CryptoFoundations.CoordinateFork.Extraction
 public import VCVio.CryptoFoundations.CoordinateFork.Finder
 public import VCVio.CryptoFoundations.CoordinateFork.Operational
