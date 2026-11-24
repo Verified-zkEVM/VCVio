@@ -11,9 +11,11 @@ public import Mathlib.Algebra.Field.ZMod
 
 /-! # Concrete algebraic BLS fixtures over the field of order 101
 
-The algebraic fixture asks one hash query and explains its output by the newly received
-point. Multiplication is the pairing and both generators are one. Sampling uses `Fin 101`
-directly, so module initialization does not enumerate a field.
+Multiplication is the pairing and both generators are one. Each fixture asks one hash query.
+`oneHash` explains its output by the newly received point; `keyReader` reads the secret scalar
+off the public key, since the first generator is one, and forges on every run, so the theorem's
+two reductions together must succeed with probability at least `100 / 101`. Sampling uses
+`Fin 101` directly, so module initialization does not enumerate a field.
 -/
 
 public section
@@ -29,17 +31,22 @@ local instance prime101 : Fact (Nat.Prime 101) := ⟨by decide⟩
 local instance sampleField : SampleableType (ZMod 101) :=
   inferInstanceAs (SampleableType (Fin 101))
 
-private abbrev K := ZMod 101
-private abbrev Groups := BLS.AGM.Group K K
-private abbrev Spec := explainedSpec K Groups (BLS.AGM.Query Bool) BLS.AGM.Reply
+/-- The test field. -/
+abbrev K := ZMod 101
+/-- The two source groups, both the test field. -/
+abbrev Groups := BLS.AGM.Group K K
+/-- The algebraic adversary's oracle family. -/
+abbrev Spec := explainedSpec K Groups (BLS.AGM.Query Bool) BLS.AGM.Reply
 
-private def output (inputs : GroupModel.Interaction.Groups Groups)
+/-- Output the hash reply itself as the signature on `false`. -/
+def output (inputs : GroupModel.Interaction.Groups Groups)
     (reply : Message Unit Groups) : Explained K Bool Groups :=
   Explained.ofVectors (extend inputs reply.groups) false (fun s => match s with
     | false => [fun i => if i.val = (inputs false).length then 1 else 0]
     | true => [])
 
-private def oneHash : BLS.AlgebraicAdversary K Bool K K (LinearMap.mul K K) 1 1 where
+/-- Ask for the hash of `false` and return it as the signature. -/
+def oneHash : BLS.AlgebraicAdversary K Bool K K (LinearMap.mul K K) 1 1 where
   main input := do
     let reply ← Spec.query ⟨⟨.inl (.inr false), BLS.AGM.groupInputs [] []⟩, fun _ => []⟩
     return output input.groups reply
@@ -49,7 +56,8 @@ private def oneHash : BLS.AlgebraicAdversary K Bool K K (LinearMap.mul K K) 1 1 
     · intro reply
       exact Explained.valid_ofVectors _ _ _
 
-private theorem oneHash_raw (pk : K × K) :
+/-- `oneHash` forgets to the ordinary hash-and-return program. -/
+theorem oneHash_toUnforgeableAdversary (pk : K × K) :
     oneHash.toUnforgeableAdversary.main pk = (do
       let h ← (BLS.AGM.rawSpec Bool K).query (.inl (.inr false))
       pure (false, h)) := by
@@ -57,7 +65,8 @@ private theorem oneHash_raw (pk : K × K) :
     output, Explained.ofVectors,
     BLS.AGM.forgery, BLS.AGM.initialInput, BLS.AGM.groupInputs, extend, evaluate]
 
-private theorem oneHash_good (X Y : K) :
+/-- The good reduction against `oneHash` computes `ρ / ρ` for a uniform `ρ`. -/
+theorem goodReduction_oneHash (X Y : K) :
     BLS.goodReduction oneHash 1 X 1 Y = (fun ρ : K => ρ / ρ) <$> ($ᵗ K) := by
   simp only [BLS.goodReduction, BLS.reductionRun,
     GroupModel.LinearFunctional.extractionProgram, smul_eq_mul, mul_one, BLS.AGM.oracle,
@@ -79,18 +88,6 @@ private theorem oneHash_good (X Y : K) :
   rw [GroupModel.LinearFunctional.transcriptOracle_hash]
   simp [GroupModel.LinearFunctional.readTranscript]
 
-/-- A certified one-hash algebraic adversary forgets to exactly the ordinary hash-and-return
-program in the BLS oracle specification. -/
-theorem one_hash_adversary_exists :
-    ∃ A : BLS.AlgebraicAdversary (ZMod 101) Bool (ZMod 101) (ZMod 101)
-      (LinearMap.mul (ZMod 101) (ZMod 101)) 1 1,
-      (∀ pk, A.toUnforgeableAdversary.main pk = (do
-        let h ← (BLS.AGM.rawSpec Bool (ZMod 101)).query (.inl (.inr false))
-        pure (false, h))) ∧
-      (∀ X Y, BLS.goodReduction A 1 X 1 Y =
-        (fun ρ : ZMod 101 => ρ / ρ) <$> ($ᵗ (ZMod 101))) :=
-  ⟨oneHash, oneHash_raw, oneHash_good⟩
-
 /-- Returning the first generator guesses the sampled scalar with probability exactly `1/101`
 in the concrete (1,1)-DLog experiment. -/
 theorem dlog11_identity_guess_probability :
@@ -100,21 +97,75 @@ theorem dlog11_identity_guess_probability :
   simpa [eq_comm] using
     SampleableType.prEvent_uniformSample_eq_singleton (1 : ZMod 101)
 
-/-- The one-hash fixture instantiates the tight algebraic EUF-CMA theorem over `ZMod 101`,
-with the scheme's original random-oracle experiment and its two named reductions. -/
-theorem one_hash_unforgeable_bound :
-    ∃ A : BLS.AlgebraicAdversary (ZMod 101) Bool (ZMod 101) (ZMod 101)
-      (LinearMap.mul (ZMod 101) (ZMod 101)) 1 1,
-      (∀ pk, A.toUnforgeableAdversary.main pk = (do
-        let h ← (BLS.AGM.rawSpec Bool (ZMod 101)).query (.inl (.inr false))
-        pure (false, h))) ∧
-      SignatureAlg.unforgeableAdvantage (ProbCompRuntime.rom (Bool →ₒ ZMod 101))
-        A.toUnforgeableAdversary ≤
-        Pr{let b ← DLog11.experiment 1 1 (BLS.goodReduction A)}[b = true] +
-        Pr{let b ← DLog11.experiment 1 1 (BLS.badReduction A)}[b = true] +
-        (1 / 101 : ℝ≥0∞) := by
-  refine ⟨oneHash, oneHash_raw, ?_⟩
-  have h := BLS.unforgeableAdvantage_le_of_algebraic oneHash (fun a => ⟨a, by simp⟩) (by simp)
-  simpa using h
+/-- Explain `pk₁ • h` by the coefficient `pk₁` on the hash reply `h`, the third received
+first-source point after the generator and the public key. -/
+def keyOutput (inputs : GroupModel.Interaction.Groups Groups)
+    (reply : Message Unit Groups) : Explained K Bool Groups :=
+  Explained.ofVectors (extend inputs reply.groups) false (fun s => match s with
+    | false => [fun i => if i.val = (inputs false).length then (inputs false).getD 1 0 else 0]
+    | true => [])
+
+/-- Ask for the hash of `false` and sign it with the scalar read off the public key. -/
+def keyReader : BLS.AlgebraicAdversary K Bool K K (LinearMap.mul K K) 1 1 where
+  main input := do
+    let reply ← Spec.query ⟨⟨.inl (.inr false), BLS.AGM.groupInputs [] []⟩, fun _ => []⟩
+    return keyOutput input.groups reply
+  algebraic input := by
+    constructor
+    · exact fun s => by cases s <;> exact .nil
+    · intro reply
+      exact Explained.valid_ofVectors _ _ _
+
+/-- `keyReader` forgets to hashing `false` and multiplying by the first public-key point. -/
+theorem keyReader_toUnforgeableAdversary (pk : K × K) :
+    keyReader.toUnforgeableAdversary.main pk = (do
+      let h : K ← (BLS.AGM.rawSpec Bool K).query (.inl (.inr false))
+      pure (false, pk.1 * h)) := by
+  simp [BLS.AlgebraicAdversary.toUnforgeableAdversary, keyReader, BLS.AGM.oracle,
+    keyOutput, Explained.ofVectors,
+    BLS.AGM.forgery, BLS.AGM.initialInput, BLS.AGM.groupInputs, extend, evaluate]
+
+/-- `keyReader` forges on every run. -/
+theorem unforgeableAdvantage_keyReader :
+    SignatureAlg.unforgeableAdvantage (ProbCompRuntime.rom (Bool →ₒ K))
+      keyReader.toUnforgeableAdversary = 1 := by
+  unfold SignatureAlg.unforgeableAdvantage
+  rw [ProbCompRuntime.rom_evalDist]
+  change 𝒟[_] {b | b = true} = 1
+  rw [evalDist_apply_setOf_simulateQ_romImpl_run'_eq_one_iff]
+  intro f _
+  rw [OracleComp.evalDist_apply_setOf_eq_one_iff_forall_mem_support]
+  intro b hb
+  simp only [SignatureAlg.unforgeableExperiment, keyReader_toUnforgeableAdversary, BLS.scheme,
+    smul_eq_mul, mul_one, bind_pure_comp, LinearMap.mul_apply_apply, LinearMap.mul_apply',
+    add_apply_inl, add_apply_inr, SignatureAlg.runWithSigningOracle_def,
+    SignatureAlg.signingOracle, QueryImpl.passthrough_add, simulateQ_bind, simulateQ_query,
+    OracleQuery.input_query, OracleQuery.cont_query, QueryImpl.add_apply_inl,
+    PFunctor.Handler.liftTarget_apply, ofPFunctor_toPFunctor, QueryImpl.id'_apply, id_map,
+    simulateQ_map, Functor.map_map, WriterT.run_liftM, List.empty_eq, WriterT.run_map,
+    bind_map_left, QueryLog.wasQueried_nil, Bool.not_false, Bool.true_and,
+    MonadAttach.support_bind, MonadAttach.mem_support, MonadAttach.support_map, Set.mem_iUnion,
+    Set.mem_image, exists_prop] at hb
+  obtain ⟨i, -, i₁, hi₁, x, hx, rfl⟩ := hb
+  have hq : simulateQ (unifFwdAnswerImpl f) (liftM ((Bool →ₒ K).query false)) =
+      (pure (f false) : ProbComp K) := by
+    change simulateQ (unifSpec.passthrough + f.liftTarget ProbComp)
+      (liftM ((Bool →ₒ K).query false)) = _
+    exact QueryImpl.simulateQ_add_liftM_query_right
+      (unifSpec.passthrough : QueryImpl unifSpec ProbComp) (f.liftTarget ProbComp) false
+  rw [hq] at hx
+  change MonadAttach.CanReturn (pure (f false) : ProbComp K) i₁ at hi₁
+  simp only [MonadAttach.canReturn_pure_iff] at hi₁ hx
+  subst hi₁ hx
+  simp [mul_comm]
+
+/-- The bound is not vacuous here: the two named reductions together solve (1,1)-DLog with
+probability at least `100 / 101`. -/
+theorem one_le_prEvent_goodReduction_add_badReduction :
+    1 ≤ Pr{let b ← DLog11.experiment (1 : K) (1 : K) (BLS.goodReduction keyReader)}[b = true] +
+      Pr{let b ← DLog11.experiment (1 : K) (1 : K) (BLS.badReduction keyReader)}[b = true] +
+      1 / 101 := by
+  have h := BLS.unforgeableAdvantage_le_of_algebraic keyReader (fun a => ⟨a, by simp⟩) (by simp)
+  simpa [unforgeableAdvantage_keyReader] using h
 
 end BLSAGMTest
