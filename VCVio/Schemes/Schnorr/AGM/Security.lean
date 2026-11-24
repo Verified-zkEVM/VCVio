@@ -17,7 +17,9 @@ Fiat-Shamir signing simulation and uniform Schnorr commitments.
 This is the full-field Schnorr bound of Fuchsbauer, Plouviez and Seurin,
 *Blind Schnorr Signatures and Signed ElGamal Encryption in the Algebraic Group Model*,
 EUROCRYPT 2020, https://eprint.iacr.org/2019/877. The additive terms match
-`Schnorr.agm_security` in zkSecurity's `signature-security-lean` at revision `3eaa8c4`;
+`Proofs.agm_security` (`Proofs/Schnorr/GeneralSecurity.lean`) in zkSecurity's
+`signature-security-lean` (https://github.com/zksecurity/signature-security-lean, revision
+`3eaa8c4`);
 that source's resource-indexed supremum is instantiated here by an explicit reduction.
 Both implementations sample nonces from the full field and hash `(message, commitment)`.
 The certified protocol shape excludes malformed requests. Bijective scalar multiplication
