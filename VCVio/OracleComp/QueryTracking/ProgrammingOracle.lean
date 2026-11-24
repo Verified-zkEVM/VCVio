@@ -88,8 +88,11 @@ variable {m : Type u → Type v}
 
 /-! ## Redirect -/
 
-/-- Redirect every query to the supplied callback. `so.withRedirect redirect` is
-definitionally equal to `redirect`. -/
+/-- Replace the oracle that answers an adversary's queries in a game hop. For example, changing
+`simulateQ so adv` to `simulateQ (so.withRedirect (fun t => pure (table t))) adv` runs the same
+adversary against a fixed table. Writing the hop this way names both the original oracle and its
+replacement. Since `so.withRedirect redirect` is definitionally `redirect`, the callback must
+call `so t` explicitly to forward a query `t` to the original oracle. -/
 def withRedirect (_so : QueryImpl spec m)
     (redirect : (t : spec.Domain) → m (spec.Range t)) :
     QueryImpl spec m :=
