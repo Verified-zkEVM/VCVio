@@ -10,13 +10,19 @@ public import VCVio.OracleComp.ProbCompLift
 
 /-! # Synchronized signature algorithms
 
-Epoch-indexed signing separates correctness for each generated key from the joint
-key-generation/signing experiment. Returned failure, rejection and missing execution mass count
-against the stated error in both observations.
+A synchronized signature scheme signs a message at an epoch, and its signer may return `none` to
+report failure. This file states correctness in two forms. `CompletePerKey` bounds the success
+probability separately for each generated key pair. `Complete` bounds the success probability of
+the joint experiment that generates keys, signs and verifies. In both forms, returned failure,
+verification rejection and missing execution mass count against the error `δ`.
+
+## References
+
+- Drake, Khovratovich, Kudinov and Wagner, *Hash-Based Multi-Signatures for Post-Quantum Ethereum*,
+  [ePrint 2025/055](https://eprint.iacr.org/2025/055).
 -/
 
 public section
-
 
 open ENNReal
 
@@ -60,17 +66,10 @@ variable {m : Type → Type v} [Monad m] {M PK SK S E : Type}
     (runtime : ProbCompRuntime m) (ks : PK × SK) (ep : E) (msg : M) : ℝ≥0∞ :=
   runtime.evalDist (alg.accepts ks.1 ep msg <$> alg.sign ks.2 ep msg) {true}
 
-/-- The measure singleton agrees with the runtime's discrete successful-output probability. -/
-theorem successMass_eq_probability (alg : SyncSignatureAlg m M PK SK S E)
-    (runtime : ProbCompRuntime m) (ks : PK × SK) (ep : E) (msg : M) :
-    alg.successMass runtime ks ep msg =
-      runtime.evalDist (alg.accepts ks.1 ep msg <$> alg.sign ks.2 ep msg) {true} := rfl
-
 /-- Successful verification has subprobability mass at most one. -/
 theorem successMass_le_one (alg : SyncSignatureAlg m M PK SK S E)
     (runtime : ProbCompRuntime m) (ks : PK × SK) (ep : E) (msg : M) :
     alg.successMass runtime ks ep msg ≤ 1 := by
-  rw [successMass_eq_probability]
   exact (MeasureTheory.measure_mono (Set.subset_univ _)).trans
     (runtime.evalDist_apply_univ_le_one _)
 
@@ -89,15 +88,17 @@ theorem successMass_eq_zero_of_failure (alg : SyncSignatureAlg m M PK SK S E)
     alg.successMass runtime ks ep msg = 0 := by
   simp [successMass, h]
 
-/-- Correctness for every producible key pair, epoch and message of this scheme instance.
-Returned failure, verification rejection and missing mass all count against `δ`. -/
+/-- Correctness for every generated key pair, epoch and message: signing then verifying succeeds
+with probability at least `1 - δ`. Returned failure, verification rejection and missing signing
+mass count against `δ`. Missing key-generation mass does not: a key pair with no mass is not
+generated, so if key generation has no mass at all, this property holds for every `δ`. Use
+`Complete` to count key-generation failure as well. -/
 @[expose] def CompletePerKey (alg : SyncSignatureAlg m M PK SK S E)
     (runtime : ProbCompRuntime m) (δ : ℝ≥0∞) : Prop :=
   ∀ ks, alg.Generated runtime ks → ∀ ep msg,
     1 - δ ≤ alg.successMass runtime ks ep msg
 
-/-- Correctness for every generated key, message and epoch satisfying the supplied predicate.
-Returned failure, rejection and missing mass count against the error allowance. -/
+/-- `CompletePerKey` restricted to the epochs satisfying `active`. -/
 @[expose] def CompleteOnPerKey (alg : SyncSignatureAlg m M PK SK S E)
     (runtime : ProbCompRuntime m) (active : E → Prop) (δ : ℝ≥0∞) : Prop :=
   ∀ ks, alg.Generated runtime ks → ∀ ep, active ep → ∀ msg,
@@ -108,16 +109,6 @@ theorem completeOnPerKey_true_iff (alg : SyncSignatureAlg m M PK SK S E)
     (runtime : ProbCompRuntime m) (δ : ℝ≥0∞) :
     alg.CompleteOnPerKey runtime (fun _ => True) δ ↔ alg.CompletePerKey runtime δ := by
   simp only [CompleteOnPerKey, CompletePerKey, forall_const]
-
-
-/-- The fully quantified per-key characterization of correctness. -/
-theorem completePerKey_iff (alg : SyncSignatureAlg m M PK SK S E)
-    (runtime : ProbCompRuntime m) (δ : ℝ≥0∞) :
-    alg.CompletePerKey runtime δ ↔ ∀ ks,
-      0 < runtime.evalDist ((fun ks' => ks' = ks) <$> alg.keygen) {True} → ∀ ep msg,
-      1 - δ ≤ runtime.evalDist
-        (alg.accepts ks.1 ep msg <$> alg.sign ks.2 ep msg) {true} := by
-  simp only [CompletePerKey, Generated, successMass_eq_probability]
 
 /-- Increasing the permitted error preserves correctness. -/
 theorem CompletePerKey.mono {alg : SyncSignatureAlg m M PK SK S E}

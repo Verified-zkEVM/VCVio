@@ -19,7 +19,7 @@ an abort from a returned signing failure, while repeated requests skip the callb
 
 public section
 namespace VCVioTest.SigningKernel
-open OracleSpec OracleComp SyncSignatureUnforgeability
+open OracleSpec OracleComp SyncSignatureAlg
 
 /-- Randomizer, one OTS value and one authentication label. -/
 abbrev Payload := Bool × Bool × Bool
@@ -95,8 +95,8 @@ theorem ambient_forwarded :
     runWithSigningKernel kernel
       (OracleComp.liftComp ($ᵗ Bool : ProbComp Bool) (unifSpec + signingSpec Bool Bool Payload))
       emptyHistory = (fun b => (b, emptyHistory)) <$> ($ᵗ Bool : ProbComp Bool) := by
-  unfold runWithSigningKernel oraclesWithSigningKernel
-  rw [QueryImpl.simulateQ_add_liftComp_left, simulateQ_liftTarget, QueryImpl.simulateQ_toQueryImpl]
+  unfold runWithSigningKernel
+  rw [QueryImpl.passthrough_add, QueryImpl.simulateQ_add_liftComp_left, simulateQ_liftTarget]
   simp
 
 /-- Actual mixed programs preserve the full signature predicate, not just successful decoding. -/
@@ -109,3 +109,5 @@ theorem run_full {A : Type}
     program emptyHistory (successfulHistorySatisfies_empty _) out hout
 
 end VCVioTest.SigningKernel
+
+end

@@ -19,7 +19,12 @@ separately exposes vacuous per-key correctness and failed joint correctness.
 
 A Boolean configuration is captured by all three algorithms of a separate family. Its correctness
 holds for every configuration and every epoch type, without epoch equality or finiteness
-assumptions.
+assumptions. A two-epoch scheme that fails at its second epoch separates correctness on active
+epochs from correctness at every epoch.
+
+The unforgeability probes use two Boolean epochs and messages to distinguish exact pair replay,
+alternative valid signatures, cross-epoch freshness and failed requests, and evaluate both
+advantages for a concrete adversary.
 -/
 
 public section
@@ -207,21 +212,47 @@ theorem not_abortingKeygen_complete : ¬ abortingKeygen.Complete optionalRuntime
   simp [jointSuccessMass, correctnessExperiment, abortingKeygen, optionalRuntime,
     ProbCompRuntime.evalDist, SemanticsVia.ofEvalDistSemantics_evalDist] at hbad
 
-end VCVioTest.SyncSignatureProbe
+/-- Signing succeeds at epoch `0` and returns failure at epoch `1`. -/
+@[expose] def firstEpochOnly : SyncSignatureAlg ProbComp Unit Unit Unit Unit (Fin 2) where
+  keygen := pure ((), ())
+  sign _ ep _ := pure (if ep = 0 then some () else none)
+  verify _ _ _ _ := true
 
-public section
+/-- Per-key correctness with zero error holds when only epoch `0` is active. -/
+theorem firstEpochOnly_completeOnPerKey_zero :
+    firstEpochOnly.CompleteOnPerKey ProbCompRuntime.probComp (· = 0) 0 := by
+  rintro ks hks ep rfl msg
+  simp [successMass, firstEpochOnly, accepts]
 
-/-!
-## Synchronized-signature security distinguishing probes
+/-- Joint correctness with zero error holds when only epoch `0` is active. -/
+theorem firstEpochOnly_completeOn_zero :
+    firstEpochOnly.CompleteOn ProbCompRuntime.probComp (· = 0) 0 := by
+  rintro ep rfl msg
+  simp [jointSuccessMass, correctnessExperiment, firstEpochOnly, accepts]
 
-Two Boolean epochs and messages suffice to distinguish exact pair replay, alternative valid
-signatures, cross-epoch freshness and failed eligible requests. The deliberately insecure toy
-verifier accepts both signatures, although its signer returns only one signature.
+/-- Per-key correctness at every epoch fails at the failing epoch `1`. -/
+theorem not_firstEpochOnly_completePerKey_zero :
+    ¬ firstEpochOnly.CompletePerKey ProbCompRuntime.probComp 0 := by
+  intro h
+  have hkey : firstEpochOnly.Generated ProbCompRuntime.probComp ((), ()) := by
+    simp [Generated, firstEpochOnly]
+  have hbad := h ((), ()) hkey 1 ()
+  simp [successMass, firstEpochOnly, accepts] at hbad
+
+/-- Joint correctness at every epoch fails at the failing epoch `1`. -/
+theorem not_firstEpochOnly_complete_zero :
+    ¬ firstEpochOnly.Complete ProbCompRuntime.probComp 0 := by
+  intro h
+  have hbad := h 1 ()
+  simp [jointSuccessMass, correctnessExperiment, firstEpochOnly, accepts] at hbad
+
+/-! ## Unforgeability probes
+
+The deliberately insecure toy verifier accepts both signatures, although its signer returns only
+one signature.
 -/
 
-namespace SyncSignatureUnforgeability.Probe
-
-open OracleComp OracleSpec
+open OracleSpec
 
 /-- A deterministic signer returns `false` except on the message `true`, which returns failure. -/
 @[expose] def toy : SyncSignatureAlg ProbComp Bool Unit Unit Bool Bool where
@@ -297,7 +328,7 @@ theorem duplicate_signed_preserves :
   exact signingOracle_used toy () signed false true false (some false) rfl
 
 /-- The second query's epoch and message depend on the first optional response. -/
-@[expose] def adaptive : Adversary unifSpec Unit Bool Bool Bool where
+@[expose] def adaptive : UnforgeableAdversary unifSpec Unit Bool Bool Bool where
   forge _ := do
     let answer ← query (spec := unifSpec + signingSpec Bool Bool Bool)
       (Sum.inr (false, true))
@@ -319,9 +350,8 @@ theorem adaptive_failure_result :
   funext ep
   cases ep <;> rfl
 
-
 /-- Three source requests include a consumed failure, a rejected duplicate and a fresh success. -/
-@[expose] def repeatedFailure : Adversary unifSpec Unit Bool Bool Bool where
+@[expose] def repeatedFailure : UnforgeableAdversary unifSpec Unit Bool Bool Bool where
   forge _ := do
     let _ ← query (spec := unifSpec + signingSpec Bool Bool Bool) (.inr (false, true))
     let _ ← query (spec := unifSpec + signingSpec Bool Bool Bool) (.inr (false, false))
@@ -365,23 +395,47 @@ theorem retained_successful_records (z : Forgery Bool Bool Bool × History Bool 
     (repeatedFailure.forge ()) emptyHistory (successfulHistorySatisfies_empty _) z hz
 
 
-universe u
+/-- Query `(false, false)`, receive the signature `false`, and output the other signature `true`
+for the same epoch and message. -/
+@[expose] def resign : UnforgeableAdversary unifSpec Unit Bool Bool Bool where
+  forge _ := do
+    let _ ← query (spec := unifSpec + signingSpec Bool Bool Bool) (.inr (false, false))
+    pure (false, false, true)
 
-variable {ι : Type u} {spec : OracleSpec ι}
-variable {M PK SK S E : Type}
+/-- The run records the one successful request at epoch `false`. -/
+theorem resign_interaction :
+    toy.interaction resign = (pure ((), (false, false, true), signed) :
+      ProbComp (ExperimentResult Unit Bool Bool Bool)) := by
+  change (pure ((), (false, false, true),
+    Function.update emptyHistory false (some (false, some false))) : ProbComp _) = _
+  congr 3
+  funext ep
+  cases ep <;> rfl
 
-/-- The endpoint checks its winning predicate only after interpreting the shared interaction. -/
-theorem unforgeableExp_post_runtime [DecidableEq E] [DecidableEq M]
-    (alg : SyncSignatureAlg (OracleComp spec) M PK SK S E)
-    (runtime : ProbCompRuntime (OracleComp spec)) (adv : Adversary spec PK E M S) :
-    unforgeableExp alg runtime adv =
-      runtime.evalDist (valid alg <$> interaction alg adv) := rfl
+/-- The new signature on a signed message is a strong forgery. -/
+theorem resign_strongUnforgeableExperiment :
+    toy.strongUnforgeableExperiment resign = pure true := by
+  rw [strongUnforgeableExperiment, resign_interaction]
+  rfl
 
-/-- The endpoint checks its winning predicate only after interpreting the shared interaction. -/
-theorem strongUnforgeableExp_post_runtime [DecidableEq E] [DecidableEq M] [DecidableEq S]
-    (alg : SyncSignatureAlg (OracleComp spec) M PK SK S E)
-    (runtime : ProbCompRuntime (OracleComp spec)) (adv : Adversary spec PK E M S) :
-    strongUnforgeableExp alg runtime adv =
-      runtime.evalDist (strongValid alg <$> interaction alg adv) := rfl
+/-- The same forgery is not a forgery for unforgeability, because its message was requested. -/
+theorem resign_unforgeableExperiment :
+    toy.unforgeableExperiment resign = pure false := by
+  rw [unforgeableExperiment, resign_interaction]
+  rfl
 
-end SyncSignatureUnforgeability.Probe
+/-- The strong unforgeability advantage of `resign` is one. -/
+theorem resign_strongUnforgeableAdvantage :
+    toy.strongUnforgeableAdvantage ProbCompRuntime.probComp resign = 1 := by
+  rw [strongUnforgeableAdvantage, resign_strongUnforgeableExperiment]
+  simp
+
+/-- The unforgeability advantage of `resign` is zero, so the two advantages can differ. -/
+theorem resign_unforgeableAdvantage :
+    toy.unforgeableAdvantage ProbCompRuntime.probComp resign = 0 := by
+  rw [unforgeableAdvantage, resign_unforgeableExperiment]
+  simp
+
+end VCVioTest.SyncSignatureProbe
+
+end

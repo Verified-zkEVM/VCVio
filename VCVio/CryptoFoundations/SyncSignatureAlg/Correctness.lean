@@ -38,12 +38,6 @@ theorem completeOn_true_iff (alg : SyncSignatureAlg m M PK SK S E)
     alg.CompleteOn runtime (fun _ => True) δ ↔ alg.Complete runtime δ := by
   simp only [CompleteOn, Complete, forall_const]
 
-/-- Joint correctness bounds the actual key-generation/signing/verification execution. -/
-theorem complete_iff (alg : SyncSignatureAlg m M PK SK S E)
-    (runtime : ProbCompRuntime m) (δ : ℝ≥0∞) :
-    alg.Complete runtime δ ↔ ∀ ep msg,
-      1 - δ ≤ runtime.evalDist (alg.correctnessExperiment ep msg) {true} := Iff.rfl
-
 /-- Increasing the joint error allowance preserves correctness. -/
 theorem Complete.mono {alg : SyncSignatureAlg m M PK SK S E}
     {runtime : ProbCompRuntime m} {δ₁ δ₂ : ℝ≥0∞}
