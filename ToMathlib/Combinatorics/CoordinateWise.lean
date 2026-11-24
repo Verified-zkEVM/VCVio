@@ -27,6 +27,14 @@ which is the output shape targeted by coordinate-wise rewinding. `card_coordFami
 exact size `Fintype.card ι * (k - 1) + 1`, and `isCoordSpecialSound_iff_of_unique` records
 that a single coordinate recovers ordinary `k`-special soundness.
 
+The neighbour relation and the column counts take an alphabet per coordinate: a challenge is
+`c : (i : ι) → S i`, and each coordinate `j` has its own threshold `k j`. A *block star*
+(`IsBlockSpecialSound`) is a centre with `k j - 1` neighbours at every `j`, and `neighbourFamily`
+builds one from a centre and per-coordinate neighbour sets. The one-alphabet predicates are its
+constant case: `HasCoordNeighbours k` is `HasBlockNeighbours (fun _ => k)`, and the bridges
+`isCoordSpecialSound_iff_isBlockSpecialSound` and `coordFamily_eq_neighbourFamily` say so for the
+other two.
+
 ## Main definitions
 
 * `Function.DiffersOnlyAt j x y` — `x` and `y` differ in coordinate `j` and only there.
@@ -37,9 +45,12 @@ that a single coordinate recovers ordinary `k`-special soundness.
   whose challenges form such a set.
 * `CoordinateWise.coordFamily e A` — the challenge set with centre `e` whose coordinate-`j`
   neighbours replace `e j` by each value of `A j`.
+* `CoordinateWise.HasBlockNeighbours k X`, `CoordinateWise.IsBlockSpecialSound k X` — the same
+  with an alphabet `S j` and a threshold `k j` per coordinate.
+* `CoordinateWise.neighbourFamily e N` — the block star with centre `e` and neighbours `N j`.
 * `CoordinateWise.columnCount accept j c` — how many values of coordinate `j` keep `c` accepting.
 
-`HasCoordNeighbours` is a nested existential, so both predicates carry accessors — `centre`,
+`HasCoordNeighbours` unfolds to a nested existential, so both predicates carry accessors — `centre`,
 `neighbours j`, and `exists_pair` — that hand back the structure without unfolding. `exists_pair`
 is the one a consumer wants: at `2 ≤ k` it produces, in any prescribed coordinate, two accepting
 transcripts whose challenges differ there and nowhere else. That pair is what a reduction turning
@@ -57,6 +68,10 @@ time are outside this file.
 * `CoordinateWise.sub_div_le_div_card_filter` — the table success condition holds for at least an
   `ε - ℓ * (k - 1) / N` fraction of challenges, where `ε` is the accepting fraction. This is the
   counting inequality used in Lemma 7.1; it does not construct or cost an oracle extractor.
+* `CoordinateWise.div_card_filter_le_affine_pi` — with an alphabet and a threshold per
+  coordinate, the accepted fraction is at most `κ + (1 - κ) p`, where
+  `κ = ∑ j, (k j - 1) / |S j|` and `p` is the fraction of challenges that satisfy the table
+  success condition. `CoordinateWise.div_card_filter_le_affine` is its constant case.
 * `CoordinateWise.isCoordSpecialSound_coordFamily` and `CoordinateWise.card_coordFamily` — what
   the table core's candidate output must satisfy to be an `SS(S, ℓ, k)` set.
 * `CoordinateWise.le_card_of_hasCoordNeighbours` — the paper's cardinality is already forced as a
@@ -119,15 +134,81 @@ namespace CoordinateWise
 
 open Function
 
+/-! ## Neighbour families with a threshold per coordinate
+
+A challenge `(j : ι) → S j` has an alphabet `S j` at every coordinate, and a *block star* with
+thresholds `k` has a centre and, at every coordinate `j`, `k j - 1` further members that differ from
+the centre at `j` and nowhere else. With one alphabet and one threshold this is
+`IsCoordSpecialSound` (`isCoordSpecialSound_iff_isBlockSpecialSound`). -/
+
+section BlockNeighbours
+
+variable {ι : Type*} [Fintype ι] {S : ι → Type*} [∀ j, DecidableEq (S j)]
+
+/-- The neighbour condition for thresholds `k`: some *centre* of `X` has, at every coordinate `j`,
+`k j - 1` further members of `X` that differ from it at `j` and nowhere else. -/
+@[expose] def HasBlockNeighbours (k : ι → ℕ) (X : Finset ((i : ι) → S i)) : Prop :=
+  ∃ e ∈ X, ∀ j : ι, ∃ J ⊆ X.erase e, J.card = k j - 1 ∧ ∀ y ∈ J, DiffersOnlyAt j e y
+
+/-- A set of challenges is a **block star** with thresholds `k` when it has the neighbour structure
+and exactly `∑ j, (k j - 1) + 1` members. -/
+@[expose] def IsBlockSpecialSound (k : ι → ℕ) (X : Finset ((i : ι) → S i)) : Prop :=
+  HasBlockNeighbours k X ∧ X.card = ∑ j, (k j - 1) + 1
+
+/-- The set made of a centre `e` and the given neighbours at each coordinate. -/
+@[expose] def neighbourFamily (e : (i : ι) → S i) (N : ι → Finset ((i : ι) → S i)) :
+    Finset ((i : ι) → S i) :=
+  insert e (Finset.univ.biUnion N)
+
+variable {k : ι → ℕ} {e : (i : ι) → S i} {N : ι → Finset ((i : ι) → S i)}
+
+theorem mem_neighbourFamily {x : (i : ι) → S i} :
+    x ∈ neighbourFamily e N ↔ x = e ∨ ∃ j, x ∈ N j := by
+  simp [neighbourFamily]
+
+theorem centre_notMem_biUnion_of_differsOnlyAt (hN : ∀ j, ∀ y ∈ N j, DiffersOnlyAt j e y) :
+    e ∉ Finset.univ.biUnion N := by
+  simp only [Finset.mem_biUnion, Finset.mem_univ, true_and]
+  rintro ⟨j, hj⟩
+  exact (hN j e hj).ne rfl
+
+omit [∀ j, DecidableEq (S j)] in
+/-- Neighbours at different coordinates are different. -/
+theorem pairwiseDisjoint_of_differsOnlyAt (hN : ∀ j, ∀ y ∈ N j, DiffersOnlyAt j e y) :
+    ∀ j ∈ (Finset.univ : Finset ι), ∀ j' ∈ (Finset.univ : Finset ι), j ≠ j' →
+      Disjoint (N j) (N j') := by
+  intro j _ j' _ hjj'
+  refine Finset.disjoint_left.mpr fun y hy hy' => hjj' ?_
+  exact (hN j y hy).coord_eq (hN j' y hy')
+
+/-- A neighbour family has exactly `∑ j, (k j - 1) + 1` challenges. -/
+theorem card_neighbourFamily (hN : ∀ j, ∀ y ∈ N j, DiffersOnlyAt j e y)
+    (hcard : ∀ j, (N j).card = k j - 1) :
+    (neighbourFamily e N).card = ∑ j, (k j - 1) + 1 := by
+  rw [neighbourFamily, Finset.card_insert_of_notMem (centre_notMem_biUnion_of_differsOnlyAt hN),
+    Finset.card_biUnion (pairwiseDisjoint_of_differsOnlyAt hN)]
+  simp [hcard]
+
+/-- **A neighbour family with thresholds `k` is a block star.** -/
+theorem isBlockSpecialSound_neighbourFamily (hN : ∀ j, ∀ y ∈ N j, DiffersOnlyAt j e y)
+    (hcard : ∀ j, (N j).card = k j - 1) : IsBlockSpecialSound k (neighbourFamily e N) := by
+  refine ⟨⟨e, Finset.mem_insert_self _ _, fun j => ⟨N j, ?_, hcard j, hN j⟩⟩,
+    card_neighbourFamily hN hcard⟩
+  intro y hy
+  exact Finset.mem_erase.mpr ⟨(hN j y hy).ne.symm, mem_neighbourFamily.mpr (Or.inr ⟨j, hy⟩)⟩
+
+end BlockNeighbours
+
 section Families
 
 variable {ι S : Type*} [DecidableEq ι] [Fintype ι] [DecidableEq S]
 variable {k : ℕ} {X : Finset (ι → S)} {e : ι → S} {A : ι → Finset S}
 
 /-- The neighbour condition: some *central* vector of `X` has, in every coordinate, `k - 1`
-further members of `X` differing from it in that coordinate and only there. -/
+further members of `X` differing from it in that coordinate and only there. It is the block
+neighbour condition with the constant threshold `k`. -/
 @[expose] def HasCoordNeighbours (k : ℕ) (X : Finset (ι → S)) : Prop :=
-  ∃ e ∈ X, ∀ j : ι, ∃ J ⊆ X.erase e, J.card = k - 1 ∧ ∀ y ∈ J, DiffersOnlyAt j e y
+  HasBlockNeighbours (fun _ => k) X
 
 /-- A finite set of challenge vectors is coordinate-wise `k`-special sound when it has the
 neighbour structure *and* exactly `ℓ * (k - 1) + 1` members.
@@ -388,68 +469,9 @@ theorem isCoordSpecialSound_iff_of_unique [Unique ι] (hk : 1 ≤ k) :
 
 end Families
 
-/-! ## Neighbour families with a threshold per coordinate
+section Bridges
 
-A challenge `(j : ι) → S j` has an alphabet `S j` at every coordinate, and a *block star* with
-thresholds `k` has a center and, at every coordinate `j`, `k j - 1` further members that differ from
-the center at `j` and nowhere else. With one alphabet and one threshold this is
-`IsCoordSpecialSound` (`isCoordSpecialSound_iff_isBlockSpecialSound`). -/
-
-section BlockNeighbours
-
-variable {ι : Type*} [Fintype ι] {S : ι → Type*} [∀ j, DecidableEq (S j)]
-
-/-- The neighbour condition for thresholds `k`: some *center* of `X` has, at every coordinate `j`,
-`k j - 1` further members of `X` that differ from it at `j` and nowhere else. -/
-@[expose] def HasBlockNeighbours (k : ι → ℕ) (X : Finset ((i : ι) → S i)) : Prop :=
-  ∃ e ∈ X, ∀ j : ι, ∃ J ⊆ X.erase e, J.card = k j - 1 ∧ ∀ y ∈ J, DiffersOnlyAt j e y
-
-/-- A set of challenges is a **block star** with thresholds `k` when it has the neighbour structure
-and exactly `∑ j, (k j - 1) + 1` members. -/
-@[expose] def IsBlockSpecialSound (k : ι → ℕ) (X : Finset ((i : ι) → S i)) : Prop :=
-  HasBlockNeighbours k X ∧ X.card = ∑ j, (k j - 1) + 1
-
-/-- The set made of a center `e` and the given neighbours at each coordinate. -/
-@[expose] def neighbourFamily (e : (i : ι) → S i) (N : ι → Finset ((i : ι) → S i)) :
-    Finset ((i : ι) → S i) :=
-  insert e (Finset.univ.biUnion N)
-
-variable {k : ι → ℕ} {e : (i : ι) → S i} {N : ι → Finset ((i : ι) → S i)}
-
-theorem mem_neighbourFamily {x : (i : ι) → S i} :
-    x ∈ neighbourFamily e N ↔ x = e ∨ ∃ j, x ∈ N j := by
-  simp [neighbourFamily]
-
-theorem centre_notMem_biUnion_of_differsOnlyAt (hN : ∀ j, ∀ y ∈ N j, DiffersOnlyAt j e y) :
-    e ∉ Finset.univ.biUnion N := by
-  simp only [Finset.mem_biUnion, Finset.mem_univ, true_and]
-  rintro ⟨j, hj⟩
-  exact (hN j e hj).ne rfl
-
-omit [∀ j, DecidableEq (S j)] in
-/-- Neighbours at different coordinates are different. -/
-theorem pairwiseDisjoint_of_differsOnlyAt (hN : ∀ j, ∀ y ∈ N j, DiffersOnlyAt j e y) :
-    ∀ j ∈ (Finset.univ : Finset ι), ∀ j' ∈ (Finset.univ : Finset ι), j ≠ j' →
-      Disjoint (N j) (N j') := by
-  intro j _ j' _ hjj'
-  refine Finset.disjoint_left.mpr fun y hy hy' => hjj' ?_
-  exact (hN j y hy).coord_eq (hN j' y hy')
-
-/-- A neighbour family has exactly `∑ j, (k j - 1) + 1` challenges. -/
-theorem card_neighbourFamily (hN : ∀ j, ∀ y ∈ N j, DiffersOnlyAt j e y)
-    (hcard : ∀ j, (N j).card = k j - 1) :
-    (neighbourFamily e N).card = ∑ j, (k j - 1) + 1 := by
-  rw [neighbourFamily, Finset.card_insert_of_notMem (centre_notMem_biUnion_of_differsOnlyAt hN),
-    Finset.card_biUnion (pairwiseDisjoint_of_differsOnlyAt hN)]
-  simp [hcard]
-
-/-- **A neighbour family with thresholds `k` is a block star.** -/
-theorem isBlockSpecialSound_neighbourFamily (hN : ∀ j, ∀ y ∈ N j, DiffersOnlyAt j e y)
-    (hcard : ∀ j, (N j).card = k j - 1) : IsBlockSpecialSound k (neighbourFamily e N) := by
-  refine ⟨⟨e, Finset.mem_insert_self _ _, fun j => ⟨N j, ?_, hcard j, hN j⟩⟩,
-    card_neighbourFamily hN hcard⟩
-  intro y hy
-  exact Finset.mem_erase.mpr ⟨(hN j y hy).ne.symm, mem_neighbourFamily.mpr (Or.inr ⟨j, hy⟩)⟩
+variable {ι : Type*} [Fintype ι]
 
 /-- With one alphabet and one threshold, a block star is a coordinate-wise special sound set. -/
 theorem isCoordSpecialSound_iff_isBlockSpecialSound {S : Type*} [DecidableEq S] {k : ℕ}
@@ -464,7 +486,7 @@ theorem coordFamily_eq_neighbourFamily [DecidableEq ι] {S : Type*} [DecidableEq
     coordFamily e A = neighbourFamily e fun j => (A j).image fun u => Function.update e j u :=
   rfl
 
-end BlockNeighbours
+end Bridges
 
 /-! ## Column counts
 
@@ -487,11 +509,9 @@ theorem update_coord_self {j : ι} {c r : (i : ι) → S i} {d : S j} (h : Funct
 
 variable [∀ j, Fintype (S j)] (accept : ((i : ι) → S i) → Prop) [DecidablePred accept]
 
-
 /-- The number of values of coordinate `j` that keep `c` accepting. -/
 @[expose] def columnCount (j : ι) (c : (i : ι) → S i) : ℕ :=
   (Finset.univ.filter fun x : S j => accept (Function.update c j x)).card
-
 
 variable {accept}
 
@@ -499,8 +519,6 @@ variable {accept}
 @[simp] theorem columnCount_update (j : ι) (c : (i : ι) → S i) (y : S j) :
     columnCount accept j (Function.update c j y) = columnCount accept j c := by
   simp [columnCount, Function.update_idem]
-
-
 
 /-- The challenges sharing a column representative are exactly the refillings of coordinate
 `j`. -/
@@ -514,15 +532,12 @@ theorem filter_update_eq_image [Fintype ι] [∀ j, DecidableEq (S j)] {j : ι} 
   rintro ⟨x, hx⟩
   rw [← hx, Function.update_idem, ← hrj, Function.update_eq_self]
 
-
 variable {c : (i : ι) → S i}
 
 /-- An accepting challenge is one of the accepting values of each of its own columns. -/
 theorem mem_filter_coord_self (hacc : accept c) (j : ι) :
     c j ∈ Finset.univ.filter fun x : S j => accept (Function.update c j x) := by
   simpa [Function.update_eq_self] using hacc
-
-
 
 /-- Restricting acceptance to the challenges whose column at `j` holds fewer than `k` accepting
 values keeps the count of such a sparse column and empties every other column, since a column
@@ -537,7 +552,6 @@ theorem columnCount_restrict (j : ι) (k : ℕ) (c : (i : ι) → S i) :
   · simp only [h, and_true, ite_true]
     rfl
   · simp [h]
-
 
 variable [Fintype ι]
 
@@ -624,7 +638,6 @@ theorem card_mul_card_filter_columnCount_lt (j : ι) [Nonempty (S j)] (k : ℕ) 
         rw [Finset.sum_const_nat (m := k - 1) fun _ _ => rfl]; ring
     _ = (k - 1) * Fintype.card ((i : ι) → S i) := by rw [htotal]
 
-
 /-- **Weighted column counting.** Give every accepting challenge a weight of `w` divided by its own
 column count at `j`. Each column then contributes at most `w` in total, whatever its count, because
 a column with `l` accepting values gives each of them weight `w / l`. Summed over the
@@ -709,7 +722,6 @@ theorem card_mul_sum_div_columnCount_le (j : ι) [Nonempty (S j)] (w : ℝ≥0�
         rw [← Finset.mul_sum, ← Nat.cast_sum,
           ← Finset.card_eq_sum_card_fiberwise fun c _ => hmaps c (Finset.mem_univ c)]
 
-
 /-- The cruder form: a column contributes at most `w` whether or not it holds an accepting
 challenge, so the whole space bounds the count of columns that do. -/
 theorem card_mul_sum_div_columnCount_le_card (j : ι) [Nonempty (S j)] (w : ℝ≥0∞) :
@@ -718,7 +730,6 @@ theorem card_mul_sum_div_columnCount_le_card (j : ι) [Nonempty (S j)] (w : ℝ�
       ≤ w * Fintype.card ((i : ι) → S i) :=
   (card_mul_sum_div_columnCount_le j w).trans <| mul_le_mul' le_rfl <| by
     exact_mod_cast Finset.card_le_card (Finset.filter_subset _ _)
-
 
 /-- **The refined column bound.** A column holding fewer than `k` accepting challenges contributes
 at most `k - 1` of them, and an *empty* column contributes none, so the count is proportional to
@@ -746,7 +757,6 @@ theorem card_mul_card_filter_columnCount_lt_le (j : ι) [Nonempty (S j)] (k : �
     exact_mod_cast Nat.le_sub_one_of_lt hc.2
   · rw [ite_eq_right hc]
     exact zero_le
-
 
 /-- **The sparse column bound.** A column holding fewer than `k` accepting challenges contributes
 at most `k - 1` of them, and every one of its `Fintype.card (S j)` challenges has a sparse column
@@ -782,7 +792,6 @@ theorem card_mul_card_filter_columnCount_lt_le_sparse (j : ι) [Nonempty (S j)] 
     · exact fun h => absurd h (lt_irrefl 0)
   rw [hleft] at h
   exact h.trans (mul_le_mul' le_rfl (by exact_mod_cast Finset.card_le_card hright))
-
 
 /-- **The affine union bound**, with an alphabet and a threshold per coordinate. The accepted
 challenges exceed the good ones by at most `κ` times the challenges that are not good, where
@@ -971,7 +980,6 @@ theorem card_mul_card_filter_accept_le [Nonempty S] (k : ℕ) :
     _ = _ := by rw [Finset.sum_const_nat (m := (k - 1) * Fintype.card (ι → S)) fun _ _ => rfl,
         Finset.card_univ]
 
-
 /-- The union bound over a *chosen* set of coordinates, with the refined column bound.
 
 `card_mul_card_filter_accept_le` is the case `T = Finset.univ` with each column count relaxed to
@@ -1017,7 +1025,6 @@ theorem card_mul_card_filter_accept_le_sum [Nonempty S] (k : ℕ) (T : Finset ι
         rw [mul_add, Finset.mul_sum]
     _ ≤ _ := add_le_add le_rfl
         (Finset.sum_le_sum fun j _ => card_mul_card_filter_columnCount_lt_le (S := fun _ => S) j k)
-
 
 /-- The table success bound used in Lemma 7.1, as a ratio of cardinalities.
 
@@ -1076,7 +1083,6 @@ theorem sub_div_le_div_card_filter [Nonempty S] (k : ℕ) :
               ((Fintype.card ι : ℝ≥0∞) * ((k - 1 : ℕ) : ℝ≥0∞) *
                 ((Fintype.card S : ℝ≥0∞))⁻¹) from by ring,
           hcN, hcT, one_mul, one_mul]
-
 
 /-- **The affine union bound.** Scaled by `Fintype.card S`, the accepting challenges exceed those
 whose every column is thick by at most `ℓ * (k - 1)` times the challenges that are *not* of that
