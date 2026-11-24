@@ -11,7 +11,8 @@ public import VCVio.OracleComp.QueryTracking.QueryBound.Weighted
 /-! # Weighted query-bound regressions
 
 Two copies of the uniform oracle give two kinds independently of their query arguments.
-The handler test charges three target queries for the left kind and none for the right.
+The handler test charges three target queries for the left kind and none for the right. A query
+with no possible answer separates the structural budget from the completed-path bound.
 -/
 
 public section
@@ -84,5 +85,23 @@ theorem unit_weight_transfer {ι ι' : Type u} {spec : OracleSpec.{u, u} ι}
   by_cases ht : p t
   · simpa [ht] using hp t ht st
   · simpa [ht] using hnp t ht st
+
+/-- A query with no possible answer completes no path, so its worst-case cost is `0`, but it still
+spends its weight: the structural budget `0` fails. So `WorstCaseCostBound` does not supply the
+structural premise of `IsQueryBound.simulateQ_run_weighted`. -/
+theorem empty_answer_separates :
+    let spec : OracleSpec Unit := fun _ => Empty
+    let A : OracleComp spec Unit := do
+      let _ ← spec.query ()
+      pure ()
+    WorstCaseCostBound A ⟨fun _ => 1⟩ 0 ∧
+      ¬ IsQueryBound A 0 (fun _ b => 1 ≤ b) (fun _ b => b - 1) := by
+  dsimp only
+  refine ⟨?_, ?_⟩
+  · rw [worstCaseCostBound_query_bind_iff]
+    intro a
+    exact a.elim
+  · rw [isQueryBound_query_bind_iff]
+    simp
 
 end VCVioTest.WeightedQueryBound
