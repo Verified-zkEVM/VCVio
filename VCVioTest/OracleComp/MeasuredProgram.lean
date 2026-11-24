@@ -56,7 +56,7 @@ theorem addProgram_realizes {Input : Type} (view : Input → Nat × Nat) (coordi
 /-- The one certified addition has one unit in its selected coordinate. -/
 theorem addProgram_costAtMost {Input : Type} (view : Input → Nat × Nat) (coordinate : Bool) :
     (addProgram view coordinate).CostAtMost (fun kind => if kind = coordinate then 1 else 0) :=
-  MeasuredProgram.costAtMost_of_forall_eq_answer _ _ (fun _ _ result => Subtype.ext result.2)
+  MeasuredProgram.costAtMost_of_runAdd_le _ _ (fun _ _ result => Subtype.ext result.2)
     (fun _ => by
       simp [addProgram, QueryImpl.withAddCost_apply]
       rfl)
@@ -139,7 +139,7 @@ abbrev unitSignature : OracleSpec Unit := fun _ => Unit
 /-- The one instruction has its declared weight in any cost preorder. -/
 theorem weightedInstruction_costAtMost {ω : Type} [AddCommMonoid ω] [Preorder ω] (weight : ω) :
     (weightedInstruction weight).CostAtMost weight :=
-  MeasuredProgram.costAtMost_of_forall_eq_answer _ _
+  MeasuredProgram.costAtMost_of_runAdd_le _ _
     (fun _ _ result => Subsingleton.elim (α := Unit) result ())
     (fun _ => by
       simp [weightedInstruction, QueryImpl.withAddCost_apply]

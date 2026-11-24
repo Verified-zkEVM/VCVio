@@ -261,7 +261,7 @@ accounting. `queryImpl` gives the answers of a view as a `QueryImpl` into `Id`.
 `run_eq_evalWithAnswerFn` states the run as `evalWithAnswerFn`, and
 `costAtMost_iff_worstCaseCostBound` states the budget as `WorstCaseCostBound` on every view.
 `runAdd_fst_eq_run` and `CostAtMost.runAdd_le` relate the `withAddCost` run of `queryImpl` to the
-run and the budget. For singleton-response interfaces, `costAtMost_of_forall_eq_answer` derives
+run and the budget. For singleton-response interfaces, `costAtMost_of_runAdd_le` derives
 the all-path budget from that one run. `simulateQ_withAddCost_comp` splits the instrumented run of
 a composite into the inner run and the outer run.
 

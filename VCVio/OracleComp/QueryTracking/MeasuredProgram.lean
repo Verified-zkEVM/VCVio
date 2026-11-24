@@ -22,7 +22,7 @@ price in a cost type. Its interface at a view is an `OracleSpec`, and its progra
 * `costAtMost_iff_worstCaseCostBound`: the all-path budget is `WorstCaseCostBound` on every view.
 * `runAdd_fst_eq_run` and `CostAtMost.runAdd_le`: the `QueryImpl.withAddCost` run of the answers
   returns the run's result, and a budget bounds the charge it records.
-* `costAtMost_of_forall_eq_answer`: if the answers are the only responses, the recorded charge
+* `costAtMost_of_runAdd_le`: if the answers are the only responses, the recorded charge
   bounds every path.
 * `simulateQ_withAddCost_comp`: the instrumented run of a composite is the instrumented run of the
   inner program, then of the outer program on its actual result.
@@ -30,7 +30,8 @@ price in a cost type. Its interface at a view is an `OracleSpec`, and its progra
 Only the operations are charged. Computing the view, the size and encoding of the view,
 evaluating the answers, the pure code between operations and the bit complexity of values are not.
 Each instance must state what its view and its answers leave uncharged. The prices and the cost
-order form the declared accounting model.
+order form the declared accounting model. A budget bounds the declared charges. It is not a
+running-time bound.
 Signed prices may cancel, and a reversed order makes an upper bound a lower bound. Idempotent or
 saturating addition may collapse repeated positive charges, so a canonically ordered monoid alone is
 not a counter. An operation count needs counting arithmetic and a charge table, such as natural
@@ -50,8 +51,9 @@ variable {Input Result ω : Type} (M : MeasuredProgram Input Result ω)
 
 /-- The answers of view `v` as a deterministic query implementation. -/
 @[expose] def queryImpl (v : M.View) : QueryImpl (M.spec v) Id :=
-  fun op => pure (M.answer v op)
+  QueryImpl.ofFn (M.answer v)
 
+/-- The query implementation of view `v` returns `M.answer v op` on operation `op`. -/
 @[simp]
 theorem queryImpl_apply (v : M.View) (op : M.Op) : M.queryImpl v op = pure (M.answer v op) :=
   rfl
@@ -85,7 +87,7 @@ theorem CostAtMost.runAdd_le [AddCommMonoid ω] [Preorder ω] {budget : ω}
 
 /-- If the answers are the only responses, the charge that the instrumented run records on every
 view bounds every path. -/
-theorem costAtMost_of_forall_eq_answer [AddCommMonoid ω] [Preorder ω] (budget : ω)
+theorem costAtMost_of_runAdd_le [AddCommMonoid ω] [Preorder ω] (budget : ω)
     (hanswer : ∀ v op (u : M.spec v op), u = M.answer v op)
     (hcost : ∀ v, (simulateQ ((M.queryImpl v).withAddCost M.cost) (M.program v)).runAdd.2 ≤
       budget) :
