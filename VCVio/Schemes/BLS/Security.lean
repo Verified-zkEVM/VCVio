@@ -31,7 +31,8 @@ namespace BLS
 
 /-- BLS EUF-CMA advantage under the standard lazy random-oracle runtime is at most
 `qH + qS + 1` times the success probability of the named index-guessing co-CDH reduction.
-Only the direct-hash and signing query budgets restrict the adversary. -/
+Only the direct-hash and signing query budgets restrict the adversary. The generator `g₁` must
+span the first source group; with a nonzero pairing that makes `· • g₁` a bijection. -/
 theorem unforgeableAdvantage_le {F G₁ G₂ Gₜ M : Type}
     [Field F] [SampleableType F] [AddCommGroup G₁] [Module F G₁]
     [SampleableType G₁] [DecidableEq G₁] [AddCommGroup G₂] [Module F G₂]
@@ -39,10 +40,12 @@ theorem unforgeableAdvantage_le {F G₁ G₂ Gₜ M : Type}
     {e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ} {g₁ : G₁} {g₂ : G₂}
     (A : SignatureAlg.UnforgeableAdversary (scheme (M := M) e g₁ g₂))
     (qH qS : ℕ) (hQ : A.RomQueryBound qH qS)
-    (hg₁ : Function.Bijective (· • g₁ : F → G₁)) (he : e g₁ g₂ ≠ 0) :
+    (hg₁ : Function.Surjective (· • g₁ : F → G₁)) (he : e g₁ g₂ ≠ 0) :
     SignatureAlg.unforgeableAdvantage (ProbCompRuntime.rom (M →ₒ G₁)) A ≤
       (qH + qS + 1) *
         Pr{let b ← CoCDH.experiment g₁ g₂ (BLS.coCDHReduction A qH qS)}[b = true] := by
+  have hg₁ : Function.Bijective (· • g₁ : F → G₁) :=
+    ⟨smul_left_injective F fun h0 => he (by simp [h0]), hg₁⟩
   rw [unforgeableAdvantage_eq_indexed A hg₁ he, mul_prEvent_experiment_coCDHReduction]
   let : MeasurableSpace F := ⊤
   rw [prEvent_bind_of_discrete]
