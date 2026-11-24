@@ -309,7 +309,9 @@ before the adversary runs.
 
 **Derived normal forms, not presentations.** Fixed-slot coefficient outputs, such as the signature
 repository's `(β, γ, ξ)` over (generator, hash replies, signing replies), are a regrouping of (E)'s
-basis list. They arrive with the port of BLS against algebraic adversaries.
+basis list. The BLS proof against algebraic adversaries does not use them: it reads the
+coefficients directly as a linear functional of the chronological replies
+(`GroupModel.LinearFunctional.traceFunctional`).
 
 ### 4.5 Knobs
 
@@ -1105,7 +1107,8 @@ each collision term counts the pairs among `m` entries and zero, `((m + 1) choos
 
 **Milestones and placement.** The model lives under `VCVio/CryptoFoundations/GroupModel/`;
 problem statements belong under `VCVio/CryptoFoundations/HardnessAssumptions/`. Named schemes
-belong under `VCVio/Schemes/BLS/` and `VCVio/Schemes/LinearFunctional/`, following
+belong under `VCVio/Schemes/BLS/`, and the shared linear-functional proof layer under
+`VCVio/CryptoFoundations/GroupModel/LinearFunctional/`, following
 [the repository ownership map](repository-layout.md). `Examples/` is for instructional consumers.
 Names follow [the cryptographic naming rules](../agents/crypto.md#naming): experiments are
 programs, advantages evaluate them, and reduction inequalities name their reductions.
@@ -1196,7 +1199,7 @@ named reduction and composes as it is.
 |---|---|---|---|
 | presentations agree (T1) | exact translations among the four presentations of Section 4.4 | agm-lean `Adversary.run_valid`; ArkLib `GroupRepresentation` | Fuchsbauer, Kiltz, Loss |
 | discrete-log relation | finding a nontrivial relation among `n` random elements is at most DLog plus `1/\|F\|` (`DiscreteLogRelation.experiment_le`, for a nonzero generator); against a generic adversary with `q` group operations, at most `((q + n + 1).choose 2 + 1)/\|F\|` (`DiscreteLogRelation.plainExperiment_ofGeneric_le`) | T3; ironwood proves the reduction on other foundations | Jaeger, Tessaro, Lemma 3 |
-| linear-functional signatures, BLS | `advantage ≤ adv(goodReduction A) + adv(badReduction A) + 1/\|F\|` against `(1,1)`-DLog | proved in `signature-security-lean` at VCVio `f5119c64e` |  |
+| linear-functional signatures, BLS | `advantage ≤ adv(goodReduction A) + adv(badReduction A) + 1/\|F\|` against `(1,1)`-DLog | for BLS, `BLS.unforgeableAdvantage_le_of_algebraic`, with `DLog11.experiment` the `(1,1)` instance of `PairingDLog.experiment`; for the other linear-functional signatures, proved in `signature-security-lean` at VCVio `f5119c64e` | Fuchsbauer, Kiltz, Loss; Bauer, Fuchsbauer, Loss |
 | BLS, unconditional | a bound in `q`, `q_H`, `q_S` and `\|F\|` only | the row above, T5, and generic `(1,1)`-DLog. The last is `PairingDLog.experiment_ofGeneric_le` at `q₁ = q₂ = 1` (Section 8.3); T5 remains | Jaeger, Mohan |
 | inner-product and Bulletproofs-style arguments | binding of the vector commitment against an algebraic prover | the discrete-log relation row | Jaeger, Tessaro |
 
@@ -1291,7 +1294,7 @@ the committed polynomial.
 | signature repo | `Signatures/Model/DirectAGM.lean` | the same certified `Interaction.Adversary` as agm-lean, not another presentation |
 | signature repo | `Signatures/Model/AlgebraicRepresentation.lean`: `Representation F Token`, `Transcript Token G` | token-indexed representations; fixed-slot coefficients are a derived grouping of the receipt basis |
 | signature repo | `Signatures/Model/LazyAGM.lean`, `Proofs/Model/DirectAGM.lean` | hash-to-group handlers with an element cache and a fresh given handle for each reply |
-| signature repo | `Proofs/LinearFunctional/`, `Proofs/BLS/`: `goodReduction`, `badReduction` and security proofs | handlers under `VCVio/Schemes/LinearFunctional/` and `VCVio/Schemes/BLS/`; generic corollaries by T5 |
+| signature repo | `Proofs/LinearFunctional/`, `Proofs/BLS/`: `goodReduction`, `badReduction` and security proofs | handlers under `VCVio/CryptoFoundations/GroupModel/LinearFunctional/` and `VCVio/Schemes/BLS/`; generic corollaries by T5 |
 | signature repo | `Signatures/Model/DLog11.lean`, `Signatures/Model/CoCDH.lean` | problems under `HardnessAssumptions/`; the co-CDH experiment is the Type 3 form |
 | signature repo | `Signatures/Model/BilinearGroup.lean`: `BilinearPairing` | a one-line adapter in that repository to the Mathlib bilinear map used by `pairingSig` |
 | ArkLib | KZG's pairing, `Groups.tSdhExperiment`, `Groups.arsdhExperiment` | the real pairing model through `Additive`; bounds by T8 |
