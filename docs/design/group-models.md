@@ -309,7 +309,7 @@ before the adversary runs.
 
 **Derived normal forms, not presentations.** Fixed-slot coefficient outputs, such as the signature
 repository's `(β, γ, ξ)` over (generator, hash replies, signing replies), are a regrouping of (E)'s
-basis list. They arrive with the BLS port.
+basis list. They arrive with the port of BLS against algebraic adversaries.
 
 ### 4.5 Knobs
 
@@ -1220,7 +1220,7 @@ are equal, free equality tests find them, and their difference is a relation.
 | KZG evaluation binding and function binding, unconditional | for a generic adversary, at most the generic `t`-SDH and ARSDH bounds at a counted number of operations | ArkLib `KZG.CommitmentScheme.binding` with `bindingReduction`, `KZG.CommitmentScheme.function_binding` with `reduction` |  |
 | KZG extraction | a named straight-line extractor; `Pr[accept ∧ p(z) ≠ v] ≤` the `t`-SDH advantage of a named reduction | ArkLib `Commitment.extractability`, today a placeholder, once its game says what the extractor receives (below) | Marlin, Theorem B.12 |
 | uber family from `q`-DLog, algebraic adversaries | a reduction that factors `W` |  | Bauer, Fuchsbauer, Loss; Rotem |
-| BLS and aggregate BLS under co-CDH | Type 3, and Type 2 with `ψ` | milestone 4 | Boneh, Gentry, Lynn, Shacham |
+| BLS and aggregate BLS under co-CDH | Type 3: EUF-CMA advantage at most `qH + qS + 1` times the co-CDH advantage of the named reduction (`BLS.unforgeableAdvantage_le`, `BLS.coCDHReduction`). Aggregate BLS, Type 2 with `ψ`, is a target | milestone 4 | Boneh, Lynn, Shacham; Boneh, Gentry, Lynn, Shacham |
 | Groth16 knowledge soundness | algebraic, from `q`-DLog; then generic by T5 | no Groth16 in ArkLib yet | Groth; Fuchsbauer, Kiltz, Loss |
 
 Two results need a change in ArkLib first.

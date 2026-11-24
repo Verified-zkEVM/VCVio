@@ -251,6 +251,7 @@ public import VCVioTest.SMDTUD
 public import VCVioTest.SMDTUDFinalValidity
 public import VCVioTest.SaltedMerkle
 public import VCVioTest.SampleableType
+public import VCVioTest.Schemes.BLS
 public import VCVioTest.Schemes.KEMDEM
 public import VCVioTest.Schemes.MerkleDamgard
 public import VCVioTest.Schemes.Pedersen.Generic
