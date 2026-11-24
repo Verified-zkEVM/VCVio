@@ -41,9 +41,13 @@ No side condition on `A` is needed. Marginalizing one coordinate out of an indep
 an equality only when the remaining factors carry full mass; a `ProbComp` always does
 (`prEvent_true_probComp`), so the hypothesis is discharged here rather than assumed.
 
-Still absent, and unchanged by this file: the expected-query clause. `indepTable` runs the
-adversary once per challenge, so it is not the paper's extractor, which queries it `ℓ(k-1)+1` times
-in expectation.
+This file proves no query bound. `indepTable` runs the adversary once per challenge, so it is not
+the paper's extractor, which queries it at most `1 + ℓ(k - 1)` times in expectation. That bound is
+proved for Figure 11's resampling loop against an acceptance table (`lintegral_cost_coordForkOp_le`
+in `CoordinateFork/Operational.lean`) and for the black-box finder (`isFinder_coordFinder` in
+`CoordinateFork/Finder.lean`), whose cost clause carries over to reruns of a prover on a frozen
+tape through `Rewinding.ResetPolicy.finder_bounds_honest`. Only the total-table core in
+`CoordinateFork.lean` leaves cost out.
 -/
 
 public section

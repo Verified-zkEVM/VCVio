@@ -33,9 +33,11 @@ for the table model. This is against a *fixed* acceptance table, which is the se
 its own analysis treats the adversary as a function of the challenge. See
 `CoordinateFork/Realizability.lean` for where such a table comes from.
 
-The expected-query clause is still open. The count is returned (`coordForkOp` pairs its result with
-the number of lookups) and `ProbComp.expectedLength_drawUntil` computes each coordinate's
-contribution, but nothing here assembles those into the paper's `1 + ℓ(k - 1)` bound.
+The expected-query clause holds too. `coordForkOp` pairs its result with the number of lookups,
+and `lintegral_cost_coordForkOp_le` bounds that number's expectation by the paper's
+`1 + ℓ(k - 1)`. `isFinder_coordFinder` in `CoordinateFork/Finder.lean` states the same bound as the
+cost clause of a black-box finder. Only the total-table core in `CoordinateFork.lean` leaves cost
+out.
 -/
 
 public section
