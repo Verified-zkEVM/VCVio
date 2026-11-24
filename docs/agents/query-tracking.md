@@ -78,6 +78,7 @@ labels, unchanged answers, and the ordinary function monoid.
 | `VCVio/OracleComp/QueryTracking/QueryCost.lean` | Generic query-cost accounting for direct-style `HasQuery.Program` computations |
 | `VCVio/OracleComp/QueryTracking/CostModel.lean` | `OracleComp`-specific facade over the generic semantics |
 | `VCVio/OracleComp/QueryTracking/CostModel/Simulation.lean` | Weighted cost bounds for actual oracle-query substitution |
+| `VCVio/OracleComp/QueryTracking/QueryBound/Weighted.lean` | Weighted charge bounds through stateful and stateless handlers, per-kind budgets, and the completed-path bound |
 | `VCVio/OracleComp/QueryTracking/DeterminedCost.lean` | Deterministic executions and singleton-response complete-path costs |
 | `VCVio/OracleComp/QueryTracking/MeasuredProgram.lean` | Named deterministic instruction programs, realization and declared budgets |
 | `VCVio/OracleComp/QueryTracking/MeasuredProgram/Composition.lean` | Sequential programs retaining both instruction traces and adding budgets |
@@ -90,14 +91,16 @@ labels, unchanged answers, and the ordinary function monoid.
 `WorstCaseCostBound.simulateQ` transfers a source cost bound through the actual query programs
 supplied by a `QueryImpl source (OracleComp target)`. The theorem does not thread additional
 handler-local `StateT` state between calls; the target oracle may be interpreted in a stateful
-runtime separately. Stateful query-count bounds are available in `QueryBound/Simulation.lean`; this
-weighted theorem does not supply a stateful refinement. Every completed run of each handler must
-fit that source query's charge, including all repeated target queries. The cost type may be a
-coordinate vector or any ordered additive commutative monoid; no probability interpretation is
-required. Signed weights may cancel, and idempotent or saturating addition may collapse repeated
-charges. A nonnegative, canonically ordered monoid therefore need not count operations; ordinary
-pointwise natural-number addition supplies counting arithmetic, with the observed coordinates
-and charge table still part of the accounting boundary.
+runtime separately. Stateful query-count bounds are available in `QueryBound/Simulation.lean`, and
+`isChargeBound_run_simulateQ` (`QueryBound/Weighted.lean`) transfers a weighted charge bound through
+a stateful handler. That budget also charges a query with no possible answer, which completes no
+path, so `WorstCaseCostBound` alone cannot supply it. Every completed run of each handler must fit
+that source query's charge, including all repeated target queries. The cost type may be a coordinate
+vector or any ordered additive commutative monoid; no probability interpretation is required. Signed
+weights may cancel, and idempotent or saturating addition may collapse repeated charges. A
+nonnegative, canonically ordered monoid therefore need not count operations; ordinary pointwise
+natural-number addition supplies counting arithmetic, with the observed coordinates and charge table
+still part of the accounting boundary.
 
 `mem_support_costDist_simulateQ` retains the returned value in its source support witness and
 bounds the target charge by the source charge. It supplies a support refinement, not equality of
