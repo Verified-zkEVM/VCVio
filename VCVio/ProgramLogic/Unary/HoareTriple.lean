@@ -96,6 +96,16 @@ exception postcondition to `Lean.Order.bot`. Definitionally equal to
 noncomputable abbrev wp (oa : OracleComp spec α) (post : α → ℝ≥0∞) : ℝ≥0∞ :=
   Std.WP.wp oa post Lean.Order.bot
 
+/-- A quantitative weakest precondition integrates the postcondition one oracle call at a time. -/
+theorem wp_eq_wpFold (oa : OracleComp spec α) (post : α → ℝ≥0∞) :
+    wp oa post = PFunctor.FreeM.wpFold
+      (@PFunctor.OpSpec.lintegral spec.toPFunctor (fun _ => ⊤) OracleSpec.AnswerMeasure.toMeasure)
+      oa post := by
+  change ((Lower.instWP (spec := spec)).toWP α).wp oa post Lean.Order.bot = _
+  rw [Lower.instWP_eq_expectationWPMonad]
+  exact @PFunctor.FreeM.expectationWPMonad_wp spec.toPFunctor (fun _ => ⊤)
+    OracleSpec.AnswerMeasure.toMeasure _ oa post Lean.Order.bot
+
 /-- Quantitative Hoare triple for `OracleComp spec`, fixing the exception
 postcondition to `Lean.Order.bot`. Definitionally equal to
 `Std.WP.Triple oa pre post Lean.Order.bot`; see the API contract for
@@ -416,15 +426,14 @@ theorem wp_eq_tsum [∀ t, Finite (spec.Range t)] (oa : OracleComp spec α) (pos
 @[game_rule] theorem wp_query (t : spec.Domain) (post : spec.Range t → ℝ≥0∞) :
     wp (query t : OracleComp spec (spec.Range t)) post =
       ∫⁻ u, post u ∂OracleSpec.AnswerMeasure.toMeasure t := by
-  let : MeasurableSpace (spec.Range t) := ⊤
-  rw [wp_eq_lintegral _ _ Measurable.of_discrete, evalDist_liftM_query, trim_eq_self]
+  rw [wp_eq_wpFold]
+  exact PFunctor.FreeM.wpFold_lift (P := spec.toPFunctor) _ t post
 
 /-- Lifting a primitive query has the same expectation rule. -/
 theorem wp_liftM_query (t : spec.Domain) (post : spec.Range t → ℝ≥0∞) :
     wp (liftM (query t) : OracleComp spec (spec.Range t)) post =
-      ∫⁻ u, post u ∂OracleSpec.AnswerMeasure.toMeasure t := by
-  let : MeasurableSpace (spec.Range t) := ⊤
-  rw [wp_eq_lintegral _ _ Measurable.of_discrete, evalDist_liftM_query, trim_eq_self]
+      ∫⁻ u, post u ∂OracleSpec.AnswerMeasure.toMeasure t :=
+  wp_query t post
 
 /-- The ergonomic query interface integrates the configured answer measure. -/
 @[game_rule] theorem wp_HasQuery_query (t : spec.Domain) (post : spec.Range t → ℝ≥0∞) :

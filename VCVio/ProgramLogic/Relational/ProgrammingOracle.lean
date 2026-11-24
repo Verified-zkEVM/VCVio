@@ -5,6 +5,7 @@ Authors: Quang Dao
 -/
 
 module
+import Cslib.Tactic.Membership
 public import VCVio.OracleComp.QueryTracking.ProgrammingOracle
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
 public import VCVio.ProgramLogic.Relational.SimulateQ.UntilBad
@@ -77,6 +78,7 @@ variable [AnswerMeasure spec']
 
 /-! ## Per-step agreement on good outputs -/
 
+attribute [local membership =] mem_support_pure_iff mem_support_bind_iff in
 /-- From a good input, the programmed oracle and its tracking partner give every event the same
 probability on good outputs. -/
 private lemma prEvent_withProgramming_and_not_bad_eq
@@ -119,13 +121,8 @@ private lemma prEvent_withProgramming_and_not_bad_eq
           (so t >>= fun u' => pure (u', (cache.cacheQuery t u', true)) :
             OracleComp spec' (spec.Range t × spec.QueryCache × Bool)) := by
         simp [QueryImpl.withCachingTrackingPolicy_apply, hcache, hpol, Functor.map_map]
-      rw [hL, hR, prEvent_eq_zero_of_forall_mem_support _ _ fun z hz h => h.2 (by
-          rw [support_pure, Set.mem_singleton_iff] at hz
-          rw [hz]),
-        prEvent_eq_zero_of_forall_mem_support _ _ fun z hz h => h.2 (by
-          obtain ⟨u', -, hz⟩ := (mem_support_bind_iff _ _ _).1 hz
-          rw [support_pure, Set.mem_singleton_iff] at hz
-          rw [hz])]
+      rw [hL, hR, prEvent_eq_zero_of_forall_mem_support _ _ fun z hz h => h.2 (by membership),
+        prEvent_eq_zero_of_forall_mem_support _ _ fun z hz h => h.2 (by membership)]
 
 /-! ## Total variation bounds -/
 
