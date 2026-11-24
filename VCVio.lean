@@ -502,6 +502,7 @@ public import VCVio.OracleComp.QueryTracking.RandomOracle.ReadSet
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Redirect
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Relabel
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Routing
+public import VCVio.OracleComp.QueryTracking.RandomOracle.RoutingLens
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Settled
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Simulation
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Tape
