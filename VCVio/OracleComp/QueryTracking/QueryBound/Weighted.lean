@@ -17,7 +17,8 @@ query even when that query has no possible answer, so it is stronger than the co
 `WorstCaseCostBound`, which it implies (`worstCaseCostBound_of_isChargeBound`); the converse needs
 every reachable query to have an answer (`PFunctor.FreeM.isChargeBound_of_forall_charge_le`).
 Predicate-targeted budgets are its indicator case (`isQueryBoundP_iff_isChargeBound`), and
-per-kind budgets combine into one weighted budget (`isChargeBound_of_per_kind`).
+budgets on several predicates, which may overlap, combine into one weighted budget
+(`isChargeBound_of_predicates`, with disjoint kinds as `isChargeBound_of_per_kind`).
 
 Through a handler whose every step stays within the charge of its query, the simulation stays
 within the same budget: `isChargeBound_run_simulateQ` for stateful handlers and
@@ -72,16 +73,25 @@ private def weightedSum {K : Type v} [Fintype K] (c : K → ℕ) : (K → ℕ) �
 private theorem weightedSum_apply {K : Type v} [Fintype K] (c v : K → ℕ) :
     weightedSum c v = ∑ k, c k * v k := rfl
 
+/-- Budgets `n k` on query predicates `p k`, which may overlap, give the weighted budget
+`∑ k, c k * n k` for the charge summing the weights `c k` of the predicates a query satisfies.
+Queries satisfying no predicate are free. -/
+theorem isChargeBound_of_predicates {K : Type v} [Fintype K]
+    (p : K → ι → Prop) [∀ k, DecidablePred (p k)] (c n : K → ℕ) {oa : OracleComp spec α}
+    (h : ∀ k, IsQueryBoundP oa (p k) (n k)) :
+    PFunctor.FreeM.IsChargeBound oa (fun t => ∑ k, if p k t then c k else 0)
+      (∑ k, c k * n k) := by
+  have hv : PFunctor.FreeM.IsChargeBound oa (fun t k => if p k t then 1 else 0) n :=
+    PFunctor.FreeM.isChargeBound_pi_iff.2 fun k => (isQueryBoundP_iff_isChargeBound _ _ _).1 (h k)
+  simpa [weightedSum_apply, Function.comp_def, mul_ite] using hv.map (weightedSum c)
+
 /-- Per-kind query budgets give the weighted budget that charges `c k` for a query of kind `k`:
 the sum of the costs times their respective budgets. -/
 theorem isChargeBound_of_per_kind {K : Type v} [Fintype K] [DecidableEq K]
     (κ : ι → K) (c n : K → ℕ) {oa : OracleComp spec α}
     (h : ∀ k, IsQueryBoundP oa (fun t => κ t = k) (n k)) :
     PFunctor.FreeM.IsChargeBound oa (fun t => c (κ t)) (∑ k, c k * n k) := by
-  have hv : PFunctor.FreeM.IsChargeBound oa (fun t k => if κ t = k then 1 else 0) n :=
-    PFunctor.FreeM.isChargeBound_pi_iff.2 fun k => (isQueryBoundP_iff_isChargeBound _ _ _).1 (h k)
-  simpa [weightedSum_apply, Function.comp_def, mul_ite, Finset.sum_ite_eq] using
-    hv.map (weightedSum c)
+  simpa [Finset.sum_ite_eq] using isChargeBound_of_predicates (fun k t => κ t = k) c n h
 
 /-- A weighted budget bounds the charge of every completed instrumented path. -/
 theorem worstCaseCostBound_of_isChargeBound {ι : Type} {spec : OracleSpec ι} {α ω : Type}
