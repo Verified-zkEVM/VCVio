@@ -85,6 +85,7 @@ public import VCVioTest.GroupModel.GenericSDH
 public import VCVioTest.GroupModel.GenericSXDH
 public import VCVioTest.GroupModel.GenericUber
 public import VCVioTest.GroupModel.GenericXDH
+public import VCVioTest.GroupModel.HashToGroup
 public import VCVioTest.GroupModel.Instances
 public import VCVioTest.GroupModel.Interaction.Axioms
 public import VCVioTest.GroupModel.Interaction.Basic
@@ -138,6 +139,7 @@ public import VCVioTest.OracleComp.Query
 public import VCVioTest.OracleComp.QueryAndHandlerLaws
 public import VCVioTest.OracleComp.QueryLogRelabel
 public import VCVioTest.OracleComp.QueryTracking.QueryLog
+public import VCVioTest.OracleComp.QueryTracking.SlotRenaming
 public import VCVioTest.OracleComp.SchwartzZippel
 public import VCVioTest.OracleComp.SecurityFamily
 public import VCVioTest.OracleComp.SimulateQ
