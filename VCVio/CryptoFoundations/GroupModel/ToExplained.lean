@@ -8,7 +8,6 @@ module
 public import VCVio.CryptoFoundations.GroupModel.Tracking
 public import VCVio.CryptoFoundations.GroupModel.Coins
 
-<<<<<<< ours
 /-!
 # Certified explanations of handle computations
 
@@ -18,9 +17,6 @@ handle adversary into such an adversary: it simulates the group oracle in the tr
 the received values and explains every outgoing handle by its tracked representation.
 `toExplained_run` shows that forgetting the explanations gives exactly the handle run read back
 through its final table.
-=======
-/-! # Certified explanations of handle computations
->>>>>>> theirs
 
 Tracking records coefficients over chronological receipts independently at each sort.
 Private randomness is forwarded through the coin-bearing interaction interface.
