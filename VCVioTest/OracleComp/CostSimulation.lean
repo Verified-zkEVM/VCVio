@@ -77,8 +77,7 @@ theorem program_bound : WorstCaseCostBound program sourceCost bound := by
   have hnext (reply : Bool) :
       WorstCaseCostBound (signature.query reply : OracleComp signature Bool) sourceCost
         (fun _ => 2) := by
-    intro result member coordinate
-    refine (worstCaseCostBound_query reply sourceCost result member coordinate).trans ?_
+    refine (worstCaseCostBound_query reply sourceCost).mono fun coordinate => ?_
     by_cases h : coordinate = reply <;> simp [sourceCost, h]
   have hcost : sourceCost.queryCost false + (fun _ => 2) = bound := by
     funext coordinate
