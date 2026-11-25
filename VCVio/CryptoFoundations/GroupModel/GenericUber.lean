@@ -22,7 +22,6 @@ public section
 open OracleComp OracleSpec MeasureTheory MvPolynomial
 open scoped ENNReal
 
-
 namespace GroupModel
 
 variable {F S ι : Type}
@@ -130,9 +129,11 @@ variable {F G₁ G₂ Gₜ : Type}
   Prod.fst <$> runGen (pairingReal e) (fun _ => id) A
     (fun | .g₁ => xs | .g₂ => ys | .gₜ => zs ++ [t])
 
-/-- At Type 3, computational uber success is bounded by the sorted collision terms and
-`k / |F|`, where `k` bounds both the target degree and the reachable target-sort degree. -/
-theorem experiment_ofGeneric_le [Field F] [Fintype F] [SampleableType F]
+/-- Generic computational uber at Type 3, for a target outside the accessible span of the supplied
+lists, generators whose pairing is nonzero, and free equality queries: success is bounded by the
+sorted collision terms and `k / |F|`, where `k` bounds both the target degree and the reachable
+target-sort degree. -/
+theorem computationalExperiment_ofGeneric_le [Field F] [Fintype F] [SampleableType F]
     [AddCommGroup G₁] [Module F G₁] [AddCommGroup G₂] [Module F G₂]
     [AddCommGroup Gₜ] [Module F Gₜ] [DecidableEq G₁] [DecidableEq G₂] [DecidableEq Gₜ]
     {v : ℕ} (e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ) (g₁ : G₁) (g₂ : G₂)
@@ -150,7 +151,6 @@ theorem experiment_ofGeneric_le [Field F] [Fintype F] [SampleableType F]
         (R.length + n .g₂ + 1).choose 2 * D .g₂ +
         (Q.length + n .gₜ + 1).choose 2 * D .gₜ + k : ℕ) : ℝ≥0∞) / Fintype.card F) := by
   classical
-  let : Fintype PSort := ⟨{.g₁, .g₂, .gₜ}, by intro s; cases s <;> simp⟩
   have hr (x : Fin v → F) :
       runGen (pairingReal e) (fun _ => id) A (fun
         | .g₁ => P.map (fun p => MvPolynomial.eval x p • g₁)
@@ -195,8 +195,9 @@ theorem experiment_ofGeneric_le [Field F] [Fintype F] [SampleableType F]
   simp only [uberTable, Nat.cast_add, Nat.cast_mul, ENNReal.add_div, mul_div_assoc]
   ac_rfl
 
-/-- A total operation budget supplies each per-sort budget in the computational uber bound. -/
-theorem experiment_ofGeneric_le_of_total [Field F] [Fintype F] [SampleableType F]
+/-- A total group-operation budget supplies each per-sort budget in
+`computationalExperiment_ofGeneric_le`, under the same conditions on the target and the pairing. -/
+theorem computationalExperiment_ofGeneric_le_of_total [Field F] [Fintype F] [SampleableType F]
     [AddCommGroup G₁] [Module F G₁] [AddCommGroup G₂] [Module F G₂]
     [AddCommGroup Gₜ] [Module F Gₜ] [DecidableEq G₁] [DecidableEq G₂] [DecidableEq Gₜ]
     {v : ℕ} (e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ) (g₁ : G₁) (g₂ : G₂)
@@ -212,7 +213,7 @@ theorem experiment_ofGeneric_le_of_total [Field F] [Fintype F] [SampleableType F
       ((((P.length + q + 1).choose 2 * D .g₁ +
         (R.length + q + 1).choose 2 * D .g₂ +
         (Q.length + q + 1).choose 2 * D .gₜ + k : ℕ) : ℝ≥0∞) / Fintype.card F) :=
-  experiment_ofGeneric_le e g₁ g₂ he P R Q f hf hD hd A
+  computationalExperiment_ofGeneric_le e g₁ g₂ he P R Q f hf hD hd A
     (fun s => hq.appendsTo s) k hk
 
 end Uber

@@ -5,7 +5,7 @@ Authors: Quang Dao
 -/
 
 module
-public import VCVio.CryptoFoundations.HardnessAssumptions.XDH
+public import VCVio.CryptoFoundations.HardnessAssumptions.DiffieHellman
 public import Mathlib.Algebra.MvPolynomial.Eval
 
 /-! # Computational and decisional uber problems
@@ -16,6 +16,9 @@ the independence condition requires the target polynomial to lie outside the lin
 of the supplied target polynomials and products of supplied source polynomials.
 The pairing is public and may be captured by the adversary. These experiments themselves
 impose neither the independence condition nor a resource restriction.
+
+The adversary receives exactly the listed elements. The generators `g₁` and `g₂` are among them
+only if `1 ∈ P` and `1 ∈ R`, unlike in `XDH`, which always supplies them.
 -/
 
 public section

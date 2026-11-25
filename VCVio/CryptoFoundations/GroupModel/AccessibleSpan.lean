@@ -7,6 +7,7 @@ Authors: Quang Dao
 module
 public import VCVio.CryptoFoundations.GroupModel.MasterBound
 public import Mathlib.Algebra.Module.Submodule.Lattice
+public import Mathlib.RingTheory.MvPolynomial.Basic
 import Mathlib.Data.List.GetD
 
 /-! # Accessible polynomial spans
@@ -47,6 +48,28 @@ theorem accessibleSpan_le [CommSemiring F] (σ : Sig S)
     (V : S → Submodule F (MvPolynomial ι F)) (hV : σ.SpanClosed V)
     (htbl : ∀ s p, p ∈ tbl s → p ∈ V s) (s : S) : accessibleSpan σ tbl s ≤ V s :=
   iInf_le_of_le ⟨V, hV, htbl⟩ le_rfl
+
+/-- Under closed degree bounds, the accessible span of a sort has total degree at most that
+sort's bound. -/
+theorem accessibleSpan_le_restrictTotalDegree [CommSemiring F] {σ : Sig S} {D : S → ℕ}
+    (hD : σ.DegreeClosed D) {tbl : Tbl (fun _ : S => MvPolynomial ι F)} (hd : DegreeLE D tbl)
+    (s : S) : accessibleSpan σ tbl s ≤ MvPolynomial.restrictTotalDegree ι F (D s) := by
+  refine accessibleSpan_le σ tbl (fun s => MvPolynomial.restrictTotalDegree ι F (D s))
+    ⟨fun o p hp => ?_, fun o p q hp hq => ?_⟩ (fun t p hp => ?_) s
+  · exact (MvPolynomial.mem_restrictTotalDegree ..).mpr
+      (((MvPolynomial.mem_restrictTotalDegree ..).mp hp).trans (hD.1 o))
+  · exact (MvPolynomial.mem_restrictTotalDegree ..).mpr
+      ((MvPolynomial.totalDegree_mul p q).trans
+        ((add_le_add ((MvPolynomial.mem_restrictTotalDegree ..).mp hp)
+          ((MvPolynomial.mem_restrictTotalDegree ..).mp hq)).trans (hD.2 o)))
+  · exact (MvPolynomial.mem_restrictTotalDegree ..).mpr (hd t p hp)
+
+/-- A target of larger degree than its sort's closed bound is outside the accessible span. -/
+theorem not_mem_accessibleSpan_of_lt_totalDegree [CommSemiring F] {σ : Sig S} {D : S → ℕ}
+    (hD : σ.DegreeClosed D) {tbl : Tbl (fun _ : S => MvPolynomial ι F)} (hd : DegreeLE D tbl)
+    {s : S} {f : MvPolynomial ι F} (hf : D s < f.totalDegree) : f ∉ accessibleSpan σ tbl s :=
+  fun h => hf.not_ge ((MvPolynomial.mem_restrictTotalDegree ..).mp
+    (accessibleSpan_le_restrictTotalDegree hD hd s h))
 
 /-- The accessible span is closed under all structure maps of the signature. -/
 theorem accessibleSpan_spanClosed [CommSemiring F] (σ : Sig S)
