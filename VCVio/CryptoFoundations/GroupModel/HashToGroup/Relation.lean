@@ -5,18 +5,20 @@ Authors: Quang Dao
 -/
 
 module
+public import VCVio.CryptoFoundations.GroupModel.HashToGroup.Programmed
 public import VCVio.CryptoFoundations.GroupModel.HashToGroup.Provenance
 public import VCVio.CryptoFoundations.HardnessAssumptions.DiscreteLogRelation
 
-/-! # Relations extracted from hash-to-group interactions
+/-! # Relations from collisions over a finite table of hash answers
 
 A normalized collision subtracts representations after merging repeated receipts by origin.
-The challenge-table experiment gives each fixed-input slot and hash label its own coordinate.
-Its reduction is an instance of the shared relation experiment; the subsequent discrete-log
-bound uses the joint hidden-mask argument of `DiscreteLogRelation.experiment_le`.
+When the labels are finite, the answer of every label can be sampled ahead of time, with one
+challenge coordinate for each fixed input and each label. The named finder then wins the shared
+relation experiment, and the discrete-log bound is `DiscreteLogRelation.experiment_le`. Neither
+statement bounds the number of hash queries, and `g` need only be nonzero.
 
-The quantitative experiment samples a complete finite table. `HashToGroup.LazyRelation` connects
-the honest lazy oracle on arbitrary labels to a finite challenge basis under a hash-query budget.
+`HashToGroup.LazyRelation` treats the lazily sampled oracle on arbitrary labels, under a hash-query
+budget, by a separate argument.
 -/
 
 public section
@@ -27,53 +29,6 @@ open OracleComp OracleSpec Interaction
 open scoped ENNReal
 
 variable {Label F G κ : Type} {n : ℕ}
-
-/-- Two different coefficient lists explaining the same group element as two final outputs. -/
-@[expose] def RepresentationCollision (out : Explained F Unit (fun _ : Unit => G)) : Prop :=
-  ∃ (a b : List F) (g : G), out.coefficients () = [a, b] ∧
-    out.value.groups () = [g, g] ∧ a ≠ b
-
-/-- Subtract the first two output representations after substituting their recorded rows. -/
-@[expose] def relationVector [Ring F] (rows : List (κ → F))
-    (out : Explained F Unit (fun _ : Unit => G)) : κ → F :=
-  transport rows (((out.coefficients ())[0]?).getD []) -
-    transport rows (((out.coefficients ())[1]?).getD [])
-
-/-- A collision of valid explanations transports to a vanishing group combination. -/
-theorem basisMap_relationVector [CommRing F] [AddCommGroup G] [Module F G] [Fintype κ]
-    (B : κ → G) (rows : List (κ → F)) (out : Explained F Unit (fun _ : Unit => G))
-    (hv : out.Valid (fun _ => rows.map (basisMap B))) (hc : RepresentationCollision out) :
-    basisMap B (relationVector rows out) = 0 := by
-  obtain ⟨a, b, g, ha, hg, _⟩ := hc
-  have h := hv ()
-  simp only [ha, hg, List.forall₂_cons, List.forall₂_nil_right_iff, and_true] at h
-  simp [relationVector, ha, map_sub, basisMap_transport, h.1.2, h.2.2]
-
-/-- Execute a certified hash adversary, starting from specified rows for its fixed inputs. -/
-@[expose] def execution [DecidableEq Label] [CommSemiring F] [AddCommMonoid G]
-    [Module F G] [Fintype κ] (B : κ → G) (sample : Label → ProbComp (κ → F))
-    (A : Adversary F (fun _ : Unit => G) Unit Label (fun _ => Unit) Unit)
-    (rows : List (κ → F)) :
-    ProbComp (Explained F Unit (fun _ : Unit => G) × State Label (κ → F)) :=
-  runProgram B sample (A.main ⟨(), fun _ => rows.map (basisMap B)⟩) (initial rows)
-
-/-- Every final explanation in a certified execution is valid over the recorded rows. -/
-theorem execution_valid [DecidableEq Label] [CommSemiring F] [AddCommMonoid G]
-    [Module F G] [Fintype κ] (B : κ → G) (sample : Label → ProbComp (κ → F))
-    (A : Adversary F (fun _ : Unit => G) Unit Label (fun _ => Unit) Unit)
-    (rows : List (κ → F)) (z)
-    (hz : z ∈ support (execution B sample A rows)) :
-    z.1.Valid (fun _ => z.2.2.map (basisMap B)) :=
-  runProgram_valid B sample _ (initial rows) (A.algebraic _) z hz
-
-
-/-- Execute a certified randomized hash adversary with the programmed coefficient log. -/
-@[expose] def executionWithCoins [DecidableEq Label] [CommSemiring F] [AddCommMonoid G]
-    [Module F G] [Fintype κ] (B : κ → G) (sample : Label → ProbComp (κ → F))
-    (A : Adversary F (fun _ : Unit => G) Unit (CoinQuery Label)
-      (CoinReply (fun _ => Unit)) Unit) (rows : List (κ → F)) :
-    ProbComp (Explained F Unit (fun _ : Unit => G) × State Label (κ → F)) :=
-  runProgramWithCoins B sample (A.main ⟨(), fun _ => rows.map (basisMap B)⟩) (initial rows)
 
 /-- Execute a certified coin-bearing hash adversary with separate symbolic challenge coordinates.
 Fixed inputs occupy identity coordinates; hash replies append their label origins. -/

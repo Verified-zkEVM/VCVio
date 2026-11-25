@@ -5,9 +5,7 @@ Authors: Quang Dao
 -/
 
 module
-public import VCVio.CryptoFoundations.GroupModel.HashToGroup.Oracle
-public import VCVio.CryptoFoundations.GroupModel.HashToGroup.Transport
-public import VCVio.CryptoFoundations.GroupModel.Coins
+public import VCVio.CryptoFoundations.GroupModel.HashToGroup.Coins
 
 /-! # Programmed hash-to-group and certified executions
 
@@ -28,18 +26,19 @@ variable {Label F G κ Data α Query : Type} {Reply : Query → Type}
 @[expose] def programmed [DecidableEq Label] [CommSemiring F] [AddCommMonoid G]
     [Module F G] [Fintype κ] (B : κ → G) (sample : Label → ProbComp (κ → F)) :
     QueryImpl (gameSpec Label G) (StateT (State Label (κ → F)) ProbComp) :=
-  game (basisMap B) sample
+  game (Fintype.linearCombination F B) sample
 
 /-- Uniform fresh programmed outputs perfectly simulate the honest oracle for every adaptive
 computation, including the final cache and receipt list after decoding. -/
 theorem programmed_simulation [DecidableEq Label] [CommSemiring F] [AddCommMonoid G]
     [Module F G] [Fintype κ] [SampleableType G]
     (B : κ → G) (sample : Label → ProbComp (κ → F))
-    (h : ∀ l, basisMap B <$> sample l =ᵈ ($ᵗ G : ProbComp G))
+    (h : ∀ l, Fintype.linearCombination F B <$> sample l =ᵈ ($ᵗ G : ProbComp G))
     (p : OracleComp (gameSpec Label G) α) (st : State Label (κ → F)) :
-    Prod.map id (mapState (basisMap B)) <$> (simulateQ (programmed B sample) p).run st =ᵈ
-      (simulateQ honest p).run (mapState (basisMap B) st) :=
-  simulateQ_game_mapState (basisMap B) id sample (fun _ => $ᵗ G) h p st
+    Prod.map id (mapState (Fintype.linearCombination F B)) <$>
+        (simulateQ (programmed B sample) p).run st =ᵈ
+      (simulateQ honest p).run (mapState (Fintype.linearCombination F B) st) :=
+  simulateQ_game_mapState (Fintype.linearCombination F B) id sample (fun _ => $ᵗ G) h p st
 
 /-- The two-element reduction basis containing a generator and a challenge. -/
 @[expose] def pairBasis (g Z : G) : Fin 2 → G := ![g, Z]
@@ -51,15 +50,15 @@ theorem programmed_simulation [DecidableEq Label] [CommSemiring F] [AddCommMonoi
   pure ![x, y]
 
 /-- The programmed two-coordinate row evaluates to the standard challenge embedding. -/
-@[simp] theorem basisMap_pairBasis [CommSemiring F] [AddCommMonoid G] [Module F G]
-    (g Z : G) (x y : F) : basisMap (pairBasis g Z) ![x, y] = x • g + y • Z := by
-  simp [basisMap, pairBasis, Fin.sum_univ_two]
+@[simp] theorem linearCombination_pairBasis [CommSemiring F] [AddCommMonoid G] [Module F G]
+    (g Z : G) (x y : F) : Fintype.linearCombination F (pairBasis g Z) ![x, y] = x • g + y • Z := by
+  simp [Fintype.linearCombination_apply, pairBasis, Fin.sum_univ_two]
 
 /-- Uniform generator masks make challenge embeddings uniform, for any fixed challenge. -/
 theorem pairSample_uniform [CommSemiring F] [AddCommGroup G] [Module F G]
     [SampleableType F] [SampleableType G]
     (g Z : G) (hg : Function.Bijective (· • g : F → G)) :
-    basisMap (pairBasis g Z) <$> (pairSample : ProbComp (Fin 2 → F)) =ᵈ
+    Fintype.linearCombination F (pairBasis g Z) <$> (pairSample : ProbComp (Fin 2 → F)) =ᵈ
       ($ᵗ G : ProbComp G) := by
   have h (y : F) : (fun x : F => x • g + y • Z) <$> ($ᵗ F : ProbComp F) =ᵈ
       ($ᵗ G : ProbComp G) :=
@@ -77,16 +76,10 @@ bijective. -/
 theorem scalarSample_uniform [CommSemiring F] [AddCommMonoid G] [Module F G]
     [SampleableType F] [SampleableType G]
     (g : G) (hg : Function.Bijective (· • g : F → G)) :
-    basisMap (fun _ : Unit => g) <$> (scalarSample : ProbComp (Unit → F)) =ᵈ
+    Fintype.linearCombination F (fun _ : Unit => g) <$> (scalarSample : ProbComp (Unit → F)) =ᵈ
       ($ᵗ G : ProbComp G) := by
-  simpa [scalarSample, basisMap] using
+  simpa [scalarSample, Fintype.linearCombination_apply] using
     SampleableType.map_uniformSample_evalDistEq_of_bijective hg
-
-/-- Forward explained requests to the plain game while retaining explanations in the result. -/
-@[expose] def interactionProgram
-    (p : OracleComp (explainedSpec F (fun _ : Unit => G) Query Reply) α) :
-    OracleComp (plainSpec (fun _ : Unit => G) Query Reply) α :=
-  simulateQ (fun q => (plainSpec (fun _ : Unit => G) Query Reply).query q.value) p
 
 /-- Run an explained computation against the programmed oracle and retain its coefficient log. -/
 @[expose] def runProgram [DecidableEq Label] [CommSemiring F] [AddCommMonoid G]
@@ -95,68 +88,32 @@ theorem scalarSample_uniform [CommSemiring F] [AddCommMonoid G] [Module F G]
     (st : State Label (κ → F)) : ProbComp (α × State Label (κ → F)) :=
   (simulateQ (programmed B sample) (interactionProgram p)).run st
 
-private theorem runProgram_pure [DecidableEq Label] [CommSemiring F] [AddCommMonoid G]
-    [Module F G] [Fintype κ] (B : κ → G) (sample : Label → ProbComp (κ → F))
-    (a : α) (st : State Label (κ → F)) : runProgram B sample (pure a) st = pure (a, st) := by
-  simp [runProgram, interactionProgram]
-
-private theorem runProgram_query [DecidableEq Label] [CommSemiring F] [AddCommMonoid G]
-    [Module F G] [Fintype κ] (B : κ → G) (sample : Label → ProbComp (κ → F))
-    (q : Explained F Label (fun _ : Unit => G))
-    (next : Message Unit (fun _ : Unit => G) →
-      OracleComp (explainedSpec F (fun _ : Unit => G) Label (fun _ => Unit)) α)
-    (st : State Label (κ → F)) :
-    runProgram B sample (liftM ((explainedSpec F (fun _ : Unit => G) Label
-      (fun _ => Unit)).query q) >>= next) st =
-      (oracle (basisMap B) sample q.value.data).run st >>= fun z =>
-        runProgram B sample (next (reply z.1)) z.2 := by
-  simp [runProgram, interactionProgram, programmed, game, bind_map_left]
-
-private theorem oracle_receipts [DecidableEq Label] (decode : (κ → F) → G)
-    (sample : Label → ProbComp (κ → F)) (l : Label) (st : State Label (κ → F))
-    (z : G × State Label (κ → F)) (hz : z ∈ support ((oracle decode sample l).run st)) :
-    z.2.2.map decode = st.2.map decode ++ [z.1] := by
-  rw [oracle_apply] at hz
-  cases hc : st.1 l with
-  | some c => simp only [hc, support_pure, Set.mem_singleton_iff] at hz; subst z; simp
-  | none =>
-    simp only [hc, support_map, Set.mem_image] at hz
-    obtain ⟨c, _, rfl⟩ := hz
-    simp
-
 /-- A certified computation's final explanation is valid over the actual recorded coefficient
 rows. Initial rows may represent fixed inputs in an enlarged basis. -/
 theorem runProgram_valid [DecidableEq Label] [CommSemiring F] [AddCommMonoid G]
     [Module F G] [Fintype κ] (B : κ → G) (sample : Label → ProbComp (κ → F))
     (p : OracleComp (explainedSpec F (fun _ : Unit => G) Label (fun _ => Unit))
       (Explained F Data (fun _ : Unit => G))) (st : State Label (κ → F))
-    (hp : IsAlgebraic (fun _ => st.2.map (basisMap B)) p)
+    (hp : IsAlgebraic (fun _ => st.2.map (Fintype.linearCombination F B)) p)
     (z : Explained F Data (fun _ : Unit => G) × State Label (κ → F))
     (hz : z ∈ support (runProgram B sample p st)) :
-    z.1.Valid (fun _ => z.2.2.map (basisMap B)) := by
-  induction p using OracleComp.inductionOn generalizing st z with
-  | pure out =>
-    rw [runProgram_pure, support_pure, Set.mem_singleton_iff] at hz
-    subst z
-    exact hp
-  | query_bind q next ih =>
-    rw [runProgram_query, mem_support_bind_iff] at hz
-    obtain ⟨w, hw, hz⟩ := hz
-    apply ih (reply w.1) w.2 _ z hz
-    have hn := ((isAlgebraic_query (Reply := fun _ => Unit)
-      (fun _ => st.2.map (basisMap B)) q next).mp hp).2 (reply w.1)
-    change IsAlgebraic (fun _ => st.2.map (basisMap B) ++ [w.1]) (next (reply w.1)) at hn
-    rwa [oracle_receipts (basisMap B) sample q.value.data st w hw]
+    z.1.Valid (fun _ => z.2.2.map (Fintype.linearCombination F B)) :=
+  run_receipts_valid (programmed B sample) (fun st => st.2.map (Fintype.linearCombination F B))
+    (fun q st z hz => by
+      obtain ⟨w, hw, rfl⟩ := by
+        simpa only [programmed, game, StateT.run_map, support_map, Set.mem_image] using hz
+      exact oracle_receipts _ sample q.data st w hw) p st hp z hz
 
 /-- Transport all final outputs of a certified programmed run to the reduction's basis. -/
 theorem runProgram_transport [DecidableEq Label] [CommSemiring F] [AddCommMonoid G]
     [Module F G] [Fintype κ] (B : κ → G) (sample : Label → ProbComp (κ → F))
     (p : OracleComp (explainedSpec F (fun _ : Unit => G) Label (fun _ => Unit))
       (Explained F Data (fun _ : Unit => G))) (st : State Label (κ → F))
-    (hp : IsAlgebraic (fun _ => st.2.map (basisMap B)) p)
+    (hp : IsAlgebraic (fun _ => st.2.map (Fintype.linearCombination F B)) p)
     (z : Explained F Data (fun _ : Unit => G) × State Label (κ → F))
     (hz : z ∈ support (runProgram B sample p st)) :
-    (transportExplained (fun _ => z.2.2) z.1 ()).map (basisMap B) = z.1.value.groups () :=
+    (transportExplained (fun _ => z.2.2) z.1 ()).map (Fintype.linearCombination F B) =
+      z.1.value.groups () :=
   transportExplained_evaluate (fun _ => B) (fun _ => z.2.2) z.1
     (runProgram_valid B sample p st hp z hz) ()
 

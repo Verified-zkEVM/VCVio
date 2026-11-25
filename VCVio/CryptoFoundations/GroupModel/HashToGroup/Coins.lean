@@ -5,7 +5,9 @@ Authors: Quang Dao
 -/
 
 module
-public import VCVio.CryptoFoundations.GroupModel.HashToGroup.Programmed
+public import VCVio.CryptoFoundations.GroupModel.Coins
+public import VCVio.CryptoFoundations.GroupModel.HashToGroup.Oracle
+public import VCVio.CryptoFoundations.GroupModel.HashToGroup.Transport
 
 /-! # Private coins and coefficient logs
 
@@ -22,10 +24,10 @@ open OracleComp OracleSpec Interaction
 variable {Label C D F G κ Data α Query σ : Type} {Reply : Query → Type}
 
 /-- Uniform private coins lifted through a state without changing it. -/
-@[expose] def coins : QueryImpl unifSpec (StateT σ ProbComp) :=
-  fun n st => (fun x => (x, st)) <$> (liftM (unifSpec.query n) : ProbComp _)
+abbrev coins : QueryImpl unifSpec (StateT σ ProbComp) :=
+  (QueryImpl.ofLift unifSpec ProbComp).liftTarget (StateT σ ProbComp)
 
-/-- Hash queries and private coins sharing the programmed coefficient state. -/
+/-- Hash queries and private coins sharing the cache and receipts of the hash oracle. -/
 @[expose] def gameWithCoins [DecidableEq Label] (decode : C → G)
     (sample : Label → ProbComp C) :
     QueryImpl (plainSpec (fun _ : Unit => G) (CoinQuery Label) (CoinReply (fun _ => Unit)))
@@ -72,13 +74,7 @@ theorem gameWithCoins_receipts [DecidableEq Label] (decode : C → G)
       (oracle decode sample l).run st) at hz
     simp only [support_map, Set.mem_image] at hz
     obtain ⟨w, hw, rfl⟩ := hz
-    rw [oracle_apply] at hw
-    cases hc : st.1 l with
-    | some c => simp only [hc, support_pure, Set.mem_singleton_iff] at hw; subst w; simp [reply]
-    | none =>
-      simp only [hc, support_map, Set.mem_image] at hw
-      obtain ⟨c, _, rfl⟩ := hw
-      simp [reply]
+    exact oracle_receipts decode sample l st w hw
   · simp only [gameWithCoins_coin, support_map, Set.mem_image] at hz
     obtain ⟨x, _, rfl⟩ := hz
     simp
@@ -91,23 +87,10 @@ theorem simulateQ_gameWithCoins_mapState [DecidableEq Label] (f : C → D) (deco
       (CoinReply (fun _ => Unit))) α) (st : State Label C) :
     Prod.map id (mapState f) <$> (simulateQ (gameWithCoins (decode ∘ f) sample) p).run st =ᵈ
       (simulateQ (gameWithCoins decode target) p).run (mapState f st) := by
-  induction p using OracleComp.inductionOn generalizing st with
-  | pure a => simp
-  | query_bind q next ih =>
-    simp only [simulateQ_bind, simulateQ_spec_query, StateT.run_bind, map_bind]
-    refine (EvalDistEq.bind_right _ fun (z : Message (CoinReply (fun _ : Label => Unit) q.data)
-        (fun _ : Unit => G) × State Label C) => ih z.1 z.2).trans ?_
-    have hs : Prod.map id (mapState f) <$>
-        (gameWithCoins (decode ∘ f) sample q).run st =ᵈ
-        (gameWithCoins decode target q).run (mapState f st) := by
-      rcases q with ⟨l | n, groups⟩
-      · change Prod.map id (mapState f) <$> (game (decode ∘ f) sample ⟨l, groups⟩).run st =ᵈ
-          (game decode target ⟨l, groups⟩).run (mapState f st)
-        simpa only [game, StateT.run_map, Functor.map_map, Prod.map, id_eq, Function.comp_def] using
-          (oracle_mapState f decode sample target h l st).map (fun z => (reply z.1, z.2))
-      · simp
-    simpa only [bind_map_left, Prod.map, id_eq] using hs.bind_left
-      (fun z => (simulateQ (gameWithCoins decode target) (next z.1)).run z.2)
+  refine evalDistEq_map_run_simulateQ_eq_of_query_evalDistEq_map_eq _ _ _ ?_ p st
+  rintro ⟨l | n, groups⟩ st
+  · exact game_mapState f decode sample target h ⟨l, groups⟩ st
+  · simp
 
 /-- Execute an explained program through a coin-bearing hash handler, retaining its private log. -/
 @[expose] def runGameWithCoins [DecidableEq Label] (decode : C → G)
@@ -175,7 +158,7 @@ theorem runGameWithCoins_coin [DecidableEq Label] (decode : C → G)
     (p : OracleComp (explainedSpec F (fun _ : Unit => G) (CoinQuery Label)
       (CoinReply (fun _ => Unit))) α) (st : State Label (κ → F)) :
     ProbComp (α × State Label (κ → F)) :=
-  runGameWithCoins (basisMap B) sample p st
+  runGameWithCoins (Fintype.linearCombination F B) sample p st
 
 /-- The coefficient log validates every output of a certified randomized computation. -/
 theorem runGameWithCoins_valid [DecidableEq Label] [CommSemiring F] [AddCommMonoid G]
@@ -184,41 +167,31 @@ theorem runGameWithCoins_valid [DecidableEq Label] [CommSemiring F] [AddCommMono
       (CoinReply (fun _ => Unit))) (Explained F Data (fun _ : Unit => G)))
     (st : State Label C) (hp : IsAlgebraic (fun _ => st.2.map decode) p)
     (z) (hz : z ∈ support (runGameWithCoins decode sample p st)) :
-    z.1.Valid (fun _ => z.2.2.map decode) := by
-  induction p using OracleComp.inductionOn generalizing st z with
-  | pure out =>
-    simp only [runGameWithCoins, interactionProgram, simulateQ_pure, StateT.run_pure,
-      support_pure, Set.mem_singleton_iff] at hz
-    subst z
-    exact hp
-  | query_bind q next ih =>
-    simp only [runGameWithCoins, interactionProgram, simulateQ_bind, simulateQ_spec_query,
-      StateT.run_bind, mem_support_bind_iff] at hz
-    obtain ⟨w, hw, hz⟩ := hz
-    apply ih w.1 w.2 _ z hz
-    have hn := ((isAlgebraic_query (Reply := CoinReply (fun _ => Unit))
-      (fun _ => st.2.map decode) q next).mp hp).2 w.1
-    change IsAlgebraic (fun _ => st.2.map decode ++ w.1.groups ()) (next w.1) at hn
-    rwa [gameWithCoins_receipts decode sample q.value st w hw]
+    z.1.Valid (fun _ => z.2.2.map decode) :=
+  run_receipts_valid (gameWithCoins decode sample) (fun st => st.2.map decode)
+    (gameWithCoins_receipts decode sample) p st hp z hz
 
 /-- Certified programmed runs with private coins produce valid logged representations. -/
 theorem runProgramWithCoins_valid [DecidableEq Label] [CommSemiring F] [AddCommMonoid G]
     [Module F G] [Fintype κ] (B : κ → G) (sample : Label → ProbComp (κ → F))
     (p : OracleComp (explainedSpec F (fun _ : Unit => G) (CoinQuery Label)
       (CoinReply (fun _ => Unit))) (Explained F Data (fun _ : Unit => G)))
-    (st : State Label (κ → F)) (hp : IsAlgebraic (fun _ => st.2.map (basisMap B)) p)
+    (st : State Label (κ → F))
+    (hp : IsAlgebraic (fun _ => st.2.map (Fintype.linearCombination F B)) p)
     (z) (hz : z ∈ support (runProgramWithCoins B sample p st)) :
-    z.1.Valid (fun _ => z.2.2.map (basisMap B)) :=
-  runGameWithCoins_valid (basisMap B) sample p st hp z hz
+    z.1.Valid (fun _ => z.2.2.map (Fintype.linearCombination F B)) :=
+  runGameWithCoins_valid (Fintype.linearCombination F B) sample p st hp z hz
 
 /-- Transport all outputs of a randomized certified computation to the reduction basis. -/
 theorem runProgramWithCoins_transport [DecidableEq Label] [CommSemiring F] [AddCommMonoid G]
     [Module F G] [Fintype κ] (B : κ → G) (sample : Label → ProbComp (κ → F))
     (p : OracleComp (explainedSpec F (fun _ : Unit => G) (CoinQuery Label)
       (CoinReply (fun _ => Unit))) (Explained F Data (fun _ : Unit => G)))
-    (st : State Label (κ → F)) (hp : IsAlgebraic (fun _ => st.2.map (basisMap B)) p)
+    (st : State Label (κ → F))
+    (hp : IsAlgebraic (fun _ => st.2.map (Fintype.linearCombination F B)) p)
     (z) (hz : z ∈ support (runProgramWithCoins B sample p st)) :
-    (transportExplained (fun _ => z.2.2) z.1 ()).map (basisMap B) = z.1.value.groups () :=
+    (transportExplained (fun _ => z.2.2) z.1 ()).map (Fintype.linearCombination F B) =
+      z.1.value.groups () :=
   transportExplained_evaluate (fun _ => B) (fun _ => z.2.2) z.1
     (runProgramWithCoins_valid B sample p st hp z hz) ()
 

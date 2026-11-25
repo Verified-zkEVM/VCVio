@@ -5,7 +5,7 @@ Authors: Quang Dao
 -/
 
 module
-public import VCVio.CryptoFoundations.GroupModel.HashToGroup.Coins
+public import VCVio.CryptoFoundations.GroupModel.HashToGroup.Programmed
 public import VCVio.CryptoFoundations.GroupModel.ToExplained
 
 /-! # Hash-to-group in the handle presentation
@@ -50,11 +50,11 @@ theorem toExplained_programmed_transport [DecidableEq Label] [CommSemiring F]
       State Label (κ → F))
     (hz : z ∈ support (((toExplained A enc).run
       (withCoins coins (programmed B sample))
-      ⟨(), fun _ => st.2.map (basisMap B)⟩).run st)) :
-    (transportExplained (fun _ => z.2.2) z.1.1 ()).map (basisMap B) =
+      ⟨(), fun _ => st.2.map (Fintype.linearCombination F B)⟩).run st)) :
+    (transportExplained (fun _ => z.2.2) z.1.1 ()).map (Fintype.linearCombination F B) =
       z.1.1.value.groups () := by
   have hp : (z.1.1, z.2) ∈ support (runProgramWithCoins B sample
-      ((toExplained A enc).main ⟨(), fun _ => st.2.map (basisMap B)⟩) st) := by
+      ((toExplained A enc).main ⟨(), fun _ => st.2.map (Fintype.linearCombination F B)⟩) st) := by
     rw [runProgramWithCoins, ← runGameWithCoins_run]
     rw [support_map]
     exact ⟨z, hz, rfl⟩

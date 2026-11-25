@@ -89,7 +89,7 @@ theorem slotPullback_transport [Semiring F] [DecidableEq Label]
     (origins : List (Origin n Label))
     (ho : ∀ l, .inr l ∈ origins → slots l ≠ none) (c : List F) :
     slotPullback slots (transport (origins.map (slotRow slots)) c) = merge origins c := by
-  rw [transport, evaluate_linearMap]
+  rw [transport, ← evaluate_map]
   unfold merge transport
   congr 1
   rw [List.map_map]

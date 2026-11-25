@@ -79,40 +79,29 @@ theorem runGameWithCoins_provenance_transport [DecidableEq Label] [CommSemiring 
     (p : OracleComp (explainedSpec F (fun _ : Unit => G) (CoinQuery Label)
       (CoinReply (fun _ => Unit))) (Explained F Unit (fun _ : Unit => G)))
     (st : State Label (Receipt n Label (κ → F)))
-    (hp : IsAlgebraic (fun _ => st.2.map (basisMap B ∘ Prod.snd)) p)
-    (z) (hz : z ∈ support (runGameWithCoins (basisMap B ∘ Prod.snd)
+    (hp : IsAlgebraic (fun _ => st.2.map (Fintype.linearCombination F B ∘ Prod.snd)) p)
+    (z) (hz : z ∈ support (runGameWithCoins (Fintype.linearCombination F B ∘ Prod.snd)
       (provenanceSample n sample) p st)) :
-    (transportExplained (fun _ => z.2.2.map Prod.snd) z.1 ()).map (basisMap B) =
+    (transportExplained (fun _ => z.2.2.map Prod.snd) z.1 ()).map (Fintype.linearCombination F B) =
       z.1.value.groups () := by
   apply transportExplained_evaluate (fun _ => B) (fun _ => z.2.2.map Prod.snd)
   simpa only [List.map_map] using
-    runGameWithCoins_valid (basisMap B ∘ Prod.snd) (provenanceSample n sample) p st hp z hz
+    runGameWithCoins_valid (Fintype.linearCombination F B ∘ Prod.snd) (provenanceSample n sample)
+      p st hp z hz
 
 /-- The set of fresh labels appearing in a receipt log, excluding fixed-input slots. -/
 @[expose] def freshLabels [DecidableEq Label] (origins : List (Origin n Label)) : Finset Label :=
   (origins.filterMap (Sum.elim (fun _ => none) some)).toFinset
 
-/-- For a finite label space, the challenge table provides enough slots for all fresh labels.
-This bound concerns distinct origins, independently of repeated receipt positions. -/
-theorem freshLabels_card_le [Fintype Label] [DecidableEq Label]
-    (origins : List (Origin n Label)) : (freshLabels origins).card ≤ Fintype.card Label :=
-  Finset.card_le_univ _
-
 /-- Merge chronological coefficients by symbolic origin, keeping distinct labels separate. -/
 @[expose] def merge [Semiring F] [DecidableEq ι] (origins : List ι) (c : List F) : ι → F :=
   transport (origins.map fun i => Pi.single i 1) c
 
-/-- The coordinate row of a symbolic origin evaluates to that origin's group element. -/
-@[simp] theorem basisMap_single [CommSemiring F] [AddCommMonoid G] [Module F G]
-    [Fintype ι] [DecidableEq ι] (B : ι → G) (i : ι) :
-    basisMap (F := F) B (Pi.single i 1) = B i := by
-  simp [basisMap, Pi.single_apply, ite_smul]
-
 /-- Merging by origin preserves evaluation over the corresponding symbolic basis. -/
-theorem basisMap_merge [CommSemiring F] [AddCommMonoid G] [Module F G]
+theorem linearCombination_merge [CommSemiring F] [AddCommMonoid G] [Module F G]
     [Fintype ι] [DecidableEq ι] (B : ι → G) (origins : List ι) (c : List F) :
-    basisMap B (merge origins c) = evaluate c (origins.map B) := by
-  simp [merge, basisMap_transport, List.map_map, Function.comp_def]
+    Fintype.linearCombination F B (merge origins c) = evaluate c (origins.map B) := by
+  simp [merge, linearCombination_transport, List.map_map, Function.comp_def]
 
 /-- Equal group outputs win only when their representations differ after merging by origin. -/
 @[expose] def NormalizedCollision [Semiring F] [DecidableEq ι] (origins : List ι)
@@ -138,15 +127,15 @@ theorem mergedDifference_ne_zero [Ring F] [DecidableEq ι] (origins : List ι)
     [Module F G] (B : ι → G) (origins : List ι)
     (out : Explained F Unit (fun _ : Unit => G))
     (hv : out.Valid (fun _ => origins.map B)) (hc : NormalizedCollision origins out) :
-    DiscreteLogRelation.RelationWitness (F := F) B where
-  coeffs := mergedDifference origins out
-  nonzero := mergedDifference_ne_zero origins out hc
-  relation := by
-    obtain ⟨a, b, g, ha, hg, _⟩ := hc
-    have h := hv ()
-    simp only [ha, hg, List.forall₂_cons, List.forall₂_nil_right_iff, and_true] at h
-    change basisMap B (mergedDifference origins out) = 0
-    simp [mergedDifference, ha, map_sub, basisMap_merge, h.1.2, h.2.2]
+    DiscreteLogRelation.RelationWitness (F := F) B :=
+  .ofCollision B (merge origins (((out.coefficients ())[0]?).getD []))
+    (merge origins (((out.coefficients ())[1]?).getD []))
+    (sub_ne_zero.mp (mergedDifference_ne_zero origins out hc)) (by
+      obtain ⟨a, b, g, ha, hg, _⟩ := hc
+      have h := hv ()
+      simp only [ha, hg, List.forall₂_cons, List.forall₂_nil_right_iff, and_true] at h
+      change Fintype.linearCombination F B _ = Fintype.linearCombination F B _
+      simp [ha, linearCombination_merge, h.1.2, h.2.2])
 
 /-- Duplicate receipts for one origin have identical singleton merged representations. -/
 theorem merge_duplicate [Semiring F] [DecidableEq ι] (i : ι) :

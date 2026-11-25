@@ -37,12 +37,28 @@ private def sumAdversary : Adversary F Gs Unit Bool (fun _ => Unit) Unit where
     refine ⟨fun _ => .nil, fun second => ?_⟩
     exact Explained.valid_ofVectors _ _ _
 
+/-- Execute a certified hash adversary, starting from specified rows for its fixed inputs. -/
+private def execution {Label κ : Type} [DecidableEq Label] [Fintype κ] (B : κ → F)
+    (sample : Label → ProbComp (κ → F))
+    (A : Adversary F Gs Unit Label (fun _ => Unit) Unit) (rows : List (κ → F)) :
+    ProbComp (Explained F Unit Gs × State Label (κ → F)) :=
+  runProgram B sample (A.main ⟨(), fun _ => rows.map (Fintype.linearCombination F B)⟩)
+    (initial rows)
+
+/-- Two different coefficient lists explaining the same group element as two final outputs. -/
+private def RepresentationCollision (out : Explained F Unit Gs) : Prop :=
+  ∃ (a b : List F) (g : F), out.coefficients () = [a, b] ∧ out.value.groups () = [g, g] ∧ a ≠ b
+
+/-- Subtract the first two output representations after substituting their recorded rows. -/
+private def relationVector {κ : Type} (rows : List (κ → F)) (out : Explained F Unit Gs) : κ → F :=
+  transport rows (((out.coefficients ())[0]?).getD []) -
+    transport rows (((out.coefficients ())[1]?).getD [])
+
 private def rows (l : Bool) : Fin 2 → F := if l then ![5, 7] else ![2, 3]
 
 private def deterministic (B : Fin 2 → F) :
     ProbComp (Explained F Unit Gs × State Bool (Fin 2 → F)) :=
-  execution (F := F) (G := F) B
-    (fun l => pure (rows l)) sumAdversary []
+  execution B (fun l => pure (rows l)) sumAdversary []
 
 example : (fun z => z.1.value.groups ()) <$> deterministic (pairBasis (G := F) 1 11) =
     pure [16] := by
@@ -50,7 +66,7 @@ example : (fun z => z.1.value.groups ()) <$> deterministic (pairBasis (G := F) 1
     simpa [deterministic, execution, runProgram, interactionProgram, sumAdversary,
       programmed, game, oracle_apply, initial, reply, rows,
       Explained.ofVectors, extend, evaluate, List.mapIdx_cons, List.mapIdx_nil,
-      basisMap, pairBasis, Fin.sum_univ_two] using h
+      Fintype.linearCombination_apply, pairBasis, Fin.sum_univ_two] using h
   decide
 
 example : (fun z => transportExplained (fun _ => z.2.2) z.1 ()) <$>
@@ -72,16 +88,18 @@ private theorem generator_bijective : Function.Bijective (· • (1 : F) : F →
 
 -- This checks the public simulation interface on an actual adaptive certified program.
 example :
-    Prod.map id (mapState (basisMap (F := F) (G := F) (pairBasis (G := F) (1 : F) 11))) <$>
+    Prod.map id (mapState (Fintype.linearCombination F (pairBasis (G := F) (1 : F) 11))) <$>
       (simulateQ (programmed (F := F) (G := F) (pairBasis (G := F) (1 : F) 11)
         (fun _ : Bool => (pairSample : ProbComp (Fin 2 → F))))
         (interactionProgram (sumAdversary.main ⟨(), fun _ => []⟩))).run (initial []) =ᵈ
       (simulateQ honest (interactionProgram (sumAdversary.main ⟨(), fun _ => []⟩))).run
-        (mapState (basisMap (F := F) (G := F) (pairBasis (G := F) (1 : F) 11)) (initial [])) :=
+        (mapState (Fintype.linearCombination F (pairBasis (G := F) (1 : F) 11)) (initial [])) :=
   programmed_simulation _ _ (fun _ => pairSample_uniform _ _ generator_bijective) _ _
 
 -- Scalar-only programming uses the same imported public interface.
-example : basisMap (fun _ : Unit => (1 : F)) <$> (scalarSample : ProbComp (Unit → F)) =ᵈ
+example :
+    Fintype.linearCombination F (fun _ : Unit => (1 : F)) <$>
+      (scalarSample : ProbComp (Unit → F)) =ᵈ
     ($ᵗ F : ProbComp F) := scalarSample_uniform _ generator_bijective
 
 private def duplicateAdversary : Adversary F Gs Unit Bool (fun _ => Unit) Unit where
@@ -99,7 +117,7 @@ private def duplicateAdversary : Adversary F Gs Unit Bool (fun _ => Unit) Unit w
 
 -- Receipt-level differences can cancel, even with honest uniform programming.
 example (B : Fin 2 → F) (sample : Bool → ProbComp (Fin 2 → F)) :
-    Pr{let z ← execution (G := F) B sample duplicateAdversary []}[
+    Pr{let z ← execution B sample duplicateAdversary []}[
       RepresentationCollision z.1 ∧ relationVector z.2.2 z.1 = 0] = 1 := by
   simp [execution, runProgram, interactionProgram, duplicateAdversary, programmed, game,
     oracle_apply, initial, reply, Explained.ofVectors, extend, RepresentationCollision,
@@ -109,9 +127,9 @@ example (B : Fin 2 → F) (sample : Bool → ProbComp (Fin 2 → F)) :
 -- A cached response still pushes a fresh handle into the table.
 example (r : Fin 2 → F) :
     ((do
-      let first ← handle (basisMap (G := F) (pairBasis (G := F) 1 11))
+      let first ← handle (Fintype.linearCombination F (pairBasis (G := F) 1 11))
         (fun _ : Bool => pure r) ⟨false, fun _ => []⟩
-      let second ← handle (basisMap (G := F) (pairBasis (G := F) 1 11))
+      let second ← handle (Fintype.linearCombination F (pairBasis (G := F) 1 11))
         (fun _ : Bool => pure r) ⟨false, fun _ => []⟩
       pure (first.groups (), second.groups ())).run' (fun _ => [])).run' (initial []) =
         (pure ([0], [1]) : ProbComp _) := by
@@ -192,7 +210,7 @@ example (B : Fin 2 → F) (sample : Bool → ProbComp (Fin 2 → F))
     (hz : z ∈ support (((GroupModel.toExplained coinHandle (fun _ => id)).run
       (GroupModel.withCoins coins (programmed (F := F) (G := F) B sample))
       ⟨(), fun _ => []⟩).run (initial []))) :
-    (transportExplained (fun _ => z.2.2) z.1.1 ()).map (basisMap (G := F) B) =
+    (transportExplained (fun _ => z.2.2) z.1.1 ()).map (Fintype.linearCombination F B) =
       z.1.1.value.groups () :=
   toExplained_programmed_transport B sample coinHandle (fun _ => id) (initial []) z hz
 

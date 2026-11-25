@@ -13,6 +13,12 @@ public import VCVio.CryptoFoundations.GroupModel.HashToGroup.Relation
 Arbitrary hash labels are assigned distinct challenge slots on first use. A hash-query budget
 bounds the required table; private coins are unrestricted. Fixed inputs occupy independently
 sampled challenge coordinates. The relation reduction returns the transported merged difference.
+
+The adversary receives `n` independently uniform group elements and the answers to its hash
+queries, and explains its outputs over those. It does not receive the generator `g`, which is the
+base of the discrete logarithms and not an input, and it has no oracle besides hashing and private
+coins. `map_lazyExecution_eq_run` identifies its execution with its run against the hash-to-group
+oracle of `HashToGroup.Oracle`.
 -/
 
 public section
@@ -106,7 +112,8 @@ private theorem slotExecution_rows [DecidableEq Label] [SampleableType G]
     (A : Adversary F (fun _ : Unit => G) Unit (CoinQuery Label)
       (CoinReply (fun _ => Unit)) Unit) (hb : HashQueryBound n q A) (z)
     (hz : z ∈ support (slotExecution B A)) :
-    ((receiptOrigins n z.2.log).map (slotRow (F := F) z.2.slotOf)).map (basisMap B) =
+    ((receiptOrigins n z.2.log).map (slotRow (F := F) z.2.slotOf)).map
+        (Fintype.linearCombination F B) =
       List.ofFn (fun i => B (.inl i)) ++ z.2.log.map Prod.snd := by
   have hn := SlotRenaming.tableRun_no_overflow _ _ (hb (fun i => B (.inl i))) z hz
   have hr := SlotRenaming.tableRun_receipts _ _ z hz
@@ -114,7 +121,7 @@ private theorem slotExecution_rows [DecidableEq Label] [SampleableType G]
   congr 1
   · congr 1
     funext i
-    exact basisMap_single B (.inl i)
+    exact (Fintype.linearCombination_apply_single F B (.inl i) 1).trans (one_smul F _)
   · apply List.map_congr_left
     intro p hp
     obtain ⟨i, hi⟩ := hn.2 p.1 (List.mem_map_of_mem hp)
@@ -122,7 +129,8 @@ private theorem slotExecution_rows [DecidableEq Label] [SampleableType G]
     change (SlotRenaming.cache z.2 (QueryCache.ofFn fun i => some (B (.inr i)))) p.1 =
       some p.2 at hv
     simp only [SlotRenaming.cache, QueryCache.ofFn_apply, hi, Option.some.injEq] at hv
-    simp only [Function.comp_apply, slotRow, hi, basisMap_single, hv]
+    simp only [Function.comp_apply, slotRow, hi, Fintype.linearCombination_apply_single, one_smul,
+      hv]
 
 private theorem slotExecution_nonzero [DecidableEq Label] [SampleableType G]
     [CommRing F] [AddCommGroup G] [Module F G] (B : Origin n (Fin q) → G)
@@ -149,14 +157,15 @@ theorem slotExecution_relation [DecidableEq Label] [SampleableType G]
     (hz : z ∈ support (slotExecution B A))
     (hc : NormalizedCollision (receiptOrigins n z.2.log) z.1) :
     slotDifference z.2.slotOf (receiptOrigins n z.2.log) z.1 ≠ 0 ∧
-      basisMap B (slotDifference z.2.slotOf (receiptOrigins n z.2.log) z.1) = 0 := by
+      Fintype.linearCombination F B
+        (slotDifference z.2.slotOf (receiptOrigins n z.2.log) z.1) = 0 := by
   refine ⟨slotExecution_nonzero B A hb z hz hc, ?_⟩
   have hv := tableRun_rawProgram_valid (List.ofFn fun i => B (.inl i))
     (fun i => B (.inr i)) _ (A.algebraic _) z hz
   obtain ⟨a, b, g, ha, hg, _⟩ := hc
   have hv' := hv ()
   simp only [ha, hg, List.forall₂_cons, List.forall₂_nil_right_iff, and_true] at hv'
-  simp [slotDifference, ha, map_sub, basisMap_transport, slotExecution_rows B A hb z hz,
+  simp [slotDifference, ha, map_sub, linearCombination_transport, slotExecution_rows B A hb z hz,
     hv'.1.2, hv'.2.2]
 
 private theorem split_sample_bijective [SMul F G] (g : G)
@@ -175,7 +184,8 @@ private theorem split_sample_bijective [SMul F G] (g : G)
     refine ⟨x, Prod.ext (funext fun i => hx (.inl i)) (funext fun i => hx (.inr i))⟩
 
 /-- The honest lazy trial equals execution with independent challenge coordinates for fixed
-inputs and first-use hash slots. This is a joint law of output and label/reply provenance. -/
+inputs and first-use hash slots, when scalar multiplication by `g` is bijective. This is a joint
+law of the output and the label/reply log; the fixed inputs are not part of it. -/
 theorem lazyTrial_eq_slotTrial [DecidableEq Label] [SampleableType F] [SampleableType G]
     [CommSemiring F] [AddCommMonoid G] [Module F G]
     (n q : ℕ) (g : G) (hg : Function.Bijective (· • g : F → G))
@@ -199,8 +209,9 @@ theorem lazyTrial_eq_slotTrial [DecidableEq Label] [SampleableType F] [Sampleabl
     bind_map_left, f, slotExecution] using hs.symm
 
 /-- Normalized collisions against the honest lazy oracle reduce to the shared relation
-experiment over exactly `n` fixed-input coordinates and `q` first-use hash slots. The explicit
-budget counts every hash query and excludes private coins. -/
+experiment over exactly `n` fixed-input coordinates and `q` first-use hash slots, when scalar
+multiplication by `g` is bijective. The explicit budget counts every hash query, repeated ones
+included, and excludes private coins. -/
 theorem lazyTrial_le_relation [DecidableEq Label] [SampleableType F] [SampleableType G]
     [Field F] [DecidableEq F] [AddCommGroup G] [Module F G] [DecidableEq G]
     (n q : ℕ) (g : G) (hg : Function.Bijective (· • g : F → G))
@@ -223,9 +234,10 @@ theorem lazyTrial_le_relation [DecidableEq Label] [SampleableType F] [Sampleable
   -- The experiment sums with the `Fintype` instance of its enumeration.
   exact ⟨hn, by convert hr'⟩
 
-/-- Honest lazy normalized collisions have a single hidden-mask loss `1 / |F|` against the
-named DLog reduction. Its relation stage uses independently programmed coordinates for every
-fixed input and fresh hash slot; adaptivity and private coins are covered by the joint
+/-- Honest lazy normalized collisions are at most the named DLog reduction's advantage plus a
+single hidden-mask term `1 / |F|`, when scalar multiplication by `g` is bijective and the
+adversary makes at most `q` hash queries. The reduction programs an independent coordinate for
+every fixed input and fresh hash slot; adaptivity and private coins are covered by the joint
 simulation and the relation theorem's conditional-independence argument. -/
 theorem lazyTrial_le_dlog [DecidableEq Label] [SampleableType F] [SampleableType G]
     [Field F] [Fintype F] [DecidableEq F] [AddCommGroup G] [Module F G]

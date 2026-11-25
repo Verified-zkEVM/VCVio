@@ -7,7 +7,7 @@ Authors: Quang Dao
 module
 public import VCVio.CryptoFoundations.GroupModel.Game
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
-public import VCVio.OracleComp.SimSemantics.StateT.Measure
+public import VCVio.OracleComp.SimSemantics.StateT.StateProjection
 public import VCVio.OracleComp.Constructions.SampleableType.Measure
 
 /-! # Lazy hash-to-group oracles
@@ -23,7 +23,7 @@ namespace GroupModel.HashToGroup
 
 open OracleComp OracleSpec Interaction
 
-variable {Label C D G α : Type}
+variable {Label C D F G α Data Query σ : Type} {Reply : Query → Type}
 
 /-- Private cache and chronological receipts, with one receipt for every adversary query. -/
 abbrev State (Label C : Type) := (Label →ₒ C).QueryCache × List C
@@ -53,6 +53,19 @@ theorem oracle_apply [DecidableEq Label] (decode : C → G) (sample : Label → 
   cases hc : st.1 l with
   | some c => rw [QueryImpl.withCaching_run_some _ hc]; simp
   | none => rw [QueryImpl.withCaching_run_none _ hc]; simp
+
+/-- Each hash step appends exactly its reply to the decoded receipts. -/
+theorem oracle_receipts [DecidableEq Label] (decode : C → G) (sample : Label → ProbComp C)
+    (l : Label) (st : State Label C) (z : G × State Label C)
+    (hz : z ∈ support ((oracle decode sample l).run st)) :
+    z.2.2.map decode = st.2.map decode ++ [z.1] := by
+  rw [oracle_apply] at hz
+  cases hc : st.1 l with
+  | some c => simp only [hc, support_pure, Set.mem_singleton_iff] at hz; subst z; simp
+  | none =>
+    simp only [hc, support_map, Set.mem_image] at hz
+    obtain ⟨c, _, rfl⟩ := hz
+    simp
 
 /-- A hash reply carries one group input and no plain data. -/
 @[expose] def reply (g : G) : Message Unit (fun _ : Unit => G) := ⟨(), fun _ => [g]⟩
@@ -106,15 +119,19 @@ theorem simulateQ_oracle_mapState [DecidableEq Label] (f : C → D) (decode : D 
     (h : ∀ l, f <$> sample l =ᵈ target l)
     (p : OracleComp (Label →ₒ G) α) (st : State Label C) :
     Prod.map id (mapState f) <$> (simulateQ (oracle (decode ∘ f) sample) p).run st =ᵈ
-      (simulateQ (oracle decode target) p).run (mapState f st) := by
-  induction p using OracleComp.inductionOn generalizing st with
-  | pure a => simp
-  | query_bind l next ih =>
-    simp only [simulateQ_bind, simulateQ_spec_query, StateT.run_bind, map_bind]
-    exact (EvalDistEq.bind_right _ fun (z : G × State Label C) => ih z.1 z.2).trans (by
-      simpa only [bind_map_left, Prod.map, id_eq] using
-        (oracle_mapState f decode sample target h l st).bind_left
-          (fun z => (simulateQ (oracle decode target) (next z.1)).run z.2))
+      (simulateQ (oracle decode target) p).run (mapState f st) :=
+  evalDistEq_map_run_simulateQ_eq_of_query_evalDistEq_map_eq _ _ _
+    (oracle_mapState f decode sample target h) p st
+
+/-- Interpreting each fresh sample in distribution interprets each step of the interaction. -/
+theorem game_mapState [DecidableEq Label] (f : C → D) (decode : D → G)
+    (sample : Label → ProbComp C) (target : Label → ProbComp D)
+    (h : ∀ l, f <$> sample l =ᵈ target l) (q : Message Label (fun _ : Unit => G))
+    (st : State Label C) :
+    Prod.map id (mapState f) <$> (game (decode ∘ f) sample q).run st =ᵈ
+      (game decode target q).run (mapState f st) := by
+  simpa [game, Function.comp_def] using
+    (oracle_mapState f decode sample target h q.data st).map (fun z => (reply z.1, z.2))
 
 /-- Perfect simulation in the interaction shape, for arbitrary computations and visible state.
 Binding either side to any downstream computation preserves this equality in distribution. -/
@@ -123,20 +140,9 @@ theorem simulateQ_game_mapState [DecidableEq Label] (f : C → D) (decode : D �
     (h : ∀ l, f <$> sample l =ᵈ target l)
     (p : OracleComp (gameSpec Label G) α) (st : State Label C) :
     Prod.map id (mapState f) <$> (simulateQ (game (decode ∘ f) sample) p).run st =ᵈ
-      (simulateQ (game decode target) p).run (mapState f st) := by
-  induction p using OracleComp.inductionOn generalizing st with
-  | pure a => simp
-  | query_bind q next ih =>
-    simp only [simulateQ_bind, simulateQ_spec_query, StateT.run_bind, map_bind]
-    refine (EvalDistEq.bind_right _
-      fun (z : Message Unit (fun _ : Unit => G) × State Label C) => ih z.1 z.2).trans ?_
-    have hs := (oracle_mapState f decode sample target h q.data st).map
-      (fun z => (reply z.1, z.2))
-    have hs' : Prod.map id (mapState f) <$> (game (decode ∘ f) sample q).run st =ᵈ
-        (game decode target q).run (mapState f st) := by
-      simpa [game, Function.comp_def] using hs
-    simpa only [bind_map_left, Prod.map, id_eq] using hs'.bind_left
-      (fun z => (simulateQ (game decode target) (next z.1)).run z.2)
+      (simulateQ (game decode target) p).run (mapState f st) :=
+  evalDistEq_map_run_simulateQ_eq_of_query_evalDistEq_map_eq _ _ _
+    (game_mapState f decode sample target h) p st
 
 /-- Handle hash replies install a fresh table entry on every query, including cache hits. -/
 @[expose] def handle [DecidableEq Label] [Zero G]
@@ -153,5 +159,40 @@ theorem handle_apply [DecidableEq Label] [Zero G]
       let g ← oracle decode sample q.data
       pure (⟨(), fun s => [(tbl s).length]⟩, fun s => tbl s ++ [g])) := by
   simp [StateT.run, handle, liftGame, game, lookupMessage, reply, pushGroups, map_eq_bind_pure_comp]
+
+/-! ## Explained programs -/
+
+/-- Forward explained requests to the plain game while retaining explanations in the result. -/
+@[expose] def interactionProgram
+    (p : OracleComp (explainedSpec F (fun _ : Unit => G) Query Reply) α) :
+    OracleComp (plainSpec (fun _ : Unit => G) Query Reply) α :=
+  simulateQ (fun q => (plainSpec (fun _ : Unit => G) Query Reply).query q.value) p
+
+/-- If every step of a handler records exactly the group elements in its reply, a certified
+program's output is explained over what the handler recorded. -/
+theorem run_receipts_valid [CommSemiring F] [AddCommMonoid G] [Module F G]
+    (impl : QueryImpl (plainSpec (fun _ : Unit => G) Query Reply) (StateT σ ProbComp))
+    (received : σ → List G)
+    (hstep : ∀ query st z, z ∈ support ((impl query).run st) →
+      received z.2 = received st ++ z.1.groups ())
+    (p : OracleComp (explainedSpec F (fun _ : Unit => G) Query Reply)
+      (Explained F Data (fun _ : Unit => G)))
+    (st : σ) (hp : IsAlgebraic (fun _ => received st) p) (z)
+    (hz : z ∈ support ((simulateQ impl (interactionProgram p)).run st)) :
+    z.1.Valid (fun _ => received z.2) := by
+  induction p using OracleComp.inductionOn generalizing st z with
+  | pure out =>
+    simp only [interactionProgram, simulateQ_pure, StateT.run_pure,
+      support_pure, Set.mem_singleton_iff] at hz
+    subst z
+    exact hp
+  | query_bind query next ih =>
+    simp only [interactionProgram, simulateQ_bind, simulateQ_spec_query,
+      StateT.run_bind, mem_support_bind_iff] at hz
+    obtain ⟨w, hw, hz⟩ := hz
+    apply ih w.1 w.2 _ z hz
+    have hn := ((isAlgebraic_query (fun _ => received st) query next).mp hp).2 w.1
+    change IsAlgebraic (fun _ => received st ++ w.1.groups ()) (next w.1) at hn
+    rwa [hstep query.value st w hw]
 
 end GroupModel.HashToGroup
