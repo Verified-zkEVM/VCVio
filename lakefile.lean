@@ -64,9 +64,9 @@ script lint (args) do
   child.wait
 
 /-
-The Rust bridges under `Interop/` require hax and Aeneas, and every dependent of this package would
-resolve any `require` written here. They are built by the separate package in `Interop/lakefile.toml`
-instead, which requires this one by path.
+The sub-projects under `Interop/` require outside tools (hax and Aeneas in `Interop/Aeneas`), and
+every dependent of this package would resolve any `require` written here. Each sub-project is built
+by its own package, `Interop/<Sub>/lakefile.toml`, which requires this one by path.
 -/
 
 /-
