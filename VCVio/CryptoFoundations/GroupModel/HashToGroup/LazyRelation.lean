@@ -44,6 +44,35 @@ the adversary with a lazy hash oracle on its arbitrary label type. -/
   let fixed ← $ᵗ (Fin n → G)
   lazyExecution fixed A
 
+/-- The lazy execution is the certified adversary's own run against the hash-to-group oracle with
+private coins, recording each receipt's origin: the receipts are the fixed inputs followed by the
+label log, and the output is the same. -/
+theorem map_lazyExecution_eq_run [DecidableEq Label] [SampleableType G]
+    [CommSemiring F] [AddCommMonoid G] [Module F G] (fixed : Fin n → G)
+    (A : Adversary F (fun _ : Unit => G) Unit (CoinQuery Label)
+      (CoinReply (fun _ => Unit)) Unit) :
+    (fun z => (z.1, (receiptState fixed (∅, z.2)).2)) <$> lazyExecution fixed A =
+      (fun z => (z.1.1, z.2.2)) <$>
+        (A.run (gameWithCoins Prod.snd (provenanceSample n fun _ : Label => $ᵗ G))
+          ⟨(), fun _ => List.ofFn fixed⟩).run (provenanceInitial fixed) := by
+  have h0 : receiptState fixed (∅, []) = (provenanceInitial fixed : State Label _) := by
+    refine Prod.ext (QueryCache.ext fun l => ?_) ?_ <;>
+      simp [receiptState, provenanceInitial, initial]
+  rw [← h0]
+  have h := congrArg (Functor.map fun z => (z.1, z.2.2))
+    ((map_run_simulateQ_honest_rawProgram fixed (A.main ⟨(), fun _ => List.ofFn fixed⟩)
+      (∅, [])).trans (runGameWithCoins_run Prod.snd (provenanceSample n fun _ : Label => $ᵗ G) A
+        ⟨(), fun _ => List.ofFn fixed⟩ _).symm)
+  simp only [Functor.map_map, Prod.map, id_eq] at h
+  rw [lazyExecution, Functor.map_map]
+  exact h
+
+/-- The origins of the receipts are the fixed inputs followed by the hashed labels. -/
+theorem receiptState_origins (fixed : Fin n → G) (c : (Label →ₒ G).QueryCache)
+    (log : List (Label × G)) :
+    (receiptState fixed (c, log)).2.map Prod.fst = receiptOrigins n log := by
+  simp [receiptState, receiptOrigins, List.map_ofFn, Function.comp_def]
+
 /-- Execute the same adversary against a fixed reduction basis, using the right-hand
 coordinates as first-use hash slots and the left-hand coordinates as fixed inputs. -/
 @[expose] def slotExecution [DecidableEq Label] [SampleableType G]

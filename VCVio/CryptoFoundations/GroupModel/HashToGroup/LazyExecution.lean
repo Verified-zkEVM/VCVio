@@ -134,4 +134,67 @@ theorem tableRun_rawProgram_valid [DecidableEq Label] [SampleableType G]
     have h := table_log g (.inl k) s v hv
     simpa only [List.append_assoc] using congrArg (fixed ++ ·) h
 
+/-! ## The recording oracle
+
+The raw execution is a run of the hash-to-group oracle itself, with every receipt tagged by its
+origin. -/
+
+/-- The state of the origin-recording oracle read from a label cache and a chronological label
+log, with the fixed inputs received first. -/
+@[expose] def receiptState (fixed : Fin n → G)
+    (s : (Label →ₒ G).QueryCache × List (Label × G)) : State Label (Receipt n Label G) :=
+  (QueryCache.ofFn fun l => (s.1 l).map fun g => (Sum.inr l, g),
+    List.ofFn (fun i => (Sum.inl i, fixed i)) ++ s.2.map fun r => (Sum.inr r.1, r.2))
+
+private theorem receiptCache_cacheQuery [DecidableEq Label]
+    (c : (Label →ₒ G).QueryCache) (l : Label) (g : G) :
+    QueryCache.ofFn (spec := Label →ₒ Receipt n Label G)
+        (fun k => ((c.cacheQuery l g) k).map fun g => (Sum.inr k, g)) =
+      (QueryCache.ofFn (spec := Label →ₒ Receipt n Label G)
+        fun k => (c k).map fun g => (Sum.inr k, g)).cacheQuery l (Sum.inr l, g) := by
+  ext k
+  by_cases h : k = l
+  · subst k; simp
+  · simp [h]
+
+/-- Running the raw program against the lazy random oracle is running the interaction against the
+hash-to-group oracle that records each receipt's origin, exactly: the output, the cache and the
+chronological receipts all agree. -/
+theorem map_run_simulateQ_honest_rawProgram [DecidableEq Label] [SampleableType G]
+    (fixed : Fin n → G)
+    (p : OracleComp (explainedSpec F (fun _ : Unit => G) (CoinQuery Label)
+      (CoinReply (fun _ => Unit))) α)
+    (s : (Label →ₒ G).QueryCache × List (Label × G)) :
+    Prod.map id (receiptState fixed) <$>
+        (simulateQ SlotRenaming.honest (rawProgram p)).run s =
+      runGameWithCoins Prod.snd (provenanceSample n fun _ => $ᵗ G) p (receiptState fixed s) := by
+  unfold runGameWithCoins rawProgram
+  rw [← QueryImpl.simulateQ_compose]
+  apply map_run_simulateQ_eq_of_query_map_eq
+  rintro ⟨l | k, groups⟩ ⟨c, log⟩
+  · change Prod.map id (receiptState fixed) <$> (simulateQ SlotRenaming.honest
+      (reply <$> (liftM ((unifSpec + (Label →ₒ G)).query (.inr l)) : OracleComp _ _))).run
+        (c, log) = _
+    rw [gameWithCoins_hash, oracle_apply]
+    simp only [simulateQ_map, simulateQ_spec_query, StateT.run_map, Functor.map_map]
+    change _ <$> ((fun z => (z.1, z.2, log ++ [(l, z.1)])) <$>
+      ((Label →ₒ G).randomOracle l).run c) = _
+    cases hc : c l with
+    | some g =>
+      rw [OracleSpec.randomOracle, QueryImpl.withCaching_run_some _ hc]
+      simp [receiptState, hc]
+    | none =>
+      rw [OracleSpec.randomOracle, QueryImpl.withCaching_run_none _ hc]
+      simp only [receiptState, Functor.map_map, Prod.map, id_eq, provenanceSample,
+        uniformSampleImpl, QueryCache.ofFn_apply, hc, Option.map_none, receiptCache_cacheQuery,
+        List.map_append, List.map_cons, List.map_nil, List.append_assoc]
+  · rw [gameWithCoins_coin]
+    change Prod.map id (receiptState fixed) <$> (simulateQ SlotRenaming.honest
+      ((fun x => (⟨x, fun _ => []⟩ : Message (Fin (k + 1)) (fun _ : Unit => G))) <$>
+        (liftM ((unifSpec + (Label →ₒ G)).query (.inl k)) : OracleComp _ _))).run (c, log) = _
+    simp only [simulateQ_map, simulateQ_spec_query, StateT.run_map, Functor.map_map]
+    change _ <$> ((fun x => (x, (c, log))) <$> (liftM (unifSpec.query k) : ProbComp _)) = _
+    simp only [Functor.map_map, Prod.map, id_eq]
+    rfl
+
 end GroupModel.HashToGroup

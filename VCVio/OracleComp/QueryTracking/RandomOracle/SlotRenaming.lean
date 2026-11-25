@@ -5,7 +5,7 @@ Authors: Quang Dao
 -/
 
 module
-public import VCVio.OracleComp.QueryTracking.RandomOracle.ExpectedFreshQuery
+public import VCVio.OracleComp.QueryTracking.RandomOracle.DependentTable
 public import VCVio.OracleComp.QueryTracking.QueryBound.Counter
 public import VCVio.OracleComp.SimSemantics.StateT.StateProjection
 
@@ -336,54 +336,6 @@ private theorem lift_id (r : R) : (liftM (m := Id) r : ProbComp R) = pure r := b
   change (liftM (pure r : Id R) : ProbComp R) = _
   rw [liftM_pure]
 
-private theorem fixedTable_project [DecidableEq D]
-    (oa : OracleComp (unifSpec + (D →ₒ R)) α) (g : D → R)
-    (c : (D →ₒ R).QueryCache) (hc : c.AgreesWithFn g) :
-    (fun z => z.1.1) <$> fixedTableLoggedRun oa g c =
-      simulateQ (unifFwdAnswerImpl g) oa := by
-  induction oa using OracleComp.inductionOn generalizing c with
-  | pure a => simp [fixedTableLoggedRun]
-  | query_bind t k ih =>
-    rw [fixedTableLoggedRun_bind]
-    cases t with
-    | inl n =>
-      rw [fixedTableLoggedRun_uniformQuery]
-      simp only [map_bind, bind_map_left, Functor.map_map]
-      simp [simulateQ_bind, unifFwdAnswerImpl, fun u => ih u c hc]
-    | inr l =>
-      rw [fixedTableLoggedRun_hashQuery]
-      cases hl : c l with
-      | some r =>
-        have hgr : g l = r := hc hl
-        rw [QueryImpl.withCaching_run_some _ hl]
-        simp [simulateQ_bind, unifFwdAnswerImpl, hgr, lift_id, ih r c hc]
-      | none =>
-        rw [QueryImpl.withCaching_run_none _ hl]
-        have hc' : (c.cacheQuery l (g l)).AgreesWithFn g :=
-          (QueryCache.agreesWithFn_cacheQuery_iff _ _ _ _ hl).mpr ⟨hc, rfl⟩
-        simp [simulateQ_bind, unifFwdAnswerImpl, lift_id, ih _ _ hc']
-
-/-- A finite-domain lazy random oracle has the same output distribution as an independently
-uniform complete table. Both sides forward the computation's private coins. -/
-theorem simulateQ_romImpl_run'_eq_uniform_table [DecidableEq D] [Finite D]
-    [SampleableType R] [SampleableType (D → R)]
-    (oa : OracleComp (unifSpec + (D →ₒ R)) α) :
-    (simulateQ (D →ₒ R).romImpl oa).run' ∅ =ᵈ
-      (($ᵗ (D → R)) >>= fun g => simulateQ (unifFwdAnswerImpl g) oa) := by
-  let : MeasurableSpace ((α × QueryLog (D →ₒ R)) × (D →ₒ R).QueryCache) := ⊤
-  have hd := evalDist_randomOracleLoggedRun_eq_fixedTable_finite oa ∅
-  have he : randomOracleLoggedRun oa ∅ =ᵈ
-      (($ᵗ (D → R)) >>= fun g => fixedTableLoggedRun oa g ∅) := by
-    apply evalDistEq_iff_evalDist_eq.mpr
-    simpa only [completeTable_empty] using hd
-  have hm := he.map (fun z => z.1.1)
-  have hp : (fun z => z.1.1) <$> randomOracleLoggedRun oa ∅ =
-      (simulateQ (D →ₒ R).romImpl oa).run' ∅ := by
-    rw [StateT.run'_eq, ← randomOracleLoggedRun_project]
-    simp only [Functor.map_map]
-  rw [hp] at hm
-  simpa only [map_bind, fixedTable_project oa _ ∅ (by simp [QueryCache.AgreesWithFn])] using hm
-
 /-- Execute a label computation with first-use slot allocation and a fixed table of slot
 responses. The uniform overflow fallback is unreachable under a sufficient hash-query budget. -/
 @[expose] def tableRun [DecidableEq D] [SampleableType R]
@@ -396,10 +348,16 @@ theorem simulateQ_lazy_eq_uniform_table [DecidableEq D] [SampleableType R]
     [SampleableType (Fin q → R)] (oa : OracleComp (unifSpec + (D →ₒ R)) α) :
     (fun z => (z.1, z.2.1)) <$> (simulateQ lazy oa).run (initial, ∅) =ᵈ
       (($ᵗ (Fin q → R)) >>= fun g => tableRun oa g) := by
-  have h := simulateQ_romImpl_run'_eq_uniform_table
-    ((simulateQ (route (q := q)) oa).run initial)
-  simpa only [tableRun, StateT.run'_eq,
-    simulateQ_mapStateTBase_run_eq_map_flattenStateT, Functor.map_map,
+  have h : (simulateQ (Fin q →ₒ R).romImpl ((simulateQ (route (q := q)) oa).run initial)).run' ∅ =ᵈ
+      (($ᵗ (Fin q → R)) >>= fun g => tableRun oa g) := by
+    let : MeasurableSpace (α × State D R q) := ⊤
+    refine (EvalDistEq.of_evalDist_eq (evalDist_simulateQ_romImpl_run'_eq_completeTable
+      ((simulateQ (route (q := q)) oa).run initial) ∅)).trans ?_
+    apply EvalDistEq.bind_right
+    intro g
+    rw [completeTable_empty]
+    rfl
+  simpa only [StateT.run'_eq, simulateQ_mapStateTBase_run_eq_map_flattenStateT, Functor.map_map,
     Function.comp_def, lazy] using h
 
 /-- Honest lazy hashing over arbitrary labels has the same joint distribution of output and
@@ -538,12 +496,6 @@ private theorem route_step [DecidableEq D] [SampleableType R]
           obtain ⟨r, _, rfl⟩ := hz
           exact ⟨fun hv => assigned_spill s hv l hn r, by simp [spill]⟩
 
-private theorem support_simulate_subset {ι : Type} {spec : OracleSpec ι}
-    (impl : QueryImpl spec ProbComp) (oa : OracleComp spec α) :
-    support (simulateQ impl oa) ⊆ support oa := by
-  simpa using support_simulateQ_run'_subset
-    (impl.liftTarget (StateT Unit ProbComp)) oa ()
-
 /-- Every fixed-table run has an injective slot assignment and a chronological receipt log
 whose length bounds the number of fresh labels. -/
 theorem tableRun_assigned [DecidableEq D] [SampleableType R]
@@ -551,7 +503,7 @@ theorem tableRun_assigned [DecidableEq D] [SampleableType R]
     (hz : z ∈ support (tableRun oa g)) : Assigned z.2 := by
   apply simulateQ_run_preserves_inv_of_query route Assigned
     (fun t s hs z hz => (route_step t s z hz).1 hs) oa initial assigned_initial z
-  exact support_simulate_subset _ _ hz
+  exact support_simulateQ_subset _ _ hz
 
 /-- A syntactic hash-query budget bounds the chronological receipt log in every supported
 fixed-table run. Private coin queries do not contribute to this count. -/
@@ -563,7 +515,7 @@ theorem tableRun_log_length_le [DecidableEq D] [SampleableType R]
     (fun s => s.log.length)
     (fun t ht s z hz => by simp [(route_step t s z hz).2, ht])
     (fun t ht s z hz => by simp [(route_step t s z hz).2, ht])
-    initial z (support_simulate_subset _ _ hz)
+    initial z (support_simulateQ_subset _ _ hz)
   simpa only [initial, List.length_nil, zero_add] using h
 
 /-- With at most `q` hash queries, every receipt is assigned a finite slot. No overflow
