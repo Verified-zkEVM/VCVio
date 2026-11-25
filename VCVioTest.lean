@@ -258,6 +258,7 @@ public import VCVioTest.SampleableType
 public import VCVioTest.Schemes.BLS
 public import VCVioTest.Schemes.BLSAGM
 public import VCVioTest.Schemes.BLSAggregate
+public import VCVioTest.Schemes.BLSGeneric
 public import VCVioTest.Schemes.KEMDEM
 public import VCVioTest.Schemes.MerkleDamgard
 public import VCVioTest.Schemes.Pedersen.Generic

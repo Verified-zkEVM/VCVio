@@ -123,6 +123,7 @@ public import VCVio.CryptoFoundations.GroupModel.Game
 public import VCVio.CryptoFoundations.GroupModel.GenericCoCDH
 public import VCVio.CryptoFoundations.GroupModel.GenericCoCDHIso
 public import VCVio.CryptoFoundations.GroupModel.GenericDDH
+public import VCVio.CryptoFoundations.GroupModel.GenericDLog11
 public import VCVio.CryptoFoundations.GroupModel.GenericHardness
 public import VCVio.CryptoFoundations.GroupModel.GenericPairing
 public import VCVio.CryptoFoundations.GroupModel.GenericRelation
@@ -157,6 +158,9 @@ public import VCVio.CryptoFoundations.GroupModel.LinearFunctional.Weights
 public import VCVio.CryptoFoundations.GroupModel.MasterBound
 public import VCVio.CryptoFoundations.GroupModel.OfExplained
 public import VCVio.CryptoFoundations.GroupModel.Oracle
+public import VCVio.CryptoFoundations.GroupModel.PairingExecution
+public import VCVio.CryptoFoundations.GroupModel.PairingExplained
+public import VCVio.CryptoFoundations.GroupModel.PairingMetadata
 public import VCVio.CryptoFoundations.GroupModel.PairingSeparation
 public import VCVio.CryptoFoundations.GroupModel.PairingVariants
 public import VCVio.CryptoFoundations.GroupModel.Projection
@@ -736,6 +740,19 @@ public import VCVio.Schemes.BLS.Covariance
 public import VCVio.Schemes.BLS.Execution
 public import VCVio.Schemes.BLS.GameIdentification
 public import VCVio.Schemes.BLS.Games
+public import VCVio.Schemes.BLS.Generic.Adversary
+public import VCVio.Schemes.BLS.Generic.AlgebraicBound
+public import VCVio.Schemes.BLS.Generic.Cache
+public import VCVio.Schemes.BLS.Generic.ReductionCost
+public import VCVio.Schemes.BLS.Generic.ReductionEquivalence
+public import VCVio.Schemes.BLS.Generic.ReductionExecution
+public import VCVio.Schemes.BLS.Generic.ReductionExtraction
+public import VCVio.Schemes.BLS.Generic.ReductionInitialization
+public import VCVio.Schemes.BLS.Generic.ReductionPoints
+public import VCVio.Schemes.BLS.Generic.ReductionPrograms
+public import VCVio.Schemes.BLS.Generic.ReductionTranslation
+public import VCVio.Schemes.BLS.Generic.Security
+public import VCVio.Schemes.BLS.Generic.Translation
 public import VCVio.Schemes.BLS.Guess
 public import VCVio.Schemes.BLS.Invariants
 public import VCVio.Schemes.BLS.Oracle
