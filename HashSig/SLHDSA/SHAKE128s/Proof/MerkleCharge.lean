@@ -187,9 +187,9 @@ theorem deviatingCollision_of_pathCollision_canonical {α : Type}
             (BinaryPath.value combine index leaf siblings parentHeight.val)
             (siblings parentHeight.val)))) = some output) :
     StructuralTerm.DeviatingCollision publicSeed
-      (@value (CacheReplay.replayQuery cache) secretSeed publicSeed) result := by
+      (value (CacheReplay.replayQuery cache) secretSeed publicSeed) result := by
   refine deviatingCollision_of_pathCollision publicSeed
-    (@value (CacheReplay.replayQuery cache) secretSeed publicSeed) cache location.address
+    (value (CacheReplay.replayQuery cache) secretSeed publicSeed) cache location.address
     (@SLHDSA.SHAKE128s.Merkle.node Id _ (CacheReplay.replayQuery cache) secretSeed publicSeed
       location.address)
     index parentHeight.val leaf siblings location parentHeight parentIndex combine hcombine
@@ -250,7 +250,7 @@ theorem deviatingCollision_of_pathBranch {α : Type} (secretSeed publicSeed : Di
               leafIndex leaf siblings pathHeight.val)
             (siblings pathHeight.val)))) = some output) :
     StructuralTerm.DeviatingCollision publicSeed
-      (@value (CacheReplay.replayQuery cache) secretSeed publicSeed) result := by
+      (value (CacheReplay.replayQuery cache) secretSeed publicSeed) result := by
   refine deviatingCollision_of_pathCollision_canonical secretSeed publicSeed cache location
     leafIndex pathHeight ⟨leafIndex / 2 ^ (pathHeight.val + 1), hbound⟩ leaf siblings _
     (fun _ _ _ _ => rfl) (fun _ _ => rfl) rfl ?_ result output hcache ?_

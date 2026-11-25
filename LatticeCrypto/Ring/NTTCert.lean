@@ -5,34 +5,19 @@ Authors: Quang Dao
 -/
 
 module
-public import Mathlib.Algebra.BigOperators.Ring.Finset
 public import LatticeCrypto.Ring.VectorBackend
 
 /-!
 # Shared Certification Scaffolding For Concrete NTTs
 
-This module provides two proof-facing routes for concrete NTT developments.
-
-The matrix route works as follows:
-1. Evaluate the executable NTT loop kernel on each standard-basis vector to
-   extract the transform matrix `M` as a `Fin n → Fin n → Coeff` function.
-2. Define the public `ntt` / `invNTT` as `applyMatrix M` / `applyMatrix M⁻¹`,
-   then mark them `@[implemented_by]` to rebind to the fast loop kernels at
-   runtime.
-3. Prove that `M · M⁻¹ = I` (via `applyMatrix_comp` and `applyMatrix_id`) to
-   obtain the roundtrip laws.
-
-The first part below retains the reusable `basis`, `applyMatrix`, `idMatrix`,
-and composition / identity / additivity lemmas for developments that use that
-route.
-
-The structural route, now used by both ML-KEM and ML-DSA, avoids a dense matrix
-certificate. A
-`ButterflyLayout` records a proof-relevant partition of a coefficient index
-type into pairs. This lets concrete loop developments separate the indexing
-proof (that an array loop implements a layout) from the small ring calculation
-showing that matching forward and inverse butterflies cancel. `ScaledStage`
-then composes those local facts and tracks the final normalization factor.
+This module provides the proof-facing structural route for concrete NTT
+developments, used by ML-KEM, ML-DSA and Falcon. It avoids a dense matrix
+certificate. A `ButterflyLayout` records a proof-relevant partition of a
+coefficient index type into pairs. This lets concrete loop developments
+separate the indexing proof (that an array loop implements a layout) from the
+small ring calculation showing that matching forward and inverse butterflies
+cancel. `ScaledStage` then composes those local facts and tracks the final
+normalization factor.
 -/
 
 @[expose] public section
@@ -128,134 +113,6 @@ theorem applyCoeffTransform_zero
     backend.build 0 = backend.build (backend.coeff 0) := congrArg backend.build hcoeffZero.symm
     _ = 0 := backend.build_coeff 0
 
-/-! ## Matrix transforms -/
-
-variable [Ring Coeff]
-
-/-- Standard basis vector `eᵢ` in the backend carrier, with `1` at position `i`
-and `0` elsewhere. Used to extract transform matrices by evaluating NTT kernels
-on each basis element. -/
-def basis (backend : LatticeCrypto.PolyBackend Coeff) (i : Fin backend.degree) : backend.Poly :=
-  backend.build fun j => if i = j then 1 else 0
-
-/-- Apply a coefficient matrix `M` to a backend polynomial, computing
-`(M · f)[row] = Σ_col M[row][col] · f[col]`. The proof-oriented NTT
-definitions are stated in terms of `applyMatrix`. -/
-def applyMatrix (backend : LatticeCrypto.PolyBackend Coeff)
-    (M : Fin backend.degree → Fin backend.degree → Coeff) (f : backend.Poly) : backend.Poly :=
-  backend.build fun row => ∑ col : Fin backend.degree, M row col * backend.coeff f col
-
-/-- Identity matrix in row/column form. -/
-def idMatrix (n : Nat) (row col : Fin n) : Coeff :=
-  if col = row then 1 else 0
-
-theorem applyMatrix_get (M : Fin backend.degree → Fin backend.degree → Coeff)
-    (f : backend.Poly) (j : Fin backend.degree) :
-    backend.coeff (applyMatrix backend M f) j =
-      ∑ col : Fin backend.degree, M j col * backend.coeff f col := by
-  simp [applyMatrix]
-
-theorem applyMatrix_comp
-    (A B C : Fin backend.degree → Fin backend.degree → Coeff)
-    (hcomp : ∀ row col : Fin backend.degree,
-      ∑ k : Fin backend.degree, A row k * B k col = C row col)
-    (f : backend.Poly) :
-    applyMatrix backend A (applyMatrix backend B f) = applyMatrix backend C f := by
-  suffices h : ∀ row : Fin backend.degree,
-      ∑ col, A row col * backend.coeff (applyMatrix backend B f) col =
-      ∑ col, C row col * backend.coeff f col by
-    unfold applyMatrix; congr 1; funext row; exact h row
-  intro row
-  simp_rw [applyMatrix_get B f]
-  simp_rw [Finset.mul_sum]
-  simp_rw [← mul_assoc]
-  rw [Finset.sum_comm]
-  simp_rw [← Finset.sum_mul]
-  congr 1; funext col; congr 1; exact hcomp row col
-
-theorem applyMatrix_id (f : backend.Poly) :
-    applyMatrix backend (idMatrix backend.degree) f = f := by
-  unfold applyMatrix
-  have h : ∀ row : Fin backend.degree,
-      (∑ col : Fin backend.degree,
-        idMatrix backend.degree row col * backend.coeff f col) =
-      backend.coeff f row := by
-    intro row
-    rw [Finset.sum_eq_single_of_mem row (Finset.mem_univ _)]
-    · simp [idMatrix]
-    · intro b _ hne; simp [idMatrix, hne]
-  simp_rw [h]
-  exact backend.build_coeff f
-
-/-- Pointwise distributivity of `applyMatrix` over a binary backend operation
-`op` whose coefficient image distributes over multiplication and finite sums.
-Specializes to `applyMatrix_add` and `applyMatrix_sub`. -/
-theorem applyMatrix_pointwise
-    (M : Fin backend.degree → Fin backend.degree → Coeff)
-    (op : backend.Poly → backend.Poly → backend.Poly)
-    (cop : Coeff → Coeff → Coeff)
-    (hop : ∀ f g : backend.Poly, ∀ i,
-      backend.coeff (op f g) i = cop (backend.coeff f i) (backend.coeff g i))
-    (hmul : ∀ x a b : Coeff, x * cop a b = cop (x * a) (x * b))
-    (hsum : ∀ (φ ψ : Fin backend.degree → Coeff),
-        ∑ c, cop (φ c) (ψ c) = cop (∑ c, φ c) (∑ c, ψ c))
-    (f g : backend.Poly) :
-    applyMatrix backend M (op f g) =
-      op (backend.build (fun row =>
-            ∑ col : Fin backend.degree, M row col * backend.coeff f col))
-         (backend.build (fun row =>
-            ∑ col : Fin backend.degree, M row col * backend.coeff g col)) := by
-  simp only [applyMatrix]
-  have key : ∀ row : Fin backend.degree,
-      (∑ col, M row col * backend.coeff (op f g) col) =
-      cop (∑ col, M row col * backend.coeff f col)
-          (∑ col, M row col * backend.coeff g col) := by
-    intro row
-    simp_rw [hop f g, hmul]
-    exact hsum _ _
-  simp_rw [key]
-  rw [← backend.build_coeff (op _ _)]
-  congr 1; funext row
-  rw [hop _ _ row, backend.coeff_build, backend.coeff_build]
-
-theorem applyMatrix_add
-    (M : Fin backend.degree → Fin backend.degree → Coeff)
-    [Add backend.Poly] (hadd : ∀ f g : backend.Poly,
-      backend.coeff (f + g) = fun i => backend.coeff f i + backend.coeff g i)
-    (f g : backend.Poly) :
-    applyMatrix backend M (f + g) =
-      backend.build (fun row =>
-        ∑ col : Fin backend.degree, M row col * backend.coeff f col) +
-      backend.build (fun row =>
-        ∑ col : Fin backend.degree, M row col * backend.coeff g col) := by
-  refine applyMatrix_pointwise M (· + ·) (· + ·) ?_ ?_ ?_ f g
-  · intro f' g' i; exact congr_fun (hadd f' g') i
-  · intros; exact mul_add _ _ _
-  · intros; exact Finset.sum_add_distrib
-
-theorem applyMatrix_zero
-    (M : Fin backend.degree → Fin backend.degree → Coeff)
-    [Zero backend.Poly] (hzero : ∀ i, backend.coeff (0 : backend.Poly) i = 0) :
-    applyMatrix backend M 0 = 0 := by
-  simp only [applyMatrix, hzero, mul_zero, Finset.sum_const_zero]
-  conv_rhs => rw [← backend.build_coeff (0 : backend.Poly)]
-  congr 1; funext row; exact (hzero row).symm
-
-theorem applyMatrix_sub
-    (M : Fin backend.degree → Fin backend.degree → Coeff)
-    [Sub backend.Poly] (hsub : ∀ f g : backend.Poly,
-      backend.coeff (f - g) = fun i => backend.coeff f i - backend.coeff g i)
-    (f g : backend.Poly) :
-    applyMatrix backend M (f - g) =
-      backend.build (fun row =>
-        ∑ col : Fin backend.degree, M row col * backend.coeff f col) -
-      backend.build (fun row =>
-        ∑ col : Fin backend.degree, M row col * backend.coeff g col) := by
-  refine applyMatrix_pointwise M (· - ·) (· - ·) ?_ ?_ ?_ f g
-  · intro f' g' i; exact congr_fun (hsub f' g') i
-  · intros; exact mul_sub _ _ _
-  · intro φ ψ; exact Finset.sum_sub_distrib (f := φ) (g := ψ)
-
 /-! ## Structural butterfly certificates -/
 
 universe v w
@@ -316,20 +173,6 @@ def inverseButterfly (zInv x y : R) : Bool → R
   | false => x + y
   | true => zInv * (x - y)
 
-/-- The same inverse butterfly with the right-minus-left convention used by
-the ML-KEM loop.  Its coefficient is the *negation* of the `zInv` expected by
-`inverseButterfly`; keeping this spelling explicit prevents a sign convention
-from being hidden in a concrete refinement proof. -/
-def inverseButterflyRev (zRev x y : R) : Bool → R
-  | false => x + y
-  | true => zRev * (y - x)
-
-theorem inverseButterflyRev_eq (zRev x y : R) :
-    inverseButterflyRev zRev x y = inverseButterfly (-zRev) x y := by
-  funext side
-  cases side <;> simp only [inverseButterflyRev, inverseButterfly]
-  ring
-
 /-- Apply one forward butterfly to every pair in a layout. -/
 def forwardStage {Pair : Type v} {Coord : Type w}
     (layout : ButterflyLayout Pair Coord) (z : Pair → R)
@@ -347,22 +190,6 @@ def inverseStage {Pair : Type v} {Coord : Type w}
   inverseButterfly (zInv pairSide.1)
     (input (layout.equiv (pairSide.1, false)))
     (input (layout.equiv (pairSide.1, true))) pairSide.2
-
-/-- Inverse stage using ML-KEM's right-minus-left spelling. -/
-def inverseStageRev {Pair : Type v} {Coord : Type w}
-    (layout : ButterflyLayout Pair Coord) (zRev : Pair → R)
-    (input : Coord → R) : Coord → R := fun coord =>
-  let pairSide := layout.equiv.symm coord
-  inverseButterflyRev (zRev pairSide.1)
-    (input (layout.equiv (pairSide.1, false)))
-    (input (layout.equiv (pairSide.1, true))) pairSide.2
-
-theorem inverseStageRev_eq {Pair : Type v} {Coord : Type w}
-    (layout : ButterflyLayout Pair Coord) (zRev : Pair → R) :
-    inverseStageRev layout zRev = inverseStage layout (fun pair => -zRev pair) := by
-  funext input coord
-  simp only [inverseStageRev, inverseStage]
-  exact congrFun (inverseButterflyRev_eq _ _ _) _
 
 /-- Pointwise scalar multiplication for coefficient functions. -/
 def scaleCoeffs {Coord : Type w} (c : R) (input : Coord → R) : Coord → R :=
@@ -485,9 +312,9 @@ structure ScaledStage (R : Type*) [CommRing R] (Coord : Type w) where
   forward_zero : forward 0 = 0
 
 /-- Build a composable stage certificate from a butterfly layout and matching
-twiddle tables.  For ML-KEM's syntactic `zRev * (y - x)`, the `zInv` supplied
-here must be `-zRev`; for ML-DSA it is the coefficient already multiplying
-`(x - y)`.  In both cases the obligation is explicitly `zInv * z = 1`. -/
+twiddle tables.  `zInv` is the coefficient multiplying `x - y` in the inverse
+butterfly, so a loop written as `zRev * (y - x)` supplies `zInv = -zRev`; the
+obligation is `zInv * z = 1`. -/
 def butterflyStage {Pair : Type v} {Coord : Type w} (layout : ButterflyLayout Pair Coord)
     (z zInv : Pair → R) (hz : ∀ pair, zInv pair * z pair = 1) :
     ScaledStage R Coord where
@@ -496,25 +323,6 @@ def butterflyStage {Pair : Type v} {Coord : Type w} (layout : ButterflyLayout Pa
   scalar := 2
   inverse_forward := inverseStage_forwardStage layout z zInv hz
   inverse_scale := inverseStage_scaleCoeffs layout zInv
-  forward_add := forwardStage_add layout z
-  forward_sub := forwardStage_sub layout z
-  forward_zero := forwardStage_zero layout z
-
-/-- Build a stage certificate using the right-minus-left inverse spelling of
-the ML-KEM loop.  The sign is visible in the required twiddle law:
-`(-zRev pair) * z pair = 1`. -/
-def butterflyStageRev {Pair : Type v} {Coord : Type w} (layout : ButterflyLayout Pair Coord)
-    (z zRev : Pair → R) (hz : ∀ pair, (-zRev pair) * z pair = 1) :
-    ScaledStage R Coord where
-  forward := forwardStage layout z
-  inverse := inverseStageRev layout zRev
-  scalar := 2
-  inverse_forward := by
-    rw [inverseStageRev_eq]
-    exact inverseStage_forwardStage layout z (fun pair => -zRev pair) hz
-  inverse_scale := by
-    rw [inverseStageRev_eq]
-    exact inverseStage_scaleCoeffs layout (fun pair => -zRev pair)
   forward_add := forwardStage_add layout z
   forward_sub := forwardStage_sub layout z
   forward_zero := forwardStage_zero layout z

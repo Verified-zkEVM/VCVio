@@ -15,7 +15,9 @@ public import VCVio.OracleComp.QueryTracking.RandomOracle.Simulation
 public import VCVio.OracleComp.QueryTracking.QueryCost
 public import VCVio.OracleComp.Coercions.Add.Basic
 public import VCVio.OracleComp.ProbCompLift
-public import VCVio.EvalDist.Defs.Semantics.Core
+public import PolyFun.Control.Monad.Measure.SemanticsVia
+public import VCVio.EvalDist.Defs.Measure.Core
+public import ToMathlib.MeasureTheory.Measure.GiryMonad
 public import VCVio.ProgramLogic.NotationCore
 public import VCVio.ProgramLogic.Tactics.Unary
 
@@ -44,12 +46,17 @@ variable {Stmt Wit Commit PrvState Chal Resp : Type}
 
 /-- Given a Σ-protocol and a generable relation, the Fiat-Shamir transform produces a
 signature scheme. The signing algorithm commits, queries the random oracle on (message,
-commitment), and then responds to the challenge. -/
+commitment), and then responds to the challenge.
+
+The Σ-protocol's own monad `mσ` is separate from the signature scheme's monad `m`, and is
+required only to lift into it: the transform never samples a challenge from the Σ-protocol, so
+a prover that queries oracles of its own is admissible here. The results below are stated at
+`mσ := ProbComp`. -/
 def FiatShamir
-    {m : Type → Type v} [Monad m]
-    (sigmaAlg : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
+    {m : Type → Type v} [Monad m] {mσ : Type → Type}
+    (sigmaAlg : SigmaProtocol mσ Stmt Wit Commit PrvState Chal Resp rel)
     (hr : GenerableRelation Stmt Wit rel) (M : Type)
-    [MonadLiftT ProbComp m] [HasQuery (M × Commit →ₒ Chal) m] :
+    [MonadLiftT ProbComp m] [MonadLiftT mσ m] [HasQuery (M × Commit →ₒ Chal) m] :
     SignatureAlg m
       (M := M) (PK := Stmt) (SK := Wit) (S := Commit × Resp) where
   keygen := monadLift hr.gen
@@ -69,7 +76,7 @@ variable {Stmt Wit Commit PrvState Chal Resp : Type} {rel : Stmt → Wit → Boo
 /-- The Fiat-Shamir signature scheme in the random oracle model: the transform instantiated in
 `OracleComp (unifSpec + (M × Commit →ₒ Chal))`, whose hash queries `runtime M` answers with a
 lazily sampled random oracle. -/
-abbrev inROM (sigmaAlg : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
+abbrev inROM (sigmaAlg : SigmaProtocol ProbComp Stmt Wit Commit PrvState Chal Resp rel)
     (hr : GenerableRelation Stmt Wit rel) (M : Type) :
     SignatureAlg (OracleComp (unifSpec + (M × Commit →ₒ Chal)))
       (M := M) (PK := Stmt) (SK := Wit) (S := Commit × Resp) :=
@@ -146,7 +153,7 @@ end semantics
 
 section naturality
 
-variable (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
+variable (σ : SigmaProtocol ProbComp Stmt Wit Commit PrvState Chal Resp rel)
   (hr : GenerableRelation Stmt Wit rel) (M : Type)
 
 variable {m : Type → Type u} [Monad m]
@@ -184,7 +191,7 @@ end naturality
 
 section costAccounting
 
-variable (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
+variable (σ : SigmaProtocol ProbComp Stmt Wit Commit PrvState Chal Resp rel)
   (hr : GenerableRelation Stmt Wit rel) (M : Type)
 
 variable {m : Type → Type u} [Monad m] [LawfulMonad m]
@@ -279,7 +286,7 @@ theorem sign_usesCostAsQueryCost {ω : Type} [AddMonoid ω]
 commitment cost over the output signature distribution. -/
 theorem sign_expectedQueryCost_eq_outputExpectation {ω : Type}
     [MeasurableSpace ω] [AddMonoid ω] [EvalDistSemantics m] [LawfulEvalDistSemantics m]
-    [MonadAttach m] [ExactMonadAttach m] [MeasurableSpace (Commit × Resp)]
+    [MeasurableSpace (Commit × Resp)]
     (runtime : QueryImpl (M × Commit →ₒ Chal) m) (pk : Stmt) (sk : Wit) (msg : M)
     (costFn : M × Commit → ω) (val : ω → ENNReal)
     (hcostMeas : Measurable fun sig : Commit × Resp ↦ costFn (msg, sig.1))
@@ -346,7 +353,7 @@ end costAccounting
 
 section correctness
 
-variable (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
+variable (σ : SigmaProtocol ProbComp Stmt Wit Commit PrvState Chal Resp rel)
   (hr : GenerableRelation Stmt Wit rel) (M : Type)
 
 open scoped Classical in
@@ -423,7 +430,10 @@ theorem perfectlyCorrect [SampleableType Chal]
             let r ← $ᵗ Chal
             let s ← σ.respond pk sk e r
             pure (σ.verify pk c r s))
-          (p := (· = true)) (h := by rw [prEvent_eq_evalDist_singleton]; exact hc pk sk hrel))
+          (p := (· = true))
+          (h := by
+            rw [prEvent_eq_evalDist_singleton]
+            exact hc.evalDist_uniform_challenge_eq_one hrel))
     · simpa [← OracleComp.ProgramLogic.propInd_eq_ite, hx] using
         (OracleComp.ProgramLogic.triple_zero
           (oa := do

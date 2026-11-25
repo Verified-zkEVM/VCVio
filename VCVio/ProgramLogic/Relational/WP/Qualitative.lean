@@ -30,7 +30,7 @@ namespace OracleComp.Rel.Qualitative
 variable {ι₁ ι₂ : Type u}
 variable {spec₁ : OracleSpec.{u, 0} ι₁} {spec₂ : OracleSpec.{u, 0} ι₂}
 variable [OracleSpec.AnswerMeasure spec₁] [OracleSpec.AnswerMeasure spec₂]
-  [∀ t, Finite (spec₁.Range t)] [∀ t, Finite (spec₂.Range t)]
+  [∀ t, Countable (spec₁.Range t)] [∀ t, Countable (spec₂.Range t)]
 variable {α β : Type}
 
 /-- Relational weakest preconditions from probabilistic coupling.
@@ -38,15 +38,15 @@ Enable with `open scoped OracleComp.Rel.Qualitative`. -/
 noncomputable scoped instance instRelWP :
     VCVio.ProgramLogic.RelWP (OracleComp spec₁) (OracleComp spec₂) Prop
       EStack⟨⟩ EStack⟨⟩ where
-  rwpTrans oa ob post _epost₁ _epost₂ :=
+  trans oa ob post _epost₁ _epost₂ :=
     OracleComp.ProgramLogic.Relational.CouplingPost oa ob post
-  rwp_trans_pure a b post _epost₁ _epost₂ :=
+  trans_pure a b post _epost₁ _epost₂ :=
     (MAlgRelOrdered.rwp_pure (m₁ := OracleComp spec₁) (m₂ := OracleComp spec₂) (l := Prop)
       a b post).symm.le
-  rwp_trans_bind_le oa ob f g post _epost₁ _epost₂ :=
+  trans_bind_le oa ob f g post _epost₁ _epost₂ :=
     MAlgRelOrdered.rwp_bind_le (m₁ := OracleComp spec₁) (m₂ := OracleComp spec₂) (l := Prop)
       oa ob f g post
-  rwp_trans_monotone _oa _ob _post _post' _epost₁ _epost₁' _epost₂ _epost₂'
+  trans_monotone _oa _ob _post _post' _epost₁ _epost₁' _epost₂ _epost₂'
       _h₁ _h₂ hpost :=
     MAlgRelOrdered.rwp_mono (m₁ := OracleComp spec₁) (m₂ := OracleComp spec₂)
       (l := Prop) hpost

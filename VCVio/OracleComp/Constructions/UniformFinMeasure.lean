@@ -10,7 +10,7 @@ public import VCVio.OracleComp.ProbComp.Basic
 public import VCVio.OracleComp.EvalDist.AnswerMeasure
 public import VCVio.EvalDist.ProbabilityNotation
 public import ToMathlib.MeasureTheory.Measure.Bounds
-public import ToMathlib.Probability.UniformOn
+public import ToCslib.Probability.UniformOn
 
 /-!
 # Measure semantics for finite-range sampling

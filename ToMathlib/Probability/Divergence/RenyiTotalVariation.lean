@@ -10,13 +10,13 @@ public import ToMathlib.Probability.Divergence.TotalVariation
 public import ToMathlib.MeasureTheory.Measure.TotalVariation
 
 /-!
-# Renyi divergence against total variation
+# Renyi divergence against statistical distance
 
-Total variation between probability measures is controlled by every Renyi divergence of order
-`a > 1` and by the max-divergence.
+The statistical distance `SD(μ, ν) = μ.statEDist ν` between probability measures is controlled by
+every Renyi divergence of order `a > 1` and by the max-divergence.
 
 For `μ ≪ ν` the two measures have densities `∂μ/∂ν` and `1` against `ν`, so Scheffé's bound
-reduces total variation to half the `L¹` distance between those densities, and
+reduces the statistical distance to half the `L¹` distance between those densities, and
 `lintegral_absDiff_div_two_rpow_two_le` compares that with the Hellinger affinity `M_{1/2}`.
 Log-convexity of the MGF (`renyiDiv_inv_le_renyiMGF_half_rpow_two`) then passes from order `1/2`
 to any order `a > 1`.
@@ -31,11 +31,11 @@ namespace InformationTheory
 
 variable {α : Type*} [MeasurableSpace α]
 
-/-- **Scheffé bound.** Total variation between probability measures `μ ≪ ν` is at most half the
-`L¹` distance between the likelihood ratio and one. -/
-theorem etvDist_le_lintegral_absDiff_rnDeriv_div_two {μ ν : Measure α} [IsProbabilityMeasure μ]
+/-- **Scheffé bound.** The statistical distance between probability measures `μ ≪ ν` is at most
+half the `L¹` distance between the likelihood ratio and one. -/
+theorem statEDist_le_lintegral_absDiff_rnDeriv_div_two {μ ν : Measure α} [IsProbabilityMeasure μ]
     [IsProbabilityMeasure ν] (hac : μ ≪ ν) :
-    μ.etvDist ν ≤ (∫⁻ x, ENNReal.absDiff (μ.rnDeriv ν x) 1 ∂ν) / 2 := by
+    μ.statEDist ν ≤ (∫⁻ x, ENNReal.absDiff (μ.rnDeriv ν x) 1 ∂ν) / 2 := by
   set f := μ.rnDeriv ν
   have hf : Measurable f := Measure.measurable_rnDeriv μ ν
   have hset : ∀ s, ∫⁻ x in s, f x ∂ν = μ s := Measure.setLIntegral_rnDeriv hac
@@ -81,11 +81,11 @@ theorem etvDist_le_lintegral_absDiff_rnDeriv_div_two {μ ν : Measure α} [IsPro
       _ ≤ N + μ A.1 := by gcongr; exact setLIntegral_le_lintegral _ _
       _ = μ A.1 + P := by rw [hPN, add_comm]
 
-/-- **Total variation against the Hellinger affinity.** For probability measures `μ ≪ ν`,
-`TV(μ, ν)² ≤ 1 - M_{1/2}(μ ‖ ν)²`. -/
-theorem etvDist_rpow_two_le_one_sub_renyiMGF_half {μ ν : Measure α} [IsProbabilityMeasure μ]
+/-- **Statistical distance against the Hellinger affinity.** For probability measures `μ ≪ ν`,
+`SD(μ, ν)² ≤ 1 - M_{1/2}(μ ‖ ν)²`. -/
+theorem statEDist_rpow_two_le_one_sub_renyiMGF_half {μ ν : Measure α} [IsProbabilityMeasure μ]
     [IsProbabilityMeasure ν] (hac : μ ≪ ν) :
-    μ.etvDist ν ^ (2 : ℝ) ≤ 1 - renyiMGF (1 / 2) μ ν ^ (2 : ℝ) := by
+    μ.statEDist ν ^ (2 : ℝ) ≤ 1 - renyiMGF (1 / 2) μ ν ^ (2 : ℝ) := by
   have hf1 : ∫⁻ x, μ.rnDeriv ν x ∂ν = 1 := by
     rw [← setLIntegral_univ, Measure.setLIntegral_rnDeriv hac, measure_univ]
   have key := lintegral_absDiff_div_two_rpow_two_le ν
@@ -93,31 +93,31 @@ theorem etvDist_rpow_two_le_one_sub_renyiMGF_half {μ ν : Measure α} [IsProbab
     (by rw [lintegral_one, measure_univ])
   simp only [mul_one] at key
   rw [renyiMGF_of_ac hac]
-  exact (ENNReal.rpow_le_rpow (etvDist_le_lintegral_absDiff_rnDeriv_div_two hac)
+  exact (ENNReal.rpow_le_rpow (statEDist_le_lintegral_absDiff_rnDeriv_div_two hac)
     (by norm_num)).trans key
 
-/-- **Renyi divergence bounds total variation.** For probability measures and any order
-`a > 1`, `TV(μ, ν)² ≤ 1 - R_a(μ ‖ ν)⁻¹`. -/
-theorem etvDist_rpow_two_le_one_sub_inv_renyiDiv {a : ℝ} (ha : 1 < a) (μ ν : Measure α)
+/-- **Renyi divergence bounds statistical distance.** For probability measures and any order
+`a > 1`, `SD(μ, ν)² ≤ 1 - R_a(μ ‖ ν)⁻¹`. -/
+theorem statEDist_rpow_two_le_one_sub_inv_renyiDiv {a : ℝ} (ha : 1 < a) (μ ν : Measure α)
     [IsProbabilityMeasure μ] [IsProbabilityMeasure ν] :
-    μ.etvDist ν ^ (2 : ℝ) ≤ 1 - (renyiDiv a μ ν)⁻¹ := by
+    μ.statEDist ν ^ (2 : ℝ) ≤ 1 - (renyiDiv a μ ν)⁻¹ := by
   by_cases hac : μ ≪ ν
-  · exact (etvDist_rpow_two_le_one_sub_renyiMGF_half hac).trans
+  · exact (statEDist_rpow_two_le_one_sub_renyiMGF_half hac).trans
       (tsub_le_tsub_left (renyiDiv_inv_le_renyiMGF_half_rpow_two ha μ ν hac) 1)
   · rw [renyiDiv_eq_rpow ha, renyiMGF_of_not_ac hac,
       ENNReal.top_rpow_of_pos (inv_pos.2 (sub_pos.2 ha)), ENNReal.inv_top, tsub_zero]
-    exact ENNReal.rpow_le_one (Measure.etvDist_le_one μ ν (by simp) (by simp)) (by norm_num)
+    exact ENNReal.rpow_le_one (Measure.statEDist_le_one μ ν (by simp) (by simp)) (by norm_num)
 
-/-- **Max-divergence bounds total variation.** For probability measures,
-`TV(μ, ν) ≤ 1 - D_∞(μ ‖ ν)⁻¹`. -/
-theorem etvDist_le_one_sub_inv_maxDiv (μ ν : Measure α) [IsProbabilityMeasure μ]
-    [IsProbabilityMeasure ν] : μ.etvDist ν ≤ 1 - (maxDiv μ ν)⁻¹ := by
+/-- **Max-divergence bounds statistical distance.** For probability measures,
+`SD(μ, ν) ≤ 1 - D_∞(μ ‖ ν)⁻¹`. -/
+theorem statEDist_le_one_sub_inv_maxDiv (μ ν : Measure α) [IsProbabilityMeasure μ]
+    [IsProbabilityMeasure ν] : μ.statEDist ν ≤ 1 - (maxDiv μ ν)⁻¹ := by
   classical
   set D := maxDiv μ ν
   by_cases hD : D = ⊤ ∨ ¬ μ ≪ ν
   · have hDtop : D = ⊤ := hD.elim id fun h => by simp [D, maxDiv, h]
     rw [hDtop, ENNReal.inv_top, tsub_zero]
-    exact Measure.etvDist_le_one μ ν (by simp) (by simp)
+    exact Measure.statEDist_le_one μ ν (by simp) (by simp)
   push Not at hD
   obtain ⟨hDtop, hac⟩ := hD
   have hle : ∀ s, μ s ≤ D * ν s := measure_le_maxDiv_mul hac

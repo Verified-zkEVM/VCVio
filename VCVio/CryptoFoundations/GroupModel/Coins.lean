@@ -8,7 +8,7 @@ module
 public import VCVio.CryptoFoundations.GroupModel.Game
 
 /-!
-Private coins in explained interactions
+# Private coins in explained interactions
 
 Coin requests share the explicit randomness handler with handle computations. Their replies
 contain no group elements, so they leave the chronological received basis unchanged.

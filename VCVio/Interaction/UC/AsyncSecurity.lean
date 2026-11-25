@@ -71,8 +71,8 @@ about separately.
 The lifted security layer pins move types, env state, env event
 alphabets, and the underlying open-process universes to `0`. This
 matches the universe constraints already imposed by
-`AsyncRuntime.lean` (which threads `ProbComp : Type → Type`
-through the runtime), and is required for `(openTheory.{u, 0, 0}
+`AsyncRuntime.lean` (whose runtime monad is `m : Type → Type`), and
+is required for `(openTheory.{u, 0, 0}
 Party).Closed` to be well-formed.
 -/
 

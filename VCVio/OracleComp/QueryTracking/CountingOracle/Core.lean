@@ -21,11 +21,18 @@ public section
 
 open OracleSpec OracleComp
 
-universe u v w
+universe uι u v w
 
 open scoped OracleSpec.PrimitiveQuery
 
-variable {ι : Type u} {spec : OracleSpec ι} {α β γ : Type u}
+/-! ## Cost traces
+
+A cost trace reads only the query input, so the index universe `uι` is independent of the
+response universe `u`, which the writer shares with the results. -/
+
+section CostTrace
+
+variable {ι : Type uι} {spec : OracleSpec.{uι, u} ι} {α β γ : Type u}
 
 namespace QueryImpl
 
@@ -55,7 +62,11 @@ observation model:
 
 This is the preferred approach when the observation model is "every oracle
 query is visible." For observations at non-query points (e.g. pure-computation
-timing), use the explicit `observe` / `runObs` API from `ObservationOracle`. -/
+timing), use the explicit `observe` / `runObs` API from `ObservationOracle`.
+
+The trace lives in an arbitrary monoid. For additive charges over a lawful monad,
+`QueryImpl.withAddCost` records them in `Multiplicative ω`, where the instrumentation is
+PolyFun's charge writer `PFunctor.Handler.withChargeW` (`QueryImpl.withAddCost_eq_withChargeW`). -/
 @[expose] def withCost (so : QueryImpl spec m) (costFn : spec.Domain → ω) :
     QueryImpl spec (WriterT ω m) :=
   so.withTraceBefore costFn
@@ -96,6 +107,52 @@ lemma support_fst_run_withCost [LawfulMonad m] [MonadAttach m]
 
 end withCost
 
+end QueryImpl
+
+/-- Oracle with arbitrary cost tracking. The cost is accumulated in a `WriterT ω` layer
+while preserving the original oracle behavior. Its additive form is `addCostOracle`. -/
+@[expose] def costOracle {ω : Type u} [Monoid ω] (costFn : spec.Domain → ω) :
+    QueryImpl spec (WriterT ω (OracleComp spec)) :=
+  (QueryImpl.ofLift spec (OracleComp spec)).withCost costFn
+
+/-- Pointwise behavior of the generic cost oracle. -/
+@[simp]
+lemma costOracle_apply {ω : Type u} [Monoid ω] (costFn : spec.Domain → ω)
+    (t : spec.Domain) :
+    costOracle costFn t =
+      (do tell (costFn t); liftM (liftM (spec.query t) : OracleComp spec _)) := by
+  rw [costOracle, QueryImpl.withCost_apply, QueryImpl.ofLift_apply]
+
+namespace costOracle
+
+variable {ω : Type u} [Monoid ω]
+
+@[simp]
+lemma fst_map_run_simulateQ (costFn : spec.Domain → ω) (oa : OracleComp spec α) :
+    Prod.fst <$> (simulateQ (costOracle costFn) oa).run = oa := by
+  rw [costOracle, QueryImpl.fst_map_run_withCost, simulateQ_ofLift_eq_self]
+lemma support_run_simulateQ
+    (costFn : spec.Domain → ω) (oa : OracleComp spec α) :
+    support (Prod.fst <$> (simulateQ (costOracle costFn) oa).run) = support oa := by
+  rw [fst_map_run_simulateQ]
+
+end costOracle
+
+end CostTrace
+
+/-! ## Per-index query counting
+
+A query count `QueryCount ι` is written into a writer over the response universe, so here the
+index shares that universe. -/
+
+section Counting
+
+variable {ι : Type u} {spec : OracleSpec.{u, u} ι} {α β γ : Type u}
+
+namespace QueryImpl
+
+variable {m : Type u → Type v} [Monad m]
+
 /-- Wrap an oracle implementation to count queries in an additive writer.
 Counting happens before the implementation runs; failure in the base monad can discard
 the writer result. Use `AddWriterT.runAdd` to observe ordinary pointwise counts.
@@ -125,25 +182,11 @@ lemma fst_map_runAdd_withCounting [DecidableEq ι] [LawfulMonad m]
 
 end QueryImpl
 
-/-- Oracle with arbitrary cost tracking. The cost is accumulated in a `WriterT ω` layer
-while preserving the original oracle behavior. -/
-@[expose] def costOracle {ω : Type u} [Monoid ω] (costFn : spec.Domain → ω) :
-    QueryImpl spec (WriterT ω (OracleComp spec)) :=
-  (QueryImpl.ofLift spec (OracleComp spec)).withCost costFn
-
 /-- Oracle for counting the number of queries made by a computation. The count is stored as a
 function from oracle indices to counts, to give finer grained information about the count. -/
 @[expose] def OracleSpec.countingOracle [DecidableEq ι] :
     QueryImpl spec (AddWriterT (QueryCount ι) (OracleComp spec)) :=
   (QueryImpl.ofLift spec (OracleComp spec)).withCounting
-
-/-- Pointwise behavior of the generic cost oracle. -/
-@[simp]
-lemma costOracle_apply {ω : Type u} [Monoid ω] (costFn : spec.Domain → ω)
-    (t : spec.Domain) :
-    costOracle costFn t =
-      (do tell (costFn t); liftM (liftM (spec.query t) : OracleComp spec _)) := by
-  rw [costOracle, QueryImpl.withCost_apply, QueryImpl.ofLift_apply]
 
 /-- Pointwise behavior of the per-index counting oracle. -/
 @[simp]
@@ -156,21 +199,6 @@ lemma OracleSpec.countingOracle_apply [DecidableEq ι] (t : spec.Domain) :
 
 lemma countingOracle_eq_costOracle [DecidableEq ι] :
     spec.countingOracle = costOracle (fun t => Multiplicative.ofAdd (QueryCount.single t)) := rfl
-
-namespace costOracle
-
-variable {ω : Type u} [Monoid ω]
-
-@[simp]
-lemma fst_map_run_simulateQ (costFn : spec.Domain → ω) (oa : OracleComp spec α) :
-    Prod.fst <$> (simulateQ (costOracle costFn) oa).run = oa := by
-  rw [costOracle, QueryImpl.fst_map_run_withCost, simulateQ_ofLift_eq_self]
-lemma support_run_simulateQ
-    (costFn : spec.Domain → ω) (oa : OracleComp spec α) :
-    support (Prod.fst <$> (simulateQ (costOracle costFn) oa).run) = support oa := by
-  rw [fst_map_run_simulateQ]
-
-end costOracle
 
 namespace countingOracle
 
@@ -405,3 +433,5 @@ lemma exists_mem_support_of_mem_support {oa : OracleComp spec α} {x : α} (hx :
 end support
 
 end countingOracle
+
+end Counting

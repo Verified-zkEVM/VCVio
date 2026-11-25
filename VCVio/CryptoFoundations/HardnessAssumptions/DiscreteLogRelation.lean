@@ -5,6 +5,7 @@ Authors: Quang Dao
 -/
 
 module
+public import Mathlib.Algebra.MvPolynomial.Degrees
 public import VCVio.CryptoFoundations.HardnessAssumptions.DiffieHellman
 public import VCVio.OracleComp.SimSemantics.StateT.Basic
 public import VCVio.OracleComp.SimSemantics.Append
@@ -13,12 +14,13 @@ public import VCVio.CryptoFoundations.HardnessAssumptions.DiscreteLogRelation.Ra
 import VCVio.OracleComp.Constructions.SampleableType.SchwartzZippel
 
 /-!
- # The discrete-log relation problem
+# The discrete-log relation problem
 
 An adversary receives independently uniform multiples of a generator over a finite index type
-and seeks a nonzero
-vector of coefficients whose linear combination vanishes. Programming each basis element as
-`x i • g + y i • Z` gives a reduction to discrete logarithm with additive loss `1 / |F|`.
+and seeks a nonzero vector of coefficients whose linear combination vanishes. Programming each
+basis element as `x i • g + y i • Z` gives a reduction to discrete logarithm with additive loss
+`1 / |F|`. The index type carries an enumeration (`FinEnum`), so the experiment and the
+reduction sample their bases executably.
 
 Reference: Joseph Jaeger and Stefano Tessaro, *Expected-Time Cryptography: Generic Techniques
 and Applications to Concrete Soundness*, https://eprint.iacr.org/2020/1213, Lemma 3.
@@ -38,9 +40,9 @@ abbrev Adversary (F G ι : Type) (spec : OracleSpec κ) :=
   (ι → G) → OracleComp spec (ι → F)
 
 /-- Sample a uniform basis and accept a nonzero coefficient vector with vanishing group sum. -/
-@[expose] noncomputable def experiment [Fintype ι] [DecidableEq ι]
-    [Field F] [DecidableEq F] [SampleableType F]
-    [AddCommGroup G] [Module F G] [DecidableEq G]
+@[expose] def experiment [FinEnum ι]
+    [Semiring F] [DecidableEq F] [SampleableType F]
+    [AddCommMonoid G] [Module F G] [DecidableEq G]
     (impl : QueryImpl spec (StateT σ ProbComp)) (s : σ)
     (g : G) (A : Adversary F G ι spec) : ProbComp Bool := do
   let x ← $ᵗ (ι → F)
@@ -49,9 +51,9 @@ abbrev Adversary (F G ι : Type) (spec : OracleSpec κ) :=
 
 /-- Program the basis with the discrete-log challenge and extract by dividing its coefficient
 into the negated generator coefficient, returning zero when that denominator vanishes. -/
-@[expose] noncomputable def reduction [Fintype ι] [DecidableEq ι]
+@[expose] def reduction [FinEnum ι]
     [Field F] [DecidableEq F] [SampleableType F]
-    [AddCommGroup G] [Module F G]
+    [AddCommMonoid G] [Module F G]
     (impl : QueryImpl spec (StateT σ ProbComp)) (s : σ)
     (A : Adversary F G ι spec) : DiffieHellman.DLogAdversary F G := fun g Z => do
   let x ← $ᵗ (ι → F)
@@ -69,20 +71,20 @@ abbrev plainImpl : QueryImpl (unifSpec + emptySpec) (StateT Unit ProbComp) :=
     Adversary F G ι (unifSpec + emptySpec) := fun basis => liftM (A basis)
 
 /-- The plain experiment is the shared experiment with the empty auxiliary specification. -/
-noncomputable abbrev plainExperiment [Fintype ι] [DecidableEq ι] [Field F] [DecidableEq F]
-    [SampleableType F] [AddCommGroup G] [Module F G] [DecidableEq G]
+abbrev plainExperiment [FinEnum ι] [Semiring F] [DecidableEq F]
+    [SampleableType F] [AddCommMonoid G] [Module F G] [DecidableEq G]
     (g : G) (A : Adversary F G ι unifSpec) : ProbComp Bool :=
   experiment plainImpl () g (plainAdversary A)
 
 /-- The plain reduction is the shared reduction with the empty auxiliary specification. -/
-noncomputable abbrev plainReduction [Fintype ι] [DecidableEq ι] [Field F] [DecidableEq F]
-    [SampleableType F] [AddCommGroup G] [Module F G]
+abbrev plainReduction [FinEnum ι] [Field F] [DecidableEq F]
+    [SampleableType F] [AddCommMonoid G] [Module F G]
     (A : Adversary F G ι unifSpec) : DiffieHellman.DLogAdversary F G :=
   reduction plainImpl () (plainAdversary A)
 
 /-- Unfolding the plain experiment selects the empty auxiliary specification and unit state. -/
-theorem plainExperiment_eq [Fintype ι] [DecidableEq ι] [Field F] [DecidableEq F]
-    [SampleableType F] [AddCommGroup G] [Module F G] [DecidableEq G]
+theorem plainExperiment_eq [FinEnum ι] [Semiring F] [DecidableEq F]
+    [SampleableType F] [AddCommMonoid G] [Module F G] [DecidableEq G]
     (g : G) (A : Adversary F G ι unifSpec) :
     plainExperiment g A = experiment plainImpl () g (plainAdversary A) := rfl
 
@@ -98,7 +100,7 @@ theorem plainExperiment_eq [Fintype ι] [DecidableEq ι] [Field F] [DecidableEq 
 
 /-- At a generating base, uniform generator-oracle outputs are uniform scalar multiples.
 This connects generator-oracle setup with the sampling used by `experiment`. -/
-theorem queryBasis_empty_evalDistEq_scalar [Fintype ι] [DecidableEq ι]
+theorem queryBasis_empty_evalDistEq_scalar [FinEnum ι]
     [DecidableEq κ] [Field F] [SampleableType F] [SampleableType G]
     [AddCommGroup G] [Module F G]
     (labels : ι → κ) (hinj : Function.Injective labels)
@@ -116,28 +118,39 @@ theorem queryBasis_empty_evalDistEq_scalar [Fintype ι] [DecidableEq ι]
     exact ⟨fun i => (hg.surjective (basis i)).choose,
       funext fun i => (hg.surjective (basis i)).choose_spec⟩
 
+/-- A linear combination of distinct polynomial variables has total degree at most one. -/
+theorem totalDegree_sum_C_mul_X_le_one [CommSemiring F] [Nontrivial F]
+    {ι : Type*} [Fintype ι]
+    (a : ι → F) :
+    (∑ i, MvPolynomial.C (a i) * MvPolynomial.X i).totalDegree ≤ 1 := by
+  apply MvPolynomial.totalDegree_finsetSum_le
+  intro i _
+  exact (MvPolynomial.totalDegree_mul _ _).trans (by simp)
+
+/-- A nonzero coefficient vector defines a nonzero linear combination of polynomial variables. -/
+theorem sum_C_mul_X_ne_zero [CommSemiring F] {ι : Type*} [Fintype ι]
+    (a : ι → F) (ha : a ≠ 0) :
+    (∑ i, MvPolynomial.C (a i) * MvPolynomial.X i) ≠ 0 := by
+  classical
+  intro h
+  apply ha
+  funext i
+  have he := congrArg (MvPolynomial.eval (Pi.single i 1)) h
+  simpa [Pi.single_apply, mul_ite] using he
+
 /-- A nonzero coefficient vector has vanishing scalar product with a uniformly sampled vector
 over a finite field with probability at most the reciprocal of the field cardinality. -/
-theorem prEvent_sum_mul_eq_zero_le [Fintype ι] [DecidableEq ι]
-    [Field F] [Fintype F] [SampleableType F]
+theorem prEvent_sum_mul_eq_zero_le [Fintype ι]
+    [Field F] [Fintype F] [SampleableType (ι → F)]
     (a : ι → F) (ha : a ≠ 0) :
     Pr{let y ← $ᵗ (ι → F)}[∑ i, a i * y i = 0] ≤
       (1 : ℝ≥0∞) / Fintype.card F := by
   classical
   let p : MvPolynomial ι F := ∑ i, MvPolynomial.C (a i) * MvPolynomial.X i
-  have hn : p ≠ 0 := by
-    intro h
-    apply ha
-    funext i
-    have he := congrArg (MvPolynomial.eval (Pi.single i 1)) h
-    simpa [p, Pi.single_apply, mul_ite] using he
-  have hd : p.totalDegree ≤ 1 := by
-    apply MvPolynomial.totalDegree_finsetSum_le
-    intro i _
-    exact (MvPolynomial.totalDegree_mul _ _).trans (by simp)
-  simpa [p] using prob_eval_zero_univ_le_div p hn hd
+  simpa [p] using prEvent_eval_eq_zero_univ_le_div p
+    (sum_C_mul_X_ne_zero a ha) (totalDegree_sum_C_mul_X_le_one a)
 
-private theorem programmed_eq [Fintype ι] [DecidableEq ι] [Field F] [SampleableType F]
+private theorem programmed_eq [Field F] [SampleableType (ι → F)]
     [AddCommGroup G] [Module F G] (g : G) (A : Adversary F G ι unifSpec) (z : F) :
     (do
       let x ← $ᵗ (ι → F)
@@ -176,15 +189,16 @@ private theorem programmed_eq [Fintype ι] [DecidableEq ι] [Field F] [Sampleabl
           (fun y a => pure ((fun i => t i - y i * z), y, a))))))
 
 /-- Relation finding reduces to discrete logarithm with additive loss `1 / |F|`, including
-an empty input vector. The implementation and initial state are fixed independently of the basis,
-so the finder can share an oracle cache with the computation from which it is extracted.
-This is the oracle-computation form of ironwood `Zcash/Common/RelationProbabilityCoins.lean`.
-The hidden mask is sampled independently after the adversary's output. -/
-theorem experiment_le [Fintype ι] [DecidableEq ι]
+an empty input vector, for any nonzero generator. The implementation and initial state are fixed
+independently of the basis, so the finder can share an oracle cache with the computation from
+which it is extracted. This is the oracle-computation form of ironwood
+`Zcash/Common/RelationProbabilityCoins.lean`. The hidden mask is sampled independently after the
+adversary's output. -/
+theorem experiment_le [FinEnum ι]
     [Field F] [Fintype F] [DecidableEq F] [SampleableType F]
     [AddCommGroup G] [Module F G] [DecidableEq G]
     (impl : QueryImpl spec (StateT σ ProbComp)) (s : σ)
-    (g : G) (hg : Function.Bijective (· • g : F → G)) (A : Adversary F G ι spec) :
+    (g : G) (hg : g ≠ 0) (A : Adversary F G ι spec) :
     Pr{let b ← experiment impl s g A}[b = true] ≤
       Pr{let b ← DiffieHellman.dlogExperiment g (reduction impl s A)}[b = true] +
         1 / Fintype.card F := by
@@ -204,7 +218,8 @@ theorem experiment_le [Fintype ι] [DecidableEq ι]
       (∑ i, a i • (t i • g) = 0) ↔ ∑ i, a i * t i = 0 := by
     rw [show (∑ i, a i • (t i • g)) = (∑ i, a i * t i) • g by
       simp only [smul_smul, Finset.sum_smul]]
-    exact ⟨fun h => hg.injective (h.trans (zero_smul F g).symm), fun h => by rw [h, zero_smul]⟩
+    exact ⟨fun h => smul_left_injective F hg (h.trans (zero_smul F g).symm),
+      fun h => by rw [h, zero_smul]⟩
   have hw : Pr{let w ← R}[win w] = Pr{let b ← experiment impl s g A}[b = true] := by
     simp only [R, win, experiment, prEvent_norm, decide_eq_true_eq, hgroup]
     simp only [← bind_pure_comp, OracleComp.prEvent_bind_const]

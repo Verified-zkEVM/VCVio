@@ -48,7 +48,7 @@ attribute [fs_simp]
   simulatedNmaImpl
 
 variable {Stmt Wit Commit PrvState Chal Resp : Type} {rel : Stmt → Wit → Bool}
-variable (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
+variable (σ : SigmaProtocol ProbComp Stmt Wit Commit PrvState Chal Resp rel)
   (hr : GenerableRelation Stmt Wit rel) (M : Type)
 
 /-- The final freshness/verification continuation performs no signing queries,
@@ -321,7 +321,7 @@ theorem nma_runProb_shiftLeft_signedFreshAdv_le_fork [Inhabited Chal]
 /-- Tight H3 bound for the freshness-preserving adversary, using the
 candidate/verifier split so the final verifier hash query is not charged to H3
 signing replacement. -/
-private theorem signedFreshAdv_H3_bound
+theorem signedFreshAdv_H3_bound
     (adv : SourceAdversary (σ := σ) (hr := hr) (M := M))
     (simT : Stmt → ProbComp (Commit × Chal × Resp))
     (ζ_zk β : ℝ≥0∞)
@@ -391,6 +391,34 @@ theorem cmaSim_runProb_eq_nma_runProb_shiftLeft_cmaToNma
   cmaSim_run_eq_nma_run_shiftLeft_cmaToNma (hr := hr)
     (M := M) (Commit := Commit) (Chal := Chal) (Resp := Resp)
     (Stmt := Stmt) (Wit := Wit) simT A
+
+/-- The simulated CMA game, run on the freshness-checked source adversary, is key generation,
+then the adversary against the logged signing simulator `simulatedNmaLoggedProbImpl` from an
+empty cache and signing log, then fresh verification (`simLoggedVerifyFreshComp`). -/
+theorem cmaSim_runProb_signedFreshAdv_eq
+    (adv : SourceAdversary (σ := σ) (hr := hr) (M := M))
+    (simT : Stmt → ProbComp (Commit × Chal × Resp)) :
+    (cmaSim M Commit Chal hr simT).runProb (cmaInit M Commit Chal Stmt Wit)
+        (signedFreshAdv σ hr M adv) = (do
+      let ks ← hr.gen
+      let p ← (simulateQ (simulatedNmaLoggedProbImpl (M := M) (Commit := Commit)
+          (Chal := Chal) (Resp := Resp) simT ks.1) (adv.main ks.1)).run
+        ((∅ : (fsRoSpec M Commit Chal).QueryCache), ([] : List M))
+      simLoggedVerifyFreshComp (M := M) (Commit := Commit) (Chal := Chal)
+        (Resp := Resp) σ ks.1 p.1 p.2) := by
+  rw [cmaSim_runProb_eq_nma_runProb_shiftLeft_cmaToNma,
+    nma_runProb_shiftLeft_signedFreshAdv_eq_forkH5Body]
+  simp only [forkH5Body, simulateQ_bind]
+  have hk : simulateQ (forkWrappedUniformImpl Chal)
+      (OracleComp.liftComp hr.gen (Fork.wrappedSpec Chal)) = hr.gen := by
+    simpa [forkWrappedUniformImpl] using QueryImpl.simulateQ_liftComp_left_eq_of_apply
+      (impl := forkWrappedUniformImpl Chal) (impl₁ := QueryImpl.id' unifSpec)
+      (h := fun _ => rfl) (oa := hr.gen)
+  rw [hk]
+  apply bind_congr
+  rintro ⟨pk, sk⟩
+  rw [forkLoggedProbImpl_run]
+  exact forkLoggedProbImpl_run_bind_verify_eq_simulatedNma_aux (M := M) σ simT pk (adv.main pk)
 
 /-- Convert the shifted-NMA H5 boundary into the linked simulated-CMA form used
 by the top-level chain. -/

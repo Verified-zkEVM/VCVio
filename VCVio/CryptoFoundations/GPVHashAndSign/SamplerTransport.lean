@@ -253,7 +253,7 @@ theorem advantage_le_advantage_add_of_trapdoorSample_measureTVDist
       ≤ ∑' x : PK × SK, (Pr{let y ← hr.gen}[y = x]
             * Pr{let y ← realGameVerifyFresh psf' hr M Salt ⟨adv.main⟩ x.1 x.2}[y = true]
           + Pr{let y ← hr.gen}[y = x] * ENNReal.ofReal (qSign * ε)) :=
-        ENNReal.tsum_le_tsum fun x => by
+        tsum_le_tsum fun x => by
           by_cases hx : x ∈ support hr.gen
           · rw [← mul_add]; gcongr; exact hper x hx
           · have hzero : Pr{let y ← hr.gen}[y = x] = 0 :=
@@ -262,7 +262,7 @@ theorem advantage_le_advantage_add_of_trapdoorSample_measureTVDist
     _ = ∑' x : PK × SK, (Pr{let y ← hr.gen}[y = x]
             * Pr{let y ← realGameVerifyFresh psf' hr M Salt ⟨adv.main⟩ x.1 x.2}[y = true])
           + (∑' x : PK × SK, Pr{let y ← hr.gen}[y = x]) * ENNReal.ofReal (qSign * ε) := by
-        rw [ENNReal.tsum_add, ENNReal.tsum_mul_right]
+        rw [tsum_add, ENNReal.tsum_mul_right]
     _ ≤ ∑' x : PK × SK, (Pr{let y ← hr.gen}[y = x]
             * Pr{let y ← realGameVerifyFresh psf' hr M Salt ⟨adv.main⟩ x.1 x.2}[y = true])
           + 1 * ENNReal.ofReal (qSign * ε) := by

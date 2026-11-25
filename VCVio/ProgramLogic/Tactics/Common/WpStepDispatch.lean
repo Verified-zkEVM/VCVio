@@ -7,24 +7,23 @@ Authors: Quang Dao
 module
 
 public meta import Lean.Elab.Tactic.Basic
-public meta import Lean.Meta.Sym.Simp.Goal
-public meta import Lean.Meta.Sym.Simp.Rewrite
-public meta import Lean.Meta.Sym.Util
-public meta import VCVio.ProgramLogic.Tactics.Common.WpStepRegistry
+public meta import VCVio.ProgramLogic.Tactics.Common.Core
 public import VCVio.ProgramLogic.Unary.SimulateQ
 
 /-!
 # `runWpStepRules` Dispatch
 
-Dispatch tactic for raw `wp`-shaped goals plus the canonical `@[wpStep]`
-registrations for every `wp_*` lemma shipped in
-`VCVio/ProgramLogic/Unary/HoareTriple.lean` and
-`VCVio/ProgramLogic/Unary/SimulateQ.lean`.
+Dispatch tactic for raw `wp`-shaped goals. One step rewrites the goal with a single equation of
+`wpStepRules`:
 
-The registrations live here (rather than in the rule files themselves) because
-`Unary/HoareTriple.lean` and `Unary/SimulateQ.lean` sit below the tactic
-infrastructure in the import DAG, mirroring the centralized `attribute [vcspec]`
-block in `VCVio/ProgramLogic/Tactics/Relational/Internals.lean`.
+* PolyFun's `ExactWPMonad` equations for `pure`, `>>=`, `<$>`, `ite` and `dite`, which hold for
+  every exact core `Std.WP` interpretation;
+* VCVio's equations for the oracle primitives (`query`, `HasQuery.query`, `$ᵗ`), the iterators
+  (`replicate`, `List.mapM`, `List.foldlM`) and the simulations (`simulateQ`, `liftComp`) from
+  `VCVio/ProgramLogic/Unary/HoareTriple.lean` and `VCVio/ProgramLogic/Unary/SimulateQ.lean`.
+
+A rule is a candidate when the head constant of the computation on its left-hand side is the head
+of the goal's computation, first as written and then after reducible `whnf`.
 -/
 
 public meta section
@@ -33,119 +32,97 @@ open Lean Elab Tactic Meta
 
 namespace OracleComp.ProgramLogic
 
-/-! ## Canonical registrations -/
+/-! ## Rules -/
 
-attribute [wpStep]
-  -- Pure / bind / branching from `Unary/HoareTriple.lean`
-  OracleComp.ProgramLogic.wp_pure
-  OracleComp.ProgramLogic.wp_bind
-  OracleComp.ProgramLogic.wp_ite
-  OracleComp.ProgramLogic.wp_dite
-  OracleComp.ProgramLogic.wp_map
-  -- Replicate / list iterators
-  OracleComp.ProgramLogic.wp_replicate_zero
-  OracleComp.ProgramLogic.wp_replicate_succ
-  OracleComp.ProgramLogic.wp_list_mapM_nil
-  OracleComp.ProgramLogic.wp_list_mapM_cons
-  OracleComp.ProgramLogic.wp_list_foldlM_nil
-  OracleComp.ProgramLogic.wp_list_foldlM_cons
-  -- Sampling / queries
-  OracleComp.ProgramLogic.wp_query
-  OracleComp.ProgramLogic.wp_HasQuery_query
-  OracleComp.ProgramLogic.wp_uniformSample
-  -- `simulateQ` / coercion-bridging from `Unary/SimulateQ.lean`
-  OracleComp.ProgramLogic.wp_simulateQ_eq
-  OracleComp.ProgramLogic.wp_simulateQ_run'_eq
-  OracleComp.ProgramLogic.wp_liftComp
+/-- The equations `wp comp post … = …` of one `runWpStepRules` step, in the order they are tried.
+The monad structure uses PolyFun's `ExactWPMonad` laws; the remaining rules are specific to
+oracle computations. -/
+def wpStepRules : Array Name := #[
+  ``ExactWPMonad.wp_pure,
+  ``ExactWPMonad.wp_bind,
+  ``ExactWPMonad.wp_map,
+  ``ExactWPMonad.wp_ite,
+  ``ExactWPMonad.wp_dite,
+  ``wp_replicate_zero,
+  ``wp_replicate_succ,
+  ``wp_list_mapM_nil,
+  ``wp_list_mapM_cons,
+  ``wp_list_foldlM_nil,
+  ``wp_list_foldlM_cons,
+  ``wp_query,
+  ``wp_HasQuery_query,
+  ``wp_uniformSample,
+  ``wp_simulateQ_eq,
+  ``wp_simulateQ_run'_eq,
+  ``wp_liftComp]
+
+/-- The computation of an application of VCVio's `wp` or of core `Std.WP.wp`. -/
+private def wpAppComp? (e : Expr) : Option Expr :=
+  let e := e.consumeMData
+  let n := e.getAppNumArgs
+  if e.getAppFn.isConstOf ``OracleComp.ProgramLogic.wp && n ≥ 2 then
+    some (e.getArg! (n - 2))
+  else if e.getAppFn.isConstOf ``Std.WP.wp && n ≥ 3 then
+    some (e.getArg! (n - 3))
+  else
+    none
+
+/-- Head constant of the computation on the left-hand side of the `wp` equation `declName`. -/
+private def wpRuleCompHead? (declName : Name) : MetaM (Option Name) := do
+  let info ← getConstInfo declName
+  forallTelescopeReducing info.type fun _ body => do
+    let_expr Eq _ lhs _ := body.consumeMData | return none
+    return (wpAppComp? lhs).bind (·.getAppFn.constName?)
+
+/-- `wpStepRules` paired with the heads of their left-hand computations, computed once. -/
+initialize wpStepRuleHeadsCache : IO.Ref (Option (Array (Name × Name))) ← IO.mkRef none
+
+private def getWpStepRuleHeads : MetaM (Array (Name × Name)) := do
+  if let some heads ← wpStepRuleHeadsCache.get then
+    return heads
+  let heads ← wpStepRules.filterMapM fun rule => do
+    return (← wpRuleCompHead? rule).map (rule, ·)
+  wpStepRuleHeadsCache.set (some heads)
+  return heads
 
 /-! ## Dispatch -/
 
-/-- Cache of Sym rewrite theorem objects for global `@[wpStep]` declarations. -/
-initialize wpStepRewriteRuleCache :
-    IO.Ref (Std.HashMap Name Lean.Meta.Sym.Simp.Theorem) ←
-  IO.mkRef {}
-
-private def traceWpStepCacheEvent (event : String) (declName : Name) : MetaM Unit := do
-  if vcvio.vcgen.traceCachedRules.get (← getOptions) then
-    logInfo m!"[wpstep cache] {event} `{declName}`"
-
-private def getWpStepRewriteRuleCached (declName : Name) : MetaM Lean.Meta.Sym.Simp.Theorem := do
-  let cache ← wpStepRewriteRuleCache.get
-  match cache[declName]? with
-  | some thm =>
-      addCachedRuleHit
-      traceWpStepCacheEvent "hit" declName
-      return thm
-  | none =>
-      addCachedRuleMiss
-      traceWpStepCacheEvent "miss" declName
-      let thm ←
-        if vcvio.vcgen.time.get (← getOptions) then
-          let (thm, ns) ← timeNs (Lean.Meta.Sym.Simp.mkTheoremFromDecl declName)
-          addCachedRuleBuildTime ns
-          return thm
-        else
-          Lean.Meta.Sym.Simp.mkTheoremFromDecl declName
-      wpStepRewriteRuleCache.modify fun cache => cache.insert declName thm
-      return thm
-
-private def wpStepMethods (thm : Lean.Meta.Sym.Simp.Theorem) : Lean.Meta.Sym.Simp.Methods :=
-  let thms := ({} : Lean.Meta.Sym.Simp.Theorems).insert thm
-  { post := thms.rewrite }
-
-/-- Apply a cached Sym rewrite theorem to the current goal target. -/
-private def runWpStepRewriteRule (declName : Name) : TacticM Bool := do
+/-- Rewrite the main goal with the equation `declName`, then try `rfl` on what remains. -/
+private def runWpStepRule (declName : Name) : TacticM Bool := do
   match ← getGoals with
   | [] => return false
   | goal :: rest =>
-      let thm ← liftMetaM <| getWpStepRewriteRuleCached declName
-      match ← observing? do
-          liftMetaM <| Lean.Meta.Sym.SymM.run do
-            let goal ← Lean.Meta.Sym.preprocessMVar goal
-            Lean.Meta.Sym.simpGoal goal (wpStepMethods thm)
-        with
-      | none => return false
-      | some .noProgress => return false
-      | some .closed =>
-          setGoals rest
-          return true
-      | some (.goal goal') =>
-          setGoals [goal']
-          discard <| tryEvalTacticSyntax (← `(tactic| rfl))
-          let goals ← getGoals
-          setGoals (goals ++ rest)
-          return true
+      let saved ← saveState
+      setGoals [goal]
+      try
+        evalTactic (← `(tactic| simp only [$(mkCIdent declName):ident]))
+      catch _ =>
+        saved.restore
+        return false
+      unless (← getGoals).isEmpty do
+        discard <| tryEvalTacticSyntax (← `(tactic| rfl))
+      setGoals ((← getGoals) ++ rest)
+      return true
 
-private def mergeWpStepCandidateEntries (preferred fallback : Array WpStepEntry) :
-    Array WpStepEntry :=
-  fallback.foldl (init := preferred) fun entries entry =>
-    let duplicate := entries.any fun existing =>
-      existing.declName? == entry.declName?
-    if duplicate then entries else entries.push entry
+/-- Advance a `wp`-shaped goal by one rewrite with the rules of `wpStepRules`.
 
-/-- Advance a `wp`-shaped goal by one rewrite, dispatching via the `@[wpStep]`
-registry.
+Locates the first `wp oa post` sub-expression of the main target and tries the rules whose
+left-hand computation has the head of `oa`, as written and then after reducible `whnf`.
 
-Locates the `wp oa post` sub-expression of the main target, first asks the
-registry for syntactic candidates, and then appends normalized fallback
-candidates. Each candidate is tried through the cached `SymM` rewrite path.
-
-Returns `false` when no candidate succeeds, or when the goal contains no `wp`
-application at all. -/
+Returns `false` when no candidate succeeds, or when the goal contains no `wp` application at
+all. -/
 def runWpStepRules : TacticM Bool := withVCGenWpStepTiming do
   let target ← instantiateMVars (← getMainTarget)
   let some wpApp := findAppWithHead? ``OracleComp.ProgramLogic.wp target | return false
-  let wpApp ← instantiateMVars wpApp
-  let argCount := wpApp.getAppNumArgs
-  if argCount < 2 then return false
-  let oa := wpApp.getArg! (argCount - 2)
-  let entries :=
-    mergeWpStepCandidateEntries
-      (← getRegisteredWpStepEntriesNoWhnf oa)
-      (← getRegisteredWpStepEntries oa)
-  for entry in entries do
-    let some declName := entry.declName? | continue
-    if ← runWpStepRewriteRule declName then return true
+  let some oa := wpAppComp? (← instantiateMVars wpApp) | return false
+  let heads ← liftMetaM getWpStepRuleHeads
+  let syntactic := oa.consumeMData.getAppFn.constName?
+  let normalized := (← whnfR oa).consumeMData.getAppFn.constName?
+  let candidates :=
+    (heads.filter fun (_, head) => some head == syntactic) ++
+      (heads.filter fun (_, head) => some head == normalized && some head != syntactic)
+  for (rule, _) in candidates do
+    if ← runWpStepRule rule then return true
   return false
 
 end OracleComp.ProgramLogic

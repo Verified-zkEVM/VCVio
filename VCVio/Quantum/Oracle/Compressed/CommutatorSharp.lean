@@ -5,6 +5,7 @@ Authors: Quang Dao
 -/
 
 module
+public import QuantumFoundations.MatrixMap.PinchingCompletion
 
 public import QuantumFoundations.MatrixMap.Commutant
 public import QuantumFoundations.MatrixMap.Completion
@@ -139,65 +140,6 @@ open Matrix
 open OracleSpec
 open scoped Matrix.Norms.L2Operator Kronecker ComplexConjugate
 
-namespace Matrix
-
-/-- Complete the rows and columns that change a label, then localize the completion to
-invariant blocks. The resulting approximation preserves the labels. -/
-theorem exists_pinch_eq_sub_sq_le_of_completion
-    {n κ Λ : Type*} [Fintype n] [DecidableEq n] [DecidableEq κ]
-    (β : n → κ) (γ : n → Λ) (bad : n → Prop) [DecidablePred bad]
-    (A : Matrix n n ℂ) (d : n → ℂ) {c : ℝ} (hc : 0 ≤ c)
-    (hrow : ‖diagonal (fun i ↦ if bad i then (1 : ℂ) else 0) * (A - diagonal d)‖ ≤ √c)
-    (hcol : ‖(A - diagonal d) * diagonal (fun i ↦ if bad i then (1 : ℂ) else 0)‖ ≤ √c)
-    (hblock : ∀ i j, A i j ≠ 0 → i ≠ j → γ i = γ j)
-    (hgood : ∀ i j, γ i = γ j → i ≠ j → ¬bad i → ¬bad j → β i = β j) :
-    ∃ S, pinch β S = S ∧ ‖A - S‖ ^ 2 ≤ c := by
-  classical
-  let P : Matrix n n ℂ := diagonal (fun i ↦ if bad i then 1 else 0)
-  have hP : IsStarProjection P := by
-    refine ⟨?_, ?_⟩
-    · dsimp [P]
-      rw [IsIdempotentElem, diagonal_mul_diagonal]
-      congr 1
-      funext i
-      split_ifs <;> simp
-    · dsimp only [P]
-      rw [IsSelfAdjoint, star_eq_conjTranspose, diagonal_conjTranspose]
-      congr 1
-      funext i
-      split_ifs <;> simp_all
-  obtain ⟨T, hPT, hTP, hT⟩ := exists_completion hP hrow hcol
-  have hr : ∀ i j, bad i → T i j = (A - diagonal d) i j := by
-    intro i j hi
-    have h := congrFun (congrFun hPT i) j
-    simpa [P, diagonal_mul, hi] using h
-  have hl : ∀ i j, bad j → T i j = (A - diagonal d) i j := by
-    intro i j hj
-    have h := congrFun (congrFun hTP i) j
-    simpa [P, mul_diagonal, hj] using h
-  refine ⟨A - pinch γ T, ?_, ?_⟩
-  · rw [pinch_eq_self_iff]
-    intro i j hij
-    by_cases he : i = j
-    · simp [he]
-    rw [Matrix.sub_apply, pinch_apply] at hij
-    by_cases hg : γ i = γ j
-    · rw [ite_eq_left hg] at hij
-      have hi : ¬bad i := by
-        intro hi
-        simp [hr i j hi, Matrix.sub_apply, diagonal_apply_ne _ he] at hij
-      have hj : ¬bad j := by
-        intro hj
-        simp [hl i j hj, Matrix.sub_apply, diagonal_apply_ne _ he] at hij
-      exact hgood i j hg he hi hj
-    · rw [ite_eq_right hg, sub_zero] at hij
-      exact False.elim (hg (hblock i j hij he))
-  · rw [sub_sub_cancel]
-    exact (pow_le_pow_left₀ (norm_nonneg _) ((l2_opNorm_pinch_le γ T).trans hT) 2).trans_eq
-      (Real.sq_sqrt hc)
-
-end Matrix
-
 namespace Quantum
 
 /-! ## The row identity -/
@@ -206,23 +148,6 @@ namespace Quantum
 section cell
 
 variable {Y : Type*} [Fintype Y] [DecidableEq Y] [AddCommGroup Y]
-
-/-- The phase cell is symmetric. -/
-theorem phaseCell_comm (χ : AddChar Y ℂ) (a b : Option Y) :
-    phaseCell Y χ a b = phaseCell Y χ b a := by
-  by_cases hχ : χ = 0
-  · subst hχ
-    rw [phaseCell_zero, one_apply, one_apply]
-    simp only [eq_comm]
-  rcases a with _ | u <;> rcases b with _ | w
-  · rfl
-  · rw [phaseCell_none_some hχ, phaseCell_some_none hχ]
-  · rw [phaseCell_none_some hχ, phaseCell_some_none hχ]
-  · rw [phaseCell_some_some hχ, phaseCell_some_some hχ]
-    by_cases h : u = w
-    · subst h; rfl
-    · simp only [h, Ne.symm h, ite_false, zero_add]
-      ring
 
 /-- **The row identity.** For a nontrivial character, the row of the phase cell at a filled
 content `u`, with the phase `χ u` removed from its diagonal entry, has squared norm
@@ -272,9 +197,8 @@ end cell
 
 section approx
 
-variable {X Y : Type*} [Fintype X] [DecidableEq X] [Fintype Y] [DecidableEq Y] [AddCommGroup Y]
+variable {X Y : Type*} [Fintype X] [DecidableEq X]
 
-omit [Fintype Y] [DecidableEq Y] [AddCommGroup Y] in
 /-- A database with a filled cell `x` has one more nonempty cell than after emptying `x`. -/
 theorem Database.size_eq_size_update_none_add_one {D : Database X Y} {x : X} {u : Y}
     (h : D x = some u) : D.size = Database.size (Function.update D x none) + 1 := by
@@ -282,6 +206,8 @@ theorem Database.size_eq_size_update_none_add_one {D : Database X Y} {x : X} {u 
     rw [Function.update_idem, ← h, Function.update_eq_self]
   conv_lhs => rw [← e]
   exact Database.size_update_some_of_eq_none (Function.update_self x none D) u
+
+variable [Fintype Y] [DecidableEq Y] [AddCommGroup Y]
 
 /-- The entries of `O_ph^(t)` minus the phase diagonal inside a block of size below `t`. -/
 theorem truncatedPhaseOracle_sub_phaseDiagonal_apply {t : ℕ} (x : X) (χ : AddChar Y ℂ)
@@ -366,7 +292,7 @@ theorem sum_norm_truncatedPhaseOracle_sub_phaseDiagonal_sq_le {t : ℕ} {x : X}
       rw [this]; simp only [hblk]]
     simp only [truncatedPhaseOracle_sub_phaseDiagonal_apply x χ hsize]
     refine le_of_eq_of_le (Finset.sum_congr rfl fun a _ ↦ ?_) (sum_norm_phaseCell_sub_sq_le hχ u)
-    rw [hcell, phaseCell_comm]
+    rw [hcell, phaseCell_apply_comm]
     by_cases h : a = some u
     · subst h; simp
     · simp [h, Ne.symm h]
@@ -419,7 +345,7 @@ theorem eq_of_truncatedPhaseOracle_ne_zero {t : ℕ} {m' m : (X × AddChar Y ℂ
     exact h (by simp [hlt])
   rw [hnone D' hupd hD', hnone D rfl hD]
 
-variable {ι : Type*} [DecidableEq ι]
+variable {ι : Type*}
 
 /-- The bad basis states of the phase basis for `π` and `t`: a nontrivial character, a block of
 size below `t`, and a content of the queried cell that changes the label. -/
@@ -435,7 +361,6 @@ private noncomputable def badProjector (π : Database X Y → ι) (t : ℕ) :
     Matrix ((X × AddChar Y ℂ) × Database X Y) ((X × AddChar Y ℂ) × Database X Y) ℂ :=
   diagonal fun m ↦ if IsBad π t m then 1 else 0
 
-omit [DecidableEq ι] in
 private theorem isStarProjection_badProjector (π : Database X Y → ι) (t : ℕ) :
     IsStarProjection (badProjector π t) := by
   refine ⟨?_, ?_⟩
@@ -448,7 +373,6 @@ private theorem isStarProjection_badProjector (π : Database X Y → ι) (t : �
     funext m
     by_cases h : IsBad π t m <;> simp [h]
 
-omit [DecidableEq ι] in
 private theorem badProjector_mul_apply (π : Database X Y → ι) (t : ℕ)
     (A : Matrix ((X × AddChar Y ℂ) × Database X Y) ((X × AddChar Y ℂ) × Database X Y) ℂ)
     (i j : (X × AddChar Y ℂ) × Database X Y) :
@@ -456,7 +380,6 @@ private theorem badProjector_mul_apply (π : Database X Y → ι) (t : ℕ)
   rw [badProjector, diagonal_mul]
   split_ifs <;> simp
 
-omit [DecidableEq ι] in
 private theorem mul_badProjector_apply (π : Database X Y → ι) (t : ℕ)
     (A : Matrix ((X × AddChar Y ℂ) × Database X Y) ((X × AddChar Y ℂ) × Database X Y) ℂ)
     (i j : (X × AddChar Y ℂ) × Database X Y) :
@@ -552,9 +475,8 @@ end labelChangingRows
 section approxInstability
 
 variable {X Y : Type} [Fintype X] [DecidableEq X] [Fintype Y] [DecidableEq Y] [AddCommGroup Y]
-  {ι : Type*} [DecidableEq ι]
+  {ι : Type*}
 
-omit [DecidableEq ι] in
 /-- The bad rows of a block-diagonal matrix whose bad rows have squared norm at most `6 / N`
 span an operator of norm at most `√(6 I)`. -/
 private theorem l2_opNorm_badProjector_mul_le [UniformAnswerMeasure (X →ₒ Y)]
@@ -580,7 +502,8 @@ private theorem l2_opNorm_badProjector_mul_le [UniformAnswerMeasure (X →ₒ Y)
 
 /-- **The label-preserving approximation, phase basis.** There is an operator `S` that preserves
 the label `π D` of the database with `‖O_ph^(t) - S‖² ≤ 6 I(π, t)`. -/
-theorem exists_pinch_eq_truncatedPhaseOracle_sub_sq_le [UniformAnswerMeasure (X →ₒ Y)]
+theorem exists_pinch_eq_truncatedPhaseOracle_sub_sq_le [DecidableEq ι]
+    [UniformAnswerMeasure (X →ₒ Y)]
     (π : Database X Y → ι) (t : ℕ) :
     ∃ S, pinch (fun m : (X × AddChar Y ℂ) × Database X Y ↦ π m.2) S = S ∧
       ‖truncatedPhaseOracle X Y t - S‖ ^ 2 ≤ 6 * (Database.instability π t).toReal := by
@@ -649,7 +572,8 @@ theorem exists_pinch_eq_truncatedPhaseOracle_sub_sq_le [UniformAnswerMeasure (X 
 preserves the label `π D` of the database with `‖O^(t) - S‖² ≤ 6 I(π, t)`. For the pinching of
 `O^(t)` the constant is `20` in [CDHZ, Lemma 5.9]
 (`Quantum.l2_opNorm_pinch_truncatedOracle_sub_sq_le`) and `8` at best. -/
-theorem exists_pinch_eq_truncatedOracle_sub_sq_le [UniformAnswerMeasure (X →ₒ Y)]
+theorem exists_pinch_eq_truncatedOracle_sub_sq_le [DecidableEq ι]
+    [UniformAnswerMeasure (X →ₒ Y)]
     (π : Database X Y → ι) (t : ℕ) :
     ∃ S, pinch (fun m : (X × Y) × Database X Y ↦ π m.2) S = S ∧
       ‖truncatedOracle X Y t - S‖ ^ 2 ≤ 6 * (Database.instability π t).toReal := by
@@ -884,14 +808,6 @@ theorem truncatedPhaseOracle_apply_update_of_size_lt {t : ℕ} (x : X) (χ : Add
   rw [truncatedPhaseOracle_apply, phaseOracle_apply, ite_eq_left hcond]
   simp only [hmask, ite_true, one_mul, mul_one, Function.update_self]
 
-omit [Fintype X] [Fintype Y] [AddCommGroup Y] in
-/-- A label-controlled operator of scalars is diagonal. -/
-theorem labelControlled_smul_one {n κ : Type*} [DecidableEq n] (β : n → κ) (c : κ → ℂ) :
-    labelControlled β (fun k ↦ c k • (1 : Matrix n n ℂ)) = diagonal fun a ↦ c (β a) := by
-  ext a b
-  rw [labelControlled_apply, Matrix.smul_apply, one_apply, diagonal_apply]
-  split_ifs <;> simp
-
 /-- **Sharpness of the constant `24`, the commutator.** Let `χ y₀ = -1`, `t ≥ 1`, and label the
 databases by whether `D x₀ = y₀`. For the scalar control `V = P_A - P_B`,
 `‖[V, O^(t)]‖² ≥ 24 / N - 36 / N²`. -/
@@ -908,7 +824,7 @@ theorem le_l2_opNorm_commutator_truncatedOracle_sq (x₀ : X) {y₀ : Y} {χ : A
     norm_num at hχ
   have hN : (0 : ℝ) < Fintype.card Y := Nat.cast_pos.mpr Fintype.card_pos
   set s : Database X Y → ℂ := fun D ↦ if D x₀ = some y₀ then -1 else 1 with hs
-  rw [labelControlled_smul_one]
+  rw [Matrix.labelControlled_smul_one]
   have hV : (diagonal fun m : (X × Y) × Database X Y ↦
       if decide (m.2 x₀ = some y₀) then (-1 : ℂ) else 1) = diagonal fun m ↦ s m.2 := by
     congr 1
@@ -986,7 +902,7 @@ theorem le_l2_opNorm_commutator_truncatedOracle_sq (x₀ : X) {y₀ : Y} {χ : A
       field_simp
       ring
     · simp only [ha, ite_false, sub_zero]
-      rw [show (1 : ℂ) + 1 = 2 by norm_num, norm_mul, mul_pow, phaseCell_comm χ a]
+      rw [show (1 : ℂ) + 1 = 2 by norm_num, norm_mul, mul_pow, phaseCell_apply_comm χ a]
       norm_num
   rw [Finset.sum_congr rfl fun a _ ↦ hterm a, Finset.sum_sub_distrib, ← Finset.mul_sum,
     sum_norm_phaseCell_sub_sq hχ0, hχ, Finset.sum_ite_eq', ite_eq_left (Finset.mem_univ _)]

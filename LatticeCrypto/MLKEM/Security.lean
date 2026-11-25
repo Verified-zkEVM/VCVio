@@ -40,9 +40,6 @@ variable (params : Params) (ring : NTTRingOps) (encoding : Encoding params)
 
 section IND_CCA
 
-variable [DecidableEq Message] [DecidableEq (KPKE.Ciphertext params encoding)]
-  [SampleableType Message] [SampleableType Coins] [SampleableType SharedSecret]
-
 /-- The PRF scheme modeling the implicit-rejection function `J(z ‖ c)` from FIPS 203.
 
 The key space is `Seed32` (the fallback seed `z` stored in the decapsulation key), the domain
@@ -60,7 +57,7 @@ derivation input being just the message (`kdInput m c = m`). Implicit rejection 
 In the concrete ML-KEM instantiation, both `H₁` and `H₂` are derived from a single hash function
 `G(m ‖ H(ek))`, which can be modeled via `FujisakiOkamoto.singleRO`. This definition uses the
 two-random-oracle formulation to expose the two derivation steps independently. -/
-noncomputable abbrev foKEMScheme :=
+noncomputable abbrev foKEMScheme [DecidableEq (KPKE.Ciphertext params encoding)] :=
   FujisakiOkamoto
     (KPKE.asExplicitCoins params ring encoding prims)
     (fun (m : Message) (_c : KPKE.Ciphertext params encoding) => m)
