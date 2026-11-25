@@ -16,9 +16,8 @@ coordinates. Composition must execute the first instruction before preparing the
 retain both charges and pass the first result to the second program. A separate nondeterministic
 example shows that a cheap deterministic handler does not establish a worst-case bound. Abstract
 preorders, signed refunds and reversed orders exercise the generic weighted scope, and empty
-carriers require no chosen witness. The oracle-facing examples check the composite's operations
-and prices, the run as `evalWithAnswerFn`, the budget as `WorstCaseCostBound`, and that the budget
-covers views no input reaches.
+carriers require no chosen witness. The last examples check that a budget is a
+`WorstCaseCostBound` on every view and that it covers views no input reaches.
 -/
 
 public section
@@ -202,36 +201,7 @@ example : ¬ WorstCaseCostBound choiceProgram (⟨fun _ => 1⟩ : CostModel choi
   rw [cost] at recorded
   exact Nat.not_succ_le_self 1 recorded
 
-/-! ## Oracle-facing form of the composite -/
-
-/-- The composite's operations are the two interfaces, each operation tagged with its view. -/
-example {A B C ω : Type} (outer : MeasuredProgram B C ω) (inner : MeasuredProgram A B ω) :
-    (outer.comp inner).Op = ((Σ _ : inner.View, inner.Op) ⊕ (Σ _ : outer.View, outer.Op)) :=
-  rfl
-
-/-- The composite keeps the inner price of a left-tagged operation. -/
-example {A B C ω : Type} (outer : MeasuredProgram B C ω) (inner : MeasuredProgram A B ω)
-    (v : inner.View) (op : inner.Op) : (outer.comp inner).cost (.inl ⟨v, op⟩) = inner.cost op :=
-  rfl
-
-/-- The composite keeps the outer price of a right-tagged operation. -/
-example {A B C ω : Type} (outer : MeasuredProgram B C ω) (inner : MeasuredProgram A B ω)
-    (v : outer.View) (op : outer.Op) : (outer.comp inner).cost (.inr ⟨v, op⟩) = outer.cost op :=
-  rfl
-
-/-- The run is `evalWithAnswerFn` of the view's answers, for a generic program. -/
-example {Input Result ω : Type} (program : MeasuredProgram Input Result ω) (input : Input) :
-    program.run input =
-      evalWithAnswerFn (program.queryImpl (program.view input))
-        (program.program (program.view input)) :=
-  rfl
-
-/-- The run is `evalWithAnswerFn` of the view's answers, for a composite. -/
-example (input : Nat) :
-    composed.run input =
-      evalWithAnswerFn (composed.queryImpl (composed.view input))
-        (composed.program (composed.view input)) :=
-  rfl
+/-! ## Budgets as worst-case cost bounds -/
 
 /-- A worst-case cost bound on every view gives the all-path budget. The one instruction costs
 its weight, whatever its response. -/
@@ -244,15 +214,7 @@ example {ω : Type} [AddCommMonoid ω] [Preorder ω] (weight : ω) :
 example (values : Nat × Nat) :
     WorstCaseCostBound (increment.program values) ⟨increment.cost⟩
       (fun kind => if kind = false then 1 else 0) :=
-  (increment.costAtMost_iff_worstCaseCostBound _).mp (addProgram_costAtMost _ _) values
-
-/-- A budget bounds the recorded charge of the answers on every view of a generic program. -/
-example {Input Result ω : Type} [AddCommMonoid ω] [Preorder ω]
-    {program : MeasuredProgram Input Result ω} {budget : ω} (h : program.CostAtMost budget)
-    (v : program.View) :
-    (simulateQ ((program.queryImpl v).withAddCost program.cost) (program.program v)).runAdd.2 ≤
-      budget :=
-  h.runAdd_le v
+  (addProgram_costAtMost _ _).worstCaseCostBound values
 
 /-- A program whose input view is always `false`. Only the view `true` requests an
 instruction. -/

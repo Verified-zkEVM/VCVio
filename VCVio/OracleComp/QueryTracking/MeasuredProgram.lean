@@ -19,7 +19,8 @@ price in a cost type. Its interface at a view is an `OracleSpec`, and its progra
 
 * `queryImpl`: the answers of a view as a `QueryImpl` into `Id`.
 * `run_eq_evalWithAnswerFn`: the run is `evalWithAnswerFn` of the view's answers.
-* `costAtMost_iff_worstCaseCostBound`: the all-path budget is `WorstCaseCostBound` on every view.
+* `costAtMost_iff_worstCaseCostBound` and `CostAtMost.worstCaseCostBound`: the all-path budget is
+  `WorstCaseCostBound` on every view.
 * `runAdd_fst_eq_run` and `CostAtMost.runAdd_le`: the `QueryImpl.withAddCost` run of the answers
   returns the run's result, and a budget bounds the charge it records.
 * `costAtMost_of_runAdd_le`: if the answers are the only responses, the recorded charge
@@ -78,12 +79,18 @@ theorem runAdd_fst_eq_run [AddMonoid ω] (input : Input) :
     (fun op => Multiplicative.ofAdd (M.cost op)) (M.program (M.view input)))
 
 variable {M} in
+/-- A budget is a worst-case cost bound on the program of each view. -/
+theorem CostAtMost.worstCaseCostBound [AddCommMonoid ω] [Preorder ω] {budget : ω}
+    (h : M.CostAtMost budget) (v : M.View) :
+    WorstCaseCostBound (M.program v) ⟨M.cost⟩ budget :=
+  (M.costAtMost_iff_worstCaseCostBound budget).mp h v
+
+variable {M} in
 /-- A budget bounds the charge that the instrumented run of any view's answers records. -/
 theorem CostAtMost.runAdd_le [AddCommMonoid ω] [Preorder ω] {budget : ω}
     (h : M.CostAtMost budget) (v : M.View) :
     (simulateQ ((M.queryImpl v).withAddCost M.cost) (M.program v)).runAdd.2 ≤ budget :=
-  worstCaseCostBound_runAdd_withAddCost_le ((M.costAtMost_iff_worstCaseCostBound budget).mp h v)
-    (M.queryImpl v)
+  worstCaseCostBound_runAdd_withAddCost_le (h.worstCaseCostBound v) (M.queryImpl v)
 
 /-- If the answers are the only responses, the charge that the instrumented run records on every
 view bounds every path. -/
