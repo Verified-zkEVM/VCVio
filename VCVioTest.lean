@@ -127,6 +127,7 @@ public import VCVioTest.OracleComp.BudgetedPotential
 public import VCVioTest.OracleComp.CostSimulation
 public import VCVioTest.OracleComp.CostedCacheReplay
 public import VCVioTest.OracleComp.EqDistTriple
+public import VCVioTest.OracleComp.LargeResultUniverse
 public import VCVioTest.OracleComp.LoggedHistory
 public import VCVioTest.OracleComp.MeasuredProgram
 public import VCVioTest.OracleComp.PreservesInv
