@@ -131,7 +131,7 @@ theorem ReductionRelated.group [CommSemiring F] [DecidableEq F]
   refine ⟨(congrArg Prod.fst heq).symm, ?_⟩
   constructor
   · intro s
-    exact (h.extendsRoot s).trans (runGen_prefix (pairingReal e) (fun _ => id) _ _ r hs s)
+    exact (h.extendsRoot s).trans (runGen_extends (pairingReal e) (fun _ => id) _ _ r hs s)
   · exact virtualize_step_wellFormed (pairingReal e) (fun _ => id) h.valid (.inl q) r hs
   · simpa only [h.metadata] using (Pairing.eraseValues_step e q real.1).symm
   · exact (congrArg Prod.snd heq).symm
@@ -151,7 +151,7 @@ theorem ReductionRelated.receive [CommSemiring F]
   constructor
   · intro s
     exact (h.extendsRoot s).trans (hp s)
-  · exact wellFormed_receive h.valid hp .g₁ handle hh
+  · exact wellFormed_append_of_extends h.valid hp .g₁ hh
   · simp only [reductionReceive, h.metadata, Pairing.eraseValues]
     congr 1
     rw [Pairing.eraseSourceValues_receive]
@@ -159,7 +159,7 @@ theorem ReductionRelated.receive [CommSemiring F]
     funext b
     cases b <;> rfl
   · change readBack (append st.handles .g₁ handle) tbl' = _
-    rw [readBack_receive h.valid hp, hv, h.values, Pairing.table_receive]
+    rw [readBack_append_of_extends h.valid hp, hv, h.values, Pairing.table_receive]
     funext s
     cases s <;> simp [pushGroups, Pairing.pairingMessage, append]
   · simp only [reductionReceive, h.transcript]

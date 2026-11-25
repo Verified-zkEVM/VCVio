@@ -74,7 +74,7 @@ theorem extractionProgram_toAlgebraic {G₁ G₂ Gₜ : Type} [Field F]
     [AddCommGroup G₁] [Module F G₁] [DecidableEq G₁]
     [AddCommGroup G₂] [Module F G₂] [DecidableEq G₂]
     [AddCommGroup Gₜ] [Module F Gₜ] [DecidableEq Gₜ]
-    (e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ) (A : Adversary F M) (hA : FollowsProtocol A)
+    (e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ) (A : Adversary F M)
     (g₁ : G₁) (g₂ : G₂) (pk : G₁ × G₂) (hash sign : R → G₁)
     (hashRep signRep : R → F × F) (initial : List (F × F)) :
     (fun a =>
@@ -84,7 +84,7 @@ theorem extractionProgram_toAlgebraic {G₁ G₂ Gₜ : Type} [Field F]
       LinearFunctional.extractionProgram (fun out => out.value.data)
         hash sign hashRep signRep initial
         (simulateQ (fun q => AGM.oracle q.value)
-          ((A.toAlgebraic hA e g₁ g₂).main (AGM.initialInput g₁ g₂ pk))) =
+          ((A.toAlgebraic e g₁ g₂).main (AGM.initialInput g₁ g₂ pk))) =
     ((fun a => realReductionView a.1 a.2) <$>
       (simulateQ (realReductionHandler (G := AGM.Group G₁ G₂) e hash sign)
         (A reductionInput)).run (initialRealReductionState

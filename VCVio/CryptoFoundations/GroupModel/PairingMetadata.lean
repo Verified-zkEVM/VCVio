@@ -37,7 +37,7 @@ variable {F T : Type} {G : Bool → Type}
   (eraseSourceValues st.1, st.2.map fun _ => 0)
 
 private theorem lookup_erase [Zero F] [∀ b, Zero (G b)]
-    (tbl : Tbl (fun b => Repr F × G b)) (b : Bool) (h : Handle) :
+    (tbl : Tbl (fun b => Coeffs F × G b)) (b : Bool) (h : Handle) :
     lookup (mapTbl (fun _ x => (x.1, (0 : F))) tbl) b h =
       ((lookup tbl b h).1, 0) := by
   exact List.getD_map (tbl b) 0 (fun x => (x.1, (0 : F)))

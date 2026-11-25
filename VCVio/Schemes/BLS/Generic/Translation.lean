@@ -16,7 +16,8 @@ import all VCVio.CryptoFoundations.GroupModel.Instances
 
 Private coins, hashes and signing requests are forwarded to the algebraic BLS interface.
 The certificate explains only source elements; target values are internal to the pairing
-interpreter. The protocol certificate enforces group-free requests and one output signature.
+interpreter. Every generic adversary translates: the algebraic BLS interface places no
+restriction on the shape of requests or outputs.
 -/
 
 public section
@@ -55,65 +56,18 @@ private theorem relabel_isAlgebraic [Zero F]
         simp only [simulateQ_bind, simulateQ_spec_query, relabel] <;>
         exact ⟨hp.1, fun reply => ih reply _ (hp.2 reply)⟩
 
-private theorem explainProgram_protocol [CommSemiring F]
-    [AddCommGroup G₁] [Module F G₁] [DecidableEq G₁]
-    [AddCommGroup G₂] [Module F G₂] [DecidableEq G₂]
-    [AddCommMonoid Gₜ] [Module F Gₜ] [DecidableEq Gₜ]
-    (e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ)
-    (p : OracleComp (adversarySpec F M) (Message M (fun _ : PSort => Handle)))
-    (st : Pairing.Tracked F (AGM.Group G₁ G₂) Gₜ)
-    (hp : allPathsSatisfy
-      (fun q => match q with
-        | .inr (.inr (.inr q)) => ∀ s, q.groups s = []
-        | _ => True)
-      (fun out => (out.groups .g₁).length = 1 ∧ out.groups .g₂ = [] ∧ out.groups .gₜ = [])
-      (fun _ => Set.univ) p) :
-    allPathsSatisfy (fun q => ∀ s, q.value.groups s = [])
-      (fun out => (out.value.groups false).length = 1 ∧ out.value.groups true = [])
-      (fun _ => Set.univ)
-      (simulateQ relabel (Pairing.explainProgram (G := AGM.Group G₁ G₂) e p st)) := by
-  induction p using OracleComp.inductionOn generalizing st with
-  | pure out =>
-      simp only [allPathsSatisfy_pure] at hp
-      change allPathsSatisfy _ _ _
-        (simulateQ relabel (pure (explain st.1 (Pairing.sourceMessage out))))
-      simp only [simulateQ_pure, allPathsSatisfy_pure]
-      constructor
-      · simpa [explain, Pairing.sourceMessage] using hp.1
-      · simp [explain, Pairing.sourceMessage, hp.2.1]
-  | query_bind q next ih =>
-      obtain ⟨hq, hn⟩ := allPathsSatisfy_query_bind _ _ |>.mp hp
-      rcases q with q | q | n | q
-      · exact ih _ _ (hn _ (Set.mem_univ _))
-      · exact ih () st (hn () (Set.mem_univ _))
-      · change allPathsSatisfy _ _ _ (simulateQ relabel (liftM
-          ((explainedSpec F (AGM.Group G₁ G₂) (CoinQuery (Query M))
-            (CoinReply (fun _ => Unit))).query
-            ⟨⟨.inr n, fun _ => []⟩, fun _ => []⟩) >>= _))
-        simp only [simulateQ_bind, simulateQ_spec_query, relabel]
-        apply (allPathsSatisfy_query_bind _ _).mpr
-        exact ⟨fun _ => rfl, fun reply _ => ih _ _ (hn _ (Set.mem_univ _))⟩
-      · rcases q with ⟨m | m, qs⟩ <;>
-          have hqs : ∀ s, qs s = [] := hq <;>
-          simp only [Pairing.explainProgram, explain, Pairing.sourceMessage] <;>
-          apply (allPathsSatisfy_query_bind _ _).mpr <;>
-          refine ⟨?_, fun reply _ => ih _ _ (hn _ (Set.mem_univ _))⟩ <;>
-          intro b <;> cases b <;>
-          simp only [hqs, List.map_nil]
-
-/-- Translate a protocol-respecting generic BLS adversary into a certified algebraic adversary. -/
+/-- Translate a generic BLS adversary into a certified algebraic adversary. -/
 @[expose] def Adversary.toAlgebraic [Field F]
     [AddCommGroup G₁] [Module F G₁] [AddCommGroup G₂] [Module F G₂]
     [AddCommGroup Gₜ] [Module F Gₜ] [DecidableEq Gₜ]
     [DecidableEq G₁] [DecidableEq G₂]
-    (A : Adversary F M) (hA : FollowsProtocol A)
+    (A : Adversary F M)
     (e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ) (g₁ : G₁) (g₂ : G₂) :
     AlgebraicAdversary F M G₁ G₂ e g₁ g₂ where
   main input := simulateQ relabel ((Pairing.toExplained (G := AGM.Group G₁ G₂) e A).main input)
   algebraic input := by
     exact relabel_isAlgebraic _ _
       ((Pairing.toExplained (G := AGM.Group G₁ G₂) e A).algebraic input)
-  protocol input := by exact explainProgram_protocol e _ _ (hA _)
 
 private def sourceOracle :
     QueryImpl (plainSpec (AGM.Group G₁ G₂) (Query M) (fun _ => Unit))
@@ -172,9 +126,9 @@ theorem Adversary.toAlgebraic_toUnforgeableAdversary [Field F] [SampleableType F
     [AddCommGroup G₂] [Module F G₂] [DecidableEq G₂]
     [AddCommGroup Gₜ] [Module F Gₜ] [DecidableEq Gₜ]
     [∀ s, DecidableEq (PFam G₁ G₂ Gₜ s)]
-    (A : Adversary F M) (hA : FollowsProtocol A)
+    (A : Adversary F M)
     (e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ) (g₁ : G₁) (g₂ : G₂) :
-    (A.toAlgebraic hA e g₁ g₂).toUnforgeableAdversary =
+    (A.toAlgebraic e g₁ g₂).toUnforgeableAdversary =
       A.toUnforgeableAdversary e g₁ g₂ := by
   change SignatureAlg.UnforgeableAdversary.mk _ = SignatureAlg.UnforgeableAdversary.mk _
   congr 1

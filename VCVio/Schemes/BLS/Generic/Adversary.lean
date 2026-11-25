@@ -61,15 +61,6 @@ abbrev adversarySpec (F M : Type) :=
   spec F pairingSig + (encSpec (fun _ : PSort => Unit) +
     (unifSpec + handleSpec (S := PSort) (Query M) (fun _ => Unit)))
 
-/-- BLS requests contain only message data and the final output is one signature handle. -/
-@[expose] def FollowsProtocol {F M : Type} (A : Adversary F M) : Prop :=
-  ∀ input, allPathsSatisfy
-    (fun q => match q with
-      | .inr (.inr (.inr q)) => ∀ s, q.groups s = []
-      | _ => True)
-    (fun out => (out.groups .g₁).length = 1 ∧ out.groups .g₂ = [] ∧ out.groups .gₜ = [])
-    (fun _ => Set.univ) (A input)
-
 /-- A query counts toward the adversary's direct hash budget. -/
 @[expose] def isHash {F M : Type} : (adversarySpec F M).Domain → Prop
   | .inr (.inr (.inr ⟨.inl _, _⟩)) => True

@@ -42,9 +42,9 @@ theorem unforgeableAdvantage_le_generic {F M G₁ G₂ Gₜ : Type}
     [AddCommGroup G₂] [Module F G₂]
     [AddCommGroup Gₜ] [Module F Gₜ] [DecidableEq Gₜ] [DecidableEq M]
     [∀ s, DecidableEq (PFam G₁ G₂ Gₜ s)]
-    (A : Generic.Adversary F M) (hA : Generic.FollowsProtocol A)
+    (A : Generic.Adversary F M)
     (e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ) (g₁ : G₁) (g₂ : G₂)
-    (hg₁ : Function.Bijective (· • g₁ : F → G₁)) (he : e g₁ g₂ ≠ 0)
+    (hg₁ : Function.Surjective (· • g₁ : F → G₁)) (he : e g₁ g₂ ≠ 0)
     (q qH qS : ℕ)
     (hq : IsQueryBoundP (A Generic.reductionInput) (fun i => isGroupOp i = true) q)
     (hqH : IsQueryBoundP (A Generic.reductionInput) Generic.isHash qH)
@@ -54,27 +54,25 @@ theorem unforgeableAdvantage_le_generic {F M G₁ G₂ Gₜ : Type}
       ((4 * (5 + q + 3 * qH + 4 * qS) ^ 2 +
         12 * (5 + q + 3 * qH + 4 * qS) + 15 : ℕ) : ℝ≥0∞) / Fintype.card F := by
   classical
-  have hg₁' : g₁ ≠ 0 := by intro h; simp [h] at he
-  have hg₂' : g₂ ≠ 0 := by intro h; simp [h] at he
   let Q := 5 + q + 3 * qH + 4 * qS
-  have hgood := DLog11.experiment_ofGeneric_le_of_total e g₁ g₂ hg₁' hg₂' he
+  have hgood := DLog11.experiment_ofGeneric_le_of_total e g₁ g₂ he
     (Generic.goodProgram A) Q
     ((Generic.isQueryBoundP_goodProgram A q qH qS hq hqH hqS).mono (by dsimp [Q]; omega))
-  have hbad := DLog11.experiment_ofGeneric_le_of_total e g₁ g₂ hg₁' hg₂' he
+  have hbad := DLog11.experiment_ofGeneric_le_of_total e g₁ g₂ he
     (Generic.badProgram A) Q (Generic.isQueryBoundP_badProgram A q qH qS hq hqH hqS)
-  have hge : DLog11.experiment g₁ g₂ (goodReduction (A.toAlgebraic hA e g₁ g₂)) =
+  have hge : DLog11.experiment g₁ g₂ (goodReduction (A.toAlgebraic e g₁ g₂)) =
       DLog11.experiment g₁ g₂ (DLog11.Adversary.ofGeneric e (Generic.goodProgram A)) := by
-    unfold DLog11.experiment
+    rw [DLog11.experiment_eq, DLog11.experiment_eq]
     apply bind_congr
     intro a
     rw [Generic.goodReduction_toAlgebraic]
-  have hbe : DLog11.experiment g₁ g₂ (badReduction (A.toAlgebraic hA e g₁ g₂)) =
+  have hbe : DLog11.experiment g₁ g₂ (badReduction (A.toAlgebraic e g₁ g₂)) =
       DLog11.experiment g₁ g₂ (DLog11.Adversary.ofGeneric e (Generic.badProgram A)) := by
-    unfold DLog11.experiment
+    rw [DLog11.experiment_eq, DLog11.experiment_eq]
     apply bind_congr
     intro a
     rw [Generic.badReduction_toAlgebraic]
-  have h := unforgeableAdvantage_le_of_generic_algebraic A hA e g₁ g₂ hg₁ he
+  have h := unforgeableAdvantage_le_of_generic_algebraic A e g₁ g₂ hg₁ he
   rw [hge, hbe] at h
   refine (h.trans (add_le_add (add_le_add hgood hbad) le_rfl)).trans_eq ?_
   rw [← ENNReal.add_div, ← ENNReal.add_div]

@@ -17,7 +17,7 @@ import all VCVio.CryptoFoundations.GroupModel.Instances
 /-! # Generic BLS translation and Type 3 DLog regression tests
 
 A handle adversary hashes and signs one message, computes a pairing and a target equality,
-and returns a scaled signature on a different message. Tests check its protocol, separate
+and returns a scaled signature on a different message. Tests check its separate
 query budgets and exact forgetful translation. The scalar-recovery fixture instantiates the
 independent generic DLog bound numerically over the field with 101 elements.
 -/
@@ -57,13 +57,6 @@ local instance pairingEq : ∀ s, DecidableEq (PFam K K K s)
     (.inl (.smul .g₁ (if same then 2 else 3) ((signed.groups .g₁).headD 0)))
   return ⟨true, fun | .g₁ => [sig] | .g₂ => [] | .gₜ => []⟩
 
-/-- Every reply path of the explicit handle program obeys the BLS message protocol. -/
-theorem scaledSignature_protocol : BLS.Generic.FollowsProtocol scaledSignature := by
-  intro input
-  simp only [scaledSignature, allPathsSatisfy_query_bind, allPathsSatisfy_pure,
-    Set.mem_univ, forall_const]
-  simp
-
 /-- Pairing and scaling cost two group operations; target equality is free. -/
 theorem scaledSignature_group_budget (input : Message Unit (fun _ : PSort => Handle)) :
     IsQueryBoundP (scaledSignature input) (fun i => isGroupOp i = true) 2 := by
@@ -99,25 +92,25 @@ theorem scaledSignature_real_main (pk : K × K) :
 
 /-- The translated certificate forgets to the same real BLS adversary through ordinary imports. -/
 theorem scaledSignature_forget :
-    (scaledSignature.toAlgebraic scaledSignature_protocol
+    (scaledSignature.toAlgebraic
       (LinearMap.mul K K) 1 1).toUnforgeableAdversary =
       scaledSignature.toUnforgeableAdversary (LinearMap.mul K K) 1 1 :=
-  BLS.Generic.Adversary.toAlgebraic_toUnforgeableAdversary _ _ _ _ _
+  BLS.Generic.Adversary.toAlgebraic_toUnforgeableAdversary _ _ _ _
 
 /-- The pairing fixture enters the original BLS advantage through the algebraic theorem. -/
 theorem scaledSignature_algebraic_bound :
     SignatureAlg.unforgeableAdvantage (ProbCompRuntime.rom (Bool →ₒ K))
       (scaledSignature.toUnforgeableAdversary (LinearMap.mul K K) 1 1) ≤
       Pr{let b ← DLog11.experiment (1 : K) 1 (BLS.goodReduction
-      (scaledSignature.toAlgebraic scaledSignature_protocol (LinearMap.mul K K) 1 1))}[b = true] +
+      (scaledSignature.toAlgebraic (LinearMap.mul K K) 1 1))}[b = true] +
       Pr{let b ← DLog11.experiment (1 : K) 1 (BLS.badReduction
-      (scaledSignature.toAlgebraic scaledSignature_protocol (LinearMap.mul K K) 1 1))}[b = true] +
+      (scaledSignature.toAlgebraic (LinearMap.mul K K) 1 1))}[b = true] +
       1 / 101 := by
   simpa only [ZMod.card, Nat.cast_ofNat] using
     BLS.unforgeableAdvantage_le_of_generic_algebraic
-    scaledSignature scaledSignature_protocol (LinearMap.mul K K) 1 1
+    scaledSignature (LinearMap.mul K K) 1 1
     (by simpa only [smul_eq_mul, mul_one] using
-      (show Function.Bijective (fun x : K => x) from ⟨fun _ _ h => h, fun x => ⟨x, rfl⟩⟩))
+      (show Function.Surjective (fun x : K => x) from fun x => ⟨x, rfl⟩))
     (by simpa only [LinearMap.mul_apply', one_mul] using (one_ne_zero : (1 : K) ≠ 0))
 
 /-- One target-group operation gives the common-exponent bound `15/101` in `DLog11`. -/
@@ -129,7 +122,7 @@ theorem dlog11_pairing_bound :
         (DLog11.Adversary.ofGeneric (LinearMap.mul K K) A))}[b = true] ≤ (15 / 101 : ℝ≥0∞) := by
   dsimp only
   apply (DLog11.experiment_ofGeneric_le_of_total
-    (LinearMap.mul K K) 1 1 one_ne_zero one_ne_zero
+    (LinearMap.mul K K) 1 1
     (by simpa only [LinearMap.mul_apply', one_mul] using (one_ne_zero : (1 : K) ≠ 0))
     _ 1 ?_).trans
   · norm_num [ZMod.card, Nat.choose]
@@ -157,7 +150,7 @@ theorem scaledSignature_goodProgram_bound :
       (DLog11.Adversary.ofGeneric (LinearMap.mul K K)
         (BLS.Generic.goodProgram scaledSignature)))}[b = true] ≤ (147 / 101 : ℝ≥0∞) := by
   apply (DLog11.experiment_ofGeneric_le_of_total
-    (LinearMap.mul K K) 1 1 one_ne_zero one_ne_zero
+    (LinearMap.mul K K) 1 1
     (by simpa only [LinearMap.mul_apply', one_mul] using (one_ne_zero : (1 : K) ≠ 0))
     _ 7 scaledSignature_goodProgram_budget).trans
   norm_num [ZMod.card, Nat.choose]
@@ -168,7 +161,7 @@ theorem scaledSignature_badProgram_bound :
       (DLog11.Adversary.ofGeneric (LinearMap.mul K K)
         (BLS.Generic.badProgram scaledSignature)))}[b = true] ≤ (483 / 101 : ℝ≥0∞) := by
   apply (DLog11.experiment_ofGeneric_le_of_total
-    (LinearMap.mul K K) 1 1 one_ne_zero one_ne_zero
+    (LinearMap.mul K K) 1 1
     (by simpa only [LinearMap.mul_apply', one_mul] using (one_ne_zero : (1 : K) ≠ 0))
     _ 14 scaledSignature_badProgram_budget).trans
   norm_num [ZMod.card, Nat.choose]
@@ -200,19 +193,19 @@ theorem repeatedReceipts_coefficients :
 
 /-- The good algebraic reduction agrees with its generic program on arbitrary challenge points. -/
 theorem scaledSignature_goodReduction (X Y : K) :
-    BLS.goodReduction (scaledSignature.toAlgebraic scaledSignature_protocol
+    BLS.goodReduction (scaledSignature.toAlgebraic
       (LinearMap.mul K K) 1 1) 1 X 1 Y =
       DLog11.Adversary.ofGeneric (LinearMap.mul K K)
         (BLS.Generic.goodProgram scaledSignature) 1 X 1 Y :=
-  BLS.Generic.goodReduction_toAlgebraic _ _ _ _ _ _ _
+  BLS.Generic.goodReduction_toAlgebraic _ _ _ _ _ _
 
 /-- The bad algebraic reduction agrees with its generic program, including sampled signing keys. -/
 theorem scaledSignature_badReduction (X Y : K) :
-    BLS.badReduction (scaledSignature.toAlgebraic scaledSignature_protocol
+    BLS.badReduction (scaledSignature.toAlgebraic
       (LinearMap.mul K K) 1 1) 1 X 1 Y =
       DLog11.Adversary.ofGeneric (LinearMap.mul K K)
         (BLS.Generic.badProgram scaledSignature) 1 X 1 Y :=
-  BLS.Generic.badReduction_toAlgebraic _ _ _ _ _ _ _
+  BLS.Generic.badReduction_toAlgebraic _ _ _ _ _ _
 
 /-- The unconditional theorem elaborates through public imports with the concrete bound `967/101`.
 The small test field checks the arithmetic and API; this numerical upper bound exceeds one. -/
@@ -221,10 +214,10 @@ theorem scaledSignature_generic_bound :
       (scaledSignature.toUnforgeableAdversary (LinearMap.mul K K) 1 1) ≤
       (967 / 101 : ℝ≥0∞) := by
   simpa only [ZMod.card, Nat.reduceAdd, Nat.reduceMul, Nat.reducePow, Nat.cast_ofNat] using
-    BLS.unforgeableAdvantage_le_generic scaledSignature scaledSignature_protocol
+    BLS.unforgeableAdvantage_le_generic scaledSignature
       (LinearMap.mul K K) 1 1
       (by simpa only [smul_eq_mul, mul_one] using
-        (show Function.Bijective (fun x : K => x) from ⟨fun _ _ h => h, fun x => ⟨x, rfl⟩⟩))
+        (show Function.Surjective (fun x : K => x) from fun x => ⟨x, rfl⟩))
       (by simpa only [LinearMap.mul_apply', one_mul] using (one_ne_zero : (1 : K) ≠ 0))
       2 1 1 (scaledSignature_group_budget _) (scaledSignature_hash_budget _)
       (scaledSignature_sign_budget _)

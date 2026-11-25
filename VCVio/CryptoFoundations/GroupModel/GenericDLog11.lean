@@ -23,18 +23,30 @@ open scoped ENNReal
 namespace DLog11
 
 /-- Interpret a generic pairing program on the generators and common-exponent challenges. -/
-@[expose] def Adversary.ofGeneric {F G₁ G₂ Gₜ : Type} [Field F]
-    [AddCommGroup G₁] [Module F G₁] [AddCommGroup G₂] [Module F G₂]
-    [AddCommGroup Gₜ] [Module F Gₜ] [∀ s, DecidableEq (PFam G₁ G₂ Gₜ s)]
+@[expose] def Adversary.ofGeneric {F G₁ G₂ Gₜ : Type} [CommSemiring F]
+    [AddCommMonoid G₁] [Module F G₁] [AddCommMonoid G₂] [Module F G₂]
+    [AddCommMonoid Gₜ] [Module F Gₜ] [DecidableEq G₁] [DecidableEq G₂] [DecidableEq Gₜ]
     (e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ) (A : OracleComp (genSpec F pairingSig) F) :
     Adversary F G₁ G₂ :=
   Adversary.ofPairing (PairingDLog.Adversary.ofGeneric e A)
 
+/-- The interpreted solver runs the generic program on the two-element source tables of the
+generator and the challenge in each group, with an empty target table. -/
+theorem Adversary.ofGeneric_apply {F G₁ G₂ Gₜ : Type} [CommSemiring F]
+    [AddCommMonoid G₁] [Module F G₁] [AddCommMonoid G₂] [Module F G₂]
+    [AddCommMonoid Gₜ] [Module F Gₜ] [DecidableEq G₁] [DecidableEq G₂] [DecidableEq Gₜ]
+    (e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ) (A : OracleComp (genSpec F pairingSig) F)
+    (g₁ x₁ : G₁) (g₂ x₂ : G₂) :
+    Adversary.ofGeneric e A g₁ x₁ g₂ x₂ = Prod.fst <$> runGen (pairingReal e) (fun _ => id) A
+      (fun | .g₁ => [g₁, x₁] | .g₂ => [g₂, x₂] | .gₜ => []) := by
+  simp only [Adversary.ofGeneric, Adversary.ofPairing, PairingDLog.Adversary.ofGeneric]
+  congr 2
+
 /-- A generic common-exponent solver has the identical success experiment in both interfaces. -/
-theorem experiment_ofGeneric {F G₁ G₂ Gₜ : Type} [Field F]
+theorem experiment_ofGeneric {F G₁ G₂ Gₜ : Type} [CommSemiring F]
     [SampleableType F] [DecidableEq F]
-    [AddCommGroup G₁] [Module F G₁] [AddCommGroup G₂] [Module F G₂]
-    [AddCommGroup Gₜ] [Module F Gₜ] [∀ s, DecidableEq (PFam G₁ G₂ Gₜ s)]
+    [AddCommMonoid G₁] [Module F G₁] [AddCommMonoid G₂] [Module F G₂]
+    [AddCommMonoid Gₜ] [Module F Gₜ] [DecidableEq G₁] [DecidableEq G₂] [DecidableEq Gₜ]
     (e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ) (g₁ : G₁) (g₂ : G₂)
     (A : OracleComp (genSpec F pairingSig) F) :
     experiment g₁ g₂ (Adversary.ofGeneric e A) =
@@ -46,9 +58,8 @@ terms, the target collision term, and the final scalar-guess root term. -/
 theorem experiment_ofGeneric_le_of_total {F G₁ G₂ Gₜ : Type}
     [Field F] [Fintype F] [SampleableType F] [DecidableEq F]
     [AddCommGroup G₁] [Module F G₁] [AddCommGroup G₂] [Module F G₂]
-    [AddCommGroup Gₜ] [Module F Gₜ] [∀ s, DecidableEq (PFam G₁ G₂ Gₜ s)]
-    (e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ) (g₁ : G₁) (g₂ : G₂)
-    (hg₁ : g₁ ≠ 0) (hg₂ : g₂ ≠ 0) (he : e g₁ g₂ ≠ 0)
+    [AddCommGroup Gₜ] [Module F Gₜ] [DecidableEq G₁] [DecidableEq G₂] [DecidableEq Gₜ]
+    (e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ) (g₁ : G₁) (g₂ : G₂) (he : e g₁ g₂ ≠ 0)
     (A : OracleComp (genSpec F pairingSig) F) (q : ℕ)
     (hq : IsQueryBoundP A (fun i => isGroupOp i = true) q) :
     Pr{let b ← experiment g₁ g₂ (Adversary.ofGeneric e A)}[b = true] ≤
@@ -57,6 +68,6 @@ theorem experiment_ofGeneric_le_of_total {F G₁ G₂ Gₜ : Type}
   rw [experiment_ofGeneric]
   simpa only [Nat.add_comm 1 q, Nat.add_assoc, Nat.reduceAdd, Nat.mul_one,
     ← two_mul, Nat.mul_comm _ 2] using
-    PairingDLog.experiment_ofGeneric_le_of_total e g₁ g₂ hg₁ hg₂ he 1 1 A q hq
+    PairingDLog.experiment_ofGeneric_le_of_total e g₁ g₂ he 1 1 A q hq
 
 end DLog11

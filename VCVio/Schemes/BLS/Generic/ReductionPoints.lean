@@ -41,7 +41,7 @@ theorem realizesPoint_smul [CommSemiring F]
   refine ⟨(tbl .g₁).length, append tbl .g₁ (c r • lookup root .g₁ h), ?_, ?_, ?_, ?_⟩
   · simp [runGen, run, impl, push, StateT.run, modifyGet, MonadStateOf.modifyGet,
       StateT.modifyGet, hl]
-  · exact fun s => prefix_append tbl .g₁ s _
+  · exact extends_append tbl .g₁ _
   · simp [append]
   · simp [lookup, append]
 
@@ -64,7 +64,7 @@ theorem RealizesPoint.smul [CommSemiring F]
     simp [runGen, run, impl, push, StateT.run, modifyGet, MonadStateOf.modifyGet,
       StateT.modifyGet, hv]
     rfl
-  · exact fun s => (hext s).trans (prefix_append tbl' .g₁ s _)
+  · exact fun s => (hext s).trans (extends_append tbl' .g₁ _ s)
   · simp [append]
   · simp [lookup, append]
 
@@ -91,7 +91,7 @@ theorem RealizesPoint.add [CommSemiring F]
     simp [runGen, run, impl, push, StateT.run, modifyGet, MonadStateOf.modifyGet,
       StateT.modifyGet, hv₁', hv₂]
     rfl
-  · exact fun s => ((hext₁ s).trans (hext₂ s)).trans (prefix_append t₂ .g₁ s _)
+  · exact fun s => ((hext₁ s).trans (hext₂ s)).trans (extends_append t₂ .g₁ _ s)
   · simp [append]
   · simp [lookup, append]
 

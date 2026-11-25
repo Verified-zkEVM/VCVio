@@ -35,10 +35,9 @@ theorem goodReduction_toAlgebraic [Field F] [DecidableEq F] [SampleableType F] [
     [AddCommGroup G₁] [Module F G₁] [DecidableEq G₁]
     [AddCommGroup G₂] [Module F G₂] [DecidableEq G₂]
     [AddCommGroup Gₜ] [Module F Gₜ] [DecidableEq Gₜ]
-    [∀ s, DecidableEq (PFam G₁ G₂ Gₜ s)]
-    (A : Adversary F M) (hA : FollowsProtocol A)
+    (A : Adversary F M)
     (e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ) (g₁ X : G₁) (g₂ Y : G₂) :
-    BLS.goodReduction (A.toAlgebraic hA e g₁ g₂) g₁ X g₂ Y =
+    BLS.goodReduction (A.toAlgebraic e g₁ g₂) g₁ X g₂ Y =
       DLog11.Adversary.ofGeneric e (goodProgram A) g₁ X g₂ Y := by
   let g : (b : Bool) → AGM.Group G₁ G₂ b := fun | false => g₁ | true => g₂
   let x : (b : Bool) → AGM.Group G₁ G₂ b := fun | false => X | true => Y
@@ -59,12 +58,13 @@ theorem goodReduction_toAlgebraic [Field F] [DecidableEq F] [SampleableType F] [
     _ _ (fun r : F => r • g₁) (fun r => r • X)
     (fun r => (r, 0)) (fun r => (0, r)) [(1, 0), (0, 1)]
     root tbl (initialRealReductionState g x) hhash' hsign' (reductionRelated_good g x)
-  have halg := extractionProgram_toAlgebraic e A hA g₁ g₂ (X, Y)
+  have halg := extractionProgram_toAlgebraic e A g₁ g₂ (X, Y)
     (fun r : F => r • g₁) (fun r => r • X)
     (fun r => (r, 0)) (fun r => (0, r)) [(1, 0), (0, 1)]
   have hex' := hex.trans halg.symm
   have hfinal := congrArg (fun p =>
     (simulateQ (M →ₒ F).romImpl ((fun t : F × F × F => t.1 / (t.2.2 - t.2.1)) <$> p)).run' ∅) hex'
+  rw [DLog11.Adversary.ofGeneric_apply]
   change _ = Prod.fst <$> runGen (pairingReal e) (fun _ => id) (goodProgram A) root
   rw [goodProgram, run_closeReduction]
   simpa only [goodReduction, reductionRun, coefficients, simulateQ_bind, simulateQ_pure,
@@ -77,10 +77,9 @@ theorem badReduction_toAlgebraic [Field F] [DecidableEq F] [SampleableType F] [D
     [AddCommGroup G₁] [Module F G₁] [DecidableEq G₁]
     [AddCommGroup G₂] [Module F G₂] [DecidableEq G₂]
     [AddCommGroup Gₜ] [Module F Gₜ] [DecidableEq Gₜ]
-    [∀ s, DecidableEq (PFam G₁ G₂ Gₜ s)]
-    (A : Adversary F M) (hA : FollowsProtocol A)
+    (A : Adversary F M)
     (e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ) (g₁ X : G₁) (g₂ Y : G₂) :
-    BLS.badReduction (A.toAlgebraic hA e g₁ g₂) g₁ X g₂ Y =
+    BLS.badReduction (A.toAlgebraic e g₁ g₂) g₁ X g₂ Y =
       DLog11.Adversary.ofGeneric e (badProgram A) g₁ X g₂ Y := by
   let g : (b : Bool) → AGM.Group G₁ G₂ b := fun | false => g₁ | true => g₂
   let x : (b : Bool) → AGM.Group G₁ G₂ b := fun | false => X | true => Y
@@ -94,6 +93,7 @@ theorem badReduction_toAlgebraic [Field F] [DecidableEq F] [SampleableType F] [D
     convert hhash using 1
     rfl
   have hz := runGen_reductionZeros (G := AGM.Group G₁ G₂) e g x
+  rw [DLog11.Adversary.ofGeneric_apply]
   change _ = Prod.fst <$> runGen (pairingReal e) (fun _ => id) (badProgram A) root
   rw [badProgram, run_closeReduction]
   simp only [badReduction, simulateQ_bind, simulateQ_pure,
@@ -108,7 +108,7 @@ theorem badReduction_toAlgebraic [Field F] [DecidableEq F] [SampleableType F] [D
     (fun _ => (0, 0)) id [(0, 0), (0, 1)]
     root (tbl κ) (initialRealReductionState g (fun b => κ • g b))
     hhash' (hhash'.smul (fun _ => κ)) (reductionRelated_bad g x κ)
-  have halg := extractionProgram_toAlgebraic e A hA g₁ g₂ (κ • g₁, κ • g₂)
+  have halg := extractionProgram_toAlgebraic e A g₁ g₂ (κ • g₁, κ • g₂)
     (fun r : F × F => r.1 • X + r.2 • g₁) (fun r => κ • (r.1 • X + r.2 • g₁))
     (fun _ => (0, 0)) id [(0, 0), (0, 1)]
   have hpk : (fun b => κ • g b) =
