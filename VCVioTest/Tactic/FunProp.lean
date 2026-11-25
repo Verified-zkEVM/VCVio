@@ -5,11 +5,13 @@ Authors: Devon Tuma
 -/
 
 module
-public import ToMathlib.MeasureTheory.Measure.Option
-public import ToMathlib.MeasureTheory.MeasurableSpace.Except
+public import ToCslib.MeasureTheory.Measure.Option
+public import ToMathlib.MeasureTheory.Measure.GiryMonad
+public import ToCslib.MeasureTheory.MeasurableSpace.Except
+public import ToMathlib.MeasureTheory.MeasurableSpace.TypeTags
 
 /-!
-# Function-property registrations for optional and exception-valued observations
+# Measurable observations on options, exceptions and algebraic type tags
 
 The spaces are arbitrary measurable spaces. These tests exercise composition through registered
 function heads without relying on a discrete-space instance.
@@ -41,5 +43,12 @@ example {f : α → β} (hf : Measurable f) :
 example {f : α → β} (hf : Measurable f) : Measurable (Option.map f) := by
   fail_if_success solve | clear hf; fun_prop
   fun_prop
+
+/-! ## Algebraic type tags -/
+
+example : Measurable (Additive.ofMul : α → Additive α) := by fun_prop
+example : Measurable (Additive.toMul : Additive α → α) := by fun_prop
+example : Measurable (Multiplicative.ofAdd : α → Multiplicative α) := by fun_prop
+example : Measurable (Multiplicative.toAdd : Multiplicative α → α) := by fun_prop
 
 end VCVioTest.FunProp

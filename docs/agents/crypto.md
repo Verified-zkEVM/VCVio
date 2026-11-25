@@ -44,6 +44,13 @@ Fiat-Shamir transform → managed-RO NMA → replay forking → DLog), see
 The Schnorr-specific σ-protocol facts that feed in live in
 [`VCVio/Schemes/Schnorr/SigmaProtocol.lean`](../../VCVio/Schemes/Schnorr/SigmaProtocol.lean).
 
+`AggregateSignatureAlg` extends `SignatureAlg` with `aggregate` and `aggregateVerify` over
+key–message lists, the interface of Boneh, Gentry, Lynn and Shacham. Its chosen-key game
+(`AggregateSignatureAlg.unforgeableExperiment`, `unforgeableAdvantage`) accepts a valid aggregate
+that names the honest key with a message never signed under it; in the random-oracle model,
+`UnforgeableAdversary.RomQueryBound` adds a bound on the forgery's length to the hash and signing
+budgets. Aggregate BLS (`VCVio/Schemes/BLS/Aggregate/`) instantiates it.
+
 ### Commitment schemes (`CommitmentScheme`)
 
 ```lean
@@ -68,19 +75,54 @@ textbook `Commit(m) = (H(m, s), s)` scheme — exercising `cachingOracle`,
 and the
 [ROM commitment scheme walkthrough](end-to-end-examples.md#rom-commitment-scheme).
 
-### Sigma protocols (`SigmaProtocol`)
+### Challenge-verify protocols and sigma protocols (`ChallengeVerifyProtocol`, `SigmaProtocol`)
 
 ```lean
-structure SigmaProtocol
+structure ChallengeVerifyProtocol (m : Type → Type u)
     (Stmt Wit Commit PrvState Chal Resp : Type) (rel : Stmt → Wit → Bool) where
-  commit (stmt : Stmt) (wit : Wit) : ProbComp (Commit × PrvState)
-  respond (stmt : Stmt) (wit : Wit) (prvState : PrvState) (chal : Chal) : ProbComp Resp
+  commit (stmt : Stmt) (wit : Wit) : m (Commit × PrvState)
+  respond (stmt : Stmt) (wit : Wit) (prvState : PrvState) (chal : Chal) : m Resp
   verify (stmt : Stmt) (commit : Commit) (chal : Chal) (resp : Resp) : Bool
-  sim (stmt : Stmt) : ProbComp Commit
-  extract (chal₁ : Chal) (resp₁ : Resp) (chal₂ : Chal) (resp₂ : Resp) : ProbComp Wit
+
+structure SigmaProtocol (m : Type → Type u)
+    (Stmt Wit Commit PrvState Chal Resp : Type) (rel : Stmt → Wit → Bool)
+    extends ChallengeVerifyProtocol m Stmt Wit Commit PrvState Chal Resp rel where
+  sim (stmt : Stmt) : m Commit
+  extract (chal₁ : Chal) (resp₁ : Resp) (chal₂ : Chal) (resp₂ : Resp) : m Wit
 ```
 
-Every `SigmaProtocol` coerces to `IdenSchemeWithAbort` via `toIdenSchemeWithAbort` (wraps `respond` with `some`).
+`ChallengeVerifyProtocol` is the bare commit-challenge-response interaction; take it when the
+extractor is irrelevant. `SigmaProtocol` adds the simulator and extractor as data, so consumers
+such as the Fischlin transform and the Fiat-Shamir Σ-layer can run them. Dot notation resolves
+through the parent projection, so a `SigmaProtocol` uses the interaction properties directly.
+
+The monad `m` carries the participants' computations: `m := ProbComp` is the usual protocol whose
+only randomness is uniform sampling, while a general `m` lets the prover query oracles.
+Probability-bearing properties (`PerfectlyComplete`, `HVZK`, `PerfectHVZK`,
+`simCommitPredictability`, `simChalUniformGivenCommit`) are stated against the measure semantics
+`[EvalDistSemantics m]`: `𝒟[…]` events, `measureETVDist` on the discrete transcript σ-algebra,
+`=ᵈ` and `Pr{…}[…]`. Lemmas about them add `[LawfulEvalDistSemantics m]` where they need it;
+`perfectHVZK_iff_hvzk_zero`, with `[LawfulMonad m]`, uses it to read `=ᵈ` as equal measures. The
+support-bearing `SpeciallySound` uses `[MonadAttach m]`. The Fiat-Shamir and Fischlin
+developments instantiate `m := ProbComp`, where the definitions are the ordinary `ProbComp`
+statements and need no bridge.
+Caveat for oracle-querying provers: the measure semantics of `OracleComp spec` draws a fresh
+independent answer per query, so a shared random oracle (equal inputs must get equal answers)
+must be interpreted through the caching layer (`OracleSpec.cachingOracle` /
+`OracleSpec.withCacheOverlay`) before taking its denotation. `PerfectlyComplete` quantifies over
+the verifier's challenge pointwise, so it needs no sampling structure on `m`; at `m := ProbComp`
+it is equivalent to the sampled form (`perfectlyComplete_iff_evalDist_uniform_challenge_eq_one`,
+directions `PerfectlyComplete.evalDist_uniform_challenge_eq_one` and
+`perfectlyComplete_of_evalDist_uniform_challenge_eq_one`). The transcript-facing properties
+(`realTranscript`, `HVZK`, `PerfectHVZK`) draw the challenge as `liftM ($ᵗ Chal)` and so ask for
+`[SampleableType Chal] [MonadLiftT ProbComp m]`; at `m := ProbComp` that is definitionally the
+plain `$ᵗ Chal` (`realTranscript_probComp`). The Fiat-Shamir transform takes the Σ-protocol's
+monad `mσ` separately from the signature scheme's monad and only asks for `[MonadLiftT mσ m]`.
+`PerfectlyComplete`, `HVZK`, `UniqueResponses`, and `realTranscript` live on
+`ChallengeVerifyProtocol`; `SpeciallySound` lives on `SigmaProtocol`, since it consumes `extract`.
+
+Every `ProbComp`-valued `ChallengeVerifyProtocol` coerces to `IdenSchemeWithAbort` via
+`toIdenSchemeWithAbort` (wraps `respond` with `some`).
 
 ### Identification scheme with aborts (`IdenSchemeWithAbort`)
 
@@ -94,11 +136,13 @@ structure IdenSchemeWithAbort
 ```
 
 The key difference from `SigmaProtocol` is that `respond` returns `Option Resp` (abort on `none`).
-Used by ML-DSA and the Fiat-Shamir with Aborts transform.
+Unlike `ChallengeVerifyProtocol`, it is stated over `ProbComp` only. Used by ML-DSA and the
+Fiat-Shamir with Aborts transform.
 
 ### Key difference: monad-parametric algorithm surfaces
 
-- `SymmEncAlg`, `AsymmEncAlg`, and `SignatureAlg` are plain structures over an abstract monad `m`.
+- `SymmEncAlg`, `AsymmEncAlg`, `SignatureAlg`, `ChallengeVerifyProtocol` and `SigmaProtocol` are
+  plain structures over an abstract monad `m`, taken as their first argument.
 - Instantiate them with `ProbComp`, `OracleComp spec`, `OptionT (OracleComp spec)`, or another monad at the security surface that needs those effects.
 - Probability and failure semantics are supplied by the surrounding experiment or semantic class, not by parent classes on the algorithm structure.
 
@@ -194,16 +238,31 @@ hypotheses.
 `Measure.boolBias_bind_coin` requires total branches: missing mass is distinct from returning
 `false`, so the assumption cannot be dropped.
 
-### DEM real-or-random IND-CPA
+### DEM IND-CPA
+
+`VCVio.CryptoFoundations.DataEncapMech` defines two left-or-right games for a `DEMScheme` under a
+uniform key. The one-time game `DEMScheme.IND_CPA_OneTime_Game` is the one the KEM–DEM
+composition uses. The multi-query game `dem.IND_CPA_Game runtime leak adv` gives the
+adversary the DEM's own oracles and the shared challenge oracle `LeftOrRight.oracle` of
+`VCVio.CryptoFoundations.LeftOrRight`, built from `dem.encrypt k`, a leakage function `leak` and
+the hidden bit: a pair with equal leakage is encrypted, any other pair is answered `none`.
+Encryption budgets are `DEMScheme.IND_CPA_Adversary.MakesAtMostQueries`.
+`IND_CPA_OneTime_Advantage_eq_IND_CPA_Advantage` is the exact equality between the one-time
+advantage and the multi-query advantage, without leakage, of the one-query adversary
+`IND_CPA_OneTime_Adversary.toMultiQuery`.
+`DEMScheme.toSymmEncAlg dem runtime` reads the DEM as a `SymmEncAlg` whose `keygen` samples the
+key uniformly. The multi-query game is the `SymmEncAlg` CPA game of this scheme: experiment, game
+and advantage agree by `rfl` (`IND_CPA_Advantage_toSymmEncAlg`), and so do the encryption budgets
+(`IND_CPA_Adversary.makesAtMostQueries_toSymmEncAlg_iff`).
 
 `VCVio.CryptoFoundations.DataEncapMech.RealOrRandom` defines the one-time real-or-random game
-`DEMScheme.realOrRandomGame`, which encrypts either the adversary's message or a uniform one.
-Both DEM advantages are `boolBias` of a fair hidden-bit game, that is, the distance between the
-two branches, so the constants carry no factor from the bias normalization.
-`realOrRandomAdvantage_eq_IND_CPA_Advantage` is an exact equality with no runtime hypotheses.
-`IND_CPA_Advantage_le_realOrRandomAdvantage_add` bounds the left-or-right advantage by the sum
-of two real-or-random advantages and takes the runtime coherence hypotheses of the KEM–DEM
-adapter.
+`DEMScheme.oneTimeRealOrRandomGame`, which encrypts either the adversary's message or a uniform
+one. Both one-time advantages are `boolBias` of a fair hidden-bit game, that is, the distance
+between the two branches, so the constants carry no factor from the bias normalization.
+`oneTimeRealOrRandomAdvantage_eq_IND_CPA_OneTime_Advantage` is an exact equality with no runtime
+hypotheses. `IND_CPA_OneTime_Advantage_le_oneTimeRealOrRandomAdvantage_add` bounds the
+left-or-right advantage by the sum of two real-or-random advantages and takes the runtime
+coherence hypotheses of the KEM–DEM adapter.
 
 ### Forking bounds and measure semantics
 
@@ -318,8 +377,25 @@ independent of a secret:
   `measureETVDist ≤ 1`;
 - extractors, distinguishers, collision finders, and preimage finders.
 
-Name each one with a definition (`cmaReduction`, `hvzkSimulatorReal`,
+Name each one with a definition (`cmaReduction`, `hvzkSimulator`,
 `unlinkToMultiplePRFReduction`) and state the bound for that definition.
+
+The same reasoning applies to hypotheses. A premise `∀ adv, Adv adv ≤ ε` that ranges over an
+adversary type holds only when `ε` is at least what exhaustive search achieves, so a theorem that
+assumes it says nothing at the parameters it is meant for. Query budgets do not change this,
+because they do not bound local computation: an adversary that searches a PRF key computed outside
+the oracle fits every budget. Assume the bound for the named distinguisher instead, as in
+`hε : prfAdvantage prf (hidingDistinguisher … adv) ≤ ε` for the adversary at hand, and state the
+conclusion for that adversary.
+
+The exception is security that is statistical in the pure random oracle model: the oracle is
+sampled when the experiment runs, the adversary's only access to the secrets is through oracle
+queries (and its own coins), and its oracle queries are bounded. Merkle-tree commitments are the
+standard case: Chiesa–Yogev (*Building Cryptographic Proofs from Hash Functions*, Version 1.2) work
+in this model, with adversaries computationally unbounded and query-bounded. There a bound over
+every query-bounded adversary is meaningful, as in
+[`VCVio/CryptoFoundations/VectorCommitment/Hiding.lean`](../../VCVio/CryptoFoundations/VectorCommitment/Hiding.lean).
+A computational assumption still requires the named reduction.
 
 A named reduction also makes the next steps possible. Its query count or cost can be proved as
 a separate lemma about the same definition. The asymptotic lemmas in
@@ -328,12 +404,9 @@ such as `SecurityGame.secureAgainst_of_reduction`, take the reduction as a funct
 `reduce : Adv → Adv'` with an efficiency hypothesis `isPPT A → isPPT' (reduce A)`. That hypothesis
 cannot be stated for an adversary that exists only inside an existential.
 
-When the reduction is not implemented yet, do not fall back to `∃`. Either:
-
-- define it as a `sorry` placeholder and state the bound for that definition, as
-  `MLDSA.eufCmaMLWEReduction` does; or
-- leave the theorem as a placeholder whose docstring warns that the statement has no security
-  content until a reduction is named, as `FiatShamirWithAbort.euf_cma_bound` does.
+When the reduction is not implemented yet, do not fall back to `∃`, and do not land a `sorry`
+placeholder either: `lake exe axiomsweep --check` rejects every `sorryAx` dependency. Keep the
+statement on its branch until the reduction is defined and the bound proved.
 
 `∃` remains appropriate for mathematical objects that the argument does not need to be efficient,
 such as a witness in a relation, an index in a support, or a key pair in the image of key
@@ -375,6 +448,11 @@ def negligible (f : ℕ → ℝ≥0∞) : Prop := SuperpolynomialDecay atTop (fu
 
 Closure properties: `negligible_add`, `negligible_const_mul`, `negligible_sum`,
 `negligible_of_le`, `negligible_pow_mul`, `negligible_polynomial_mul`.
+If `h : negligible ε` and `hq : Cslib.PolynomiallyBounded q`, then
+`h.polynomiallyBounded_mul hq` absorbs a query count or parameter size as a loss factor.
+`negligible_coe_nnreal_iff` transports CSLib's finite-valued notion directly.
+For extended values, `negligible_iff_eventually_ne_top_and_toNNReal` also requires
+eventual finiteness, since `toNNReal` sends infinity to zero.
 
 ### `SecurityGame` (`Security.lean`)
 

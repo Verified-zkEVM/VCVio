@@ -7,7 +7,7 @@ Authors: Devon Tuma
 module
 
 public import Examples.OneTimePad.Separated.Security
-public import ToMathlib.MeasureTheory.DiscreteInstances
+public import ToCslib.MeasureTheory.MeasurableSpace.Instances
 
 /-!
 # Adversarial tests for separated OTP actors

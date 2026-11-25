@@ -5,7 +5,7 @@ Authors: Devon Tuma
 -/
 
 module
-public import ToMathlib.Probability.UniformOn
+public import ToCslib.Probability.UniformOn
 
 /-!
 # Regression tests for finite uniform measures

@@ -40,7 +40,7 @@ the adversary.
 * Superpolynomial growth of `|Nonce λ|` and `|Digest λ|`, phrased as negligibility of their
   reciprocals.
 * Polynomial query / instance bounds: `qReader λ`, `qTag λ`, `|TagId λ|`, and `sessionsPerTag λ`
-  are each bounded by a fixed polynomial in `λ`. The cell-count slack
+  are each polynomially bounded in `λ`. The cell-count slack
   `qReader · |TagId| · sessionsPerTag / |Digest|` forces the *numerator* to be polynomial, so the
   polynomial bounds on `|TagId λ|` and `sessionsPerTag λ` are real modeling assumptions, surfaced
   explicitly.
@@ -80,7 +80,7 @@ instances, suppose:
 * the nonce and digest spaces grow superpolynomially — `(|Nonce λ|)⁻¹` and `(|Digest λ|)⁻¹` are
   negligible;
 * the adversary is a polynomial-query family and the instance parameters are polynomially bounded —
-  `qReader`, `qTag`, `|TagId|`, and `sessionsPerTag` are each bounded by a fixed polynomial in `λ`.
+  `qReader`, `qTag`, `|TagId|`, and `sessionsPerTag` are each polynomially bounded in `λ`.
 
 Then the unlinkability advantage `unlinkabilityAdvantage` is negligible. -/
 theorem negligible_unlinkabilityAdvantage
@@ -100,11 +100,10 @@ theorem negligible_unlinkabilityAdvantage
     (hNonce : negligible (fun lam => (Fintype.card (Nonce lam) : ℝ≥0∞)⁻¹))
     (hDigest : negligible (fun lam => (Fintype.card (Digest lam) : ℝ≥0∞)⁻¹))
     -- Polynomial bounds on the query counts and instance parameters:
-    (pReader pTag pTagId pSessions : Polynomial ℕ)
-    (hpReader : ∀ lam, qReader lam ≤ pReader.eval lam)
-    (hpTag : ∀ lam, qTag lam ≤ pTag.eval lam)
-    (hpTagId : ∀ lam, Fintype.card (TagId lam) ≤ pTagId.eval lam)
-    (hpSessions : ∀ lam, sessionsPerTag lam ≤ pSessions.eval lam) :
+    (hpReader : Cslib.PolynomiallyBounded qReader)
+    (hpTag : Cslib.PolynomiallyBounded qTag)
+    (hpTagId : Cslib.PolynomiallyBounded fun lam => Fintype.card (TagId lam))
+    (hpSessions : Cslib.PolynomiallyBounded sessionsPerTag) :
     negligible (fun lam => unlinkabilityAdvantage (inst.prfs lam) (adversary lam)) := by
   classical
   -- Negligibility of the collision term: bounded by `sessionsPerTag² · |TagId| / |Nonce|`.
@@ -117,9 +116,7 @@ theorem negligible_unlinkabilityAdvantage
     refine negligible_of_le (g := fun lam => ENNReal.ofReal
       (((sessionsPerTag lam ^ 2 * Fintype.card (TagId lam) : ℕ) : ℝ) /
         (Fintype.card (Nonce lam) : ℝ))) (fun lam => ?_)
-      (negligible_ofReal_natDiv_of_poly_bound (g := fun lam =>
-        sessionsPerTag lam ^ 2 * Fintype.card (TagId lam))
-        (p := pSessions ^ 2 * pTagId) hNonce (fun lam => ?_))
+      (negligible_ofReal_natDiv ?_)
     · let : MeasurableSpace (Nonce lam) := ⊤
       have hmax : ∀ nonce : Nonce lam,
           (Pr{let n ← $ᵗ Nonce lam}[n = nonce]).toReal ≤ (Fintype.card (Nonce lam) : ℝ)⁻¹ := by
@@ -130,28 +127,25 @@ theorem negligible_unlinkabilityAdvantage
         (by positivity)).2 ?_
       simpa only [div_eq_mul_inv] using multipleBad_bad_le_sessionCollisionBound
         (sessionsPerTag := sessionsPerTag lam) (adversary lam) _ hmax
-    · rw [Polynomial.eval_mul, Polynomial.eval_pow]
-      exact Nat.mul_le_mul (Nat.pow_le_pow_left (hpSessions lam) 2) (hpTagId lam)
+    · simpa only [Nat.cast_mul, Nat.cast_pow, sq, mul_assoc] using
+        hNonce.polynomiallyBounded_mul hpTagId |>.polynomiallyBounded_mul hpSessions
+          |>.polynomiallyBounded_mul hpSessions
   -- Negligibility of each unconditional slack term.
   have hSlack1 : negligible (fun lam =>
       ((qReader lam * Fintype.card (TagId lam) : ℕ) : ℝ≥0∞) /
         (Fintype.card (Digest lam) : ℝ≥0∞)) := by
-    simpa only [div_eq_mul_inv] using negligible_natMul_of_poly_bound hDigest
-      (g := fun lam => qReader lam * Fintype.card (TagId lam)) (p := pReader * pTagId)
-      (fun lam => by rw [Polynomial.eval_mul]; exact Nat.mul_le_mul (hpReader lam) (hpTagId lam))
+    simpa only [Nat.cast_mul, div_eq_mul_inv, mul_assoc] using
+      (hDigest.polynomiallyBounded_mul hpTagId).polynomiallyBounded_mul hpReader
   have hSlack2 : negligible (fun lam =>
       ((qReader lam * qTag lam : ℕ) : ℝ≥0∞) / (Fintype.card (Nonce lam) : ℝ≥0∞)) := by
-    simpa only [div_eq_mul_inv] using negligible_natMul_of_poly_bound hNonce
-      (g := fun lam => qReader lam * qTag lam) (p := pReader * pTag)
-      (fun lam => by rw [Polynomial.eval_mul]; exact Nat.mul_le_mul (hpReader lam) (hpTag lam))
+    simpa only [Nat.cast_mul, div_eq_mul_inv, mul_assoc] using
+      (hNonce.polynomiallyBounded_mul hpTag).polynomiallyBounded_mul hpReader
   have hSlack3 : negligible (fun lam =>
       ((qReader lam * Fintype.card (TagId lam) * sessionsPerTag lam : ℕ) : ℝ≥0∞) /
         (Fintype.card (Digest lam) : ℝ≥0∞)) := by
-    simpa only [div_eq_mul_inv] using negligible_natMul_of_poly_bound hDigest
-      (g := fun lam => qReader lam * Fintype.card (TagId lam) * sessionsPerTag lam)
-      (p := pReader * pTagId * pSessions) (fun lam => by
-        rw [Polynomial.eval_mul, Polynomial.eval_mul]
-        exact Nat.mul_le_mul (Nat.mul_le_mul (hpReader lam) (hpTagId lam)) (hpSessions lam))
+    simpa only [Nat.cast_mul, div_eq_mul_inv, mul_assoc] using
+      hDigest.polynomiallyBounded_mul hpSessions |>.polynomiallyBounded_mul hpTagId
+        |>.polynomiallyBounded_mul hpReader
   exact negligible_of_le
     (fun lam => unlinkabilityAdvantage_le_two_prf_plus_collision
       (inst.prfs lam) (adversary lam) (qReader lam) (qTag lam) (hqReader lam) (hqTag lam))

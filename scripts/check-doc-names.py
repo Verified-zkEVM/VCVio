@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S uv run --no-project --python 3.12 python
 """Check the declaration names the documentation cites.
 
 Retired-name checks cover all first-party Markdown and comments in active Lean libraries.
@@ -74,8 +74,8 @@ RETIRED_LABEL_RE = re.compile(
     r"\b(?:structural|angelic|demonic)\s+(?:readings?|interpretations?|triples?|WP|"
     r"weakest\s+preconditions?)\b|\bstructural\s+support\b|\bstructurally\s+"
     r"(?:reachable|possible)\b", re.I)
-LEAN_ROOTS = ("ToMathlib/", "VCVio/", "VCVioCslib/", "LatticeCrypto/", "HashSig/", "Examples/",
-              "Extern/", "VCVioWidgets/", "VCVioTest/", "LatticeCryptoTest/", "HashSigTest/")
+LEAN_ROOTS = ("ToMathlib/", "VCVio/", "LatticeCrypto/", "HashSig/", "Examples/",
+              "Extern/", "VCVioTest/", "LatticeCryptoTest/", "HashSigTest/")
 
 
 def default_docs() -> tuple[list[Path], list[Path]]:
@@ -235,13 +235,15 @@ def codemod_targets(sites: dict[str, list[tuple[Path, int]]]) -> None:
     spec.loader.exec_module(codemod)
     lines = CODEMOD.read_text(encoding="utf-8").splitlines()
 
-    def add(name: str) -> None:
+    def add(name: str, spelling: str | None = None) -> None:
         if declaration_like(name):
-            number = next((k for k, text in enumerate(lines, 1) if name in text), 0)
+            number = next((k for k, text in enumerate(lines, 1) if (spelling or name) in text), 0)
             sites[name].append((CODEMOD, number))
 
     for name in codemod.RENAMES.values():
         add(name)
+    for name in set(codemod.STAT_DISTANCE_RENAMES.values()):
+        add(name, f'"{name.rsplit(".", 1)[-1]}"')
     for modules in codemod.MODULES.values():
         for module in modules:
             add(module)
@@ -260,7 +262,7 @@ def retired_patterns() -> list[tuple[re.Pattern[str], str]]:
         names |= set(re.findall(r"\b(Is[A-Za-z]*Spec)\b", regex.pattern))
     for name in sorted(names):
         patterns.append((re.compile(r"(?<![\w'.])" + re.escape(name) + r"(?![\w'.])"), name))
-    for pattern, _ in codemod.LEGACY_TOKENS:
+    for pattern, _ in codemod.LEGACY_TOKENS + codemod.LEGACY_DISTANCE_TOKENS:
         if "\\s" not in pattern and "\\(" not in pattern:  # identifier-level patterns only
             patterns.append((re.compile(pattern), pattern))
     return patterns

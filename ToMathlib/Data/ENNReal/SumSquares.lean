@@ -38,7 +38,7 @@ lemma sq_sum_le_card_mul_sum_sq {ι' : Type*}
     (s : Finset ι') (f : ι' → ℝ≥0∞) :
     (∑ i ∈ s, f i) ^ 2 ≤ s.card * ∑ i ∈ s, f i ^ 2 := by
   let : MeasurableSpace ι' := ⊤
-  simpa [lintegral_finsetSum_measure, lintegral_dirac, Measure.finsetSum_apply,
+  simpa [lintegral_finsetSum_measure, lintegral_dirac, sum_apply,
     mul_comm] using
     (sq_lintegral_le_lintegral_sq_mul (μ := ∑ i ∈ s, Measure.dirac i)
       (f := f) Measurable.of_discrete.aemeasurable)

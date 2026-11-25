@@ -103,8 +103,10 @@ section CacheAuxProjection
 variable {Q : Type u}
 variable [LawfulMonad m]
 
-/-- Projecting away the auxiliary state of `withCachingAux` recovers ordinary caching whenever
-the miss handler has the same output marginal as the base implementation. -/
+/-- If `Prod.fst <$> miss t cache q = base t` for every query, cache, and auxiliary state,
+discarding the final auxiliary state gives the same computation of the result and final cache
+as `base.withCaching`. For example, a miss handler can record the answer in a log and still
+satisfy this equality. -/
 theorem withCachingAux_run_proj_eq
     (base : QueryImpl spec m)
     (hit : (t : spec.Domain) → spec.Range t → spec.QueryCache → Q → Q)
@@ -177,8 +179,9 @@ theorem PreservesInv.withCachingAux_aux
 
 section CacheMonotonicity
 
-/-- Running `withCaching` at state `cache` produces a result whose cache is `≥ cache`.
-On a cache hit the state is unchanged; on a miss a single entry is added. -/
+/-- Every outcome in the support of a `withCaching` step preserves all entries of the initial
+cache. A hit returns that cache. On a miss, each answer returned by the handler adds the entry
+at the queried index. -/
 lemma withCaching_cache_le [LawfulMonad m] [MonadAttach m] [ExactMonadAttach m]
     (so : QueryImpl spec m) (t : spec.Domain) (cache₀ : QueryCache spec)
     (z) (hz : z ∈ support ((so.withCaching t).run cache₀)) :
@@ -325,8 +328,9 @@ end CacheMonotonicity
 
 /-! ## Forward query bounds for `withCaching`
 
-A wrapped step makes ≤ 1 underlying query (zero on a hit, one on a miss), so any bound on
-`so t` transfers to `(so.withCaching t).run cache`. -/
+A cache hit returns the stored answer without issuing a target query. A miss runs the entire
+handler `so t` once and stores its answer. Any total, predicate, or per-index query bound
+on `so t` therefore also bounds the cached step. -/
 
 section QueryBound
 
@@ -373,7 +377,12 @@ end QueryBound
 
 end QueryImpl
 
-/-! ### Parametric `simulateQ` lifts for `withCaching` -/
+/-! ### Query bounds for a computation simulated with `withCaching`
+
+A total bound on the source computation carries over when each `so t` makes at most one target
+query. For a predicate bound, each source query satisfying `p` may issue at most one target
+query satisfying `q`, and other source queries must issue none satisfying `q`. For a per-index
+bound, `so t` may query only `t`, at most once. -/
 
 namespace OracleComp
 
@@ -454,7 +463,9 @@ lemma simulateQ_query (t : spec.Domain) :
 
 /-! ### Forward query bounds for `cachingOracle`
 
-Forward only — the reverse fails because cache hits strictly reduce the simulated count. -/
+On a miss, `cachingOracle` forwards exactly one query at the same index. Hence each source
+bound also bounds the simulated computation. A single query whose answer is already cached
+illustrates why the converse fails. Its simulation issues zero queries. -/
 
 theorem isTotalQueryBound_run_simulateQ {ι₀ : Type} [DecidableEq ι₀]
     {spec₀ : OracleSpec.{0, 0} ι₀} {α : Type}
@@ -487,23 +498,13 @@ end cachingOracle
 
 section withCacheOverlay
 
-/-- Run an `OracleComp` with a `QueryCache` as a priority layer over the real oracle.
-Cached entries are returned directly (no oracle query), misses fall through to the real
-oracle and get cached for subsequent lookups within the same computation.
+/-- Run `oa` with the given cache and return its result, discarding the final cache.
+A hit supplies the stored answer. A miss forwards the query and stores the answer for the rest
+of the run. Even with an empty initial cache, two queries at the same index share one answer.
 
-This is the fundamental "programmable random oracle" primitive: pre-fill the cache with
-programmed entries, then run the computation. Concretely:
-
-  `withCacheOverlay cache oa = StateT.run' (simulateQ cachingOracle oa) cache`
-
-Key properties:
-- `withCacheOverlay ∅ oa` deduplicates queries but is otherwise equivalent to `oa`.
-- `withCacheOverlay cache (query t)` returns `v` without an external query when
-  `cache t = some v`, and queries the real oracle when `cache t = none`.
-
-The cache-parametric runtime built on top of this combinator lives in
-`VCVio.CryptoFoundations.FiatShamir.Sigma` as `FiatShamir.runtimeWithCache cache`, with
-`FiatShamir.runtime` defined as `runtimeWithCache ∅`. -/
+Preloading the cache lets a caller supply answers at selected indices. For example,
+`SignatureAlg.managedRoNmaExperiment` verifies a forgery using the adversary's programmed
+entries and forwards fresh queries to the external oracle. -/
 def OracleSpec.withCacheOverlay {α : Type u} (cache : spec.QueryCache) (oa : OracleComp spec α) :
     OracleComp spec α :=
   StateT.run' (simulateQ spec.cachingOracle oa) cache
@@ -575,7 +576,7 @@ theorem simulateQ_cachingOracle_cache_le {α : Type u}
   induction oa using OracleComp.inductionOn generalizing cache₀ z with
   | pure a =>
       simp only [StateT.run, simulateQ_pure] at hmem
-      obtain rfl := hmem
+      obtain rfl := (mem_support_pure_iff _ _).mp hmem
       exact le_rfl
   | query_bind t mx ih =>
       simp only [simulateQ_query_bind, StateT.run_bind] at hmem
@@ -594,3 +595,24 @@ theorem cachingOracle_query_caches (t : spec.Domain)
   QueryImpl.withCaching_run_caches _ t cache₀ _ hmem
 
 end OracleComp
+
+namespace QueryImpl
+
+variable {m : Type u → Type v} [Monad m] [LawfulMonad m]
+
+/-- A map `g` of caches that leaves the entry at `t` of `cache` unchanged and commutes with caching
+an answer at `t` commutes with a `withCaching` step on `t` from `cache`: running the step and
+mapping the final cache through `g` is running the step from `g cache`. -/
+lemma map_withCaching_run_of_commute (so : QueryImpl spec m)
+    (g : spec.QueryCache → spec.QueryCache) {t : spec.Domain} {cache : spec.QueryCache}
+    (h₁ : g cache t = cache t) (h₂ : ∀ u, g (cache.cacheQuery t u) = (g cache).cacheQuery t u) :
+    Prod.map id g <$> (so.withCaching t).run cache = (so.withCaching t).run (g cache) := by
+  cases hc : cache t with
+  | some u =>
+    rw [withCaching_run_some so hc, withCaching_run_some so (h₁.trans hc), map_pure]
+    rfl
+  | none =>
+    rw [withCaching_run_none so hc, withCaching_run_none so (h₁.trans hc), Functor.map_map]
+    simp only [Prod.map_apply, id_eq, h₂]
+
+end QueryImpl

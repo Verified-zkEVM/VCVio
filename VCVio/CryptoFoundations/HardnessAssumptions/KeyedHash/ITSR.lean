@@ -6,7 +6,6 @@ Authors: Quang Dao
 
 module
 public import VCVio.CryptoFoundations.HardnessAssumptions.CollisionResistance
-import VCVio.EvalDist.ProbabilityNotation
 
 /-!
 # Interleaved target subset resilience

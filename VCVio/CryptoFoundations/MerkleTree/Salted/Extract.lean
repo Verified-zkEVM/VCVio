@@ -8,7 +8,7 @@ module
 public import VCVio.CryptoFoundations.MerkleTree.Salted.Defs
 public import VCVio.CryptoFoundations.MerkleTree.OrderedResolver
 public import VCVio.Quantum.VC.MultiExtractor
-public import VCVio.Quantum.Oracle.Compressed.Basic
+public import VCVio.Quantum.Oracle.Compressed.QueryCache
 public import VCVio.OracleComp.QueryTracking.Collision
 
 /-!
@@ -28,8 +28,8 @@ namespace SaltedMerkle
 variable {X : Type uX} {Y : Type uY} {Msg : Type uM} {Salt : Type uS}
 /-! ## The collision-free databases -/
 
-/-- `P_good` of §8.3 (p. 55): the databases without a collision, that is, in which an output
-determines its input. For `X Y : Type` this is the absence of
+/-- `P_good` for the Merkle scheme (`P_nocol` of §8.3, p. 55): the databases without a collision,
+that is, in which an output determines its input. For `X Y : Type` this is the absence of
 `OracleComp.CacheHasCollision` on `Quantum.Database.equivQueryCache` (`mem_collisionFree_iff`). -/
 @[expose]
 def collisionFree : Set (Database X Y) :=

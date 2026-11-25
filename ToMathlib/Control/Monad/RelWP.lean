@@ -20,8 +20,8 @@ when one side is pure. Oracle-specific interpretations live in
 `VCVio/ProgramLogic/Relational/WP/`.
 
 The design follows Maillard et al., *The Next 700 Relational Program Logics* (POPL 2020),
-and Avanzini, Barthe, Grégoire, Davoli, *eRHL* (POPL 2025). Its unary predecessor was
-Loom2 (`verse-lab/loom2`).
+and Avanzini, Barthe, Grégoire, Davoli, *eRHL* (POPL 2025). Its unary counterpart is core's
+`Std.WP`, whose design comes from Loom2 (`verse-lab/loom2`).
 -/
 
 @[expose] public section
@@ -38,16 +38,16 @@ namespace VCVio.ProgramLogic
 The `RelWP` typeclass defines weakest precondition semantics for a
 *pair* of monads. A `RelWP m₁ m₂ Pred EPred₁ EPred₂` instance provides
 a relational predicate transformer
-`rwpTrans : m₁ α → m₂ β → (α → β → Pred) → EPred₁ → EPred₂ → Pred`
+`trans : m₁ α → m₂ β → (α → β → Pred) → EPred₁ → EPred₂ → Pred`
 satisfying:
 
-* `rwp_trans_pure`: `(pure a, pure b)` is at least as strong as its
+* `trans_pure`: `(pure a, pure b)` is at least as strong as its
   joint predicate transformer at `(a, b)`.
-* `rwp_trans_bind_le`: sequential composition of the two sides is
+* `trans_bind_le`: sequential composition of the two sides is
   sound (one-directional `⊑`; the bind law is *lax* because the
   optimal coupling for a composite computation can be more precise
   than the sequential composition of optimal couplings).
-* `rwp_trans_monotone`: the relational transformer is monotone in
+* `trans_monotone`: the relational transformer is monotone in
   each of its three postcondition slots.
 -/
 
@@ -71,26 +71,31 @@ class RelWP
     where
   /-- The relational weakest precondition transformer for a pair of
   monadic programs. -/
-  rwpTrans {α β : Type u} : m₁ α → m₂ β → (α → β → Pred) → EPred₁ → EPred₂ → Pred
+  trans {α β : Type u} : m₁ α → m₂ β → (α → β → Pred) → EPred₁ → EPred₂ → Pred
   /-- Soundness of `pure`: the joint postcondition applied to `(a, b)`
   implies the relational WP of `(pure a, pure b)`. -/
-  rwp_trans_pure {α β : Type u} (a : α) (b : β) :
+  trans_pure {α β : Type u} (a : α) (b : β) :
     ∀ post epost₁ epost₂,
-      post a b ⊑ rwpTrans (pure a : m₁ α) (pure b : m₂ β) post epost₁ epost₂
+      post a b ⊑ trans (pure a : m₁ α) (pure b : m₂ β) post epost₁ epost₂
   /-- Soundness of `bind`: composing relational WPs is at least as strong as
   the relational WP of the pair of `>>=`. -/
-  rwp_trans_bind_le {α β γ δ : Type u}
+  trans_bind_le {α β γ δ : Type u}
     (x : m₁ α) (y : m₂ β) (f : α → m₁ γ) (g : β → m₂ δ) :
     ∀ post epost₁ epost₂,
-      rwpTrans x y (fun a b => rwpTrans (f a) (g b) post epost₁ epost₂) epost₁ epost₂
-        ⊑ rwpTrans (x >>= f) (y >>= g) post epost₁ epost₂
+      trans x y (fun a b => trans (f a) (g b) post epost₁ epost₂) epost₁ epost₂
+        ⊑ trans (x >>= f) (y >>= g) post epost₁ epost₂
   /-- Monotonicity: weaker per-side exception postconditions and a weaker
   joint normal postcondition yield a weaker precondition. -/
-  rwp_trans_monotone {α β : Type u} (x : m₁ α) (y : m₂ β)
+  trans_monotone {α β : Type u} (x : m₁ α) (y : m₂ β)
     (post post' : α → β → Pred)
     (epost₁ epost₁' : EPred₁) (epost₂ epost₂' : EPred₂) :
     epost₁ ⊑ epost₁' → epost₂ ⊑ epost₂' → (∀ a b, post a b ⊑ post' a b) →
-      rwpTrans x y post epost₁ epost₂ ⊑ rwpTrans x y post' epost₁' epost₂'
+      trans x y post epost₁ epost₂ ⊑ trans x y post' epost₁' epost₂'
+
+@[deprecated (since := "2026-11-17")] alias RelWP.rwpTrans := RelWP.trans
+@[deprecated (since := "2026-11-17")] alias RelWP.rwp_trans_monotone := RelWP.trans_monotone
+@[deprecated (since := "2026-11-17")] alias RelWP.rwp_trans_pure := RelWP.trans_pure
+@[deprecated (since := "2026-11-17")] alias RelWP.rwp_trans_bind_le := RelWP.trans_bind_le
 
 /-- User-facing relational weakest precondition. Compute the relational
 WP of the pair `(x, y)` for joint normal postcondition `post`, left
@@ -105,7 +110,7 @@ def rwp
     [RelWP m₁ m₂ Pred EPred₁ EPred₂]
     {α β : Type u} (x : m₁ α) (y : m₂ β) (post : α → β → Pred)
     (epost₁ : EPred₁) (epost₂ : EPred₂) : Pred :=
-  RelWP.rwpTrans x y post epost₁ epost₂
+  RelWP.trans x y post epost₁ epost₂
 
 /-- Relational Hoare-style triple
 `⦃pre⦄ x ~ y ⦃post | epost₁ | epost₂⦄`, defined as
@@ -135,9 +140,8 @@ variable {α β γ δ : Type u}
 ## Derived Lemmas
 
 One-directional consequences of the `RelWP` axioms for `pure`, `bind`,
-monotonicity, and weakening, mirroring `Std.WP.WP.{wp_pure, wp_bind,
-wp_consequence, wp_econs, …}` in
-`Std.WP.WP`.
+monotonicity, and weakening. The unary monotonicity laws in core are
+`Std.WP.WP.wp_monotone_post` and `Std.WP.WP.wp_monotone_epost`.
 -/
 
 /-- Pure rule: the joint postcondition at `(a, b)` is below the
@@ -145,7 +149,7 @@ relational WP of `(pure a, pure b)`. -/
 theorem rwp_pure (a : α) (b : β) (post : α → β → Pred)
     (epost₁ : EPred₁) (epost₂ : EPred₂) :
     post a b ⊑ rwp (pure a : m₁ α) (pure b : m₂ β) post epost₁ epost₂ :=
-  rwp_trans_pure a b post epost₁ epost₂
+  trans_pure a b post epost₁ epost₂
 
 /-- Bind rule: iterated relational WP is below the relational WP of the
 joint `>>=`. -/
@@ -154,7 +158,7 @@ theorem rwp_bind_le
     (post : γ → δ → Pred) (epost₁ : EPred₁) (epost₂ : EPred₂) :
     rwp x y (fun a b => rwp (f a) (g b) post epost₁ epost₂) epost₁ epost₂
       ⊑ rwp (x >>= f) (y >>= g) post epost₁ epost₂ :=
-  rwp_trans_bind_le x y f g post epost₁ epost₂
+  trans_bind_le x y f g post epost₁ epost₂
 
 /-- Consequence rule for the joint normal postcondition. -/
 theorem rwp_consequence
@@ -162,7 +166,7 @@ theorem rwp_consequence
     (epost₁ : EPred₁) (epost₂ : EPred₂)
     (h : ∀ a b, post a b ⊑ post' a b) :
     rwp x y post epost₁ epost₂ ⊑ rwp x y post' epost₁ epost₂ :=
-  rwp_trans_monotone x y post post' epost₁ epost₁ epost₂ epost₂
+  trans_monotone x y post post' epost₁ epost₁ epost₂ epost₂
     PartialOrder.rel_refl PartialOrder.rel_refl h
 
 /-- Consequence rule on both exception postconditions plus the joint
@@ -173,7 +177,7 @@ theorem rwp_consequence_econs
     (h : ∀ a b, post a b ⊑ post' a b)
     (h₁ : epost₁ ⊑ epost₁') (h₂ : epost₂ ⊑ epost₂') :
     rwp x y post epost₁ epost₂ ⊑ rwp x y post' epost₁' epost₂' :=
-  rwp_trans_monotone x y post post' epost₁ epost₁' epost₂ epost₂' h₁ h₂ h
+  trans_monotone x y post post' epost₁ epost₁' epost₂ epost₂' h₁ h₂ h
 
 /-- Weaken the left exception postcondition. -/
 theorem rwp_econs_left
@@ -181,7 +185,7 @@ theorem rwp_econs_left
     (epost₁ epost₁' : EPred₁) (epost₂ : EPred₂)
     (h : epost₁ ⊑ epost₁') :
     rwp x y post epost₁ epost₂ ⊑ rwp x y post epost₁' epost₂ :=
-  rwp_trans_monotone x y post post epost₁ epost₁' epost₂ epost₂
+  trans_monotone x y post post epost₁ epost₁' epost₂ epost₂
     h PartialOrder.rel_refl (fun _ _ => PartialOrder.rel_refl)
 
 /-- Weaken the right exception postcondition. -/
@@ -190,7 +194,7 @@ theorem rwp_econs_right
     (epost₁ : EPred₁) (epost₂ epost₂' : EPred₂)
     (h : epost₂ ⊑ epost₂') :
     rwp x y post epost₁ epost₂ ⊑ rwp x y post epost₁ epost₂' :=
-  rwp_trans_monotone x y post post epost₁ epost₁ epost₂ epost₂'
+  trans_monotone x y post post epost₁ epost₁ epost₂ epost₂'
     PartialOrder.rel_refl h (fun _ _ => PartialOrder.rel_refl)
 
 /-- Pre-composing a stronger pre with a `RelTriple` keeps the same

@@ -93,8 +93,9 @@ theorem cellView_of_getElem? {tape : List HashOutput} {index : Nat} {answer : Ha
   rw [List.getD_eq_getElem?_getD, h]
   rfl
 
-set_option maxHeartbeats 4000000 in
--- Unifying the three-stage run's long block-tape types in the cell correspondences is slow.
+attribute [local irreducible] WarmedGame.afterSeeds Scheme.verify Scheme.keygenInternal
+  Scheme.sign Security.signingOracle Security.countQueries
+
 open scoped Classical in
 /-- **The coverage charge with fired witnesses, at the carrier tail.** -/
 theorem prob_carrierTail_firedCovered_le (adversary : Adversary) (walk : Walk)
@@ -149,8 +150,9 @@ theorem prob_carrierTail_firedCovered_le (adversary : Adversary) (walk : Walk)
     have hplain : outcome.2 ∈ support (carrierTail keep127 adversary walk) := by
       rw [hsupport, support_map]
       exact ⟨outcome, hmem, rfl⟩
-    have hrightLen := hrightBound _ hplain
-    have hleftLen := hleftBound _ hplain
+    -- Tactic arguments avoid reducing concrete support predicates to look for function binders.
+    have hrightLen := hrightBound outcome.2 (by clear * - hplain; assumption)
+    have hleftLen := hleftBound outcome.2 (by clear * - hplain; assumption)
     have hRlen : outcome.1.2.length = rightLength := padding_length rightLength _ hrightTape
     have hLlen : outcome.1.1.length = leftLength := padding_length leftLength _ hleftTape
     have hcellRight : ∀ (index : Nat) (entry : Bytes × HashOutput),
@@ -164,7 +166,7 @@ theorem prob_carrierTail_firedCovered_le (adversary : Adversary) (walk : Walk)
         (fun keys forgery => countRecorded verifierCost
           (Scheme.verify keys.2 forgery.message forgery.signature))
         CarrierCoverage.tailValue ((startAt walk.2, 0) : Counted) [] [] outcome.1.1 outcome.1.2
-        outcome.2 hrun index (by simpa using hindex) (by omega)
+        outcome.2 (by clear * - hrun; assumption) index (by simpa using hindex) (by omega)
       simp only [List.length_nil, Nat.zero_add] at hcell
       rw [hget] at hcell
       exact hcell.symm
@@ -179,7 +181,7 @@ theorem prob_carrierTail_firedCovered_le (adversary : Adversary) (walk : Walk)
         (fun keys forgery => countRecorded verifierCost
           (Scheme.verify keys.2 forgery.message forgery.signature))
         CarrierCoverage.tailValue ((startAt walk.2, 0) : Counted) [] [] outcome.1.1 outcome.1.2
-        outcome.2 hrun index (by simpa using hindex) (by omega)
+        outcome.2 (by clear * - hrun; assumption) index (by simpa using hindex) (by omega)
       simp only [List.length_nil, Nat.zero_add] at hcell
       rw [hget] at hcell
       exact hcell.symm
@@ -220,9 +222,6 @@ theorem prob_carrierTail_firedCovered_le (adversary : Adversary) (walk : Walk)
     refine le_trans hcharge (le_of_eq ?_)
     rw [mul_add, add_assoc, mul_assoc (rightLength : ℝ≥0∞),
       mul_left_comm _ (rightLength : ℝ≥0∞)]
-
-attribute [local irreducible] WarmedGame.afterSeeds Scheme.verify Scheme.keygenInternal
-  Scheme.sign Security.signingOracle Security.countQueries
 
 /-! ## The join -/
 

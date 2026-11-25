@@ -4,8 +4,6 @@ HashSig	44
 HashSigTest	3
 LatticeCrypto	37
 LatticeCryptoTest	0
-ToMathlib	41
-VCVio	231
-VCVioCslib	0
+ToMathlib	25
+VCVio	228
 VCVioTest	9
-VCVioWidgets	0

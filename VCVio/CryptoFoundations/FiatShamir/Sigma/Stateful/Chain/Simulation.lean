@@ -44,7 +44,7 @@ attribute [fs_simp]
   simulatedNmaImpl
 
 variable {Stmt Wit Commit PrvState Chal Resp : Type} {rel : Stmt → Wit → Bool}
-variable (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
+variable (σ : SigmaProtocol ProbComp Stmt Wit Commit PrvState Chal Resp rel)
   (hr : GenerableRelation Stmt Wit rel) (M : Type)
 
 /-- The challenge oracle of the forkable experiment answers uniformly. -/
@@ -88,7 +88,7 @@ theorem cmaToNma_shiftLeft_signedFreshAdv_eq_bind [DecidableEq M]
             (verifyFreshComp (σ := σ) (hr := hr) (M := M)
               (Commit := Commit) (Chal := Chal) (Resp := Resp) p)).run log' := by
   simp [QueryImpl.Stateful.shiftLeft, QueryImpl.Stateful.run, signedFreshAdv,
-    StateT.run'_eq, simulateQ_bind, StateT.run_bind, monad_norm]
+    StateT.run'_eq, StateT.run_bind, monad_norm]
 
 private lemma cmaToNma_lift_ro_query_run
     (simT : Stmt → ProbComp (Commit × Chal × Resp))
@@ -187,7 +187,8 @@ private lemma mem_support_forkSim_pure_nested_iff
     (simulatedNmaImpl (M := M) (Commit := Commit) (Chal := Chal)
       (Resp := Resp) simT pk)).flattenStateT
 
-@[fs_simp] private def cmaOracleSignLogAux
+/-- Append each signing request's message to the signing log; other queries leave it unchanged. -/
+@[expose, fs_simp] def cmaOracleSignLogAux
     {S : Type}
     (t : (cmaOracleSpec M Commit Chal Resp).Domain)
     (_s : S)
@@ -213,12 +214,14 @@ section SimulatedCma
 
 variable [SampleableType Chal]
 
-private abbrev SimLoggedState (M Commit Chal : Type)
-      :=
+/-- The simulated signer's state: the random-oracle cache and the signing log. -/
+abbrev SimLoggedState (M Commit Chal : Type) :=
   (fsRoSpec M Commit Chal).QueryCache × List M
 
-@[fs_simp] private noncomputable def simLoggedVerifyFreshComp
-    (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
+/-- Fresh verification of a forgery against the simulated signer's state: the message must be
+absent from the signing log, and the challenge is read from the cache or sampled afresh. -/
+@[expose, fs_simp] noncomputable def simLoggedVerifyFreshComp
+    (σ : SigmaProtocol ProbComp Stmt Wit Commit PrvState Chal Resp rel)
     (pk : Stmt) (x : M × (Commit × Resp))
     (s : SimLoggedState M Commit Chal) : ProbComp Bool := do
   let msg := x.1
@@ -230,12 +233,15 @@ private abbrev SimLoggedState (M Commit Chal : Type)
       let ch ← ($ᵗ Chal : ProbComp Chal)
       pure (!decide (msg ∈ s.2) && σ.verify pk c ch resp)
 
-@[fs_simp] private noncomputable def fsUniformImpl :
+/-- Answer coins and random-oracle queries with uniform samples. -/
+@[expose, fs_simp] noncomputable def fsUniformImpl :
     QueryImpl (fsRoSpec M Commit Chal) ProbComp :=
   QueryImpl.ofLift unifSpec ProbComp +
     (uniformSampleImpl (spec := (M × Commit →ₒ Chal)))
 
-@[fs_simp] private noncomputable def simulatedNmaLoggedProbImpl
+/-- The HVZK signing simulator over a lazy random oracle in `ProbComp`, which also logs the
+signed messages. -/
+@[expose, fs_simp] noncomputable def simulatedNmaLoggedProbImpl
     (simT : Stmt → ProbComp (Commit × Chal × Resp)) (pk : Stmt) :
     QueryImpl (cmaOracleSpec M Commit Chal Resp)
       (StateT (SimLoggedState M Commit Chal) ProbComp) :=
@@ -366,7 +372,9 @@ private lemma nma_lift_unif_run
       simp [impl₁, nma, nmaPublic])
     (oa := oa) ▸ himpl₁
 
-private lemma simulatedNmaUnifSim_fsUniform_run
+omit [DecidableEq M] [DecidableEq Commit] in
+/-- Uniform answering after the simulator's coin forwarding leaves the cache unchanged. -/
+lemma simulatedNmaUnifSim_fsUniform_run
     {α : Type} (oa : ProbComp α)
     (cache : (fsRoSpec M Commit Chal).QueryCache) :
     simulateQ (fsUniformImpl (M := M) (Commit := Commit) (Chal := Chal))
@@ -458,7 +466,7 @@ private lemma cmaSimLoggedLeft_preserves_inv
           all_goals
             simp only [htarget, support_pure, Set.mem_singleton_iff, Prod.mk.injEq,
               Bool.false_eq_true, Bool.true_eq_false, and_false, and_true, true_and] at hu
-          all_goals exact hu.2.trans hxkey
+          exact hu.2.trans hxkey
       · have hxinner := state_eq true hxmem
         have hxkey : xKeypair = some (pk, sk) :=
           congrArg (fun state => state.2.1) hxinner

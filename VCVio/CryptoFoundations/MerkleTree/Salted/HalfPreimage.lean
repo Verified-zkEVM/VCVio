@@ -25,7 +25,8 @@ variable {X : Type uX} {Y : Type uY} {Msg : Type uM} {Salt : Type uS}
 
 /-- Components of supported node inputs, as in Definition 8.5. -/
 @[expose]
-def halfPreimages (enc : QueryEncoding X Unit Unit (Msg × Salt) Y) (D : Database X Y) : Set Y :=
+noncomputable def halfPreimages (enc : QueryEncoding X Unit Unit (Msg × Salt) Y)
+    (D : Database X Y) : Set Y :=
   MerkleTreeExtractor.halfPreimages
     (RoleDecoder.ofInjective (enc.node ()) (enc.node_injective ())).decode D
 

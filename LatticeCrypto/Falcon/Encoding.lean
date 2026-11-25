@@ -29,7 +29,6 @@ algorithms.
 
 @[expose] public section
 
-
 namespace Falcon
 
 /-- Encoding and decoding operations for Falcon keys and signatures. -/
@@ -55,22 +54,5 @@ structure Encoding (p : Params) where
   sigEncode : Bytes 40 → List Byte → EncodedSig
   /-- Decode an encoded signature back to `(salt, s₂_compressed)`. -/
   sigDecode : EncodedSig → Option (Bytes 40 × List Byte)
-
-namespace Encoding
-
-variable {p : Params} (enc : Encoding p)
-
-/-- Roundtrip laws for the Falcon encoding operations. -/
-structure Laws : Prop where
-  /-- Public key encoding roundtrip. -/
-  pkDecode_pkEncode : ∀ (h : Rq p.n), enc.pkDecode (enc.pkEncode h) = some h
-  /-- Secret key encoding roundtrip. -/
-  skDecode_skEncode : ∀ (f g capF : IntPoly p.n),
-    enc.skDecode (enc.skEncode f g capF) = some (f, g, capF)
-  /-- Signature encoding roundtrip. -/
-  sigDecode_sigEncode : ∀ (salt : Bytes 40) (compSig : List Byte),
-    enc.sigDecode (enc.sigEncode salt compSig) = some (salt, compSig)
-
-end Encoding
 
 end Falcon

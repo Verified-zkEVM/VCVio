@@ -10,7 +10,8 @@ public import VCVio.EvalDist.Monad.Measure
 public import VCVio.OracleComp.EvalDist.AnswerMeasure
 public import VCVio.EvalDist.Monad.Option
 public import VCVio.EvalDist.EvalDistEq
-import ToMathlib.Probability.UniformOn
+import VCVio.EvalDist.FiniteSupport
+import ToCslib.Probability.UniformOn
 import ToMathlib.MeasureTheory.Measure.Bounds
 
 /-!
@@ -224,6 +225,33 @@ theorem evalDist_bind_apply_le_add_of_support
           hfg a (MonadAttach.mem_support_bind.mpr ⟨x, by simp, ha⟩)
       _ = _ := lintegral_add_left Measurable.of_discrete _
 
+/-- **Up to a bad event, for a test followed by a check.** After a common computation `mx`, if the
+test `win a` implies the test `win' a` at every reachable `a` where `bad a` is false, then the
+probability that `win a` holds and the check `check a` succeeds is at most the same probability for
+`win'` plus the probability of `bad`. -/
+theorem evalDist_bind_and_le_add_of_not_bad
+    {ι : Type u} {α : Type} {spec : OracleSpec.{u, 0} ι} [OracleSpec.AnswerMeasure spec]
+    (mx : OracleComp spec α) (check : α → OracleComp spec Bool) (bad win win' : α → Bool)
+    (hwin : ∀ a ∈ support mx, bad a = false → win a = true → win' a = true) :
+    𝒟[mx >>= fun a => do
+        let v ← check a
+        return (win a && v)] {true} ≤
+      𝒟[mx >>= fun a => do
+          let v ← check a
+          return (win' a && v)] {true} +
+        𝒟[mx >>= fun a => pure (bad a)] {true} := by
+  refine evalDist_bind_apply_le_add_of_support _ _ _ _ (measurableSet_singleton true)
+    fun a ha => ?_
+  cases hc : bad a
+  · rw [evalDist_pure, show Measure.dirac false {true} = 0 by simp, add_zero]
+    refine evalDist_bind_apply_mono_of_support _ _ _ (measurableSet_singleton true)
+      fun v _ => ?_
+    cases hw : win a
+    · cases v <;> cases win' a <;> simp
+    · simp [hwin a ha hc hw]
+  · rw [evalDist_pure, Measure.dirac_apply_of_mem (Set.mem_singleton _)]
+    exact prob_le_one.trans le_add_self
+
 /-- A uniform lower bound on reachable continuation events bounds their composed event.
 The common computation need not carry a measurable-space instance on its output type. -/
 theorem le_evalDist_bind_apply_of_support
@@ -318,6 +346,7 @@ theorem mem_support_iff_evalDist_singleton_pos_of_fullSupport
     x ∈ support mx ↔ 0 < 𝒟[mx] {x} := by
   induction mx using OracleComp.inductionOn with
   | pure a =>
+      rw [mem_support_pure_iff]
       change x = a ↔ 0 < (Measure.dirac a) {x}
       constructor
       · intro h
@@ -485,27 +514,33 @@ theorem prEvent_bind_eq_mul_of_unique {β : Type} (mx : OracleComp spec α)
     _ = _ := by rw [← prEvent_eq_evalDist_singleton mx x, mul_comm]
 
 /-- Over finite oracle responses, computations with equal point masses are equal in distribution:
-both output measures are carried by the finite union of their supports. -/
+both have finite support, so `evalDist_eq_of_prEvent_eq_eq` applies. -/
 theorem evalDistEq_of_forall_prEvent_eq_output [∀ t, Finite (spec.Range t)]
     {mx my : OracleComp spec α} (h : ∀ x, Pr{let y ← mx}[y = x] = Pr{let y ← my}[y = x]) :
-    mx =ᵈ my := by
-  refine evalDistEq_iff_evalDist_eq.mpr ?_
-  classical
-  let : MeasurableSpace α := ⊤
-  let T : Finset α := ((support_finite mx).union (support_finite my)).toFinset
-  have key : ∀ oz : OracleComp spec α, support oz ⊆ ↑T → ∀ s : Set α,
-      𝒟[oz] s = ∑ x ∈ T.filter (· ∈ s), Pr{let z ← oz}[z = x] := by
-    intro oz hsub s
-    simp_rw [prEvent_eq_evalDist_singleton]
-    rw [MeasureTheory.sum_measure_singleton]
-    refine measure_congr ((evalDist.ae_of_forall_mem_support oz (· ∈ support oz)
-      MeasurableSet.of_discrete fun _ ha => ha).mono fun a ha => ?_)
-    have haT : a ∈ T := hsub ha
-    change (a ∈ s) = (a ∈ (↑(T.filter (· ∈ s)) : Set α))
-    simp [haT]
-  ext s -
-  rw [key mx (fun a ha => by simp [T, ha]) s, key my (fun a ha => by simp [T, ha]) s]
-  exact Finset.sum_congr rfl fun x _ => h x
+    mx =ᵈ my :=
+  evalDistEq_iff_evalDist_eq.mpr
+    (evalDist_eq_of_prEvent_eq_eq mx my (support_finite mx) (support_finite my) h)
+
+/-- When query `t` is uniform, an event of the lifted query has the proportion of satisfying
+responses as its probability. -/
+theorem prEvent_liftM_query_eq_card_div (t : spec.Domain)
+    [OracleSpec.AnswerMeasure.IsUniformAt spec t] [Fintype (spec.Range t)]
+    (p : spec.Range t → Prop) [DecidablePred p] :
+    Pr{let u ← (liftM (OracleSpec.query t) : OracleComp spec (spec.Range t))}[p u] =
+      ((Finset.univ.filter p).card : ℝ≥0∞) / Fintype.card (spec.Range t) := by
+  let : MeasurableSpace (spec.Range t) := ⊤
+  rw [prEvent_eq_evalDist_of_discrete, evalDist_liftM_query_apply t MeasurableSet.of_discrete,
+    OracleSpec.AnswerMeasure.IsUniformAt.toMeasure_eq_uniformOn, uniformOn_univ_apply_setOf]
+
+/-- When query `t` is uniform, an event of the query has the proportion of satisfying responses
+as its probability. -/
+theorem prEvent_query_eq_card_div (t : spec.Domain)
+    [OracleSpec.AnswerMeasure.IsUniformAt spec t] [Fintype (spec.Range t)]
+    (p : spec.Range t → Prop) [DecidablePred p] :
+    Pr{let u ← (query t : OracleComp spec (spec.Range t))}[p u] =
+      ((Finset.univ.filter p).card : ℝ≥0∞) / Fintype.card (spec.Range t) := by
+  rw [HasQuery.instOfMonadLift_query]
+  exact prEvent_liftM_query_eq_card_div t p
 
 end measureSpec
 
@@ -562,24 +597,6 @@ theorem support_eq_of_evalDistEq {mx my : OracleComp spec α} (h : mx =ᵈ my) :
   ext x
   rw [mem_support_iff_evalDist_singleton_pos, mem_support_iff_evalDist_singleton_pos,
     h.evalDist_eq]
-
-/-- Under uniform oracle semantics, an event of a single lifted query has the proportion of
-satisfying responses as its probability. -/
-theorem prEvent_liftM_query_eq_card_div (t : spec.Domain) [Fintype (spec.Range t)]
-    (p : spec.Range t → Prop) [DecidablePred p] :
-    Pr{let u ← (liftM (OracleSpec.query t) : OracleComp spec (spec.Range t))}[p u] =
-      ((Finset.univ.filter p).card : ℝ≥0∞) / Fintype.card (spec.Range t) := by
-  let : MeasurableSpace (spec.Range t) := ⊤
-  rw [prEvent_eq_evalDist_of_discrete, evalDist_liftM_query_uniform, uniformOn_univ_apply_setOf]
-
-/-- Under uniform oracle semantics, an event of a single query has the proportion of satisfying
-responses as its probability. -/
-theorem prEvent_query_eq_card_div (t : spec.Domain) [Fintype (spec.Range t)]
-    (p : spec.Range t → Prop) [DecidablePred p] :
-    Pr{let u ← (query t : OracleComp spec (spec.Range t))}[p u] =
-      ((Finset.univ.filter p).card : ℝ≥0∞) / Fintype.card (spec.Range t) := by
-  let : MeasurableSpace (spec.Range t) := ⊤
-  rw [prEvent_eq_evalDist_of_discrete, evalDist_query_uniform, uniformOn_univ_apply_setOf]
 
 /-- **Union bound over a set of indices.** Under uniform oracle semantics, a uniform bound `ε` on
 each event indexed by `T` bounds their union by `ε` times the cardinality of `T`, with no

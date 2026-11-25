@@ -9,7 +9,6 @@ public import VCVio.CryptoFoundations.GroupModel.DecisionalPairing
 public import VCVio.CryptoFoundations.GroupModel.GenericDDH
 public import VCVio.CryptoFoundations.GroupModel.GenericPairing
 public import VCVio.CryptoFoundations.HardnessAssumptions.XDH
-import all VCVio.CryptoFoundations.GroupModel.Instances
 
 /-! # Generic hardness of external Diffie–Hellman
 
@@ -35,7 +34,7 @@ and no initially supplied target elements. -/
   | .g₂ => [1]
   | .gₜ => []
 
-private theorem evReprT_xdhTable [Field F] (p : MvPolynomial (Fin 3) F) (r : ReprT F) :
+private theorem evReprT_xdhTable [Field F] (p : MvPolynomial (Fin 3) F) (r : CoeffsT F) :
     evReprT (LinearMap.mul F _) (xdhTable p .g₁) (xdhTable p .g₂)
       (xdhTable p .gₜ) r = evRepr (xdhTable p .g₁) (fun i => r.2 i 0) := by
   simp [evReprT_apply, evRepr_apply, xdhTable]
@@ -50,7 +49,7 @@ theorem xdhTables_sameKernel [Field F] :
   | g₁ => exact (ddhTables_sameKernel (F := F) ()).2 r
   | g₂ => rfl
   | gₜ =>
-    change ReprT F at r
+    change CoeffsT F at r
     change evReprT _ _ _ _ r = 0 ↔ evReprT _ _ _ _ r = 0
     rw [evReprT_xdhTable, evReprT_xdhTable]
     exact (ddhTables_sameKernel (F := F) ()).2 (fun i => r.2 i 0)
@@ -87,13 +86,14 @@ variable {F G₁ G₂ Gₜ : Type}
 second-source generator, with the supplied public pairing and an empty target table. -/
 @[expose] def Adversary.ofGeneric [Field F]
     [AddCommGroup G₁] [Module F G₁] [AddCommGroup G₂] [Module F G₂]
-    [AddCommGroup Gₜ] [Module F Gₜ] [∀ s, DecidableEq (PFam G₁ G₂ Gₜ s)]
+    [AddCommGroup Gₜ] [Module F Gₜ] [DecidableEq G₁] [DecidableEq G₂] [DecidableEq Gₜ]
     (e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ) (A : OracleComp (genSpec F pairingSig) Bool) :
     Adversary F G₁ G₂ :=
   fun g₁ X Y T g₂ => Prod.fst <$> runGen (pairingReal e) (fun _ => id) A
     (fun | .g₁ => [g₁, X, Y, T] | .g₂ => [g₂] | .gₜ => [])
 
-private theorem uniform_fin_three [SampleableType F] :
+/-- Three independent uniform samples form a uniform function on `Fin 3`. -/
+theorem uniformSample_fin_three [SampleableType F] :
     (do let a ← $ᵗ F; let b ← $ᵗ F; let c ← $ᵗ F
         pure (![a, b, c] : Fin 3 → F)) =ᵈ ($ᵗ (Fin 3 → F) : ProbComp _) := by
   have hb : Function.Bijective (Function.uncurry
@@ -117,9 +117,9 @@ private theorem uniform_fin_three [SampleableType F] :
 
 private theorem runGen_xdh [Field F] [DecidableEq F]
     [AddCommGroup G₁] [Module F G₁] [AddCommGroup G₂] [Module F G₂]
-    [AddCommGroup Gₜ] [Module F Gₜ] [∀ s, DecidableEq (PFam G₁ G₂ Gₜ s)]
+    [AddCommGroup Gₜ] [Module F Gₜ] [DecidableEq G₁] [DecidableEq G₂] [DecidableEq Gₜ]
     (e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ) (g₁ : G₁) (g₂ : G₂)
-    (hg₁ : g₁ ≠ 0) (hg₂ : g₂ ≠ 0) (he : e g₁ g₂ ≠ 0) (x : Fin 3 → F)
+    (he : e g₁ g₂ ≠ 0) (x : Fin 3 → F)
     (A : OracleComp (genSpec F pairingSig) Bool) (p : MvPolynomial (Fin 3) F) :
     Adversary.ofGeneric e A g₁ (x 0 • g₁) (x 1 • g₁) (MvPolynomial.eval x p • g₁) g₂ =
       Prod.fst <$> runGen (symbolic F pairingSig (Fin 3))
@@ -130,19 +130,19 @@ private theorem runGen_xdh [Field F] [DecidableEq F]
     funext s
     cases s <;> simp [mapTbl, xdhTable, evalAt_apply]
   unfold Adversary.ofGeneric
-  rw [← ht, runGen_pairing_mapTbl_evalHom e g₁ g₂ hg₁ hg₂ he x A]
+  rw [← ht, runGen_pairing_mapTbl_evalHom e g₁ g₂ he x A]
   simp only [Functor.map_map, Prod.map, id_eq]
 
 private theorem real_experiment_evalDistEq [Field F] [DecidableEq F] [SampleableType F]
     [AddCommGroup G₁] [Module F G₁] [AddCommGroup G₂] [Module F G₂]
-    [AddCommGroup Gₜ] [Module F Gₜ] [∀ s, DecidableEq (PFam G₁ G₂ Gₜ s)]
+    [AddCommGroup Gₜ] [Module F Gₜ] [DecidableEq G₁] [DecidableEq G₂] [DecidableEq Gₜ]
     (e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ) (g₁ : G₁) (g₂ : G₂)
-    (hg₁ : g₁ ≠ 0) (hg₂ : g₂ ≠ 0) (he : e g₁ g₂ ≠ 0) (A : OracleComp (genSpec F pairingSig) Bool) :
+    (he : e g₁ g₂ ≠ 0) (A : OracleComp (genSpec F pairingSig) Bool) :
     realExperiment g₁ g₂ (Adversary.ofGeneric e A) =ᵈ
       (do let x ← $ᵗ (Fin 3 → F)
           Prod.fst <$> runGen (symbolic F pairingSig (Fin 3))
             (fun _ p => MvPolynomial.eval x p) A (xdhTable (X 0 * X 1))) := by
-  have hs := (uniform_fin_three (F := F)).bind_left (fun x =>
+  have hs := (uniformSample_fin_three (F := F)).bind_left (fun x =>
     Adversary.ofGeneric e A g₁ (x 0 • g₁) (x 1 • g₁) ((x 0 * x 1) • g₁) g₂)
   have hc := EvalDistEq.bind_right ($ᵗ F : ProbComp F) (fun a =>
     EvalDistEq.bind_right ($ᵗ F : ProbComp F) (fun b =>
@@ -152,35 +152,36 @@ private theorem real_experiment_evalDistEq [Field F] [DecidableEq F] [Sampleable
     simpa only [bind_assoc, pure_bind, Matrix.cons_val_zero, Matrix.cons_val_one] using hs)
   apply EvalDistEq.of_forall_prEvent_eq
   intro p
-  simpa [realExperiment, ← runGen_xdh e g₁ g₂ hg₁ hg₂ he, prEvent_norm] using
+  simpa [realExperiment, ← runGen_xdh e g₁ g₂ he, prEvent_norm] using
     heq.prEvent_eq p
 
 private theorem random_experiment_evalDistEq [Field F] [DecidableEq F] [SampleableType F]
     [AddCommGroup G₁] [Module F G₁] [AddCommGroup G₂] [Module F G₂]
-    [AddCommGroup Gₜ] [Module F Gₜ] [∀ s, DecidableEq (PFam G₁ G₂ Gₜ s)]
+    [AddCommGroup Gₜ] [Module F Gₜ] [DecidableEq G₁] [DecidableEq G₂] [DecidableEq Gₜ]
     (e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ) (g₁ : G₁) (g₂ : G₂)
-    (hg₁ : g₁ ≠ 0) (hg₂ : g₂ ≠ 0) (he : e g₁ g₂ ≠ 0) (A : OracleComp (genSpec F pairingSig) Bool) :
+    (he : e g₁ g₂ ≠ 0) (A : OracleComp (genSpec F pairingSig) Bool) :
     randomExperiment g₁ g₂ (Adversary.ofGeneric e A) =ᵈ
       (do let x ← $ᵗ (Fin 3 → F)
           Prod.fst <$> runGen (symbolic F pairingSig (Fin 3))
             (fun _ p => MvPolynomial.eval x p) A (xdhTable (X 2))) := by
-  have hs := (uniform_fin_three (F := F)).bind_left (fun x =>
+  have hs := (uniformSample_fin_three (F := F)).bind_left (fun x =>
     Adversary.ofGeneric e A g₁ (x 0 • g₁) (x 1 • g₁) (x 2 • g₁) g₂)
   apply EvalDistEq.of_forall_prEvent_eq
   intro p
-  simpa [randomExperiment, ← runGen_xdh e g₁ g₂ hg₁ hg₂ he, prEvent_norm] using
+  simpa [randomExperiment, ← runGen_xdh e g₁ g₂ he, prEvent_norm] using
     hs.prEvent_eq p
 
 /-- In a Type 3 pairing group, a generic XDH adversary with per-sort append budgets
 `n₁, n₂, nₜ` has advantage at most
 `3 * ((n₁ + 5).choose 2 + (nₜ + 1).choose 2) / |F|`.
 The second-source degree is zero, so its budget contributes no collision term.
-Equality queries are free. Nonzero generators suffice; they need not span the carriers. -/
+Equality queries are free. The two generators need only pair to a nonzero element; they
+need not span the carriers. -/
 theorem advantage_ofGeneric_le [Field F] [Fintype F] [SampleableType F]
     [AddCommGroup G₁] [Module F G₁] [AddCommGroup G₂] [Module F G₂]
-    [AddCommGroup Gₜ] [Module F Gₜ] [∀ s, DecidableEq (PFam G₁ G₂ Gₜ s)]
+    [AddCommGroup Gₜ] [Module F Gₜ] [DecidableEq G₁] [DecidableEq G₂] [DecidableEq Gₜ]
     (e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ) (g₁ : G₁) (g₂ : G₂)
-    (hg₁ : g₁ ≠ 0) (hg₂ : g₂ ≠ 0) (he : e g₁ g₂ ≠ 0)
+    (he : e g₁ g₂ ≠ 0)
     (A : OracleComp (genSpec F pairingSig) Bool) (n₁ n₂ nₜ : ℕ)
     (hn₁ : IsQueryBoundP A (appendsTo .g₁) n₁)
     (hn₂ : IsQueryBoundP A (appendsTo .g₂) n₂)
@@ -188,7 +189,6 @@ theorem advantage_ofGeneric_le [Field F] [Fintype F] [SampleableType F]
     advantage g₁ g₂ (Adversary.ofGeneric e A) ≤
       (3 * ((n₁ + 5).choose 2 + (nₜ + 1).choose 2) : ℕ) / (Fintype.card F : ℝ≥0∞) := by
   classical
-  let : Fintype PSort := ⟨{.g₁, .g₂, .gₜ}, by intro s; cases s <;> simp⟩
   let : MeasurableSpace ((Fin 3 → F) × Bool) := ⊤
   let D₀ : PSort → ℕ := fun | .g₁ => 2 | .g₂ => 0 | .gₜ => 2
   let D₁ : PSort → ℕ := fun | .g₁ => 1 | .g₂ => 0 | .gₜ => 1
@@ -213,10 +213,10 @@ theorem advantage_ofGeneric_le [Field F] [Fintype F] [SampleableType F]
     pure (x, z.1)
   have hl : realExperiment g₁ g₂ (Adversary.ofGeneric e A) =ᵈ Prod.snd <$> left := by
     simpa only [left, map_bind, map_pure, bind_pure_comp, Functor.map_map, Function.comp_def] using
-      real_experiment_evalDistEq e g₁ g₂ hg₁ hg₂ he A
+      real_experiment_evalDistEq e g₁ g₂ he A
   have hr : randomExperiment g₁ g₂ (Adversary.ofGeneric e A) =ᵈ Prod.snd <$> right := by
     simpa only [right, map_bind, map_pure, bind_pure_comp, Functor.map_map, Function.comp_def] using
-      random_experiment_evalDistEq e g₁ g₂ hg₁ hg₂ he A
+      random_experiment_evalDistEq e g₁ g₂ he A
   rw [advantage, hl.evalDist_eq, hr.evalDist_eq]
   have hb := measureETVDist_runGen_pairing_sameKernel_uniform_le hD₀ hD₁ A hn
     (xdhTable (X 0 * X 1)) (xdhTable (X 2))
@@ -242,14 +242,14 @@ theorem advantage_ofGeneric_le [Field F] [Fintype F] [SampleableType F]
 `3 * ((q + 5).choose 2 + (q + 1).choose 2) / |F|`. Equality queries are free. -/
 theorem advantage_ofGeneric_le_of_total [Field F] [Fintype F] [SampleableType F]
     [AddCommGroup G₁] [Module F G₁] [AddCommGroup G₂] [Module F G₂]
-    [AddCommGroup Gₜ] [Module F Gₜ] [∀ s, DecidableEq (PFam G₁ G₂ Gₜ s)]
+    [AddCommGroup Gₜ] [Module F Gₜ] [DecidableEq G₁] [DecidableEq G₂] [DecidableEq Gₜ]
     (e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ) (g₁ : G₁) (g₂ : G₂)
-    (hg₁ : g₁ ≠ 0) (hg₂ : g₂ ≠ 0) (he : e g₁ g₂ ≠ 0)
+    (he : e g₁ g₂ ≠ 0)
     (A : OracleComp (genSpec F pairingSig) Bool) (q : ℕ)
     (hq : IsQueryBoundP A (fun i => isGroupOp i = true) q) :
     advantage g₁ g₂ (Adversary.ofGeneric e A) ≤
       (3 * ((q + 5).choose 2 + (q + 1).choose 2) : ℕ) / (Fintype.card F : ℝ≥0∞) :=
-  advantage_ofGeneric_le e g₁ g₂ hg₁ hg₂ he A q q q
+  advantage_ofGeneric_le e g₁ g₂ he A q q q
     (hq.appendsTo .g₁) (hq.appendsTo .g₂) (hq.appendsTo .gₜ)
 
 end XDH

@@ -7,8 +7,6 @@ Authors: Alexander Hicks
 module
 
 public import VCVio.CryptoFoundations.SignatureAlg.RomQueryCount
-import VCVio.OracleComp.QueryTracking.QueryBound.Simulation
-import VCVio.EvalDist.ProbabilityBounds
 
 /-!
 # Canonical wire interfaces for signatures
@@ -235,7 +233,7 @@ theorem prEvent_strongUnforgeableExperiment_le
   rintro ⟨⟨⟨msg, raw⟩, log⟩, st'⟩
   simp only [CanonicalEncoding.decode_encode]
   cases hd : sig.decode raw with
-  | none => simp [simulateQ_pure, StateT.run_pure]
+  | none => simp [StateT.run_pure]
   | some s =>
     have hr : sig.read raw = s := by simp [CanonicalEncoding.read, hd]
     simp only [hr]
