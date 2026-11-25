@@ -220,7 +220,7 @@ theorem experiment_ofGeneric_le [Field F] [Fintype F] [DecidableEq F]
   have hevent : Pr{let b ← experiment g₁ g₂ (Adversary.ofGeneric (D := D) e A)}[b = true] =
       Pr{let a ← SDH.sampleTrapdoor F; let z ← (runGen (symbolic F pairingSig Unit)
         (fun _ p => MvPolynomial.eval (fun _ => a) p) A (sdhTable D))}[E (fun _ => a) z] := by
-    simp only [experiment, Adversary.ofGeneric]
+    simp only [experiment, Adversary.ofGeneric, SDH.srs_fst, SDH.srs_snd]
     dsimp only [PFam] at hr hl ⊢
     simp_rw [hr]
     simp only [prEvent_norm,
@@ -322,7 +322,7 @@ theorem experiment_ofGeneric_le [Field F] [Fintype F] [DecidableEq F]
   have hevent : Pr{let b ← experiment g₁ g₂ (Adversary.ofGeneric (D := D) e A)}[b = true] =
       Pr{let a ← SDH.sampleTrapdoor F; let z ← (runGen (symbolic F pairingSig Unit)
         (fun _ p => MvPolynomial.eval (fun _ => a) p) A (sdhTable D))}[E (fun _ => a) z] := by
-    simp only [experiment, Adversary.ofGeneric]
+    simp only [experiment, Adversary.ofGeneric, SDH.srs_fst, SDH.srs_snd]
     dsimp only [PFam] at hr hl ⊢
     simp_rw [hr]
     simp only [prEvent_norm,
