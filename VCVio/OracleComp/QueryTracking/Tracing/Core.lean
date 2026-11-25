@@ -23,9 +23,9 @@ public section
 
 open OracleSpec OracleComp
 
-universe u v w idx
+universe uι u v w
 
-variable {ι : Type idx} {spec : OracleSpec.{idx, u} ι} {α β γ : Type u}
+variable {ι : Type uι} {spec : OracleSpec ι} {α β γ : Type u}
 
 namespace QueryImpl
 

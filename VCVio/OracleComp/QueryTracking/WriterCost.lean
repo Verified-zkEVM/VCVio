@@ -31,20 +31,19 @@ charge of the one completed path it picks (`QueryImpl.run_simulateQ_withAddCost_
 
 @[expose] public section
 
-open OracleSpec
+universe uι u
 
-universe v idx
+open OracleSpec
 
 namespace QueryImpl
 
-variable {ι : Type idx} {spec : OracleSpec.{idx, 0} ι} {m : Type → Type v}
-
 section addCost
 
-variable [Monad m]
+variable {ι : Type uι} {spec : OracleSpec.{uι, u} ι} {m : Type u → Type*} [Monad m]
+
 
 /-- Instrument an implementation with additive cost accumulation in an `AddWriterT` layer. -/
-def withAddCost {ω : Type} [AddMonoid ω]
+def withAddCost {ω : Type u} [AddMonoid ω]
     (impl : QueryImpl spec m) (costFn : spec.Domain → ω) :
     QueryImpl spec (AddWriterT ω m) :=
   QueryImpl.withCost (spec := spec) (m := m) impl
@@ -52,20 +51,20 @@ def withAddCost {ω : Type} [AddMonoid ω]
 
 /-- Over a lawful monad, additive cost instrumentation is PolyFun's charge writer: each query
 writes its charge before the implementation runs. -/
-theorem withAddCost_eq_withChargeW [LawfulMonad m] {ω : Type} [AddMonoid ω]
+theorem withAddCost_eq_withChargeW [LawfulMonad m] {ω : Type u} [AddMonoid ω]
     (impl : QueryImpl spec m) (costFn : spec.Domain → ω) :
     impl.withAddCost costFn = PFunctor.Handler.withChargeW (P := spec.toPFunctor) impl costFn :=
   (PFunctor.Handler.withChargeW_eq_withTraceBefore (P := spec.toPFunctor) impl costFn).symm
 
 /-- Forgetting the additive cost recovers the uninstrumented simulation. -/
-theorem fst_map_run_simulateQ_withAddCost [LawfulMonad m] {ω α : Type} [AddMonoid ω]
+theorem fst_map_run_simulateQ_withAddCost [LawfulMonad m] {ω α : Type u} [AddMonoid ω]
     (impl : QueryImpl spec m) (costFn : spec.Domain → ω) (oa : OracleComp spec α) :
     Prod.fst <$> (simulateQ (impl.withAddCost costFn) oa).run = simulateQ impl oa :=
   fst_map_run_withCost impl _ oa
 
 /-- **Deterministic recording.** A handler into `Id` instrumented with additive cost returns the
 output of the one completed path it picks, together with the charge of that path. -/
-theorem run_simulateQ_withAddCost_id {ω α : Type} [AddMonoid ω] (answer : QueryImpl spec Id)
+theorem run_simulateQ_withAddCost_id {ω α : Type u} [AddMonoid ω] (answer : QueryImpl spec Id)
     (costFn : spec.Domain → ω) (oa : OracleComp spec α) :
     (simulateQ (answer.withAddCost costFn) oa).run =
       (PFunctor.FreeM.output oa (PFunctor.FreeM.Path.ofHandler (fun t => (answer t).run) oa),
@@ -75,7 +74,7 @@ theorem run_simulateQ_withAddCost_id {ω α : Type} [AddMonoid ω] (answer : Que
   exact PFunctor.Handler.run_liftM_withChargeW_id answer costFn oa
 
 @[simp]
-lemma withAddCost_apply {ω : Type} [AddMonoid ω]
+lemma withAddCost_apply {ω : Type u} [AddMonoid ω]
     (impl : QueryImpl spec m) (costFn : spec.Domain → ω) (t : spec.Domain) :
     impl.withAddCost costFn t =
       (do AddWriterT.addTell (M := m) (costFn t); liftM (impl t)) := by
@@ -83,7 +82,7 @@ lemma withAddCost_apply {ω : Type} [AddMonoid ω]
 
 /-- Cost instrumentation on a left-summand query, with the component response type exposed. -/
 lemma withAddCost_apply_inl {ι₁ ι₂ : Type} {spec₁ : OracleSpec ι₁} {spec₂ : OracleSpec ι₂}
-    {ω : Type} [AddMonoid ω] (impl : QueryImpl (spec₁ + spec₂) m)
+    {ω : Type u} [AddMonoid ω] (impl : QueryImpl (spec₁ + spec₂) m)
     (costFn : (spec₁ + spec₂).Domain → ω) (t : spec₁.Domain) :
     impl.withAddCost costFn (Sum.inl t) = (do
       AddWriterT.addTell (costFn (Sum.inl t))
@@ -92,12 +91,20 @@ lemma withAddCost_apply_inl {ι₁ ι₂ : Type} {spec₁ : OracleSpec ι₁} {s
 
 /-- Cost instrumentation on a right-summand query, with the component response type exposed. -/
 lemma withAddCost_apply_inr {ι₁ ι₂ : Type} {spec₁ : OracleSpec ι₁} {spec₂ : OracleSpec ι₂}
-    {ω : Type} [AddMonoid ω] (impl : QueryImpl (spec₁ + spec₂) m)
+    {ω : Type u} [AddMonoid ω] (impl : QueryImpl (spec₁ + spec₂) m)
     (costFn : (spec₁ + spec₂).Domain → ω) (t : spec₂.Domain) :
     impl.withAddCost costFn (Sum.inr t) = (do
       AddWriterT.addTell (costFn (Sum.inr t))
       liftM (impl.restrictRight t)) := by
   rw [withAddCost_apply, restrictRight_apply]
+
+end addCost
+
+/-! A unit charge is a natural number, so unit-cost instrumentation runs over `Type`. -/
+
+section unitCost
+
+variable {ι : Type uι} {spec : OracleSpec.{uι, 0} ι} {m : Type → Type*} [Monad m]
 
 /-- Instrument an implementation with unit additive cost for every query. -/
 def withUnitCost (impl : QueryImpl spec m) :
@@ -110,13 +117,20 @@ lemma withUnitCost_apply (impl : QueryImpl spec m) (t : spec.Domain) :
       (do AddWriterT.addTell (M := m) 1; liftM (impl t)) := by
   simp [withUnitCost]
 
-end addCost
+end unitCost
 
 end QueryImpl
 
 namespace AddWriterT
 
-variable {m : Type → Type*} {α β : Type}
+/-! ## Costs in an arbitrary universe
+
+`AddWriterT ω m α` is `m (α × Multiplicative ω)`, so the cost carrier `ω`, the results and the
+input universe of the base monad `m` coincide. -/
+
+section general
+
+variable {m : Type u → Type*} {α β : Type u}
 
 section pathwiseCost
 
@@ -124,13 +138,13 @@ variable [MonadAttach m]
 
 /-- Pathwise upper bound for an `AddWriterT` computation: every reachable execution result carries
 additive cost at most `w`. -/
-def PathwiseCostAtMost {ω : Type} [AddMonoid ω] [Preorder ω]
+def PathwiseCostAtMost {ω : Type u} [AddMonoid ω] [Preorder ω]
     (oa : AddWriterT ω m α) (w : ω) : Prop :=
   ∀ z ∈ support oa.run, Multiplicative.toAdd z.2 ≤ w
 
 /-- Pathwise lower bound for an `AddWriterT` computation: every reachable execution result carries
 additive cost at least `w`. -/
-def PathwiseCostAtLeast {ω : Type} [AddMonoid ω] [Preorder ω]
+def PathwiseCostAtLeast {ω : Type u} [AddMonoid ω] [Preorder ω]
     (oa : AddWriterT ω m α) (w : ω) : Prop :=
   ∀ z ∈ support oa.run, w ≤ Multiplicative.toAdd z.2
 
@@ -140,11 +154,11 @@ carries exactly the additive cost `w`.
 This is the weak extensional notion of pathwise exactness. If `oa.run` has empty support, it holds
 vacuously for every `w`. Use [`AddWriterT.PathwiseHasCost`] when the intended meaning is that `oa`
 has an exact pathwise cost and admits at least one reachable execution. -/
-def PathwiseCostEqOnSupport {ω : Type} [AddMonoid ω] [Preorder ω]
+def PathwiseCostEqOnSupport {ω : Type u} [AddMonoid ω] [Preorder ω]
     (oa : AddWriterT ω m α) (w : ω) : Prop :=
   PathwiseCostAtMost oa w ∧ PathwiseCostAtLeast oa w
 
-@[simp] lemma pathwiseCostEqOnSupport_iff {ω : Type} [AddMonoid ω] [Preorder ω]
+@[simp] lemma pathwiseCostEqOnSupport_iff {ω : Type u} [AddMonoid ω] [Preorder ω]
     (oa : AddWriterT ω m α) (w : ω) :
     PathwiseCostEqOnSupport oa w ↔ PathwiseCostAtMost oa w ∧ PathwiseCostAtLeast oa w :=
   Iff.rfl
@@ -156,47 +170,47 @@ This is the strong semantic notion of exact cost over execution paths.
 Unlike [`AddWriterT.HasCost`], it does not require cost to be recoverable
 from the final output alone. Unlike
 [`AddWriterT.PathwiseCostEqOnSupport`], it is not vacuous on computations with empty support. -/
-def PathwiseHasCost {ω : Type} [AddMonoid ω] [Preorder ω]
+def PathwiseHasCost {ω : Type u} [AddMonoid ω] [Preorder ω]
     (oa : AddWriterT ω m α) (w : ω) : Prop :=
   (support oa.run).Nonempty ∧ PathwiseCostEqOnSupport oa w
 
-@[simp] lemma pathwiseHasCost_iff {ω : Type} [AddMonoid ω] [Preorder ω]
+@[simp] lemma pathwiseHasCost_iff {ω : Type u} [AddMonoid ω] [Preorder ω]
     (oa : AddWriterT ω m α) (w : ω) :
     PathwiseHasCost oa w ↔
       (support oa.run).Nonempty ∧ PathwiseCostEqOnSupport oa w :=
   Iff.rfl
 
-lemma PathwiseHasCost.nonempty {ω : Type} [AddMonoid ω] [Preorder ω]
+lemma PathwiseHasCost.nonempty {ω : Type u} [AddMonoid ω] [Preorder ω]
     {oa : AddWriterT ω m α} {w : ω} (h : PathwiseHasCost oa w) :
     (support oa.run).Nonempty :=
   h.1
 
-lemma PathwiseCostEqOnSupport.atMost {ω : Type} [AddMonoid ω] [Preorder ω]
+lemma PathwiseCostEqOnSupport.atMost {ω : Type u} [AddMonoid ω] [Preorder ω]
     {oa : AddWriterT ω m α} {w : ω} (h : PathwiseCostEqOnSupport oa w) :
     PathwiseCostAtMost oa w :=
   h.1
 
-lemma PathwiseCostEqOnSupport.atLeast {ω : Type} [AddMonoid ω] [Preorder ω]
+lemma PathwiseCostEqOnSupport.atLeast {ω : Type u} [AddMonoid ω] [Preorder ω]
     {oa : AddWriterT ω m α} {w : ω} (h : PathwiseCostEqOnSupport oa w) :
     PathwiseCostAtLeast oa w :=
   h.2
 
-lemma PathwiseHasCost.eqOnSupport {ω : Type} [AddMonoid ω] [Preorder ω]
+lemma PathwiseHasCost.eqOnSupport {ω : Type u} [AddMonoid ω] [Preorder ω]
     {oa : AddWriterT ω m α} {w : ω} (h : PathwiseHasCost oa w) :
     PathwiseCostEqOnSupport oa w :=
   h.2
 
-lemma PathwiseHasCost.atMost {ω : Type} [AddMonoid ω] [Preorder ω]
+lemma PathwiseHasCost.atMost {ω : Type u} [AddMonoid ω] [Preorder ω]
     {oa : AddWriterT ω m α} {w : ω} (h : PathwiseHasCost oa w) :
     PathwiseCostAtMost oa w :=
   h.2.1
 
-lemma PathwiseHasCost.atLeast {ω : Type} [AddMonoid ω] [Preorder ω]
+lemma PathwiseHasCost.atLeast {ω : Type u} [AddMonoid ω] [Preorder ω]
     {oa : AddWriterT ω m α} {w : ω} (h : PathwiseHasCost oa w) :
     PathwiseCostAtLeast oa w :=
   h.2.2
 
-lemma PathwiseHasCost.unique {ω : Type} [AddMonoid ω] [PartialOrder ω]
+lemma PathwiseHasCost.unique {ω : Type u} [AddMonoid ω] [PartialOrder ω]
     {oa : AddWriterT ω m α} {w₁ w₂ : ω}
     (h₁ : PathwiseHasCost oa w₁) (h₂ : PathwiseHasCost oa w₂) :
     w₁ = w₂ := by
@@ -206,7 +220,7 @@ lemma PathwiseHasCost.unique {ω : Type} [AddMonoid ω] [PartialOrder ω]
 
 variable [Monad m] [ExactMonadAttach m]
 
-lemma pathwiseCostAtMost_of_hasCost {ω : Type} [AddMonoid ω] [Preorder ω] [LawfulMonad m]
+lemma pathwiseCostAtMost_of_hasCost {ω : Type u} [AddMonoid ω] [Preorder ω] [LawfulMonad m]
     {oa : AddWriterT ω m α} {w b : ω}
     (h : AddWriterT.HasCost oa w) (hwb : w ≤ b) :
     PathwiseCostAtMost oa b := by
@@ -218,7 +232,7 @@ lemma pathwiseCostAtMost_of_hasCost {ω : Type} [AddMonoid ω] [Preorder ω] [La
   obtain ⟨_, _, hzCost⟩ := hzCost
   simpa [hzCost] using hwb
 
-lemma pathwiseCostAtLeast_of_hasCost {ω : Type} [AddMonoid ω] [Preorder ω] [LawfulMonad m]
+lemma pathwiseCostAtLeast_of_hasCost {ω : Type u} [AddMonoid ω] [Preorder ω] [LawfulMonad m]
     {oa : AddWriterT ω m α} {w b : ω}
     (h : AddWriterT.HasCost oa w) (hbw : b ≤ w) :
     PathwiseCostAtLeast oa b := by
@@ -234,13 +248,7 @@ end pathwiseCost
 
 section expectedCost
 
-variable {ω : Type} [Monad m] [EvalDistSemantics m]
-
-/-- An event depending only on cost can observe either the cost marginal or the joint run.
-No measurable space on the discarded outputs is required. -/
-lemma prEvent_costs [LawfulMonad m] (oa : AddWriterT ω m α) (p : ω → Prop) :
-    Pr{let c ← oa.costs}[p c] = Pr{let z ← oa.run}[p (Multiplicative.toAdd z.2)] := by
-  simp only [costs_def, prEvent_map]
+variable {ω : Type u} [Monad m] [EvalDistSemantics m]
 
 variable [MeasurableSpace ω]
 
@@ -252,27 +260,6 @@ computation can fail, the missing mass contributes `0`. -/
 noncomputable def expectedCost
     (oa : AddWriterT ω m α) (val : ω → ENNReal) : ENNReal :=
   ∫⁻ w, val w ∂𝒟[oa.costs]
-
-/-- Markov's inequality for the cost marginal, without a measurable space on discarded outputs. -/
-lemma prEvent_cost_gt_mul_le_expectedCost [LawfulMonad m] [LawfulEvalDistSemantics m]
-    (oa : AddWriterT ω m α) {val : ω → ENNReal} (hval : Measurable val) (t : ENNReal) :
-    Pr{let c ← oa.costs}[t < val c] * t ≤ expectedCost oa val := by
-  rw [prEvent_eq_evalDist _ _
-    (measurableSet_setOfPred.mp (measurableSet_lt measurable_const hval))]
-  calc
-    𝒟[oa.costs] {c | t < val c} * t = t * 𝒟[oa.costs] {c | t < val c} := mul_comm _ _
-    _ ≤ t * 𝒟[oa.costs] {c | t ≤ val c} := by
-      gcongr
-      exact fun hc ↦ hc.le
-    _ ≤ expectedCost oa val := MeasureTheory.mul_meas_ge_le_lintegral hval t
-
-/-- Markov's inequality for valued cost, in division form. -/
-lemma prEvent_cost_gt_le_expectedCost_div [LawfulMonad m] [LawfulEvalDistSemantics m]
-    (oa : AddWriterT ω m α) {val : ω → ENNReal} (hval : Measurable val)
-    {t : ENNReal} (ht : 0 < t) (ht' : t ≠ ⊤) :
-    Pr{let c ← oa.costs}[t < val c] ≤ expectedCost oa val / t :=
-  (ENNReal.le_div_iff_mul_le (.inl ht.ne') (.inl ht')).mpr
-    (prEvent_cost_gt_mul_le_expectedCost oa hval t)
 
 /-- Expected cost integrates the cost projection of the joint output/writer measure. -/
 lemma expectedCost_eq_lintegral_run
@@ -292,11 +279,6 @@ lemma measurable_expectedCost {ρ : Type*} [MeasurableSpace ρ]
     (hoa : Measurable fun r ↦ 𝒟[(oa r).costs]) (hval : Measurable val) :
     Measurable fun r ↦ expectedCost (oa r) val :=
   (MeasureTheory.Measure.measurable_lintegral hval).comp hoa
-
-/-- Convenience specialization of [`AddWriterT.expectedCost`] to natural-valued additive costs. -/
-noncomputable abbrev expectedCostNat
-    (oa : AddWriterT ℕ m α) : ENNReal :=
-  expectedCost oa (fun n ↦ ↑n)
 
 /-- The successful mass of the cost marginal, under its chosen measurable space. -/
 noncomputable def costMass (oa : AddWriterT ω m α) : ENNReal :=
@@ -383,57 +365,6 @@ theorem le_expectedCost_of_aeCostAtLeast [Preorder ω]
       rw [MeasureTheory.lintegral_const, hmass, mul_one]
     _ ≤ expectedCost oa val :=
       MeasureTheory.lintegral_mono_ae (h.mono fun c hc ↦ hval hc)
-
-section tailBounds
-
-/-- Tail-sum formula for the natural-valued expected cost of an `AddWriterT` computation:
-
-`E[cost] = ∑ i, Pr[i < cost]`.
-
-This specializes `MeasureTheory.lintegral_coe_nat_eq_tsum` to the writer-cost marginal. -/
-lemma expectedCostNat_eq_tsum_tail_probs
-    [LawfulMonad m] [LawfulEvalDistSemantics m]
-    (oa : AddWriterT ℕ m α) :
-    expectedCostNat oa = ∑' i : ℕ, Pr{let c ← oa.costs}[i < c] := by
-  unfold expectedCostNat expectedCost
-  refine (MeasureTheory.lintegral_coe_nat_eq_tsum
-    (f := fun n : ℕ ↦ n) measurable_id 𝒟[oa.costs]).trans ?_
-  refine tsum_congr fun i ↦ ?_
-  exact (prEvent_eq_evalDist_of_discrete oa.costs (fun c ↦ i < c)).symm
-
-/-- Tail domination bounds the expected natural-valued writer cost.
-
-If the tail probability `Pr[i < cost]` is bounded by `a i` for every `i`, then
-`E[cost] ≤ ∑ i, a i`. -/
-lemma expectedCostNat_le_tsum_of_tail_probs_le
-    [LawfulMonad m] [LawfulEvalDistSemantics m]
-    (oa : AddWriterT ℕ m α) {a : ℕ → ENNReal}
-    (h : ∀ i : ℕ, Pr{let c ← oa.costs}[i < c] ≤ a i) :
-    expectedCostNat oa ≤ ∑' i : ℕ, a i :=
-  (expectedCostNat_eq_tsum_tail_probs oa).trans_le (tsum_le_tsum h)
-
-end tailBounds
-
-/-- Finite tail-sum formula for natural-valued writer cost under a pathwise upper bound.
-
-If every execution path of `oa` incurs cost at most `n`, then the tail probabilities vanish above
-`n`, so the infinite tail sum truncates to `Finset.range n`. -/
-lemma expectedCostNat_eq_sum_tail_probs_of_pathwiseCostAtMost
-    [MonadAttach m] [ExactMonadAttach m]
-    [LawfulMonad m] [LawfulEvalDistSemantics m]
-    {oa : AddWriterT ℕ m α} {n : ℕ}
-    (h : PathwiseCostAtMost oa n) :
-    expectedCostNat oa = ∑ i ∈ Finset.range n, Pr{let c ← oa.costs}[i < c] := by
-  rw [expectedCostNat_eq_tsum_tail_probs]
-  symm
-  rw [tsum_eq_sum (s := Finset.range n) (fun b hb ↦ ?_)]
-  have hnb : n ≤ b := Nat.le_of_not_lt (by simpa [Finset.mem_range] using hb)
-  rw [prEvent_eq_evalDist_of_discrete]
-  apply evalDist.apply_eq_zero_of_disjoint_support _ MeasurableSet.of_discrete
-  intro c hc
-  rw [AddWriterT.costs_def, support_map] at hc
-  rcases hc with ⟨z, hz, rfl⟩
-  exact not_lt_of_ge (le_trans (h z hz) hnb)
 
 /-- A measurable valuation bounded on reachable costs bounds its expectation. -/
 lemma expectedCost_le_of_support_bound
@@ -575,7 +506,7 @@ end expectedCost
 
 section weightedPathwiseBounds
 
-variable [MonadAttach m] {ω : Type} [AddCommMonoid ω] [Preorder ω]
+variable [MonadAttach m] {ω : Type u} [AddCommMonoid ω] [Preorder ω]
 
 @[gcongr]
 lemma pathwiseCostAtMost_mono {oa : AddWriterT ω m α} {w₁ w₂ : ω}
@@ -655,25 +586,6 @@ lemma pathwiseHasCost_liftM_of_supportNonempty [LawfulMonad m] (x : m α)
   refine ⟨(a, 1), ?_⟩
   rw [WriterT.liftM_def, WriterT.run_mk, support_map]
   exact ⟨a, ha, rfl⟩
-
-lemma pathwiseCostAtMost_probCompLift [LawfulMonad m] [MonadLiftT ProbComp m] (x : ProbComp α) :
-    PathwiseCostAtMost (monadLift x : AddWriterT ω m α) 0 :=
-  pathwiseCostAtMost_monadLift (m := m) (x := (liftM x : m α))
-
-lemma pathwiseCostAtLeast_probCompLift [LawfulMonad m] [MonadLiftT ProbComp m] (x : ProbComp α) :
-    PathwiseCostAtLeast (monadLift x : AddWriterT ω m α) 0 :=
-  pathwiseCostAtLeast_monadLift (m := m) (x := (liftM x : m α))
-
-lemma pathwiseCostEqOnSupport_probCompLift [LawfulMonad m] [MonadLiftT ProbComp m]
-    (x : ProbComp α) :
-    PathwiseCostEqOnSupport (monadLift x : AddWriterT ω m α) 0 :=
-  ⟨pathwiseCostAtMost_probCompLift (m := m) (ω := ω) x,
-    pathwiseCostAtLeast_probCompLift (m := m) (ω := ω) x⟩
-
-lemma pathwiseHasCost_probCompLift_of_supportNonempty [LawfulMonad m] [MonadLiftT ProbComp m]
-    (x : ProbComp α) (hx : (support (liftM x : m α)).Nonempty) :
-    PathwiseHasCost (monadLift x : AddWriterT ω m α) 0 :=
-  pathwiseHasCost_monadLift_of_supportNonempty (m := m) (ω := ω) (x := (liftM x : m α)) hx
 
 lemma pathwiseCostAtMost_addTell [LawfulMonad m] (w : ω) :
     PathwiseCostAtMost (AddWriterT.addTell (M := m) w) w := by
@@ -844,6 +756,140 @@ lemma pathwiseHasCost_fin_mOfFn [LawfulMonad m] [IsOrderedAddMonoid ω] {n : ℕ
 
 end weightedPathwiseBounds
 
+end general
+
+/-! ## Costs in `Type`
+
+Natural-valued costs, unit charges and `ProbComp` lifts live in `Type`. So do probability events:
+`Pr{…}[…]` is PolyFun's `prEvent`, which evaluates a computation of `Prop`, so its base monad takes
+inputs in `Type`. -/
+
+section typeZero
+
+variable {m : Type → Type*} {α β : Type}
+
+section costEvents
+
+variable [Monad m] [EvalDistSemantics m] {ω : Type}
+
+/-- An event depending only on cost can observe either the cost marginal or the joint run.
+No measurable space on the discarded outputs is required. -/
+lemma prEvent_costs [LawfulMonad m] (oa : AddWriterT ω m α) (p : ω → Prop) :
+    Pr{let c ← oa.costs}[p c] = Pr{let z ← oa.run}[p (Multiplicative.toAdd z.2)] := by
+  simp only [costs_def, prEvent_map]
+
+variable [MeasurableSpace ω]
+
+/-- Markov's inequality for the cost marginal, without a measurable space on discarded outputs. -/
+lemma prEvent_cost_gt_mul_le_expectedCost [LawfulMonad m] [LawfulEvalDistSemantics m]
+    (oa : AddWriterT ω m α) {val : ω → ENNReal} (hval : Measurable val) (t : ENNReal) :
+    Pr{let c ← oa.costs}[t < val c] * t ≤ expectedCost oa val := by
+  rw [prEvent_eq_evalDist _ _
+    (measurableSet_setOfPred.mp (measurableSet_lt measurable_const hval))]
+  calc
+    𝒟[oa.costs] {c | t < val c} * t = t * 𝒟[oa.costs] {c | t < val c} := mul_comm _ _
+    _ ≤ t * 𝒟[oa.costs] {c | t ≤ val c} := by
+      gcongr
+      exact fun hc ↦ hc.le
+    _ ≤ expectedCost oa val := MeasureTheory.mul_meas_ge_le_lintegral hval t
+
+/-- Markov's inequality for valued cost, in division form. -/
+lemma prEvent_cost_gt_le_expectedCost_div [LawfulMonad m] [LawfulEvalDistSemantics m]
+    (oa : AddWriterT ω m α) {val : ω → ENNReal} (hval : Measurable val)
+    {t : ENNReal} (ht : 0 < t) (ht' : t ≠ ⊤) :
+    Pr{let c ← oa.costs}[t < val c] ≤ expectedCost oa val / t :=
+  (ENNReal.le_div_iff_mul_le (.inl ht.ne') (.inl ht')).mpr
+    (prEvent_cost_gt_mul_le_expectedCost oa hval t)
+
+end costEvents
+
+section expectedCostNat
+
+variable [Monad m] [EvalDistSemantics m]
+
+/-- Convenience specialization of [`AddWriterT.expectedCost`] to natural-valued additive costs. -/
+noncomputable abbrev expectedCostNat
+    (oa : AddWriterT ℕ m α) : ENNReal :=
+  expectedCost oa (fun n ↦ ↑n)
+
+section tailBounds
+
+/-- Tail-sum formula for the natural-valued expected cost of an `AddWriterT` computation:
+
+`E[cost] = ∑ i, Pr[i < cost]`.
+
+This specializes `MeasureTheory.lintegral_coe_nat_eq_tsum` to the writer-cost marginal. -/
+lemma expectedCostNat_eq_tsum_tail_probs
+    [LawfulMonad m] [LawfulEvalDistSemantics m]
+    (oa : AddWriterT ℕ m α) :
+    expectedCostNat oa = ∑' i : ℕ, Pr{let c ← oa.costs}[i < c] := by
+  unfold expectedCostNat expectedCost
+  refine (MeasureTheory.lintegral_coe_nat_eq_tsum
+    (f := fun n : ℕ ↦ n) measurable_id 𝒟[oa.costs]).trans ?_
+  refine tsum_congr fun i ↦ ?_
+  exact (prEvent_eq_evalDist_of_discrete oa.costs (fun c ↦ i < c)).symm
+
+/-- Tail domination bounds the expected natural-valued writer cost.
+
+If the tail probability `Pr[i < cost]` is bounded by `a i` for every `i`, then
+`E[cost] ≤ ∑ i, a i`. -/
+lemma expectedCostNat_le_tsum_of_tail_probs_le
+    [LawfulMonad m] [LawfulEvalDistSemantics m]
+    (oa : AddWriterT ℕ m α) {a : ℕ → ENNReal}
+    (h : ∀ i : ℕ, Pr{let c ← oa.costs}[i < c] ≤ a i) :
+    expectedCostNat oa ≤ ∑' i : ℕ, a i :=
+  (expectedCostNat_eq_tsum_tail_probs oa).trans_le (tsum_le_tsum h)
+
+end tailBounds
+
+/-- Finite tail-sum formula for natural-valued writer cost under a pathwise upper bound.
+
+If every execution path of `oa` incurs cost at most `n`, then the tail probabilities vanish above
+`n`, so the infinite tail sum truncates to `Finset.range n`. -/
+lemma expectedCostNat_eq_sum_tail_probs_of_pathwiseCostAtMost
+    [MonadAttach m] [ExactMonadAttach m]
+    [LawfulMonad m] [LawfulEvalDistSemantics m]
+    {oa : AddWriterT ℕ m α} {n : ℕ}
+    (h : PathwiseCostAtMost oa n) :
+    expectedCostNat oa = ∑ i ∈ Finset.range n, Pr{let c ← oa.costs}[i < c] := by
+  rw [expectedCostNat_eq_tsum_tail_probs]
+  symm
+  rw [tsum_eq_sum (s := Finset.range n) (fun b hb ↦ ?_)]
+  have hnb : n ≤ b := Nat.le_of_not_lt (by simpa [Finset.mem_range] using hb)
+  rw [prEvent_eq_evalDist_of_discrete]
+  apply evalDist.apply_eq_zero_of_disjoint_support _ MeasurableSet.of_discrete
+  intro c hc
+  rw [AddWriterT.costs_def, support_map] at hc
+  rcases hc with ⟨z, hz, rfl⟩
+  exact not_lt_of_ge (le_trans (h z hz) hnb)
+
+end expectedCostNat
+
+section probCompLift
+
+variable [Monad m] [MonadAttach m] [ExactMonadAttach m] {ω : Type} [AddCommMonoid ω] [Preorder ω]
+
+lemma pathwiseCostAtMost_probCompLift [LawfulMonad m] [MonadLiftT ProbComp m] (x : ProbComp α) :
+    PathwiseCostAtMost (monadLift x : AddWriterT ω m α) 0 :=
+  pathwiseCostAtMost_monadLift (m := m) (x := (liftM x : m α))
+
+lemma pathwiseCostAtLeast_probCompLift [LawfulMonad m] [MonadLiftT ProbComp m] (x : ProbComp α) :
+    PathwiseCostAtLeast (monadLift x : AddWriterT ω m α) 0 :=
+  pathwiseCostAtLeast_monadLift (m := m) (x := (liftM x : m α))
+
+lemma pathwiseCostEqOnSupport_probCompLift [LawfulMonad m] [MonadLiftT ProbComp m]
+    (x : ProbComp α) :
+    PathwiseCostEqOnSupport (monadLift x : AddWriterT ω m α) 0 :=
+  ⟨pathwiseCostAtMost_probCompLift (m := m) (ω := ω) x,
+    pathwiseCostAtLeast_probCompLift (m := m) (ω := ω) x⟩
+
+lemma pathwiseHasCost_probCompLift_of_supportNonempty [LawfulMonad m] [MonadLiftT ProbComp m]
+    (x : ProbComp α) (hx : (support (liftM x : m α)).Nonempty) :
+    PathwiseHasCost (monadLift x : AddWriterT ω m α) 0 :=
+  pathwiseHasCost_monadLift_of_supportNonempty (m := m) (ω := ω) (x := (liftM x : m α)) hx
+
+end probCompLift
+
 section unitCostBounds
 
 variable [MonadAttach m]
@@ -995,5 +1041,7 @@ lemma expectedCostNat_eq_of_queryCostExactly
     (le_expectedCostNat_of_queryBoundedBelowBy h.toBelow)
 
 end expectedUnitCost
+
+end typeZero
 
 end AddWriterT

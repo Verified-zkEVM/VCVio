@@ -36,6 +36,15 @@ open scoped ENNReal
 
 namespace BudgetedPotentialTest
 
+/-- Generalized rewriting carries an inclusion of charge predicates through an additive bound. -/
+example {ι σ α : Type} {spec : OracleSpec ι} {m : Type → Type} [Monad m] [LawfulMonad m]
+    [EvalDistSemantics m] [LawfulEvalDistSemantics m] (so : QueryImpl spec (StateT σ m))
+    {p q : spec.Domain → Prop} [DecidablePred p] [DecidablePred q] (hpq : ∀ t, p t → q t)
+    (oa : OracleComp spec α) (s : σ) (c : ENNReal) :
+    c + expectedSimulatedQueryCount so p oa s ≤ c + expectedSimulatedQueryCount so q oa s := by
+  apply_rw [hpq]
+
+
 /-! ## A lottery -/
 
 /-- A coin oracle: each query draws a uniform `Bool`, returns it, and sets the flag if it is

@@ -293,6 +293,14 @@ partial def decodeExpr (value : Json) : Except String Expr := do
     return .proj (← decodeName fields[1]!) (← fields[2]!.getNat?) (← decodeExpr fields[3]!)
   | _ => throw "unknown or non-closed expression node"
 
+/-- Read recorded references to `ProbComp` at result universe zero. The literal bundles record it as
+a constant of type `Type → Type`, with no universe argument. Every other constant keeps its recorded
+levels. -/
+def recoverProbComp (type : Expr) : Expr :=
+  type.replace fun
+    | .const `ProbComp [] => some (.const `ProbComp [.zero])
+    | _ => none
+
 /-- Read one immutable contract from the literal type bundle. -/
 def readContract (path source : String) : CommandElabM (Json × Expr) := do
   let raw ← IO.FS.readFile path
@@ -305,7 +313,7 @@ def readContract (path source : String) : CommandElabM (Json × Expr) := do
   let entry := foundEntries[0]!
   let index ← ofExcept (entry.getObjValAs? Nat "typeRoot")
   let some encoded := expanded[index]? | throwError "Contract root is outside the DAG"
-  let type ← ofExcept (decodeExpr encoded)
+  let type := recoverProbComp (← ofExcept (decodeExpr encoded))
   if type.hasLooseBVars || type.hasFVar || type.hasMVar || type.hasLevelMVar then
     throwError "The expected contract is not closed"
   return (entry, type)

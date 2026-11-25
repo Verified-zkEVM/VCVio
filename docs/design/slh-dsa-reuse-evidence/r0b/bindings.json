@@ -67,7 +67,7 @@
     ]
   },
   "r0aProtectedFiles": {
-    "HashSigTest/SLHDSA/Refactor/Capture.lean": "434cc67898dc2dd43bceddf1e8285554c8f5b46fdcfea078cf67773f9bc4f0af",
+    "HashSigTest/SLHDSA/Refactor/Capture.lean": "d6aff600c7cfb621af71e6b9f080c7eda78c4d79d46c8ef2ac77739523e6d3d8",
     "HashSigTest/SLHDSA/Refactor/Strength/General.lean": "5297555e6bede156d7519c391a8f74049d27ec09b16328bb9a032dff0efbc826",
     "HashSigTest/SLHDSA/Refactor/Strength/JointWork.lean": "5609dad121144c958afb64668105b23fa392a00c90612650840cc400efa60390",
     "HashSigTest/SLHDSA/Refactor/Strength/ParameterWire.lean": "8ee4ebd25679327ad32f93880c9dfbe5e48a46a38b0aeaee8011f7011fe4d3d8",
@@ -83,6 +83,7 @@
     "scripts/tests/test_slh_dsa_r0.py": "b3b8c0bd3422a37a94d04e2ce0717d03f324954dbdcf3bb634ad6703f5870fee"
   },
   "historicalR0aWitnessSources": {
+    "HashSigTest/SLHDSA/Refactor/Capture.lean": "434cc67898dc2dd43bceddf1e8285554c8f5b46fdcfea078cf67773f9bc4f0af",
     "HashSigTest/SLHDSA/Refactor/Strength/ProviderWork.lean": "a063d5b563632cead5054bf000df60b7b638901294a291cae90f47bd0affada9"
   },
   "semanticSourceSha256": {

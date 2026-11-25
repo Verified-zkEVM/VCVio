@@ -10,6 +10,7 @@ public import VCVio.OracleComp.QueryTracking.Tracing.Core
 public import VCVio.OracleComp.SimSemantics.Append.Core
 public import PolyFun.PFunctor.Free.Path.Execution
 public import ToMathlib.Control.WriterT
+public import VCVio.OracleComp.SimSemantics.Subst
 
 /-!
 # Logged query execution
@@ -28,7 +29,7 @@ whose predicate is the counter's growth.
 
 public section
 
-universe u v w
+universe u v w u' v'
 
 open OracleSpec OracleComp
 
@@ -714,8 +715,11 @@ theorem withQueryLog_simulateQ {ι κ : Type} {source : OracleSpec ι}
   unfold OracleComp.withQueryLog OracleSpec.loggingOracle
   rw [QueryImpl.simulateQ_compose]
 
-/-- Erase an intrinsic execution path to its output and query log. -/
-@[expose, reducible] def pathLogResult {i : Type} {oSpec : OracleSpec.{0, 0} i} {β : Type}
+/-- Erase an intrinsic execution path to its output and query log. The query index, the answers
+and the output may lie in any universes. `PFunctor.FreeM.map (pathLogResult mx)
+(PFunctor.FreeM.withPath mx)` therefore logs a program whose log is larger than its answers. It
+is `withQueryLog mx` when the two coincide (`map_pathLogResult_withPath`). -/
+@[expose, reducible] def pathLogResult {i : Type u} {oSpec : OracleSpec.{u, v} i} {β : Type w}
     (mx : OracleComp oSpec β) (path : PFunctor.FreeM.Path mx) :
     β × QueryLog oSpec :=
   (PFunctor.FreeM.output mx path, (PFunctor.FreeM.Path.trace mx path).toList)
@@ -799,6 +803,32 @@ lemma withQueryLog_query
     (liftM (OracleSpec.query t) : OracleComp spec _).withQueryLog =
       liftM (OracleSpec.query t) >>= fun u => pure (u, [⟨t, u⟩]) := by
   simp [withQueryLog]
+
+/-- Substituting into the logged path run and then forgetting the log is substituting into the
+program. The query index, the answers and the output may lie in any universes. -/
+theorem map_fst_subst_map_pathLogResult_withPath {i : Type u} {oSpec : OracleSpec.{u, v} i}
+    {κ : Type u'} {target : OracleSpec.{u', v'} κ} {β : Type w}
+    (impl : QueryImpl oSpec (OracleComp target)) (mx : OracleComp oSpec β) :
+    PFunctor.FreeM.map Prod.fst
+        (subst impl (PFunctor.FreeM.map (pathLogResult mx) (PFunctor.FreeM.withPath mx))) =
+      subst impl mx := by
+  rw [← subst_freeM_map, ← PFunctor.FreeM.comp_map]
+  exact congrArg (subst impl) (PFunctor.FreeM.map_output_withPath mx)
+
+/-- When the log lies in the answer universe, substituting into the logged path run is running
+the logging handler. -/
+theorem subst_map_pathLogResult_withPath {i : Type} {oSpec : OracleSpec.{0, 0} i}
+    {κ : Type u'} {target : OracleSpec.{u', 0} κ} {β : Type}
+    (impl : QueryImpl oSpec (OracleComp target)) (mx : OracleComp oSpec β) :
+    subst impl (PFunctor.FreeM.map (pathLogResult mx) (PFunctor.FreeM.withPath mx)) =
+      (simulateQ impl.withLogging mx).run := by
+  rw [subst_eq_simulateQ, map_pathLogResult_withPath]
+  induction mx using OracleComp.inductionOn with
+  | pure x => rfl
+  | query_bind t k ih =>
+    rw [withQueryLog_bind, withQueryLog_query]
+    simp [ih]
+    rfl
 
 /-- **Self-log fixed point.** The two log layers produced by
 `oa.withQueryLog.withQueryLog` agree on every support point: simulating the

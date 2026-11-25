@@ -50,5 +50,11 @@ compatibility, arbitrary compiler behavior, a shared counted-game equivalence, o
 Those later gates require the stated mathematical observer and theorem-recovery proofs. No
 legacy body delegates to a new construction on the strength of this regression baseline.
 
+`ProbComp` takes its result type in any universe, while the literal bundles record it as a constant
+of type `Type → Type`. `recoverProbComp` in `Capture.lean` reads those references at universe zero
+after the unchanged decoder runs, and keeps the recorded levels of every other constant.
+`kernel-types.json` and `goal-contracts.json` are unchanged, and `historicalR0aWitnessSources` keeps
+the digest of `Capture.lean` without this pass.
+
 The R6c source map records the historical table digest. The current runtime bindings pin the
 checksum-aware evaluator table and its independent exact-rational checker.

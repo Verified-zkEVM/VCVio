@@ -282,6 +282,7 @@ public import HashSig.SLHDSA.Security.GraphProgramming
 public import HashSig.SLHDSA.Security.HedgedKeyBound
 public import HashSig.SLHDSA.Security.HiddenCells
 public import HashSig.SLHDSA.Security.HiddenUndrawn
+public import HashSig.SLHDSA.Security.HintCache
 public import HashSig.SLHDSA.Security.HmsgWitnesses
 public import HashSig.SLHDSA.Security.HonestTransfer
 public import HashSig.SLHDSA.Security.HypertreeWitnesses

@@ -203,7 +203,8 @@ theorem Bounds.toIsTotalQueryBound {α : Type}
     IsTotalQueryBound program upper := by
   unfold Bounds at h
   apply WorstCaseCostBound.toIsTotalQueryBound_unit
-  exact (h (OracleComp HashSpec) (QueryImpl.ofLift HashSpec (OracleComp HashSpec))).2
+  exact (worstCaseCostBound_iff_pathwiseCostAtMost program CostModel.unit upper).2
+    (h (OracleComp HashSpec) (QueryImpl.ofLift HashSpec (OracleComp HashSpec))).2
 
 /-- An exact query count lies within any enclosing bounds. -/
 theorem Bounds.of_exact {computation : OracleComp HashSpec α} {count lower upper : Nat}

@@ -158,6 +158,7 @@ theorem mul_expectedSimulatedQueryCount_le_of_isQueryBoundP {oa : OracleComp spe
   exact expectedSimulatedQueryCount_le_of_isQueryBoundP so charged oa s q hq
 
 /-- The expected charged-query count is monotone in the charged predicate. -/
+@[gcongr]
 theorem expectedSimulatedQueryCount_mono {left right : spec.Domain → Prop} [DecidablePred left]
     [DecidablePred right] (hsub : ∀ t, left t → right t) (oa : OracleComp spec α) (s : σ) :
     expectedSimulatedQueryCount so left oa s ≤ expectedSimulatedQueryCount so right oa s := by

@@ -73,15 +73,15 @@ section trace
 variable {ι : Type 1} {spec : OracleSpec.{1, 1} ι} {m : Type 1 → Type 2} [Monad m]
 variable {ω : Type 1} [Monoid ω] (impl : QueryImpl spec m) (cost : spec.Domain → ω)
 
-/-- Old explicit trace parameters mean result/input level1 and monad output level2. -/
-private def before : QueryImpl spec (WriterT ω m) := QueryImpl.withTraceBefore.{1, 2} impl cost
+/-- Explicit trace levels are the query index, the result and input level, and the monad output. -/
+private def before : QueryImpl spec (WriterT ω m) := QueryImpl.withTraceBefore.{1, 1, 2} impl cost
 
-/-- The response-dependent trace preserves the same existing universe positions. -/
+/-- The response-dependent trace takes the same explicit universe positions. -/
 private def after (observe : (input : spec.Domain) → spec.Range input → ω) :
-    QueryImpl spec (WriterT ω m) := QueryImpl.withTrace.{1, 2} impl observe
+    QueryImpl spec (WriterT ω m) := QueryImpl.withTrace.{1, 1, 2} impl observe
 
-/-- Old explicit cost applications keep their original diagonal index interpretation. -/
-private def costed : QueryImpl spec (WriterT ω m) := QueryImpl.withCost.{1, 2} impl cost
+/-- Explicit cost applications at the diagonal index level. -/
+private def costed : QueryImpl spec (WriterT ω m) := QueryImpl.withCost.{1, 1, 2} impl cost
 
 end trace
 
@@ -90,20 +90,20 @@ section append
 variable {ι : Type 1} {spec : OracleSpec.{1, 1} ι} {m : Type 1 → Type 2} [Monad m]
 variable {ω : Type 1} [EmptyCollection ω] [Append ω] (impl : QueryImpl spec m)
 
-/-- Append-before tracing retains old explicit universe positions. -/
+/-- Append-before tracing takes the same explicit universe positions. -/
 private def appendBefore (cost : spec.Domain → ω) : QueryImpl spec (WriterT ω m) :=
-  QueryImpl.withTraceAppendBefore.{1, 2} impl cost
+  QueryImpl.withTraceAppendBefore.{1, 1, 2} impl cost
 
-/-- Append-after tracing retains old explicit universe positions. -/
+/-- Append-after tracing takes the same explicit universe positions. -/
 private def appendAfter (cost : (input : spec.Domain) → spec.Range input → ω) :
-    QueryImpl spec (WriterT ω m) := QueryImpl.withTraceAppend.{1, 2} impl cost
+    QueryImpl spec (WriterT ω m) := QueryImpl.withTraceAppend.{1, 1, 2} impl cost
 
 end append
 
-/-- The old additive wrapper's sole explicit universe controls the monad output. -/
+/-- The additive wrapper's explicit universes are the index, the responses and the monad output. -/
 private def additive {ι : Type} {spec : OracleSpec.{0, 0} ι} {m : Type → Type 2} [Monad m]
     {C : Type} [AddMonoid C] (impl : QueryImpl spec m) (cost : spec.Domain → C) :
-    QueryImpl spec (AddWriterT C m) := QueryImpl.withAddCost.{2} impl cost
+    QueryImpl spec (AddWriterT C m) := QueryImpl.withAddCost.{0, 0, 2} impl cost
 
 /-- Old explicit event range universes remain independent of its zero index. -/
 private def ambient {ι : Type} {spec : OracleSpec.{0, 1} ι} {Request : Type}

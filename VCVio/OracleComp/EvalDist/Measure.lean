@@ -225,6 +225,33 @@ theorem evalDist_bind_apply_le_add_of_support
           hfg a (MonadAttach.mem_support_bind.mpr ⟨x, by simp, ha⟩)
       _ = _ := lintegral_add_left Measurable.of_discrete _
 
+/-- **Up to a bad event, for a test followed by a check.** After a common computation `mx`, if the
+test `win a` implies the test `win' a` at every reachable `a` where `bad a` is false, then the
+probability that `win a` holds and the check `check a` succeeds is at most the same probability for
+`win'` plus the probability of `bad`. -/
+theorem evalDist_bind_and_le_add_of_not_bad
+    {ι : Type u} {α : Type} {spec : OracleSpec.{u, 0} ι} [OracleSpec.AnswerMeasure spec]
+    (mx : OracleComp spec α) (check : α → OracleComp spec Bool) (bad win win' : α → Bool)
+    (hwin : ∀ a ∈ support mx, bad a = false → win a = true → win' a = true) :
+    𝒟[mx >>= fun a => do
+        let v ← check a
+        return (win a && v)] {true} ≤
+      𝒟[mx >>= fun a => do
+          let v ← check a
+          return (win' a && v)] {true} +
+        𝒟[mx >>= fun a => pure (bad a)] {true} := by
+  refine evalDist_bind_apply_le_add_of_support _ _ _ _ (measurableSet_singleton true)
+    fun a ha => ?_
+  cases hc : bad a
+  · rw [evalDist_pure, show Measure.dirac false {true} = 0 by simp, add_zero]
+    refine evalDist_bind_apply_mono_of_support _ _ _ (measurableSet_singleton true)
+      fun v _ => ?_
+    cases hw : win a
+    · cases v <;> cases win' a <;> simp
+    · simp [hwin a ha hc hw]
+  · rw [evalDist_pure, Measure.dirac_apply_of_mem (Set.mem_singleton _)]
+    exact prob_le_one.trans le_add_self
+
 /-- A uniform lower bound on reachable continuation events bounds their composed event.
 The common computation need not carry a measurable-space instance on its output type. -/
 theorem le_evalDist_bind_apply_of_support

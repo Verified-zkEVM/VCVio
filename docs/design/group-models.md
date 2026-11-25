@@ -309,7 +309,9 @@ before the adversary runs.
 
 **Derived normal forms, not presentations.** Fixed-slot coefficient outputs, such as the signature
 repository's `(β, γ, ξ)` over (generator, hash replies, signing replies), are a regrouping of (E)'s
-basis list. They arrive with the BLS port.
+basis list. The BLS proof against algebraic adversaries does not use them: it reads the
+coefficients directly as a linear functional of the chronological replies
+(`GroupModel.LinearFunctional.traceFunctional`).
 
 ### 4.5 Knobs
 
@@ -599,10 +601,12 @@ top of the group oracle. Then:
   *cost certificate* bounds the handler's group operations by `c_t` for each of `A`'s queries of
   kind `t` (group operations, equality tests, and each scheme oracle, separately) and by `c₀`
   for setup and the final step. Then `reduction A` makes at most `c₀ + Σ_t c_t · q_t` group
-  operations, where `q_t` bounds `A`'s queries of kind `t`. This is a weighted form of
-  `IsQueryBoundP.simulateQ_run_of_step`
-  (`VCVio/OracleComp/QueryTracking/QueryBound/Simulation.lean`), which has per-step bounds as
-  hypotheses in the same way. T4 then gives the unconditional bound
+  operations, where `q_t` bounds `A`'s queries of kind `t`. This counting half is
+  `GroupModel.CostCertificate.transfer_per_kind` (`GroupModel/Certificate.lean`). It goes through
+  `OracleComp.isChargeBound_run_simulateQ` (`VCVio/OracleComp/QueryTracking/QueryBound/Weighted.lean`),
+  a weighted form of `IsQueryBoundP.simulateQ_run_of_step` with per-step bounds as hypotheses in
+  the same way, and `costCertificate_virtualizeImpl` certifies virtualization at one for each group
+  operation and zero for equality tests and coins. T4 then gives the unconditional bound
   `adv(A) ≤ bound_P(c₀ + Σ_t c_t · q_t) + ε`. A bound in `A`'s group operations alone needs
   `c_t = 0` for every other kind. Equality tests are free for `A`, so a handler that spends a
   group operation on each of them has no bound of that form.
@@ -1103,7 +1107,8 @@ each collision term counts the pairs among `m` entries and zero, `((m + 1) choos
 
 **Milestones and placement.** The model lives under `VCVio/CryptoFoundations/GroupModel/`;
 problem statements belong under `VCVio/CryptoFoundations/HardnessAssumptions/`. Named schemes
-belong under `VCVio/Schemes/BLS/` and `VCVio/Schemes/LinearFunctional/`, following
+belong under `VCVio/Schemes/BLS/`, and the shared linear-functional proof layer under
+`VCVio/CryptoFoundations/GroupModel/LinearFunctional/`, following
 [the repository ownership map](repository-layout.md). `Examples/` is for instructional consumers.
 Names follow [the cryptographic naming rules](../agents/crypto.md#naming): experiments are
 programs, advantages evaluate them, and reduction inequalities name their reductions.
@@ -1194,7 +1199,8 @@ named reduction and composes as it is.
 |---|---|---|---|
 | presentations agree (T1) | exact translations among the four presentations of Section 4.4 | agm-lean `Adversary.run_valid`; ArkLib `GroupRepresentation` | Fuchsbauer, Kiltz, Loss |
 | discrete-log relation | finding a nontrivial relation among `n` random elements is at most DLog plus `1/\|F\|` (`DiscreteLogRelation.experiment_le`, for a nonzero generator); against a generic adversary with `q` group operations, at most `((q + n + 1).choose 2 + 1)/\|F\|` (`DiscreteLogRelation.plainExperiment_ofGeneric_le`) | T3; ironwood proves the reduction on other foundations | Jaeger, Tessaro, Lemma 3 |
-| linear-functional signatures, BLS | `advantage ≤ adv(goodReduction A) + adv(badReduction A) + 1/\|F\|` against `(1,1)`-DLog | proved in `signature-security-lean` at VCVio `f5119c64e` |  |
+| linear-functional signatures, BLS | `advantage ≤ adv(goodReduction A) + adv(badReduction A) + 1/\|F\|` against `(1,1)`-DLog | for BLS, `BLS.unforgeableAdvantage_le_of_algebraic`, with `DLog11.experiment` the `(1,1)` instance of `PairingDLog.experiment`; for the other linear-functional signatures, proved in `signature-security-lean` at VCVio `f5119c64e` | Fuchsbauer, Kiltz, Loss; Bauer, Fuchsbauer, Loss |
+| Schnorr, tight | `advantage ≤ adv(agmReduction g A) + (q_H + 1)/\|F\| + q_S(q_S + q_H)/\|F\|` against DLog, for every algebraic adversary | `Schnorr.unforgeableAdvantage_le_of_algebraic`, on the existing Schnorr signature and EUF-CMA game, through the existing Fiat–Shamir signing simulation | Fuchsbauer, Plouviez, Seurin |
 | BLS, unconditional | a bound in `q`, `q_H`, `q_S` and `\|F\|` only | the row above, T5, and generic `(1,1)`-DLog. The last is `PairingDLog.experiment_ofGeneric_le` at `q₁ = q₂ = 1` (Section 8.3); T5 remains | Jaeger, Mohan |
 | inner-product and Bulletproofs-style arguments | binding of the vector commitment against an algebraic prover | the discrete-log relation row | Jaeger, Tessaro |
 
@@ -1218,7 +1224,7 @@ are equal, free equality tests find them, and their difference is a relation.
 | KZG evaluation binding and function binding, unconditional | for a generic adversary, at most the generic `t`-SDH and ARSDH bounds at a counted number of operations | ArkLib `KZG.CommitmentScheme.binding` with `bindingReduction`, `KZG.CommitmentScheme.function_binding` with `reduction` |  |
 | KZG extraction | a named straight-line extractor; `Pr[accept ∧ p(z) ≠ v] ≤` the `t`-SDH advantage of a named reduction | ArkLib `Commitment.extractability`, today a placeholder, once its game says what the extractor receives (below) | Marlin, Theorem B.12 |
 | uber family from `q`-DLog, algebraic adversaries | a reduction that factors `W` |  | Bauer, Fuchsbauer, Loss; Rotem |
-| BLS and aggregate BLS under co-CDH | Type 3, and Type 2 with `ψ` | milestone 4 | Boneh, Gentry, Lynn, Shacham |
+| BLS and aggregate BLS under co-CDH | Type 3: EUF-CMA advantage at most `qH + qS + 1` times the co-CDH advantage of the named reduction (`BLS.unforgeableAdvantage_le`, `BLS.coCDHReduction`). Aggregate BLS, Type 2 with `ψ`: chosen-key advantage at most `max 1 (qH + qS + N)` times the Type 2 co-CDH advantage of the named reduction (`BLS.Aggregate.unforgeableAdvantage_le`, `BLS.Aggregate.coCDHReduction`), an index-guessing loss weaker than BGLS's `e · (qS + N)` | milestone 4 | Boneh, Lynn, Shacham; Boneh, Gentry, Lynn, Shacham |
 | Groth16 knowledge soundness | algebraic, from `q`-DLog; then generic by T5 | no Groth16 in ArkLib yet | Groth; Fuchsbauer, Kiltz, Loss |
 
 Two results need a change in ArkLib first.
@@ -1258,7 +1264,6 @@ the committed polynomial.
 | Result | Why it waits | Composes with |
 |---|---|---|
 | Schnorr EUF-CMA, unconditional in the labelled model | the scheme hashes a group element, so both scheme and adversary need labels | `Schnorr.signature_euf_cma` in `VCVio/Schemes/Schnorr/Signature.lean`, a forking bound against `dlogExperiment g (dlogReduction …)`; the composed bound has the square-root loss of forking |
-| Schnorr, tight, algebraic adversaries | a different proof, not a composition | Fuchsbauer, Plouviez, Seurin |
 | hashed ElGamal, the DDH term only | the scheme hashes a group element. The existing bound is one-time and reads `2 · (ddhAdvantage … + EntropySmoothing.advantage …)` for an arbitrary keyed function `hash : HK → G → M`. A group model bounds the first term. The second is an assumption on the hash family and stays one: with a constant `hash` the scheme sends the message in the clear | `hashedElGamal.hashedElGamal_IND_CPA_bound` in `Examples/ElGamal/Hash.lean` |
 | KZG extraction with oblivious sampling | the adversary can create elements with no representation | Lipmaa, Parisella, Siim; Belohorec, Hubáček, Stejskal |
 
@@ -1289,7 +1294,7 @@ the committed polynomial.
 | signature repo | `Signatures/Model/DirectAGM.lean` | the same certified `Interaction.Adversary` as agm-lean, not another presentation |
 | signature repo | `Signatures/Model/AlgebraicRepresentation.lean`: `Representation F Token`, `Transcript Token G` | token-indexed representations; fixed-slot coefficients are a derived grouping of the receipt basis |
 | signature repo | `Signatures/Model/LazyAGM.lean`, `Proofs/Model/DirectAGM.lean` | hash-to-group handlers with an element cache and a fresh given handle for each reply |
-| signature repo | `Proofs/LinearFunctional/`, `Proofs/BLS/`: `goodReduction`, `badReduction` and security proofs | handlers under `VCVio/Schemes/LinearFunctional/` and `VCVio/Schemes/BLS/`; generic corollaries by T5 |
+| signature repo | `Proofs/LinearFunctional/`, `Proofs/BLS/`: `goodReduction`, `badReduction` and security proofs | handlers under `VCVio/CryptoFoundations/GroupModel/LinearFunctional/` and `VCVio/Schemes/BLS/`; generic corollaries by T5 |
 | signature repo | `Signatures/Model/DLog11.lean`, `Signatures/Model/CoCDH.lean` | problems under `HardnessAssumptions/`; the co-CDH experiment is the Type 3 form |
 | signature repo | `Signatures/Model/BilinearGroup.lean`: `BilinearPairing` | a one-line adapter in that repository to the Mathlib bilinear map used by `pairingSig` |
 | ArkLib | KZG's pairing, `Groups.tSdhExperiment`, `Groups.arsdhExperiment` | the real pairing model through `Additive`; bounds by T8 |
@@ -1324,7 +1329,7 @@ against the paper before a theorem cites it).
 | Boneh, Boyen, *Short signatures without random oracles* (2004) | `t`-SDH and its generic bound (T8) | target | recalled; the assumption as restated in Marlin was read |
 | Boneh, Boyen, Goh, ePrint 2005/015; Boyen, *The uber-assumption family* (2008) | T7; the independence condition as equality of relation kernels | T6 proved; T7 proved at `discreteSig S` | recalled |
 | Galbraith, Paterson, Smart, ePrint 2006/165 | the three pairing signatures; hashing per sort | library target | abstract |
-| Boneh, Gentry, Lynn, Shacham, *Aggregate and verifiably encrypted signatures from bilinear maps* (2003) | `pairingIsoSig`; co-CDH | library target | read |
+| Boneh, Gentry, Lynn, Shacham, *Aggregate and verifiably encrypted signatures from bilinear maps* (2003) | `pairingIsoSig`; co-CDH; aggregate BLS | proved (`BLS.Aggregate.unforgeableAdvantage_le`) | read |
 | Jager, Rupp, *The semi-generic group model and applications to pairing-based cryptography* (2010) | a per-sort choice of knobs (Section 6.6) | target | abstract |
 | Groth, ePrint 2016/260 | knowledge soundness in the generic bilinear group model (Section 8.3) | not planned yet | abstract |
 | Chiesa, Hu, Maller, Mishra, Vesely, Ward, *Marlin*, ePrint 2019/1047, Appendices A.4 and B.3 | pairing as a query; KZG extraction from the adversary's representations | target | read |
@@ -1333,7 +1338,7 @@ against the paper before a theorem cites it).
 | Rotem, Segev, ePrint 2020/1144 | algebraic distinguishers for decisional problems | not planned | abstract |
 | Bauer, Farshim, Harasser, Kohlweiss, *The uber-knowledge assumption* (IACR CiC 1(3)) | knowledge assumptions that instantiate algebraic extraction | not planned | abstract |
 | Jaeger, Tessaro, ePrint 2020/1213, Lemma 3 | discrete-log relation ≤ DLog + `1/\|F\|` | proved as `DiscreteLogRelation.experiment_le`; its generic corollary `DiscreteLogRelation.plainExperiment_ofGeneric_le` gives `((q + n + 1).choose 2 + 1)/\|F\|`; ironwood proves the lemma on other foundations | recalled; ironwood's statement was read |
-| Fuchsbauer, Plouviez, Seurin, ePrint 2019/877 | Schnorr, tight, algebraic adversaries | not planned yet | recalled |
+| Fuchsbauer, Plouviez, Seurin, ePrint 2019/877 | Schnorr, tight, algebraic adversaries | proved (`Schnorr.unforgeableAdvantage_le_of_algebraic`), with the terms of the ported `signature-security-lean` theorem | recalled |
 | Bauer, Fuchsbauer, Plouviez, ePrint 2021/866 | one-more discrete log, beyond T3 (Section 8.5) | not planned | abstract |
 | Katz, Zhang, Zhou, ePrint 2022/210 | S2 | target | recalled |
 | Zhandry, ePrint 2022/226; Zhandry, Zhang, ePrint 2021/240 | S1, S3; the two encoding variants | target | abstract |
@@ -1438,7 +1443,7 @@ Schwartz–Zippel specialization for uniform points is
 `DecisionalPairing.lean` as `measureETVDist_runGen_pairing_sameKernel_le`, and generic XDH follows
 as `XDH.advantage_ofGeneric_le`.
 
-Everything else is a paper argument or theorem target: T5 and its cost certificate, T7 in its
+Everything else is a paper argument or theorem target: T5 beyond its cost certificate, T7 in its
 per-sort form at `discreteSig S` and at the Type 1 and Type 2 signatures, T8 for problems other than `(q₁, q₂)`-DLog, S1–S3,
 P1–P3, restriction along a map of signatures, the invariant at the target sort over `CoeffsT`,
 the free and tracking models for Types 1 and 2, the accessible spans, the polynomial-table

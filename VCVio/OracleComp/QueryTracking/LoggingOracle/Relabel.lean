@@ -7,16 +7,18 @@ Authors: Minhyuk Hwang
 module
 
 public import VCVio.OracleComp.QueryTracking.LoggingOracle.Core
-public import VCVio.OracleComp.SimSemantics.QueryImpl.Compose
+public import VCVio.OracleComp.MapLens
+public import VCVio.OracleComp.QueryTracking.RandomOracle.RoutingLens
 
 /-!
 # Relabelling logged queries
 
 A program over `spec + (M →ₒ T)` can be run against a logging handler for `D →ₒ T` by first
-translating each query `msg` into the query `f msg`. The resulting log records the translated
-inputs `f msg`; running the program directly against the logging handler for the composite
-`msg ↦ tagFn (f msg)` records the original inputs instead. The two runs agree up to relabelling
-every log entry by `f` (`QueryImpl.run_simulateQ_withLogging_translate`).
+transporting it (`OracleComp.mapLens`) along the lens `OracleComp.translateLens spec f`, which
+sends each query `msg` to the query `f msg` and leaves `spec` alone. The resulting log records the
+translated inputs `f msg`; running the program directly against the logging handler for the
+composite `msg ↦ tagFn (f msg)` records the original inputs instead. The two runs agree up to
+relabelling every log entry by `f` (`QueryImpl.run_simulateQ_withLogging_mapLens_translateLens`).
 
 This is the simulation step of domain-extension reductions such as hash-and-MAC and hash-and-sign,
 where the reduction hashes each chosen-message query before forwarding it. The other step is
@@ -145,29 +147,40 @@ theorem run_simulateQ_passthrough_add_liftM {κ : Type*} {spec' : OracleSpec.{_,
   | pure x => simp
   | query_bind t f ih => simp [ih, map_bind]
 
-variable {M D T : Type u}
+end QueryImpl
 
-/-- The handler that answers each `(M →ₒ T)` query `msg` by the `(D →ₒ T)` query `f msg`,
-passing the queries of `spec` through unchanged. -/
-@[expose] def translate (f : M → D) :
-    QueryImpl (spec + (M →ₒ T)) (OracleComp (spec + (D →ₒ T))) :=
-  HAdd.hAdd (α := QueryImpl.Passthrough spec)
-    (β := QueryImpl (M →ₒ T) (OracleComp (spec + (D →ₒ T)))) spec.passthrough
-    fun msg => ((spec + (D →ₒ T)).query (Sum.inr (f msg)) : OracleComp (spec + (D →ₒ T)) T)
+namespace OracleComp
 
-/-- Running a program whose `(M →ₒ T)` queries are translated by `f` against a logging handler
-for `tagFn` is the run against the logging handler for any `tagFn'` that answers `msg` as `tagFn`
-answers `f msg`, with its log relabelled by `f`. -/
-theorem run_simulateQ_withLogging_translate (tagFn : QueryImpl (D →ₒ T) (OracleComp spec))
-    (tagFn' : QueryImpl (M →ₒ T) (OracleComp spec)) (f : M → D)
+variable {ι : Type*} {M D T : Type u}
+
+/-- The lens that sends each `(M →ₒ T)` query `msg` to the `(D →ₒ T)` query `f msg` and leaves the
+queries of `spec` unchanged: the identity lens on `spec` beside `RandomOracleRouting.lens f`. -/
+@[expose] def translateLens (spec : OracleSpec.{_, u} ι) (f : M → D) :
+    PFunctor.Lens (spec + (M →ₒ T)).toPFunctor (spec + (D →ₒ T)).toPFunctor :=
+  PFunctor.Lens.sumMap (PFunctor.Lens.id spec.toPFunctor) (RandomOracleRouting.lens f)
+
+end OracleComp
+
+namespace QueryImpl
+
+variable {ι : Type*} {spec : OracleSpec.{_, u} ι} {α : Type u} {M D T : Type u}
+
+/-- Running a program transported along `translateLens spec f`, which sends each `(M →ₒ T)` query
+`msg` to the query `f msg`, against a logging handler for `tagFn` is the run against the logging
+handler for any `tagFn'` that answers `msg` as `tagFn` answers `f msg`, with its log relabelled by
+`f`. -/
+theorem run_simulateQ_withLogging_mapLens_translateLens
+    (tagFn : QueryImpl (D →ₒ T) (OracleComp spec)) (tagFn' : QueryImpl (M →ₒ T) (OracleComp spec))
+    (f : M → D)
     (htag : ∀ msg, tagFn' msg = tagFn (f msg)) (oa : OracleComp (spec + (M →ₒ T)) α) :
-    (simulateQ (spec.passthrough + tagFn.withLogging) (simulateQ (translate f) oa)).run =
+    (simulateQ (spec.passthrough + tagFn.withLogging)
+        (oa.mapLens (translateLens spec f))).run =
       Prod.map id (QueryLog.relabel f) <$>
         (simulateQ (spec.passthrough + tagFn'.withLogging) oa).run := by
-  rw [← simulateQ_compose]
+  rw [OracleComp.simulateQ_mapLens]
   refine run_simulateQ_map_log _ _ _ (fun t => ?_) oa
   rcases t with n | msg
-  · simp [translate, QueryImpl.simulateQ_add_liftM_left]
-  · simp [translate, htag]
+  · simp [QueryImpl.comapLens, translateLens, PFunctor.Lens.sumMap]
+  · simp [QueryImpl.comapLens, translateLens, PFunctor.Lens.sumMap, RandomOracleRouting.lens, htag]
 
 end QueryImpl

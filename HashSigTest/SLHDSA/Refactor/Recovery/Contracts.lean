@@ -303,7 +303,7 @@ def readGoals : CommandElabM (Array (Name × List Name × Expr)) := do
     let levels ← ofExcept (rawLevels.toList.mapM decodeName)
     if type.hasLooseBVars || type.hasFVar || type.hasMVar || type.hasLevelMVar then
       throwError "Recovery type is not closed"
-    goals := goals.push (contract.toName, levels, type)
+    goals := goals.push (contract.toName, levels, recoverProbComp type)
   return goals
 
 end SLHDSA.Refactor.Recovery.Contracts
