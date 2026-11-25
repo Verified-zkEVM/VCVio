@@ -11,10 +11,10 @@ public import VCVio.OracleComp.SimSemantics.SimulateQ
 # Substituting oracle programs for queries
 
 `OracleComp.subst impl oa` replaces every query `t` of `oa` with the target program `impl t`.
-Its result type may lie in any universe. `simulateQ impl` runs in a single monad
-`r : Type v → Type w` that also answers the queries, so its result type lies in the answer
-universe `v`. `OracleComp target` is a free monad, and its bind changes universes, so `subst`
-needs no such restriction. A program whose result holds data larger than its answers, such as a
+Its result type may lie in any universe. Because `simulateQ impl` runs in a single monad
+`r : Type v → Type w` that also answers the queries, its result type lies in the answer universe
+`v`. `subst` needs no such restriction: `OracleComp target` is a free monad, and its bind changes
+universes. A program whose result holds data larger than its answers, such as a
 query log over a large index type, runs through `subst`.
 
 When the result type lies in the answer universe, `subst` is `simulateQ`

@@ -664,9 +664,9 @@ theorem withQueryLog_simulateQ {ι κ : Type} {source : OracleSpec ι}
   rw [QueryImpl.simulateQ_compose]
 
 /-- Erase an intrinsic execution path to its output and query log. The query index, the answers
-and the output may lie in any universes, so `PFunctor.FreeM.map (pathLogResult mx)
-(PFunctor.FreeM.withPath mx)` logs a program whose log is larger than its answers; it is
-`withQueryLog mx` when the two coincide (`map_pathLogResult_withPath`). -/
+and the output may lie in any universes. `PFunctor.FreeM.map (pathLogResult mx)
+(PFunctor.FreeM.withPath mx)` therefore logs a program whose log is larger than its answers. It
+is `withQueryLog mx` when the two coincide (`map_pathLogResult_withPath`). -/
 @[expose, reducible] def pathLogResult {i : Type u} {oSpec : OracleSpec.{u, v} i} {β : Type w}
     (mx : OracleComp oSpec β) (path : PFunctor.FreeM.Path mx) :
     β × QueryLog oSpec :=

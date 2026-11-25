@@ -16,10 +16,10 @@ public import VCVio.OracleComp.QueryTracking.LoggingOracle.Core
 handler whose answers lie in a large universe runs into `ProbComp` at that universe.
 
 `simulateQ` returns results in the answer universe of the source specification, and
-`QueryImpl.withLogging` stores its log in that universe, so a log over a large query index cannot
-pass through a handler with small answers. `OracleComp.subst` returns results in any universe, and
-the path run `PFunctor.FreeM.map (pathLogResult oa) (PFunctor.FreeM.withPath oa)` records the
-log in the universe of the index.
+`QueryImpl.withLogging` stores its log in that universe. A log over a large query index therefore
+cannot pass through a handler with small answers. `OracleComp.subst` returns results in any
+universe, and the path run `PFunctor.FreeM.map (pathLogResult oa) (PFunctor.FreeM.withPath oa)`
+records the log in the universe of the index.
 -/
 
 open OracleComp OracleSpec MeasureTheory
@@ -62,7 +62,7 @@ example {ι : Type u} (spec : OracleSpec.{u, 0} ι) {κ : Type} (target : Oracle
       simulateQ impl oa := by
   rw [map_fst_subst_map_pathLogResult_withPath, subst_eq_simulateQ]
 
--- The writer log of `withLogging` lies in the answer universe, so it rejects a large index.
+-- `withLogging` rejects a large index: its writer log lies in the answer universe.
 /--
 error: Application type mismatch
 -/

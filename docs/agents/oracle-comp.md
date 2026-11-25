@@ -257,8 +257,8 @@ explicit `spec.query t`, `simulateQ_spec_query : simulateQ impl (liftM (spec.que
 
 ### Results in large universes: `subst`
 
-`simulateQ impl` runs in one monad `r : Type v → Type w` that also answers the queries, so its
-result type lies in the answer universe `v`. The same holds for every `WriterT` or `StateT`
+Because `simulateQ impl` runs in one monad `r : Type v → Type w` that also answers the queries,
+its result type lies in the answer universe `v`. The same holds for every `WriterT` or `StateT`
 handler, including `QueryImpl.withLogging`, whose log `QueryLog spec` must then lie in the answer
 universe too. For a target `OracleComp target`, `OracleComp.subst impl oa` replaces each query
 with `impl t` and returns a result in any universe, because the free monad's bind changes
