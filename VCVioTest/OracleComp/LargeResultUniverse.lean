@@ -22,6 +22,8 @@ universe, and the path run `PFunctor.FreeM.map (pathLogResult oa) (PFunctor.Free
 records the log in the universe of the index.
 -/
 
+public section
+
 open OracleComp OracleSpec MeasureTheory
 
 universe u
