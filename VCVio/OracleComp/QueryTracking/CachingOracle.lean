@@ -103,8 +103,10 @@ section CacheAuxProjection
 variable {Q : Type u}
 variable [LawfulMonad m]
 
-/-- Projecting away the auxiliary state of `withCachingAux` recovers ordinary caching whenever
-the miss handler has the same output marginal as the base implementation. -/
+/-- If `Prod.fst <$> miss t cache q = base t` for every query, cache, and auxiliary state,
+discarding the final auxiliary state gives the same computation of the result and final cache
+as `base.withCaching`. For example, a miss handler can record the answer in a log and still
+satisfy this equality. -/
 theorem withCachingAux_run_proj_eq
     (base : QueryImpl spec m)
     (hit : (t : spec.Domain) → spec.Range t → spec.QueryCache → Q → Q)
@@ -177,8 +179,9 @@ theorem PreservesInv.withCachingAux_aux
 
 section CacheMonotonicity
 
-/-- Running `withCaching` at state `cache` produces a result whose cache is `≥ cache`.
-On a cache hit the state is unchanged; on a miss a single entry is added. -/
+/-- Every outcome in the support of a `withCaching` step preserves all entries of the initial
+cache. A hit returns that cache. On a miss, each answer returned by the handler adds the entry
+at the queried index. -/
 lemma withCaching_cache_le [LawfulMonad m] [MonadAttach m] [ExactMonadAttach m]
     (so : QueryImpl spec m) (t : spec.Domain) (cache₀ : QueryCache spec)
     (z) (hz : z ∈ support ((so.withCaching t).run cache₀)) :

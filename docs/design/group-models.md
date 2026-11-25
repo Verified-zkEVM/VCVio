@@ -335,6 +335,9 @@ Everything else is an extra oracle beside `spec F`, with a handler that shares t
   have two. In the symbolic instance a fresh input is a fresh variable and a repeated one pushes
   the same variable again. Two handles to one variable are equal in the symbolic run and in the
   real run, so they are not a collision.
+  `GroupModel/HashToGroup/` has the oracle for one group, where every reply is received, fresh or
+  cached; programmed answers, which simulate it perfectly; and the collision bound of Section 8.2.
+  A lookup that pushes nothing and the tracking and symbolic instances are not part of it.
 - **Decoding oracle** `E →ₒ Handle`, with `dec : E → Option G`. The adversary turns a bit string
   into a table entry whose logarithm nobody tracks. This is oblivious sampling (Lipmaa, Parisella
   and Siim).
@@ -1202,6 +1205,7 @@ named reduction and composes as it is.
 |---|---|---|---|
 | presentations agree (T1) | exact translations among the four presentations of Section 4.4 | agm-lean `Adversary.run_valid`; ArkLib `GroupRepresentation` | Fuchsbauer, Kiltz, Loss |
 | discrete-log relation | finding a nontrivial relation among `n` random elements is at most DLog plus `1/\|F\|` (`DiscreteLogRelation.experiment_le`, for a nonzero generator); against a generic adversary with `q` group operations, at most `((q + n + 1).choose 2 + 1)/\|F\|` (`DiscreteLogRelation.plainExperiment_ofGeneric_le`) | T3; ironwood proves the reduction on other foundations | Jaeger, Tessaro, Lemma 3 |
+| hash-to-group collisions | two representations of one element that differ after merging receipts by origin, against an adversary with `n` uniform inputs, private coins and at most `q` hash queries on arbitrary labels: at most DLog plus `1/\|F\|`, when `· • g` is bijective (`HashToGroup.lazyTrial_le_dlog`, on the adversary's own run by `HashToGroup.map_lazyExecution_eq_run`); over finite labels, the same bound for an oracle sampled as a full table, with no query budget and `g ≠ 0` (`HashToGroup.normalizedTrial_le_dlog`) | the discrete-log relation row, at `n + q` and at `n` plus the number of labels | [ironwood issue 188](https://github.com/zcash/ironwood/issues/188) |
 | linear-functional signatures, BLS | `advantage ≤ adv(goodReduction A) + adv(badReduction A) + 1/\|F\|` against `(1,1)`-DLog | for BLS, `BLS.unforgeableAdvantage_le_of_algebraic`, with `DLog11.experiment` the `(1,1)` instance of `PairingDLog.experiment`; for the other linear-functional signatures, proved in `signature-security-lean` at VCVio `f5119c64e` | Fuchsbauer, Kiltz, Loss; Bauer, Fuchsbauer, Loss |
 | Schnorr, tight | `advantage ≤ adv(agmReduction g A) + (q_H + 1)/\|F\| + q_S(q_S + q_H)/\|F\|` against DLog, for every algebraic adversary | `Schnorr.unforgeableAdvantage_le_of_algebraic`, on the existing Schnorr signature and EUF-CMA game, through the existing Fiat–Shamir signing simulation | Fuchsbauer, Plouviez, Seurin |
 | BLS, unconditional | `advantage ≤ (4Q² + 12Q + 15)/\|F\|` with `Q = 5 + q + 3q_H + 4q_S`, for every generic adversary, equality tests free (`BLS.unforgeableAdvantage_le_generic`); meaningful only when `\|F\| > 4Q² + 12Q + 15` | the row above, T5 for the virtualized reduction handler, and generic `(1,1)`-DLog (`DLog11.experiment_ofGeneric_le_of_total`, the `q₁ = q₂ = 1` case of `PairingDLog.experiment_ofGeneric_le_of_total`, Section 8.3) | Jaeger, Mohan |
