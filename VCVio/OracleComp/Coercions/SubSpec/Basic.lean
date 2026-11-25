@@ -118,7 +118,7 @@ and these embeddings are essential to the API.
 
 Cartesianness preserves operational possibilities and permits transport of uniform measures.
 Preservation of arbitrary weighted measures is a separate semantic contract. The public
-`LawfulSubSpec.toLens_isCartesian` equation exposes the polynomial lens certificate. -/
+`LawfulSubSpec.toLens_isCartesian` instance gives cartesianness of the underlying lens. -/
 class LawfulSubSpec (spec : OracleSpec.{u, w} ι) (superSpec : OracleSpec.{v, w} τ)
     [h : SubSpec spec superSpec] : Prop where
   /-- The backward translation is bijective on every fiber. -/
@@ -134,11 +134,9 @@ namespace LawfulSubSpec
 variable {ι : Type u} {τ : Type v} {spec : OracleSpec ι} {superSpec : OracleSpec τ}
     [h : spec ⊂ₒ superSpec] [spec ˡ⊂ₒ superSpec]
 
-/-- The lens-level statement of `LawfulSubSpec`: the underlying
-`PFunctor.Lens` is cartesian. This makes the dictionary between the
-oracle-spec layer and the polynomial-functor lens layer explicit. -/
-lemma toLens_isCartesian : h.toLens.IsCartesian := fun t =>
-  onResponse_bijective (h := h) t
+/-- The lens of a lawful sub-spec embedding is cartesian at each query. -/
+instance toLens_isCartesian : h.toLens.IsCartesian where
+  bijective t := onResponse_bijective (h := h) t
 
 
 end LawfulSubSpec

@@ -24,6 +24,9 @@ namespace VCVioTest.QueryAndHandlerLaws
 
 variable {α σ ι : Type}
 
+example {ι₁ ι₂ : Type} {s : OracleSpec ι₁} {t : OracleSpec ι₂}
+    [h : SubSpec s t] [LawfulSubSpec s t] : h.toLens.IsCartesian := inferInstance
+
 example {ι₁ ι₂ ι₃ : Type} {a : OracleSpec ι₁} {b : OracleSpec ι₂} {c : OracleSpec ι₃}
     (p : OracleComp a α) :
     liftComp (liftComp p (a + b)) ((a + b) + c) = liftComp p ((a + b) + c) :=
