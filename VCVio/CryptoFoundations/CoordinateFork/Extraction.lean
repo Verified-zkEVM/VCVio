@@ -183,7 +183,7 @@ theorem sub_div_le_prEvent_extracted_coordExtractOp [Nonempty S]
 
 /-- **The expected-lookup clause, for the paper's algorithm.** The composite reports exactly the
 lookups its fork made, so the bound is the fork's. -/
-theorem lintegral_cost_coordExtractOp_le [Nonempty S]
+theorem lintegral_cost_coordExtractOp_le
     (σ : SigmaProtocol ProbComp Stmt Wit Commit PrvState (ι → S) Resp rel) (k : ℕ)
     (ext : Stmt → Commit → Finset ((ι → S) × Resp) → ProbComp Wit) (x : Stmt)
     (pc : Commit) (P : ProbComp ((ι → S) → Resp)) :
