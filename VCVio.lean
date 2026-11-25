@@ -570,6 +570,7 @@ public import VCVio.OracleComp.SimSemantics.StateT.StateProjection
 public import VCVio.OracleComp.SimSemantics.StateT.StateSeparating
 public import VCVio.OracleComp.SimSemantics.StateT.UntilBad
 public import VCVio.OracleComp.SimSemantics.StateT.UntilBad.Bind
+public import VCVio.OracleComp.SimSemantics.Subst
 public import VCVio.OracleComp.SimSemantics.Wiring
 public import VCVio.OracleComp.SimSemantics.WriterT.Core
 public import VCVio.OracleComp.SimSemantics.WriterT.PreservesInv

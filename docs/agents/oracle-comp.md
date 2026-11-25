@@ -255,6 +255,24 @@ So "operational vs denotational" is not a primitive split for monad-valued inter
 explicit `spec.query t`, `simulateQ_spec_query : simulateQ impl (liftM (spec.query t)) = impl t`
 (`@[grind =]`, not `@[simp]`) avoids the `id <$>` that `simulateQ_query` leaves.
 
+### Results in large universes: `subst`
+
+`simulateQ impl` runs in one monad `r : Type v → Type w` that also answers the queries, so its
+result type lies in the answer universe `v`. The same holds for every `WriterT` or `StateT`
+handler, including `QueryImpl.withLogging`, whose log `QueryLog spec` must then lie in the answer
+universe too. For a target `OracleComp target`, `OracleComp.subst impl oa` replaces each query
+with `impl t` and returns a result in any universe, because the free monad's bind changes
+universes. `subst_eq_simulateQ` identifies it with `simulateQ` when the result lies in the answer
+universe; `subst_freeM_bind` and `subst_freeM_map` are its laws across universes.
+
+To return a query log over an index larger than the answers, log through the path run:
+`subst impl (PFunctor.FreeM.map (pathLogResult oa) (PFunctor.FreeM.withPath oa))`.
+`map_fst_subst_map_pathLogResult_withPath` forgets the log at every universe, and
+`subst_map_pathLogResult_withPath` identifies the run with `(simulateQ impl.withLogging oa).run`
+at small universes. `ProbComp : Type u → Type u` returns values in every universe as well; a
+small sampler moves to a large output type with `PFunctor.FreeM.map`, since `<$>` keeps one
+universe.
+
 ### QueryImpl composition
 
 ```lean
