@@ -168,7 +168,7 @@ theorem scaledSignature_badReduction (X Y : K) :
 
 section Idle
 
-/-- The smallest test field above the bound's constant `175` at zero budgets. -/
+/-- A prime field with more elements than the bound's numerator at zero budgets, `175`. -/
 local instance prime191 : Fact (Nat.Prime 191) := ⟨by norm_num⟩
 /-- Sampling uses the direct finite representation without enumerating a field at load time. -/
 local instance sampleField191 : SampleableType (ZMod 191) :=
