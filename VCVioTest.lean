@@ -127,6 +127,7 @@ public import VCVioTest.OracleComp.BudgetedPotential
 public import VCVioTest.OracleComp.CostSimulation
 public import VCVioTest.OracleComp.CostedCacheReplay
 public import VCVioTest.OracleComp.EqDistTriple
+public import VCVioTest.OracleComp.LargeResultUniverse
 public import VCVioTest.OracleComp.LoggedHistory
 public import VCVioTest.OracleComp.MeasuredProgram
 public import VCVioTest.OracleComp.PreservesInv
@@ -260,6 +261,7 @@ public import VCVioTest.Schemes.MerkleDamgard
 public import VCVioTest.Schemes.Pedersen.Generic
 public import VCVioTest.Schemes.Schnorr.ChallengeRestriction
 public import VCVioTest.Schemes.Schnorr.Transforms
+public import VCVioTest.Schemes.SchnorrAGM
 public import VCVioTest.Schemes.VectorPedersen
 public import VCVioTest.SeparatedOTP
 public import VCVioTest.SigmaProtocolMonad

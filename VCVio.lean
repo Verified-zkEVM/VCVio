@@ -483,7 +483,6 @@ public import VCVio.OracleComp.QueryTracking.LoggingOracle.Core
 public import VCVio.OracleComp.QueryTracking.LoggingOracle.History
 public import VCVio.OracleComp.QueryTracking.LoggingOracle.Relabel
 public import VCVio.OracleComp.QueryTracking.MeasuredProgram
-public import VCVio.OracleComp.QueryTracking.MeasuredProgram.Composition
 public import VCVio.OracleComp.QueryTracking.ObservationOracle
 public import VCVio.OracleComp.QueryTracking.ProgrammingOracle
 public import VCVio.OracleComp.QueryTracking.QueryBound
@@ -574,6 +573,7 @@ public import VCVio.OracleComp.SimSemantics.StateT.StateProjection
 public import VCVio.OracleComp.SimSemantics.StateT.StateSeparating
 public import VCVio.OracleComp.SimSemantics.StateT.UntilBad
 public import VCVio.OracleComp.SimSemantics.StateT.UntilBad.Bind
+public import VCVio.OracleComp.SimSemantics.Subst
 public import VCVio.OracleComp.SimSemantics.Wiring
 public import VCVio.OracleComp.SimSemantics.WriterT.Core
 public import VCVio.OracleComp.SimSemantics.WriterT.PreservesInv
@@ -775,6 +775,14 @@ public import VCVio.Schemes.PointerChainPuzzle.LeanSealHidingBridge
 public import VCVio.Schemes.PointerChainPuzzle.LeanSealHidingEncoding
 public import VCVio.Schemes.PointerChainPuzzle.Path
 public import VCVio.Schemes.PointerChainPuzzle.Sequential
+public import VCVio.Schemes.Schnorr.AGM.Adversary
+public import VCVio.Schemes.Schnorr.AGM.Bridge
+public import VCVio.Schemes.Schnorr.AGM.Probability
+public import VCVio.Schemes.Schnorr.AGM.Reduction
+public import VCVio.Schemes.Schnorr.AGM.Representation
+public import VCVio.Schemes.Schnorr.AGM.Security
+public import VCVio.Schemes.Schnorr.AGM.Simulation
+public import VCVio.Schemes.Schnorr.AGM.Soundness
 public import VCVio.Schemes.Schnorr.BoundedChallenges
 public import VCVio.Schemes.Schnorr.ChallengeRestriction
 public import VCVio.Schemes.Schnorr.SigmaProtocol

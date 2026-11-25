@@ -1200,6 +1200,7 @@ named reduction and composes as it is.
 | presentations agree (T1) | exact translations among the four presentations of Section 4.4 | agm-lean `Adversary.run_valid`; ArkLib `GroupRepresentation` | Fuchsbauer, Kiltz, Loss |
 | discrete-log relation | finding a nontrivial relation among `n` random elements is at most DLog plus `1/\|F\|` (`DiscreteLogRelation.experiment_le`, for a nonzero generator); against a generic adversary with `q` group operations, at most `((q + n + 1).choose 2 + 1)/\|F\|` (`DiscreteLogRelation.plainExperiment_ofGeneric_le`) | T3; ironwood proves the reduction on other foundations | Jaeger, Tessaro, Lemma 3 |
 | linear-functional signatures, BLS | `advantage ≤ adv(goodReduction A) + adv(badReduction A) + 1/\|F\|` against `(1,1)`-DLog | for BLS, `BLS.unforgeableAdvantage_le_of_algebraic`, with `DLog11.experiment` the `(1,1)` instance of `PairingDLog.experiment`; for the other linear-functional signatures, proved in `signature-security-lean` at VCVio `f5119c64e` | Fuchsbauer, Kiltz, Loss; Bauer, Fuchsbauer, Loss |
+| Schnorr, tight | `advantage ≤ adv(agmReduction g A) + (q_H + 1)/\|F\| + q_S(q_S + q_H)/\|F\|` against DLog, for every algebraic adversary | `Schnorr.unforgeableAdvantage_le_of_algebraic`, on the existing Schnorr signature and EUF-CMA game, through the existing Fiat–Shamir signing simulation | Fuchsbauer, Plouviez, Seurin |
 | BLS, unconditional | a bound in `q`, `q_H`, `q_S` and `\|F\|` only | the row above, T5, and generic `(1,1)`-DLog. The last is `PairingDLog.experiment_ofGeneric_le` at `q₁ = q₂ = 1` (Section 8.3); T5 remains | Jaeger, Mohan |
 | inner-product and Bulletproofs-style arguments | binding of the vector commitment against an algebraic prover | the discrete-log relation row | Jaeger, Tessaro |
 
@@ -1263,7 +1264,6 @@ the committed polynomial.
 | Result | Why it waits | Composes with |
 |---|---|---|
 | Schnorr EUF-CMA, unconditional in the labelled model | the scheme hashes a group element, so both scheme and adversary need labels | `Schnorr.signature_euf_cma` in `VCVio/Schemes/Schnorr/Signature.lean`, a forking bound against `dlogExperiment g (dlogReduction …)`; the composed bound has the square-root loss of forking |
-| Schnorr, tight, algebraic adversaries | a different proof, not a composition | Fuchsbauer, Plouviez, Seurin |
 | hashed ElGamal, the DDH term only | the scheme hashes a group element. The existing bound is one-time and reads `2 · (ddhAdvantage … + EntropySmoothing.advantage …)` for an arbitrary keyed function `hash : HK → G → M`. A group model bounds the first term. The second is an assumption on the hash family and stays one: with a constant `hash` the scheme sends the message in the clear | `hashedElGamal.hashedElGamal_IND_CPA_bound` in `Examples/ElGamal/Hash.lean` |
 | KZG extraction with oblivious sampling | the adversary can create elements with no representation | Lipmaa, Parisella, Siim; Belohorec, Hubáček, Stejskal |
 
@@ -1338,7 +1338,7 @@ against the paper before a theorem cites it).
 | Rotem, Segev, ePrint 2020/1144 | algebraic distinguishers for decisional problems | not planned | abstract |
 | Bauer, Farshim, Harasser, Kohlweiss, *The uber-knowledge assumption* (IACR CiC 1(3)) | knowledge assumptions that instantiate algebraic extraction | not planned | abstract |
 | Jaeger, Tessaro, ePrint 2020/1213, Lemma 3 | discrete-log relation ≤ DLog + `1/\|F\|` | proved as `DiscreteLogRelation.experiment_le`; its generic corollary `DiscreteLogRelation.plainExperiment_ofGeneric_le` gives `((q + n + 1).choose 2 + 1)/\|F\|`; ironwood proves the lemma on other foundations | recalled; ironwood's statement was read |
-| Fuchsbauer, Plouviez, Seurin, ePrint 2019/877 | Schnorr, tight, algebraic adversaries | not planned yet | recalled |
+| Fuchsbauer, Plouviez, Seurin, ePrint 2019/877 | Schnorr, tight, algebraic adversaries | proved (`Schnorr.unforgeableAdvantage_le_of_algebraic`), with the terms of the ported `signature-security-lean` theorem | recalled |
 | Bauer, Fuchsbauer, Plouviez, ePrint 2021/866 | one-more discrete log, beyond T3 (Section 8.5) | not planned | abstract |
 | Katz, Zhang, Zhou, ePrint 2022/210 | S2 | target | recalled |
 | Zhandry, ePrint 2022/226; Zhandry, Zhang, ePrint 2021/240 | S1, S3; the two encoding variants | target | abstract |
