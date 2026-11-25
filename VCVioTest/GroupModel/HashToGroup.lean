@@ -31,7 +31,8 @@ private def sumAdversary : Adversary F Gs Unit Bool (fun _ => Unit) Unit where
     let first ← Spec.query ⟨⟨false, fun _ => []⟩, fun _ => []⟩
     let second ← Spec.query ⟨⟨true, fun _ => []⟩, fun _ => []⟩
     return Explained.ofVectors (extend (extend input.groups first.groups) second.groups)
-      () (fun s => [fun i => if i.val < (input.groups s).length then 0 else 1])
+      () (fun s => [fun i => if i.val < (input.groups s).length then 0 else
+        if i.val = (input.groups s).length then 1 else 2])
   algebraic input := by
     refine ⟨fun _ => .nil, fun first => ?_⟩
     refine ⟨fun _ => .nil, fun second => ?_⟩
@@ -61,8 +62,8 @@ private def deterministic (B : Fin 2 → F) :
   execution B (fun l => pure (rows l)) sumAdversary []
 
 example : (fun z => z.1.value.groups ()) <$> deterministic (pairBasis (G := F) 1 11) =
-    pure [16] := by
-  suffices h : (2 + 3 * 11 + (5 + 7 * 11) : F) = 16 by
+    pure [98] := by
+  suffices h : (2 + 3 * 11 + 2 * (5 + 7 * 11) : F) = 98 by
     simpa [deterministic, execution, runProgram, interactionProgram, sumAdversary,
       programmed, game, oracle_apply, initial, reply, rows,
       Explained.ofVectors, extend, evaluate, List.mapIdx_cons, List.mapIdx_nil,
@@ -71,8 +72,8 @@ example : (fun z => z.1.value.groups ()) <$> deterministic (pairBasis (G := F) 1
 
 example : (fun z => transportExplained (fun _ => z.2.2) z.1 ()) <$>
     deterministic (pairBasis (G := F) 1 11) =
-    pure [![7, 10]] := by
-  suffices h : (![(2 : F) + 5, 3 + 7] : Fin 2 → F) = ![7, 10] by
+    pure [![12, 17]] := by
+  suffices h : (![(2 : F) + 2 * 5, 3 + 2 * 7] : Fin 2 → F) = ![12, 17] by
     simpa [deterministic, execution, runProgram, interactionProgram, sumAdversary,
       programmed, game, oracle_apply, initial, reply, rows,
       Explained.ofVectors, extend, transportExplained, transport, evaluate,
@@ -134,6 +135,18 @@ example (r : Fin 2 → F) :
       pure (first.groups (), second.groups ())).run' (fun _ => [])).run' (initial []) =
         (pure ([0], [1]) : ProbComp _) := by
   simp [handle_apply, StateT.run'_eq, oracle_apply, initial]
+
+-- Two queries on one label install two handles to one sampled element, whatever it is.
+example :
+    Pr{let z ← ((do
+      let _ ← handle id (fun _ : Bool => ($ᵗ F : ProbComp F)) ⟨false, fun _ => []⟩
+      let _ ← handle id (fun _ : Bool => ($ᵗ F : ProbComp F)) ⟨false, fun _ => []⟩
+      pure ()).run (fun _ => [])).run (initial [])}[∃ g, z.1.2 () = [g, g]] = 1 := by
+  refine prEvent_eq_one_of_forall_mem_support _ _ fun z hz => ?_
+  obtain ⟨y, hy⟩ : ∃ y, z.1.2 = fun _ => [y, y] := by
+    simpa [handle_apply, oracle_apply, initial] using
+      (by simp [handle_apply, oracle_apply, initial] at hz; exact hz.imp fun _ h => by rw [← h])
+  exact ⟨y, by rw [hy]⟩
 
 /-- The difference of two identical receipt rows cancels under representation transport. -/
 theorem transport_duplicate_rows (r : Fin 2 → ZMod 101) : transport [r, r] [1, -1] = 0 := by
@@ -255,6 +268,13 @@ private theorem adaptiveCoinAdversary_bound (n : ℕ) :
       · intro second _
         exact isQueryBoundP_pure (p := fun t : ℕ ⊕ ℕ => t.isRight) _ _
 
+-- The adversary makes two hash queries, so it does not meet a budget of one.
+example (n : ℕ) : ¬ HashQueryBound (F := F) (G := F) n 1 adaptiveCoinAdversary := by
+  intro h
+  have h := (h 0).2 (0 : Fin 2)
+  have h : ¬ true = true ∨ 0 < 0 := (h.2 (0 : F)).1
+  simp at h
+
 -- Ordinary imports expose the final lazy-oracle bound on an infinite label type. The first
 -- label depends on a private coin; the second depends on both that coin and a hash reply.
 example :
@@ -267,5 +287,67 @@ example :
   simpa only [ZMod.card, Nat.cast_ofNat] using
     lazyTrial_le_dlog (F := F) (G := F) 1 2 (1 : F) generator_bijective
       adaptiveCoinAdversary (adaptiveCoinAdversary_bound 1)
+
+section Solver
+
+variable {K : Type} [Field K] [DecidableEq K]
+
+private abbrev KGroups (K : Type) := fun _ : Unit => K
+
+/-- One element explained in two ways from a received `x` and a hash reply `y`: as `y` and as
+`(y / x) • x`, or, when `x = 0`, as `x` and as `0`. -/
+private def solverOutput (inputs replies : Groups (KGroups K)) : Explained K Unit (KGroups K) :=
+  Explained.ofVectors (extend inputs replies) () (fun _ =>
+    if (inputs ()).getD 0 0 = 0 then [fun i => if i.val = 0 then 1 else 0, fun _ => 0]
+    else [fun i => if i.val = 0 then 0 else 1,
+      fun i => if i.val = 0 then (replies ()).getD 0 0 / (inputs ()).getD 0 0 else 0])
+
+private def solver : Adversary K (KGroups K) Unit (GroupModel.CoinQuery Bool)
+    (GroupModel.CoinReply (fun _ => Unit)) Unit where
+  main := fun ⟨_, groups⟩ => do
+    let r ← (explainedSpec K (KGroups K) (GroupModel.CoinQuery Bool)
+      (GroupModel.CoinReply (fun _ => Unit))).query ⟨⟨.inl false, fun _ => []⟩, fun _ => []⟩
+    return solverOutput groups r.groups
+  algebraic _ := ⟨fun _ => .nil, fun _ => Explained.valid_ofVectors _ _ _⟩
+
+private theorem lazyExecution_solver [SampleableType K] (fixed : Fin 1 → K) :
+    lazyExecution fixed solver =
+      (fun y => (solverOutput (fun _ => List.ofFn fixed) (reply y).groups, [(false, y)])) <$>
+        ($ᵗ K : ProbComp K) := by
+  have h : rawProgram (solver.main ⟨(), fun _ => List.ofFn fixed⟩) =
+      (liftM ((unifSpec + (Bool →ₒ K)).query (.inr false)) :
+          OracleComp (unifSpec + (Bool →ₒ K)) K) >>= fun y =>
+        pure (solverOutput (fun _ => List.ofFn fixed) (reply y).groups) := rfl
+  rw [lazyExecution, h]
+  have hh : (SlotRenaming.honest (D := Bool) (R := K) (.inr false)).run (∅, []) =
+      (fun y => (y, (∅ : (Bool →ₒ K).QueryCache).cacheQuery false y, [(false, y)])) <$>
+        ($ᵗ K : ProbComp K) := by
+    change (fun z => (z.1, z.2, [] ++ [(false, z.1)])) <$>
+      ((Bool →ₒ K).randomOracle false).run ∅ = _
+    rw [OracleSpec.randomOracle, QueryImpl.withCaching_run_none _ (by simp)]
+    simp [uniformSampleImpl, Functor.map_map]
+  simp only [simulateQ_bind, simulateQ_spec_query, simulateQ_pure, StateT.run_bind,
+    StateT.run_pure]
+  rw [hh]
+  simp [Functor.map_map]
+
+-- The lazy trial can be won: this solver wins it with probability one.
+example [SampleableType K] : Pr{let z ← lazyTrial (F := K) (G := K) 1 solver}[
+    NormalizedCollision (receiptOrigins 1 z.2) z.1] = 1 := by
+  refine prEvent_eq_one_of_forall_mem_support _ _ fun z hz => ?_
+  obtain ⟨fixed, _, hz⟩ := (mem_support_bind_iff _ _ _).mp hz
+  rw [lazyExecution_solver, support_map] at hz
+  obtain ⟨y, _, rfl⟩ := hz
+  by_cases h : fixed 0 = 0
+  · refine ⟨[1, 0], [0, 0], 0, ?_, ?_, fun he => ?_⟩
+    · simp [solverOutput, Explained.ofVectors, extend, reply, h]
+    · simp [solverOutput, Explained.ofVectors, extend, reply, h, evaluate]
+    · simpa [merge, transport, evaluate, receiptOrigins] using congrFun he (.inl 0)
+  · refine ⟨[0, 1], [y / fixed 0, 0], y, ?_, ?_, fun he => ?_⟩
+    · simp [solverOutput, Explained.ofVectors, extend, reply, h]
+    · simp [solverOutput, Explained.ofVectors, extend, reply, h, evaluate]
+    · simpa [merge, transport, evaluate, receiptOrigins] using congrFun he (.inr false)
+
+end Solver
 
 end HashToGroupTest

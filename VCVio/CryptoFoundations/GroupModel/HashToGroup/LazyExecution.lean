@@ -36,6 +36,36 @@ group input; private coins return only plain data. -/
       (CoinReply (fun _ => Unit))) α) : OracleComp (unifSpec + (Label →ₒ G)) α :=
   simulateQ rawGame (interactionProgram p)
 
+/-- A returned value makes no raw queries. -/
+@[simp] theorem rawProgram_pure (a : α) :
+    rawProgram (pure a : OracleComp (explainedSpec F (fun _ : Unit => G) (CoinQuery Label)
+      (CoinReply (fun _ => Unit))) α) = pure a := by
+  simp [rawProgram, interactionProgram]
+
+/-- An explained hash request is one raw hash query. -/
+theorem rawProgram_hash (l : Label) (groups : Groups (fun _ : Unit => G))
+    (coefficients : Unit → List (List F))
+    (next : Message Unit (fun _ : Unit => G) →
+      OracleComp (explainedSpec F (fun _ : Unit => G) (CoinQuery Label)
+        (CoinReply (fun _ => Unit))) α) :
+    rawProgram (liftM ((explainedSpec F (fun _ : Unit => G) (CoinQuery Label)
+      (CoinReply (fun _ => Unit))).query ⟨⟨.inl l, groups⟩, coefficients⟩) >>= next) =
+      liftM ((unifSpec + (Label →ₒ G)).query (.inr l)) >>= fun g =>
+        rawProgram (next (reply g)) :=
+  rfl
+
+/-- An explained private-coin request is one raw uniform query. -/
+theorem rawProgram_coin (k : ℕ) (groups : Groups (fun _ : Unit => G))
+    (coefficients : Unit → List (List F))
+    (next : Message (Fin (k + 1)) (fun _ : Unit => G) →
+      OracleComp (explainedSpec F (fun _ : Unit => G) (CoinQuery Label)
+        (CoinReply (fun _ => Unit))) α) :
+    rawProgram (liftM ((explainedSpec F (fun _ : Unit => G) (CoinQuery Label)
+      (CoinReply (fun _ => Unit))).query ⟨⟨.inr k, groups⟩, coefficients⟩) >>= next) =
+      liftM ((unifSpec + (Label →ₒ G)).query (.inl k)) >>= fun x =>
+        rawProgram (next ⟨x, fun _ => []⟩) :=
+  rfl
+
 private theorem table_log [DecidableEq Label] [SampleableType G]
     (g : Fin q → G) (t : (unifSpec + (Label →ₒ G)).Domain)
     (s : SlotRenaming.State Label G q) (z)

@@ -14,6 +14,11 @@ public import VCVio.OracleComp.SimSemantics.StateT.StateProjection
 Labels acquire slots in first-query order. Repeated labels reuse their slots. Private coins
 leave the assignment and chronological label log unchanged. A uniform fallback makes the
 handler total; a hash-query budget rules out its use.
+
+`RandomOracle/Tape.lean` answers fresh queries from a presampled tape and recovers the tape
+positions of the final cache entries. Here fresh labels are routed to the coordinates of a table on
+`Fin q`, the state keeps every receipt in order, repetitions included, and private coins pass
+through, so one fixed table interprets a whole adaptive run.
 -/
 
 public section

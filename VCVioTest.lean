@@ -138,6 +138,7 @@ public import VCVioTest.OracleComp.Query
 public import VCVioTest.OracleComp.QueryAndHandlerLaws
 public import VCVioTest.OracleComp.QueryLogRelabel
 public import VCVioTest.OracleComp.QueryTracking.QueryLog
+public import VCVioTest.OracleComp.QueryTracking.SlotRenaming
 public import VCVioTest.OracleComp.SchwartzZippel
 public import VCVioTest.OracleComp.SecurityFamily
 public import VCVioTest.OracleComp.SimulateQ
