@@ -9,7 +9,7 @@ module
 public import VCVio.Schemes.BLS.Generic.Security
 public import VCVio.Schemes.BLS.Generic.ReductionCost
 public import VCVio.CryptoFoundations.GroupModel.PairingExecution
-public import VCVio.CryptoFoundations.GroupModel.DLog11
+public import VCVio.CryptoFoundations.GroupModel.GenericDLog11
 public import Mathlib.Algebra.Field.ZMod
 import all VCVio.Schemes.BLS.Generic.Adversary
 import all VCVio.CryptoFoundations.GroupModel.Instances

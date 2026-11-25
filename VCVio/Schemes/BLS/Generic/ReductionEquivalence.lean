@@ -7,7 +7,7 @@ Authors: Quang Dao
 module
 
 public import VCVio.Schemes.BLS.Generic.ReductionExtraction
-public import VCVio.CryptoFoundations.GroupModel.DLog11
+public import VCVio.CryptoFoundations.GroupModel.GenericDLog11
 import all VCVio.Schemes.BLS.AGM.Adversary
 import all VCVio.Schemes.BLS.AGM.Reductions
 import all VCVio.Schemes.BLS.Generic.Adversary

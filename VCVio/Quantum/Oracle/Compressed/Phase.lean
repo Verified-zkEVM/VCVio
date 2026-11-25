@@ -5,6 +5,7 @@ Authors: Quang Dao
 -/
 
 module
+public import QuantumFoundations.ForMathlib.Analysis.Matrix.Contraction
 
 public import Mathlib.Analysis.Fourier.FiniteAbelian.PontryaginDuality
 public import VCVio.Quantum.Oracle.Compressed.Truncation
@@ -82,18 +83,18 @@ theorem fourierMatrix_mul_conjTranspose : fourierMatrix Y * (fourierMatrix Y)ᴴ
   have hN : (Fintype.card Y : ℂ) ≠ 0 := Nat.cast_ne_zero.mpr Fintype.card_ne_zero
   ext χ ψ
   have hsum : ∑ y, χ y * conj (ψ y) = if χ = ψ then (Fintype.card Y : ℂ) else 0 := by
-    simp_rw [← AddChar.map_neg_eq_conj, ← AddChar.inv_apply, ← AddChar.mul_apply]
+    simp_rw [← AddChar.map_neg_eq_conj, ← AddChar.inv_apply, ← mul_apply]
     rw [AddChar.sum_eq_ite]
     congr 1
     exact propext ⟨fun h ↦ mul_inv_eq_one.mp h, fun h ↦ mul_inv_eq_one.mpr h⟩
-  simp only [mul_apply, conjTranspose_apply, fourierMatrix_apply, star_mul', star_cellAmp,
+  simp only [Matrix.mul_apply, conjTranspose_apply, fourierMatrix_apply, star_mul', star_cellAmp,
     RCLike.star_def]
   calc ∑ y, cellAmp Y * χ y * (cellAmp Y * conj (ψ y))
       = cellAmp Y * cellAmp Y * ∑ y, χ y * conj (ψ y) := by
         rw [Finset.mul_sum]
         exact Finset.sum_congr rfl fun y _ ↦ by ring
     _ = (1 : Matrix (AddChar Y ℂ) (AddChar Y ℂ) ℂ) χ ψ := by
-        rw [hsum, cellAmp_mul_self, one_apply]
+        rw [hsum, cellAmp_mul_self, Matrix.one_apply]
         split_ifs <;> simp [hN]
 
 /-- The columns of the Fourier transform are orthonormal: the characters separate the points of
@@ -108,15 +109,33 @@ theorem conjTranspose_fourierMatrix_mul [DecidableEq Y] :
     rw [AddChar.sum_apply_eq_ite]
     congr 1
     exact propext ⟨fun h ↦ (neg_add_eq_zero.mp h), fun h ↦ neg_add_eq_zero.mpr h⟩
-  simp only [mul_apply, conjTranspose_apply, fourierMatrix_apply, star_mul', star_cellAmp,
+  simp only [Matrix.mul_apply, conjTranspose_apply, fourierMatrix_apply, star_mul', star_cellAmp,
     RCLike.star_def]
   calc ∑ χ : AddChar Y ℂ, cellAmp Y * conj (χ y) * (cellAmp Y * χ y')
       = cellAmp Y * cellAmp Y * ∑ χ : AddChar Y ℂ, conj (χ y) * χ y' := by
         rw [Finset.mul_sum]
         exact Finset.sum_congr rfl fun χ _ ↦ by ring
     _ = (1 : Matrix Y Y ℂ) y y' := by
-        rw [hsum, cellAmp_mul_self, one_apply]
+        rw [hsum, cellAmp_mul_self, Matrix.one_apply]
         split_ifs <;> simp [hN]
+
+variable {Y}
+
+/-- A unit-modulus multiple of a nontrivial character has the same quadratic sum law. -/
+theorem sum_norm_sub_signed_char_sq {χ : AddChar Y ℂ} (hχ : χ ≠ 0)
+    {ε : ℂ} (hε : ‖ε‖ = 1) (c : ℂ) :
+    ∑ w, ‖c - ε * χ w‖ ^ 2 = Fintype.card Y * (‖c‖ ^ 2 + 1) := by
+  have hs := AddChar.sum_eq_zero_iff_ne_zero.mpr hχ
+  have e : ∀ w, ‖c - ε * χ w‖ ^ 2 =
+      (‖c‖ ^ 2 + 1) - 2 * (c * conj (ε * χ w)).re := fun w ↦ by
+    rw [Complex.sq_norm, Complex.sq_norm, Complex.normSq_sub,
+      ← Complex.sq_norm (ε * χ w), norm_mul, hε, AddChar.norm_apply]
+    ring
+  simp_rw [e]
+  rw [Finset.sum_sub_distrib, Finset.sum_const, Finset.card_univ, nsmul_eq_mul,
+    ← Finset.mul_sum, ← Complex.re_sum, ← Finset.mul_sum, ← map_sum,
+    ← Finset.mul_sum, hs]
+  simp
 
 end fourier
 
@@ -137,7 +156,7 @@ theorem queryFourier_apply (x' : X) (χ : AddChar Y ℂ) (D' : Database X Y) (x 
     (D : Database X Y) :
     queryFourier X Y ((x', χ), D') ((x, y), D) =
       if x' = x ∧ D' = D then cellAmp Y * χ y else 0 := by
-  simp only [queryFourier, kroneckerMap_apply, one_apply, fourierMatrix_apply]
+  simp only [queryFourier, kroneckerMap_apply, Matrix.one_apply, fourierMatrix_apply]
   split_ifs <;> simp_all
 
 theorem queryFourier_mul_conjTranspose : queryFourier X Y * (queryFourier X Y)ᴴ = 1 := by
@@ -214,7 +233,7 @@ noncomputable def phaseCell (χ : AddChar Y ℂ) : Matrix (Option Y) (Option Y) 
 
 theorem phaseCell_apply (χ : AddChar Y ℂ) (a' a : Option Y) :
     phaseCell Y χ a' a = ∑ b, cellCompress Y a' b * χ (b.getD 0) * cellCompress Y b a := by
-  rw [phaseCell, mul_apply]
+  rw [phaseCell, Matrix.mul_apply]
   simp_rw [mul_diagonal]
 
 /-- For the trivial character the phase cell is the identity. -/
@@ -225,30 +244,8 @@ theorem phaseCell_zero : phaseCell Y 0 = 1 := by
 
 variable {Y}
 
-omit [DecidableEq Y] in
-/-- The values of a nontrivial character sum to zero. -/
-theorem sum_apply_eq_zero_of_ne_zero {χ : AddChar Y ℂ} (hχ : χ ≠ 0) : ∑ y, χ y = 0 :=
-  AddChar.sum_eq_zero_iff_ne_zero.mpr hχ
-
-omit [DecidableEq Y] in
-/-- A unit-modulus multiple of a nontrivial character has the same quadratic sum law. -/
-theorem sum_norm_sub_signed_char_sq {χ : AddChar Y ℂ} (hχ : χ ≠ 0)
-    {ε : ℂ} (hε : ‖ε‖ = 1) (c : ℂ) :
-    ∑ w, ‖c - ε * χ w‖ ^ 2 = Fintype.card Y * (‖c‖ ^ 2 + 1) := by
-  have hs := sum_apply_eq_zero_of_ne_zero hχ
-  have e : ∀ w, ‖c - ε * χ w‖ ^ 2 =
-      (‖c‖ ^ 2 + 1) - 2 * (c * conj (ε * χ w)).re := fun w ↦ by
-    rw [Complex.sq_norm, Complex.sq_norm, Complex.normSq_sub,
-      ← Complex.sq_norm (ε * χ w), norm_mul, hε, AddChar.norm_apply]
-    ring
-  simp_rw [e]
-  rw [Finset.sum_sub_distrib, Finset.sum_const, Finset.card_univ, nsmul_eq_mul,
-    ← Finset.mul_sum, ← Complex.re_sum, ← Finset.mul_sum, ← map_sum,
-    ← Finset.mul_sum, hs]
-  simp
-
 theorem phaseCell_none_none {χ : AddChar Y ℂ} (hχ : χ ≠ 0) : phaseCell Y χ none none = 0 := by
-  have hs := sum_apply_eq_zero_of_ne_zero hχ
+  have hs := AddChar.sum_eq_zero_iff_ne_zero.mpr hχ
   rw [phaseCell_apply, Fintype.sum_option]
   simp only [cellCompress_none_none, cellCompress_none_some, cellCompress_some_none, zero_mul,
     zero_add]
@@ -260,7 +257,7 @@ theorem phaseCell_none_none {χ : AddChar Y ℂ} (hχ : χ ≠ 0) : phaseCell Y 
 
 theorem phaseCell_some_none {χ : AddChar Y ℂ} (hχ : χ ≠ 0) (u : Y) :
     phaseCell Y χ (some u) none = cellAmp Y * χ u := by
-  have hs := sum_apply_eq_zero_of_ne_zero hχ
+  have hs := AddChar.sum_eq_zero_iff_ne_zero.mpr hχ
   rw [phaseCell_apply, Fintype.sum_option]
   simp only [cellCompress_none_none, cellCompress_some_none, cellCompress_some_some, mul_zero,
     zero_add, Option.getD_some, sub_mul, ite_mul, one_mul, zero_mul, Finset.sum_sub_distrib,
@@ -270,7 +267,7 @@ theorem phaseCell_some_none {χ : AddChar Y ℂ} (hχ : χ ≠ 0) (u : Y) :
 
 theorem phaseCell_none_some {χ : AddChar Y ℂ} (hχ : χ ≠ 0) (w : Y) :
     phaseCell Y χ none (some w) = cellAmp Y * χ w := by
-  have hs := sum_apply_eq_zero_of_ne_zero hχ
+  have hs := AddChar.sum_eq_zero_iff_ne_zero.mpr hχ
   rw [phaseCell_apply, Fintype.sum_option]
   simp only [cellCompress_none_none, cellCompress_none_some, cellCompress_some_some, zero_mul,
     zero_add, Option.getD_some, mul_sub, mul_ite, mul_one, mul_zero, Finset.sum_sub_distrib,
@@ -281,7 +278,7 @@ theorem phaseCell_none_some {χ : AddChar Y ℂ} (hχ : χ ≠ 0) (w : Y) :
 theorem phaseCell_some_some {χ : AddChar Y ℂ} (hχ : χ ≠ 0) (u w : Y) :
     phaseCell Y χ (some u) (some w) =
       (if u = w then χ u else 0) + (Fintype.card Y : ℂ)⁻¹ * (1 - χ u - χ w) := by
-  have hs := sum_apply_eq_zero_of_ne_zero hχ
+  have hs := AddChar.sum_eq_zero_iff_ne_zero.mpr hχ
   rw [phaseCell_apply, Fintype.sum_option]
   simp only [cellCompress_some_none, cellCompress_none_some, cellCompress_some_some,
     Option.getD_none, AddChar.map_zero_eq_one, mul_one, cellAmp_mul_self, Option.getD_some]
@@ -303,22 +300,39 @@ theorem phaseCell_some_some {χ : AddChar Y ℂ} (hχ : χ ≠ 0) (u w : Y) :
 
 end phase
 
-/-- An entry of `(1 ⊗ A) diag(d) (1 ⊗ B)`: the first register is kept, and the second is
-summed over the intermediate states. -/
-theorem one_kronecker_mul_diagonal_mul_one_kronecker_apply {Q Z : Type*} [Fintype Q]
-    [DecidableEq Q] [Fintype Z] [DecidableEq Z] (A B : Matrix Z Z ℂ) (d : Q × Z → ℂ)
-    (q' : Q) (z' : Z) (q : Q) (z : Z) :
-    (((1 : Matrix Q Q ℂ) ⊗ₖ A) * diagonal d * ((1 : Matrix Q Q ℂ) ⊗ₖ B)) (q', z') (q, z) =
-      if q' = q then ∑ z₁, A z' z₁ * d (q, z₁) * B z₁ z else 0 := by
-  rw [mul_apply, Fintype.sum_prod_type, Finset.sum_eq_single q]
-  · simp only [mul_diagonal, kroneckerMap_apply, one_apply, ↓reduceIte, one_mul]
-    split_ifs with h
-    · subst h
-      simp only [one_mul]
-    · simp
-  · intro b _ hb
-    simp [hb]
-  · simp
+section sizeProjector
+
+variable {X Y : Type*} [Fintype X] [DecidableEq X] [DecidableEq Y]
+
+/-- The size projector of the standard basis acts on the database register only. -/
+theorem sizeProjector_eq_one_kronecker (t : ℕ) :
+    sizeProjector X Y t = (1 : Matrix (X × Y) (X × Y) ℂ) ⊗ₖ
+      diagonal (fun D : Database X Y ↦ if D.size ≤ t then 1 else 0) := by
+  ext ⟨m, D⟩ ⟨m', D'⟩
+  simp only [sizeProjector, diagonal_apply, kroneckerMap_apply, Matrix.one_apply,
+    Prod.mk.injEq]
+  split_ifs <;> simp_all
+
+variable [AddCommGroup Y]
+
+variable (X Y) in
+/-- The projector `P_size^(t)` onto databases with at most `t` nonempty cells, on the joint
+register `(X × Ŷ) × Database X Y` of the phase basis. -/
+@[expose]
+noncomputable def phaseSizeProjector (t : ℕ) :
+    Matrix ((X × AddChar Y ℂ) × Database X Y) ((X × AddChar Y ℂ) × Database X Y) ℂ :=
+  diagonal fun m ↦ if m.2.size ≤ t then 1 else 0
+
+/-- The size projector of the phase basis acts on the database register only. -/
+theorem phaseSizeProjector_eq_one_kronecker (t : ℕ) :
+    phaseSizeProjector X Y t = (1 : Matrix (X × AddChar Y ℂ) (X × AddChar Y ℂ) ℂ) ⊗ₖ
+      diagonal (fun D : Database X Y ↦ if D.size ≤ t then 1 else 0) := by
+  ext ⟨m, D⟩ ⟨m', D'⟩
+  simp only [phaseSizeProjector, diagonal_apply, kroneckerMap_apply, Matrix.one_apply,
+    Prod.mk.injEq]
+  split_ifs <;> simp_all
+
+end sizeProjector
 
 section phaseOracle
 
@@ -354,7 +368,7 @@ theorem phaseOracle_apply (x' : X) (χ' : AddChar Y ℂ) (D' : Database X Y) (x 
     (χ : AddChar Y ℂ) (D : Database X Y) :
     phaseOracle X Y ((x', χ'), D') ((x, χ), D) =
       if (x', χ') = (x, χ) ∧ ∀ j ≠ x, D' j = D j then phaseCell Y χ (D' x) (D x) else 0 := by
-  rw [phaseOracle_eq, phaseDiagonal, one_kronecker_mul_diagonal_mul_one_kronecker_apply]
+  rw [phaseOracle_eq, phaseDiagonal, Matrix.one_kronecker_mul_diagonal_mul_one_kronecker_apply]
   by_cases hm : (x', χ') = (x, χ)
   · obtain ⟨rfl, rfl⟩ := Prod.mk.inj hm
     have key := sum_mul_piKron_mul_piKron (fun _ : X ↦ cellCompress Y)
@@ -368,7 +382,7 @@ theorem phaseOracle_apply (x' : X) (χ' : AddChar Y ℂ) (D' : Database X Y) (x 
         (cellCompress Y (D' j) z * cellCompress Y z (D j))) = if D' j = D j then 1 else 0 := by
       intro j hj
       simp only [Finset.ne_of_mem_erase hj, ↓reduceIte, one_mul]
-      rw [← mul_apply, cellCompress_mul_self, one_apply]
+      rw [← Matrix.mul_apply, cellCompress_mul_self, Matrix.one_apply]
     simp only [true_and, ↓reduceIte]
     rw [hsum, key, ← Finset.mul_prod_erase _ _ (Finset.mem_univ x'), Finset.prod_congr rfl hprod,
       Finset.prod_boole]
@@ -439,38 +453,12 @@ theorem phaseOracle_mulVec_single_of_eq_some {χ : AddChar Y ℂ} (hχ : χ ≠ 
 /-! ## Truncation in the phase basis -/
 
 variable (X Y) in
-/-- The projector `P_size^(t)` onto databases with at most `t` nonempty cells, on the joint
-register `(X × Ŷ) × Database X Y` of the phase basis. -/
-@[expose]
-noncomputable def phaseSizeProjector (t : ℕ) :
-    Matrix ((X × AddChar Y ℂ) × Database X Y) ((X × AddChar Y ℂ) × Database X Y) ℂ :=
-  diagonal fun m ↦ if m.2.size ≤ t then 1 else 0
-
-variable (X Y) in
 /-- The truncated compressed phase oracle `O_ph^(t) = P_size^(t) O_ph P_size^(t)` of
 ePrint 2025/2166, §4.3. -/
 @[expose]
 noncomputable def truncatedPhaseOracle (t : ℕ) :
     Matrix ((X × AddChar Y ℂ) × Database X Y) ((X × AddChar Y ℂ) × Database X Y) ℂ :=
   phaseSizeProjector X Y t * phaseOracle X Y * phaseSizeProjector X Y t
-
-omit [Fintype Y] [AddCommGroup Y] in
-/-- The size projector of the standard basis acts on the database register only. -/
-theorem sizeProjector_eq_one_kronecker (t : ℕ) :
-    sizeProjector X Y t = (1 : Matrix (X × Y) (X × Y) ℂ) ⊗ₖ
-      diagonal (fun D : Database X Y ↦ if D.size ≤ t then 1 else 0) := by
-  ext ⟨m, D⟩ ⟨m', D'⟩
-  simp only [sizeProjector, diagonal_apply, kroneckerMap_apply, one_apply, Prod.mk.injEq]
-  split_ifs <;> simp_all
-
-omit [Fintype Y] in
-/-- The size projector of the phase basis acts on the database register only. -/
-theorem phaseSizeProjector_eq_one_kronecker (t : ℕ) :
-    phaseSizeProjector X Y t = (1 : Matrix (X × AddChar Y ℂ) (X × AddChar Y ℂ) ℂ) ⊗ₖ
-      diagonal (fun D : Database X Y ↦ if D.size ≤ t then 1 else 0) := by
-  ext ⟨m, D⟩ ⟨m', D'⟩
-  simp only [phaseSizeProjector, diagonal_apply, kroneckerMap_apply, one_apply, Prod.mk.injEq]
-  split_ifs <;> simp_all
 
 /-- The entries of the truncated phase oracle: the entries of the phase oracle, kept when both
 databases have at most `t` nonempty cells. -/

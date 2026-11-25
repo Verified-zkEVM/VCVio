@@ -10,8 +10,8 @@ public import VCVio.CryptoFoundations.GroupModel.Certificate
 
 /-! # Group certificate regressions
 
-The virtualization certificate preserves arbitrary group-operation budgets, including free
-equality and coin queries. The setup and finalization test accounts for both surrounding phases.
+A virtualized adversary's group operations, an equality test that the certificate leaves free,
+and one group operation each in setup and finalization add up to the transferred bound.
 -/
 
 public section
@@ -19,15 +19,6 @@ public section
 open OracleComp OracleSpec GroupModel
 
 namespace VCVioTest.GroupModel.Certificate
-
-/-- The certified transfer gives virtualization's group-operation bound. -/
-theorem virtualize_bound {F S : Type} {σ : Sig S} [DecidableEq S]
-    (z : S → Handle) {α : Type} {A : OracleComp (genSpec F σ) α} {q : ℕ}
-    (hA : IsQueryBoundP A (fun i => isGroupOp i = true) q)
-    (s : Tbl (fun _ : S => Handle)) :
-    IsQueryBoundP ((virtualize z A).run s) (fun i => isGroupOp i = true) q :=
-  (costCertificate_virtualizeImpl z).simulateQ_run
-    ((isQueryBoundP_iff_weighted A q).mp hA) s
 
 /-- One setup operation and one final operation add two to the virtualized operation budget. -/
 theorem setup_finish_bound :

@@ -308,17 +308,10 @@ noncomputable def ffSampling (κ : ℕ) (t : FFTPair κ)
 
 end Primitives
 
-/-- Algebraic and distributional laws that the Falcon primitives must satisfy. -/
-structure Primitives.Laws {p : Params} (prims : Primitives p) : Prop where
-  /-- The discrete Gaussian sampler produces output distributed according to the ideal
-  discrete Gaussian PMF `D_{ℤ,σ',μ}`. -/
-  samplerZ_correct : ∀ (μ σ' : ℝ) (_hσ : 0 < σ'),
-    ∀ z : ℤ, Pr{let x ← prims.samplerZ μ σ'}[x = z] =
-      ENNReal.ofReal (LatticeCrypto.discreteGaussianPMF σ' μ z)
-  /-- `HashToPoint` output lies in `R_q` (coefficients in `[0, q-1]`).
-  In the random oracle model, this is modeled by the random oracle itself;
-  this law is a placeholder for any additional structural constraint. -/
-  hashToPoint_welldefined : ∀ (_salt : Bytes 40) (_vrfyKey : ByteArray) (_msg : List Byte), True
+/-- The structural laws of the Falcon primitives: the codec round-trips and the NTT backend
+satisfies the transform laws. Sampler laws are separate (`Primitives.SamplerEnvelope`,
+`Primitives.SamplerQuality`). -/
+structure Primitives.StructuralLaws {p : Params} (prims : Primitives p) : Prop where
   /-- Compress/decompress roundtrip: decompressing a compressed polynomial recovers
   the original. -/
   compress_decompress : ∀ (s : IntPoly p.n) (slen : ℕ) (bytes : List Byte),

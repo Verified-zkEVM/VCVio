@@ -31,10 +31,10 @@ theorem isQueryBoundP_reductionLift {A : OracleComp (genSpec F pairingSig) α} {
     (h : IsQueryBoundP A (fun i => isGroupOp i = true) q) :
     IsQueryBoundP (simulateQ (reductionLift (M := M) (R := R)) A)
       (fun i => isGroupOp i = true) q := by
-  apply ((isQueryBoundP_iff_weighted _ _).mp h).simulateQ_weighted
-  rintro (t | n)
-  · cases t <;> simp [reductionLift, isGroupOp, GroupModel.Query.isOp]
-  · simp [reductionLift, isGroupOp]
+  refine h.simulateQ_of_step ?_ ?_ <;> rintro (t | n) ht
+  all_goals first
+    | (cases t <;> simp_all [reductionLift, isGroupOp, GroupModel.Query.isOp])
+    | simp_all [reductionLift, isGroupOp]
 
 private theorem coins_free {α : Type} (oa : ProbComp α) :
     IsQueryBoundP (liftM oa : OracleComp (genSpec F pairingSig) α)
@@ -115,7 +115,7 @@ theorem isQueryBoundP_reductionHandler_run [CommSemiring F] [DecidableEq F]
     · convert hq using 1 <;> rfl
     · convert hqH using 1 <;> rfl
     · convert hqS using 1 <;> rfl
-  have hw := isQueryBound_weighted_of_predicates budgetPredicate ![1, cH, cS] ![q, qH, qS] hb
+  have hw := isChargeBound_of_predicates budgetPredicate ![1, cH, cS] ![q, qH, qS] hb
   have hc : CostCertificate (reductionHandler (M := M) z hash sign)
       (fun t => ∑ k : Fin 3, if budgetPredicate k t then ![1, cH, cS] k else 0) := by
     convert costCertificate_reductionHandler (M := M) z hash sign cH cS hH hS using 1

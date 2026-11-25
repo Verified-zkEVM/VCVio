@@ -21,7 +21,8 @@ open OracleComp OracleSpec
 
 namespace BLS
 
-private theorem realOracle_run_hash {F G M : Type} [SMul F G]
+/-- A direct hash query preserves the signing log and uses the shared random-oracle cache. -/
+theorem realOracle_run_hash {F G M : Type} [SMul F G]
     [SampleableType G] [DecidableEq M] (x : F) (msg : M)
     (s : List M × (M →ₒ G).QueryCache) :
     (realOracle x (.inl (.inr msg))).run s =
@@ -140,7 +141,8 @@ theorem unforgeableAdvantage_eq_indexed {F G₁ G₂ Gₜ M : Type}
   rw [← hproj]
   simp only [prEvent_map, pairing_eq_iff e g₁ g₂ hg₁.2 he]
   have hmap := simulateQ_indexedOracle_map_evalDistEq (· • g₁ : F → G₁)
-    (fun _ => $ᵗ F) (fun _ => $ᵗ G₁) (fun _ => smul_uniformSample_evalDistEq g₁ hg₁)
+    (fun _ => $ᵗ F) (fun _ => $ᵗ G₁)
+    (fun _ => SampleableType.map_uniformSample_evalDistEq_of_bijective hg₁)
     id (x • ·) none (withFinalHash (A.main (x • g₁, x • g₂))) OracleState.empty
   have hmempty : (OracleState.empty : OracleState F M).map (· • g₁) = OracleState.empty := by
     apply OracleState.ext <;> simp [OracleState.map, OracleState.empty]

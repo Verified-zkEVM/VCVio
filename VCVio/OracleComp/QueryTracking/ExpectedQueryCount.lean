@@ -158,6 +158,7 @@ theorem mul_expectedSimulatedQueryCount_le_of_isQueryBoundP {oa : OracleComp spe
   exact expectedSimulatedQueryCount_le_of_isQueryBoundP so charged oa s q hq
 
 /-- The expected charged-query count is monotone in the charged predicate. -/
+@[gcongr]
 theorem expectedSimulatedQueryCount_mono {left right : spec.Domain → Prop} [DecidablePred left]
     [DecidablePred right] (hsub : ∀ t, left t → right t) (oa : OracleComp spec α) (s : σ) :
     expectedSimulatedQueryCount so left oa s ≤ expectedSimulatedQueryCount so right oa s := by
@@ -179,7 +180,7 @@ theorem expectedSimulatedQueryCount_bind (oa : OracleComp spec α) (ob : α → 
         ∫⁻ r, r ∂𝒟[(fun z => expectedSimulatedQueryCount so charged (ob z.1) z.2) <$>
           (simulateQ so oa).run s] := by
   induction oa using OracleComp.inductionOn generalizing s with
-  | pure x => simp [simulateQ_pure]
+  | pure x => simp
   | query_bind t k ih =>
     rw [bind_assoc, expectedSimulatedQueryCount_query_bind,
       expectedSimulatedQueryCount_query_bind, simulateQ_bind, simulateQ_spec_query,
@@ -226,7 +227,7 @@ theorem lintegral_resource_le_add_expectedSimulatedQueryCount [MonadAttach m]
     ∫⁻ r, r ∂𝒟[(fun z => resource z.2) <$> (simulateQ so oa).run s] ≤
       resource s + expectedSimulatedQueryCount so charged oa s := by
   induction oa using OracleComp.inductionOn generalizing s with
-  | pure x => simp [simulateQ_pure]
+  | pure x => simp
   | query_bind t k ih =>
     rw [simulateQ_bind, simulateQ_spec_query, StateT.run_bind,
       lintegral_id_evalDist_map_bind, expectedSimulatedQueryCount_query_bind]

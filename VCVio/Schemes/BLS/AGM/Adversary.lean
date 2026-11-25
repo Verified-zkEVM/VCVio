@@ -7,15 +7,14 @@ Authors: Quang Dao
 module
 public import VCVio.CryptoFoundations.GroupModel.Interaction
 public import VCVio.Schemes.BLS.Basic
-public import VCVio.OracleComp.Traversal
 
 /-! # Algebraic BLS adversaries
 
-The shared interactive algebraic group model tracks the two source groups separately.
-Initially the adversary receives both generators and both public-key components. Hash and
-signing replies each add one first-source-group input. Oracle arguments are ordinary data;
-a protocol certificate requires outgoing query group lists to be empty. The final output has
-exactly one first-source-group point and no second-source-group points.
+A BLS adversary is an algebraic adversary of `GroupModel.Interaction.Adversary`, which tracks
+the two source groups separately. Initially the adversary receives both generators and both
+public-key components. Hash and signing replies each add one first-source-group input. Oracle
+arguments are ordinary data. The forgery is decoded from the first first-source-group point of
+the output, so no restriction on the shape of requests or outputs is needed.
 -/
 
 public section
@@ -82,18 +81,14 @@ end BLS.AGM
 
 namespace BLS
 
-/-- The shared interactive algebraic adversary specialized to BLS. The scheme parameters
-index the forgetful map; all generators and public-key points are delivered as group inputs. -/
+/-- An algebraic adversary (`GroupModel.Interaction.Adversary`) specialized to BLS. The scheme
+parameters index the forgetful map; all generators and public-key points are delivered as group
+inputs. -/
 structure AlgebraicAdversary (F M G₁ G₂ : Type) {Gₜ : Type} [Field F]
     [AddCommGroup G₁] [Module F G₁] [AddCommGroup G₂] [Module F G₂]
     [AddCommGroup Gₜ] [Module F Gₜ]
     (_e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ) (_g₁ : G₁) (_g₂ : G₂) extends
-    GroupModel.Interaction.Adversary F (AGM.Group G₁ G₂) Unit (AGM.Query M) AGM.Reply M where
-  /-- All requests are group-free and every final output is exactly one signature point. -/
-  protocol : ∀ input, allPathsSatisfy
-    (fun q => ∀ s, q.value.groups s = [])
-    (fun out => (out.value.groups false).length = 1 ∧ out.value.groups true = [])
-    (fun _ => Set.univ) (main input)
+    GroupModel.Interaction.Adversary F (AGM.Group G₁ G₂) Unit (AGM.Query M) AGM.Reply M
 
 /-- Forget the explanations and certificates, forwarding randomness, hashes, and signing
 requests to the original scheme oracles and returning the raw decoded forgery. -/

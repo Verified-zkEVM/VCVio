@@ -14,7 +14,7 @@ public import Mathlib.Control.Lawful
 `ExceptT ε m α` computations fail with an error of type `ε` or succeed with a value of type `α`;
 the underlying type is `m (Except ε α)`. An `ExceptT` computation's support is the preimage of its
 run's support under `Except.ok`, so errors are not outputs, and finite support lifts the same way.
-Their output measures are in `VCVio.EvalDist.Defs.Measure.ExceptT`.
+Their output measures are in `PolyFun.Control.Monad.Measure.ExceptT`.
 -/
 
 @[expose] public section

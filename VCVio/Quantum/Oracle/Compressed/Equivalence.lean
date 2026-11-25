@@ -5,6 +5,7 @@ Authors: Quang Dao
 -/
 
 module
+public import QuantumFoundations.Oracle.Basis
 public import VCVio.Quantum.Oracle.Compressed.Oracle
 public import VCVio.Quantum.Oracle.Comb
 public import VCVio.Quantum.Oracle.Model
@@ -73,42 +74,23 @@ universe u v w
 
 namespace Quantum
 
-/-! ## Basis matrices on basis states -/
-
-/-- The column of the basis state at `b`, times its adjoint, is the basis state at `b`. -/
-theorem basisMatrix_const_mul_conjTranspose {B : Type*} [DecidableEq B] (b : B) :
-    basisMatrix (fun _ : Unit ↦ b) * (basisMatrix fun _ : Unit ↦ b)ᴴ = Matrix.single b b 1 := by
-  ext c c'
-  by_cases h : c = b <;> by_cases h' : c' = b <;>
-    simp [Matrix.mul_apply, Matrix.single_apply, h, h'] <;> grind
-
-/-- The gate of a basis matrix sends the basis state at `a` to the basis state at `f a`. -/
-theorem conj_basisMatrix_single {A B : Type*} [Fintype A] [DecidableEq A] [DecidableEq B]
-    (f : A → B) (a : A) :
-    MatrixMap.conj (basisMatrix f) (Matrix.single a a 1) = Matrix.single (f a) (f a) 1 := by
-  rw [← basisMatrix_const_mul_conjTranspose a, MatrixMap.conj_apply,
-    ← Matrix.mul_assoc (basisMatrix f), Matrix.mul_assoc (basisMatrix f * _),
-    ← Matrix.conjTranspose_mul, ← basisMatrix_comp]
-  exact basisMatrix_const_mul_conjTranspose (f a)
-
 /-! ## The uniform superposition over functions -/
 
 section uniform
 
-variable (X Y : Type*) [Fintype X] [DecidableEq X] [Fintype Y] [DecidableEq Y]
+variable (X Y : Type*) [Fintype X] [DecidableEq X] [Fintype Y]
 
 /-- The uniform superposition `|Y|^(-|X|/2) ∑ H, |H⟩` over the functions `X → Y`, as a column. -/
 @[expose]
 noncomputable def uniformColumn : Matrix (X → Y) Unit ℂ :=
   Matrix.of fun _ _ ↦ cellAmp Y ^ Fintype.card X
 
-omit [DecidableEq X] [DecidableEq Y] in
+omit [DecidableEq X] in
 @[simp]
 theorem uniformColumn_apply (H : X → Y) (u : Unit) :
     uniformColumn X Y H u = cellAmp Y ^ Fintype.card X :=
   rfl
 
-omit [DecidableEq Y] in
 /-- For nonempty `Y`, the uniform superposition over functions is a unit vector. -/
 theorem conjTranspose_uniformColumn_mul_self [Nonempty Y] :
     (uniformColumn X Y)ᴴ * uniformColumn X Y = 1 := by
@@ -126,7 +108,6 @@ noncomputable def uniformFunctionState [Nonempty Y] : SubState (X → Y) :=
   (SubInstrument.ofIsometry (uniformColumn X Y) (conjTranspose_uniformColumn_mul_self X Y)).post
     (SubState.basis ()) ()
 
-omit [DecidableEq Y] in
 theorem matrix_uniformFunctionState [Nonempty Y] :
     (uniformFunctionState X Y).matrix =
       MatrixMap.conj (uniformColumn X Y) (Matrix.single () () 1) := by
@@ -135,7 +116,7 @@ theorem matrix_uniformFunctionState [Nonempty Y] :
 
 /-- Tabulating the uniform superposition over functions gives the empty database with every cell
 compressed: `E |φ⟩ = S^{⊗X} |∅⟩`. -/
-theorem basisMatrix_ofFun_mul_uniformColumn :
+theorem basisMatrix_ofFun_mul_uniformColumn [DecidableEq Y] :
     basisMatrix (Database.ofFun : (X → Y) → Database X Y) * uniformColumn X Y =
       compressAll X Y * basisMatrix fun _ : Unit ↦ (Database.empty : Database X Y) := by
   ext D u
@@ -427,11 +408,11 @@ theorem outcomeLawWith_purifiedRuntime {γ : Type*} [MeasurableSpace γ] (I : L.
     (x : QuantumComp L (qromSpec X Y) W A) (ρ : SubState A) (f : (Σ u, W u) → γ) :
     (purifiedRuntime X Y).evalDistMap I x ρ f = qromEvalDistMap I x ρ fun _ ↦ f := by
   refine Measure.ext fun s hs ↦ ?_
-  rw [qromEvalDistMap_eq_sum, Measure.smul_apply, Measure.coe_finsetSum, Finset.sum_apply,
+  rw [qromEvalDistMap_eq_sum, smul_apply, FunLike.coe_sum, Finset.sum_apply,
     smul_eq_mul, QuantumRuntime.evalDistMap_apply _ _ _ _ _ hs]
   simp only [QuantumRuntime.evalDistMap_apply _ _ _ _ _ hs,
     ofReal_trace_jointPost_purifiedRuntime, Finset.sum_mul, mul_assoc]
-  rw [Summable.tsum_finsetSum fun _ _ ↦ ENNReal.summable, Finset.mul_sum]
+  rw [Summable.tsum_finsetSum fun _ _ ↦ CompleteLattice.summable, Finset.mul_sum]
   simp only [ENNReal.tsum_mul_left]
 
 end purifiedQromRuntime

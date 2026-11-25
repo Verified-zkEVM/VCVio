@@ -58,7 +58,7 @@ theorem expect_run_le {ι : Type} {spec : OracleSpec ι} {S : Type}
     calc ∑' step, Pr{let x ← (impl queried).run state}[x = step] *
           ∑' z, Pr{let x ← (simulateQ impl (next step.1)).run step.2}[x = z] * value z.2
         ≤ ∑' step, Pr{let x ← (impl queried).run state}[x = step] * value step.2 :=
-          ENNReal.tsum_le_tsum fun step => mul_le_mul' le_rfl (ih step.1 step.2)
+          tsum_le_tsum fun step => mul_le_mul' le_rfl (ih step.1 step.2)
       _ ≤ value state := hstep queried state
 
 /-- **And a run followed by a continuation that does not raise it either.** -/
@@ -75,7 +75,7 @@ theorem expect_run_bind_le {ι : Type} {spec : OracleSpec ι} {S γ : Type}
   calc ∑' z, Pr{let x ← (simulateQ impl computation).run state}[x = z] *
         ∑' w, Pr{let x ← cont z}[x = w] * final w
       ≤ ∑' z, Pr{let x ← (simulateQ impl computation).run state}[x = z] * value z.2 :=
-        ENNReal.tsum_le_tsum fun z => mul_le_mul' le_rfl (hcont z)
+        tsum_le_tsum fun z => mul_le_mul' le_rfl (hcont z)
     _ ≤ value state := expect_run_le impl value hstep computation state
 
 /-! ## The watched value -/
@@ -238,7 +238,7 @@ theorem watchValue_step_le (leftKeep rightKeep : Bytes → σ → Prop) (target 
         | nil =>
           rw [splitTapeRecorder_run_left_nil leftKeep rightKeep input noticed rightTape leftRecord
             rightRecord hfresh hleft, FiredCoverage.tsum_probOutput_bind]
-          refine le_trans (ENNReal.tsum_le_tsum fun answer => mul_le_mul' le_rfl
+          refine le_trans (tsum_le_tsum fun answer => mul_le_mul' le_rfl
             (le_of_eq (FiredCoverage.tsum_probOutput_pure _ _))) ?_
           simp only [watchValue, hupdate, hrecorded, not_true_eq_false, false_and, and_false,
             ite_false, mul_zero, tsum_zero]
@@ -254,7 +254,7 @@ theorem watchValue_step_le (leftKeep rightKeep : Bytes → σ → Prop) (target 
           | nil =>
             rw [splitTapeRecorder_run_right_nil leftKeep rightKeep input noticed leftTape
               leftRecord rightRecord hfresh hleft hright, FiredCoverage.tsum_probOutput_bind]
-            refine le_trans (ENNReal.tsum_le_tsum fun answer => mul_le_mul' le_rfl
+            refine le_trans (tsum_le_tsum fun answer => mul_le_mul' le_rfl
               (le_of_eq (FiredCoverage.tsum_probOutput_pure _ _))) ?_
             simp only [watchValue, hupdate, hrecorded, not_true_eq_false, and_false,
               ite_false, mul_zero, tsum_zero]
@@ -271,7 +271,7 @@ theorem watchValue_step_le (leftKeep rightKeep : Bytes → σ → Prop) (target 
           rw [FiredCoverage.tsum_probOutput_bind]
           refine le_trans (le_of_eq (tsum_congr fun answer =>
             congrArg _ (FiredCoverage.tsum_probOutput_pure _ _))) ?_
-          refine le_trans (ENNReal.tsum_le_tsum fun answer => mul_le_mul' le_rfl
+          refine le_trans (tsum_le_tsum fun answer => mul_le_mul' le_rfl
             (show watchValue input hits (CacheView.update noticed input answer,
                 (leftTape, rightTape), (leftRecord, rightRecord)) ≤
               (if hits answer then 1 else 0) from ?_)) ?_

@@ -11,8 +11,15 @@ public import Mathlib.Data.ZMod.Basic
 
 /-! # Virtualization regression over five elements
 
-A private zero entry follows the two adversary inputs in the outer table. The adversary adds
-its two inputs and compares the result with an out-of-range handle.
+The adversary adds its two inputs and compares the sum with handle `3`, which is out of range
+for its own table but in range for the surrounding one. The surrounding table is `[1, 3, 0]`,
+with the designated zero entry at handle `2`, and the adversary's handles `0, 1` translate to
+`0, 1`.
+
+The checks evaluate the virtualized program and its run. The program issues each operation
+once and sends handle `3` as the zero handle `2`, so the comparison answers `false`, as the
+direct run on `[1, 3]` does. Passing handle `3` through untranslated would compare the sum with
+itself in the surrounding table and answer `true`.
 -/
 
 public section
@@ -21,42 +28,79 @@ open OracleComp OracleSpec
 
 namespace GroupModel
 
-/-- Virtualization reads back the direct run on `[1, 3]` and transports its one-operation budget,
-even when the adversary compares with handle `7`. -/
-theorem virtualize_zmod5 :
-    let M : Model (ZMod 5) groupSig (fun _ => ZMod 5) := Model.group (ZMod 5)
+/-- The virtualized program issues the addition and the comparison once each, translates the
+out-of-range handle `3` to the zero handle `2`, and records the fresh outer handle. -/
+theorem virtualize_program :
     let A : OracleComp (genSpec (ZMod 5) groupSig) Bool := do
       let h ← (genSpec (ZMod 5) groupSig).query (.inl (.add () 0 1))
-      let b ← (genSpec (ZMod 5) groupSig).query (.inl (.eq () h 7))
+      let b ← (genSpec (ZMod 5) groupSig).query (.inl (.eq () h 3))
       pure b
-    let z : Unit → Handle := fun _ => 2
-    let τ : Tbl (fun _ : Unit => Handle) := fun _ => [0, 1]
-    let T : Tbl (fun _ : Unit => ZMod 5) := fun _ => [1, 3, 0]
-    (fun r => (r.1.1, readBack r.1.2 r.2)) <$>
-        runGen M (fun _ => id) ((virtualize z A).run τ) T =
-      runGen M (fun _ => id) A (fun _ => [1, 3]) ∧
-    IsQueryBoundP A (fun i => isGroupOp i = true) 1 ∧
-    IsQueryBoundP ((virtualize z A).run τ) (fun i => isGroupOp i = true) 1 := by
-  dsimp only
-  let A : OracleComp (genSpec (ZMod 5) groupSig) Bool := do
-    let h ← (genSpec (ZMod 5) groupSig).query (.inl (.add () 0 1))
-    let b ← (genSpec (ZMod 5) groupSig).query (.inl (.eq () h 7))
-    pure b
-  have hw : WellFormed (fun _ : Unit => 2) (fun _ => [0, 1])
-      (fun _ => ([1, 3, 0] : List (ZMod 5))) := by
-    intro s
-    simp [lookup]
+    (virtualize (fun _ => 2) A).run (fun _ => [0, 1]) =
+      ((do
+        let h ← (genSpec (ZMod 5) groupSig).query (.inl (.add () 0 1))
+        let b ← (genSpec (ZMod 5) groupSig).query (.inl (.eq () h 2))
+        pure (b, append (fun _ : Unit => ([0, 1] : List Handle)) () h)) :
+          OracleComp (genSpec (ZMod 5) groupSig) (Bool × Tbl (fun _ : Unit => Handle))) :=
+  rfl
+
+/-- The virtualized run on `[1, 3, 0]` answers `false`, extends the translation by the outer
+handle `3`, and appends the sum `4`. -/
+theorem virtualize_run :
+    let A : OracleComp (genSpec (ZMod 5) groupSig) Bool := do
+      let h ← (genSpec (ZMod 5) groupSig).query (.inl (.add () 0 1))
+      let b ← (genSpec (ZMod 5) groupSig).query (.inl (.eq () h 3))
+      pure b
+    runGen (Model.group (ZMod 5)) (fun _ => id) ((virtualize (fun _ => 2) A).run (fun _ => [0, 1]))
+        (fun _ => [1, 3, 0]) =
+      pure ((false, fun _ => [0, 1, 3]), fun _ => [1, 3, 0, 4]) :=
+  rfl
+
+/-- The direct run on `[1, 3]` answers `false` with table `[1, 3, 4]`, which is the read-back of
+the virtualized run's final translation and table. -/
+theorem virtualize_direct_run :
+    let A : OracleComp (genSpec (ZMod 5) groupSig) Bool := do
+      let h ← (genSpec (ZMod 5) groupSig).query (.inl (.add () 0 1))
+      let b ← (genSpec (ZMod 5) groupSig).query (.inl (.eq () h 3))
+      pure b
+    runGen (Model.group (ZMod 5)) (fun _ => id) A (fun _ => [1, 3]) =
+        pure (false, fun _ => [1, 3, 4]) ∧
+      readBack (fun _ : Unit => [0, 1, 3]) (fun _ => ([1, 3, 0, 4] : List (ZMod 5))) =
+        fun _ => [1, 3, 4] :=
+  ⟨rfl, rfl⟩
+
+/-- Without translation, the comparison with handle `3` in the surrounding table answers
+`true`. -/
+theorem untranslated_run :
+    runGen (Model.group (ZMod 5)) (fun _ => id)
+        ((do
+          let h ← (genSpec (ZMod 5) groupSig).query (.inl (.add () 0 1))
+          let b ← (genSpec (ZMod 5) groupSig).query (.inl (.eq () h 3))
+          pure b) : OracleComp (genSpec (ZMod 5) groupSig) Bool)
+        (fun _ => [1, 3, 0]) =
+      pure (true, fun _ => [1, 3, 0, 4]) :=
+  rfl
+
+/-- The adversary's one-operation budget transports to the virtualized program, where it is
+tight: the virtualized program exceeds a budget of zero. -/
+theorem virtualize_budget :
+    let A : OracleComp (genSpec (ZMod 5) groupSig) Bool := do
+      let h ← (genSpec (ZMod 5) groupSig).query (.inl (.add () 0 1))
+      let b ← (genSpec (ZMod 5) groupSig).query (.inl (.eq () h 3))
+      pure b
+    IsQueryBoundP ((virtualize (fun _ => 2) A).run (fun _ => [0, 1]))
+        (fun i => isGroupOp i = true) 1 ∧
+      ¬ IsQueryBoundP ((virtualize (fun _ => 2) A).run (fun _ => [0, 1]))
+        (fun i => isGroupOp i = true) 0 := by
+  intro A
   have hb : IsQueryBoundP A (fun i => isGroupOp i = true) 1 := by
     refine ⟨?_, fun _ => ⟨?_, fun _ => trivial⟩⟩
     · change (¬ true = true) ∨ 0 < 1
       decide
     · change (¬ false = true) ∨ 0 < 0
       decide
-  refine ⟨?_, hb, isQueryBoundP_virtualize _ hb _⟩
-  have hrb : readBack (fun _ : Unit => [0, 1])
-      (fun _ => ([1, 3, 0] : List (ZMod 5))) = (fun _ => [1, 3]) := rfl
-  have hs := runGen_virtualize (Model.group (ZMod 5)) (fun _ => id) A hw
-  rw [hrb] at hs
-  exact hs.symm
+  refine ⟨isQueryBoundP_virtualize _ hb _, fun h => ?_⟩
+  rw [virtualize_program] at h
+  have h₀ : (¬ true = true) ∨ 0 < 0 := h.1
+  exact absurd h₀ (by decide)
 
 end GroupModel

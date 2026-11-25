@@ -7,7 +7,9 @@ Authors: Quang Dao
 module
 public import VCVio.OracleComp.ProbComp.Basic
 public import VCVio.OracleComp.EvalDist.AnswerMeasure
-public import VCVio.EvalDist.Defs.Semantics.Core
+public import PolyFun.Control.Monad.Measure.SemanticsVia
+public import VCVio.EvalDist.Defs.Measure.Core
+public import ToMathlib.MeasureTheory.Measure.GiryMonad
 public import PolyFun.Control.Monad.Hom
 import VCVio.EvalDist.Monad.Measure
 
@@ -129,6 +131,13 @@ noncomputable def probComp : ProbCompRuntime ProbComp where
 @[simp]
 lemma probComp_evalDist [MeasurableSpace α] (mx : ProbComp α) :
     probComp.evalDist mx = 𝒟[mx] := rfl
+
+/-- The canonical `ProbComp` runtime's randomness capability is the identity lift. -/
+lemma probComp_toProbCompLift : probComp.toProbCompLift = ProbCompLift.id := rfl
+
+/-- The canonical `ProbComp` runtime lifts a `ProbComp` computation to itself. -/
+@[simp]
+lemma probComp_liftProbComp (mx : ProbComp α) : probComp.liftProbComp mx = mx := rfl
 
 /-- The canonical `ProbComp` runtime assigns every computation a probability measure. -/
 instance [MeasurableSpace α] (mx : ProbComp α) :

@@ -25,6 +25,7 @@ open OracleComp OracleSpec TweakableHash
 
 namespace SMDTRTCRTest
 
+/-- The unique public seed used by the probe hash. -/
 inductive Seed
   | only
 
@@ -54,12 +55,18 @@ resampling loop stops on its first draw and leaves the remaining budget unspent.
   numTargets := 1
   numRetries := 3
 
+/-- One target with an accepting predicate but no permitted resampling draw. -/
+@[expose] def zeroRetryProblem : SM_DT_RTCR_Problem Seed Bool Bool Bool Bool :=
+  { exhaustingProblem with prop := fun _ => true, numRetries := 0 }
+
 @[simp] lemma acceptingProblem_seedGen : acceptingProblem.th.seedGen = pure .only := rfl
 
 @[simp] lemma exhaustingProblem_seedGen : exhaustingProblem.th.seedGen = pure .only := rfl
 
+/-- Private uniform sampling and challenge queries for the Boolean probe games. -/
 abbrev Specs := unifSpec + SM_DT_RTCR_challengeSpec Bool Bool Bool Bool
 
+/-- Issue a challenge at the supplied tweak and message. -/
 def challenge (t m : Bool) : OracleComp Specs (Option (Bool × Bool)) :=
   liftM (Specs.query (.inr (t, m)))
 
@@ -99,6 +106,11 @@ def exhaustedThenSecond : OracleComp Specs (Option (Bool × Bool)) := do
   let _ ← challenge false true
   challenge true true
 
+/-- A second message at the same tweak must be rejected before drawing again. -/
+def repeatedTweak : OracleComp Specs (Option (Bool × Bool)) := do
+  let _ ← challenge false false
+  challenge false true
+
 /-- Reusing the recorded message with fresh randomness is a win. Transcribing SM-TCR's winning
 condition, which requires the message to differ, would make this adversary lose. -/
 theorem same_message_fresh_randomness_wins :
@@ -108,26 +120,30 @@ theorem same_message_fresh_randomness_wins :
     rw [hbool]
     exact MeasureTheory.measure_univ
   simp [SM_DT_RTCR_Advantage, SM_DT_RTCR_Experiment, SM_DT_RTCR_oracles,
-    SM_DT_RTCR_challengeOracle, SM_DT_RTCR_resample, SM_DT_RTCR_IsCollision,
+    SM_DT_RTCR_challengeOracle, SM_DT_RTCR_resample_succ,
+    SM_DT_RTCR_IsCollision,
     sameMessageFreshRandomness, challenge, acceptingProblem, hash, TweakReserved, hmass]
 
 /-- Replaying the recorded pair loses, so the pair inequality in the winning condition is live. -/
 theorem replay_loses : SM_DT_RTCR_Advantage replayRecordedPair = 0 := by
   simp [SM_DT_RTCR_Advantage, SM_DT_RTCR_Experiment, SM_DT_RTCR_oracles,
-    SM_DT_RTCR_challengeOracle, SM_DT_RTCR_resample, SM_DT_RTCR_IsCollision, replayRecordedPair,
+    SM_DT_RTCR_challengeOracle, SM_DT_RTCR_resample_succ,
+    SM_DT_RTCR_IsCollision, replayRecordedPair,
     challenge, acceptingProblem, hash, TweakReserved]
 
 /-- An index past the end of the history loses. -/
 theorem index_out_of_range_loses : SM_DT_RTCR_Advantage indexOutOfRange = 0 := by
   simp [SM_DT_RTCR_Advantage, SM_DT_RTCR_Experiment, SM_DT_RTCR_oracles,
-    SM_DT_RTCR_challengeOracle, SM_DT_RTCR_resample, SM_DT_RTCR_IsCollision, indexOutOfRange,
+    SM_DT_RTCR_challengeOracle, SM_DT_RTCR_resample_succ,
+    SM_DT_RTCR_IsCollision, indexOutOfRange,
     challenge, acceptingProblem, hash, TweakReserved]
 
 /-- A slot recorded on exhausted resampling cannot be forged against, even though the probe hash
 collides on everything. -/
 theorem exhausted_slot_loses : SM_DT_RTCR_Advantage claimExhaustedSlot = 0 := by
   simp [SM_DT_RTCR_Advantage, SM_DT_RTCR_Experiment, SM_DT_RTCR_oracles,
-    SM_DT_RTCR_challengeOracle, SM_DT_RTCR_resample, SM_DT_RTCR_IsCollision, claimExhaustedSlot,
+    SM_DT_RTCR_challengeOracle, SM_DT_RTCR_resample_succ,
+    SM_DT_RTCR_resample_zero, SM_DT_RTCR_IsCollision, claimExhaustedSlot,
     challenge, exhaustingProblem, hash, TweakReserved]
 
 /-- An exhausted query consumes one of the `numTargets` targets: at a cap of one, the query that
@@ -139,7 +155,8 @@ theorem exhausted_burns_a_target :
       exhaustedThenSecond).run []),
       z = (none, [(false, true, none)]) := by
   simp [exhaustedThenSecond, challenge, SM_DT_RTCR_oracles, SM_DT_RTCR_challengeOracle,
-    SM_DT_RTCR_resample, exhaustingProblem, hash, TweakReserved]
+    SM_DT_RTCR_resample_succ,
+    SM_DT_RTCR_resample_zero, exhaustingProblem, hash, TweakReserved]
 
 /-- Whatever randomness the oracle draws, the tweaks appear in issue order, so the `j`-th entry
 belongs to the `j`-th query. Appending is what makes this hold; consing would reverse it. -/
@@ -147,7 +164,22 @@ theorem history_in_issue_order :
     ∀ z ∈ support ((simulateQ (SM_DT_RTCR_oracles acceptingProblem .only) twoQueries).run []),
       z.2.map Prod.fst = [false, true] := by
   simp [twoQueries, challenge, SM_DT_RTCR_oracles, SM_DT_RTCR_challengeOracle,
-    SM_DT_RTCR_resample, acceptingProblem, hash, TweakReserved]
+    SM_DT_RTCR_resample_succ,
+    acceptingProblem, hash, TweakReserved]
   grind
+
+/-- Zero retries draw no randomness, record an exhausted slot and consume its target capacity. -/
+theorem zero_retries_burn_a_target_without_draws :
+    (simulateQ (SM_DT_RTCR_oracles zeroRetryProblem .only) exhaustedThenSecond).run [] =
+      pure (none, [(false, true, none)]) := by
+  simp [exhaustedThenSecond, challenge, SM_DT_RTCR_oracles, SM_DT_RTCR_challengeOracle,
+    SM_DT_RTCR_resample_zero, zeroRetryProblem, exhaustingProblem, hash, TweakReserved]
+
+/-- Reusing a tweak leaves the first target intact and draws randomness only for that target. -/
+theorem reused_tweak_keeps_first_target :
+    (simulateQ (SM_DT_RTCR_oracles acceptingProblem .only) repeatedTweak).run [] =
+      (fun ρ => (none, [(false, false, some ρ)])) <$> ($ᵗ Bool) := by
+  simp [repeatedTweak, challenge, SM_DT_RTCR_oracles, SM_DT_RTCR_challengeOracle,
+    SM_DT_RTCR_resample_succ, acceptingProblem, hash, TweakReserved]
 
 end SMDTRTCRTest

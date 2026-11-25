@@ -8,15 +8,11 @@ module
 public import Mathlib.Algebra.Field.Basic
 import Mathlib.Tactic.LinearCombination
 
--- Enumeration entry points inspected by the per-module initialization sweep.
-import Mathlib.Data.FinEnum
-import Mathlib.Data.Fintype.Pi
 
 /-! # Affine representations and scalar extraction
 
-This follows Gurkan's linear-functional proof of BLS security in the algebraic group model
-of Fuchsbauer, Kiltz and Loss (CRYPTO 2018). An element's exponent is a known affine
-function of a single hidden scalar. A nonzero verification gap reveals that scalar.
+An element's exponent is a known affine function of a single hidden scalar. A nonzero verification
+gap reveals that scalar.
 -/
 
 public section

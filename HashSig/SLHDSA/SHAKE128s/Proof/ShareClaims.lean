@@ -49,9 +49,9 @@ theorem forgedAt_congr (publicSeed : Digest) :
       (∀ probe, QueriesUnder left
         (Hypertree.rootFromSignature (m := OracleComp HashSpec) publicSeed remaining signatures
           layer tree leaf message) probe → left probe = right probe) →
-      @WotsResidueReduction.forgedAt (replayQuery left) publicSeed remaining signatures layer tree
+      WotsResidueReduction.forgedAt (replayQuery left) publicSeed remaining signatures layer tree
           leaf message i =
-        @WotsResidueReduction.forgedAt (replayQuery right) publicSeed remaining signatures layer
+        WotsResidueReduction.forgedAt (replayQuery right) publicSeed remaining signatures layer
           tree leaf message i := by
   intro remaining
   induction remaining with
@@ -69,12 +69,12 @@ theorem forgedAt_congr (publicSeed : Digest) :
         refine simulateQ_replay_congr _ left right fun probe hprobe => hagree probe ?_
         simp only [Hypertree.rootFromSignature]
         exact queriesUnder_bind left _ _ probe hprobe
-      change @WotsResidueReduction.forgedAt (replayQuery left) publicSeed remaining
+      change WotsResidueReduction.forgedAt (replayQuery left) publicSeed remaining
           (fun j => signatures j.succ) (layer + 1) (tree / 2 ^ subtreeHeight)
           (Hypertree.nextLeaf tree)
           (@Merkle.publicKeyFromSignature Id _ (replayQuery left) leaf (signatures 0) message
             publicSeed (Hypertree.address layer tree)) i =
-        @WotsResidueReduction.forgedAt (replayQuery right) publicSeed remaining
+        WotsResidueReduction.forgedAt (replayQuery right) publicSeed remaining
           (fun j => signatures j.succ) (layer + 1) (tree / 2 ^ subtreeHeight)
           (Hypertree.nextLeaf tree)
           (@Merkle.publicKeyFromSignature Id _ (replayQuery right) leaf (signatures 0) message
@@ -106,8 +106,8 @@ theorem claimedCandidatesOf_congr (publicSeed : Digest) (left right : QueryCache
     (hagree : ∀ probe, QueriesUnder left
       (Scheme.verify (m := OracleComp HashSpec) pk request signature) probe →
         left probe = right probe) :
-    @ClaimedProbes.claimedCandidatesOf (replayQuery left) publicSeed left pk message parsed =
-      @ClaimedProbes.claimedCandidatesOf (replayQuery right) publicSeed right pk message
+    ClaimedProbes.claimedCandidatesOf (replayQuery left) publicSeed left pk message parsed =
+      ClaimedProbes.claimedCandidatesOf (replayQuery right) publicSeed right pk message
         parsed := by
   subst hseed
   have hdig : digestOf left pk message parsed = digestOf right pk message parsed := by
@@ -126,11 +126,11 @@ theorem claimedCandidatesOf_congr (publicSeed : Digest) (left right : QueryCache
     exact simulateQ_replay_congr _ left right fun probe hprobe =>
       hagree probe (queriesUnder_verify_fors left pk request signature message parsed hframe
         hparsed probe hprobe)
-  have hsteps : @ClaimedProbes.forgedSteps (replayQuery left) pk.seed parsed
+  have hsteps : ClaimedProbes.forgedSteps (replayQuery left) pk.seed parsed
         (MessageDigest.treeIndex (digestOf left pk message parsed)).toNat
         (MessageDigest.leafIndex (digestOf left pk message parsed)).toFin
         (forsKeyOf left pk message parsed) =
-      @ClaimedProbes.forgedSteps (replayQuery right) pk.seed parsed
+      ClaimedProbes.forgedSteps (replayQuery right) pk.seed parsed
         (MessageDigest.treeIndex (digestOf left pk message parsed)).toNat
         (MessageDigest.leafIndex (digestOf left pk message parsed)).toFin
         (forsKeyOf left pk message parsed) := by

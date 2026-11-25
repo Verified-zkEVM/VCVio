@@ -359,7 +359,7 @@ lemma expectedQueries_le_tsum_of_tail_probs_le
     {a : ℕ → ENNReal}
     (h : ∀ i : ℕ, Pr{let c ← HasQuery.queryCountDist oa runtime}[i < c] ≤ a i) :
     HasQuery.expectedQueries oa runtime ≤ ∑' i : ℕ, a i :=
-  (HasQuery.expectedQueries_eq_tsum_tail_probs oa runtime).trans_le (ENNReal.tsum_le_tsum h)
+  (HasQuery.expectedQueries_eq_tsum_tail_probs oa runtime).trans_le (tsum_le_tsum h)
 
 /-- Finite tail-sum formula for expected query count under a pathwise upper bound.
 

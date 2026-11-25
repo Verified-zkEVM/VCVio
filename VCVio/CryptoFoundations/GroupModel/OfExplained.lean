@@ -6,15 +6,27 @@ Authors: Quang Dao
 
 module
 public import VCVio.CryptoFoundations.GroupModel.Coins
+public import Mathlib.Data.FinEnum
 
 /-!
-Realizing certified explanations with handles
+# Realizing certified explanations with handles
+
+A certified algebraic adversary in the sense of Fuchsbauer, Kiltz and Loss sends each group
+element together with its coefficients over the elements it has received. `ofExplained` turns
+such an adversary into a handle adversary that rebuilds each element from its coefficients with
+`smul` and `add` queries, and `ofExplained_run` shows that reading back the handle run gives the
+certified run exactly.
 
 The received-handle invariant includes bounds as well as read-back equality. Bounds ensure
 that appending to a table preserves the meaning of every received handle.
 
-Sortwise computations use `Finset.univ.toList` from the supplied `Fintype` instance. This fixed
-finite enumeration sequences encoding and group queries, including for dependent group types.
+Sortwise computations visit the sorts in the order `FinEnum.toList S`. This fixed enumeration
+sequences encoding and group queries, including for dependent group types.
+
+## References
+
+* G. Fuchsbauer, E. Kiltz, J. Loss, *The Algebraic Group Model and its Applications*,
+  CRYPTO 2018.
 -/
 
 public section
@@ -56,24 +68,14 @@ theorem received_initial [∀ s, Zero (G s)] (basis : Groups G) :
   intro i hi hj
   simp [lookup, List.getD, hj]
 
-private def Extends (tbl tbl' : Tbl G) : Prop := ∀ s, (tbl s).IsPrefix (tbl' s)
-
-private theorem extends_refl (tbl : Tbl G) : Extends tbl tbl := fun _ => ⟨[], by simp⟩
-
-private theorem extends_trans {a b c : Tbl G} (hab : Extends a b) (hbc : Extends b c) :
-    Extends a c := fun s => (hab s).trans (hbc s)
-
 private theorem lookup_extends [∀ s, Zero (G s)] {tbl tbl' : Tbl G}
-    (he : Extends tbl tbl') (s : S) (h : Handle) (hh : h < (tbl s).length) :
-    h < (tbl' s).length ∧ lookup tbl' s h = lookup tbl s h := by
-  obtain ⟨tail, ht⟩ := he s
-  constructor
-  · exact lt_of_lt_of_le hh (he s).length_le
-  · simp [lookup, ← ht, List.getD_eq_getElem?_getD, List.getElem?_append_left hh]
+    (he : Tbl.Extends tbl tbl') (s : S) (h : Handle) (hh : h < (tbl s).length) :
+    h < (tbl' s).length ∧ lookup tbl' s h = lookup tbl s h :=
+  ⟨lt_of_lt_of_le hh (he s).length_le, lookup_eq_of_prefix s (he s) h hh⟩
 
 private theorem received_extends [∀ s, Zero (G s)] {tbl tbl' : Tbl G}
     {handles : Groups (fun _ : S => Handle)} {basis : Groups G}
-    (h : Received tbl handles basis) (he : Extends tbl tbl') : Received tbl' handles basis := by
+    (h : Received tbl handles basis) (he : Tbl.Extends tbl tbl') : Received tbl' handles basis := by
   intro s
   exact (h s).imp fun _ _ hh =>
     ⟨(lookup_extends he s _ hh.1).1, (lookup_extends he s _ hh.1).2.trans hh.2⟩
@@ -84,7 +86,7 @@ theorem received_pushGroups [∀ s, Zero (G s)] {tbl : Tbl G}
     (h : Received tbl handles basis) (reply : Groups G) :
     Received (pushGroups reply tbl).2 (extend handles (pushGroups reply tbl).1)
       (extend basis reply) := by
-  have he : Extends tbl (pushGroups reply tbl).2 := fun s => ⟨reply s, rfl⟩
+  have he : Tbl.Extends tbl (pushGroups reply tbl).2 := fun s => ⟨reply s, rfl⟩
   intro s
   apply List.rel_append (received_extends h he s)
   apply List.forall₂_iff_get.mpr
@@ -92,19 +94,11 @@ theorem received_pushGroups [∀ s, Zero (G s)] {tbl : Tbl G}
   intro i hi hj
   simp [pushGroups, lookup, List.getD, hj]
 
-private theorem extends_append [DecidableEq S] (tbl : Tbl G) (s : S) (g : G s) :
-    Extends tbl (append tbl s g) := by
-  intro t
-  by_cases ht : t = s
-  · subst t
-    exact ⟨[g], by simp [append]⟩
-  · exact ⟨[], by simp [append, Function.update_of_ne ht]⟩
-
 private theorem lookup_append_self [DecidableEq S] [∀ s, Zero (G s)]
     (tbl : Tbl G) (s : S) (g : G s) :
     (tbl s).length < (append tbl s g s).length ∧
-      lookup (append tbl s g) s (tbl s).length = g := by
-  simp [append, lookup, List.getD]
+      lookup (append tbl s g) s (tbl s).length = g :=
+  ⟨by simp [append], lookup_append_fresh tbl s g⟩
 
 /-! ## Compilation -/
 
@@ -137,42 +131,40 @@ private def sortMap [DecidableEq S] {m : Type → Type} [Monad m] {A : S → Typ
       let rest ← sortMap f ss
       pure (Function.update rest s xs)
 
-private noncomputable def decodeGroups [Fintype S] [DecidableEq S] (dec : (s : S) → E s → G s)
+private def decodeGroups [DecidableEq S] [FinEnum S] (dec : (s : S) → E s → G s)
     (handles : Groups (fun _ : S => Handle)) : OracleComp (Target F S E Query Reply) (Groups G) :=
   sortMap (fun s => (handles s).mapM fun h => do
     let e ← encodingQ s h
-    pure (dec s e)) Finset.univ.toList
+    pure (dec s e)) (FinEnum.toList S)
 
-private noncomputable def buildVectorAux [Zero F] (s : S) : List F → List Handle →
-    OracleComp (Target F S E Query Reply) (Option Handle) := by
-  classical
-  exact fun cs hs => match cs, hs with
-    | c :: cs, h :: hs =>
-        if c = 0 then buildVectorAux s cs hs else do
-          let a ← smulQ s c h
-          let rest ← buildVectorAux s cs hs
-          match rest with
-          | none => pure (some a)
-          | some b => do
-              let sum ← addQ s a b
-              pure (some sum)
-    | _, _ => pure none
+private def buildVectorAux [Zero F] [DecidableEq F] (s : S) : List F → List Handle →
+    OracleComp (Target F S E Query Reply) (Option Handle)
+  | c :: cs, h :: hs =>
+      if c = 0 then buildVectorAux s cs hs else do
+        let a ← smulQ s c h
+        let rest ← buildVectorAux s cs hs
+        match rest with
+        | none => pure (some a)
+        | some b => do
+            let sum ← addQ s a b
+            pure (some sum)
+  | _, _ => pure none
 
-private noncomputable def buildVector [Zero F] (s : S) (cs : List F) (hs : List Handle) :
+private def buildVector [Zero F] [DecidableEq F] (s : S) (cs : List F) (hs : List Handle) :
     OracleComp (Target F S E Query Reply) Handle := do
   let result ← buildVectorAux s cs hs
   match result with
   | some h => pure h
   | none => smulQ s 0 0
 
-private noncomputable def buildMessage [Zero F] [Fintype S] [DecidableEq S] {Data : Type}
+private def buildMessage [Zero F] [DecidableEq F] [DecidableEq S] [FinEnum S] {Data : Type}
     (handles : Groups (fun _ : S => Handle)) (out : Explained F Data G) :
     OracleComp (Target F S E Query Reply) (Message Data (fun _ : S => Handle)) := do
   let groups ← sortMap (fun s => (out.coefficients s).mapM fun cs =>
-    buildVector s cs (handles s)) Finset.univ.toList
+    buildVector s cs (handles s)) (FinEnum.toList S)
   pure ⟨out.value.data, groups⟩
 
-private noncomputable def compile [Zero F] [Fintype S] [DecidableEq S]
+private def compile [Zero F] [DecidableEq F] [DecidableEq S] [FinEnum S]
     (dec : (s : S) → E s → G s)
     (program : OracleComp (explainedSpec F G (CoinQuery Query) (CoinReply Reply))
       (Explained F Result G)) :
@@ -194,12 +186,12 @@ private noncomputable def compile [Zero F] [Fintype S] [DecidableEq S]
           next ⟨coin, fun _ => []⟩ handles)
         q.value.data next)
 
-private theorem compile_pure [Zero F] [Fintype S] [DecidableEq S]
+private theorem compile_pure [Zero F] [DecidableEq F] [DecidableEq S] [FinEnum S]
     (dec : (s : S) → E s → G s) (out : Explained F Result G)
     (hs : Groups (fun _ : S => Handle)) :
     compile (Query := Query) (Reply := Reply) dec (pure out) hs = buildMessage hs out := rfl
 
-private theorem compile_coin [Zero F] [Fintype S] [DecidableEq S]
+private theorem compile_coin [Zero F] [DecidableEq F] [DecidableEq S] [FinEnum S]
     (dec : (s : S) → E s → G s) (n : ℕ) (groups : Groups G)
     (coefficients : S → List (List F))
     (next : Message (Fin (n + 1)) G → OracleComp
@@ -210,7 +202,7 @@ private theorem compile_coin [Zero F] [Fintype S] [DecidableEq S]
         let coin ← coinQ n
         compile dec (next ⟨coin, fun _ => []⟩) hs) := rfl
 
-private theorem compile_request [Zero F] [Fintype S] [DecidableEq S]
+private theorem compile_request [Zero F] [DecidableEq F] [DecidableEq S] [FinEnum S]
     (dec : (s : S) → E s → G s) (q : Query) (groups : Groups G)
     (coefficients : S → List (List F))
     (next : Message (Reply q) G → OracleComp
@@ -224,13 +216,16 @@ private theorem compile_request [Zero F] [Fintype S] [DecidableEq S]
         let groups ← decodeGroups dec reply.groups
         compile dec (next ⟨reply.data, groups⟩) (extend hs reply.groups)) := rfl
 
-/-- Realize certified explanations with module operations on received handles.
+/-- Realize a certified algebraic adversary (Fuchsbauer, Kiltz and Loss 2018) with module
+operations on received handles.
 
-Encoding queries recover received values, private coins use `unifSpec`, and each nonzero
-coefficient uses one scalar multiplication and at most one addition. An all-zero vector uses
-one multiplication by zero. The sort order is the supplied `Fintype` enumeration. -/
-noncomputable def ofExplained [Zero F] [∀ s, AddMonoid (G s)]
-    [∀ s, SMul F (G s)] [Fintype S] [DecidableEq S]
+Encoding queries recover received values and private coins use `unifSpec`. Each outgoing
+element is built from its coefficient vector: every nonzero coefficient becomes a `smul` of the
+corresponding received handle, added to the element built from the remaining coefficients, and
+an all-zero vector becomes one `smul` by zero. Sorts are visited in the order
+`FinEnum.toList S`. -/
+def ofExplained [Zero F] [DecidableEq F] [∀ s, AddMonoid (G s)]
+    [∀ s, SMul F (G s)] [DecidableEq S] [FinEnum S]
     (B : Interaction.Adversary F G Input (CoinQuery Query) (CoinReply Reply) Result)
     (dec : (s : S) → E s → G s) :
     HandleAdversary F (discreteSig S) E Input Query Reply Result := fun input => do
@@ -245,7 +240,7 @@ private theorem evaluate_cons {s : S} [CommSemiring F]
   simp [evaluate]
 
 private theorem list_received_extends [∀ s, Zero (G s)] {tbl tbl' : Tbl G}
-    (he : Extends tbl tbl') (s : S) {hs : List Handle} {gs : List (G s)}
+    (he : Tbl.Extends tbl tbl') (s : S) {hs : List Handle} {gs : List (G s)}
     (h : List.Forall₂ (fun h g => h < (tbl s).length ∧ lookup tbl s h = g) hs gs) :
     List.Forall₂ (fun h g => h < (tbl' s).length ∧ lookup tbl' s h = g) hs gs :=
   h.imp fun _ _ hh =>
@@ -305,13 +300,13 @@ private theorem run_game (q : Message Query (fun _ : S => Handle)) (tbl : Tbl G)
   exact congrArg (fun st : StateT (Tbl G) N (Message (Reply q.data) (fun _ : S => Handle)) =>
     st.run tbl) (simulateQ_spec_query (handler M enc random game) (.inr (.inr (.inr q))))
 
-private theorem run_buildVectorAux (s : S) (cs : List F) (hs : List Handle)
+private theorem run_buildVectorAux [DecidableEq F] (s : S) (cs : List F) (hs : List Handle)
     (gs : List (G s)) (tbl : Tbl G)
     (hr : List.Forall₂ (fun h g => h < (tbl s).length ∧ lookup tbl s h = g) hs gs)
     (hlen : cs.length = gs.length) :
     ∃ opt tbl',
       (simulateQ (handler M enc random game) (buildVectorAux s cs hs)).run tbl =
-        pure (opt, tbl') ∧ Extends tbl tbl' ∧
+        pure (opt, tbl') ∧ Tbl.Extends tbl tbl' ∧
       match opt with
       | none => evaluate cs gs = 0
       | some h => h < (tbl' s).length ∧ lookup tbl' s h = evaluate cs gs := by
@@ -320,7 +315,7 @@ private theorem run_buildVectorAux (s : S) (cs : List F) (hs : List Handle)
       have hg : gs = [] := List.length_eq_zero_iff.mp hlen.symm
       subst gs
       cases hr
-      exact ⟨none, tbl, by simp [buildVectorAux], extends_refl tbl, by simp [evaluate]⟩
+      exact ⟨none, tbl, by simp [buildVectorAux], Tbl.Extends.refl tbl, by simp [evaluate]⟩
   | cons c cs ih =>
       cases hr with
       | nil => simp at hlen
@@ -332,14 +327,14 @@ private theorem run_buildVectorAux (s : S) (cs : List F) (hs : List Handle)
             · simpa [buildVectorAux, hc] using hrun
             · simpa [evaluate_cons, hc] using hv
           · let tbl₁ := append tbl s (c • lookup tbl s h)
-            have he₁ : Extends tbl tbl₁ := extends_append tbl s _
+            have he₁ : Tbl.Extends tbl tbl₁ := extends_append tbl s _
             obtain ⟨opt, tbl₂, hrun, he₂, hv⟩ :=
               ih hs gs tbl₁ (list_received_extends he₁ s ht) hl
             have ha := lookup_append_self tbl s (c • lookup tbl s h)
             have ha₂ := lookup_extends he₂ s (tbl s).length ha.1
             cases opt with
             | none =>
-                refine ⟨some (tbl s).length, tbl₂, ?_, extends_trans he₁ he₂, ?_⟩
+                refine ⟨some (tbl s).length, tbl₂, ?_, Tbl.Extends.trans he₁ he₂, ?_⟩
                 · simp only [buildVectorAux, ite_eq_right hc, simulateQ_bind, StateT.run_bind,
                     run_smul, pure_bind]
                   rw [hrun]
@@ -348,7 +343,7 @@ private theorem run_buildVectorAux (s : S) (cs : List F) (hs : List Handle)
             | some b =>
                 let tbl₃ := append tbl₂ s (lookup tbl₂ s (tbl s).length + lookup tbl₂ s b)
                 refine ⟨some (tbl₂ s).length, tbl₃, ?_,
-                  extends_trans (extends_trans he₁ he₂) (extends_append tbl₂ s _), ?_⟩
+                  Tbl.Extends.trans (Tbl.Extends.trans he₁ he₂) (extends_append tbl₂ s _), ?_⟩
                 · simp only [buildVectorAux, ite_eq_right hc, simulateQ_bind, StateT.run_bind,
                     run_smul, pure_bind]
                   rw [hrun]
@@ -358,40 +353,40 @@ private theorem run_buildVectorAux (s : S) (cs : List F) (hs : List Handle)
                   exact ⟨hf.1, by
                     exact hf.2.trans (by rw [ha₂.2, ha.2, hh.2, hv.2, evaluate_cons])⟩
 
-private theorem run_buildVector (s : S) (cs : List F) (hs : List Handle)
+private theorem run_buildVector [DecidableEq F] (s : S) (cs : List F) (hs : List Handle)
     (gs : List (G s)) (tbl : Tbl G)
     (hr : List.Forall₂ (fun h g => h < (tbl s).length ∧ lookup tbl s h = g) hs gs)
     (hlen : cs.length = gs.length) :
     ∃ h tbl',
       (simulateQ (handler M enc random game) (buildVector s cs hs)).run tbl =
-        pure (h, tbl') ∧ Extends tbl tbl' ∧
+        pure (h, tbl') ∧ Tbl.Extends tbl tbl' ∧
       h < (tbl' s).length ∧ lookup tbl' s h = evaluate cs gs := by
   obtain ⟨opt, tbl', hrun, he, hv⟩ := run_buildVectorAux M enc random game s cs hs gs tbl hr hlen
   cases opt with
   | none =>
       refine ⟨(tbl' s).length, append tbl' s 0, ?_,
-        extends_trans he (extends_append tbl' s 0), ?_⟩
-      · simp [buildVector, simulateQ_bind, StateT.run_bind, hrun, run_smul]
+        Tbl.Extends.trans he (extends_append tbl' s 0), ?_⟩
+      · simp [buildVector, StateT.run_bind, hrun, run_smul]
       · simpa [hv] using lookup_append_self tbl' s 0
   | some h =>
-      exact ⟨h, tbl', by simp [buildVector, simulateQ_bind, StateT.run_bind, hrun], he, hv⟩
+      exact ⟨h, tbl', by simp [buildVector, StateT.run_bind, hrun], he, hv⟩
 
-private theorem run_buildVectors (s : S) (css : List (List F)) (hs : List Handle)
+private theorem run_buildVectors [DecidableEq F] (s : S) (css : List (List F)) (hs : List Handle)
     (gs outs : List (G s)) (tbl : Tbl G)
     (hr : List.Forall₂ (fun h g => h < (tbl s).length ∧ lookup tbl s h = g) hs gs)
     (hv : List.Forall₂ (fun g cs => cs.length = gs.length ∧ evaluate cs gs = g) outs css) :
     ∃ handles tbl',
       (simulateQ (handler M enc random game) (css.mapM fun cs => buildVector s cs hs)).run tbl =
-        pure (handles, tbl') ∧ Extends tbl tbl' ∧
+        pure (handles, tbl') ∧ Tbl.Extends tbl tbl' ∧
       List.Forall₂ (fun h g => h < (tbl' s).length ∧ lookup tbl' s h = g) handles outs := by
   induction hv generalizing tbl with
-  | nil => exact ⟨[], tbl, by simp, extends_refl tbl, .nil⟩
+  | nil => exact ⟨[], tbl, by simp, Tbl.Extends.refl tbl, .nil⟩
   | @cons g cs outs css hv hvs ih =>
       obtain ⟨h, tbl₁, hrun₁, he₁, hh⟩ :=
         run_buildVector M enc random game s cs hs gs tbl hr hv.1
       obtain ⟨handles, tbl₂, hrun₂, he₂, ht⟩ :=
         ih tbl₁ (list_received_extends he₁ s hr)
-      refine ⟨h :: handles, tbl₂, ?_, extends_trans he₁ he₂, .cons ?_ ht⟩
+      refine ⟨h :: handles, tbl₂, ?_, Tbl.Extends.trans he₁ he₂, .cons ?_ ht⟩
       · simp only [List.mapM_cons, simulateQ_bind, StateT.run_bind, hrun₁, pure_bind,
           hrun₂, simulateQ_pure, StateT.run_pure]
       · have heh := lookup_extends he₂ s h hh.1
@@ -399,49 +394,28 @@ private theorem run_buildVectors (s : S) (css : List (List F)) (hs : List Handle
 
 private theorem run_sortMap (f : (s : S) →
     OracleComp (Target F S E Query Reply) (List Handle)) (values : Groups G) (tbl₀ : Tbl G)
-    (hf : ∀ s tbl, Extends tbl₀ tbl → ∃ hs tbl',
+    (hf : ∀ s tbl, Tbl.Extends tbl₀ tbl → ∃ hs tbl',
       (simulateQ (handler M enc random game) (f s)).run tbl = pure (hs, tbl') ∧
-      Extends tbl tbl' ∧
+      Tbl.Extends tbl tbl' ∧
       List.Forall₂ (fun h g => h < (tbl' s).length ∧ lookup tbl' s h = g) hs (values s))
-    (sorts : List S) (tbl : Tbl G) (he : Extends tbl₀ tbl) :
+    (sorts : List S) (tbl : Tbl G) (he : Tbl.Extends tbl₀ tbl) :
     ∃ handles tbl',
       (simulateQ (handler M enc random game) (sortMap f sorts)).run tbl = pure (handles, tbl') ∧
-      Extends tbl tbl' ∧ ∀ s ∈ sorts,
+      Tbl.Extends tbl tbl' ∧ ∀ s ∈ sorts,
       List.Forall₂ (fun h g => h < (tbl' s).length ∧ lookup tbl' s h = g)
         (handles s) (values s) := by
   induction sorts generalizing tbl with
-  | nil => exact ⟨fun _ => [], tbl, by simp [sortMap], extends_refl tbl, by simp⟩
+  | nil => exact ⟨fun _ => [], tbl, by simp [sortMap], Tbl.Extends.refl tbl, by simp⟩
   | cons s ss ih =>
       obtain ⟨hs, tbl₁, hrun₁, he₁, hv₁⟩ := hf s tbl he
-      obtain ⟨rest, tbl₂, hrun₂, he₂, hv₂⟩ := ih tbl₁ (extends_trans he he₁)
-      refine ⟨Function.update rest s hs, tbl₂, ?_, extends_trans he₁ he₂, ?_⟩
-      · simp [sortMap, simulateQ_bind, StateT.run_bind, hrun₁, hrun₂]
+      obtain ⟨rest, tbl₂, hrun₂, he₂, hv₂⟩ := ih tbl₁ (Tbl.Extends.trans he he₁)
+      refine ⟨Function.update rest s hs, tbl₂, ?_, Tbl.Extends.trans he₁ he₂, ?_⟩
+      · simp [sortMap, StateT.run_bind, hrun₁, hrun₂]
       · intro t ht
         by_cases hts : t = s
         · subst t
           simpa using list_received_extends he₂ s hv₁
         · simpa [Function.update_of_ne hts] using hv₂ t ((List.mem_cons.mp ht).resolve_left hts)
-
-private theorem run_buildMessage [Fintype S] {Data : Type}
-    (handles : Groups (fun _ : S => Handle)) (basis : Groups G)
-    (out : Explained F Data G) (tbl : Tbl G) (hr : Received tbl handles basis)
-    (hv : out.Valid basis) :
-    ∃ msg tbl',
-      (simulateQ (handler M enc random game) (buildMessage handles out)).run tbl =
-        pure (msg, tbl') ∧ Extends tbl tbl' ∧ lookupMessage tbl' msg = out.value := by
-  obtain ⟨hs, tbl', hrun, he, hreads⟩ := run_sortMap M enc random game
-    (fun s => (out.coefficients s).mapM fun cs => buildVector s cs (handles s))
-    out.value.groups tbl (fun s tbl' he =>
-      run_buildVectors M enc random game s (out.coefficients s) (handles s) (basis s)
-        (out.value.groups s) tbl' (received_extends hr he s) (hv s))
-    Finset.univ.toList tbl (extends_refl tbl)
-  refine ⟨⟨out.value.data, hs⟩, tbl', ?_, he, ?_⟩
-  · simp [buildMessage, hrun]
-  · have hh : Received tbl' hs out.value.groups := fun s => hreads s (by simp)
-    cases out with
-    | mk value coefficients =>
-      cases value
-      simp only [lookupMessage, hh.readback]
 
 private theorem run_decodeList (dec : (s : S) → E s → G s)
     (hdec : ∀ s g, dec s (enc s g) = g) (s : S) (hs : List Handle) (tbl : Tbl G) :
@@ -481,13 +455,34 @@ private theorem run_decodeSorts (dec : (s : S) → E s → G s)
         simp
       · simp [hts]
 
-private theorem run_decodeGroups [Fintype S] (dec : (s : S) → E s → G s)
+private theorem run_buildMessage [DecidableEq F] [FinEnum S] {Data : Type}
+    (handles : Groups (fun _ : S => Handle)) (basis : Groups G)
+    (out : Explained F Data G) (tbl : Tbl G) (hr : Received tbl handles basis)
+    (hv : out.Valid basis) :
+    ∃ msg tbl',
+      (simulateQ (handler M enc random game) (buildMessage handles out)).run tbl =
+        pure (msg, tbl') ∧ Tbl.Extends tbl tbl' ∧ lookupMessage tbl' msg = out.value := by
+  obtain ⟨hs, tbl', hrun, he, hreads⟩ := run_sortMap M enc random game
+    (fun s => (out.coefficients s).mapM fun cs => buildVector s cs (handles s))
+    out.value.groups tbl (fun s tbl' he =>
+      run_buildVectors M enc random game s (out.coefficients s) (handles s) (basis s)
+        (out.value.groups s) tbl' (received_extends hr he s) (hv s))
+    (FinEnum.toList S) tbl (Tbl.Extends.refl tbl)
+  refine ⟨⟨out.value.data, hs⟩, tbl', ?_, he, ?_⟩
+  · simp [buildMessage, hrun]
+  · have hh : Received tbl' hs out.value.groups := fun s => hreads s (FinEnum.mem_toList s)
+    cases out with
+    | mk value coefficients =>
+      cases value
+      simp only [lookupMessage, hh.readback]
+
+private theorem run_decodeGroups [FinEnum S] (dec : (s : S) → E s → G s)
     (hdec : ∀ s g, dec s (enc s g) = g) (hs : Groups (fun _ : S => Handle)) (tbl : Tbl G) :
     (simulateQ (handler M enc random game) (decodeGroups dec hs)).run tbl =
       pure ((fun s => (hs s).map (lookup tbl s)), tbl) := by
-  simpa [decodeGroups] using run_decodeSorts M enc random game dec hdec hs Finset.univ.toList tbl
+  simpa [decodeGroups] using run_decodeSorts M enc random game dec hdec hs (FinEnum.toList S) tbl
 
-private theorem run_compile [Fintype S] (dec : (s : S) → E s → G s)
+private theorem run_compile [DecidableEq F] [FinEnum S] (dec : (s : S) → E s → G s)
     (hdec : ∀ s g, dec s (enc s g) = g)
     (program : OracleComp (explainedSpec F G (CoinQuery Query) (CoinReply Reply))
       (Explained F Result G))
@@ -551,7 +546,7 @@ private theorem run_compile [Fintype S] (dec : (s : S) → E s → G s)
 
 /-- Reading back the compiled handle run gives exactly the certified run, including all
 ambient monadic effects. Decoding must be a left inverse to the supplied encoding. -/
-theorem ofExplained_run [Fintype S]
+theorem ofExplained_run [DecidableEq F] [FinEnum S]
     (B : Interaction.Adversary F G Input (CoinQuery Query) (CoinReply Reply) Result)
     (dec : (s : S) → E s → G s) (hdec : ∀ s g, dec s (enc s g) = g)
     (input : Message Input G) :

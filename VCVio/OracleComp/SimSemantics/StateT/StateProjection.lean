@@ -1,11 +1,12 @@
 /-
 Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Quang Dao
+Authors: Quang Dao, Oleksandr Vovkotrub
 -/
 
 module
 
+public import VCVio.OracleComp.EvalDist.Measure
 public import VCVio.OracleComp.ProbComp.Basic
 public import VCVio.OracleComp.SimSemantics.StateT.Basic
 
@@ -24,6 +25,9 @@ TV-distance content, and so live at the `SimSemantics` layer alongside `StateT.l
   the full simulation does too.
 - `OracleComp.run'_simulateQ_eq_of_query_map_eq` (and variants): the `run'` (output-only)
   projection corollaries.
+- `OracleComp.evalDistEq_map_run_simulateQ_eq_of_query_evalDistEq_map_eq`: the transport of
+  `map_run_simulateQ_eq_of_query_map_eq` for handlers into `StateT σ ProbComp` whose steps agree
+  only in distribution (`=ᵈ`).
 - `QueryImpl.StateOrnament`: a package for the recurring pattern where one
   stateful handler refines another by carrying extra bookkeeping state.
 - `QueryImpl.fixSndStateT` + `OracleComp.simulateQ_run_eq_of_snd_invariant`: support-based
@@ -91,6 +95,35 @@ theorem run'_simulateQ_eq_of_query_map_eq
   have hmap := congrArg (fun p => Prod.fst <$> p)
     (map_run_simulateQ_eq_of_query_map_eq impl₁ impl₂ proj hproj oa s)
   simpa [StateT.run'_eq, Functor.map_map, Function.comp_def] using hmap
+
+/-- **State-projection transport in distribution (differing state types).** If every oracle step of
+`impl₁ : QueryImpl spec (StateT σ₁ ProbComp)` becomes the corresponding `impl₂` step after mapping
+the state with `proj : σ₁ → σ₂` *in distribution*, then the full simulated runs agree under the same
+projection in distribution.  This is the distributional relaxation of
+`OracleComp.map_run_simulateQ_eq_of_query_map_eq`: the per-query hypothesis may discard a lossless
+answer-irrelevant draw (e.g. a write-only trapdoor sample) that breaks the *monadic* equality but
+preserves the distribution. -/
+theorem evalDistEq_map_run_simulateQ_eq_of_query_evalDistEq_map_eq
+    {ι : Type} {spec : OracleSpec ι}
+    {σ₁ σ₂ : Type} {α : Type}
+    (impl₁ : QueryImpl spec (StateT σ₁ ProbComp))
+    (impl₂ : QueryImpl spec (StateT σ₂ ProbComp))
+    (proj : σ₁ → σ₂)
+    (hproj : ∀ t s,
+      (Prod.map id proj <$> (impl₁ t).run s) =ᵈ ((impl₂ t).run (proj s)))
+    (oa : OracleComp spec α) (s : σ₁) :
+    (Prod.map id proj <$> (simulateQ impl₁ oa).run s) =ᵈ ((simulateQ impl₂ oa).run (proj s)) := by
+  induction oa using OracleComp.inductionOn generalizing s with
+  | pure x => simp
+  | query_bind t oa ih =>
+      simp only [simulateQ_bind, simulateQ_query, OracleQuery.input_query,
+        OracleQuery.cont_query, id_map, StateT.run_bind, map_bind]
+      refine (EvalDistEq.bind_right ((impl₁ t).run s) (fun x => ih x.1 x.2)).trans ?_
+      rw [show ((impl₁ t).run s >>= fun x => (simulateQ impl₂ (oa x.1)).run (proj x.2))
+            = ((Prod.map id proj <$> (impl₁ t).run s) >>= fun x =>
+                (simulateQ impl₂ (oa x.1)).run x.2) from by
+        rw [bind_map_left]; rfl]
+      exact (hproj t s).bind_left _
 
 /-! ## State-projection: invariant-gated -/
 
@@ -276,7 +309,7 @@ theorem simulateQ_run_eq_of_snd_invariant
     (fun p => (p.1, (p.2, q₀))) <$> (simulateQ (QueryImpl.fixSndStateT impl q₀) oa).run s := by
   induction oa using OracleComp.inductionOn generalizing s with
   | pure x =>
-    simp [simulateQ_pure, StateT.run_pure]
+    simp [StateT.run_pure]
   | query_bind t oa ih =>
     simp only [simulateQ_bind, simulateQ_query, OracleQuery.input_query,
       OracleQuery.cont_query, id_map, StateT.run_bind]

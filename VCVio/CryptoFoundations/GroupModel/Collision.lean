@@ -9,7 +9,7 @@ public import VCVio.CryptoFoundations.GroupModel.Projection
 public import VCVio.ProgramLogic.Relational.SimulateQ.UntilBad
 
 /-!
-Identical until a collision
+# Identical until a collision
 
 Observation-based and exact equality runs differ in total variation by at most the probability
 that the exact run queries distinct values with equal observations. Collision monitoring includes

@@ -10,10 +10,8 @@ import Mathlib.Tactic.Ring
 
 /-! # Independent slopes under affine masking
 
-This follows Gurkan's linear-functional proof of BLS security in the algebraic group model
-of Fuchsbauer, Kiltz and Loss (CRYPTO 2018). Adding a uniform mask to a scalar multiple of
-a slope table hides the slope perfectly, including from an adaptive computation that observes
-the entire masked table.
+Adding a uniform mask to a scalar multiple of a slope table hides the slope perfectly, including
+from an adaptive computation that observes the entire masked table.
 -/
 
 public section
@@ -24,9 +22,10 @@ namespace GroupModel.LinearFunctional
 
 /-- An independent additive mask makes an affine table uniform for any fixed slope and secret. -/
 theorem affine_uniform_evalDistEq {F ι : Type} [Ring F] [SampleableType F]
-    [Fintype ι] [DecidableEq ι] (α : F) (a : ι → F) :
+    [Fintype ι] (α : F) (a : ι → F) :
     (fun b : ι → F => fun i => a i * α + b i) <$> ($ᵗ (ι → F)) =ᵈ
       ($ᵗ (ι → F) : ProbComp _) := by
+  classical
   apply SampleableType.map_uniformSample_evalDistEq_of_bijective
   constructor
   · intro b c h
@@ -38,7 +37,7 @@ theorem affine_uniform_evalDistEq {F ι : Type} [Ring F] [SampleableType F]
 /-- An adaptive view of an affine-masked table leaves its slope table independently uniform.
 The output retains the view, public table, and hidden slope, in that order. -/
 theorem masked_view_evalDistEq {F ι γ : Type} [Ring F] [SampleableType F]
-    [Fintype ι] [DecidableEq ι] (α : F) (view : (ι → F) → ProbComp γ) :
+    [Fintype ι] (α : F) (view : (ι → F) → ProbComp γ) :
     (do
       let a ← $ᵗ (ι → F)
       let b ← $ᵗ (ι → F)
@@ -50,6 +49,7 @@ theorem masked_view_evalDistEq {F ι γ : Type} [Ring F] [SampleableType F]
       let z ← view ρ
       let a ← $ᵗ (ι → F)
       pure (z, ρ, a)) := by
+  classical
   trans (do
     let a ← $ᵗ (ι → F)
     let ρ ← $ᵗ (ι → F)
@@ -66,24 +66,10 @@ theorem masked_view_evalDistEq {F ι γ : Type} [Ring F] [SampleableType F]
       OracleComp.EvalDistEq.bind_bind_swap ($ᵗ (ι → F)) seen
         (fun a z => pure (z.1, z.2, a))
 
-/-- A zero affine equation with nonzero slope reveals the masked scalar. -/
-theorem affine_extract_eq {F ι : Type*} [Field F] [Fintype ι]
-    (L a b : ι → F) (α c : F)
-    (hzero : ∑ i, L i * (a i * α + b i) = c)
-    (hslope : ∑ i, L i * a i ≠ 0) :
-    (c - ∑ i, L i * b i) / (∑ i, L i * a i) = α := by
-  apply (div_eq_iff hslope).2
-  have he : ∑ i, L i * (a i * α + b i) =
-      (∑ i, L i * a i) * α + ∑ i, L i * b i := by
-    simp only [mul_add, ← mul_assoc, Finset.sum_add_distrib, Finset.sum_mul]
-  rw [he] at hzero
-  rw [← hzero]
-  ring
-
 /-- A zero verification gap in a public view yields an affine guess, except for a hidden
 uniform slope collision. The entire public view is drawn before the slope table. -/
 private theorem prEvent_zero_gap_le_guess_add {F ι γ : Type} [Field F] [Fintype F]
-    [SampleableType F] [Fintype ι] [DecidableEq ι]
+    [SampleableType F] [Fintype ι]
     (oa : ProbComp γ) (L : γ → ι → F) (table : γ → ι → F) (c : γ → F)
     (valid : γ → Prop) (j : γ → ι) (α : F)
     (hL : ∀ z ∈ support oa, valid z → L z (j z) ≠ 0) :
@@ -91,6 +77,7 @@ private theorem prEvent_zero_gap_le_guess_add {F ι γ : Type} [Field F] [Fintyp
       Pr{let z ← oa; let a ← $ᵗ (ι → F)}[
         (c z - ∑ i, L z i * table z i + (∑ i, L z i * a i) * α) /
           (∑ i, L z i * a i) = α] + 1 / Fintype.card F := by
+  classical
   let game : ProbComp (γ × (ι → F)) := do
     let z ← oa
     let a ← $ᵗ (ι → F)
@@ -133,7 +120,7 @@ private theorem prEvent_zero_gap_le_guess_add {F ι γ : Type} [Field F] [Fintyp
 /-- A zero gap for an adaptive public view is bounded by extraction from independently masked
 bases and one field-sized collision. The extractor uses only its sampled masks and the view. -/
 theorem prEvent_zero_gap_le_affine_extract_add {F ι γ : Type} [Field F] [Fintype F]
-    [SampleableType F] [Fintype ι] [DecidableEq ι]
+    [SampleableType F] [Fintype ι]
     (view : (ι → F) → ProbComp γ) (L : γ → ι → F) (c : γ → F)
     (valid : γ → Prop) (j : γ → ι) (α : F)
     (hL : ∀ ρ z, z ∈ support (view ρ) → valid z → L z (j z) ≠ 0) :
@@ -142,6 +129,7 @@ theorem prEvent_zero_gap_le_affine_extract_add {F ι γ : Type} [Field F] [Finty
     Pr{let a ← $ᵗ (ι → F); let b ← $ᵗ (ι → F)
        let z ← view (fun i => a i * α + b i)}[
       (c z - ∑ i, L z i * b i) / (∑ i, L z i * a i) = α] + 1 / Fintype.card F := by
+  classical
   let seen : ProbComp (γ × (ι → F)) := do
     let ρ ← $ᵗ (ι → F)
     let z ← view ρ
@@ -167,7 +155,7 @@ theorem prEvent_zero_gap_le_affine_extract_add {F ι γ : Type} [Field F] [Finty
 /-- Averaging affine extraction over a fresh uniform challenge preserves the single
 field-sized collision term. -/
 theorem prEvent_zero_gap_le_uniform_affine_extract_add {F ι γ : Type}
-    [Field F] [Fintype F] [SampleableType F] [Fintype ι] [DecidableEq ι]
+    [Field F] [Fintype F] [SampleableType F] [Fintype ι]
     (view : (ι → F) → ProbComp γ) (L : γ → ι → F) (c : γ → F)
     (valid : γ → Prop) (j : γ → ι)
     (hL : ∀ ρ z, z ∈ support (view ρ) → valid z → L z (j z) ≠ 0) :
@@ -177,6 +165,7 @@ theorem prEvent_zero_gap_le_uniform_affine_extract_add {F ι γ : Type}
        let a ← $ᵗ (ι → F); let b ← $ᵗ (ι → F)
        let z ← view (fun i => a i * α + b i)}[
       (c z - ∑ i, L z i * b i) / (∑ i, L z i * a i) = α] + 1 / Fintype.card F := by
+  classical
   let : MeasurableSpace F := ⊤
   have h := MeasureTheory.lintegral_mono (μ := 𝒟[($ᵗ F : ProbComp F)])
     (fun α => prEvent_zero_gap_le_affine_extract_add view L c valid j α hL)
