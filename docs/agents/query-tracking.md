@@ -70,6 +70,23 @@ writer result. `WriterT ω Option` loses the log on `none`; `OptionT (WriterT ω
 a log together with `none`. `VCVioTest/ModuleAPI/Counting.lean` checks both orders, repeated
 labels, unchanged answers, and the ordinary function monoid.
 
+## Universes
+
+`CostModel` and `WorstCaseCostBound` take the query index, the responses, the program result and
+the cost carrier in four independent universes. `WorstCaseCostBound` quantifies over completed
+paths with `PFunctor.FreeM.Path.charge`, so it never runs the program; use
+`worstCaseCostBound_iff_support_bound` or `worstCaseCostBound_iff_pathwiseCostAtMost` to move to
+the `costDist` support form.
+
+The executable layer (`addCostOracle`, `costDist`, `instrumentedRun`, `expectedCost`,
+`QueryImpl.withAddCost`, `withCost`) runs the program through `simulateQ` into `AddWriterT ω`.
+`simulateQ` puts responses and results in one universe and `AddWriterT ω m α` puts `ω` and `α` in
+one universe, so this layer keeps the index free and ties responses, results and costs together.
+Declarations that use natural-number costs (`expectedCostNat`, `CostModel.unit` bridges,
+`withUnitCost`), `ProbComp` lifts, or `Pr{…}[…]` (which evaluates `m Prop`) stay in `Type`.
+Per-index counting writes `QueryCount ι` into the writer, so there the index shares the response
+universe.
+
 ## Main Files
 
 | File | Role |
