@@ -121,15 +121,15 @@ example (r : Fin 2 → F) :
 theorem transport_duplicate_rows (r : Fin 2 → ZMod 101) : transport [r, r] [1, -1] = 0 := by
   simp [transport, evaluate, List.mapIdx_cons, List.mapIdx_nil]
 
-private abbrev CoinSpec := explainedSpec F Gs (GroupModel.CoinQuery Bool)
+private abbrev CoinSpec (Label : Type) := explainedSpec F Gs (GroupModel.CoinQuery Label)
   (GroupModel.CoinReply (fun _ => Unit))
 
-private def collisionAdversary (nextLabel : F → Bool) :
-    Adversary F Gs Unit (GroupModel.CoinQuery Bool)
+private def collisionAdversary {Label : Type} (firstLabel : Label) (nextLabel : F → Label) :
+    Adversary F Gs Unit (GroupModel.CoinQuery Label)
       (GroupModel.CoinReply (fun _ => Unit)) Unit where
   main input := do
-    let first ← CoinSpec.query ⟨⟨.inl false, fun _ => []⟩, fun _ => []⟩
-    let second ← CoinSpec.query
+    let first ← (CoinSpec Label).query ⟨⟨.inl firstLabel, fun _ => []⟩, fun _ => []⟩
+    let second ← (CoinSpec Label).query
       ⟨⟨.inl (nextLabel ((first.groups ()).getD 0 0)), fun _ => []⟩, fun _ => []⟩
     let basis := extend (extend input.groups first.groups) second.groups
     return Explained.ofVectors basis () (fun s =>
@@ -142,7 +142,7 @@ private def collisionAdversary (nextLabel : F → Bool) :
 
 -- Repeated cached labels remain two receipts, but no longer win the normalized game.
 example (B : Origin 0 Bool → F) :
-    Pr{let z ← normalizedExecution (F := F) (G := F) B (collisionAdversary fun _ => false)}[
+    Pr{let z ← normalizedExecution (F := F) (G := F) B (collisionAdversary false fun _ => false)}[
       NormalizedCollision z.2.2 z.1] = 0 := by
   dsimp only [normalizedExecution, collisionAdversary]
   erw [runGameWithCoins_hash]
@@ -155,7 +155,7 @@ example (B : Origin 0 Bool → F) :
 -- Equal values at different labels remain a real normalized collision.
 example (g : F) :
     Pr{let z ← (normalizedExecution (n := 0) (F := F) (G := F) (fun _ => g)
-      (collisionAdversary fun _ => true))}[NormalizedCollision z.2.2 z.1] = 1 := by
+      (collisionAdversary false fun _ => true))}[NormalizedCollision z.2.2 z.1] = 1 := by
   have hne := merge_pair_ne (F := F) (Sum.inr false : Origin 0 Bool) (Sum.inr true)
     (by decide)
   dsimp only [normalizedExecution, collisionAdversary]
@@ -166,16 +166,18 @@ example (g : F) :
     evaluate, List.mapIdx_cons, List.mapIdx_nil, prEvent_norm] using hne
 
 
+private abbrev adaptiveFinAdversary :=
+  collisionAdversary (0 : Fin 2) fun g => if g = 0 then 0 else 1
+
 -- The finite challenge-table bound accepts labels selected from previous group replies.
 example :
     Pr{let w ← (normalizedTrial (F := F) (G := F) 1 (1 : F)
-      (collisionAdversary fun g => decide (g ≠ 0)))}[NormalizedCollision w.2.2.2 w.2.1] ≤
+      adaptiveFinAdversary)}[NormalizedCollision w.2.2.2 w.2.1] ≤
       Pr{let b ← (DiffieHellman.dlogExperiment (1 : F)
         (DiscreteLogRelation.plainReduction (normalizedReduction (F := F) (G := F) (n := 1)
-          (collisionAdversary fun g => decide (g ≠ 0)))))}[b = true] + 1 / 101 := by
+          adaptiveFinAdversary)))}[b = true] + 1 / 101 := by
   simpa only [ZMod.card, Nat.cast_ofNat] using
-    normalizedTrial_le_dlog (F := F) (G := F) 1 (1 : F) generator_bijective
-    (collisionAdversary fun g => decide (g ≠ 0))
+    normalizedTrial_le_dlog (F := F) (G := F) 1 (1 : F) one_ne_zero adaptiveFinAdversary
 
 private def coinHandle : GroupModel.HandleAdversary F (GroupModel.discreteSig Unit) Gs
     Unit Bool (fun _ => Unit) Unit := fun _ => do

@@ -106,7 +106,7 @@ input coordinates, from a randomized certified execution. -/
 
 /-- Sample independent scalar challenge coordinates for the fixed inputs and all hash labels.
 The full output retains provenance for the normalized winning event. -/
-@[expose] noncomputable def normalizedTrial [Fintype Label] [DecidableEq Label] [Field F]
+@[expose] noncomputable def normalizedTrial [FinEnum Label] [Field F]
     [SampleableType F] [AddCommGroup G] [Module F G] (n : ℕ) (g : G)
     (A : Adversary F (fun _ : Unit => G) Unit (CoinQuery Label)
       (CoinReply (fun _ => Unit)) Unit) :
@@ -120,7 +120,7 @@ The full output retains provenance for the normalized winning event. -/
 /-- Normalized collisions in the independently sampled challenge-table game reduce to the
 shared relation experiment with no receipt-cancellation term. Fixed inputs are sampled as
 separate challenge coordinates, not represented by arbitrary initial rows. -/
-theorem normalizedTrial_le_relation [Fintype Label] [DecidableEq Label] [Field F]
+theorem normalizedTrial_le_relation [FinEnum Label] [Field F]
     [DecidableEq F] [SampleableType F] [AddCommGroup G] [Module F G] [DecidableEq G]
     (n : ℕ) (g : G)
     (A : Adversary F (fun _ : Unit => G) Unit (CoinQuery Label)
@@ -128,30 +128,25 @@ theorem normalizedTrial_le_relation [Fintype Label] [DecidableEq Label] [Field F
     Pr{let w ← normalizedTrial n g A}[NormalizedCollision w.2.2.2 w.2.1] ≤
       Pr{let b ← (DiscreteLogRelation.plainExperiment g
         (normalizedReduction (n := n) A))}[b = true] := by
-  have hs : Pr{let w ← normalizedTrial n g A}[
-      mergedDifference w.2.2.2 w.2.1 ≠ 0 ∧
-        basisMap w.1 (mergedDifference w.2.2.2 w.2.1) = 0] =
-      Pr{let b ← (DiscreteLogRelation.plainExperiment g
-        (normalizedReduction (n := n) A))}[b = true] := by
-    simp only [DiscreteLogRelation.plainExperiment, DiscreteLogRelation.experiment,
-      DiscreteLogRelation.plainAdversary, StateT.run'_eq, DiscreteLogRelation.map_run_plainImpl]
-    simp [normalizedTrial, normalizedReduction, basisMap, prEvent_norm]
-  rw [← hs]
+  simp only [normalizedTrial, normalizedReduction, DiscreteLogRelation.plainExperiment,
+    DiscreteLogRelation.experiment, DiscreteLogRelation.plainAdversary, StateT.run'_eq,
+    DiscreteLogRelation.map_run_plainImpl, prEvent_norm]
+  apply prEvent_bind_mono_of_support
+  intro x _
   apply prEvent_mono_of_support
-  intro w hw hc
-  simp only [normalizedTrial, mem_support_bind_iff] at hw
-  obtain ⟨x, _, z, hz, hw⟩ := hw
-  simp only [support_pure, Set.mem_singleton_iff] at hw
-  subst w
-  let witness := normalizedRelation _ _ _ (normalizedExecution_valid _ A z hz) hc
-  exact ⟨witness.nonzero, witness.relation⟩
+  intro z hz hc
+  have hr : ∑ i, mergedDifference z.2.2 z.1 i • (x i • g) = 0 :=
+    (normalizedRelation _ _ _ (normalizedExecution_valid _ A z hz) hc).relation
+  simp only [decide_eq_true_eq]
+  -- The experiment sums with the `Fintype` instance of its enumeration.
+  exact ⟨mergedDifference_ne_zero _ _ hc, by convert hr⟩
 
 /-- The challenge-table normalized collision bound has a single hidden-mask loss `1 / |F|`.
 The named reduction samples independent masks for every challenge coordinate before running
 its adaptive, coin-bearing adversary; the relation theorem proves their conditional independence. -/
-theorem normalizedTrial_le_dlog [Fintype Label] [DecidableEq Label] [Field F] [Fintype F]
+theorem normalizedTrial_le_dlog [FinEnum Label] [Field F] [Fintype F]
     [DecidableEq F] [SampleableType F] [AddCommGroup G] [Module F G]
-    (n : ℕ) (g : G) (hg : Function.Bijective (· • g : F → G))
+    (n : ℕ) (g : G) (hg : g ≠ 0)
     (A : Adversary F (fun _ : Unit => G) Unit (CoinQuery Label)
       (CoinReply (fun _ => Unit)) Unit) :
     Pr{let w ← normalizedTrial n g A}[NormalizedCollision w.2.2.2 w.2.1] ≤
@@ -159,7 +154,6 @@ theorem normalizedTrial_le_dlog [Fintype Label] [DecidableEq Label] [Field F] [F
         (DiscreteLogRelation.plainReduction (normalizedReduction (n := n) A)))}[b = true] +
         1 / Fintype.card F := by
   classical
-  exact (normalizedTrial_le_relation n g A).trans
-    (DiscreteLogRelation.experiment_le _ () g hg _)
+  exact (normalizedTrial_le_relation n g A).trans (DiscreteLogRelation.experiment_le _ () g hg _)
 
 end GroupModel.HashToGroup

@@ -181,37 +181,18 @@ theorem lazyTrial_le_relation [DecidableEq Label] [SampleableType F] [Sampleable
       Pr{let b ← (DiscreteLogRelation.plainExperiment g
         (lazyRelationReduction (n := n) (q := q) A))}[b = true] := by
   rw [(lazyTrial_eq_slotTrial n q g hg A).prEvent_eq]
-  let trial := do
-    let x ← $ᵗ (Origin n (Fin q) → F)
-    let z ← slotExecution (fun i => x i • g) A
-    pure (x, z)
-  have he : Pr{let w ← trial}[
-        slotDifference w.2.2.slotOf (receiptOrigins n w.2.2.log) w.2.1 ≠ 0 ∧
-        basisMap (fun i => w.1 i • g)
-          (slotDifference w.2.2.slotOf (receiptOrigins n w.2.2.log) w.2.1) = 0] =
-      Pr{let b ← (DiscreteLogRelation.plainExperiment g
-        (lazyRelationReduction (n := n) (q := q) A))}[b = true] := by
-    simp only [DiscreteLogRelation.plainExperiment, DiscreteLogRelation.experiment,
-      DiscreteLogRelation.plainAdversary, StateT.run'_eq, DiscreteLogRelation.map_run_plainImpl]
-    let : MeasurableSpace (Origin n (Fin q) → F) := ⊤
-    simp [trial, lazyRelationReduction, basisMap, prEvent_norm,
-      prEvent_bind_bind_eq_lintegral_of_discrete, SampleableType.evalDist_uniformSample]
-  rw [← he]
-  have hwin : Pr{let z ← (do
-      let x ← $ᵗ (Origin n (Fin q) → F)
-      (fun z : Explained F Unit (fun _ : Unit => G) × SlotRenaming.State Label G q =>
-        (z.1, z.2.log)) <$> slotExecution (fun i => x i • g) A)}[
-          NormalizedCollision (receiptOrigins n z.2) z.1] =
-      Pr{let w ← trial}[NormalizedCollision (receiptOrigins n w.2.2.log) w.2.1] := by
-    simp [trial, prEvent_norm]
-  rw [hwin]
+  simp only [lazyRelationReduction, DiscreteLogRelation.plainExperiment,
+    DiscreteLogRelation.experiment, DiscreteLogRelation.plainAdversary, StateT.run'_eq,
+    DiscreteLogRelation.map_run_plainImpl, prEvent_norm]
+  apply prEvent_bind_mono_of_support
+  intro x _
   apply prEvent_mono_of_support
-  intro w hw hc
-  simp only [trial, mem_support_bind_iff] at hw
-  obtain ⟨x, _, z, hz, hw⟩ := hw
-  simp only [support_pure, Set.mem_singleton_iff] at hw
-  subst w
-  exact slotExecution_relation _ A hb z hz hc
+  intro z hz hc
+  obtain ⟨hn, hr⟩ := slotExecution_relation _ A hb z hz hc
+  have hr' : ∑ i, slotDifference z.2.slotOf (receiptOrigins n z.2.log) z.1 i • (x i • g) = 0 := hr
+  simp only [decide_eq_true_eq]
+  -- The experiment sums with the `Fintype` instance of its enumeration.
+  exact ⟨hn, by convert hr'⟩
 
 /-- Honest lazy normalized collisions have a single hidden-mask loss `1 / |F|` against the
 named DLog reduction. Its relation stage uses independently programmed coordinates for every
@@ -228,6 +209,7 @@ theorem lazyTrial_le_dlog [DecidableEq Label] [SampleableType F] [SampleableType
           (lazyRelationReduction (n := n) (q := q) A)))}[b = true] + 1 / Fintype.card F := by
   classical
   exact (lazyTrial_le_relation n q g hg A hb).trans
-    (DiscreteLogRelation.experiment_le _ () g hg _)
+    (DiscreteLogRelation.experiment_le _ () g
+      (fun h => one_ne_zero (hg.injective (by simp [h]) : (1 : F) = 0)) _)
 
 end GroupModel.HashToGroup
