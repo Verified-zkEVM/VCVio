@@ -331,8 +331,10 @@ theorem withCachingTrackingPolicy_run'_eq
 
 /-! ### Forward query bounds for `withCachingTrackingPolicy`
 
-The bad-flag overlay projects away to `withCaching` (via `withCachingTrackingPolicy_run_proj_eq'`)
-and makes no underlying queries, so the `withCaching` bounds transfer directly. -/
+Tracking the bad flag adds no queries. Every cache miss still runs `so t`, including misses at
+programmed indices. Projecting away the flag recovers the cached computation by
+`withCachingTrackingPolicy_run_proj_eq'`, so the same per-handler hypotheses suffice for its
+total, predicate, and per-index bounds. -/
 
 theorem isTotalQueryBound_run_simulateQ_withCachingTrackingPolicy
     {ι ι' : Type} [DecidableEq ι] {spec : OracleSpec ι} {spec' : OracleSpec ι'}
@@ -378,10 +380,10 @@ theorem isPerIndexQueryBound_run_simulateQ_withCachingTrackingPolicy
 
 /-! ### Forward query bounds for `withProgramming`
 
-A wrapped step makes ≤ 1 underlying query (zero on a cache hit or programmed value, one on
-a true miss). Unlike `withCachingTrackingPolicy`, the policy can short-circuit on cache
-miss, so the proof case-splits on cache × policy rather than reusing the `withCaching`
-projection. -/
+A cache hit or a value supplied by the policy answers the query locally. If both lookups miss,
+the step runs `so t` once, including every target query it issues. For example, transferring
+a total bound from the source computation requires a bound of one on each `so t`. The predicate
+and per-index theorems impose the corresponding bounds on the queries each handler may issue. -/
 
 section WithProgrammingBounds
 
