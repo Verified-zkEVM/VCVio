@@ -758,6 +758,14 @@ public import VCVio.Schemes.PointerChainPuzzle.LeanSealHidingBridge
 public import VCVio.Schemes.PointerChainPuzzle.LeanSealHidingEncoding
 public import VCVio.Schemes.PointerChainPuzzle.Path
 public import VCVio.Schemes.PointerChainPuzzle.Sequential
+public import VCVio.Schemes.Schnorr.AGM.Adversary
+public import VCVio.Schemes.Schnorr.AGM.Bridge
+public import VCVio.Schemes.Schnorr.AGM.Probability
+public import VCVio.Schemes.Schnorr.AGM.Reduction
+public import VCVio.Schemes.Schnorr.AGM.Representation
+public import VCVio.Schemes.Schnorr.AGM.Security
+public import VCVio.Schemes.Schnorr.AGM.Simulation
+public import VCVio.Schemes.Schnorr.AGM.Soundness
 public import VCVio.Schemes.Schnorr.BoundedChallenges
 public import VCVio.Schemes.Schnorr.ChallengeRestriction
 public import VCVio.Schemes.Schnorr.SigmaProtocol

@@ -260,6 +260,7 @@ public import VCVioTest.Schemes.MerkleDamgard
 public import VCVioTest.Schemes.Pedersen.Generic
 public import VCVioTest.Schemes.Schnorr.ChallengeRestriction
 public import VCVioTest.Schemes.Schnorr.Transforms
+public import VCVioTest.Schemes.SchnorrAGM
 public import VCVioTest.Schemes.VectorPedersen
 public import VCVioTest.SeparatedOTP
 public import VCVioTest.SigmaProtocolMonad
