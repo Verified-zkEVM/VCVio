@@ -59,8 +59,6 @@ The adversary compares the pairing of the two `X` entries with the zero default,
 returning that default handle when the comparison succeeds. -/
 theorem uber_computational_zmod_101 :
     letI : Fact (Nat.Prime 101) := ⟨by decide⟩
-    letI : ∀ s, DecidableEq (PFam (ZMod 101) (ZMod 101) (ZMod 101) s) :=
-      fun s => by cases s <;> exact inferInstanceAs (DecidableEq (ZMod 101))
     let A : OracleComp (genSpec (ZMod 101) pairingSig) Handle := do
       let t : Handle ← (genSpec (ZMod 101) pairingSig).query (.inl (.bil () 1 1))
       let b : Bool ← (genSpec (ZMod 101) pairingSig).query (.inl (.eq .gₜ t (t + 1)))
@@ -70,11 +68,9 @@ theorem uber_computational_zmod_101 :
       (Uber.ComputationalAdversary.ofGeneric (LinearMap.mul (ZMod 101) (ZMod 101)) A))}[
         b = true] ≤ (11 / 101 : ℝ≥0∞) := by
   let : Fact (Nat.Prime 101) := ⟨by decide⟩
-  let : ∀ s, DecidableEq (PFam (ZMod 101) (ZMod 101) (ZMod 101) s) :=
-    fun s => by cases s <;> exact inferInstanceAs (DecidableEq (ZMod 101))
   dsimp only
   apply (Uber.experiment_ofGeneric_le
-    (LinearMap.mul (ZMod 101) (ZMod 101)) 1 1 one_ne_zero one_ne_zero
+    (LinearMap.mul (ZMod 101) (ZMod 101)) 1 1
     (by simpa only [LinearMap.mul_apply', one_mul] using (one_ne_zero : (1 : ZMod 101) ≠ 0))
     [1, X 0] [1, X 0] [] (X 0 ^ 3) cubic_not_mem
     (degreeClosed_pairingSig 1 1 2) (table_degreeLE 2)
@@ -88,8 +84,6 @@ theorem uber_computational_zmod_101 :
 The adversary compares the appended challenge with the pairing of the two `X` entries. -/
 theorem uber_decisional_zmod_101 :
     letI : Fact (Nat.Prime 101) := ⟨by decide⟩
-    letI : ∀ s, DecidableEq (PFam (ZMod 101) (ZMod 101) (ZMod 101) s) :=
-      fun s => by cases s <;> exact inferInstanceAs (DecidableEq (ZMod 101))
     let A : OracleComp (genSpec (ZMod 101) pairingSig) Bool := do
       let t : Handle ← (genSpec (ZMod 101) pairingSig).query (.inl (.bil () 1 1))
       (genSpec (ZMod 101) pairingSig).query (.inl (.eq .gₜ t 0))
@@ -98,11 +92,9 @@ theorem uber_decisional_zmod_101 :
       (Uber.DecisionalAdversary.ofGeneric (LinearMap.mul (ZMod 101) (ZMod 101)) A) ≤
         (27 / 101 : ℝ≥0∞) := by
   let : Fact (Nat.Prime 101) := ⟨by decide⟩
-  let : ∀ s, DecidableEq (PFam (ZMod 101) (ZMod 101) (ZMod 101) s) :=
-    fun s => by cases s <;> exact inferInstanceAs (DecidableEq (ZMod 101))
   dsimp only
   apply (Uber.advantage_ofGeneric_le
-    (LinearMap.mul (ZMod 101) (ZMod 101)) 1 1 one_ne_zero one_ne_zero
+    (LinearMap.mul (ZMod 101) (ZMod 101)) 1 1
     (by simpa only [LinearMap.mul_apply', one_mul] using (one_ne_zero : (1 : ZMod 101) ≠ 0))
     [1, X 0] [1, X 0] [] (X 0 ^ 3) cubic_not_mem
     (degreeClosed_pairingSig 1 1 3) (degreeClosed_pairingSig 1 1 2)

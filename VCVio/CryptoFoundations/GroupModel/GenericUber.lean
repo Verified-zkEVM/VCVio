@@ -8,7 +8,6 @@ module
 public import VCVio.CryptoFoundations.GroupModel.AccessibleSpan
 public import VCVio.CryptoFoundations.GroupModel.GenericPairing
 public import VCVio.CryptoFoundations.HardnessAssumptions.Uber
-import all VCVio.CryptoFoundations.GroupModel.Instances
 
 /-! # Generic computational uber bounds
 
@@ -80,8 +79,8 @@ theorem prEvent_runGen_symbolic_uber_uniform_le [Field F] [DecidableEq F]
         ((D t : ℝ≥0∞) / Fintype.card F)) + (k : ℝ≥0∞) / Fintype.card F := by
   classical
   exact prEvent_runGen_symbolic_uber_le _ hD
-    (fun _ p hp hdeg => prob_eval_zero_univ_le_div p hp hdeg) oa hn tbl hd s f hf k hk
-    (fun p hp hdeg => prob_eval_zero_univ_le_div p hp hdeg)
+    (fun _ p hp hdeg => prEvent_eval_eq_zero_univ_le_div p hp hdeg) oa hn tbl hd s f hf k hk
+    (fun p hp hdeg => prEvent_eval_eq_zero_univ_le_div p hp hdeg)
 
 /-- The Type 3 initial polynomial table, in the supplied list order. -/
 @[expose] def uberTable [CommSemiring F]
@@ -116,7 +115,7 @@ variable {F G₁ G₂ Gₜ : Type}
 /-- Interpret a generic output handle as an element of the final target table. -/
 @[expose] def ComputationalAdversary.ofGeneric [Field F]
     [AddCommGroup G₁] [Module F G₁] [AddCommGroup G₂] [Module F G₂]
-    [AddCommGroup Gₜ] [Module F Gₜ] [∀ s, DecidableEq (PFam G₁ G₂ Gₜ s)]
+    [AddCommGroup Gₜ] [Module F Gₜ] [DecidableEq G₁] [DecidableEq G₂] [DecidableEq Gₜ]
     (e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ) (A : OracleComp (genSpec F pairingSig) Handle) :
     ComputationalAdversary G₁ G₂ Gₜ := fun xs ys zs =>
   (fun z => lookup z.2 .gₜ z.1) <$> runGen (pairingReal e) (fun _ => id) A
@@ -125,7 +124,7 @@ variable {F G₁ G₂ Gₜ : Type}
 /-- Interpret a generic Boolean adversary with the challenge appended to the target table. -/
 @[expose] def DecisionalAdversary.ofGeneric [Field F]
     [AddCommGroup G₁] [Module F G₁] [AddCommGroup G₂] [Module F G₂]
-    [AddCommGroup Gₜ] [Module F Gₜ] [∀ s, DecidableEq (PFam G₁ G₂ Gₜ s)]
+    [AddCommGroup Gₜ] [Module F Gₜ] [DecidableEq G₁] [DecidableEq G₂] [DecidableEq Gₜ]
     (e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ) (A : OracleComp (genSpec F pairingSig) Bool) :
     DecisionalAdversary G₁ G₂ Gₜ := fun xs ys zs t =>
   Prod.fst <$> runGen (pairingReal e) (fun _ => id) A
@@ -133,11 +132,11 @@ variable {F G₁ G₂ Gₜ : Type}
 
 /-- At Type 3, computational uber success is bounded by the sorted collision terms and
 `k / |F|`, where `k` bounds both the target degree and the reachable target-sort degree. -/
-theorem experiment_ofGeneric_le [DecidableEq Gₜ] [Field F] [Fintype F] [SampleableType F]
+theorem experiment_ofGeneric_le [Field F] [Fintype F] [SampleableType F]
     [AddCommGroup G₁] [Module F G₁] [AddCommGroup G₂] [Module F G₂]
-    [AddCommGroup Gₜ] [Module F Gₜ] [∀ s, DecidableEq (PFam G₁ G₂ Gₜ s)]
+    [AddCommGroup Gₜ] [Module F Gₜ] [DecidableEq G₁] [DecidableEq G₂] [DecidableEq Gₜ]
     {v : ℕ} (e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ) (g₁ : G₁) (g₂ : G₂)
-    (hg₁ : g₁ ≠ 0) (hg₂ : g₂ ≠ 0) (he : e g₁ g₂ ≠ 0)
+    (he : e g₁ g₂ ≠ 0)
     (P R Q : List (MvPolynomial (Fin v) F)) (f : MvPolynomial (Fin v) F)
     (hf : f ∉ accessibleSpan pairingSig (uberTable P R Q) .gₜ)
     {D n : PSort → ℕ} (hD : pairingSig.DegreeClosed D)
@@ -161,7 +160,7 @@ theorem experiment_ofGeneric_le [DecidableEq Gₜ] [Field F] [Fintype F] [Sample
         runGen (symbolic F pairingSig (Fin v)) (fun _ p => MvPolynomial.eval x p) A
           (uberTable P R Q) := by
     rw [← mapTbl_uberTable_evalHom e g₁ g₂ x P R Q]
-    exact runGen_pairing_mapTbl_evalHom e g₁ g₂ hg₁ hg₂ he x A (uberTable P R Q)
+    exact runGen_pairing_mapTbl_evalHom e g₁ g₂ he x A (uberTable P R Q)
   have had (x : Fin v → F) : ComputationalAdversary.ofGeneric e A
       (P.map (fun p => MvPolynomial.eval x p • g₁))
       (R.map (fun p => MvPolynomial.eval x p • g₂))
@@ -197,11 +196,11 @@ theorem experiment_ofGeneric_le [DecidableEq Gₜ] [Field F] [Fintype F] [Sample
   ac_rfl
 
 /-- A total operation budget supplies each per-sort budget in the computational uber bound. -/
-theorem experiment_ofGeneric_le_of_total [DecidableEq Gₜ] [Field F] [Fintype F] [SampleableType F]
+theorem experiment_ofGeneric_le_of_total [Field F] [Fintype F] [SampleableType F]
     [AddCommGroup G₁] [Module F G₁] [AddCommGroup G₂] [Module F G₂]
-    [AddCommGroup Gₜ] [Module F Gₜ] [∀ s, DecidableEq (PFam G₁ G₂ Gₜ s)]
+    [AddCommGroup Gₜ] [Module F Gₜ] [DecidableEq G₁] [DecidableEq G₂] [DecidableEq Gₜ]
     {v : ℕ} (e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ) (g₁ : G₁) (g₂ : G₂)
-    (hg₁ : g₁ ≠ 0) (hg₂ : g₂ ≠ 0) (he : e g₁ g₂ ≠ 0)
+    (he : e g₁ g₂ ≠ 0)
     (P R Q : List (MvPolynomial (Fin v) F)) (f : MvPolynomial (Fin v) F)
     (hf : f ∉ accessibleSpan pairingSig (uberTable P R Q) .gₜ)
     {D : PSort → ℕ} (hD : pairingSig.DegreeClosed D) (hd : DegreeLE D (uberTable P R Q))
@@ -213,7 +212,7 @@ theorem experiment_ofGeneric_le_of_total [DecidableEq Gₜ] [Field F] [Fintype F
       ((((P.length + q + 1).choose 2 * D .g₁ +
         (R.length + q + 1).choose 2 * D .g₂ +
         (Q.length + q + 1).choose 2 * D .gₜ + k : ℕ) : ℝ≥0∞) / Fintype.card F) :=
-  experiment_ofGeneric_le e g₁ g₂ hg₁ hg₂ he P R Q f hf hD hd A
+  experiment_ofGeneric_le e g₁ g₂ he P R Q f hf hD hd A
     (fun s => hq.appendsTo s) k hk
 
 end Uber

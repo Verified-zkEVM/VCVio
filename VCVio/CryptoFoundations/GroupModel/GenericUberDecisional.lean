@@ -8,7 +8,6 @@ module
 public import VCVio.CryptoFoundations.GroupModel.GenericUber
 public import VCVio.CryptoFoundations.GroupModel.DecisionalPairing
 import Mathlib.Data.List.GetD
-import all VCVio.CryptoFoundations.GroupModel.Instances
 
 /-! # Generic decisional uber bounds
 
@@ -28,7 +27,7 @@ namespace GroupModel
 variable {F ι : Type}
 
 private theorem evRepr_append_singleton [Field F] (Q : List (MvPolynomial ι F))
-    (f : MvPolynomial ι F) (r : Repr F) :
+    (f : MvPolynomial ι F) (r : Coeffs F) :
     evRepr (Q ++ [f]) r = evRepr Q r + r Q.length • f := by
   rw [evRepr_apply, evRepr_apply, List.length_append, List.length_singleton,
     Finset.sum_range_succ]
@@ -40,13 +39,13 @@ private theorem evRepr_append_singleton [Field F] (Q : List (MvPolynomial ι F))
     simp
 
 private theorem evReprT_append_singleton [Field F] (P R Q : List (MvPolynomial ι F))
-    (f : MvPolynomial ι F) (r : ReprT F) :
+    (f : MvPolynomial ι F) (r : CoeffsT F) :
     evReprT (LinearMap.mul F _) P R (Q ++ [f]) r =
       evReprT (LinearMap.mul F _) P R Q r + r.1 Q.length • f := by
   simp only [evReprT_apply, evRepr_append_singleton]
   ac_rfl
 
-private theorem evReprT_mem [Field F] (P R Q : List (MvPolynomial ι F)) (r : ReprT F) :
+private theorem evReprT_mem [Field F] (P R Q : List (MvPolynomial ι F)) (r : CoeffsT F) :
     evReprT (LinearMap.mul F _) P R Q r ∈ accessibleSpan pairingSig (uberTable P R Q) .gₜ := by
   let V := accessibleSpan pairingSig (uberTable P R Q)
   have hm : ∀ s p, p ∈ uberTable P R Q s → p ∈ V s := fun s _ hp =>
@@ -88,7 +87,7 @@ theorem uberTables_sameKernel_of_not_mem [Field F] (P R Q : List (MvPolynomial �
   cases s with
   | g₁ | g₂ => rfl
   | gₜ =>
-    change ReprT F at r
+    change CoeffsT F at r
     change evReprT _ P R (Q ++ [f]) r = 0 ↔ evReprT _ P R (Q ++ [g]) r = 0
     rw [evReprT_append_singleton, evReprT_append_singleton,
       add_smul_eq_zero_iff _ (evReprT_mem P R Q r) hf,
@@ -212,9 +211,9 @@ private theorem uniform_option [SampleableType F] {v : ℕ} :
 
 private theorem runGen_uber_challenge [Field F] [DecidableEq F]
     [AddCommGroup G₁] [Module F G₁] [AddCommGroup G₂] [Module F G₂]
-    [AddCommGroup Gₜ] [Module F Gₜ] [∀ s, DecidableEq (PFam G₁ G₂ Gₜ s)]
+    [AddCommGroup Gₜ] [Module F Gₜ] [DecidableEq G₁] [DecidableEq G₂] [DecidableEq Gₜ]
     {v : ℕ} (e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ) (g₁ : G₁) (g₂ : G₂)
-    (hg₁ : g₁ ≠ 0) (hg₂ : g₂ ≠ 0) (he : e g₁ g₂ ≠ 0)
+    (he : e g₁ g₂ ≠ 0)
     (P R Q : List (MvPolynomial (Fin v) F)) (t : MvPolynomial (Option (Fin v)) F)
     (A : OracleComp (genSpec F pairingSig) Bool) (x : Option (Fin v) → F) :
     DecisionalAdversary.ofGeneric e A
@@ -251,14 +250,14 @@ private theorem runGen_uber_challenge [Field F] [DecidableEq F]
         Function.comp_def, eval_rename]
   unfold DecisionalAdversary.ofGeneric
   erw [← ht]
-  rw [runGen_pairing_mapTbl_evalHom e g₁ g₂ hg₁ hg₂ he]
+  rw [runGen_pairing_mapTbl_evalHom e g₁ g₂ he]
   simp only [Functor.map_map, Prod.map, id_eq]
 
 private theorem real_experiment_evalDistEq [Field F] [DecidableEq F] [SampleableType F]
     [AddCommGroup G₁] [Module F G₁] [AddCommGroup G₂] [Module F G₂]
-    [AddCommGroup Gₜ] [Module F Gₜ] [∀ s, DecidableEq (PFam G₁ G₂ Gₜ s)]
+    [AddCommGroup Gₜ] [Module F Gₜ] [DecidableEq G₁] [DecidableEq G₂] [DecidableEq Gₜ]
     {v : ℕ} (e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ) (g₁ : G₁) (g₂ : G₂)
-    (hg₁ : g₁ ≠ 0) (hg₂ : g₂ ≠ 0) (he : e g₁ g₂ ≠ 0)
+    (he : e g₁ g₂ ≠ 0)
     (P R Q : List (MvPolynomial (Fin v) F)) (f : MvPolynomial (Fin v) F)
     (A : OracleComp (genSpec F pairingSig) Bool) :
     realExperiment e g₁ g₂ P R Q f (DecisionalAdversary.ofGeneric e A) =ᵈ
@@ -283,7 +282,7 @@ private theorem real_experiment_evalDistEq [Field F] [DecidableEq F] [Sampleable
         (uberTable (P.map (rename some)) (R.map (rename some))
           (Q.map (rename some) ++ [rename some f])) := by
     simpa only [run, eval_rename] using
-      runGen_uber_challenge e g₁ g₂ hg₁ hg₂ he P R Q (rename some f) A x
+      runGen_uber_challenge e g₁ g₂ he P R Q (rename some f) A x
   apply EvalDistEq.of_forall_prEvent_eq
   intro p
   simpa only [realExperiment, ← hr, run, Function.comp_def, Option.elim_some, prEvent_norm]
@@ -291,9 +290,9 @@ private theorem real_experiment_evalDistEq [Field F] [DecidableEq F] [Sampleable
 
 private theorem random_experiment_evalDistEq [Field F] [DecidableEq F] [SampleableType F]
     [AddCommGroup G₁] [Module F G₁] [AddCommGroup G₂] [Module F G₂]
-    [AddCommGroup Gₜ] [Module F Gₜ] [∀ s, DecidableEq (PFam G₁ G₂ Gₜ s)]
+    [AddCommGroup Gₜ] [Module F Gₜ] [DecidableEq G₁] [DecidableEq G₂] [DecidableEq Gₜ]
     {v : ℕ} (e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ) (g₁ : G₁) (g₂ : G₂)
-    (hg₁ : g₁ ≠ 0) (hg₂ : g₂ ≠ 0) (he : e g₁ g₂ ≠ 0)
+    (he : e g₁ g₂ ≠ 0)
     (P R Q : List (MvPolynomial (Fin v) F)) (A : OracleComp (genSpec F pairingSig) Bool) :
     randomExperiment e g₁ g₂ P R Q (DecisionalAdversary.ofGeneric e A) =ᵈ
       (do let x ← $ᵗ (Option (Fin v) → F)
@@ -310,16 +309,16 @@ private theorem random_experiment_evalDistEq [Field F] [DecidableEq F] [Sampleab
   intro p
   simpa only [randomExperiment, bind_assoc, pure_bind, Function.comp_def,
     Option.elim_some, Option.elim_none, prEvent_norm,
-    ← runGen_uber_challenge e g₁ g₂ hg₁ hg₂ he, eval_X] using hs.prEvent_eq p
+    ← runGen_uber_challenge e g₁ g₂ he, eval_X] using hs.prEvent_eq p
 
 /-- The Type 3 decisional uber advantage is at most the two sorted collision sums.
 The real profile bounds the target polynomial, and the random profile bounds a fresh
 variable. Neither profile requires independence among the initially supplied lists. -/
 theorem advantage_ofGeneric_le [Field F] [Fintype F] [SampleableType F]
     [AddCommGroup G₁] [Module F G₁] [AddCommGroup G₂] [Module F G₂]
-    [AddCommGroup Gₜ] [Module F Gₜ] [∀ s, DecidableEq (PFam G₁ G₂ Gₜ s)]
+    [AddCommGroup Gₜ] [Module F Gₜ] [DecidableEq G₁] [DecidableEq G₂] [DecidableEq Gₜ]
     {v : ℕ} (e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ) (g₁ : G₁) (g₂ : G₂)
-    (hg₁ : g₁ ≠ 0) (hg₂ : g₂ ≠ 0) (he : e g₁ g₂ ≠ 0)
+    (he : e g₁ g₂ ≠ 0)
     (P R Q : List (MvPolynomial (Fin v) F)) (f : MvPolynomial (Fin v) F)
     (hf : f ∉ accessibleSpan pairingSig (uberTable P R Q) .gₜ)
     {D₀ D₁ n : PSort → ℕ} (hD₀ : pairingSig.DegreeClosed D₀)
@@ -353,11 +352,11 @@ theorem advantage_ofGeneric_le [Field F] [Fintype F] [SampleableType F]
   have hl : realExperiment e g₁ g₂ P R Q f (DecisionalAdversary.ofGeneric e A) =ᵈ
       Prod.snd <$> left := by
     simpa only [left, map_bind, map_pure, bind_pure_comp, Functor.map_map, Function.comp_def]
-      using real_experiment_evalDistEq e g₁ g₂ hg₁ hg₂ he P R Q f A
+      using real_experiment_evalDistEq e g₁ g₂ he P R Q f A
   have hr : randomExperiment e g₁ g₂ P R Q (DecisionalAdversary.ofGeneric e A) =ᵈ
       Prod.snd <$> right := by
     simpa only [right, map_bind, map_pure, bind_pure_comp, Functor.map_map, Function.comp_def]
-      using random_experiment_evalDistEq e g₁ g₂ hg₁ hg₂ he P R Q A
+      using random_experiment_evalDistEq e g₁ g₂ he P R Q A
   have hb := measureETVDist_runGen_pairing_sameKernel_uniform_le hD₀ hD₁ A hn T₀ T₁
     (uberTable_degreeLE_rename_append P R Q hd₀ _ ((totalDegree_rename_le _ _).trans hdeg))
     (uberTable_degreeLE_rename_append P R Q hd₁ _ (by simpa using hone))
@@ -382,9 +381,9 @@ theorem advantage_ofGeneric_le [Field F] [Fintype F] [SampleableType F]
 /-- A total group-operation budget supplies each per-sort budget in the decisional uber bound. -/
 theorem advantage_ofGeneric_le_of_total [Field F] [Fintype F] [SampleableType F]
     [AddCommGroup G₁] [Module F G₁] [AddCommGroup G₂] [Module F G₂]
-    [AddCommGroup Gₜ] [Module F Gₜ] [∀ s, DecidableEq (PFam G₁ G₂ Gₜ s)]
+    [AddCommGroup Gₜ] [Module F Gₜ] [DecidableEq G₁] [DecidableEq G₂] [DecidableEq Gₜ]
     {v : ℕ} (e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ) (g₁ : G₁) (g₂ : G₂)
-    (hg₁ : g₁ ≠ 0) (hg₂ : g₂ ≠ 0) (he : e g₁ g₂ ≠ 0)
+    (he : e g₁ g₂ ≠ 0)
     (P R Q : List (MvPolynomial (Fin v) F)) (f : MvPolynomial (Fin v) F)
     (hf : f ∉ accessibleSpan pairingSig (uberTable P R Q) .gₜ)
     {D₀ D₁ : PSort → ℕ} (hD₀ : pairingSig.DegreeClosed D₀) (hD₁ : pairingSig.DegreeClosed D₁)
@@ -397,7 +396,7 @@ theorem advantage_ofGeneric_le_of_total [Field F] [Fintype F] [SampleableType F]
         (R.length + q + 1).choose 2 * (D₀ .g₂ + D₁ .g₂) +
         (Q.length + q + 2).choose 2 * (D₀ .gₜ + D₁ .gₜ) : ℕ) : ℝ≥0∞) /
           Fintype.card F) :=
-  advantage_ofGeneric_le e g₁ g₂ hg₁ hg₂ he P R Q f hf hD₀ hD₁ hd₀ hd₁ hdeg hone A
+  advantage_ofGeneric_le e g₁ g₂ he P R Q f hf hD₀ hD₁ hd₀ hd₁ hdeg hone A
     (n := fun _ => q) (fun s => hq.appendsTo s)
 
 end Uber
