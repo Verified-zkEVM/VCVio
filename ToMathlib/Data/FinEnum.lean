@@ -73,7 +73,8 @@ chosen enumeration. Completeness holds because every element a permutation can m
 /-- Computable enumeration of embeddings `β ↪ α` between `FinEnum` types, transported from the
 `FinEnum` on the subtype of injective functions `{f : β → α // Function.Injective f}`.
 Enumerating the domain and comparing images using decidable equality on the codomain
-decides injectivity. -/
+decides injectivity. Mathlib's `Function.Embedding.fintype` is noncomputable. With this
+enumeration, a sampler can compute the embedding at a given index. -/
 @[reducible] def Function.Embedding.finEnum {β α : Type u} [FinEnum β] [FinEnum α] :
     FinEnum (β ↪ α) :=
   FinEnum.ofEquiv { f : β → α // Function.Injective f }
