@@ -325,8 +325,9 @@ end CacheMonotonicity
 
 /-! ## Forward query bounds for `withCaching`
 
-A wrapped step makes ≤ 1 underlying query (zero on a hit, one on a miss), so any bound on
-`so t` transfers to `(so.withCaching t).run cache`. -/
+A cache hit returns the stored answer without issuing a target query. A miss runs the entire
+handler `so t` once and stores its answer. Any total, predicate, or per-index query bound
+on `so t` therefore also bounds the cached step. -/
 
 section QueryBound
 
@@ -373,7 +374,12 @@ end QueryBound
 
 end QueryImpl
 
-/-! ### Parametric `simulateQ` lifts for `withCaching` -/
+/-! ### Query bounds for a computation simulated with `withCaching`
+
+A total bound on the source computation carries over when each `so t` makes at most one target
+query. For a predicate bound, each source query satisfying `p` may issue at most one target
+query satisfying `q`, and other source queries must issue none satisfying `q`. For a per-index
+bound, `so t` may query only `t`, at most once. -/
 
 namespace OracleComp
 
@@ -454,7 +460,9 @@ lemma simulateQ_query (t : spec.Domain) :
 
 /-! ### Forward query bounds for `cachingOracle`
 
-Forward only — the reverse fails because cache hits strictly reduce the simulated count. -/
+On a miss, `cachingOracle` forwards exactly one query at the same index. Hence each source
+bound also bounds the simulated computation. A single query whose answer is already cached
+illustrates why the converse fails. Its simulation issues zero queries. -/
 
 theorem isTotalQueryBound_run_simulateQ {ι₀ : Type} [DecidableEq ι₀]
     {spec₀ : OracleSpec.{0, 0} ι₀} {α : Type}
@@ -487,23 +495,13 @@ end cachingOracle
 
 section withCacheOverlay
 
-/-- Run an `OracleComp` with a `QueryCache` as a priority layer over the real oracle.
-Cached entries are returned directly (no oracle query), misses fall through to the real
-oracle and get cached for subsequent lookups within the same computation.
+/-- Run `oa` with the given cache and return its result, discarding the final cache.
+A hit supplies the stored answer. A miss forwards the query and stores the answer for the rest
+of the run. Even with an empty initial cache, two queries at the same index share one answer.
 
-This is the fundamental "programmable random oracle" primitive: pre-fill the cache with
-programmed entries, then run the computation. Concretely:
-
-  `withCacheOverlay cache oa = StateT.run' (simulateQ cachingOracle oa) cache`
-
-Key properties:
-- `withCacheOverlay ∅ oa` deduplicates queries but is otherwise equivalent to `oa`.
-- `withCacheOverlay cache (query t)` returns `v` without an external query when
-  `cache t = some v`, and queries the real oracle when `cache t = none`.
-
-The cache-parametric runtime built on top of this combinator lives in
-`VCVio.CryptoFoundations.FiatShamir.Sigma` as `FiatShamir.runtimeWithCache cache`, with
-`FiatShamir.runtime` defined as `runtimeWithCache ∅`. -/
+Preloading the cache lets a caller supply answers at selected indices. For example,
+`SignatureAlg.managedRoNmaExperiment` verifies a forgery using the adversary's programmed
+entries and forwards fresh queries to the external oracle. -/
 def OracleSpec.withCacheOverlay {α : Type u} (cache : spec.QueryCache) (oa : OracleComp spec α) :
     OracleComp spec α :=
   StateT.run' (simulateQ spec.cachingOracle oa) cache
