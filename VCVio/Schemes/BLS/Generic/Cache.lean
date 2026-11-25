@@ -9,7 +9,6 @@ module
 public import VCVio.Schemes.BLS.Generic.ReductionPrograms
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Simulation
 public import VCVio.OracleComp.SimSemantics.StateT.StateProjection
-import all VCVio.Schemes.BLS.Generic.ReductionPrograms
 
 /-! # Commuting the private scalar cache with real group interpretation
 

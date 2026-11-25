@@ -84,30 +84,6 @@ theorem CostCertificate.transfer_per_kind
     isQueryBoundP_bind (hc.simulateQ_run hw s) fun z _ => hfinish z.1 z.2
   exact hb.mono (by omega)
 
-/-- A certified handler combines independent predicate budgets with setup and finalization.
-Free queries do not require a budget, even when they occur arbitrarily often. -/
-theorem CostCertificate.transfer_predicates
-    {K : Type*} [Fintype K] (p : K → (spec F σ + Γ).Domain → Prop)
-    [∀ k, DecidablePred (p k)] (c n : K → ℕ)
-    {h : QueryImpl (spec F σ + Γ) (StateT τ (OracleComp (spec F σ + Γ')))}
-    (hc : CostCertificate h (fun t => ∑ k, if p k t then c k else 0))
-    {A : OracleComp (spec F σ + Γ) α}
-    (hA : ∀ k, IsQueryBoundP A (p k) (n k))
-    (setup : OracleComp (spec F σ + Γ') τ)
-    (finish : α → τ → OracleComp (spec F σ + Γ') β)
-    {cSetup cFinish c₀ : ℕ}
-    (hsetup : IsQueryBoundP setup (fun i => isGroupOp i = true) cSetup)
-    (hfinish : ∀ a s, IsQueryBoundP (finish a s) (fun i => isGroupOp i = true) cFinish)
-    (h₀ : cSetup + cFinish ≤ c₀) :
-    IsQueryBoundP (do
-      let s ← setup
-      let (a, st) ← (simulateQ h A).run s
-      finish a st) (fun i => isGroupOp i = true) (c₀ + ∑ k, c k * n k) := by
-  have hw := isChargeBound_of_predicates p c n hA
-  have hb := isQueryBoundP_bind hsetup fun s _ =>
-    isQueryBoundP_bind (hc.simulateQ_run hw s) fun z _ => hfinish z.1 z.2
-  exact hb.mono (by omega)
-
 /-- Virtualization charges one for each group operation and zero for equality and coins. -/
 theorem costCertificate_virtualizeImpl [DecidableEq S] (z : S → Handle) :
     CostCertificate (virtualizeImpl (F := F) (σ := σ) z)

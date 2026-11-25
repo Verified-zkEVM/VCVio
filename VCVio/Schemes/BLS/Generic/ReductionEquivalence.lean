@@ -11,7 +11,7 @@ public import VCVio.CryptoFoundations.GroupModel.GenericDLog11
 import all VCVio.Schemes.BLS.AGM.Adversary
 import all VCVio.Schemes.BLS.AGM.Reductions
 import all VCVio.Schemes.BLS.Generic.Adversary
-import all VCVio.Schemes.BLS.Generic.ReductionPrograms
+import VCVio.Schemes.BLS.Generic.ReductionPrograms
 import all VCVio.CryptoFoundations.GroupModel.Instances
 
 /-! # Exact generic realizations of the BLS algebraic reductions

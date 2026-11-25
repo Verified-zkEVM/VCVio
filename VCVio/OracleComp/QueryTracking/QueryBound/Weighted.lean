@@ -17,7 +17,8 @@ query even when that query has no possible answer, so it is stronger than the co
 `WorstCaseCostBound`, which it implies (`worstCaseCostBound_of_isChargeBound`); the converse needs
 every reachable query to have an answer (`PFunctor.FreeM.isChargeBound_of_forall_charge_le`).
 Predicate-targeted budgets are its indicator case (`isQueryBoundP_iff_isChargeBound`), and
-per-kind budgets combine into one weighted budget (`isChargeBound_of_per_kind`).
+budgets on several predicates, which may overlap, combine into one weighted budget
+(`isChargeBound_of_predicates`, with disjoint kinds as `isChargeBound_of_per_kind`).
 
 Through a handler whose every step stays within the charge of its query, the simulation stays
 within the same budget: `isChargeBound_run_simulateQ` for stateful handlers and

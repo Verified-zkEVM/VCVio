@@ -10,7 +10,7 @@ public import VCVio.Schemes.BLS.Generic.ReductionTranslation
 public import VCVio.Schemes.BLS.Generic.ReductionInitialization
 import all VCVio.Schemes.BLS.Generic.Adversary
 import all VCVio.Schemes.BLS.AGM.Adversary
-import all VCVio.Schemes.BLS.Generic.ReductionPrograms
+import VCVio.Schemes.BLS.Generic.ReductionPrograms
 
 /-! # Scalar extraction from the common BLS execution view
 

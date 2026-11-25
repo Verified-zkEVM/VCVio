@@ -44,7 +44,7 @@ theorem reductionRelated_initial [Zero F] [One F]
     [∀ b, AddCommMonoid (G b)] [AddCommMonoid T]
     (g pk : (b : Bool) → G b) (pk₁ pk₂ : Handle)
     (root tbl : Tbl (PFam (G false) (G true) T)) (z : PSort → Handle)
-    (hp : ∀ s, root s <+: tbl s)
+    (hp : Tbl.Extends root tbl)
     (hw : WellFormed z (initialReductionState (F := F) (M := M) pk₁ pk₂).handles tbl)
     (hg₁ : lookup tbl .g₁ 0 = g false) (hg₂ : lookup tbl .g₂ 0 = g true)
     (hpk₁ : lookup tbl .g₁ pk₁ = pk false) (hpk₂ : lookup tbl .g₂ pk₂ = pk true) :

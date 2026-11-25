@@ -62,23 +62,23 @@ abbrev adversarySpec (F M : Type) :=
     (unifSpec + handleSpec (S := PSort) (Query M) (fun _ => Unit)))
 
 /-- A query counts toward the adversary's direct hash budget. -/
-@[expose] def isHash {F M : Type} : (adversarySpec F M).Domain → Prop
+@[expose] def IsHashQuery {F M : Type} : (adversarySpec F M).Domain → Prop
   | .inr (.inr (.inr ⟨.inl _, _⟩)) => True
   | _ => False
 
 /-- A query counts toward the adversary's signing budget. -/
-@[expose] def isSign {F M : Type} : (adversarySpec F M).Domain → Prop
+@[expose] def IsSignQuery {F M : Type} : (adversarySpec F M).Domain → Prop
   | .inr (.inr (.inr ⟨.inr _, _⟩)) => True
   | _ => False
 
 /-- Hash-budget membership is decidable from the query constructor. -/
-instance isHashDecidable : DecidablePred (isHash (F := F) (M := M)) := fun q => by
-  unfold isHash
+instance IsHashQuery.decidable : DecidablePred (IsHashQuery (F := F) (M := M)) := fun q => by
+  unfold IsHashQuery
   split <;> infer_instance
 
 /-- Signing-budget membership is decidable from the query constructor. -/
-instance isSignDecidable : DecidablePred (isSign (F := F) (M := M)) := fun q => by
-  unfold isSign
+instance IsSignQuery.decidable : DecidablePred (IsSignQuery (F := F) (M := M)) := fun q => by
+  unfold IsSignQuery
   split <;> infer_instance
 
 /-- Initial tables contain the two generators and the corresponding public-key components. -/
@@ -102,7 +102,7 @@ The hash and signing effects are forwarded to the ordinary BLS security experime
     [Field F] [SampleableType F]
     [AddCommGroup G₁] [Module F G₁] [AddCommGroup G₂] [Module F G₂]
     [AddCommGroup Gₜ] [Module F Gₜ] [DecidableEq Gₜ]
-    [∀ s, DecidableEq (PFam G₁ G₂ Gₜ s)]
+    [DecidableEq G₁] [DecidableEq G₂]
     (A : Adversary F M) (e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ) (g₁ : G₁) (g₂ : G₂) :
     SignatureAlg.UnforgeableAdversary (scheme (M := M) e g₁ g₂) where
   main pk := (fun z =>

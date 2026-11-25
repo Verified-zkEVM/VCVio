@@ -29,7 +29,6 @@ theorem unforgeableAdvantage_le_of_generic_algebraic {F M G₁ G₂ Gₜ : Type}
     [AddCommGroup G₁] [Module F G₁] [SampleableType G₁] [DecidableEq G₁]
     [AddCommGroup G₂] [Module F G₂] [DecidableEq G₂]
     [AddCommGroup Gₜ] [Module F Gₜ] [DecidableEq Gₜ] [DecidableEq M]
-    [∀ s, DecidableEq (PFam G₁ G₂ Gₜ s)]
     (A : Generic.Adversary F M)
     (e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ) (g₁ : G₁) (g₂ : G₂)
     (hg₁ : Function.Surjective (· • g₁ : F → G₁)) (he : e g₁ g₂ ≠ 0) :

@@ -9,7 +9,7 @@ module
 public import VCVio.Schemes.BLS.Generic.Cache
 public import VCVio.CryptoFoundations.GroupModel.PairingExecution
 import all VCVio.CryptoFoundations.GroupModel.Instances
-import all VCVio.Schemes.BLS.Generic.ReductionPrograms
+import VCVio.Schemes.BLS.Generic.ReductionPrograms
 
 /-! # Real execution of BLS extraction handlers
 
@@ -69,7 +69,7 @@ structure ReductionRelated [Zero F] [∀ b, AddCommMonoid (G b)] [AddCommMonoid 
     (st : ReductionState F M) (tbl : Tbl (PFam (G false) (G true) T))
     (real : RealReductionState F M G T) : Prop where
   /-- Challenge inputs remain an outer-table prefix. -/
-  extendsRoot : ∀ s, root s <+: tbl s
+  extendsRoot : Tbl.Extends root tbl
   /-- Local and zero handles refer to valid outer entries. -/
   valid : WellFormed z st.handles tbl
   /-- Real and scalar-only trackers retain identical coefficients. -/
@@ -143,7 +143,7 @@ theorem ReductionRelated.receive [CommSemiring F]
     {root : Tbl (PFam (G false) (G true) T)} {z : PSort → Handle}
     {st : ReductionState F M} {tbl tbl' : Tbl (PFam (G false) (G true) T)}
     {real : RealReductionState F M G T} (h : ReductionRelated root z st tbl real)
-    (hp : ∀ s, tbl s <+: tbl' s) (handle : Handle) (hh : handle < (tbl' .g₁).length)
+    (hp : Tbl.Extends tbl tbl') (handle : Handle) (hh : handle < (tbl' .g₁).length)
     (kind : Bool) (m : M) (value : G false) (hv : lookup tbl' .g₁ handle = value) :
     ReductionRelated root z (reductionReceive st kind m handle) tbl'
       ((receive real.1.1 (fun | false => [value] | true => []), real.1.2),
@@ -172,9 +172,9 @@ theorem ReductionRelated.receive [CommSemiring F]
     (e : G false →ₗ[F] G true →ₗ[F] T)
     (root : Tbl (PFam (G false) (G true) T))
     (program : R → OracleComp (genSpec F pairingSig) Handle) (value : R → G false) : Prop :=
-  ∀ r tbl, (∀ s, root s <+: tbl s) → ∃ h tbl',
+  ∀ r tbl, Tbl.Extends root tbl → ∃ h tbl',
     runGen (pairingReal e) (fun _ => id) (program r) tbl = pure (h, tbl') ∧
-    (∀ s, tbl s <+: tbl' s) ∧ h < (tbl' .g₁).length ∧ lookup tbl' .g₁ h = value r
+    Tbl.Extends tbl tbl' ∧ h < (tbl' .g₁).length ∧ lookup tbl' .g₁ h = value r
 
 private def combinedHandler [CommSemiring F] [DecidableEq F]
     [∀ b, AddCommMonoid (G b)] [∀ b, Module F (G b)]

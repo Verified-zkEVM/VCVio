@@ -125,7 +125,6 @@ theorem Adversary.toAlgebraic_toUnforgeableAdversary [Field F] [SampleableType F
     [AddCommGroup G₁] [Module F G₁] [DecidableEq G₁]
     [AddCommGroup G₂] [Module F G₂] [DecidableEq G₂]
     [AddCommGroup Gₜ] [Module F Gₜ] [DecidableEq Gₜ]
-    [∀ s, DecidableEq (PFam G₁ G₂ Gₜ s)]
     (A : Adversary F M)
     (e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ) (g₁ : G₁) (g₂ : G₂) :
     (A.toAlgebraic e g₁ g₂).toUnforgeableAdversary =

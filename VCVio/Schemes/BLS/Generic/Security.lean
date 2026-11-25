@@ -15,7 +15,9 @@ public import VCVio.Schemes.BLS.Generic.ReductionCost
 The certified algebraic translation and the exact generic implementations of both extraction
 branches compose with the generic common-exponent bound. The common operation budget is
 `Q = 5 + q + 3 * qH + 4 * qS`; the resulting advantage is at most
-`(4 * Q ^ 2 + 12 * Q + 15) / Fintype.card F`.
+`(4 * Q ^ 2 + 12 * Q + 15) / Fintype.card F`. The bound says something only when the field has
+more than `4 * Q ^ 2 + 12 * Q + 15` elements, so at least `176` even at zero budgets; group
+equality tests are free.
 -/
 
 public section
@@ -33,22 +35,23 @@ private theorem twice_pairing_bound (q : ℕ) :
   simp only [Nat.choose_one_right, Nat.reduceAdd, Nat.add_assoc] at h₁ h₂
   nlinarith
 
-/-- A generic Type 3 BLS forger has unconditional ROM advantage bounded solely by its group,
-hash, and signing budgets and the field cardinality. The named reductions are `goodProgram`
-and `badProgram`, with costs `3 + q + qH + qS` and `5 + q + 3 * qH + 4 * qS`. -/
+/-- A generic Type 3 BLS forger has unconditional ROM advantage bounded solely by its
+group-operation, hash, and signing budgets and the field cardinality; equality tests are free.
+The named reductions are `goodProgram` and `badProgram`, with costs `3 + q + qH + qS` and
+`5 + q + 3 * qH + 4 * qS`, and both are charged the larger budget `Q`. -/
 theorem unforgeableAdvantage_le_generic {F M G₁ G₂ Gₜ : Type}
     [Field F] [Fintype F] [SampleableType F]
     [AddCommGroup G₁] [Module F G₁] [SampleableType G₁]
     [AddCommGroup G₂] [Module F G₂]
     [AddCommGroup Gₜ] [Module F Gₜ] [DecidableEq Gₜ] [DecidableEq M]
-    [∀ s, DecidableEq (PFam G₁ G₂ Gₜ s)]
+    [DecidableEq G₁] [DecidableEq G₂]
     (A : Generic.Adversary F M)
     (e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ) (g₁ : G₁) (g₂ : G₂)
     (hg₁ : Function.Surjective (· • g₁ : F → G₁)) (he : e g₁ g₂ ≠ 0)
     (q qH qS : ℕ)
     (hq : IsQueryBoundP (A Generic.reductionInput) (fun i => isGroupOp i = true) q)
-    (hqH : IsQueryBoundP (A Generic.reductionInput) Generic.isHash qH)
-    (hqS : IsQueryBoundP (A Generic.reductionInput) Generic.isSign qS) :
+    (hqH : IsQueryBoundP (A Generic.reductionInput) Generic.IsHashQuery qH)
+    (hqS : IsQueryBoundP (A Generic.reductionInput) Generic.IsSignQuery qS) :
     SignatureAlg.unforgeableAdvantage (ProbCompRuntime.rom (M →ₒ G₁))
       (A.toUnforgeableAdversary e g₁ g₂) ≤
       ((4 * (5 + q + 3 * qH + 4 * qS) ^ 2 +

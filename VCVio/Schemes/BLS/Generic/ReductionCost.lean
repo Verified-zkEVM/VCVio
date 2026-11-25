@@ -8,7 +8,6 @@ module
 
 public import VCVio.Schemes.BLS.Generic.ReductionPrograms
 import all VCVio.Schemes.BLS.Generic.Adversary
-import all VCVio.Schemes.BLS.Generic.ReductionPrograms
 
 /-! # Operation certificates for generic BLS reduction programs
 
@@ -62,8 +61,8 @@ theorem isQueryBoundP_closeReduction [DecidableEq M] [SampleableType R]
 
 /-- Per-query charges for adversarial group work, direct hashing, and signing. -/
 @[expose] def reductionCharge (cH cS : ℕ) (t : (adversarySpec F M).Domain) : ℕ :=
-  (if isGroupOp t then 1 else 0) + (if isHash t then cH else 0) +
-    (if isSign t then cS else 0)
+  (if isGroupOp t then 1 else 0) + (if IsHashQuery t then cH else 0) +
+    (if IsSignQuery t then cS else 0)
 
 /-- The virtual reduction handler charges exactly the supplied hash and signing allowances. -/
 theorem costCertificate_reductionHandler [CommSemiring F] [DecidableEq F]
@@ -77,20 +76,20 @@ theorem costCertificate_reductionHandler [CommSemiring F] [DecidableEq F]
     have hc := isQueryBoundP_reductionLift (M := M) (R := R)
       (costCertificate_virtualizeImpl (F := F) z (.inl t) st.handles)
     convert hc using 1 <;> rfl
-  · simp [reductionHandler, StateT.run, reductionCharge, isHash, isSign, isGroupOp]
-  · simp [reductionHandler, StateT.run, reductionCharge, isHash, isSign, isGroupOp]
+  · simp [reductionHandler, StateT.run, reductionCharge, IsHashQuery, IsSignQuery, isGroupOp]
+  · simp [reductionHandler, StateT.run, reductionCharge, IsHashQuery, IsSignQuery, isGroupOp]
   · rcases t with ⟨m | m, groups⟩
     all_goals
       simp only [reductionHandler, StateT.run, Bool.false_eq_true, ↓reduceIte,
         bind_pure_comp, isQueryBoundP_query_bind_iff, isGroupOp, Bool.false_eq_true,
         ↓reduceIte, isQueryBoundP_map_iff]
-    · simpa [reductionCharge, isHash, isSign, isGroupOp] using
+    · simpa [reductionCharge, IsHashQuery, IsSignQuery, isGroupOp] using
         (fun r => isQueryBoundP_reductionLift (M := M) (R := R) (hH r))
-    · simpa [reductionCharge, isHash, isSign, isGroupOp] using
+    · simpa [reductionCharge, IsHashQuery, IsSignQuery, isGroupOp] using
         (fun r => isQueryBoundP_reductionLift (M := M) (R := R) (hS r))
 
 private def budgetPredicate (k : Fin 3) : (adversarySpec F M).Domain → Prop :=
-  ![fun i => isGroupOp i = true, isHash, isSign] k
+  ![fun i => isGroupOp i = true, IsHashQuery, IsSignQuery] k
 
 private instance budgetPredicateDecidable (k : Fin 3) :
     DecidablePred (budgetPredicate (F := F) (M := M) k) := by
@@ -105,7 +104,7 @@ theorem isQueryBoundP_reductionHandler_run [CommSemiring F] [DecidableEq F]
     (hS : ∀ r, IsQueryBoundP (sign r) (fun i => isGroupOp i = true) cS)
     (program : OracleComp (adversarySpec F M) α) (q qH qS : ℕ)
     (hq : IsQueryBoundP program (fun i => isGroupOp i = true) q)
-    (hqH : IsQueryBoundP program isHash qH) (hqS : IsQueryBoundP program isSign qS)
+    (hqH : IsQueryBoundP program IsHashQuery qH) (hqS : IsQueryBoundP program IsSignQuery qS)
     (st : ReductionState F M) :
     IsQueryBoundP ((simulateQ (reductionHandler z hash sign) program).run st)
       (fun i => isGroupOp i = true) (q + cH * qH + cS * qS) := by
@@ -143,8 +142,8 @@ theorem isQueryBoundP_reductionExtract [CommSemiring F] [DecidableEq F]
     (hH : ∀ r, IsQueryBoundP (hash r) (fun i => isGroupOp i = true) cH)
     (hS : ∀ r, IsQueryBoundP (sign r) (fun i => isGroupOp i = true) cS)
     (hq : IsQueryBoundP (A reductionInput) (fun i => isGroupOp i = true) q)
-    (hqH : IsQueryBoundP (A reductionInput) isHash qH)
-    (hqS : IsQueryBoundP (A reductionInput) isSign qS) :
+    (hqH : IsQueryBoundP (A reductionInput) IsHashQuery qH)
+    (hqS : IsQueryBoundP (A reductionInput) IsSignQuery qS) :
     IsQueryBoundP (reductionExtract A z pk₁ pk₂ hash sign hashRep signRep initial)
       (fun i => isGroupOp i = true) (q + cH * qH + cS * qS) := by
   unfold reductionExtract
@@ -171,8 +170,8 @@ theorem isQueryBoundP_maskedPoint (r : F × F) :
 theorem isQueryBoundP_goodProgram [Field F] [DecidableEq F] [SampleableType F] [DecidableEq M]
     (A : Adversary F M) (q qH qS : ℕ)
     (hq : IsQueryBoundP (A reductionInput) (fun i => isGroupOp i = true) q)
-    (hqH : IsQueryBoundP (A reductionInput) isHash qH)
-    (hqS : IsQueryBoundP (A reductionInput) isSign qS) :
+    (hqH : IsQueryBoundP (A reductionInput) IsHashQuery qH)
+    (hqS : IsQueryBoundP (A reductionInput) IsSignQuery qS) :
     IsQueryBoundP (goodProgram A) (fun i => isGroupOp i = true) (3 + q + qH + qS) := by
   unfold goodProgram
   apply isQueryBoundP_closeReduction
@@ -188,8 +187,8 @@ theorem isQueryBoundP_goodProgram [Field F] [DecidableEq F] [SampleableType F] [
 theorem isQueryBoundP_badProgram [Field F] [DecidableEq F] [SampleableType F] [DecidableEq M]
     (A : Adversary F M) (q qH qS : ℕ)
     (hq : IsQueryBoundP (A reductionInput) (fun i => isGroupOp i = true) q)
-    (hqH : IsQueryBoundP (A reductionInput) isHash qH)
-    (hqS : IsQueryBoundP (A reductionInput) isSign qS) :
+    (hqH : IsQueryBoundP (A reductionInput) IsHashQuery qH)
+    (hqS : IsQueryBoundP (A reductionInput) IsSignQuery qS) :
     IsQueryBoundP (badProgram A) (fun i => isGroupOp i = true) (5 + q + 3 * qH + 4 * qS) := by
   unfold badProgram
   apply isQueryBoundP_closeReduction
@@ -216,11 +215,10 @@ theorem isQueryBoundP_badProgram [Field F] [DecidableEq F] [SampleableType F] [D
   have hs (r : F × F) : IsQueryBoundP (do
       let h ← maskedPoint r
       (genSpec F pairingSig).query (.inl (.smul .g₁ κ h)))
-      (fun i => isGroupOp i = true) 4 :=
-    by
-      apply isQueryBoundP_bind (m := 1) (isQueryBoundP_maskedPoint r)
-      intro h _
-      simp [isGroupOp, GroupModel.Query.isOp]
+      (fun i => isGroupOp i = true) 4 := by
+    apply isQueryBoundP_bind (m := 1) (isQueryBoundP_maskedPoint r)
+    intro h _
+    simp [isGroupOp, GroupModel.Query.isOp]
   exact (isQueryBoundP_reductionExtract A z pk₁ pk₂ _ _ _ _ _ 3 4 q qH qS
     isQueryBoundP_maskedPoint hs hq hqH hqS).mono (by omega)
 

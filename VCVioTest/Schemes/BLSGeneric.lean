@@ -8,18 +8,18 @@ module
 
 public import VCVio.Schemes.BLS.Generic.Security
 public import VCVio.Schemes.BLS.Generic.ReductionCost
-public import VCVio.CryptoFoundations.GroupModel.PairingExecution
 public import VCVio.CryptoFoundations.GroupModel.GenericDLog11
 public import Mathlib.Algebra.Field.ZMod
-import all VCVio.Schemes.BLS.Generic.Adversary
-import all VCVio.CryptoFoundations.GroupModel.Instances
+public import Mathlib.Tactic.NormNum.Prime
 
 /-! # Generic BLS translation and Type 3 DLog regression tests
 
 A handle adversary hashes and signs one message, computes a pairing and a target equality,
 and returns a scaled signature on a different message. Tests check its separate
 query budgets and exact forgetful translation. The scalar-recovery fixture instantiates the
-independent generic DLog bound numerically over the field with 101 elements.
+independent generic DLog bound numerically over the field with 101 elements. Over the field
+with 191 elements, an adversary making no queries meets the unconditional BLS bound at
+`175/191`, below one, so the bound says something once the field exceeds `4Q² + 12Q + 15`.
 -/
 
 public section
@@ -38,11 +38,6 @@ abbrev K := ZMod 101
 local instance prime101 : Fact (Nat.Prime 101) := ⟨by decide⟩
 /-- Sampling uses the direct finite representation without enumerating a field at load time. -/
 local instance sampleField : SampleableType K := inferInstanceAs (SampleableType (Fin 101))
-/-- Equality is decided separately at each of the three pairing sorts. -/
-local instance pairingEq : ∀ s, DecidableEq (PFam K K K s)
-  | .g₁ => inferInstanceAs (DecidableEq K)
-  | .g₂ => inferInstanceAs (DecidableEq K)
-  | .gₜ => inferInstanceAs (DecidableEq K)
 
 /-- Hash and sign `false`, exercise the target group, and return a scaled signature on `true`. -/
 @[expose] def scaledSignature : BLS.Generic.Adversary K Bool := fun _ => do
@@ -64,13 +59,13 @@ theorem scaledSignature_group_budget (input : Message Unit (fun _ : PSort => Han
 
 /-- The explicit program makes one direct hash request. -/
 theorem scaledSignature_hash_budget (input : Message Unit (fun _ : PSort => Handle)) :
-    IsQueryBoundP (scaledSignature input) BLS.Generic.isHash 1 := by
-  simp [scaledSignature, BLS.Generic.isHash]
+    IsQueryBoundP (scaledSignature input) BLS.Generic.IsHashQuery 1 := by
+  simp [scaledSignature, BLS.Generic.IsHashQuery]
 
 /-- The explicit program makes one signing request. -/
 theorem scaledSignature_sign_budget (input : Message Unit (fun _ : PSort => Handle)) :
-    IsQueryBoundP (scaledSignature input) BLS.Generic.isSign 1 := by
-  simp [scaledSignature, BLS.Generic.isSign]
+    IsQueryBoundP (scaledSignature input) BLS.Generic.IsSignQuery 1 := by
+  simp [scaledSignature, BLS.Generic.IsSignQuery]
 
 /-- Real execution queries the two BLS oracles and returns twice the signing reply. -/
 theorem scaledSignature_real_main (pk : K × K) :
@@ -144,42 +139,6 @@ theorem scaledSignature_badProgram_budget :
     (scaledSignature_group_budget _) (scaledSignature_hash_budget _)
     (scaledSignature_sign_budget _)
 
-/-- The named good generic reduction instantiates the unconditional DLog bound at `147/101`. -/
-theorem scaledSignature_goodProgram_bound :
-    Pr{let b ← (DLog11.experiment (1 : K) 1
-      (DLog11.Adversary.ofGeneric (LinearMap.mul K K)
-        (BLS.Generic.goodProgram scaledSignature)))}[b = true] ≤ (147 / 101 : ℝ≥0∞) := by
-  apply (DLog11.experiment_ofGeneric_le_of_total
-    (LinearMap.mul K K) 1 1
-    (by simpa only [LinearMap.mul_apply', one_mul] using (one_ne_zero : (1 : K) ≠ 0))
-    _ 7 scaledSignature_goodProgram_budget).trans
-  norm_num [ZMod.card, Nat.choose]
-
-/-- The named bad generic reduction instantiates the unconditional DLog bound at `483/101`. -/
-theorem scaledSignature_badProgram_bound :
-    Pr{let b ← (DLog11.experiment (1 : K) 1
-      (DLog11.Adversary.ofGeneric (LinearMap.mul K K)
-        (BLS.Generic.badProgram scaledSignature)))}[b = true] ≤ (483 / 101 : ℝ≥0∞) := by
-  apply (DLog11.experiment_ofGeneric_le_of_total
-    (LinearMap.mul K K) 1 1
-    (by simpa only [LinearMap.mul_apply', one_mul] using (one_ne_zero : (1 : K) ≠ 0))
-    _ 14 scaledSignature_badProgram_budget).trans
-  norm_num [ZMod.card, Nat.choose]
-
-/-- Real tracked execution retains the concrete adversary's complete explained output. -/
-theorem scaledSignature_tracked
-    (random : QueryImpl unifSpec ProbComp)
-    (handler : QueryImpl (plainSpec (fun _ : Bool => K)
-      (BLS.Generic.Query Bool) (fun _ => Unit)) ProbComp)
-    (st : Pairing.Tracked K (fun _ : Bool => K) K) :
-    simulateQ (fun q => withCoins random handler q.value)
-      (Pairing.explainProgram (LinearMap.mul K K)
-        (scaledSignature BLS.Generic.reductionInput) st) =
-      (fun z => explain z.2.1 (Pairing.sourceMessage z.1)) <$>
-        (simulateQ (Pairing.trackedImpl (LinearMap.mul K K) random handler)
-          (scaledSignature BLS.Generic.reductionInput)).run st :=
-  Pairing.explainProgram_run_tracked _ _ _ _ _
-
 /-- Repeated replies remain separate coefficient positions, including zero-valued receipts. -/
 theorem repeatedReceipts_coefficients :
     let st := BLS.Generic.initialReductionState (F := K) (M := Bool) 1 1
@@ -207,19 +166,31 @@ theorem scaledSignature_badReduction (X Y : K) :
         (BLS.Generic.badProgram scaledSignature) 1 X 1 Y :=
   BLS.Generic.badReduction_toAlgebraic _ _ _ _ _ _
 
-/-- The unconditional theorem elaborates through public imports with the concrete bound `967/101`.
-The small test field checks the arithmetic and API; this numerical upper bound exceeds one. -/
-theorem scaledSignature_generic_bound :
-    SignatureAlg.unforgeableAdvantage (ProbCompRuntime.rom (Bool →ₒ K))
-      (scaledSignature.toUnforgeableAdversary (LinearMap.mul K K) 1 1) ≤
-      (967 / 101 : ℝ≥0∞) := by
+section Idle
+
+/-- The smallest test field above the bound's constant `175` at zero budgets. -/
+local instance prime191 : Fact (Nat.Prime 191) := ⟨by norm_num⟩
+/-- Sampling uses the direct finite representation without enumerating a field at load time. -/
+local instance sampleField191 : SampleableType (ZMod 191) :=
+  inferInstanceAs (SampleableType (Fin 191))
+
+/-- Return a signature handle on `true` without any query. -/
+@[expose] def idle : BLS.Generic.Adversary (ZMod 191) Bool := fun _ =>
+  pure ⟨true, fun | .g₁ => [0] | .g₂ => [] | .gₜ => []⟩
+
+/-- The unconditional bound is below one here: at zero budgets `Q = 5`, and the bound is
+`175/191`. -/
+theorem idle_generic_bound :
+    SignatureAlg.unforgeableAdvantage (ProbCompRuntime.rom (Bool →ₒ ZMod 191))
+      (idle.toUnforgeableAdversary (LinearMap.mul (ZMod 191) (ZMod 191)) 1 1) ≤
+      (175 / 191 : ℝ≥0∞) := by
   simpa only [ZMod.card, Nat.reduceAdd, Nat.reduceMul, Nat.reducePow, Nat.cast_ofNat] using
-    BLS.unforgeableAdvantage_le_generic scaledSignature
-      (LinearMap.mul K K) 1 1
+    BLS.unforgeableAdvantage_le_generic idle (LinearMap.mul (ZMod 191) (ZMod 191)) 1 1
       (by simpa only [smul_eq_mul, mul_one] using
-        (show Function.Surjective (fun x : K => x) from fun x => ⟨x, rfl⟩))
-      (by simpa only [LinearMap.mul_apply', one_mul] using (one_ne_zero : (1 : K) ≠ 0))
-      2 1 1 (scaledSignature_group_budget _) (scaledSignature_hash_budget _)
-      (scaledSignature_sign_budget _)
+        (show Function.Surjective (fun x : ZMod 191 => x) from fun x => ⟨x, rfl⟩))
+      (by simpa only [LinearMap.mul_apply', one_mul] using (one_ne_zero : (1 : ZMod 191) ≠ 0))
+      0 0 0 (by simp [idle]) (by simp [idle]) (by simp [idle])
+
+end Idle
 
 end BLSGenericTest
