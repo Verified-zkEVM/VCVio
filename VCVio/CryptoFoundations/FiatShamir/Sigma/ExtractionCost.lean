@@ -40,7 +40,7 @@ private theorem simulated_hash_bound [DecidableEq M] [DecidableEq Commit] {A : T
   cases t with
   | inl n =>
     change IsQueryBoundP ((Fork.unifForward M Commit Chal n).run st) (· = .inr ()) 0
-    simp [Fork.unifForward_run, Fork.wrappedUniformQuery]
+    simp [Fork.wrappedUniformQuery]
   | inr mc =>
     change IsQueryBoundP ((Fork.roImpl M Commit Chal mc).run st) (· = .inr ()) 1
     rcases st with ⟨cache, log⟩

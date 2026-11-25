@@ -195,16 +195,31 @@ The uniform lemmas additionally require `[spec ˡ⊂ₒ superSpec]` and
 `QueryImpl` maps each oracle input to a monadic response:
 
 ```lean
-@[reducible] def QueryImpl (spec : OracleSpec ι) (m : Type u → Type v) :=
-  (x : spec.Domain) → m (spec.Range x)
+structure QueryImpl (spec : OracleSpec ι) (m : Type u → Type v) where
+  toFun : (x : spec.Domain) → m (spec.Range x)
 ```
 
-This is definitionally `PFunctor.Handler m spec.toPFunctor`, recorded by
-`QueryImpl.eq_handler`. The source definition retains the oracle-shaped
-dependent function because it gives Lean better expected-type information for
-polymorphic query code; the PolyFun theorem makes clear that the same object
-can interpret any free program over the interface, not only oracle-specific
-syntax.
+It is a one-field structure that applies like a function: `impl x` is `impl.toFun x`, and `impl` is
+accepted where a raw answer function is expected. There is no coercion in the other direction, so
+a handler is built with `where toFun …`, `⟨fun x => …⟩`, or a combinator. `impl.toHandler` and
+`QueryImpl.ofHandler` convert to and from PolyFun's `PFunctor.Handler m spec.toPFunctor`, which is a
+structure too. The oracle-shaped field gives Lean better expected-type information for polymorphic
+query code than the handler of `spec.toPFunctor`.
+
+State a handler through the equation for its application, as Mathlib does for bundled morphisms:
+
+```lean
+@[simps]
+def constImpl (f : (x : spec.Domain) → spec.Range x) : QueryImpl spec Id where
+  toFun x := f x
+-- generates the equation `constImpl f x = f x`
+```
+
+`simp` then uses the generated equation; it does not unfold the handler. Use `@[simps -isSimp]` when the
+equation competes with a preferred lemma or leaves a `match` on a variable, and name it in the
+proof. A handler must not be `@[reducible]` or an `abbrev`. The environment linters
+`queryImplApply` and `handlerApply` report a handler with no application lemma. Prove handlers
+equal with `ext` or `QueryImpl.ext`, not `funext`; `ext t : 1` stops at the answers.
 
 Constructors:
 
@@ -357,7 +372,8 @@ target `OracleComp unifSpec`):
 
 ```lean
 def uniformSampleImpl [∀ i, SampleableType (spec.Range i)] :
-    QueryImpl spec ProbComp := fun t => $ᵗ spec.Range t
+    QueryImpl spec ProbComp where
+  toFun t := $ᵗ spec.Range t
 ```
 
 Preservation of the output measure through `uniformSampleImpl` is a **lemma**, not definitional:
@@ -392,11 +408,13 @@ Requires `[DecidableEq ι]` and `[∀ t, Inhabited (spec.Range t)]` (for `defaul
 For stateful oracle simulations, use `StateT`:
 
 ```lean
-def myImpl : QueryImpl spec (StateT MyState ProbComp) := fun t => do
-  let st ← get
-  -- process query using state
-  set newState
-  return response
+@[simps]
+def myImpl : QueryImpl spec (StateT MyState ProbComp) where
+  toFun t := do
+    let st ← get
+    -- process query using state
+    set newState
+    return response
 ```
 
 Then run with `(simulateQ myImpl computation).run initialState`.

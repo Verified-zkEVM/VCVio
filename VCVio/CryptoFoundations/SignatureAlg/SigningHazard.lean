@@ -127,7 +127,7 @@ theorem prEvent_run_unforgeableTranscriptExperiment_le (so : QueryImpl spec (Sta
   refine (prEvent_bind_le_prEvent_add_of_support _ _ (fun w ↦ bad w.2) _ (ε := 0)
     fun ⟨⟨⟨msg, sig⟩, log⟩, s₂⟩ _ h₂ ↦ ?_).trans ?_
   · rw [add_zero]
-    exact QueryImpl.prEvent_run_add_withLogging_le so (sigAlg.sign pk sk) bad hamb
+    exact QueryImpl.prEvent_run_add_withLogging_le so ⟨sigAlg.sign pk sk⟩ bad hamb
       (fun msg s hs ↦ hsign pk sk msg s hs) hp (hadv pk) (hq pk) (hkeygen _ h₁)
   · refine (prEvent_eq_zero_of_forall_mem_support _ _ fun z hz ↦ ?_).le
     simp only [simulateQ_pure, mem_support_bind_iff, StateT.run_pure, support_pure,

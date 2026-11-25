@@ -86,10 +86,11 @@ structure Adversary (prob : Problem ι PkSeed Tweak M M' Y) where
 /-- The always-answering target oracle. Every query samples a message and records the target; a
 cap, duplicate target tweak, or collection clash poisons final validity without suppressing the
 sample or digest. -/
+@[simps]
 noncomputable def challengeOracle [DecidableEq Tweak] [SampleableType M']
     (prob : Problem ι PkSeed Tweak M M' Y) (pk : PkSeed) :
-    QueryImpl (challengeSpec Tweak Y) (StateT (State Tweak M') ProbComp) :=
-  fun t => do
+    QueryImpl (challengeSpec Tweak Y) (StateT (State Tweak M') ProbComp) where
+  toFun t := do
     let x ← (($ᵗ M' : ProbComp M') : StateT (State Tweak M') ProbComp M')
     let st ← get
     set (st.recordTarget prob.numTargets Prod.fst (t, x))
@@ -131,7 +132,7 @@ theorem challengeOracle_run :
     (challengeOracle prob pk t).run st =
       (fun x => (prob.th.eval pk t (prob.emb x),
         st.recordTarget prob.numTargets Prod.fst (t, x))) <$> ($ᵗ M') := by
-  simp [challengeOracle, Functor.map_map]
+  simp [challengeOracle_apply, Functor.map_map]
 
 /-! ## Run-level final-validity correspondence -/
 

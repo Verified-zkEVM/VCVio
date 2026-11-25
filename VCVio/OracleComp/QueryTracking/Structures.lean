@@ -101,7 +101,7 @@ def AgreesWithFn (f : QueryImpl spec Id) (cache : QueryCache spec) : Prop :=
 /-- Every cache is extended by some total answer function. -/
 lemma exists_agreesWithFn [∀ t, Nonempty (spec.Range t)] (cache : QueryCache spec) :
     ∃ f : QueryImpl spec Id, cache.AgreesWithFn f := by
-  refine ⟨fun t => (cache t).getD (Classical.arbitrary _), ?_⟩
+  refine ⟨⟨fun t => (cache t).getD (Classical.arbitrary _)⟩, ?_⟩
   intro t r h
   simp [h]
 

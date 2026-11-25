@@ -88,10 +88,11 @@ A raw round draws the private values of all its inputs, in order and with repeti
 coins of `free` (`TimeLockPuzzle.sideDraws`); submits the typed points that its inputs encode as
 one typed round; and reassembles the answers: at an encoding, the typed answer completed from the
 private value, and elsewhere the private value (`RandomOracleEncoding.assemble`). -/
-@[expose]
+@[expose, simps]
 def freeOnlineImpl :
     QueryImpl (free + (D →ₒ M).batch)
-      (StateT (D →ₒ M).QueryCache (OracleComp (free + spec.batch)))
+      (StateT (D →ₒ M).QueryCache (OracleComp (free + spec.batch))) where
+  toFun
   | .inl t => StateT.lift (liftM ((free + spec.batch).query (.inl t)))
   | .inr xs => do
       let ps ← sideDraws (spec := spec) (side := (D →ₒ M)) (free := free) xs
@@ -114,7 +115,7 @@ in order and with repetitions: the private draws submit no round. -/
 theorem isOnlineQueryBound_freeOnlineImpl_inr_run (xs : List D) (s : (D →ₒ M).QueryCache) :
     IsOnlineQueryBound ((E.freeOnlineImpl (free := free) (.inr xs)).run s)
       (1, (xs.filterMap E.route).length) := by
-  simp only [freeOnlineImpl, StateT.run_bind]
+  simp only [freeOnlineImpl_apply, StateT.run_bind]
   refine isOnlineQueryBound_bind_le (0, 0) (1, (xs.filterMap E.route).length)
     (isOnlineQueryBound_sideDraws_run _ _ _) (fun z => ?_) ⟨by omega, by omega⟩
   rw [StateT.run_lift, bind_assoc]
@@ -131,7 +132,7 @@ theorem isOnlineQueryBound_freeOnlineImpl (t : (free + (D →ₒ M).batch).Domai
     (s : (D →ₒ M).QueryCache) :
     IsOnlineQueryBound ((E.freeOnlineImpl t).run s) (onlineStep t) := by
   rcases t with t | xs
-  · simp only [freeOnlineImpl, onlineStep_inl, StateT.run_lift]
+  · simp only [freeOnlineImpl_apply, onlineStep_inl, StateT.run_lift]
     exact (isOnlineQueryBound_query_bind_inl_iff _ _ _).2 fun _ => isOnlineQueryBound_pure _ _
   · exact (E.isOnlineQueryBound_freeOnlineImpl_inr_run xs s).mono
       (Prod.mk_le_mk.mpr ⟨le_rfl, List.length_filterMap_le _ _⟩)
@@ -178,12 +179,12 @@ lemma isQueryBoundP_freeOnlineImpl_challenge
     IsQueryBoundP ((E.freeOnlineImpl t).run s) (· matches .inl (.inr _))
       (if t matches .inl (.inr _) then 1 else 0) := by
   rcases t with (k | mm) | xs
-  · simp only [freeOnlineImpl, StateT.run_lift]
+  · simp only [freeOnlineImpl_apply, StateT.run_lift]
     exact isQueryBoundP_bind_zero _ _ (by simp) fun _ => isQueryBoundP_pure _ _ _
-  · simp only [freeOnlineImpl, StateT.run_lift, ↓reduceIte]
+  · simp only [freeOnlineImpl_apply, StateT.run_lift, ↓reduceIte]
     rw [← Nat.add_zero 1]
     exact isQueryBoundP_bind (by simp) fun _ _ => isQueryBoundP_pure _ _ _
-  · simp only [freeOnlineImpl, sideDraws, StateT.run_bind, StateT.run_mk, StateT.run_lift,
+  · simp only [freeOnlineImpl_apply, sideDraws, StateT.run_bind, StateT.run_mk, StateT.run_lift,
       bind_assoc, pure_bind, StateT.run_pure]
     refine isQueryBoundP_bind_zero _ _ (isQueryBoundP_liftComp_challenge _) fun _ => ?_
     exact isQueryBoundP_bind_zero _ _ (by simp) fun _ => isQueryBoundP_pure _ _ _
@@ -227,11 +228,11 @@ def combinedChallengeImpl {Puzzle Key Λ : Type} [DecidableEq Λ]
     (puzzle : Puzzle) (key : Key) (b : Bool) :
     QueryImpl ((unifSpec + LeftOrRight.spec Msg C) + (D →ₒ M))
       (OracleComp (unifSpec + (spec + (D →ₒ M)))) :=
-  ((fun n => liftM ((unifSpec + (spec + (D →ₒ M))).query (.inl n)) :
+  ((⟨fun n => liftM ((unifSpec + (spec + (D →ₒ M))).query (.inl n))⟩ :
       QueryImpl unifSpec (OracleComp (unifSpec + (spec + (D →ₒ M))))) +
     LeftOrRight.oracle
       (fun msg => simulateQ (typedLift (D := D) (M := M)) (dem.encrypt (puzzle, key) msg)) leak b) +
-  (fun x => liftM ((unifSpec + (spec + (D →ₒ M))).query (.inr (.inr x))) :
+  (⟨fun x => liftM ((unifSpec + (spec + (D →ₒ M))).query (.inr (.inr x)))⟩ :
       QueryImpl (D →ₒ M) (OracleComp (unifSpec + (spec + (D →ₒ M)))))
 
 /-- The hiding experiment of a typed puzzle and a typed DEM against a raw hiding adversary, on the
@@ -270,14 +271,14 @@ lemma simulateQ_encodeImpl_combinedHidingExperiment {Puzzle Key Λ : Type} [Deci
         (unifSpec.passthrough + LeftOrRight.oracle (demRaw.encrypt (puzzle, key)) leak b) +
           (QueryImpl.id' (D →ₒ M)).liftTarget (OracleComp (unifSpec + (D →ₒ M))) := by
     intro puzzle key
-    funext t
+    ext t : 1
     rcases t with (n | ⟨m₀, m₁⟩) | x
-    · simp [combinedChallengeImpl, encodeImpl]
+    · simp [combinedChallengeImpl, encodeImpl_apply]
       rfl
     · simp only [QueryImpl.apply_compose, combinedChallengeImpl, QueryImpl.add_apply_inl,
         QueryImpl.add_apply_inr, QueryImpl.passthrough_add, LeftOrRight.oracle_apply]
       split_ifs <;> simp [← QueryImpl.simulateQ_compose, henc]
-    · simp [combinedChallengeImpl, encodeImpl]
+    · simp [combinedChallengeImpl, encodeImpl_apply]
       rfl
   simp only [combinedHidingExperiment, hidingExperiment, simulateQ_bind,
     simulateQ_encodeImpl_rawLift, hg]
@@ -342,29 +343,29 @@ lemma freeOnlineImpl_run_step {Puzzle Key Λ : Type} [DecidableEq Λ]
       (fun z => ((z.1, z.2.2), z.2.1)) <$>
         ((E.typedImpl ∘ₛ combinedChallengeImpl dem leak puzzle key b).batch' t).run (c, pv) := by
   rcases t with (n | mm) | xs
-  · simp only [freeOnlineImpl, QueryImpl.batch'_apply_inl, QueryImpl.apply_compose,
+  · simp only [freeOnlineImpl_apply, QueryImpl.batch'_apply_inl, QueryImpl.apply_compose,
       combinedChallengeImpl, QueryImpl.add_apply_inl, simulateQ_spec_query]
     rw [typedImpl_inl_run]
     simp [OracleSpec.romImpl, QueryImpl.simulateQ_add_liftM_left]
-  · simp only [freeOnlineImpl, QueryImpl.batch'_apply_inl, QueryImpl.apply_compose,
+  · simp only [freeOnlineImpl_apply, QueryImpl.batch'_apply_inl, QueryImpl.apply_compose,
       combinedChallengeImpl, QueryImpl.add_apply_inl, QueryImpl.add_apply_inr,
       QueryImpl.passthrough_add, StateT.run_lift, simulateQ_bind, simulateQ_spec_query,
       simulateQ_pure, StateT.run_bind, StateT.run_pure]
     rw [E.challenge_run_step dem leak puzzle key b mm pv c]
     simp [Functor.map_map]
-  · have hround : QueryImpl.batch (fun t => (spec.romImpl ∘ₛ ((unifSpec.passthrough +
+  · have hround : QueryImpl.batch ⟨fun t => (spec.romImpl ∘ₛ ((unifSpec.passthrough +
         LeftOrRight.oracle (dem.encrypt (puzzle, key)) leak b) +
-        (QueryImpl.id' spec).liftTarget (OracleComp (unifSpec + spec)))) (.inr t)) =
+        (QueryImpl.id' spec).liftTarget (OracleComp (unifSpec + spec)))) (.inr t)⟩ =
           spec.randomOracle.batch := by
       congr 1
-      funext t
+      ext t : 1
       simp [OracleSpec.romImpl, QueryImpl.simulateQ_add_liftM_right]
     rw [QueryImpl.batch'_apply_inr, show (fun x => (E.typedImpl ∘ₛ
         combinedChallengeImpl dem leak puzzle key b) (.inr x)) =
         fun x => E.typedHashImpl (.inr x) from funext fun x => by
           simp [combinedChallengeImpl, typedImpl]]
     refine EvalDistEq.trans ?_ ((E.batch_typedHashImpl_run xs c pv).map _).symm
-    simp only [freeOnlineImpl, sideDraws, StateT.run_bind, StateT.run_mk, StateT.run_lift,
+    simp only [freeOnlineImpl_apply, sideDraws, StateT.run_bind, StateT.run_mk, StateT.run_lift,
       bind_assoc, pure_bind, StateT.run_pure, simulateQ_bind, simulateQ_spec_query,
       simulateQ_pure, QueryImpl.batch'_apply_inr, hround]
     rw [run_simulateQ_liftComp_coins _ (fun n s => by

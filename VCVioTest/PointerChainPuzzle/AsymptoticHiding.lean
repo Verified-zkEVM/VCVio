@@ -70,13 +70,13 @@ theorem prfAdvantage_multiKey_of_eq_zero {K D R : Type} [DecidableEq D] [Samplea
     (prf.multiKey (Fin 0)).prfRealQueryImpl Fin.elim0
   have hreal : ∀ ks, (prf.multiKey (Fin 0)).prfRealQueryImpl ks = impl := by
     intro ks
-    funext t
+    ext t : 1
     rcases t with t | ⟨i, _⟩
     · rfl
     · exact i.elim0
   have hideal : prfIdealQueryImpl (D := Fin 0 × D) (R := R) =
       impl.liftTarget (StateT ((Fin 0 × D →ₒ R).QueryCache) ProbComp) := by
-    funext t
+    ext t : 1
     rcases t with t | ⟨i, _⟩
     · rfl
     · exact i.elim0

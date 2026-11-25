@@ -81,12 +81,12 @@ theorem oneHashOneSign_raw (pk : K) :
       let _ ← (rawSpec K Bool K).query (.inr false)
       let c : K ← (rawSpec K Bool K).query (.inl (.inr (true, 0)))
       pure (true, (0, c * pk))) := by
-  simp only [Schnorr.AlgebraicAdversary.toUnforgeableAdversary, oracle, add_apply_inl,
+  simp only [Schnorr.AlgebraicAdversary.toUnforgeableAdversary, oracle_apply, add_apply_inl,
     bind_pure_comp, add_apply_inr, oneHashOneSign, zeroPoint_data, List.getD_eq_getElem?_getD,
     initial, List.length_cons, List.length_nil, zero_add, Nat.reduceAdd, Order.lt_two_iff,
     Std.le_refl, getElem?_pos, List.getElem_cons_succ, List.getElem_cons_zero, Option.getD_some,
     simulateQ_bind, simulateQ_query, OracleQuery.input_query, OracleQuery.cont_query,
-    List.headD_nil, Functor.map_map, id_eq, simulateQ_map, bind_map_left, map_bind, forgery,
+    Functor.map_map, id_eq, simulateQ_map, bind_map_left, map_bind, forgery,
     zeroPoint_groups, List.headD_eq_head?_getD, List.head?_cons]
   conv_lhs =>
     enter [2, sig]
@@ -133,7 +133,7 @@ theorem unforgeableAdvantage_oneHashOneSign :
     SignatureAlg.signingOracle, QueryImpl.passthrough_add, simulateQ_bind, simulateQ_query,
     OracleQuery.input_query, OracleQuery.cont_query, QueryImpl.add_apply_inr,
     QueryImpl.withLogging_apply, map_bind, Functor.map_map, id_eq, simulateQ_map,
-    QueryImpl.add_apply_inl, PFunctor.Handler.liftTarget_apply, ofPFunctor_toPFunctor,
+    QueryImpl.add_apply_inl, QueryImpl.liftTarget_apply,
     QueryImpl.id'_apply, id_map, bind_assoc, WriterT.run_bind, WriterT.run_liftM, List.empty_eq,
     WriterT.run_tell, WriterT.run_map, List.append_nil, pure_bind, List.nil_append, ne_eq,
     Bool.false_eq_true, not_false_eq_true, QueryLog.wasQueried_cons_of_ne,

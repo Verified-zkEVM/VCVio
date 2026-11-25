@@ -47,8 +47,8 @@ the other way, and merging the two would cost a reassociation at every call site
 
 /-- The shared oracle with a two-slot hash counter beside its cache. -/
 @[expose] noncomputable def romWithSplit (inClass : Bytes → Prop) (inside outside : QueryKind) :
-    QueryImpl OracleWorld (StateT (QueryCache HashSpec × Counts) ProbComp) :=
-  fun queried state => do
+    QueryImpl OracleWorld (StateT (QueryCache HashSpec × Counts) ProbComp) where
+  toFun queried state := do
     let step ← (KeygenUniform.rom queried).run state.1
     pure (step.1, (step.2, state.2 + splitCost inClass inside outside queried))
 

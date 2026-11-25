@@ -62,9 +62,9 @@ round in order. -/
 def recordRounds (n : ℕ) :
     QueryImpl (unifSpec + (oracleSpec n S L Salt Salt).batch)
       (StateM (List (List (Point n S L Salt Salt)))) :=
-  QueryImpl.add (fun _ => pure 0) fun ts => do
+  QueryImpl.add ⟨fun _ => pure 0⟩ ⟨fun ts => do
     modify (· ++ [ts])
-    pure ((oracles n).toImpl.batch ts).run
+    pure ((oracles n).toImpl.batch ts).run⟩
 
 /-- Run a program against `recordRounds`, returning its output and its rounds. -/
 def record {n : ℕ} {α : Type} (oa : RoundComp n S L Salt Salt α) :

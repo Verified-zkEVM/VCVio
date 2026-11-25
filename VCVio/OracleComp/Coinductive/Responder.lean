@@ -158,9 +158,10 @@ instance ofQueryImpl.instIsExecutable {σ : Type}
 /-- A responder as a stateful query implementation in `StateT State ProbComp`: the
 bundled-to-unbundled direction of the Kleisli–Mealy identification, of which
 `PFunctor.Responder.equivStateful` is the deterministic (`Id`) sibling. -/
+@[simps]
 noncomputable def toQueryImpl (R : ProbResponder spec) [R.IsExecutable] :
-    QueryImpl spec (StateT R.State ProbComp) :=
-  fun t s => IsExecutable.answerComp (R := R) s t
+    QueryImpl spec (StateT R.State ProbComp) where
+  toFun t s := IsExecutable.answerComp (R := R) s t
 
 @[simp] lemma toQueryImpl_ofQueryImpl {σ : Type}
     (impl : QueryImpl spec (StateT σ ProbComp)) : (ofQueryImpl impl).toQueryImpl = impl := rfl
@@ -182,7 +183,7 @@ one-shot security game (sample the setup, then answer memorylessly) is exactly t
 constant-state case. -/
 @[reducible] noncomputable def ofHandlerFamily {Γ : Type} (h : Γ → ProbHandler spec) :
     ProbResponder spec :=
-  ofQueryImpl fun t γ => (fun r => (r, γ)) <$> h γ t
+  ofQueryImpl ⟨fun t γ => (fun r => (r, γ)) <$> h γ t⟩
 
 /-- A memoryless randomized oracle as a (trivially) stateful responder. -/
 @[reducible] noncomputable def ofHandler (H : ProbHandler spec) : ProbResponder spec :=
@@ -194,7 +195,7 @@ and successor state it commits to, with probability one. Wiring against it recov
 upstream closed game (`OracleStrategy.stepAgainst_ofDet`). -/
 @[reducible] noncomputable def ofDet {σ : Type} (C : PFunctor.Responder σ spec.toPFunctor) :
     ProbResponder spec :=
-  ofQueryImpl fun t s => pure (C.answer s t, C.next s t)
+  ofQueryImpl ⟨fun t s => pure (C.answer s t, C.next s t)⟩
 
 end Executable
 
@@ -404,10 +405,10 @@ section Executable
 variable {ι : Type} {spec : OracleSpec.{0, 0} ι} {S : Type}
 
 example (H : ProbHandler spec) (A : OracleStrategy S spec) (s : S) :
-    kleisliStep H A s = PFunctor.DynSystem.kleisliStep H A s := rfl
+    kleisliStep H A s = PFunctor.DynSystem.kleisliStep H.toHandler A s := rfl
 
 example (H : ProbHandler spec) (A : OracleStrategy S spec) (n : ℕ) (s : S) :
-    kleisliIterate H A n s = PFunctor.DynSystem.kleisliIterate H A n s := by
+    kleisliIterate H A n s = PFunctor.DynSystem.kleisliIterate H.toHandler A n s := by
   induction n generalizing s with
   | zero => rfl
   | succ n ih => exact congrArg (kleisliStep H A s >>= ·) (funext ih)
@@ -420,7 +421,7 @@ interface data; only the states advance stochastically. -/
 noncomputable def stepAgainst (A : OracleStrategy S spec) (R : ProbResponder spec)
     [R.IsExecutable] :
     R.State × S → ProbComp (R.State × S) :=
-  PFunctor.DynSystem.stepWith R.toQueryImpl A
+  PFunctor.DynSystem.stepWith R.toQueryImpl.toHandler A
 
 @[simp] theorem stepAgainst_apply (A : OracleStrategy S spec) (R : ProbResponder spec)
     [R.IsExecutable]
@@ -434,7 +435,7 @@ noncomputable def stepAgainst (A : OracleStrategy S spec) (R : ProbResponder spe
 noncomputable def iterateAgainst (A : OracleStrategy S spec) (R : ProbResponder spec)
     [R.IsExecutable] :
     ℕ → R.State × S → ProbComp (R.State × S) :=
-  PFunctor.DynSystem.iterateWith R.toQueryImpl A
+  PFunctor.DynSystem.iterateWith R.toQueryImpl.toHandler A
 
 @[simp] theorem iterateAgainst_zero (A : OracleStrategy S spec) (R : ProbResponder spec)
     [R.IsExecutable]

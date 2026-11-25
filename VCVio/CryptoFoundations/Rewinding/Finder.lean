@@ -157,7 +157,7 @@ theorem counted_run_add {Q α β : Type} (f : Q → α)
         bind_map_left, map_bind, ih]
     | inr q =>
       simp only [simulateQ_bind, simulateQ_spec_query, QueryImpl.add_apply_inr,
-        StateT.run_bind, counted, StateT.run_modify, StateT.run_pure, pure_bind]
+        StateT.run_bind, counted_apply, StateT.run_modify, StateT.run_pure, pure_bind]
       simpa only [Nat.add_right_comm count offset 1] using ih (f q) (count + 1)
 
 /-- Running a finite sequence of programs against a fixed acceptance function adds up their

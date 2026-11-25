@@ -33,11 +33,13 @@ noncomputable instance : AnswerMeasure WeightedSpec where
   toMeasure _ := Measure.dirac false
   isProbabilityMeasure _ := inferInstance
 
-def drawHandler : QueryImpl.Stateful WeightedSpec WeightedSpec Unit := fun _ ↦
-  StateT.mk fun state ↦ (fun b ↦ (b, state)) <$> WeightedSpec.query 0
+def drawHandler : QueryImpl.Stateful WeightedSpec WeightedSpec Unit where
+  toFun _ :=
+    StateT.mk fun state ↦ (fun b ↦ (b, state)) <$> WeightedSpec.query 0
 
-def constantHandler : QueryImpl.Stateful WeightedSpec WeightedSpec Unit := fun _ ↦
-  StateT.mk fun state ↦ pure (false, state)
+def constantHandler : QueryImpl.Stateful WeightedSpec WeightedSpec Unit where
+  toFun _ :=
+    StateT.mk fun state ↦ pure (false, state)
 
 theorem handlers_equiv : DistEquiv drawHandler () constantHandler () := by
   apply DistEquiv.of_step

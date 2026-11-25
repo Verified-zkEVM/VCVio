@@ -38,7 +38,8 @@ def sourceCost : CostModel signature Profile :=
   ⟨fun label coordinate => if coordinate = label then 2 else 0⟩
 
 /-- Each source query retains the second of two target replies at its own label. -/
-def route : QueryImpl signature (OracleComp signature) := fun label => do
+def route : QueryImpl signature (OracleComp signature) where
+  toFun label := do
   let _ ← (signature.query label : OracleComp signature Bool)
   (signature.query label : OracleComp signature Bool)
 
@@ -103,7 +104,7 @@ example (result : Bool × Multiplicative Profile)
 
 /-- Execute the actual route with a handler returning the same fixed bit at every query. -/
 def fixedRun (reply : Bool) : Bool × Profile :=
-  (simulateQ (QueryImpl.withAddCost (fun _ => pure reply : QueryImpl signature Id)
+  (simulateQ (QueryImpl.withAddCost (⟨fun _ => pure reply⟩ : QueryImpl signature Id)
       targetCost.queryCost)
     (simulateQ route program)).runAdd.run
 

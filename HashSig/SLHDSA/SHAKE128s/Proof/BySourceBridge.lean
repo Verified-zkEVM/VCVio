@@ -103,7 +103,7 @@ theorem keygen_eq_seeds_bind :
     (Scheme.keygen : OracleComp OracleWorld (SecretKey × PublicKey)) =
       (liftM WarmedGame.seeds : OracleComp OracleWorld _) >>= fun sds =>
         Scheme.keygenInternal sds.1 sds.2.1 sds.2.2 := by
-  have hsample : (simulateQ (fun i => query (spec := unifSpec) i) ($ᵗ Digest) :
+  have hsample : (simulateQ ⟨fun i => query (spec := unifSpec) i⟩ ($ᵗ Digest) :
       OracleComp OracleWorld Digest) = liftM ($ᵗ Digest : ProbComp Digest) := rfl
   unfold Scheme.keygen WarmedGame.seeds
   simp only [liftM_bind, bind_pure_comp, bind_assoc, liftM_map, bind_map_left, hsample]

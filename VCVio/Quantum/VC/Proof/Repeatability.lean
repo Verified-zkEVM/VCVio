@@ -35,7 +35,7 @@ variable {P : Type} [Fintype P] [DecidableEq P] {In : P → QReg}
 all rejected answer histories have zero contribution to the accepting branch. -/
 theorem actual_fold_accept (B : QReg) (log : QueryLog (X →ₒ Y)) (acc : Bool) :
     ((E.withClassicalReads H).run₂ .instruments
-      ((log.foldlM QueryLog.recheckStep acc).toQuantumAt (H.classicalCall B))).branch true =
+      ((log.foldlM QueryLog.recheckStep acc).toQuantumAt ⟨H.classicalCall B⟩)).branch true =
         if acc then H.transcriptBranch B log else 0 := by
   induction log generalizing acc with
   | nil =>
@@ -46,13 +46,13 @@ theorem actual_fold_accept (B : QReg) (log : QueryLog (X →ₒ Y)) (acc : Bool)
       simp only [ite_true, transcriptBranch_nil]
       rfl
   | cons p log ih =>
-    have hp : ((p :: log).foldlM QueryLog.recheckStep acc).toQuantumAt (H.classicalCall B) =
+    have hp : ((p :: log).foldlM QueryLog.recheckStep acc).toQuantumAt ⟨H.classicalCall B⟩ =
         (H.classicalCall B p.1).bind fun y ↦
           (log.foldlM QueryLog.recheckStep (acc && decide (y = p.2))).toQuantumAt
-            (H.classicalCall B) := by
+            ⟨H.classicalCall B⟩ := by
       rw [List.foldlM_cons, QueryLog.recheckStep, bind_assoc]
       simp only [pure_bind]
-      exact toQuantumAt_query_bind (H.classicalCall B) p.1 _
+      exact toQuantumAt_query_bind ⟨H.classicalCall B⟩ p.1 _
     rw [hp, QuantumRuntime.run₂_bind, DSubInstrument.branch_bind_apply_univ,
       Finset.sum_eq_single p.2]
     · rw [ih]
@@ -73,7 +73,7 @@ projectors, including repeated and contradictory prescriptions, on any entangled
 reference/private input matrix. -/
 theorem actual_accept_eq_projectorProduct (B : QReg) (log : QueryLog (X →ₒ Y)) :
     ((E.withClassicalReads H).run₂ .instruments
-      ((QueryLog.recheck log).toQuantumAt (H.classicalCall B))).branch true =
+      ((QueryLog.recheck log).toQuantumAt ⟨H.classicalCall B⟩)).branch true =
         MatrixMap.conj ((1 : Matrix B B ℂ) ⊗ₖ H.projector log) := by
   simpa only [QueryLog.recheck, ↓reduceIte, transcriptBranch] using
     H.actual_fold_accept B log true

@@ -243,22 +243,23 @@ abbrev GhostState (M Commit Chal : Type) : Type :=
 `progSide` selects the answer at a ghost hit: the ghost value (Prog side) or a fresh
 caching read of the real layer (Trans side). The bad flag fires on ghost hits and is
 otherwise preserved; signing queries run `ghostSignBody` on the cache layers. -/
-@[expose] noncomputable def ghostHybridImpl (progSide : Bool) (pk : Stmt) (sk : Wit) :
+@[expose, simps]
+noncomputable def ghostHybridImpl (progSide : Bool) (pk : Stmt) (sk : Wit) :
     QueryImpl ((unifSpec + (M × Commit →ₒ Chal)) + (M →ₒ Option (Commit × Resp)))
-      (StateT (GhostState M Commit Chal) ProbComp) :=
-  fun t => match t with
-  | .inl (.inl n) => StateT.mk fun s =>
-      (fun u => (u, s)) <$> (HasQuery.toQueryImpl (spec := unifSpec) (m := ProbComp)) n
-  | .inl (.inr mc) => StateT.mk fun s =>
-      match s.1.1.2 mc with
-      | some v =>
-          if progSide then pure (v, (s.1, true))
-          else (fun cu => (cu.1, (((cu.2, s.1.1.2), s.1.2), true))) <$> roStep M s.1.1.1 mc
-      | none =>
-          (fun cu => (cu.1, (((cu.2, s.1.1.2), s.1.2), s.2))) <$> roStep M s.1.1.1 mc
-  | .inr msg => StateT.mk fun s =>
-      (fun alc => (alc.1, ((alc.2, msg :: s.1.2), s.2))) <$>
-        (ghostSignBody ids M pk sk msg maxAttempts).run s.1.1
+      (StateT (GhostState M Commit Chal) ProbComp) where
+  toFun t := match t with
+    | .inl (.inl n) => StateT.mk fun s =>
+        (fun u => (u, s)) <$> (HasQuery.toQueryImpl (spec := unifSpec) (m := ProbComp)) n
+    | .inl (.inr mc) => StateT.mk fun s =>
+        match s.1.1.2 mc with
+        | some v =>
+            if progSide then pure (v, (s.1, true))
+            else (fun cu => (cu.1, (((cu.2, s.1.1.2), s.1.2), true))) <$> roStep M s.1.1.1 mc
+        | none =>
+            (fun cu => (cu.1, (((cu.2, s.1.1.2), s.1.2), s.2))) <$> roStep M s.1.1.1 mc
+    | .inr msg => StateT.mk fun s =>
+        (fun alc => (alc.1, ((alc.2, msg :: s.1.2), s.2))) <$>
+          (ghostSignBody ids M pk sk msg maxAttempts).run s.1.1
 
 /-- The two ghost-instrumented handlers agree on all transitions that leave the bad flag
 unset: they differ only in the answer at a ghost hit, which fires the flag on both
@@ -274,7 +275,7 @@ lemma ghostHybridImpl_agree_good (pk : Stmt) (sk : Wit)
            (s, false)}[x = (u, (s', false))] := by
   rcases t with (n | mc) | msg
   · rfl
-  · simp only [ghostHybridImpl, StateT.run_mk]
+  · simp only [ghostHybridImpl_apply, StateT.run_mk]
     cases hgh : s.1.2 mc with
     | some v =>
         simp only [↓reduceIte]
@@ -298,10 +299,10 @@ lemma ghostHybridImpl_bad_mono (progSide : Bool) (pk : Stmt) (sk : Wit)
       z.2.2 = true := by
   intro z hz
   rcases t with (n | mc) | msg
-  · simp only [ghostHybridImpl, StateT.run_mk, support_map] at hz
+  · simp only [ghostHybridImpl_apply, StateT.run_mk, support_map] at hz
     obtain ⟨_, _, rfl⟩ := hz
     exact hp
-  · simp only [ghostHybridImpl, StateT.run_mk] at hz
+  · simp only [ghostHybridImpl_apply, StateT.run_mk] at hz
     rcases hgh : p.1.1.2 mc with _ | v
     · simp only [hgh, support_map] at hz
       obtain ⟨_, _, rfl⟩ := hz
@@ -316,7 +317,7 @@ lemma ghostHybridImpl_bad_mono (progSide : Bool) (pk : Stmt) (sk : Wit)
           rw [ite_eq_right Bool.false_ne_true, support_map] at hz
           obtain ⟨_, _, rfl⟩ := hz
           rfl
-  · simp only [ghostHybridImpl, StateT.run_mk, support_map] at hz
+  · simp only [ghostHybridImpl_apply, StateT.run_mk, support_map] at hz
     obtain ⟨_, _, rfl⟩ := hz
     exact hp
 
@@ -390,16 +391,16 @@ component of the hybrid state. -/
     unifFwdImpl (M × Commit →ₒ Chal) +
       (randomOracle : QueryImpl (M × Commit →ₒ Chal)
         (StateT ((M × Commit →ₒ Chal).QueryCache) ProbComp))
-  fun t => onCache M (base t)
+  ⟨fun t => onCache M (base t)⟩
 
 /-- Handler for the adversary's signing oracle in the hybrid games: record the signed
 message (for the freshness check) and run the given signing body on the cache. -/
-@[expose] noncomputable def hybridSignImpl
+@[expose, simps] noncomputable def hybridSignImpl
     (signBody : M → StateT ((M × Commit →ₒ Chal).QueryCache) ProbComp
       (Option (Commit × Resp))) :
     QueryImpl (M →ₒ Option (Commit × Resp))
-      (StateT ((M × Commit →ₒ Chal).QueryCache × List M) ProbComp) :=
-  fun msg => do
+      (StateT ((M × Commit →ₒ Chal).QueryCache × List M) ProbComp) where
+  toFun msg := do
     modify fun s => (s.1, msg :: s.2)
     onCache M (signBody msg)
 

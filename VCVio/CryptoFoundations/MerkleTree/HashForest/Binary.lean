@@ -81,12 +81,12 @@ def binaryAnswer
 
 /-- Interpret binary Merkle queries by issuing their injective translations in the general
 hash-forest oracle. -/
-@[expose]
+@[expose, simps]
 def binaryQueryImpl :
     QueryImpl (MerkleTreeHashing.spec LeafAddress NodeAddress EncodedLeaf Digest)
       (OracleComp (spec BinaryOperationKind Unit (BinaryAddress LeafAddress NodeAddress)
-        EncodedLeaf Digest)) :=
-  fun query => HasQuery.query
+        EncodedLeaf Digest)) where
+  toFun query := HasQuery.query
     (spec := spec BinaryOperationKind Unit (BinaryAddress LeafAddress NodeAddress)
       EncodedLeaf Digest) (binaryQuery query)
 
@@ -166,7 +166,7 @@ private theorem evaluateTree_binaryTreeAt {s : Skeleton}
       cases leafHashing <;>
         simp [binaryTreeAt, binaryRoot, evaluateTree, Internal.evaluateTree,
           Internal.evaluateInputs, Internal.evaluateInput, leafDigest,
-          binaryQueryImpl, binaryQuery]
+          binaryQueryImpl_apply, binaryQuery]
   | internal left right leftIH rightIH =>
       simp only [binaryTreeAt, evaluateTree, Internal.evaluateTree,
         Internal.evaluateInputs, Internal.evaluateInput, binaryRoot, simulateQ_bind]
@@ -228,11 +228,11 @@ theorem evaluateTree_binaryTree {s : Skeleton}
 private theorem compose_binaryQueryImpl
     (answer : Query BinaryOperationKind Unit (BinaryAddress LeafAddress NodeAddress)
       EncodedLeaf Digest → Digest) :
-    (answer : QueryImpl
+    (⟨answer⟩ : QueryImpl
       (spec BinaryOperationKind Unit (BinaryAddress LeafAddress NodeAddress)
         EncodedLeaf Digest) Id) ∘ₛ binaryQueryImpl =
-      (fun query => (binaryAnswer answer query : Id Digest)) := by
-  funext query
+      ⟨fun query => (binaryAnswer answer query : Id Digest)⟩ := by
+  ext query : 1
   cases query <;> simp [QueryImpl.compose, binaryQueryImpl, binaryAnswer, binaryQuery]
 
 /-- The general hash-forest evaluator preserves the public root of every addressed binary Merkle
@@ -247,7 +247,7 @@ theorem evaluateTreeWithHash_binaryTree {s : Skeleton}
       (buildWithHash addressing leafHashing payloads (binaryAnswer answer)).getRootValue := by
   let answerImpl : QueryImpl
       (spec BinaryOperationKind Unit (BinaryAddress LeafAddress NodeAddress)
-        EncodedLeaf Digest) Id := answer
+        EncodedLeaf Digest) Id := ⟨answer⟩
   have h := congrArg (simulateQ answerImpl)
     (evaluateTree_binaryTree addressing leafHashing payloads)
   rw [simulateQ_evaluateTree, simulateQ_map,

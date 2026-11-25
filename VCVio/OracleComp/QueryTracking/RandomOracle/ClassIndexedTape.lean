@@ -517,7 +517,7 @@ theorem simulateQ_dupRandomOracle_eq {α : Type} (oa : OracleComp (spec + spec) 
     simulateQ (dupRandomOracle spec) oa
       = simulateQ spec.randomOracle (simulateQ (dupCollapse spec) oa) := by
   have hc : spec.randomOracle ∘ₛ dupCollapse spec = dupRandomOracle spec := by
-    funext t
+    ext t : 1
     cases t <;> simp [dupCollapse, dupRandomOracle_apply_inl, dupRandomOracle_apply_inr]
   rw [← hc, QueryImpl.simulateQ_compose]
 
@@ -547,7 +547,8 @@ def tapeStep (R : J → Type) (j : J) (t : spec.Domain) (h : spec.Range t = R j)
 out of one shared cache, taking each fresh answer off the tape of the query's class. -/
 def tapeCachingImplClass (R : J → Type) (τ : (spec + spec).Domain → J)
     (hR : ∀ t : (spec + spec).Domain, (spec + spec).Range t = R (τ t)) :
-    QueryImpl (spec + spec) (StateT (spec.QueryCache × ((k : J) → List (R k))) ProbComp)
+    QueryImpl (spec + spec) (StateT (spec.QueryCache × ((k : J) → List (R k))) ProbComp) where
+  toFun
   | .inl t => tapeStep R (τ (Sum.inl t)) t (hR (Sum.inl t))
   | .inr t => tapeStep R (τ (Sum.inr t)) t (hR (Sum.inr t))
 

@@ -23,9 +23,10 @@ variable {Label F G α σ : Type} {n q : ℕ}
 
 /-- Present ordinary hash and private-coin queries as interaction replies. Hashes return one
 group input; private coins return only plain data. -/
-@[expose] def rawGame :
+@[expose, simps -isSimp] def rawGame :
     QueryImpl (plainSpec (fun _ : Unit => G) (CoinQuery Label) (CoinReply (fun _ => Unit)))
-      (OracleComp (unifSpec + (Label →ₒ G)))
+      (OracleComp (unifSpec + (Label →ₒ G))) where
+  toFun
   | ⟨.inl l, _⟩ => reply <$> (liftM ((unifSpec + (Label →ₒ G)).query (.inr l)) : OracleComp _ _)
   | ⟨.inr k, _⟩ => (fun x => (⟨x, fun _ => []⟩ : Message (Fin (k + 1)) (fun _ : Unit => G)))
       <$> (liftM ((unifSpec + (Label →ₒ G)).query (.inl k)) : OracleComp _ _)
@@ -69,7 +70,7 @@ theorem rawProgram_coin (k : ℕ) (groups : Groups (fun _ : Unit => G))
 private theorem table_log [DecidableEq Label] [SampleableType G]
     (g : Fin q → G) (t : (unifSpec + (Label →ₒ G)).Domain)
     (s : SlotRenaming.State Label G q) (z)
-    (hz : z ∈ support ((((unifFwdAnswerImpl g).mapStateTBase SlotRenaming.route) t).run s)) :
+    (hz : z ∈ support ((((unifFwdAnswerImpl ⟨g⟩).mapStateTBase SlotRenaming.route) t).run s)) :
     z.2.log.map Prod.snd = s.log.map Prod.snd ++
       (match t, z.1 with | .inl _, _ => [] | .inr _, r => [r]) := by
   rw [SlotRenaming.tableHandler_apply] at hz
@@ -109,9 +110,10 @@ theorem tableRun_rawProgram_valid [DecidableEq Label] [SampleableType G]
     (hp : IsAlgebraic (fun _ => fixed) p) (z)
     (hz : z ∈ support (SlotRenaming.tableRun (rawProgram p) g)) :
     z.1.Valid (fun _ => fixed ++ z.2.log.map Prod.snd) := by
-  let impl := (unifFwdAnswerImpl g).mapStateTBase (SlotRenaming.route (D := Label))
+  let impl := (unifFwdAnswerImpl ⟨g⟩).mapStateTBase (SlotRenaming.route (D := Label))
   have he : SlotRenaming.tableRun (rawProgram p) g =
-      (simulateQ (fun query => simulateQ impl (rawGame query)) (interactionProgram p)).run
+      (simulateQ (⟨fun query => simulateQ impl (rawGame query)⟩ :
+        QueryImpl _ (StateT _ ProbComp)) (interactionProgram p)).run
         SlotRenaming.initial := by
     rw [SlotRenaming.tableRun, QueryImpl.simulateQ_mapStateTBase_run]
     unfold rawProgram

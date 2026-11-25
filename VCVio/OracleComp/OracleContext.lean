@@ -39,7 +39,7 @@ def OracleSpec.defaultContext {ι : Type u} (spec : OracleSpec ι) :
 namespace OracleContext
 
 instance {ι} {m : Type u → Type v} [Pure m] : Inhabited (OracleContext ι m) :=
-  ⟨{ spec := ι →ₒ PUnit, impl _ := pure PUnit.unit }⟩
+  ⟨{ spec := ι →ₒ PUnit, impl := ⟨fun _ => pure PUnit.unit⟩ }⟩
 
 variable {ι ι'} {spec : OracleSpec ι} {m : Type u → Type v}
 

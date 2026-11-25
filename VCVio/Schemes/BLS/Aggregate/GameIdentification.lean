@@ -35,14 +35,14 @@ private theorem realOracle_hashes {F G M α : Type} [SMul F G]
     [SampleableType G] [DecidableEq M] (x : F) (oa : OracleComp (M →ₒ G) α)
     (l : List M) (c : (M →ₒ G).QueryCache) :
     (simulateQ (realOracle x)
-      (simulateQ (fun msg => (liftM (((unifSpec + (M →ₒ G)) + (M →ₒ G)).query
-        (.inl (.inr msg))) : OracleComp ((unifSpec + (M →ₒ G)) + (M →ₒ G)) G)) oa)).run (l, c) =
+      (simulateQ ⟨fun msg => (liftM (((unifSpec + (M →ₒ G)) + (M →ₒ G)).query
+        (.inl (.inr msg))) : OracleComp ((unifSpec + (M →ₒ G)) + (M →ₒ G)) G)⟩ oa)).run (l, c) =
       (fun z => (z.1, l, z.2)) <$> (simulateQ (M →ₒ G).randomOracle oa).run c := by
   rw [QueryImpl.simulateQ_simulateQ_eq_of_apply
-    (impl := fun msg => realOracle x (.inl (.inr msg)))
+    (impl := ⟨fun msg => realOracle x (.inl (.inr msg))⟩)
     (fun msg => simulateQ_spec_query (realOracle x) (.inl (.inr msg)))]
   have h := map_run_simulateQ_eq_of_query_map_eq (M →ₒ G).randomOracle
-    (fun msg => realOracle x (.inl (.inr msg))) (fun c => (l, c))
+    ⟨fun msg => realOracle x (.inl (.inr msg))⟩ (fun c => (l, c))
     (fun msg c => (BLS.realOracle_run_hash x msg (l, c)).symm) oa c
   exact h.symm
 

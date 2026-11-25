@@ -200,10 +200,11 @@ private theorem run_project [DecidableEq Label] (decode : C → G) (sample : Lab
       (CoinReply (fun _ => Unit))) α) (st : State Label C)
     (basis : Groups (fun _ : Unit => G)) :
     Prod.map Prod.fst id <$> ((simulateQ
-      (fun (q : Explained F (CoinQuery Label) (fun _ : Unit => G)) =>
-        StateT.mk fun received => do
-      let r ← gameWithCoins decode sample q.value
-      pure (r, extend received r.groups)) p).run basis).run st =
+      (⟨fun q => StateT.mk fun received => do
+        let r ← gameWithCoins decode sample q.value
+        pure (r, extend received r.groups)⟩ :
+          QueryImpl (explainedSpec F (fun _ : Unit => G) (CoinQuery Label)
+            (CoinReply (fun _ => Unit))) (StateT _ (StateT _ ProbComp))) p).run basis).run st =
       runGameWithCoins decode sample p st := by
   induction p using OracleComp.inductionOn generalizing st basis with
   | pure a => simp [runGameWithCoins, interactionProgram]

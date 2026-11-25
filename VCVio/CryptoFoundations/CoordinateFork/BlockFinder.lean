@@ -73,7 +73,7 @@ theorem runFinder_blockFinder [SampleableType ((i : ι) → S i)] (k : ι → �
     QueryImpl.simulateQ_add_liftComp_left, hcoins, bind_map_left]
   refine bind_congr fun c₀ => ?_
   simp only [Rewinding.blockChildren, Rewinding.acceptanceChild, simulateQ_bind, simulateQ_pure,
-    QueryImpl.simulateQ_add_liftM_query_right, Rewinding.counted, StateT.run_bind,
+    QueryImpl.simulateQ_add_liftM_query_right, Rewinding.counted_apply, StateT.run_bind,
     StateT.run_modify, StateT.run_pure, pure_bind, zero_add, bind_assoc]
   cases hacc : ρ c₀ with
   | false => simp [blockForkOpAt, hacc]

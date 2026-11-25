@@ -112,7 +112,7 @@ example : lossyKernel false Set.univ = 0 := by
 @[expose, reducible] def boolAnswerSpec : OracleSpec PUnit := fun _ => Bool
 
 @[reducible] noncomputable def togglingResponder : ProbResponder boolAnswerSpec :=
-  .ofQueryImpl fun _ state => pure (state, !state)
+  .ofQueryImpl ⟨fun _ state => pure (state, !state)⟩
 
 noncomputable example : togglingResponder.IsExecutable := by
   unfold togglingResponder

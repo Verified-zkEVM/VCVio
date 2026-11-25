@@ -291,8 +291,9 @@ structure Oracles (n : ℕ) (S L Salt Ctx : Type) where
 namespace Oracles
 
 /-- The six functions as a deterministic implementation of the oracles. -/
-@[expose]
-def toImpl (O : Oracles n S L Salt Ctx) : QueryImpl (oracleSpec n S L Salt Ctx) Id
+@[expose, simps -isSimp]
+def toImpl (O : Oracles n S L Salt Ctx) : QueryImpl (oracleSpec n S L Salt Ctx) Id where
+  toFun
   | .start ctx i x => O.start ctx i x
   | .step salt i s => O.step salt i s
   | .mask ctx y => O.mask ctx y
@@ -311,7 +312,7 @@ def ofImpl (f : QueryImpl (oracleSpec n S L Salt Ctx) Id) : Oracles n S L Salt C
   commit ctx k := (f (.commit ctx k)).run
 
 lemma toImpl_ofImpl (f : QueryImpl (oracleSpec n S L Salt Ctx) Id) : (ofImpl f).toImpl = f := by
-  funext t
+  ext t : 1
   cases t <;> rfl
 
 end Oracles
@@ -467,7 +468,7 @@ lemma simulateQ_derive [NeZero n] [AddCommGroup L] (salt : Salt) (xs : Fin n →
   have h := accAfter_succ_of_lt (m := m) (mkCtx := mkCtx) (initAcc := initAcc) (O := O)
     (salt := salt) (xs := xs) (Nat.sub_one_lt (NeZero.ne n))
   rw [hn] at h
-  simp only [Oracles.toImpl, Id.run, Nat.zero_add, honestKey, h]
+  simp only [Oracles.toImpl_apply, Id.run, Nat.zero_add, honestKey, h]
   rfl
 
 lemma simulateQ_check [DecidableEq S] (puzzle : Puzzle n S L Salt) (key : S) :

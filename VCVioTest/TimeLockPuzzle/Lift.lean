@@ -64,19 +64,20 @@ def srcAdv : TwoPhaseAdversary unifSpec (puzSpec + sideSpec) Unit (ℕ × List �
     liftM ((unifSpec + (puzSpec + sideSpec).batch).query (.inr mixed))
 
 /-- Local coins read off a counter, which then moves on. -/
-def counterCoins {σ : Type} (get : σ → ℕ) (set : ℕ → σ → σ) : QueryImpl unifSpec (StateT σ Id) :=
-  fun n => StateT.mk fun s => pure (⟨get s % (n + 1), Nat.mod_lt _ n.succ_pos⟩, set (get s + 1) s)
+def counterCoins {σ : Type} (get : σ → ℕ) (set : ℕ → σ → σ) : QueryImpl unifSpec (StateT σ Id) where
+  toFun n := StateT.mk fun s => pure (⟨get s % (n + 1), Nat.mod_lt _ n.succ_pos⟩, set (get s + 1) s)
 
 /-- The puzzle oracle `t ↦ t + 100`, one point at a time. -/
-def puzPoint : QueryImpl puzSpec (StateT ℕ Id) := fun t => pure (t + 100)
+def puzPoint : QueryImpl puzSpec (StateT ℕ Id) where
+  toFun t := pure (t + 100)
 
 /-- The preprocessing oracles: coins from the counter, and the puzzle oracle `t ↦ t + 100`. -/
 def preImpl : QueryImpl (unifSpec + puzSpec) (StateT ℕ Id) :=
   counterCoins id (fun k _ => k) + puzPoint
 
 /-- Rounds of the puzzle oracle answered by `t ↦ t + 100` and recorded in a log. -/
-def puzRounds : QueryImpl puzSpec.batch (StateT (ℕ × List (List ℕ)) Id) :=
-  fun ts => StateT.mk fun s =>
+def puzRounds : QueryImpl puzSpec.batch (StateT (ℕ × List (List ℕ)) Id) where
+  toFun ts := StateT.mk fun s =>
     pure ((fun j => ts[j] + 100 : puzSpec.batch.Range ts), (s.1, ts :: s.2))
 
 /-- The online oracles: coins from the counter, and rounds answered by `t ↦ t + 100` and recorded
@@ -206,8 +207,8 @@ def sumAnswer : (t : ℕ ⊕ ℕ) → (puzSpec + sideSpec).Range t
   | .inr _ => (0 : Fin 8)
 
 /-- Rounds of the sum answered by `sumAnswer` and recorded in a log. -/
-def sumRounds : QueryImpl (puzSpec + sideSpec).batch (StateT (List (List (ℕ ⊕ ℕ))) Id) :=
-  fun ts => StateT.mk fun log =>
+def sumRounds : QueryImpl (puzSpec + sideSpec).batch (StateT (List (List (ℕ ⊕ ℕ))) Id) where
+  toFun ts := StateT.mk fun log =>
     pure ((fun j => sumAnswer ts[j] : (puzSpec + sideSpec).batch.Range ts), ts :: log)
 
 /-- Rounds of the sum recorded in a log; coins are never asked. -/

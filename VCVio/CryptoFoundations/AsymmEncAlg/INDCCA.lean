@@ -35,8 +35,8 @@ variable {m : Type → Type v} [Monad m] {M PK SK C : Type}
 
 /-- The decryption oracle under `sk`: a ciphertext is answered with its decryption, and an invalid
 one with `none`, which the adversary receives as `⊥` before it continues. -/
-def decryptionOracle (sk : SK) : QueryImpl (C →ₒ Option M) m :=
-  fun c => encAlg.decrypt sk c
+def decryptionOracle (sk : SK) : QueryImpl (C →ₒ Option M) m where
+  toFun c := encAlg.decrypt sk c
 
 @[simp] lemma decryptionOracle_apply (sk : SK) (c : C) :
     encAlg.decryptionOracle sk c = encAlg.decrypt sk c := rfl
@@ -73,8 +73,8 @@ The challenge ciphertext itself is answered with `none`, while all other ciphert
 decrypted normally. -/
 def IND_CCA_postChallengeImpl (encAlg : AsymmEncAlg (OracleComp spec) M PK SK C)
     (sk : SK) (cStar : C) : QueryImpl (IND_CCA_oracleSpec encAlg) (OracleComp spec) :=
-  QueryImpl.add spec.passthrough fun c =>
-    if c = cStar then return none else encAlg.decryptionOracle sk c
+  QueryImpl.add spec.passthrough ⟨fun c =>
+    if c = cStar then return none else encAlg.decryptionOracle sk c⟩
 
 /-- After the challenge, the decryption oracle answers the challenge ciphertext with `none`. -/
 @[simp] lemma IND_CCA_postChallengeImpl_apply_cStar

@@ -86,7 +86,7 @@ theorem signInternalAt_liftM (randomizer : Digest) (sk : SecretKey) (message : B
       liftM (signInternalAt (m := OracleComp HashSpec) randomizer sk message) := by
   rw [← OracleComp.liftComp_eq_liftM, OracleComp.liftComp_def]
   exact (signInternalAt_simulate
-    (fun t => liftM (HashSpec.query t) : QueryImpl HashSpec (OracleComp OracleWorld))
+    (⟨fun t => liftM (HashSpec.query t)⟩ : QueryImpl HashSpec (OracleComp OracleWorld))
     (fun _ => rfl) randomizer sk message).symm
 
 /-- A hash query of the scheme's, simulated, is the implementation at that input. -/

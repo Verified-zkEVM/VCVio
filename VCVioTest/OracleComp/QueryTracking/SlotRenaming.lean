@@ -31,31 +31,31 @@ variable {q : ℕ}
 
 private theorem hash_slot (g : Fin q → R) (l : Bool) (s : State Bool R q) (i : Fin q)
     (h : s.slotOf l = some i) :
-    (((unifFwdAnswerImpl g).mapStateTBase route) (.inr l)).run s =
+    (((unifFwdAnswerImpl ⟨g⟩).mapStateTBase route) (.inr l)).run s =
       pure (g i, record s l (g i)) := by
   rw [tableHandler_apply]; simp [h]
 
 private theorem hash_overflow (g : Fin q → R) (l : Bool) (s : State Bool R q) (r : R)
     (h : s.slotOf l = none) (ho : s.overflow l = some r) :
-    (((unifFwdAnswerImpl g).mapStateTBase route) (.inr l)).run s = pure (r, record s l r) := by
+    (((unifFwdAnswerImpl ⟨g⟩).mapStateTBase route) (.inr l)).run s = pure (r, record s l r) := by
   rw [tableHandler_apply]; simp [h, ho]
 
 private theorem hash_assign (g : Fin q → R) (l : Bool) (s : State Bool R q)
     (h : s.slotOf l = none) (ho : s.overflow l = none) (hn : s.next < q) :
-    (((unifFwdAnswerImpl g).mapStateTBase route) (.inr l)).run s =
+    (((unifFwdAnswerImpl ⟨g⟩).mapStateTBase route) (.inr l)).run s =
       pure (g ⟨s.next, hn⟩, assign s l hn (g ⟨s.next, hn⟩)) := by
   rw [tableHandler_apply]; simp [h, ho, hn]
 
 private theorem hash_spill (g : Fin q → R) (l : Bool) (s : State Bool R q)
     (h : s.slotOf l = none) (ho : s.overflow l = none) (hn : ¬ s.next < q) :
-    (((unifFwdAnswerImpl g).mapStateTBase route) (.inr l)).run s =
+    (((unifFwdAnswerImpl ⟨g⟩).mapStateTBase route) (.inr l)).run s =
       (fun r => (r, spill s l r)) <$> ($ᵗ R : ProbComp R) := by
   rw [tableHandler_apply]; simp [h, ho, hn]
 
 private theorem tableRun_two (k l : Bool) (g : Fin q → R) :
     tableRun (twoQueries k l) g =
-      (((unifFwdAnswerImpl g).mapStateTBase route) (.inr k)).run initial >>= fun x =>
-        (((unifFwdAnswerImpl g).mapStateTBase route) (.inr l)).run x.2 >>= fun y =>
+      (((unifFwdAnswerImpl ⟨g⟩).mapStateTBase route) (.inr k)).run initial >>= fun x =>
+        (((unifFwdAnswerImpl ⟨g⟩).mapStateTBase route) (.inr l)).run x.2 >>= fun y =>
           pure ((x.1, y.1), y.2) := by
   rw [tableRun, QueryImpl.simulateQ_mapStateTBase_run]
   simp [twoQueries]

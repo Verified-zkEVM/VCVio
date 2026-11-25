@@ -34,8 +34,8 @@ open OracleComp OracleSpec
 namespace SLHDSA.SHAKE128s.CacheReplay
 
 /-- A finished cache, read as a total hash function. -/
-@[expose] def replay (cache : QueryCache HashSpec) : QueryImpl HashSpec Id :=
-  fun input => ((cache input).getD default : Id HashOutput)
+@[expose, simps] def replay (cache : QueryCache HashSpec) : QueryImpl HashSpec Id where
+  toFun input := ((cache input).getD default : Id HashOutput)
 
 /-- The oracle step either returns a cached value and leaves the cache alone, or samples and
 installs one. -/
@@ -162,7 +162,7 @@ collisions can be read off the cache the game itself left behind. -/
 
 /-- The `HasQuery` instance that answers from a finished cache. -/
 @[expose, reducible] def replayQuery (cache : QueryCache HashSpec) : HasQuery HashSpec Id :=
-  ⟨fun input => ((cache input).getD default : Id HashOutput)⟩
+  (replay cache).toHasQuery
 
 /-- A hash call reads the cached answer at its input. -/
 theorem hash_replayQuery (cache : QueryCache HashSpec) (input : Bytes) (output : HashOutput)
@@ -489,7 +489,7 @@ theorem simulateQ_replay_congr {α : Type} (computation : OracleComp HashSpec α
     have hhead : left input = right input :=
       hagree input (QueriesUnder.head (cache := left) input next)
     have hanswer : replay left input = replay right input := by
-      rw [replay, replay, hhead]
+      rw [replay_apply, replay_apply, hhead]
     change (simulateQ (replay left) (next (replay left input)) : Id α) =
       (simulateQ (replay right) (next (replay right input)) : Id α)
     rw [← hanswer]

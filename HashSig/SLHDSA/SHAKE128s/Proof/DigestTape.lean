@@ -53,8 +53,8 @@ open scoped Classical in
 `keep`. A cache hit records nothing: it draws no randomness, so it contributes no tape
 coordinate. -/
 @[expose] noncomputable def recorder (keep : Bytes → Prop) :
-    QueryImpl OracleWorld (StateT RecordState ProbComp) :=
-  fun queried state =>
+    QueryImpl OracleWorld (StateT RecordState ProbComp) where
+  toFun queried state :=
     match queried with
     | Sum.inl coin => do
         let value ← ($ᵗ (OracleWorld.Range (Sum.inl coin)) : ProbComp _)

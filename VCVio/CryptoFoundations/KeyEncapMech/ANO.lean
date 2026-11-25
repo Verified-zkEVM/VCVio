@@ -113,17 +113,17 @@ by the query's Boolean. -/
 @[expose]
 def ANO_CCA_preChallengeImpl (sk0 sk1 : SK) :
     QueryImpl (kem.ANO_CCA_oracleSpec) (OracleComp spec) :=
-  QueryImpl.add spec.passthrough fun (bc : Bool × C) =>
-    if bc.1 then kem.decaps sk1 bc.2 else kem.decaps sk0 bc.2
+  QueryImpl.add spec.passthrough ⟨fun (bc : Bool × C) =>
+    if bc.1 then kem.decaps sk1 bc.2 else kem.decaps sk0 bc.2⟩
 
 /-- Post-challenge ANO-CCA handler: the challenge ciphertext maps to `none`
 under either key; every other query decapsulates for real. -/
 @[expose]
 def ANO_CCA_postChallengeImpl [DecidableEq C] (sk0 sk1 : SK) (cStar : C) :
     QueryImpl (kem.ANO_CCA_oracleSpec) (OracleComp spec) :=
-  QueryImpl.add spec.passthrough fun (bc : Bool × C) =>
+  QueryImpl.add spec.passthrough ⟨fun (bc : Bool × C) =>
     if bc.2 = cStar then return none
-    else if bc.1 then kem.decaps sk1 bc.2 else kem.decaps sk0 bc.2
+    else if bc.1 then kem.decaps sk1 bc.2 else kem.decaps sk0 bc.2⟩
 
 /-- Two-phase key-revealing ANO-CCA adversary with a decapsulation oracle for
 both keys. The second phase sees the whole challenge encapsulation,

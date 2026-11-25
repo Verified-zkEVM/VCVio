@@ -47,8 +47,9 @@ open Security CanonicalGraph ShareGame
 
 open scoped Classical in
 /-- **The blind game's step, flag dropped.** -/
-@[expose] noncomputable def blindStep (setup : Setup) : QueryImpl ShareSpec (StateT St ProbComp) :=
-  fun queried state => match queried with
+@[expose, simps -isSimp]
+noncomputable def blindStep (setup : Setup) : QueryImpl ShareSpec (StateT St ProbComp) where
+  toFun queried state := match queried with
     | Sum.inl (Sum.inl (Sum.inl (Sum.inl coin))) => do
         let value ← ($ᵗ (OracleWorld.Range (Sum.inl coin)) : ProbComp _)
         pure (value, state)
@@ -108,8 +109,8 @@ step from a lowered flag, the flag kept up once it is up. It parts from `handler
 claims made with the flag already up, so the flag has the same law in both
 (`prEvent_filing_eq`), and with the flag forgotten it is `blindStep` from every state. -/
 @[expose]
-noncomputable def filing (setup : Setup) : QueryImpl ShareSpec (StateT (St × Bool) ProbComp) :=
-  fun queried state => (fun z => (z.1, (z.2.1, state.2 || z.2.2))) <$>
+noncomputable def filing (setup : Setup) : QueryImpl ShareSpec (StateT (St × Bool) ProbComp) where
+  toFun queried state := (fun z => (z.1, (z.2.1, state.2 || z.2.2))) <$>
     ((handler false setup) queried).run (state.1, false)
 
 /-- One step of the filing handler: the flag-down step of the flag handler, with the flag

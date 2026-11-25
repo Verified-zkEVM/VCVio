@@ -163,9 +163,9 @@ abbrev HandlerState := HandlerCarrier.State × List (Bytes × HandlerCarrier.Sta
 open scoped Classical in
 /-- **The handler.** Fresh uniform everywhere, except at an input the run may legitimately
 read, which is answered from the table. -/
-@[expose] noncomputable def lazyProgram (availableAt : HandlerCarrier.State → Node → Prop)
-    (table : Cells × Padding) : QueryImpl OracleWorld (StateT HandlerState ProbComp) :=
-  fun queried state =>
+@[expose, simps] noncomputable def lazyProgram (availableAt : HandlerCarrier.State → Node → Prop)
+    (table : Cells × Padding) : QueryImpl OracleWorld (StateT HandlerState ProbComp) where
+  toFun queried state :=
     match queried with
     | Sum.inl coin => do
         let value ← ($ᵗ (OracleWorld.Range (Sum.inl coin)) : ProbComp _)

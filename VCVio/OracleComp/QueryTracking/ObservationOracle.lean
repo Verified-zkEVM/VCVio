@@ -95,7 +95,9 @@ variable {m : Type u → Type*} [Monad m]
 /-- Oracle implementation that handles `spec + ObsSpec Ev` by forwarding base queries to
 `base` and discarding observation events. Parameterized by the base implementation so it
 works for any target monad, not just `OracleComp spec`. -/
-def eraseObsImpl (base : QueryImpl spec m) : QueryImpl (spec + ObsSpec Ev) m
+@[simps]
+def eraseObsImpl (base : QueryImpl spec m) : QueryImpl (spec + ObsSpec Ev) m where
+  toFun
   | .inl t => base t
   | .inr _ => pure PUnit.unit
 

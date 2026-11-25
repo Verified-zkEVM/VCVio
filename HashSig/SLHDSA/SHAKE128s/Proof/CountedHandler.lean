@@ -43,8 +43,8 @@ variable (pk : PublicKey) {τ : Type}
 /-- A handler with a hash counter beside its carrier. -/
 @[expose] noncomputable def withCount
     (impl : QueryImpl OracleWorld (StateT (HandlerCarrier.State × τ) ProbComp)) :
-    QueryImpl OracleWorld (StateT (HandlerCarrier.State × (τ × Nat)) ProbComp) :=
-  fun queried state => do
+    QueryImpl OracleWorld (StateT (HandlerCarrier.State × (τ × Nat)) ProbComp) where
+  toFun queried state := do
     let step ← (impl queried).run (state.1, state.2.1)
     pure (step.1, (step.2.1, (step.2.2, state.2.2 + hashCost queried)))
 
@@ -86,8 +86,8 @@ so it is stated once here and `withCount` is its instance. -/
 @[expose] noncomputable def withExtra {ω : Type}
     (impl : QueryImpl OracleWorld (StateT (HandlerCarrier.State × τ) ProbComp))
     (update : OracleWorld.Domain → ω → ω) :
-    QueryImpl OracleWorld (StateT (HandlerCarrier.State × (τ × ω)) ProbComp) :=
-  fun queried state => do
+    QueryImpl OracleWorld (StateT (HandlerCarrier.State × (τ × ω)) ProbComp) where
+  toFun queried state := do
     let step ← (impl queried).run (state.1, state.2.1)
     pure (step.1, (step.2.1, (step.2.2, update queried state.2.2)))
 
@@ -340,8 +340,8 @@ differently: `ServedAgreement.Files` needs the carrier first, so the carrier's c
 
 /-- The shared oracle with a hash counter beside its cache. -/
 @[expose] noncomputable def romWithCount :
-    QueryImpl OracleWorld (StateT (QueryCache HashSpec × Nat) ProbComp) :=
-  fun queried state => do
+    QueryImpl OracleWorld (StateT (QueryCache HashSpec × Nat) ProbComp) where
+  toFun queried state := do
     let step ← (KeygenUniform.rom queried).run state.1
     pure (step.1, (step.2, state.2 + hashCost queried))
 

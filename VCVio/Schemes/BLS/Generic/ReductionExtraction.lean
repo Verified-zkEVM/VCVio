@@ -83,7 +83,7 @@ theorem extractionProgram_toAlgebraic {G₁ G₂ Gₜ : Type} [Field F]
       (repr.1, repr.2, a.2.2)) <$>
       LinearFunctional.extractionProgram (fun out => out.value.data)
         hash sign hashRep signRep initial
-        (simulateQ (fun q => AGM.oracle q.value)
+        (simulateQ ⟨fun q => AGM.oracle q.value⟩
           ((A.toAlgebraic e g₁ g₂).main (AGM.initialInput g₁ g₂ pk))) =
     ((fun a => realReductionView a.1 a.2) <$>
       (simulateQ (realReductionHandler (G := AGM.Group G₁ G₂) e hash sign)

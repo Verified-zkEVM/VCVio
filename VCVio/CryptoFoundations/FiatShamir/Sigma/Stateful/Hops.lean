@@ -270,7 +270,7 @@ private theorem cmaReal_step_normal_form
             Set.mem_singleton_iff, exists_prop] at hrest
           obtain ⟨π, _, rfl⟩ := hrest
           exact ⟨rfl, fun h => by simpa [CmaData.Valid] using h, le_self_add⟩
-  · simp only [fs_simp, cmaReal, cmaH3Costly, IsCostlyQuery, IsHashQuery, false_or,
+  · simp only [fs_simp, cmaReal_apply, cmaH3Costly, IsCostlyQuery, IsHashQuery, false_or,
       ite_false, StateT.run_mk] at hz ⊢
     rcases keypair with keypair | ⟨pk, sk⟩
     · simp only [support_bind, Set.mem_iUnion, support_pure, Set.mem_singleton_iff,
@@ -433,15 +433,12 @@ theorem cmaReal_eq_cmaSim_of_not_costly
       ((cmaSim M Commit Chal hr simT) t).run p := by
   rcases p with ⟨⟨log, cache, keypair⟩, bad⟩
   rcases t with n | mc | m | ⟨⟩
-  · simp [fs_simp, QueryImpl.Stateful.linkWith_apply_run,
-      QueryImpl.Stateful.Frame.linkReshape]
+  · simp [fs_simp, QueryImpl.Stateful.Frame.linkReshape]
   · cases hcache : cache mc <;>
-      simp [fs_simp, QueryImpl.Stateful.linkWith_apply_run,
-        QueryImpl.Stateful.Frame.linkReshape, hcache]
+      simp [fs_simp, QueryImpl.Stateful.Frame.linkReshape, hcache]
   · exact (ht True.intro).elim
   · rcases keypair with _ | ⟨pk, sk⟩ <;>
-      simp [fs_simp, QueryImpl.Stateful.linkWith_apply_run,
-        QueryImpl.Stateful.Frame.linkReshape]
+      simp [fs_simp, QueryImpl.Stateful.Frame.linkReshape]
 
 end H3Obligations
 
@@ -772,7 +769,7 @@ private lemma cmaRealSignStep_evalDistEq_ghost
   rcases s with ⟨log, cache, keypair⟩
   obtain _ | key := keypair <;>
     (conv_lhs =>
-      simp only [cmaReal, cmaRealSourceFull, bind_pure_comp, Prod.mk.eta,
+      simp only [cmaReal_apply, cmaRealSourceFull_apply, bind_pure_comp, Prod.mk.eta,
         StateT.run_mk, liftM_bind]) <;>
     (conv_rhs => simp [cmaRealSignGhostDist, cmaSignKeySource])
   on_goal 1 => refine EvalDistEq.bind_right _ fun key => ?_
@@ -822,10 +819,11 @@ private lemma cmaSimSignStep_evalDistEq_public
   obtain _ | key := keypair <;>
     (conv_lhs =>
       simp only [cmaFrame, cmaOuterLens, Prod.mk.eta, cmaNmaLens,
-        QueryImpl.Stateful.linkWith_apply_run, cmaToNma, cmaSignSim, liftComp_eq_liftM,
+        QueryImpl.Stateful.linkWith_apply_run, cmaToNma_apply, cmaSignSim_apply, liftComp_eq_liftM,
         bind_pure_comp, PFunctor.Lens.State.mk_get, StateT.run_mk, simulateQ_bind,
-        simulateQ_query, OracleQuery.input_query, OracleQuery.cont_query, nma, nmaPublic,
-        id_map, simulateQ_map, nmaProgram, StateT.run_bind, StateT.run_map, pure_bind,
+        simulateQ_query, OracleQuery.input_query, OracleQuery.cont_query, nma_apply,
+        nmaPublic_apply,
+        id_map, simulateQ_map, nmaProgram_apply, StateT.run_bind, StateT.run_map, pure_bind,
         bind_map_left, map_bind, Functor.map_map, QueryImpl.Stateful.Frame.linkReshape,
         PFunctor.Lens.State.mk_put, liftM_bind, liftM_map]) <;>
     (conv_rhs => simp [cmaSimSignPublicDist, cmaSignKeySource])

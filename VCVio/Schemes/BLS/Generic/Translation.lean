@@ -29,10 +29,11 @@ namespace BLS.Generic
 variable {F M G₁ G₂ Gₜ : Type}
 
 /-- Reassociate the three query kinds into the algebraic BLS interface. -/
-@[expose] def relabel :
+@[expose, simps -isSimp] def relabel :
     QueryImpl (explainedSpec F (AGM.Group G₁ G₂) (CoinQuery (Query M))
       (CoinReply (fun _ => Unit)))
-      (OracleComp (explainedSpec F (AGM.Group G₁ G₂) (AGM.Query M) AGM.Reply))
+      (OracleComp (explainedSpec F (AGM.Group G₁ G₂) (AGM.Query M) AGM.Reply)) where
+  toFun
   | ⟨⟨.inl (.inl m), gs⟩, cs⟩ =>
       (explainedSpec F (AGM.Group G₁ G₂) (AGM.Query M) AGM.Reply).query
         ⟨⟨.inl (.inr m), gs⟩, cs⟩
@@ -69,9 +70,10 @@ private theorem relabel_isAlgebraic [Zero F]
     exact relabel_isAlgebraic _ _
       ((Pairing.toExplained (G := AGM.Group G₁ G₂) e A).algebraic input)
 
-private def sourceOracle :
+@[simps -isSimp] private def sourceOracle :
     QueryImpl (plainSpec (AGM.Group G₁ G₂) (Query M) (fun _ => Unit))
-      (OracleComp (AGM.rawSpec M G₁))
+      (OracleComp (AGM.rawSpec M G₁)) where
+  toFun
   | ⟨.inl m, _⟩ => do
       let h ← (AGM.rawSpec M G₁).query (.inl (.inr m))
       return ⟨(), AGM.groupInputs [h] []⟩
@@ -84,22 +86,22 @@ attribute [local implicit_reducible] AGM.Reply CoinReply GroupModel.PFam
 private theorem relabel_run
     (p : OracleComp (explainedSpec F (AGM.Group G₁ G₂) (CoinQuery (Query M))
       (CoinReply (fun _ => Unit))) (Explained F M (AGM.Group G₁ G₂))) :
-    simulateQ (fun q => AGM.oracle q.value) (simulateQ relabel p) =
-      simulateQ (fun q => withCoins
-        (QueryImpl.ofLift unifSpec (OracleComp (AGM.rawSpec M G₁))) sourceOracle q.value) p := by
+    simulateQ ⟨fun q => AGM.oracle q.value⟩ (simulateQ relabel p) =
+      simulateQ ⟨fun q => withCoins
+        (QueryImpl.ofLift unifSpec (OracleComp (AGM.rawSpec M G₁))) sourceOracle q.value⟩ p := by
   apply QueryImpl.simulateQ_simulateQ_eq_of_apply
   rintro ⟨⟨(m | m) | n, gs⟩, cs⟩
   · exact simulateQ_spec_query
       (spec := explainedSpec F (AGM.Group G₁ G₂) (AGM.Query M) AGM.Reply)
-      (fun q => AGM.oracle q.value)
+      ⟨fun q => AGM.oracle q.value⟩
       (⟨⟨.inl (.inr m), gs⟩, cs⟩ : Explained F (AGM.Query M) (AGM.Group G₁ G₂))
   · exact simulateQ_spec_query
       (spec := explainedSpec F (AGM.Group G₁ G₂) (AGM.Query M) AGM.Reply)
-      (fun q => AGM.oracle q.value)
+      ⟨fun q => AGM.oracle q.value⟩
       (⟨⟨.inr m, gs⟩, cs⟩ : Explained F (AGM.Query M) (AGM.Group G₁ G₂))
   · have h := simulateQ_spec_query
       (spec := explainedSpec F (AGM.Group G₁ G₂) (AGM.Query M) AGM.Reply)
-      (fun q => AGM.oracle (G₁ := G₁) (G₂ := G₂) q.value)
+      ⟨fun q => AGM.oracle (G₁ := G₁) (G₂ := G₂) q.value⟩
       (⟨⟨.inl (.inl n), gs⟩, cs⟩ : Explained F (AGM.Query M) (AGM.Group G₁ G₂))
     have he : AGM.groupInputs ([] : List G₁) ([] : List G₂) = fun _ => [] := by
       funext b
@@ -114,7 +116,7 @@ private theorem relabel_run
 
 private theorem game_sourceOracle :
     Pairing.game (T := Gₜ) (sourceOracle (M := M) (G₁ := G₁) (G₂ := G₂)) = oracle := by
-  funext q
+  ext q : 1
   rcases q with ⟨m | m, gs⟩ <;>
     simp [Pairing.game, sourceOracle, Pairing.sourceValue, Pairing.pairingMessage,
       oracle, AGM.groupInputs] <;> rfl

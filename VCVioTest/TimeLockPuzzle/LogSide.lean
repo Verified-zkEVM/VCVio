@@ -54,12 +54,14 @@ def zeroAnswer : (t : ℕ ⊕ ℕ) → (puzSpec + sideSpec).Range t
   | .inr _ => (0 : Fin 8)
 
 /-- The preprocessing oracles, answering `0` everywhere. -/
-def preImpl : QueryImpl (unifSpec + (puzSpec + sideSpec)) Id
+def preImpl : QueryImpl (unifSpec + (puzSpec + sideSpec)) Id where
+  toFun
   | .inl n => pure (0 : Fin (n + 1))
   | .inr t => pure (zeroAnswer t)
 
 /-- The online oracles, answering `0` everywhere. -/
-def onImpl : QueryImpl (unifSpec + (puzSpec + sideSpec).batch) Id
+def onImpl : QueryImpl (unifSpec + (puzSpec + sideSpec).batch) Id where
+  toFun
   | .inl n => pure (0 : Fin (n + 1))
   | .inr ts => pure fun j => zeroAnswer ts[j]
 

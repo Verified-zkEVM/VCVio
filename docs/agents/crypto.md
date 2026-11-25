@@ -430,10 +430,11 @@ Use `StateT` for reductions that need to track state (e.g., query counter, cache
 
 ```lean
 def myQueryImpl (challenge : ...) :
-    QueryImpl spec (StateT MyState ProbComp) := fun t => do
-  let st ← get
-  -- branch on state to embed challenge
-  ...
+    QueryImpl spec (StateT MyState ProbComp) where
+  toFun t := do
+    let st ← get
+    -- branch on state to embed challenge
+    ...
 ```
 
 ## Asymptotic Security

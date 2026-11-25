@@ -284,8 +284,8 @@ the obvious reassociation of the product state. -/
 interpret the resulting PRF-oracle queries through the lazy random oracle. -/
 noncomputable def multipleIdealQueryImpl :
     QueryImpl (UnlinkOracleSpec TagId Nonce Digest)
-      (StateT (UnlinkState TagId × ((TagId × Nonce) →ₒ Digest).QueryCache) ProbComp) :=
-  fun q => fun p => do
+      (StateT (UnlinkState TagId × ((TagId × Nonce) →ₒ Digest).QueryCache) ProbComp) where
+  toFun q := fun p => do
     let r ← (simulateQ PRFScheme.prfIdealQueryImpl
       ((unlinkToMultiplePRFQueryImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
         (sessionsPerTag := sessionsPerTag) q).run p.1)).run p.2
@@ -314,8 +314,8 @@ interpret the resulting PRF-oracle queries through the lazy random oracle. -/
 noncomputable def singleIdealQueryImpl :
     QueryImpl (UnlinkOracleSpec TagId Nonce Digest)
       (StateT (UnlinkState TagId ×
-        (((TagId × Fin sessionsPerTag) × Nonce) →ₒ Digest).QueryCache) ProbComp) :=
-  fun q => fun p => do
+        (((TagId × Fin sessionsPerTag) × Nonce) →ₒ Digest).QueryCache) ProbComp) where
+  toFun q := fun p => do
     let r ← (simulateQ PRFScheme.prfIdealQueryImpl
       ((unlinkToSinglePRFQueryImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
         (sessionsPerTag := sessionsPerTag) q).run p.1)).run p.2
@@ -382,7 +382,6 @@ lemma multipleIdealQueryImpl_tag_run_of_not_lt (tag : TagId) (s : UnlinkState Ta
         (sessionsPerTag := sessionsPerTag) (Sum.inl tag)) (s, c) =
       pure ((none, s, c)) := by
   unfold multipleIdealQueryImpl unlinkToMultiplePRFQueryImpl
-  rw [QueryImpl.add_apply_inl unlinkToMultiplePRFTagImpl unlinkToMultiplePRFReaderImpl tag]
   change (do let r ← (simulateQ PRFScheme.prfIdealQueryImpl
       ((unlinkToMultiplePRFTagImpl tag).run s)).run c; pure (r.1.1, r.1.2, r.2)) = _
   rw [unlinkToMultiplePRFTagImpl_run_of_not_lt tag s hslot]
@@ -402,7 +401,6 @@ lemma multipleIdealQueryImpl_tag_run_of_lt (tag : TagId) (s : UnlinkState TagId)
               Function.update s.sessionsUsed tag (s.sessionsUsed tag + 1) } :
               UnlinkState TagId), r.2) := by
   unfold multipleIdealQueryImpl unlinkToMultiplePRFQueryImpl
-  rw [QueryImpl.add_apply_inl unlinkToMultiplePRFTagImpl unlinkToMultiplePRFReaderImpl tag]
   change ((simulateQ PRFScheme.prfIdealQueryImpl
       ((unlinkToMultiplePRFTagImpl tag).run s)).run c) >>=
       (fun r => pure (r.1.1, r.1.2, r.2)) = _
@@ -419,7 +417,6 @@ lemma multipleIdealQueryImpl_reader_run
           (fun tag => (tag, transcript.nonce))) c >>= fun rs =>
         pure (ReaderReply.ofBool (decide (∃ d ∈ rs.1, d = transcript.auth)), s, rs.2) := by
   unfold multipleIdealQueryImpl unlinkToMultiplePRFQueryImpl
-  rw [QueryImpl.add_apply_inr unlinkToMultiplePRFTagImpl unlinkToMultiplePRFReaderImpl transcript]
   change ((simulateQ PRFScheme.prfIdealQueryImpl
       ((unlinkToMultiplePRFReaderImpl transcript).run s)).run c) >>=
       (fun r => pure (r.1.1, r.1.2, r.2)) = _
@@ -436,7 +433,6 @@ lemma singleIdealQueryImpl_tag_run_of_not_lt (tag : TagId) (s : UnlinkState TagI
         (sessionsPerTag := sessionsPerTag) (Sum.inl tag)) (s, c) =
       pure ((none, s, c)) := by
   unfold singleIdealQueryImpl unlinkToSinglePRFQueryImpl
-  rw [QueryImpl.add_apply_inl unlinkToSinglePRFTagImpl unlinkToSinglePRFReaderImpl tag]
   change (do let r ← (simulateQ PRFScheme.prfIdealQueryImpl
       ((unlinkToSinglePRFTagImpl tag).run s)).run c; pure (r.1.1, r.1.2, r.2)) = _
   rw [unlinkToSinglePRFTagImpl_run_of_not_lt tag s hslot]
@@ -455,7 +451,6 @@ lemma singleIdealQueryImpl_tag_run_of_lt (tag : TagId) (s : UnlinkState TagId)
             { s with sessionsUsed :=
               Function.update s.sessionsUsed tag (s.sessionsUsed tag + 1) }, r.2) := by
   unfold singleIdealQueryImpl unlinkToSinglePRFQueryImpl
-  rw [QueryImpl.add_apply_inl unlinkToSinglePRFTagImpl unlinkToSinglePRFReaderImpl tag]
   change ((simulateQ PRFScheme.prfIdealQueryImpl
       ((unlinkToSinglePRFTagImpl tag).run s)).run c) >>=
       (fun r => pure (r.1.1, r.1.2, r.2)) = _
@@ -472,7 +467,6 @@ lemma singleIdealQueryImpl_reader_run
           (fun slot => (slot, transcript.nonce))) c >>= fun rs =>
         pure (ReaderReply.ofBool (decide (∃ d ∈ rs.1, d = transcript.auth)), s, rs.2) := by
   unfold singleIdealQueryImpl unlinkToSinglePRFQueryImpl
-  rw [QueryImpl.add_apply_inr unlinkToSinglePRFTagImpl unlinkToSinglePRFReaderImpl transcript]
   change ((simulateQ PRFScheme.prfIdealQueryImpl
       ((unlinkToSinglePRFReaderImpl transcript).run s)).run c) >>=
       (fun r => pure (r.1.1, r.1.2, r.2)) = _

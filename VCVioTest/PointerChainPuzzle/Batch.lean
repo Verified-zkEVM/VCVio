@@ -38,12 +38,14 @@ instance : ∀ t, Inhabited (hetSpec.Range t)
   | false => inferInstanceAs (Inhabited Bool)
 
 /-- A deterministic handler for `hetSpec`. -/
-def hetImpl : QueryImpl hetSpec Id
+def hetImpl : QueryImpl hetSpec Id where
+  toFun
   | true => (2 : Fin 3)
   | false => true
 
 /-- A deterministic handler for local coins, always answering `0`. -/
-def zeroCoins : QueryImpl unifSpec Id := fun _ => (0 : Fin _)
+def zeroCoins : QueryImpl unifSpec Id where
+  toFun _ := (0 : Fin _)
 
 /-- One round to both oracles; the answers are read at their own types. -/
 def hetRound : OracleComp (unifSpec + hetSpec.batch) (Fin 3 × Bool) := do
@@ -106,7 +108,8 @@ abbrev pointSpec : OracleSpec ℕ := fun _ => ℕ
 
 /-- A stateful handler that appends each submitted point to a trace and answers with the number
 of points submitted before it. -/
-def traceImpl : QueryImpl pointSpec (StateM (List ℕ)) := fun t => do
+def traceImpl : QueryImpl pointSpec (StateM (List ℕ)) where
+  toFun t := do
   let s ← get
   set (s ++ [t])
   pure s.length

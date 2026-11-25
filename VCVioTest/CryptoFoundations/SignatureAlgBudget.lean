@@ -48,7 +48,8 @@ def IsSignQuery : Unit ⊕ Bool → Prop := fun t => t.isRight
 instance : DecidablePred IsSignQuery := fun t => inferInstanceAs (Decidable (t.isRight = true))
 
 /-- The constant interpretation of the ambient oracle, which makes no query. -/
-def constImpl : QueryImpl bitSpec (OracleComp bitSpec) := fun _ => pure false
+def constImpl : QueryImpl bitSpec (OracleComp bitSpec) where
+  toFun _ := pure false
 
 /-- Two signing queries bound the oracle queries of the transcript experiment by two. -/
 example : IsQueryBoundP (SignatureAlg.unforgeableTranscriptExperiment
@@ -75,7 +76,8 @@ def mixedAdv : SignatureAlg.UnforgeableAdversary readSigAlg where
     return (true, σ)
 
 /-- The interpretation of the ambient oracle that forwards each query. -/
-def fwdImpl : QueryImpl bitSpec (OracleComp bitSpec) := fun _ => bitSpec.query ()
+def fwdImpl : QueryImpl bitSpec (OracleComp bitSpec) where
+  toFun _ := bitSpec.query ()
 
 /-- One charged ambient query, one charged signing query and one verification query bound the
 oracle queries of the transcript experiment by three. -/

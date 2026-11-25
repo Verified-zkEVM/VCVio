@@ -264,10 +264,11 @@ variable (sessionsPerTag) in
 /-- Deterministic-table instrumented multiple-session handler: runs `multipleTableHandler g` on the
 multiple-ideal component (now just `UnlinkState`) and, on a tag query, advances the bad-world
 component via `multipleBadAdvance`. The eager-table analogue of `multipleBadQueryImpl`. -/
+@[simps]
 noncomputable def multipleBadTableHandler (g : TagId × Nonce → Digest) :
     QueryImpl (UnlinkOracleSpec TagId Nonce Digest)
-      (StateT (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) ProbComp) :=
-  fun q => fun p => match q with
+      (StateT (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) ProbComp) where
+  toFun q := fun p => match q with
     | Sum.inl tag =>
         (multipleTableHandler (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
             (sessionsPerTag := sessionsPerTag) g (Sum.inl tag)) p.1 >>= fun r =>
@@ -467,12 +468,13 @@ sampled fine table. -/
 /-- The eager handler `multipleBadTableHandler g` with the fine table `gFine` threaded
 through reader queries, each of which ORs `cacheBadReader gFine` into the `cacheBad` flag
 through `multipleBadReaderAdvance`. -/
+@[simps -isSimp]
 noncomputable def multipleBadTableHandlerFine
     (g : TagId × Nonce → Digest)
     (gFine : ((TagId × Fin sessionsPerTag) × Nonce) → Digest) :
     QueryImpl (UnlinkOracleSpec TagId Nonce Digest)
-      (StateT (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) ProbComp) :=
-  fun q => fun p => match q with
+      (StateT (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) ProbComp) where
+  toFun q := fun p => match q with
     | Sum.inl tag =>
         (multipleTableHandler (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
             (sessionsPerTag := sessionsPerTag) g (Sum.inl tag)) p.1 >>= fun r =>

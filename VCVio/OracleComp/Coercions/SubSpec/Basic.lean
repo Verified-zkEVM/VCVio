@@ -179,14 +179,14 @@ Usually `liftM` should be preferred but this can allow more explicit annotation.
 def liftComp (mx : OracleComp spec α) (superSpec : OracleSpec τ)
     [h : MonadLiftT (OracleQuery spec) (OracleQuery superSpec)] :
     OracleComp superSpec α :=
-    simulateQ (fun t => liftM (spec.query t)) mx
+    simulateQ (r := OracleComp superSpec) ⟨fun t => liftM (spec.query t)⟩ mx
 
 variable (superSpec : OracleSpec τ)
     [h : MonadLiftT (OracleQuery spec) (OracleQuery superSpec)]
 
 @[grind =, aesop unsafe norm]
 lemma liftComp_def (mx : OracleComp spec α) : liftComp mx superSpec =
-    simulateQ (fun t => liftM (spec.query t)) mx := rfl
+    simulateQ (r := OracleComp superSpec) ⟨fun t => liftM (spec.query t)⟩ mx := rfl
 
 @[simp]
 lemma liftComp_pure (x : α) : liftComp (pure x : OracleComp spec α) superSpec = pure x := rfl
@@ -388,12 +388,13 @@ section OptionT
 
 instance [MonadLift (OracleQuery spec) (OracleQuery superSpec)] :
     MonadLift (OptionT (OracleComp spec)) (OptionT (OracleComp superSpec)) where
-  monadLift mx := OptionT.mk (simulateQ (fun t => liftM (query t)) (OptionT.run mx))
+  monadLift mx := OptionT.mk
+    (simulateQ (r := OracleComp superSpec) ⟨fun t => liftM (spec.query t)⟩ (OptionT.run mx))
 
 @[simp]
 lemma liftM_OptionT_eq [MonadLift (OracleQuery spec) (OracleQuery superSpec)]
     (mx : OptionT (OracleComp spec) α) : (liftM mx : OptionT (OracleComp superSpec) α) =
-      let impl : QueryImpl spec (OracleComp superSpec) := fun t => liftM (query t)
+      let impl : QueryImpl spec (OracleComp superSpec) := ⟨fun t => liftM (spec.query t)⟩
       simulateQ impl mx := rfl
 
 lemma liftM_failure [MonadLift (OracleQuery spec) (OracleQuery superSpec)] :

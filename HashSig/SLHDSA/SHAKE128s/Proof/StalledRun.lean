@@ -52,8 +52,8 @@ open scoped Classical in
 by a fixed value and the state stands still. -/
 @[expose] noncomputable def stalled (impl : QueryImpl spec (StateT (σ × Bool) ProbComp))
     (Frozen : σ → Prop) (stall : (t : spec.Domain) → spec.Range t) :
-    QueryImpl spec (StateT (σ × Bool) ProbComp) :=
-  fun t p => if Frozen p.1 then pure (stall t, p) else impl t p
+    QueryImpl spec (StateT (σ × Bool) ProbComp) where
+  toFun t p := if Frozen p.1 then pure (stall t, p) else impl t p
 
 open scoped Classical in
 /-- Once the state is frozen, the stalled implementation answers with the stall value and

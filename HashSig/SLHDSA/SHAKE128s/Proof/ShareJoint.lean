@@ -64,8 +64,8 @@ forgery's verification costs at least, less the `239` of them the charge never p
 /-- A world computation, as queries of the shared games. -/
 @[expose] noncomputable def toShare {α : Type} (computation : OracleComp OracleWorld α) :
     OracleComp ShareSpec α :=
-  simulateQ (fun world => (query (spec := ShareSpec) (worldQuery world) :
-      OracleComp ShareSpec (OracleWorld.Range world))) computation
+  simulateQ ⟨fun world => (query (spec := ShareSpec) (worldQuery world) :
+      OracleComp ShareSpec (OracleWorld.Range world))⟩ computation
 
 /-- The verifier, capped on its charged queries. -/
 @[expose] noncomputable def cappedVerify (pk : PublicKey) (limit : Nat) (forgery : Forgery) :

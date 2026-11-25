@@ -32,7 +32,7 @@ variable {D R : Type} [DecidableEq D]
 @[expose]
 def prfHandler [SampleableType R] :
     QueryImpl (PRFOracleSpec D R) (StateT (List (D × R)) ProbComp) :=
-  unifSpec.passthrough + handler (D := D) (fun _ => $ᵗ R)
+  unifSpec.passthrough + handler (D := D) ⟨fun _ => $ᵗ R⟩
 
 /-- Private randomness and ideal PRF calls preserve the decoded cache. -/
 theorem prf_local_projection [SampleableType R]
@@ -49,7 +49,7 @@ theorem prf_local_projection [SampleableType R]
       simp only [map_bind, map_pure, Prod.map_apply, id_eq]
   | inr d =>
       simp only [prfHandler, PRFScheme.prfIdealQueryImpl_apply_inr]
-      exact local_projection (fun _ => $ᵗ R) d cache
+      exact local_projection ⟨fun _ => $ᵗ R⟩ d cache
 
 section Closing
 
@@ -58,16 +58,18 @@ variable {I S : Type} {spec : OracleSpec I} [SampleableType R]
 /-- Close a stateful reduction with the association-list ideal PRF handler. -/
 @[expose]
 def close (reduction : QueryImpl spec (StateT S (OracleComp (PRFOracleSpec D R)))) :
-    QueryImpl spec (StateT (S × List (D × R)) ProbComp) := fun q state => do
-  let out ← (simulateQ prfHandler ((reduction q).run state.1)).run state.2
-  pure (out.1.1, out.1.2, out.2)
+    QueryImpl spec (StateT (S × List (D × R)) ProbComp) where
+  toFun q state := do
+    let out ← (simulateQ prfHandler ((reduction q).run state.1)).run state.2
+    pure (out.1.1, out.1.2, out.2)
 
 /-- Close a stateful reduction with the function-valued ideal PRF cache. -/
-@[expose]
+@[expose, simps]
 def closeReference (reduction : QueryImpl spec (StateT S (OracleComp (PRFOracleSpec D R)))) :
-    QueryImpl spec (StateT (S × (D →ₒ R).QueryCache) ProbComp) := fun q state => do
-  let out ← (simulateQ PRFScheme.prfIdealQueryImpl ((reduction q).run state.1)).run state.2
-  pure (out.1.1, out.1.2, out.2)
+    QueryImpl spec (StateT (S × (D →ₒ R).QueryCache) ProbComp) where
+  toFun q state := do
+    let out ← (simulateQ PRFScheme.prfIdealQueryImpl ((reduction q).run state.1)).run state.2
+    pure (out.1.1, out.1.2, out.2)
 
 /-- Closing a reduction with the list handler preserves its result and decoded state. -/
 theorem close_projection
@@ -220,7 +222,7 @@ theorem reference_instrument :
     (multipleIdealQueryImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
       (sessionsPerTag := sessionsPerTag)).extendState (fun q _ r _ => advance q r) =
       multipleBadQueryImpl _ _ _ sessionsPerTag := by
-  funext q state
+  refine QueryImpl.ext fun q => funext fun state => ?_
   cases q with
   | inl tag => rw [multipleBadQueryImpl_tag_run]; rfl
   | inr tr => rw [multipleBadQueryImpl_reader_run]; rfl

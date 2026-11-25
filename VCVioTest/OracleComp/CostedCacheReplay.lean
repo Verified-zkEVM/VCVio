@@ -32,8 +32,8 @@ def repeated : OracleComp Spec (BitVec 256) := do
   Spec.query 0
 
 /-- Each cache miss advances the sampler state exactly once. -/
-def nextWord : QueryImpl Spec (StateM Nat) :=
-  fun _ => StateT.mk fun n => pure (BitVec.ofNat 256 n, n + 1)
+def nextWord : QueryImpl Spec (StateM Nat) where
+  toFun _ := StateT.mk fun n => pure (BitVec.ofNat 256 n, n + 1)
 
 /-- Arbitrary warm words and extra rows survive all three weighted calls. -/
 theorem warm_weighted {m : Type → Type} [Monad m] [LawfulMonad m]

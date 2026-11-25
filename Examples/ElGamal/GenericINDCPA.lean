@@ -31,11 +31,12 @@ namespace GenericAdversary
 
 /-- Forward private coins and left/right queries, appending the returned ciphertext components
 in order. Each response receives fresh handles, including responses served by the game's cache. -/
-@[expose] def queryImpl [Field F] [Fintype F] [DecidableEq F] [SampleableType F]
+@[expose, simps -isSimp] def queryImpl [Field F] [Fintype F] [DecidableEq F] [SampleableType F]
     [AddCommGroup G] [Module F G] [SampleableType G] (gen : G) :
     QueryImpl (unifSpec + (Handle × Handle →ₒ Handle × Handle))
       (StateT (Tbl (fun _ : Unit => G))
-        (OracleComp (elGamalAsymmEnc F G gen).IND_CPA_oracleSpec))
+        (OracleComp (elGamalAsymmEnc F G gen).IND_CPA_oracleSpec)) where
+  toFun
   | .inl n => fun tbl => do
       let u ← (elGamalAsymmEnc F G gen).IND_CPA_oracleSpec.query (.inl n)
       pure (u, tbl)
@@ -96,7 +97,7 @@ private def cacheFind (F : Type) (mm : HandlePair) :
 
 private def encrypt [SampleableType F] (m : Handle) :
     OracleComp (genSpec F groupSig) HandlePair := do
-  let r ← simulateQ (fun n => liftM ((genSpec F groupSig).query (.inr n))) ($ᵗ F)
+  let r ← simulateQ ⟨fun n => liftM ((genSpec F groupSig).query (.inr n))⟩ ($ᵗ F)
   let c₁ ← (genSpec F groupSig).query (.inl (.smul () r 0))
   let pad ← (genSpec F groupSig).query (.inl (.smul () r 1))
   let c₂ ← (genSpec F groupSig).query (.inl (.add () m pad))
@@ -108,9 +109,11 @@ private def groupStep (z : Handle) (t : Query F groupSig) :
     let (u, τ) ← (virtualizeImpl (fun _ => z) (.inl t)).run st.translation
     pure (u, { st with translation := τ })
 
+@[simps]
 private def suffixImpl [SampleableType F] (z : Handle) :
     QueryImpl (spec F groupSig + (unifSpec + (HandlePair →ₒ HandlePair)))
-      (StateT SimState (OracleComp (genSpec F groupSig)))
+      (StateT SimState (OracleComp (genSpec F groupSig))) where
+  toFun
   | .inl t => groupStep z t
   | .inr (.inl n) => fun st => do
       let u ← (genSpec F groupSig).query (.inr n)
@@ -195,7 +198,7 @@ private theorem cacheFind_bound (mm : HandlePair) (cs : List (HandlePair × Hand
 private theorem encrypt_bound [SampleableType F] (m : Handle) :
     IsQueryBoundP (encrypt (F := F) m) (fun i => isGroupOp i = true) 3 := by
   have hc : IsQueryBoundP
-      (simulateQ (fun n => liftM ((genSpec F groupSig).query (.inr n))) ($ᵗ F))
+      (simulateQ ⟨fun n => liftM ((genSpec F groupSig).query (.inr n))⟩ ($ᵗ F))
       (fun i => isGroupOp i = true) 0 :=
     isQueryBoundP_simulateQ_zero _ (fun n => by
       erw [isQueryBoundP_query_iff]; simp [isGroupOp])
@@ -886,7 +889,7 @@ variable [Field F] [AddCommGroup G] [Module F G]
 private def groupResult [DecidableEq G] (z : Handle) (t : Query F groupSig) (st : SimState)
     (T : Tbl (fun _ : Unit => G)) :
     ((spec F groupSig).Range t × SimState) × Tbl (fun _ : Unit => G) :=
-  run (Model.group G) (fun _ => id) (m := Id) (fun _ => pure 0)
+  run (Model.group G) (fun _ => id) (m := Id) ⟨fun _ => pure 0⟩
     ((groupStep z t).run st) T
 
 private theorem runGen_groupStep [DecidableEq G] (z : Handle) (t : Query F groupSig) (st : SimState)
@@ -946,7 +949,7 @@ private theorem groupResult_read [DecidableEq G] {gen pk : G} {z : Handle} {st :
 private theorem runGen_liftCoins [DecidableEq G] {α : Type} (A : ProbComp α)
     (T : Tbl (fun _ : Unit => G)) :
     runGen (Model.group (F := F) G) (fun _ => id)
-      (simulateQ (fun n => liftM ((genSpec F groupSig).query (.inr n))) A) T =
+      (simulateQ ⟨fun n => liftM ((genSpec F groupSig).query (.inr n))⟩ A) T =
         (fun a => (a, T)) <$> A := by
   induction A using OracleComp.inductionOn with
   | pure a => rfl

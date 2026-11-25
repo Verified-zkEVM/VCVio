@@ -248,8 +248,8 @@ The two branches are the shared oracle's own — a hit
 returns the cached answer and leaves the state, a miss draws and installs — so at the cache this
 is `SplitPrefix.recorder` and not merely something with its law. -/
 @[expose] noncomputable def recorderOf (leftKeep rightKeep : Bytes → σ → Prop) :
-    QueryImpl OracleWorld (StateT (StateOf σ) ProbComp) :=
-  fun queried state =>
+    QueryImpl OracleWorld (StateT (StateOf σ) ProbComp) where
+  toFun queried state :=
     match queried with
     | Sum.inl coin => do
         let value ← ($ᵗ (OracleWorld.Range (Sum.inl coin)) : ProbComp _)
@@ -322,7 +322,7 @@ open scoped Classical in
 theorem recorderOf_cache (leftKeep rightKeep : Bytes → QueryCache HashSpec → Prop) :
     recorderOf leftKeep rightKeep = recorder leftKeep rightKeep := by
   classical
-  funext queried state
+  ext queried state : 2
   rcases queried with coin | input
   · rfl
   · change ((recorderOf leftKeep rightKeep) (Sum.inr input)).run state =
@@ -519,8 +519,8 @@ because the law says it leaves the cache alone. -/
 open scoped Classical in
 /-- The recorder, with the view told about each hash query before it is answered. -/
 @[expose] noncomputable def noticingRecorderOf (leftKeep rightKeep : Bytes → σ → Prop) :
-    QueryImpl OracleWorld (StateT (StateOf σ) ProbComp) :=
-  fun queried state =>
+    QueryImpl OracleWorld (StateT (StateOf σ) ProbComp) where
+  toFun queried state :=
     match queried with
     | Sum.inl coin => ((recorderOf leftKeep rightKeep) (Sum.inl coin)).run state
     | Sum.inr input =>

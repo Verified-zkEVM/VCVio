@@ -155,7 +155,8 @@ variable (vp pk)
 /-- **The linked redirect.** A linked tweakable-hash query is answered by the first `n` bytes of
 the `H_msg` query with the same byte string; every other public-hash query is passed on. -/
 @[expose] def linkedRedirect :
-    QueryImpl (publicHashSpec (shakeCore vp)) (OracleComp (publicHashSpec (shakeCore vp)))
+    QueryImpl (publicHashSpec (shakeCore vp)) (OracleComp (publicHashSpec (shakeCore vp))) where
+  toFun
   | .thash s k (r :: rest) =>
       if IsLinked vp pk (.thash s k (r :: rest)) then
         (prefixBytes vp.params.n <$> (query (spec := publicHashSpec (shakeCore vp))
@@ -261,7 +262,7 @@ theorem simulateQ_linkedHashRedirect_liftPub {α : Type}
       liftPub (simulateQ (linkedRedirect vp pk) P) := by
   rw [liftPub, liftPub, ← QueryImpl.simulateQ_compose, ← QueryImpl.simulateQ_compose]
   congr 1
-  funext t
+  ext t : 1
   exact simulateQ_HasQuery_query _ _
 
 /-- The redirected verification makes at most `V = verifyInternalQueryBound` queries. -/
@@ -346,7 +347,8 @@ out a linked point is issued as the `H_msg` query `H_msg(PK.seed, PK.seed, PK.ro
 out, `M` the string after its first `3n` bytes; every other string stays a raw query, and uniform
 draws pass through. -/
 @[expose] noncomputable def linkedRawImpl : QueryImpl (unifSpec + shakeSpec vp)
-    (OracleComp (unifSpec + (hashSpec (shakeCore vp) + shakeSpec vp)))
+    (OracleComp (unifSpec + (hashSpec (shakeCore vp) + shakeSpec vp))) where
+  toFun
   | .inl n => (query (spec := unifSpec + (hashSpec (shakeCore vp) + shakeSpec vp)) (.inl n) :
       OracleComp _ (Fin (n + 1)))
   | .inr x =>
@@ -381,7 +383,7 @@ theorem encodeImpl_shakeEncoding_compose_linkedRawImpl (hn : vp.params.n ≤ 32)
     (hnm : vp.params.n ≤ vp.params.m) (pkSeed : (shakeCore vp).PkSeed) :
     (shakeEncoding vp hn hnm pkSeed).encodeImpl ∘ₛ linkedRawImpl vp pk =
       QueryImpl.id' (unifSpec + shakeSpec vp) := by
-  funext u
+  ext u : 1
   rcases u with n | x
   · rfl
   · by_cases h : IsLinkedString vp pk x
@@ -403,7 +405,7 @@ theorem encodeImpl_shakeEncoding_compose_linkedRawImpl (hn : vp.params.n ≤ 32)
 /-- For `n ≠ 32`, `linkedRawImpl` is the plain lift of raw queries. -/
 theorem linkedRawImpl_eq_liftRawImpl_of_ne (hn : vp.params.n ≠ 32) :
     linkedRawImpl vp pk = liftRawImpl (hs := hashSpec (shakeCore vp)) := by
-  funext u
+  ext u : 1
   rcases u with n | x
   · rfl
   · simp only [linkedRawImpl, not_isLinkedString_of_ne hn x, ↓reduceIte]

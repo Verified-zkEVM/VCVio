@@ -123,7 +123,7 @@ theorem discharge_zero_zmod_101 :
 theorem counter_experiment_zmod_101 :
     letI : Fact (Nat.Prime 101) := ⟨by decide⟩
     let impl : QueryImpl (Unit →ₒ ℕ) (StateT ℕ ProbComp) :=
-      fun _ => modifyGet (fun n => (n, n + 1))
+      ⟨fun _ => modifyGet (fun n => (n, n + 1))⟩
     let A : Adversary (ZMod 101) (ZMod 101) (Fin 2) (Unit →ₒ ℕ) := fun _ => do
       let n ← (Unit →ₒ ℕ).query ()
       let m ← (Unit →ₒ ℕ).query ()
@@ -137,7 +137,7 @@ theorem counter_experiment_zmod_101 :
 theorem counter_reduction_zmod_101 :
     letI : Fact (Nat.Prime 101) := ⟨by decide⟩
     let impl : QueryImpl (Unit →ₒ ℕ) (StateT ℕ ProbComp) :=
-      fun _ => modifyGet (fun n => (n, n + 1))
+      ⟨fun _ => modifyGet (fun n => (n, n + 1))⟩
     ∀ A : Adversary (ZMod 101) (ZMod 101) Bool (Unit →ₒ ℕ),
       Pr{let b ← experiment impl 7 (1 : ZMod 101) A}[b = true] ≤
         Pr{let b ← (DiffieHellman.dlogExperiment 1 (reduction impl 7 A))}[b = true] +

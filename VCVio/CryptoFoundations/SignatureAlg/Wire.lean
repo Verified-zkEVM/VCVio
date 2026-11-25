@@ -100,8 +100,9 @@ theorem map_scheme {ι' : Type} {spec' : OracleSpec ι'}
     cases hp : pk.decode key <;> cases hs : sig.decode raw <;> simp [scheme, hp, hs]
 
 /-- Signing-query translation; every ambient query is forwarded unchanged. -/
-@[expose] def signingImpl (message : E → M) (sig : CanonicalEncoding S WS) :
-    QueryImpl (spec + (E →ₒ WS)) (OracleComp (spec + (M →ₒ S)))
+@[expose, simps] def signingImpl (message : E → M) (sig : CanonicalEncoding S WS) :
+    QueryImpl (spec + (E →ₒ WS)) (OracleComp (spec + (M →ₒ S))) where
+  toFun
   | .inl t => (query (spec := spec + (M →ₒ S)) (.inl t) : OracleComp _ (spec.Range t))
   | .inr msg => sig.encode <$>
       (query (spec := spec + (M →ₒ S)) (.inr (message msg)) : OracleComp _ S)
@@ -134,10 +135,10 @@ theorem runWithSigningOracle_signingImpl
       CanonicalEncoding.read_encode, QueryImpl.passthrough_add, decodeLog] at ih
     cases t with
     | inl t =>
-      simp [runWithSigningOracle, signingImpl, signingOracle, scheme, QueryImpl.passthrough_add,
-        ih, decodeLog]
+      simp [runWithSigningOracle, signingImpl_apply, signingOracle, scheme,
+        QueryImpl.passthrough_add, ih, decodeLog]
     | inr msg =>
-      simp [runWithSigningOracle, signingImpl, signingOracle, scheme,
+      simp [runWithSigningOracle, signingImpl_apply, signingOracle, scheme,
         QueryImpl.passthrough_add, ih, decodeLog]
 
 /-- An accepted fresh wire pair gives a fresh structured pair, including for a second
@@ -175,12 +176,12 @@ theorem romQueryBound_reduce {ιh : Type} {hs : OracleSpec ιh}
   constructor
   · simp only [StrongUnforgeableAdversary.toUnforgeableAdversary, reduce, isQueryBoundP_map_iff]
     apply hh.simulateQ_of_step
-    · rintro ((_ | _) | _) ht <;> simp_all [IsHashQuery, signingImpl]
-    · rintro ((_ | _) | _) ht <;> simp_all [IsHashQuery, signingImpl]
+    · rintro ((_ | _) | _) ht <;> simp_all [IsHashQuery, signingImpl_apply]
+    · rintro ((_ | _) | _) ht <;> simp_all [IsHashQuery, signingImpl_apply]
   · simp only [StrongUnforgeableAdversary.toUnforgeableAdversary, reduce, isQueryBoundP_map_iff]
     apply hs.simulateQ_of_step
-    · rintro ((_ | _) | _) ht <;> simp_all [IsSignQuery, signingImpl]
-    · rintro ((_ | _) | _) ht <;> simp_all [IsSignQuery, signingImpl]
+    · rintro ((_ | _) | _) ht <;> simp_all [IsSignQuery, signingImpl_apply]
+    · rintro ((_ | _) | _) ht <;> simp_all [IsSignQuery, signingImpl_apply]
 
 /-- Mapping an adversary's output leaves its signing log unchanged. -/
 theorem runWithSigningOracle_map

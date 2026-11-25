@@ -176,7 +176,7 @@ variable {X : Type uX} {Y : Type}
 /-- Answering every query of `X →ₒ Y` with `pure (H x)` evaluates the computation at `H`. -/
 theorem simulateQ_pure_eq_evalWithAnswerFn {m : Type → Type v} [Monad m] [LawfulMonad m]
     (H : X → Y) {α : Type} (oa : OracleComp (X →ₒ Y) α) :
-    simulateQ (fun x ↦ (pure (H x) : m Y)) oa =
+    simulateQ ⟨fun x ↦ (pure (H x) : m Y)⟩ oa =
       pure (evalWithAnswerFn (QueryImpl.ofFn H) oa) := by
   exact (PFunctor.FreeM.liftM_natural (s := QueryImpl.ofFn H) (MonadHom.pure m) oa).symm
 
@@ -184,7 +184,7 @@ theorem simulateQ_pure_eq_evalWithAnswerFn {m : Type → Type v} [Monad m] [Lawf
 answers every oracle query with the fixed function `H`. -/
 @[expose]
 def fixedOracleImpl (H : X → Y) : QueryImpl (unifSpec + (X →ₒ Y)) ProbComp :=
-  QueryImpl.id' unifSpec + fun x ↦ (pure (H x) : ProbComp Y)
+  QueryImpl.id' unifSpec + (⟨fun x ↦ pure (H x)⟩ : QueryImpl (X →ₒ Y) ProbComp)
 
 /-- Against `fixedOracleImpl H`, a coin-free computation over `X →ₒ Y` is evaluated at `H`. -/
 theorem simulateQ_fixedOracleImpl_liftComp (H : X → Y) {α : Type}
@@ -192,7 +192,7 @@ theorem simulateQ_fixedOracleImpl_liftComp (H : X → Y) {α : Type}
     simulateQ (fixedOracleImpl H) (liftComp oa (unifSpec + (X →ₒ Y))) =
       pure (evalWithAnswerFn (QueryImpl.ofFn H) oa) := by
   rw [fixedOracleImpl, QueryImpl.simulateQ_add_liftComp_right (QueryImpl.id' unifSpec)
-    (fun x ↦ (pure (H x) : ProbComp Y)) oa, simulateQ_pure_eq_evalWithAnswerFn]
+    ⟨fun x ↦ (pure (H x) : ProbComp Y)⟩ oa, simulateQ_pure_eq_evalWithAnswerFn]
 
 end FixedOracle
 

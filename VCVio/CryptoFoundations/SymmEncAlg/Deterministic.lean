@@ -137,7 +137,7 @@ answered by `scheme.encrypt k`. -/
 def indDollarRealQueryImpl (scheme : DetSymmEncAlg M K C) (k : K) :
     QueryImpl (INDDollarOracleSpec M C) ProbComp :=
   (HasQuery.toQueryImpl (spec := unifSpec) (m := ProbComp)) +
-    (fun msg ↦ pure (scheme.encrypt k msg) : QueryImpl (M →ₒ C) ProbComp)
+    (⟨fun msg ↦ pure (scheme.encrypt k msg)⟩ : QueryImpl (M →ₒ C) ProbComp)
 
 /-- Ideal IND$-CPA oracle: uniform-sampling queries are forwarded and every encryption query is
 answered by a fresh uniform ciphertext, independently of the message and of earlier answers. -/
@@ -145,7 +145,7 @@ answered by a fresh uniform ciphertext, independently of the message and of earl
 def indDollarIdealQueryImpl [SampleableType C] :
     QueryImpl (INDDollarOracleSpec M C) ProbComp :=
   (HasQuery.toQueryImpl (spec := unifSpec) (m := ProbComp)) +
-    (fun _ ↦ $ᵗ C : QueryImpl (M →ₒ C) ProbComp)
+    (⟨fun _ ↦ $ᵗ C⟩ : QueryImpl (M →ₒ C) ProbComp)
 
 /-- Real IND$-CPA experiment: sample a key and run the adversary against the real oracle. -/
 @[expose]

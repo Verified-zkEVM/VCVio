@@ -155,11 +155,11 @@ lemma somePathSatisfies_query_bind (q : spec.Domain)
       exact ⟨hu, hw⟩
 
 /-- Every output of `oa` reachable under `possibleOutputs` satisfies `outputPred` exactly when
-`outputPred` holds throughout `oa.reachableWhen possibleOutputs`. -/
+`outputPred` holds throughout `oa.reachableWhen ⟨possibleOutputs⟩`. -/
 lemma allOutputsSatisfyWhen_iff_reachableWhen (outputPred : α → Prop)
     (possibleOutputs : (x : spec.Domain) → Set (spec.Range x)) (oa : OracleComp spec α) :
     allOutputsSatisfyWhen outputPred possibleOutputs oa ↔
-      ∀ x ∈ oa.reachableWhen possibleOutputs, outputPred x := by
+      ∀ x ∈ oa.reachableWhen ⟨possibleOutputs⟩, outputPred x := by
   induction oa using OracleComp.inductionOn with
   | pure x => simp [OracleComp.allOutputsSatisfyWhen]
   | query_bind q oa ih =>
@@ -168,11 +168,11 @@ lemma allOutputsSatisfyWhen_iff_reachableWhen (outputPred : α → Prop)
       grind
 
 /-- Some output of `oa` reachable under `possibleOutputs` satisfies `outputPred` exactly when
-`outputPred` holds at some point of `oa.reachableWhen possibleOutputs`. -/
+`outputPred` holds at some point of `oa.reachableWhen ⟨possibleOutputs⟩`. -/
 lemma someOutputSatisfiesWhen_iff_reachableWhen (outputPred : α → Prop)
     (possibleOutputs : (x : spec.Domain) → Set (spec.Range x)) (oa : OracleComp spec α) :
     someOutputSatisfiesWhen outputPred possibleOutputs oa ↔
-      ∃ x ∈ oa.reachableWhen possibleOutputs, outputPred x := by
+      ∃ x ∈ oa.reachableWhen ⟨possibleOutputs⟩, outputPred x := by
   induction oa using OracleComp.inductionOn with
   | pure x => simp [OracleComp.someOutputSatisfiesWhen]
   | query_bind q oa ih =>
@@ -237,7 +237,7 @@ lemma allOutputsSatisfyWhen_bind_iff_reachableWhen (outputPred : β → Prop)
     (possibleOutputs : (x : spec.Domain) → Set (spec.Range x))
     (oa : OracleComp spec α) (ob : α → OracleComp spec β) :
     (oa >>= ob).allOutputsSatisfyWhen outputPred possibleOutputs ↔
-      ∀ x ∈ oa.reachableWhen possibleOutputs,
+      ∀ x ∈ oa.reachableWhen ⟨possibleOutputs⟩,
         (ob x).allOutputsSatisfyWhen outputPred possibleOutputs := by
   rw [OracleComp.allOutputsSatisfyWhen_bind_iff]
   simp [OracleComp.allOutputsSatisfyWhen_iff_reachableWhen]
@@ -247,7 +247,7 @@ lemma someOutputSatisfiesWhen_bind_iff_reachableWhen (outputPred : β → Prop)
     (possibleOutputs : (x : spec.Domain) → Set (spec.Range x))
     (oa : OracleComp spec α) (ob : α → OracleComp spec β) :
     (oa >>= ob).someOutputSatisfiesWhen outputPred possibleOutputs ↔
-      ∃ x ∈ oa.reachableWhen possibleOutputs,
+      ∃ x ∈ oa.reachableWhen ⟨possibleOutputs⟩,
         (ob x).someOutputSatisfiesWhen outputPred possibleOutputs := by
   rw [OracleComp.someOutputSatisfiesWhen_bind_iff]
   simp [OracleComp.someOutputSatisfiesWhen_iff_reachableWhen]

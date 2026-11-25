@@ -234,17 +234,17 @@ theorem worldImpl_run (lenient : Bool) (setup : Setup) (world : OracleWorld.Doma
 
 /-- The blind world handler at a hash input. -/
 @[expose]
-noncomputable def hashImpl (setup : Setup) : QueryImpl HashSpec (StateT (St × Bool) ProbComp) :=
-  fun input => ShareBound.worldImpl false setup (Sum.inr input)
+noncomputable def hashImpl (setup : Setup) : QueryImpl HashSpec (StateT (St × Bool) ProbComp) where
+  toFun input := ShareBound.worldImpl false setup (Sum.inr input)
 
 /-- The blind world handler at a coin. -/
-@[expose]
-noncomputable def coinImpl (setup : Setup) : QueryImpl unifSpec (StateT (St × Bool) ProbComp) :=
-  fun coin => ShareBound.worldImpl false setup (Sum.inl coin)
+@[expose, simps]
+noncomputable def coinImpl (setup : Setup) : QueryImpl unifSpec (StateT (St × Bool) ProbComp) where
+  toFun coin := ShareBound.worldImpl false setup (Sum.inl coin)
 
 theorem worldImpl_eq_add (setup : Setup) :
     ShareBound.worldImpl false setup = coinImpl setup + hashImpl setup := by
-  funext queried
+  ext queried : 1
   rcases queried with coin | input <;> rfl
 
 open scoped Classical in

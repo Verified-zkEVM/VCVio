@@ -180,12 +180,14 @@ secret-free interface: a uniform draw is forwarded, and any other query goes to 
 
 /-- Role `r` answers a query `t` of the secret-free interface by the one query
 `roleQuery core r t`. -/
-@[expose] def roleImpl : Role → QueryImpl (deriveSpec core) (OracleComp (roleSpec core))
-  | _, .inl (.inl n) => liftM ((roleSpec core).query (.inl n))
-  | .forger, .inl (.inr t) => liftM ((roleSpec core).query (.inr (.inl (.inl t))))
-  | .forger, .inr x => liftM ((roleSpec core).query (.inr (.inl (.inr x))))
-  | .signer, .inl (.inr t) => liftM ((roleSpec core).query (.inr (.inr (.inl t))))
-  | .signer, .inr x => liftM ((roleSpec core).query (.inr (.inr (.inr x))))
+@[expose, simps -isSimp]
+def roleImpl (r : Role) : QueryImpl (deriveSpec core) (OracleComp (roleSpec core)) where
+  toFun t := match r, t with
+    | _, .inl (.inl n) => liftM ((roleSpec core).query (.inl n))
+    | .forger, .inl (.inr t) => liftM ((roleSpec core).query (.inr (.inl (.inl t))))
+    | .forger, .inr x => liftM ((roleSpec core).query (.inr (.inl (.inr x))))
+    | .signer, .inl (.inr t) => liftM ((roleSpec core).query (.inr (.inr (.inl t))))
+    | .signer, .inr x => liftM ((roleSpec core).query (.inr (.inr (.inr x))))
 
 /-- A role answers a query by one query, `roleQuery core r t`. -/
 theorem isQueryBoundP_roleImpl_iff (r : Role) (t : (deriveSpec core).Domain)

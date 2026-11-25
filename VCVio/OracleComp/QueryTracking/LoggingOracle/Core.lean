@@ -52,8 +52,9 @@ variable {ω : Type u}
 @[expose] def writerTMapBase
     (outer : QueryImpl spec₁ m₁)
     (inner : QueryImpl spec₀ (WriterT ω (OracleComp spec₁))) :
-    QueryImpl spec₀ (WriterT ω m₁) := fun t =>
-  WriterT.mk (simulateQ outer ((inner t).run))
+    QueryImpl spec₀ (WriterT ω m₁) where
+  toFun t :=
+    WriterT.mk (simulateQ outer ((inner t).run))
 
 @[simp]
 theorem writerTMapBase_apply
@@ -892,9 +893,9 @@ lemma withQueryLog_liftComp_left_of_query {ι₁ ι₂ : Type} {oSpec : OracleSp
       = (liftComp ((simulateQ loggingOracle X).run) (oSpec + spec₂) (h := i₁)) >>= fun p =>
           pure (p.1, QueryLog.inl p.2) := by
   let : MonadLiftT (OracleQuery oSpec) (OracleQuery (oSpec + spec₂)) := i₁
-  let impl : QueryImpl oSpec (OracleComp (oSpec + spec₂)) := fun t => liftM (oSpec.query t)
+  let impl : QueryImpl oSpec (OracleComp (oSpec + spec₂)) := ⟨fun t => liftM (oSpec.query t)⟩
   have hi (t : oSpec.Domain) : impl t = HasQuery.query (spec := oSpec + spec₂) (.inl t) := by
-    simpa only [liftComp_liftM_query] using hq t
+    simpa only [liftComp_liftM_query, impl, QueryImpl.mk_apply] using hq t
   have hquery (t : oSpec.Domain) :
       (simulateQ impl (liftM (oSpec.query t) : OracleComp oSpec _)).withQueryLog =
         (fun p => (p.1, p.2.map (fun e => ⟨.inl e.1, e.2⟩))) <$>

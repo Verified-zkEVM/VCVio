@@ -37,9 +37,9 @@ abbrev State (Label C : Type) := (Label →ₒ C).QueryCache × List C
 
 /-- A hash query samples only on a cache miss and records its answer even on a cache hit. -/
 @[expose] def oracle [DecidableEq Label] (decode : C → G) (sample : Label → ProbComp C) :
-    QueryImpl (Label →ₒ G) (StateT (State Label C) ProbComp) :=
-  fun l st => do
-    let (c, cache) ← (QueryImpl.withCaching (spec := Label →ₒ C) sample l).run st.1
+    QueryImpl (Label →ₒ G) (StateT (State Label C) ProbComp) where
+  toFun l st := do
+    let (c, cache) ← (QueryImpl.withCaching (spec := Label →ₒ C) ⟨sample⟩ l).run st.1
     pure (decode c, cache, st.2 ++ [c])
 
 /-- One cached hash step, exposing the fresh and repeated-query branches. -/
@@ -48,7 +48,7 @@ theorem oracle_apply [DecidableEq Label] (decode : C → G) (sample : Label → 
     (oracle decode sample l).run st = match st.1 l with
       | some c => pure (decode c, st.1, st.2 ++ [c])
       | none => (fun c => (decode c, st.1.cacheQuery l c, st.2 ++ [c])) <$> sample l := by
-  change ((QueryImpl.withCaching (spec := Label →ₒ C) sample l).run st.1 >>=
+  change ((QueryImpl.withCaching (spec := Label →ₒ C) ⟨sample⟩ l).run st.1 >>=
     fun z => pure (decode z.1, z.2, st.2 ++ [z.1])) = _
   cases hc : st.1 l with
   | some c => rw [QueryImpl.withCaching_run_some _ hc]; simp
@@ -74,9 +74,9 @@ theorem oracle_receipts [DecidableEq Label] (decode : C → G) (sample : Label �
 abbrev gameSpec (Label G : Type) := plainSpec (fun _ : Unit => G) Label (fun _ => Unit)
 
 /-- The interaction presentation of a hash-to-group oracle. -/
-@[expose] def game [DecidableEq Label] (decode : C → G) (sample : Label → ProbComp C) :
-    QueryImpl (gameSpec Label G) (StateT (State Label C) ProbComp) :=
-  fun q => reply <$> oracle decode sample q.data
+@[expose, simps] def game [DecidableEq Label] (decode : C → G) (sample : Label → ProbComp C) :
+    QueryImpl (gameSpec Label G) (StateT (State Label C) ProbComp) where
+  toFun q := reply <$> oracle decode sample q.data
 
 /-- The honest lazy random oracle, with every answer recorded in chronological order. -/
 @[expose] def honest [DecidableEq Label] [SampleableType G] :
@@ -130,7 +130,7 @@ theorem game_mapState [DecidableEq Label] (f : C → D) (decode : D → G)
     (st : State Label C) :
     Prod.map id (mapState f) <$> (game (decode ∘ f) sample q).run st =ᵈ
       (game decode target q).run (mapState f st) := by
-  simpa [game, Function.comp_def] using
+  simpa [Function.comp_def] using
     (oracle_mapState f decode sample target h q.data st).map (fun z => (reply z.1, z.2))
 
 /-- Perfect simulation in the interaction shape, for arbitrary computations and visible state.
@@ -166,7 +166,7 @@ theorem handle_apply [DecidableEq Label] [Zero G]
 @[expose] def interactionProgram
     (p : OracleComp (explainedSpec F (fun _ : Unit => G) Query Reply) α) :
     OracleComp (plainSpec (fun _ : Unit => G) Query Reply) α :=
-  simulateQ (fun q => (plainSpec (fun _ : Unit => G) Query Reply).query q.value) p
+  simulateQ ⟨fun q => (plainSpec (fun _ : Unit => G) Query Reply).query q.value⟩ p
 
 /-- If every step of a handler records exactly the group elements in its reply, a certified
 program's output is explained over what the handler recorded. -/

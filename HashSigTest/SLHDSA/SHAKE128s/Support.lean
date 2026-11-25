@@ -133,12 +133,14 @@ abbrev CachedBackend (Output : Type) := StateT (List (Bytes × Output)) (StateM 
 
 /-- Produce one deterministic test answer and record that the cache requested a fresh answer. -/
 def drawAnswer (answer : Output) :
-    QueryImpl (RandomOracleModel.HashSpec Bytes Output) (StateM BackendTrace) := fun _ => do
+    QueryImpl (RandomOracleModel.HashSpec Bytes Output) (StateM BackendTrace) where
+  toFun _ := do
   modify fun trace => { trace with answerDraws := trace.answerDraws + 1 }
   return answer
 
 /-- Forward private samples freely and count hash calls before the association-list cache. -/
-def cachedHandler (answer : Output) : QueryImpl (World Output) (CachedBackend Output)
+def cachedHandler (answer : Output) : QueryImpl (World Output) (CachedBackend Output) where
+  toFun
   | .inl n => do
       liftM (modify (fun trace : BackendTrace =>
         { trace with privateSamples := trace.privateSamples + 1 }) : StateM BackendTrace Unit)

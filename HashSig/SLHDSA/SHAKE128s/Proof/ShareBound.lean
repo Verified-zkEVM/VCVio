@@ -46,8 +46,8 @@ open Security CanonicalGraph ShareGame ShareFlag ShareBlindFacts
 /-- The game's handler, read at the verifier's oracles. -/
 @[expose] noncomputable def worldImpl (lenient : Bool) (setup : Setup) :
     QueryImpl OracleWorld (StateT (St × Bool) ProbComp) :=
-  QueryImpl.compose (handler lenient setup) fun world =>
-    (query (spec := ShareSpec) (worldQuery world) : OracleComp ShareSpec (OracleWorld.Range world))
+  QueryImpl.compose (handler lenient setup) ⟨fun world =>
+    (query (spec := ShareSpec) (worldQuery world) : OracleComp ShareSpec (OracleWorld.Range world))⟩
 
 /-- The game's verifier under the handler is the scheme's verifier under `worldImpl`. -/
 theorem verifyShare_run (lenient : Bool) (setup : Setup) (pk : PublicKey) (forgery : Forgery)
@@ -57,8 +57,8 @@ theorem verifyShare_run (lenient : Bool) (setup : Setup) (pk : PublicKey) (forge
         (Scheme.verify (m := OracleComp OracleWorld) pk forgery.message
           forgery.signature)).run p := by
   exact congrArg (StateT.run · p) (QueryImpl.simulateQ_compose (handler lenient setup)
-    (fun world => (query (spec := ShareSpec) (worldQuery world) :
-      OracleComp ShareSpec (OracleWorld.Range world)))
+    ⟨fun world => (query (spec := ShareSpec) (worldQuery world) :
+      OracleComp ShareSpec (OracleWorld.Range world))⟩
     (Scheme.verify (m := OracleComp OracleWorld) pk forgery.message forgery.signature)).symm
 
 /-- A world query, at a handler that is the game's away from the claims. -/
@@ -79,7 +79,7 @@ theorem compose_splitter_of (impl : QueryImpl ShareSpec (StateT (St × Bool) Pro
     (lenient : Bool) (setup : Setup)
     (hinl : ∀ queried, impl (Sum.inl queried) = handler lenient setup (Sum.inl queried)) :
     QueryImpl.compose impl splitter = advImpl lenient setup := by
-  funext queried
+  ext queried : 1
   rcases queried with world | request
   · exact simulateQ_inl_query impl lenient setup hinl _
   · simp only [advImpl, QueryImpl.apply_compose, splitter, simulateQ_bind]
@@ -91,10 +91,10 @@ theorem compose_splitter_of (impl : QueryImpl ShareSpec (StateT (St × Bool) Pro
 theorem compose_world_of (impl : QueryImpl ShareSpec (StateT (St × Bool) ProbComp))
     (lenient : Bool) (setup : Setup)
     (hinl : ∀ queried, impl (Sum.inl queried) = handler lenient setup (Sum.inl queried)) :
-    QueryImpl.compose impl (fun world =>
+    QueryImpl.compose impl ⟨fun world =>
       (query (spec := ShareSpec) (worldQuery world) :
-        OracleComp ShareSpec (OracleWorld.Range world))) = worldImpl lenient setup := by
-  funext world
+        OracleComp ShareSpec (OracleWorld.Range world))⟩ = worldImpl lenient setup := by
+  ext world : 1
   exact simulateQ_inl_query impl lenient setup hinl _
 
 /-! ## The blind step never reads `SK.prf` -/
@@ -135,7 +135,7 @@ theorem blindStep_prf (publicSeed : Digest) (cells : Cells) (prf prf' : Digest) 
     blindStep (setupOf publicSeed cells (prf, pad)) =
       blindStep (setupOf publicSeed cells (prf', pad)) := by
   classical
-  funext queried state
+  ext queried state : 2
   rcases queried with ((world | request) | ⟨request, drawn⟩) | forgery
   · rcases world with coin | input
     · rfl

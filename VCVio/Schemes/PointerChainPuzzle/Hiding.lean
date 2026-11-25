@@ -221,7 +221,7 @@ def privateImpl (puzzle : Puzzle n S L Salt) (b : Bool) :
         (OracleComp (unifSpec + (sealSpec n S L Salt Ctx N K).batch)))) +
     LeftOrRight.oracle (privateEncrypt (n := n) (S := S) (L := L) (Salt := Salt) (Ctx := Ctx)
       prf codec (encodePuzzle puzzle)) plaintextLength b) +
-    (fun ts => liftM ((unifSpec + (sealSpec n S L Salt Ctx N K).batch).query (.inr ts)) :
+    (⟨fun ts => liftM ((unifSpec + (sealSpec n S L Salt Ctx N K).batch).query (.inr ts))⟩ :
       QueryImpl (sealSpec n S L Salt Ctx N K).batch (StateT (privateSpec N K).QueryCache
         (OracleComp (unifSpec + (sealSpec n S L Salt Ctx N K).batch))))
 
@@ -267,7 +267,8 @@ theorem isQueryBound_privateAdversary
   · rcases t with (k | ⟨m₀, m₁⟩) | ts
     · simp only [privateImpl, add_apply_inl, onlineStep_inl]
       exact isOnlineQueryBound_liftM_probComp (unifSpec.query k) _
-    · simp only [privateImpl, QueryImpl.add_apply_inl, QueryImpl.add_apply_inr, LeftOrRight.oracle]
+    · simp only [privateImpl, QueryImpl.add_apply_inl, QueryImpl.add_apply_inr,
+      LeftOrRight.oracle_apply]
       by_cases hm : plaintextLength m₀ = plaintextLength m₁
       · simp only [hm, ↓reduceIte, StateT.run_map]
         exact (isQueryBound_map_iff _ _ _ _ _).2 (isOnlineQueryBound_privateEncrypt_run _ _ _ _ _ _)
@@ -540,8 +541,8 @@ noncomputable def privateOnlineImpl (puzzle : Puzzle n S L Salt) (b : Bool) :
     QueryImpl ((unifSpec + LeftOrRight.spec Plaintext ByteArray) +
         (sealSpec n S L Salt Ctx N K).batch)
       (StateT ((sealSpec n S L Salt Ctx N K).QueryCache × (privateSpec N K).QueryCache)
-        ProbComp) :=
-  fun t => StateT.mk fun s => (fun z => (z.1.1, (z.2, z.1.2))) <$>
+        ProbComp) where
+  toFun t := StateT.mk fun s => (fun z => (z.1.1, (z.2, z.1.2))) <$>
     (simulateQ (sealSpec n S L Salt Ctx N K).romImpl
       (simulateQ (sealSpec n S L Salt Ctx N K).unbatch
         ((privateImpl prf codec encodePuzzle puzzle b t).run s.2))).run s.1
@@ -557,7 +558,7 @@ lemma privateOnlineImpl_run_unif (puzzle : Puzzle n S L Salt) (b : Bool) (k : �
     (privateOnlineImpl (Ctx := Ctx) prf codec encodePuzzle puzzle b (.inl (.inl k))).run s =
       (fun z => (z.1, (z.2, s.2))) <$> (unifFwdImpl (sealSpec n S L Salt Ctx N K) k).run s.1 := by
   simp only [add_apply_inl, privateOnlineImpl, privateImpl, QueryImpl.add_apply_inl,
-    PFunctor.Handler.liftTarget_apply, ofPFunctor_toPFunctor, QueryImpl.ofLift_apply,
+    QueryImpl.liftTarget_apply, QueryImpl.ofLift_apply,
     StateT.run_monadLift, monadLift_self, bind_pure_comp, simulateQ_map,
     simulateQ_romImpl_simulateQ_unbatch, StateT.run_map, Functor.map_map, StateT.run_mk,
     Prod.mk.injEq, and_true, and_imp, Prod.forall, forall_apply_eq_imp_iff, forall_eq',
@@ -607,8 +608,8 @@ lemma hidingOnlineImpl_run_batch (puzzle : Puzzle n S L Salt) (key : S) (b : Boo
   simp only [add_apply_inr, hidingOnlineImpl, QueryImpl.passthrough_add, QueryImpl.batch'_add,
     QueryImpl.apply_compose, QueryImpl.add_apply_inr]
   rw [← QueryImpl.apply_compose, QueryImpl.compose_batch]
-  congr 2
-  funext t
+  congr 3
+  ext t : 1
   rw [QueryImpl.apply_compose, QueryImpl.liftTarget_apply, QueryImpl.id'_apply,
     QueryImpl.simulateQ_add_liftM_right, simulateQ_spec_query]
 
@@ -625,7 +626,7 @@ lemma privateOnlineImpl_run_batch (puzzle : Puzzle n S L Salt) (b : Bool)
     forall_eq', Prod.mk.eta, implies_true, map_inj_right]
   rw [← QueryImpl.apply_compose, QueryImpl.compose_batch]
   congr 3
-  funext t
+  ext t : 1
   simp only [QueryImpl.apply_compose, simulateQ_query, OracleQuery.input_query, add_apply_inr,
     OracleQuery.cont_query, QueryImpl.add_apply_inr, QueryImpl.withCaching_apply,
     uniformSampleImpl_apply, map_bind, id_map]

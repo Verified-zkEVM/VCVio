@@ -390,8 +390,8 @@ def rejectingClaim : OpeningClaim VerifierQuery Nat verifierConfig where
     values := bothValues
     proof := bothProof }
 
-def verifierImpl : QueryImpl (VerifierQuery →ₒ Nat) Id :=
-  fun query => orderedHash query.1 query.2
+def verifierImpl : QueryImpl (VerifierQuery →ₒ Nat) Id where
+  toFun query := orderedHash query.1 query.2
 
 def attemptBits
     (attempts : List (AnyEvaluatedOpeningClaim Unit VerifierQuery Unit Nat verifierConfig)) :

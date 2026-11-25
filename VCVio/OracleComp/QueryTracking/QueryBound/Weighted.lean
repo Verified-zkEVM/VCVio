@@ -49,7 +49,7 @@ theorem isChargeBound_run_simulateQ {σ : Type u}
     {oa : OracleComp spec α} {W : ω} (h : PFunctor.FreeM.IsChargeBound oa c W) (s : σ) :
     PFunctor.FreeM.IsChargeBound ((simulateQ impl oa).run s) d W := by
   rw [simulateQ]
-  exact PFunctor.FreeM.IsChargeBound.run_liftM impl hstep h s
+  exact PFunctor.FreeM.IsChargeBound.run_liftM impl.toHandler hstep h s
 
 /-- A stateless handler whose every step stays within the charge of its query transfers a
 weighted budget from the source program to the simulation. -/

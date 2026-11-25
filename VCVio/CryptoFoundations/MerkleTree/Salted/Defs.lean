@@ -299,7 +299,7 @@ def commitTree (enc : QueryEncoding X Unit Unit (Msg × Salt) Y) (d : ℕ)
 theorem simulateQ_commitTree {m : Type uY → Type*} [Monad m] [LawfulMonad m]
     (enc : QueryEncoding X Unit Unit (Msg × Salt) Y) (d : ℕ) (H : X → Y)
     (msg : Fin (2 ^ d) → Msg) (γ : Fin (2 ^ d) → Salt) :
-    simulateQ (fun x => (pure (H x) : m Y)) (commitTree enc d msg γ) =
+    simulateQ ⟨fun x => (pure (H x) : m Y)⟩ (commitTree enc d msg γ) =
       pure (honestTree enc d H msg γ) := by
   simp only [commitTree, simulateQ_bind, simulateQ_pure]
   rw [AddressedMerkleTree.simulateQ_buildMerkleTreeAddressedM_with]
@@ -360,7 +360,7 @@ theorem perfectlyComplete [DecidableEq X] [DecidableEq Y] [SampleableType Salt]
   rw [mem_support_bind_iff] at hz
   obtain ⟨γ, -, hz⟩ := hz
   rw [QueryImpl.simulateQ_add_liftComp_right (QueryImpl.id' unifSpec)
-    (fun x ↦ (pure (H x) : ProbComp Y)) (commitTree enc d msg γ)] at hz
+    ⟨fun x ↦ (pure (H x) : ProbComp Y)⟩ (commitTree enc d msg γ)] at hz
   rw [simulateQ_commitTree] at hz
   rw [support_pure, Set.mem_singleton_iff] at hz
   subst hz

@@ -80,12 +80,12 @@ are recorded independently of that response. -/
     (hash sign : V → G) (j : Option ℕ) :
     QueryImpl ((unifSpec + (M →ₒ G)) + (M →ₒ G)) (StateT (OracleState V M) ProbComp) :=
   let unif : QueryImpl unifSpec (StateT (OracleState V M) ProbComp) :=
-    fun t s => (fun v => (v, s)) <$> (unifSpec.query t : ProbComp _)
+    ⟨fun t s => (fun v => (v, s)) <$> (unifSpec.query t : ProbComp _)⟩
   let ro : QueryImpl (M →ₒ G) (StateT (OracleState V M) ProbComp) :=
-    fun msg s => (fun z => (hash z.1.1, z.2)) <$> (indexedEntry draw j msg).run s
+    ⟨fun msg s => (fun z => (hash z.1.1, z.2)) <$> (indexedEntry draw j msg).run s⟩
   let signer : QueryImpl (M →ₒ G) (StateT (OracleState V M) ProbComp) :=
-    fun msg s => (fun z => (sign z.1.1, z.2.recordSign j msg z.1.2)) <$>
-      (indexedEntry draw j msg).run s
+    ⟨fun msg s => (fun z => (sign z.1.1, z.2.recordSign j msg z.1.2)) <$>
+      (indexedEntry draw j msg).run s⟩
   (unif + ro) + signer
 
 /-- A public-randomness step leaves all oracle state unchanged. -/

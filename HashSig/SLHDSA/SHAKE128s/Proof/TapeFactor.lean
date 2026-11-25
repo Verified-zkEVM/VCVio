@@ -44,9 +44,9 @@ open scoped Classical in
 /-- **The recording oracle with its class answers read off a tape.** A fresh query whose input
 passes `keep` takes the head of the tape as its answer; everything else draws as before, and so
 does a class query made after the tape is spent. -/
-@[expose] noncomputable def tapeRecorder (keep : Bytes → Prop) :
-    QueryImpl OracleWorld (StateT TapeState ProbComp) :=
-  fun queried state =>
+@[expose, simps] noncomputable def tapeRecorder (keep : Bytes → Prop) :
+    QueryImpl OracleWorld (StateT TapeState ProbComp) where
+  toFun queried state :=
     match queried with
     | Sum.inl coin => do
         let value ← ($ᵗ (OracleWorld.Range (Sum.inl coin)) : ProbComp _)
@@ -148,8 +148,8 @@ open scoped Classical in
 is tried first, so one answer is never read off both blocks. -/
 @[expose] noncomputable def splitTapeRecorder
     (leftKeep rightKeep : Bytes → σ → Prop) :
-    QueryImpl OracleWorld (StateT (SplitTapeState σ) ProbComp) :=
-  fun queried state =>
+    QueryImpl OracleWorld (StateT (SplitTapeState σ) ProbComp) where
+  toFun queried state :=
     match queried with
     | Sum.inl coin => do
         let value ← ($ᵗ (OracleWorld.Range (Sum.inl coin)) : ProbComp _)

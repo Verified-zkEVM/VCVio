@@ -138,8 +138,8 @@ abbrev RomSpec (M : Type) : OracleSpec (ℕ ⊕ ((M × Commitment p prims) ⊕ B
 
 /-- Fresh uniform matrices as `ExpandA` answers, in the two-oracle world of the signature. -/
 def expandALazy :
-    QueryImpl (ExpandASpec p) (OracleComp (unifSpec + HashSpec p prims M)) :=
-  fun _ => liftM ($ᵗ (TqMatrix p.k p.l))
+    QueryImpl (ExpandASpec p) (OracleComp (unifSpec + HashSpec p prims M)) where
+  toFun _ := liftM ($ᵗ (TqMatrix p.k p.l))
 
 /-- The `ExpandA` random-oracle simulator: uniform and `H` queries are forwarded to the
 two-oracle world of the signature, and `ExpandA` queries are answered lazily — a cached seed is
@@ -288,7 +288,7 @@ def tableImpl (f : Bytes 32 → TqMatrix p.k p.l) :
     QueryImpl (RomSpec p prims M) (OracleComp (unifSpec + HashSpec p prims M)) :=
   QueryImpl.ofLift unifSpec (OracleComp (unifSpec + HashSpec p prims M)) +
     (QueryImpl.ofLift (HashSpec p prims M) (OracleComp (unifSpec + HashSpec p prims M)) +
-      (fun rho => (pure (f rho) : OracleComp (unifSpec + HashSpec p prims M) _) :
+      (⟨fun rho => (pure (f rho) : OracleComp (unifSpec + HashSpec p prims M) _)⟩ :
         QueryImpl (ExpandASpec p) (OracleComp (unifSpec + HashSpec p prims M))))
 
 /-- With `ExpandA` answered by the table `f`, the oracle key generator is the short key

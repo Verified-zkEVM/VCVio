@@ -425,6 +425,7 @@ public import VCVio.Interaction.UC.ReactiveSecurity
 public import VCVio.Interaction.UC.ReactiveWorld
 public import VCVio.Interaction.UC.Runtime
 public import VCVio.Interaction.UC.Standard
+public import VCVio.Lint.HandlerApply
 public import VCVio.OracleComp.CanReturn
 public import VCVio.OracleComp.Coercions.Add.Basic
 public import VCVio.OracleComp.Coercions.SubSpec

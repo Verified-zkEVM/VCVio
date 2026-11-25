@@ -74,9 +74,9 @@ namespace Rewinding
 /-! ## Charged reruns -/
 
 /-- Answer from a fixed function and charge `cost q` for the complete run on input `q`. -/
-@[expose] def charged {Q α : Type} (f : Q → α) (cost : Q → ℕ) :
-    QueryImpl (rerunSpec Q α) (StateT ℕ ProbComp) :=
-  fun q => do
+@[expose, simps] def charged {Q α : Type} (f : Q → α) (cost : Q → ℕ) :
+    QueryImpl (rerunSpec Q α) (StateT ℕ ProbComp) where
+  toFun q := do
     modify (· + cost q)
     pure (f q)
 
@@ -112,7 +112,7 @@ theorem runCharged_query_inr_bind {Q α β : Type} (q : Q)
     (f : Q → α) (cost : Q → ℕ) (s : ℕ) :
     runCharged (liftM ((unifSpec + rerunSpec Q α).query (Sum.inr q)) >>= k) f cost s =
       runCharged (k (f q)) f cost (s + cost q) := by
-  simp [runCharged, charged]
+  simp [runCharged, charged_apply]
 
 /-- If every rerun costs at most `c`, the expected accumulated charge of a run is at most `c`
 times its expected number of reruns, for initial counters `s₁ ≤ c * s₂`. -/
@@ -186,9 +186,10 @@ theorem IsFinder.expectedCalls_bind_runCharged_le {R : Type} [Fintype R] [Decida
 
 /-- Answer coin queries by coin queries, and a rerun on `q` by a rerun that also reports its cost,
 adding the reported cost to the state. -/
-@[expose] def costAdapterImpl {Q α : Type} :
+@[expose, simps] def costAdapterImpl {Q α : Type} :
     QueryImpl (unifSpec + rerunSpec Q α)
-      (StateT ℕ (OracleComp (unifSpec + rerunSpec Q (α × ℕ))))
+      (StateT ℕ (OracleComp (unifSpec + rerunSpec Q (α × ℕ)))) where
+  toFun
   | Sum.inl n =>
     (liftM ((unifSpec + rerunSpec Q (α × ℕ)).query (Sum.inl n)) :
       StateT ℕ (OracleComp (unifSpec + rerunSpec Q (α × ℕ))) (Fin (n + 1)))
@@ -215,9 +216,9 @@ private theorem fst_map_simulateQ_counted_costAdapterImpl {Q α β : Type} (g : 
     rcases t with n | q
     · rw [runCharged_query_inl_bind]
       simp only [coins, QueryImpl.ofLift_eq_id'] at ih ⊢
-      simp [costAdapterImpl, ih]
+      simp [costAdapterImpl_apply, ih]
     · rw [runCharged_query_inr_bind]
-      simpa [costAdapterImpl, coins, counted] using ih _ _ _
+      simpa [costAdapterImpl_apply, coins, counted_apply] using ih _ _ _
 
 /-- Against a fixed table of answers and costs, the output and accumulated reported cost of
 `costAdapter alg` form the charged run of `alg`. -/
@@ -240,8 +241,8 @@ theorem map_simulateQ_counted_costAdapter {Q α β : Type} (g : Q → α × ℕ)
   | query_bind t k ih =>
     rcases t with n | q
     · simp only [coins, QueryImpl.ofLift_eq_id'] at ih ⊢
-      simp [costAdapterImpl, ih]
-    · simpa [costAdapterImpl, coins, counted] using ih _ _ _
+      simp [costAdapterImpl_apply, ih]
+    · simpa [costAdapterImpl_apply, coins, counted_apply] using ih _ _ _
 
 /-! ## Frozen reruns that report their own cost -/
 
@@ -277,8 +278,8 @@ private theorem map_run_simulateQ_rerun_costAdapterImpl {Q α β : Type}
   | query_bind t k ih =>
     rcases t with n | q
     · simp only [coins, QueryImpl.ofLift_eq_id'] at ih ⊢
-      simp [costAdapterImpl, ih]
-    · simp [costAdapterImpl, ResetPolicy.rerun, simulateQ_map, StateT.run_map, ih]
+      simp [costAdapterImpl_apply, ih]
+    · simp [costAdapterImpl_apply, ResetPolicy.rerun_apply, simulateQ_map, StateT.run_map, ih]
 
 /-- Forgetting the accumulated reported cost of an attempt of `costAdapter alg` against frozen
 reruns gives the attempt of `alg` against the reruns' outputs. -/
@@ -312,14 +313,14 @@ private theorem le_of_mem_support_run_simulateQ_rerun_costAdapterImpl {Q α β :
     · intro z hz
       obtain ⟨u, hz⟩ : ∃ u, z ∈ support ((simulateQ (coins (S := P.World × ℕ) + P.rerun run)
           ((simulateQ costAdapterImpl (k u)).run s)).run st) := by
-        simpa [costAdapterImpl, coins] using hz
+        simpa [costAdapterImpl_apply, coins] using hz
       exact ih u s st z hz
     · intro z hz
       obtain ⟨a, d, w, cur, ha, hz⟩ : ∃ (a : α) (d : ℕ) (w : P.World) (cur : P.Cursor),
           ((a, d), (w, cur)) ∈ support ((simulateQ P.answer (run q)).run (st.1, P.begin)) ∧
             z ∈ support ((simulateQ (coins (S := P.World × ℕ) + P.rerun run)
               ((simulateQ costAdapterImpl (k a)).run (s + d))).run (w, st.2 + 1)) := by
-        simpa [costAdapterImpl, ResetPolicy.rerun] using hz
+        simpa [costAdapterImpl_apply, ResetPolicy.rerun_apply] using hz
       have hd : d ≤ c := hc q _ _ ha
       have hk := ih a (s + d) (w, st.2 + 1) z hz
       dsimp only at hk ⊢

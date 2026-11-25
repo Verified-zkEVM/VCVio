@@ -137,8 +137,8 @@ theorem run_simulateQ_counted_lookupAll (F : Q → α) (L : Set Q) {m : ℕ} (qs
       exact Fin.cases rfl (fun _ => rfl) i
     · have hc : cacheOf F L (qs 0) = none := by simp [cacheOf, hq]
       simp only [lookupAll, hc, Option.elim, simulateQ_bind, simulateQ_pure, StateT.run_bind,
-        StateT.run_pure, QueryImpl.simulateQ_add_liftM_query_right, counted, StateT.run_modify,
-        pure_bind, ih, missCount, hq, ite_false]
+        StateT.run_pure, QueryImpl.simulateQ_add_liftM_query_right, counted_apply,
+        StateT.run_modify, pure_bind, ih, missCount, hq, ite_false]
       refine congrArg pure (Prod.ext ?_ (by simp only; omega))
       funext i
       exact Fin.cases rfl (fun _ => rfl) i
@@ -162,12 +162,12 @@ finder's coins pass through unchanged. -/
     QueryImpl (unifSpec + rerunSpec Q Bool)
       (StateT (Q → Option α) (OracleComp (unifSpec + rerunSpec Q α))) :=
   (show QueryImpl unifSpec (StateT (Q → Option α) (OracleComp (unifSpec + rerunSpec Q α))) from
-    fun n => liftM (liftM (unifSpec.query n) : OracleComp (unifSpec + rerunSpec Q α) _)) +
+    ⟨fun n => liftM (liftM (unifSpec.query n) : OracleComp (unifSpec + rerunSpec Q α) _)⟩) +
   (show QueryImpl (rerunSpec Q Bool)
-      (StateT (Q → Option α) (OracleComp (unifSpec + rerunSpec Q α))) from fun q => do
+      (StateT (Q → Option α) (OracleComp (unifSpec + rerunSpec Q α))) from ⟨fun q => do
     let a ← liftM (liftM ((rerunSpec Q α).query q) : OracleComp (unifSpec + rerunSpec Q α) α)
     modify fun cache => Function.update cache q (some a)
-    pure (accept q a))
+    pure (accept q a)⟩)
 
 theorem run_cachingImpl_inl (accept : Q → α → Bool) (t : ℕ) (c : Q → Option α) :
     (cachingImpl accept (Sum.inl t)).run c =
@@ -214,7 +214,7 @@ theorem run_simulateQ_counted_caching (accept : Q → α → Bool) (F : Q → α
     | inr q =>
       simp only [simulateQ_bind, simulateQ_spec_query, QueryImpl.add_apply_inr, StateT.run_bind,
         run_cachingImpl_inr, QueryImpl.simulateQ_add_liftM_query_right, bind_assoc, pure_bind,
-        counted, logCounted, StateT.run_modify]
+        counted_apply, logCounted_apply, StateT.run_modify]
       rw [update_cacheOf]
       exact ih _ _ _
 

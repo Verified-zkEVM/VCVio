@@ -63,8 +63,8 @@ once. -/
 open scoped Classical in
 /-- The shared random oracle, keeping two recordings. -/
 @[expose] noncomputable def recorder (leftKeep rightKeep : Bytes → QueryCache HashSpec → Prop) :
-    QueryImpl OracleWorld (StateT SplitState ProbComp) :=
-  fun queried state =>
+    QueryImpl OracleWorld (StateT SplitState ProbComp) where
+  toFun queried state :=
     match queried with
     | Sum.inl coin => do
         let value ← ($ᵗ (OracleWorld.Range (Sum.inl coin)) : ProbComp _)

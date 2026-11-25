@@ -85,8 +85,8 @@ abbrev RealState := Multiplicative Tally × SigningLog × QueryCache HashSpec
 /-- **The real phase as one handler** over the adversary's oracles: a world query is the oracle's
 step, charged; a signing request runs the signer against the oracle and is logged. -/
 @[expose] noncomputable def realImpl (signer : Message → OracleComp OracleWorld (Option Bytes)) :
-    QueryImpl (OracleWorld + SigningSpec) (StateT RealState ProbComp) :=
-  fun queried state => match queried with
+    QueryImpl (OracleWorld + SigningSpec) (StateT RealState ProbComp) where
+  toFun queried state := match queried with
     | Sum.inl world =>
         (fun z => (z.1, (state.1 * Multiplicative.ofAdd (phaseCost (Sum.inl world)), state.2.1,
           z.2))) <$> (KeygenUniform.rom world).run state.2.2
@@ -196,8 +196,9 @@ theorem run_flat (signer : Message → OracleComp OracleWorld (Option Bytes)) {�
 abbrev VerifyState := Multiplicative Tally × QueryCache HashSpec
 
 /-- **The verifier as one handler**: the oracle's step, charged as verification. -/
-@[expose] noncomputable def realWorldImpl : QueryImpl OracleWorld (StateT VerifyState ProbComp) :=
-  fun world state =>
+@[expose]
+noncomputable def realWorldImpl : QueryImpl OracleWorld (StateT VerifyState ProbComp) where
+  toFun world state :=
     (fun z => (z.1, (state.1 * Multiplicative.ofAdd (verifierCost world), z.2))) <$>
       (KeygenUniform.rom world).run state.2
 

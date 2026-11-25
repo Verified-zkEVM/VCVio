@@ -93,8 +93,8 @@ def srcAdv : TwoPhaseAdversary freeSpec rawSpec Unit (Option ℕ × List ℕ) wh
     pure (c, v.val :: List.ofFn fun j => (us j : Fin 8).val)
 
 /-- Local coins read off a counter, which then moves on. -/
-def counterCoins {σ : Type} (get : σ → ℕ) (set : ℕ → σ → σ) : QueryImpl unifSpec (StateT σ Id) :=
-  fun n => StateT.mk fun s => pure (⟨get s % (n + 1), Nat.mod_lt _ n.succ_pos⟩, set (get s + 1) s)
+def counterCoins {σ : Type} (get : σ → ℕ) (set : ℕ → σ → σ) : QueryImpl unifSpec (StateT σ Id) where
+  toFun n := StateT.mk fun s => pure (⟨get s % (n + 1), Nat.mod_lt _ n.succ_pos⟩, set (get s + 1) s)
 
 /-- The typed oracle `t ↦ t + 5 mod 8`. -/
 def typAnswer (t : ℕ) : Fin 8 := ⟨(t + 5) % 8, Nat.mod_lt _ (by decide)⟩
@@ -102,18 +102,18 @@ def typAnswer (t : ℕ) : Fin 8 := ⟨(t + 5) % 8, Nat.mod_lt _ (by decide)⟩
 /-- The preprocessing oracles: coins from the counter, and the typed oracle. -/
 def preImpl : QueryImpl (unifSpec + typSpec) (StateT ℕ Id) :=
   counterCoins id (fun k _ => k) +
-    (fun t => pure (typAnswer t) : QueryImpl typSpec (StateT ℕ Id))
+    (⟨fun t => pure (typAnswer t)⟩ : QueryImpl typSpec (StateT ℕ Id))
 
 /-- The online state: the coin counter, the typed rounds and the challenges, latest first. -/
 abbrev OnState := ℕ × List (List ℕ) × List (ℕ × ℕ)
 
 /-- Challenges answered by `(m₀, m₁) ↦ 10 m₀ + m₁` and recorded in the log. -/
-def challenges : QueryImpl (LeftOrRight.spec ℕ ℕ) (StateT OnState Id) :=
-  fun mm => StateT.mk fun s => pure (some (10 * mm.1 + mm.2), (s.1, s.2.1, mm :: s.2.2))
+def challenges : QueryImpl (LeftOrRight.spec ℕ ℕ) (StateT OnState Id) where
+  toFun mm := StateT.mk fun s => pure (some (10 * mm.1 + mm.2), (s.1, s.2.1, mm :: s.2.2))
 
 /-- Typed rounds answered by the typed oracle and recorded in the log. -/
-def typRounds : QueryImpl typSpec.batch (StateT OnState Id) :=
-  fun ts => StateT.mk fun s =>
+def typRounds : QueryImpl typSpec.batch (StateT OnState Id) where
+  toFun ts := StateT.mk fun s =>
     pure ((fun j => typAnswer ts[j] : typSpec.batch.Range ts), (s.1, ts :: s.2.1, s.2.2))
 
 /-- The online oracles: coins from the counter, challenges, and typed rounds. -/

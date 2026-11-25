@@ -140,13 +140,13 @@ structure IND_CCA_Adversary (kem : KEMScheme (OracleComp spec) K PK SK C) where
 def IND_CCA_preChallengeImpl (kem : KEMScheme (OracleComp spec) K PK SK C)
     (sk : SK) : QueryImpl (IND_CCA_oracleSpec kem) (OracleComp spec) :=
   QueryImpl.add spec.passthrough
-    fun c => kem.decaps sk c
+    ⟨fun c => kem.decaps sk c⟩
 
 /-- Post-challenge decapsulation oracle: the challenge ciphertext itself maps to `none`. -/
 def IND_CCA_postChallengeImpl (kem : KEMScheme (OracleComp spec) K PK SK C)
     (sk : SK) (cStar : C) : QueryImpl (IND_CCA_oracleSpec kem) (OracleComp spec) :=
-  QueryImpl.add spec.passthrough fun c =>
-    if c = cStar then return none else kem.decaps sk c
+  QueryImpl.add spec.passthrough ⟨fun c =>
+    if c = cStar then return none else kem.decaps sk c⟩
 
 /-- IND-CCA real-or-random experiment for a KEM. -/
 noncomputable def IND_CCA_Game {kem : KEMScheme (OracleComp spec) K PK SK C}
@@ -201,7 +201,8 @@ theorem IND_CPA_Game_eq_IND_CCA_Game_toIND_CCA
       ext t
       simp [QueryImpl.compose]
       simpa using
-        (QueryImpl.simulateQ_add_liftM_query_left (QueryImpl.id' spec) impl₂ t)
+        (QueryImpl.simulateQ_add_liftM_query_left
+          ((QueryImpl.id' spec).liftTarget (OracleComp spec)) impl₂ t)
     rw [this, simulateQ_id']
   simp only [IND_CPA_Game, IND_CCA_Game, IND_CPA_Adversary.toIND_CCA,
     IND_CCA_preChallengeImpl, IND_CCA_postChallengeImpl, IND_CCA_oracleSpec, h]

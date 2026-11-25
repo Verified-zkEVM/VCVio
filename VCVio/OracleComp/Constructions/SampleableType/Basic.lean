@@ -368,7 +368,8 @@ variable {ι : Type*} {spec : OracleSpec ι}
 /-- Given that the output type of all oracles has a `SampleableType` instance, replace all queries
 with uniformly random responses by calling the corresponding `uniformSample` at each query. -/
 @[expose] def uniformSampleImpl [∀ i, SampleableType (spec.Range i)] :
-    QueryImpl spec ProbComp := fun t => $ᵗ spec.Range t
+    QueryImpl spec ProbComp where
+  toFun t := $ᵗ spec.Range t
 
 /-- A uniformly sampled implementation answers each query with the uniform sampler for
 that query's response type. -/

@@ -87,10 +87,10 @@ instance IsSignQuery.decidable : DecidablePred (IsSignQuery (F := F) (M := M)) :
   ⟨(), fun | .g₁ => [g₁, pk.1] | .g₂ => [g₂, pk.2] | .gₜ => []⟩
 
 /-- Forward hash and signing requests to the BLS oracles and expose their replies as points. -/
-@[expose] def oracle {M G₁ G₂ Gₜ : Type} :
+@[expose, simps -isSimp] def oracle {M G₁ G₂ Gₜ : Type} :
     QueryImpl (plainSpec (PFam G₁ G₂ Gₜ) (Query M) (fun _ => Unit))
-      (OracleComp (AGM.rawSpec M G₁)) :=
-  fun q => do
+      (OracleComp (AGM.rawSpec M G₁)) where
+  toFun q := do
     let v ← match q.data with
       | .inl m => (AGM.rawSpec M G₁).query (.inl (.inr m))
       | .inr m => (AGM.rawSpec M G₁).query (.inr m)

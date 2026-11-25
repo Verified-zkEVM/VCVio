@@ -51,7 +51,7 @@ variable {D α : Type} {R : D → Type}
     (g : (d : D) → R d) :
     tableQueryLog (liftM ((OracleSpec.ofFn R).query t) >>= k) g =
       ⟨t, g t⟩ :: tableQueryLog (k (g t)) g := by
-  simp [tableQueryLog, QueryImpl.ofFn, WriterT.run_bind, WriterT.run_tell]
+  simp [tableQueryLog, QueryImpl.ofFn_apply, WriterT.run_bind, WriterT.run_tell]
   rfl
 
 /-- A primitive query contributes its actual input and table answer to the log. -/

@@ -48,12 +48,12 @@ open OracleSpec OracleComp
 variable {ι : Type u} {spec : OracleSpec.{u, v} ι} {K : Type w}
 
 /-- The handler answering each query `t` of `spec` by the query `(k, t)` of `spec.tagged K`. -/
-def tagWith (k : K) : QueryImpl spec (OracleComp (spec.tagged K)) :=
-  fun t => liftM ((spec.tagged K).query (k, t))
+def tagWith (k : K) : QueryImpl spec (OracleComp (spec.tagged K)) where
+  toFun t := liftM ((spec.tagged K).query (k, t))
 
 /-- The handler answering each tagged query `(k, t)` by the query `t` of `spec`. -/
-def untag : QueryImpl (spec.tagged K) (OracleComp spec) :=
-  fun kt => liftM (spec.query kt.2)
+def untag : QueryImpl (spec.tagged K) (OracleComp spec) where
+  toFun kt := liftM (spec.query kt.2)
 
 @[simp]
 lemma tagWith_apply (k : K) (t : spec.Domain) :

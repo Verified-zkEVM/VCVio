@@ -74,20 +74,16 @@ namespace OracleMachine
 
 variable {α β : Type u} {m : Type u → Type v} [Monad m]
 
-/-- `QueryImpl spec m` is definitionally PolyFun's monadic handler type, so machines run
-directly through query implementations. Regression guard for the definitional bridge. -/
-example : QueryImpl spec m = PFunctor.Handler m spec.toPFunctor := rfl
-
 /-- Executing a machine through a `QueryImpl` is definitionally `simulateQ` of the fuelled
 unrolling: the machine layer plugs into the existing simulation semantics with no glue. -/
 theorem runWith_eq_simulateQ (M : OracleMachine spec α β) (impl : QueryImpl spec m)
     (k : ℕ) (s : M.State) :
-    M.runWith impl k s = simulateQ impl (ofFreeM (M.unroll k s)) := rfl
+    M.runWith impl.toHandler k s = simulateQ impl (ofFreeM (M.unroll k s)) := rfl
 
 /-- Input form of `runWith_eq_simulateQ`. -/
 theorem runWithInput_eq_simulateQ (M : OracleMachine spec α β) (impl : QueryImpl spec m)
     (k : ℕ) (x : α) :
-    M.runWithInput impl k x = simulateQ impl (ofFreeM (M.unroll k (M.init x))) := rfl
+    M.runWithInput impl.toHandler k x = simulateQ impl (ofFreeM (M.unroll k (M.init x))) := rfl
 
 /-- The implementation relation **is** behavior equality: `M.Implements program` says the
 machine's behavior tree at each input — its extensional, state-free denotation in the cofree
@@ -130,24 +126,24 @@ the `simulateQ` reading of `DynComputation.ImplementsWithin.runWithInput_eq`. -/
 theorem simulateQ_run_eq [LawfulMonad m] {M : OracleMachine spec α β}
     {program : α → OracleComp spec β} {k : ℕ}
     (h : M.ImplementsWithin program k) (impl : QueryImpl spec m) (x : α) :
-    M.runWithInput impl k x = some <$> simulateQ impl (program x) :=
-  h.runWithInput_eq impl x
+    M.runWithInput impl.toHandler k x = some <$> simulateQ impl (program x) :=
+  h.runWithInput_eq impl.toHandler x
 
 /-- Deterministic reading: through a deterministic handler, an implementing machine returns
 exactly the handler-computed value of the program. -/
 theorem runWithInput_ofFn_eq {M : OracleMachine spec α β}
     {program : α → OracleComp spec β} {k : ℕ}
     (h : M.ImplementsWithin program k) (hf : OracleHandler spec) (x : α) :
-    M.runWithInput (QueryImpl.ofFn hf) k x =
+    M.runWithInput (QueryImpl.ofFn hf).toHandler k x =
       some (evalWithAnswerFn (QueryImpl.ofFn hf) (program x)) :=
-  h.runWithInput_eq (QueryImpl.ofFn hf) x
+  h.runWithInput_eq (QueryImpl.ofFn hf).toHandler x
 
 /-- Probabilistic reading: an implementing machine puts no probability mass on fuel
 exhaustion — the `none` branch of the fuelled run through a probabilistic handler is null. -/
 theorem prEvent_none_runWithInput {ι : Type} {spec : OracleSpec.{0, 0} ι} {α β : Type}
     {M : OracleMachine spec α β} {program : α → OracleComp spec β} {k : ℕ}
     (h : M.ImplementsWithin program k) (impl : ProbHandler spec) (x : α) :
-    Pr{let y ← M.runWithInput impl k x}[y = none] = 0 := by
+    Pr{let y ← M.runWithInput impl.toHandler k x}[y = none] = 0 := by
   rw [h.simulateQ_run_eq impl x]
   simp [prEvent_norm]
 

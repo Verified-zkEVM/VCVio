@@ -45,18 +45,19 @@ query the PRF oracle on `(tag, nonce)` for the authenticator. Models `unlinkTagQ
 def unlinkToMultiplePRFTagImpl :
     QueryImpl (TagId →ₒ Option (TagTranscript Nonce Digest))
       (StateT (UnlinkState TagId)
-        (OracleComp (unifSpec + ((TagId × Nonce) →ₒ Digest)))) := fun tag => do
-  let st ← get
-  if _h : st.sessionsUsed tag < sessionsPerTag then
-    let nonce ← (OracleComp.liftComp (spec := unifSpec)
-      (superSpec := unifSpec + ((TagId × Nonce) →ₒ Digest)) ($ᵗ Nonce) :
-      OracleComp (unifSpec + ((TagId × Nonce) →ₒ Digest)) Nonce)
-    let auth ← PRFScheme.functionQuery (D := TagId × Nonce) (R := Digest) (tag, nonce)
-    set { st with
-      sessionsUsed := Function.update st.sessionsUsed tag (st.sessionsUsed tag + 1) }
-    return some (⟨nonce, auth⟩ : TagTranscript Nonce Digest)
-  else
-    return none
+        (OracleComp (unifSpec + ((TagId × Nonce) →ₒ Digest)))) where
+  toFun tag := do
+    let st ← get
+    if _h : st.sessionsUsed tag < sessionsPerTag then
+      let nonce ← (OracleComp.liftComp (spec := unifSpec)
+        (superSpec := unifSpec + ((TagId × Nonce) →ₒ Digest)) ($ᵗ Nonce) :
+        OracleComp (unifSpec + ((TagId × Nonce) →ₒ Digest)) Nonce)
+      let auth ← PRFScheme.functionQuery (D := TagId × Nonce) (R := Digest) (tag, nonce)
+      set { st with
+        sessionsUsed := Function.update st.sessionsUsed tag (st.sessionsUsed tag + 1) }
+      return some (⟨nonce, auth⟩ : TagTranscript Nonce Digest)
+    else
+      return none
 
 /-- Reader-oracle implementation of the multiple-session reduction: query the PRF oracle on
 `(tag, transcript.nonce)` for every tag and accept when some digest matches the submitted
@@ -64,12 +65,13 @@ authenticator. Models `unlinkReaderQueryImpl` under the `multiplePattern`. -/
 noncomputable def unlinkToMultiplePRFReaderImpl :
     QueryImpl ((TagTranscript Nonce Digest) →ₒ ReaderReply)
       (StateT (UnlinkState TagId)
-        (OracleComp (unifSpec + ((TagId × Nonce) →ₒ Digest)))) := fun transcript => do
-  let digests ← (Finset.univ : Finset TagId).toList.mapM
-    (m := OracleComp (unifSpec + ((TagId × Nonce) →ₒ Digest)))
-    (fun tag => PRFScheme.functionQuery (D := TagId × Nonce) (R := Digest)
-      (tag, transcript.nonce))
-  return ReaderReply.ofBool (decide (∃ d ∈ digests, d = transcript.auth))
+        (OracleComp (unifSpec + ((TagId × Nonce) →ₒ Digest)))) where
+  toFun transcript := do
+    let digests ← (Finset.univ : Finset TagId).toList.mapM
+      (m := OracleComp (unifSpec + ((TagId × Nonce) →ₒ Digest)))
+      (fun tag => PRFScheme.functionQuery (D := TagId × Nonce) (R := Digest)
+        (tag, transcript.nonce))
+    return ReaderReply.ofBool (decide (∃ d ∈ digests, d = transcript.auth))
 
 /-- Combined oracle implementation of the multiple-session reduction. -/
 noncomputable def unlinkToMultiplePRFQueryImpl :
@@ -101,20 +103,21 @@ def unlinkToSinglePRFTagImpl :
     QueryImpl (TagId →ₒ Option (TagTranscript Nonce Digest))
       (StateT (UnlinkState TagId)
         (OracleComp (unifSpec +
-          (((TagId × Fin sessionsPerTag) × Nonce) →ₒ Digest)))) := fun tag => do
-  let st ← get
-  if h : st.sessionsUsed tag < sessionsPerTag then
-    let sid : Fin sessionsPerTag := ⟨st.sessionsUsed tag, h⟩
-    let nonce ← (OracleComp.liftComp (spec := unifSpec)
-      (superSpec := unifSpec + (((TagId × Fin sessionsPerTag) × Nonce) →ₒ Digest)) ($ᵗ Nonce) :
-      OracleComp (unifSpec + (((TagId × Fin sessionsPerTag) × Nonce) →ₒ Digest)) Nonce)
-    let auth ← PRFScheme.functionQuery
-      (D := (TagId × Fin sessionsPerTag) × Nonce) (R := Digest) ((tag, sid), nonce)
-    set { st with
-      sessionsUsed := Function.update st.sessionsUsed tag (st.sessionsUsed tag + 1) }
-    return some (⟨nonce, auth⟩ : TagTranscript Nonce Digest)
-  else
-    return none
+          (((TagId × Fin sessionsPerTag) × Nonce) →ₒ Digest)))) where
+  toFun tag := do
+    let st ← get
+    if h : st.sessionsUsed tag < sessionsPerTag then
+      let sid : Fin sessionsPerTag := ⟨st.sessionsUsed tag, h⟩
+      let nonce ← (OracleComp.liftComp (spec := unifSpec)
+        (superSpec := unifSpec + (((TagId × Fin sessionsPerTag) × Nonce) →ₒ Digest)) ($ᵗ Nonce) :
+        OracleComp (unifSpec + (((TagId × Fin sessionsPerTag) × Nonce) →ₒ Digest)) Nonce)
+      let auth ← PRFScheme.functionQuery
+        (D := (TagId × Fin sessionsPerTag) × Nonce) (R := Digest) ((tag, sid), nonce)
+      set { st with
+        sessionsUsed := Function.update st.sessionsUsed tag (st.sessionsUsed tag + 1) }
+      return some (⟨nonce, auth⟩ : TagTranscript Nonce Digest)
+    else
+      return none
 
 /-- Reader-oracle implementation of the single-session reduction: query the PRF oracle on
 `((tag, sid), transcript.nonce)` for every tag/session slot and accept when some digest matches
@@ -123,13 +126,14 @@ noncomputable def unlinkToSinglePRFReaderImpl :
     QueryImpl ((TagTranscript Nonce Digest) →ₒ ReaderReply)
       (StateT (UnlinkState TagId)
         (OracleComp (unifSpec +
-          (((TagId × Fin sessionsPerTag) × Nonce) →ₒ Digest)))) := fun transcript => do
-  let digests ← (Finset.univ : Finset (TagId × Fin sessionsPerTag)).toList.mapM
-    (m := OracleComp (unifSpec + (((TagId × Fin sessionsPerTag) × Nonce) →ₒ Digest)))
-    (fun slot => PRFScheme.functionQuery
-      (D := (TagId × Fin sessionsPerTag) × Nonce) (R := Digest)
-      (slot, transcript.nonce))
-  return ReaderReply.ofBool (decide (∃ d ∈ digests, d = transcript.auth))
+          (((TagId × Fin sessionsPerTag) × Nonce) →ₒ Digest)))) where
+  toFun transcript := do
+    let digests ← (Finset.univ : Finset (TagId × Fin sessionsPerTag)).toList.mapM
+      (m := OracleComp (unifSpec + (((TagId × Fin sessionsPerTag) × Nonce) →ₒ Digest)))
+      (fun slot => PRFScheme.functionQuery
+        (D := (TagId × Fin sessionsPerTag) × Nonce) (R := Digest)
+        (slot, transcript.nonce))
+    return ReaderReply.ofBool (decide (∃ d ∈ digests, d = transcript.auth))
 
 /-- Combined oracle implementation of the single-session reduction. -/
 noncomputable def unlinkToSinglePRFQueryImpl :

@@ -24,8 +24,8 @@ variable {S : Type} {V W E : S → Type}
 
 /-- Encode a table entry without changing the table. -/
 @[expose] def encImpl [∀ s, Zero (V s)] {m : Type → Type} [Monad m]
-    (enc : (s : S) → V s → E s) : QueryImpl (encSpec E) (StateT (Tbl V) m) :=
-  fun q tbl => pure (enc q.1 (lookup tbl q.1 q.2), tbl)
+    (enc : (s : S) → V s → E s) : QueryImpl (encSpec E) (StateT (Tbl V) m) where
+  toFun q tbl := pure (enc q.1 (lookup tbl q.1 q.2), tbl)
 
 /-- An encoding query returns the encoding of the lookup and preserves state. -/
 @[simp] theorem encImpl_apply [∀ s, Zero (V s)] {m : Type → Type} [Monad m]

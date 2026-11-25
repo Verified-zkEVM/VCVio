@@ -81,10 +81,10 @@ lemma run_parallelStateT_randomOracle_map_eq (t : (spec₁ + spec₂).Domain)
   cases t with
   | inl t =>
       rcases h : c₁ t with _ | u <;>
-        simp [QueryImpl.parallelStateT, h, QueryCache.addEquiv_cacheQuery_inl, Prod.map]
+        simp [QueryImpl.parallelStateT_apply, h, QueryCache.addEquiv_cacheQuery_inl, Prod.map]
   | inr t =>
       rcases h : c₂ t with _ | u <;>
-        simp [QueryImpl.parallelStateT, h, QueryCache.addEquiv_cacheQuery_inr, Prod.map]
+        simp [QueryImpl.parallelStateT_apply, h, QueryCache.addEquiv_cacheQuery_inr, Prod.map]
 
 end QueryImpl
 

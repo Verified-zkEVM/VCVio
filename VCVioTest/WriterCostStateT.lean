@@ -93,7 +93,7 @@ theorem noncommutative_control :
 theorem outer_failure {σ C : Type} [AddMonoid C]
     (weight : Nat → C) (initial : σ) (start : C) (input : Nat) :
     let impl : QueryImpl (Nat →ₒ Bool) (StateT σ Option) :=
-      fun _ => StateT.mk fun _ => none
+      ⟨fun _ => StateT.mk fun _ => none⟩
     (fun output : (Bool × C) × σ =>
       (output.1.1, (output.2, start + output.1.2))) <$>
         (simulateQ impl (simulateQ ((QueryImpl.id' (Nat →ₒ Bool)).withAddCost weight)

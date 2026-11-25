@@ -22,10 +22,11 @@ open OracleComp OracleSpec QueryImpl.ListCache
 
 namespace ListCacheTests
 
-@[expose] def fresh (_ : Nat) : StateM Nat Nat := do
-  let r ← get
-  modify (· + 1)
-  return r
+@[expose] def fresh : QueryImpl (Nat →ₒ Nat) (StateM Nat) where
+  toFun _ := do
+    let r ← get
+    modify (· + 1)
+    return r
 
 -- A duplicate key keeps the first binding, and a hit leaves both states unchanged.
 example : ((handler fresh 1).run [(1, 7), (1, 3)]).run 20 =

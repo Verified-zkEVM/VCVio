@@ -101,7 +101,8 @@ def msgC : Plaintext := ⟨⟨#[1, 2]⟩, by decide⟩
 /-- Local coins from a tape: the coin query `n` is answered with the head of the tape modulo
 `n + 1`, which is dropped; rounds are answered from the table `g`. -/
 @[expose]
-def tapeImpl (g : QueryImpl spec Id) : QueryImpl (unifSpec + spec.batch) (StateM (List ℕ))
+def tapeImpl (g : QueryImpl spec Id) : QueryImpl (unifSpec + spec.batch) (StateM (List ℕ)) where
+  toFun
   | .inl n => do
       let l ← get
       set l.tail

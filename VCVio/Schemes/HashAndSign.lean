@@ -128,10 +128,10 @@ theorem runWithSigningOracle_reductionMain (sig : SignatureAlg ProbComp D PK SK 
       let s ← H.keygen
       let ((msg, σ), log) ← (scheme sig H).runWithSigningOracle (pk, s) sk (main (pk, s))
       return ((H.hash s msg, σ), QueryLog.relabel (H.hash s) log)) := by
-  have htr := fun s => QueryImpl.run_simulateQ_withLogging_mapLens_translateLens (sig.sign pk sk)
-    ((scheme sig H).sign (pk, s) sk) (H.hash s) (fun _ => rfl) (main (pk, s))
+  have htr := fun s => QueryImpl.run_simulateQ_withLogging_mapLens_translateLens ⟨sig.sign pk sk⟩
+    ⟨(scheme sig H).sign (pk, s) sk⟩ (H.hash s) (fun _ => rfl) (main (pk, s))
   have hkey := QueryImpl.run_simulateQ_passthrough_add_liftM
-    (QueryImpl.withLogging (sig.sign pk sk)) H.keygen
+    (QueryImpl.withLogging ⟨sig.sign pk sk⟩) H.keygen
   simp only [SignatureAlg.runWithSigningOracle_def, reductionMain, SignatureAlg.signingOracle,
     simulateQ_bind, WriterT.run_bind']
   erw [hkey]

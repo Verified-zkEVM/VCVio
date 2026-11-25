@@ -33,8 +33,8 @@ abbrev targetSpec : OracleSpec Unit := fun _ => Unit
 abbrev unansweredSpec : OracleSpec Unit := fun _ => Empty
 
 /-- Charged steps issue two target queries; every step advances the state. -/
-@[expose] def weightedStep : QueryImpl sourceSpec (StateT ℕ (OracleComp targetSpec)) :=
-  fun charged => StateT.mk fun state =>
+@[expose] def weightedStep : QueryImpl sourceSpec (StateT ℕ (OracleComp targetSpec)) where
+  toFun charged := StateT.mk fun state =>
     if charged then do
       let _ ← liftM (targetSpec.query ())
       let _ ← liftM (targetSpec.query ())

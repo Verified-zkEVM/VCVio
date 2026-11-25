@@ -172,7 +172,7 @@ theorem prfRealExperiment_prfReduction (prf : PRFScheme K R M) (leak : M → Λ)
     exact simulateQ_prfRealQueryImpl_liftComp prf k _
   rcases t with n | ⟨m₀, m₁⟩
   · simp [reductionImpl, prfRealQueryImpl, QueryImpl.simulateQ_add_liftM_left]
-  · simp [reductionImpl, LeftOrRight.oracle, oracleEncrypt, scheme, hlift]
+  · simp [reductionImpl, LeftOrRight.oracle_apply, oracleEncrypt, scheme, hlift]
 
 /-! ## The random-function game -/
 

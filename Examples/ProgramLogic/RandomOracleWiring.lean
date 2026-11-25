@@ -38,12 +38,13 @@ abbrev output : PFunctor := ⟨Bool, fun _ => Bool × Bool × Bool⟩
       Unit (fun _ => spec.toPFunctor) output := .box () (fun _ => .input ())
 
 /-- An adaptive query between two requests for the same cell. -/
-@[expose] def implementation (_ : Unit) (input : Bool) :
-    FreeM (PFunctor.sigma fun _ : Bool => spec.toPFunctor) (Bool × Bool × Bool) := do
-  let first ← FreeM.lift (P := PFunctor.sigma fun _ : Bool => spec.toPFunctor) ⟨true, input⟩
-  let adaptive ← FreeM.lift (P := PFunctor.sigma fun _ : Bool => spec.toPFunctor) ⟨false, first⟩
-  let repeated ← FreeM.lift (P := PFunctor.sigma fun _ : Bool => spec.toPFunctor) ⟨true, input⟩
-  pure (first, adaptive, repeated)
+@[expose, simps] def implementation (_ : Unit) :
+    Handler (FreeM (PFunctor.sigma fun _ : Bool => spec.toPFunctor)) output where
+  toFun input := do
+    let first ← FreeM.lift (P := PFunctor.sigma fun _ : Bool => spec.toPFunctor) ⟨true, input⟩
+    let adaptive ← FreeM.lift (P := PFunctor.sigma fun _ : Bool => spec.toPFunctor) ⟨false, first⟩
+    let repeated ← FreeM.lift (P := PFunctor.sigma fun _ : Bool => spec.toPFunctor) ⟨true, input⟩
+    pure (first, adaptive, repeated)
 
 /-- The compiled program uses one shared interface at all three calls. -/
 theorem oracleProgram_eq (input : Bool) :

@@ -32,7 +32,8 @@ noncomputable abbrev wireAlgorithm (ctx : SLHDSA.Security.PureContext) :=
 /-- Forward ambient queries and attach the fixed context to each signing request. -/
 @[expose] def fixedContextHandler (ctx : SLHDSA.Security.PureContext) :
     QueryImpl ((unifSpec + SLHDSA.Security.shakeSpec FIPS205.params) + (Bytes →ₒ Bytes))
-      (OracleComp (Game.World FIPS205.Answer + Game.SigningSpec))
+      (OracleComp (Game.World FIPS205.Answer + Game.SigningSpec)) where
+  toFun
   | .inl t => liftM ((Game.World FIPS205.Answer + Game.SigningSpec).query (.inl t))
   | .inr msg => (fun answer : Option Bytes => answer.getD []) <$>
       liftM ((Game.World FIPS205.Answer + Game.SigningSpec).query

@@ -39,7 +39,7 @@ than at the definition sites. -/
 
 attribute [fs_simp]
   simulatedNmaFwd
-  simulatedNmaUnifSim
+  simulatedNmaUnifSim_apply
   simulatedNmaRoSim
   simulatedNmaBaseSim
   simulatedNmaSigSim
@@ -151,7 +151,7 @@ private lemma forkVerifyFreshComp_prob_true_le_finalQueryTrace_fresh
             (Resp := Resp) σ pk (msg, (c, resp))
             (((advCache, (liveCache, queryLog)), signed)))}[
         (Fork.forkPoint Commit Chal Resp M qH trace).isSome] := by
-        simp only [forkFinalQueryTrace, Fork.roImpl, StateT.run_bind,
+        simp only [forkFinalQueryTrace, Fork.roImpl_apply, StateT.run_bind,
           StateT.run_get, hlive, StateT.run_set,
           StateT.run_pure, monad_norm]
         rw [StateT.run_lift]
@@ -220,7 +220,7 @@ private lemma forkVerifyFreshComp_prob_true_le_finalQueryTrace
                 queryLog := queryLog
                 verified := true }).isSome = true := by
             simpa [hverify] using hfork
-          simp [forkVerifyFreshComp, forkFinalQueryTrace, Fork.roImpl, hcache,
+          simp [forkVerifyFreshComp, forkFinalQueryTrace, Fork.roImpl_apply, hcache,
             hlive, hsigned, hverify, hfork']
         · have hverify_false : σ.verify pk c ch resp = false := Bool.not_eq_true _ ▸ hverify
           simp [forkVerifyFreshComp, hcache, hsigned, hverify_false]
@@ -299,7 +299,7 @@ private lemma forkBase_finalQuery_runTrace_eq
   simp only [monad_norm]
   refine bind_congr fun z ↦ ?_
   obtain ⟨⟨msg, c, resp⟩, advCache, liveCache, queryLog⟩ := z
-  cases hcache : liveCache (msg, c) <;> simp [Fork.roImpl, hcache]
+  cases hcache : liveCache (msg, c) <;> simp [Fork.roImpl_apply, hcache]
 
 @[fs_simp] private noncomputable def forkLoggedProbImpl
     (simT : Stmt → ProbComp (Commit × Chal × Resp)) (pk : Stmt) :
@@ -398,7 +398,7 @@ private lemma simulatedNmaUnifSim_forkWrapped_run
   | query_bind n k ih =>
       simp only [simulateQ_bind, simulateQ_query, OracleQuery.input_query,
         OracleQuery.cont_query, id_map, StateT.run_bind]
-      simp only [simulatedNmaUnifSim, simulatedNmaFwd, QueryImpl.liftTarget_apply,
+      simp only [simulatedNmaUnifSim_apply, simulatedNmaFwd, QueryImpl.liftTarget_apply,
         add_apply_inl,
         StateT.run_monadLift, monadLift_self, bind_pure_comp, simulateQ_map,
         StateT.run_map, bind_map_left, map_bind]
@@ -457,13 +457,13 @@ private def forkLoggedProbOrnament [Inhabited Chal]
       simp only [Functor.map_map] at hleft'
       have hright' := congrArg
         (fun q => (fun u => (u, advCache, signed)) <$> q) hright.symm
-      simpa [fs_simp, QueryImpl.extendState, QueryImpl.flattenStateT,
-        QueryImpl.mapStateTBase] using hleft'.trans hright'
+      simpa [fs_simp, QueryImpl.extendState, QueryImpl.flattenStateT_apply,
+        QueryImpl.mapStateTBase_apply] using hleft'.trans hright'
     · cases hadv : advCache (.inr mc) with
       | some ch =>
           change Chal at ch
-          simp [fs_simp, QueryImpl.extendState, QueryImpl.flattenStateT,
-            QueryImpl.mapStateTBase, hadv]
+          simp [fs_simp, QueryImpl.extendState, QueryImpl.flattenStateT_apply,
+            QueryImpl.mapStateTBase_apply, hadv]
       | none =>
           cases hlive : liveCache mc with
           | some liveCh =>
@@ -477,12 +477,12 @@ private def forkLoggedProbOrnament [Inhabited Chal]
                 mc liveCache queryLog hlive
               have hright := simulateQ_id_add_uniform_query_inr
                 (M × Commit →ₒ Chal) mc
-              simpa [fs_simp, QueryImpl.extendState, QueryImpl.flattenStateT,
-                QueryImpl.mapStateTBase, hadv] using
+              simpa [fs_simp, QueryImpl.extendState, QueryImpl.flattenStateT_apply,
+                QueryImpl.mapStateTBase_apply, hadv] using
                   hleft.trans (congrArg (fun q => (fun v =>
                     (v, advCache.cacheQuery (.inr mc) v, signed)) <$> q) hright.symm)
-    · simp only [add_apply_inr, fs_simp, QueryImpl.mapStateTBase,
-        QueryImpl.ofLift_eq_id', QueryImpl.extendState, QueryImpl.flattenStateT,
+    · simp only [add_apply_inr, fs_simp, QueryImpl.mapStateTBase_apply,
+        QueryImpl.ofLift_eq_id', QueryImpl.extendState, QueryImpl.flattenStateT_apply,
         QueryImpl.add_apply_inr, StateT.run_bind, StateT.run_modifyGet,
         Prod.mk.eta, bind_pure_comp, simulateQ_map, StateT.run_mk, StateT.run_map,
         Functor.map_map, Prod.map_apply, id_eq]

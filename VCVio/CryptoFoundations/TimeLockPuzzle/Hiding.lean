@@ -329,14 +329,15 @@ namespace HidingAdversary
 requests as state. A pair with equal leakage, asked while fewer than `qEnc` pairs have been
 forwarded, is forwarded to the challenge oracle and advances the counter; every other challenge
 request is answered locally with `none`. Local coins and rounds are forwarded unchanged. -/
-@[expose]
+@[expose, simps -isSimp]
 def capChallengesImpl (leak : M → Λ) (qEnc : ℕ) :
     QueryImpl ((unifSpec + LeftOrRight.spec M C) + spec.batch)
-      (StateT ℕ (OracleComp ((unifSpec + LeftOrRight.spec M C) + spec.batch)))
+      (StateT ℕ (OracleComp ((unifSpec + LeftOrRight.spec M C) + spec.batch))) where
+  toFun
   | .inl (.inl n) =>
       monadLift (((unifSpec + LeftOrRight.spec M C) + spec.batch).query (.inl (.inl n)))
   | .inl (.inr mm) => LeftOrRight.cap leak qEnc
-      (fun mm => liftM (((unifSpec + LeftOrRight.spec M C) + spec.batch).query (.inl (.inr mm))))
+      ⟨fun mm => liftM (((unifSpec + LeftOrRight.spec M C) + spec.batch).query (.inl (.inr mm)))⟩
       mm
   | .inr ts => monadLift (((unifSpec + LeftOrRight.spec M C) + spec.batch).query (.inr ts))
 
@@ -375,12 +376,12 @@ theorem makesAtMostQueries_capChallenges (adv : HidingAdversary spec Puzzle M C)
   | query_bind t mx ih =>
     intro j
     rcases t with (n | ⟨m₀, m₁⟩) | ts
-    · simpa [capChallengesImpl] using fun u => ih u j
+    · simpa [capChallengesImpl_apply] using fun u => ih u j
     · by_cases h : leak m₀ = leak m₁ ∧ j < qEnc
-      · simpa [capChallengesImpl, LeftOrRight.run_cap_apply, h, Nat.sub_sub] using
+      · simpa [capChallengesImpl_apply, LeftOrRight.run_cap_apply, h, Nat.sub_sub] using
           fun u => ih u (j + 1)
-      · simpa [capChallengesImpl, LeftOrRight.run_cap_apply, h] using ih none j
-    · simpa [capChallengesImpl] using fun u => ih u j
+      · simpa [capChallengesImpl_apply, LeftOrRight.run_cap_apply, h] using ih none j
+    · simpa [capChallengesImpl_apply] using fun u => ih u j
 
 /-- The adapted adversary keeps the preprocessing budget and the online budget of `adv`:
 challenge requests, forwarded or answered locally, cost no round and no point, and rounds are
@@ -395,10 +396,10 @@ theorem isQueryBound_capChallenges {adv : HidingAdversary spec Puzzle M C} {Q : 
     (fun t b s _ => ?_) (fun t b ht => ?_) 0
   · simpa [capChallenges, StateT.run'_eq, IsOnlineQueryBound, isQueryBound_map_iff] using key
   · rcases t with (n | ⟨m₀, m₁⟩) | ts
-    · simp [capChallengesImpl, isQueryBound_map_iff]
+    · simp [capChallengesImpl_apply, isQueryBound_map_iff]
     · rw [capChallengesImpl, LeftOrRight.run_cap_apply]
       split_ifs <;> simp [isQueryBound_map_iff]
-    · simp [capChallengesImpl, isQueryBound_map_iff]
+    · simp [capChallengesImpl_apply, isQueryBound_map_iff]
   · rcases t with n | ts
     · simp
     · simp only [onlineCanQuery_inr] at ht
@@ -424,20 +425,19 @@ theorem hidingExperiment_capChallenges (tlp : TimeLockPuzzle spec Puzzle Key)
     StateT.run'_eq, StateT.run'_eq, simulateQ_map, simulateQ_StateT_compose _ _ _ ?_]
   intro q s
   rcases q with (n | ⟨m₀, m₁⟩) | ts
-  · simp only [add_apply_inl, QueryImpl.passthrough_add, QueryImpl.batch'_add, capChallengesImpl,
+  · simp only [add_apply_inl, QueryImpl.passthrough_add, QueryImpl.batch'_add,
+    capChallengesImpl_apply,
       StateT.run_monadLift, bind_pure_comp, simulateQ_map, simulateQ_query,
       OracleQuery.input_query, OracleQuery.cont_query, QueryImpl.add_apply_inl,
-      PFunctor.Handler.liftTarget_apply, ofPFunctor_toPFunctor, QueryImpl.id'_apply, id_map,
-      QueryImpl.batch'_apply_inl]
+      QueryImpl.liftTarget_apply, QueryImpl.id'_apply, id_map]
     rw [map_eq_bind_pure_comp]
     rfl
   · rw [capChallengesImpl, LeftOrRight.run_cap_apply]
     simp [LeftOrRight.cappedOracle, LeftOrRight.run_cap_apply]
-  · simp only [add_apply_inr, QueryImpl.passthrough_add, QueryImpl.batch'_add, capChallengesImpl,
+  · simp only [add_apply_inr, QueryImpl.passthrough_add, QueryImpl.batch'_add,
+    capChallengesImpl_apply,
       StateT.run_monadLift, bind_pure_comp, simulateQ_map, simulateQ_query,
-      OracleQuery.input_query, OracleQuery.cont_query, QueryImpl.add_apply_inr, id_map,
-      QueryImpl.batch'_apply_inr, PFunctor.Handler.liftTarget_apply, ofPFunctor_toPFunctor,
-      QueryImpl.id'_apply]
+      OracleQuery.input_query, OracleQuery.cont_query, QueryImpl.add_apply_inr, id_map]
     exact (QueryImpl.run_batch_liftTarget _ ts s).symm
 
 /-- **Branchwise bridge in the random oracle model.** At each hidden bit, the hiding experiment of

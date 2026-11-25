@@ -251,8 +251,9 @@ section Simulation
 open OracleSpec OracleComp
 
 /-- A coin sampler that also counts its calls; the counter needs no measurable structure. -/
-def countingCoin : QueryImpl coinSpec (StateT ℕ ProbComp) := fun _ ↦
-  StateT.mk fun calls ↦ (fun b ↦ (b, calls + 1)) <$> ($ᵗ Bool)
+def countingCoin : QueryImpl coinSpec (StateT ℕ ProbComp) where
+  toFun _ :=
+    StateT.mk fun calls ↦ (fun b ↦ (b, calls + 1)) <$> ($ᵗ Bool)
 
 -- Answer-preserving stateful implementations preserve every output law once state is discarded.
 example {α : Type} [MeasurableSpace α] (oa : OracleComp coinSpec α) (calls : ℕ) :

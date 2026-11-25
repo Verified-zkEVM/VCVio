@@ -180,7 +180,8 @@ theorem run_simulateQ_withLogging_mapLens_translateLens
   rw [OracleComp.simulateQ_mapLens]
   refine run_simulateQ_map_log _ _ _ (fun t => ?_) oa
   rcases t with n | msg
-  · simp [QueryImpl.comapLens, translateLens, PFunctor.Lens.sumMap]
-  · simp [QueryImpl.comapLens, translateLens, PFunctor.Lens.sumMap, RandomOracleRouting.lens, htag]
+  · simp [QueryImpl.comapLens_apply, translateLens, PFunctor.Lens.sumMap]
+  · simp [QueryImpl.comapLens_apply, translateLens, PFunctor.Lens.sumMap, RandomOracleRouting.lens,
+    htag]
 
 end QueryImpl

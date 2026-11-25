@@ -31,9 +31,9 @@ variable {F G₁ G₂ Gₜ M : Type}
     OracleComp ((unifSpec + (M →ₒ G₁)) + (M →ₒ G₁)) ((List (G₂ × M) × G₁) × Gₜ) := do
   let out ← oa
   let rhs ← simulateQ
-    (fun msg => (liftM
+    ⟨fun msg => (liftM
       (((unifSpec + (M →ₒ G₁)) + (M →ₒ G₁)).query (.inl (.inr msg))) :
-        OracleComp ((unifSpec + (M →ₒ G₁)) + (M →ₒ G₁)) G₁))
+        OracleComp ((unifSpec + (M →ₒ G₁)) + (M →ₒ G₁)) G₁)⟩
     (pairingSum e out.1)
   return (out, rhs)
 
@@ -42,9 +42,9 @@ private theorem pairingSum_discard [Field F]
     [AddCommGroup Gₜ] [Module F Gₜ]
     (e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ) (ps : List (G₂ × M)) :
     (do let _ ← simulateQ
-          (fun msg => (liftM
+          ⟨fun msg => (liftM
       (((unifSpec + (M →ₒ G₁)) + (M →ₒ G₁)).query (.inl (.inr msg))) :
-        OracleComp ((unifSpec + (M →ₒ G₁)) + (M →ₒ G₁)) G₁))
+        OracleComp ((unifSpec + (M →ₒ G₁)) + (M →ₒ G₁)) G₁)⟩
           (pairingSum e ps)
         pure ()) =
     (do let _ ← ps.mapM fun p =>
@@ -78,9 +78,9 @@ private theorem pairingSum_hash_bound [Field F]
     [AddCommGroup Gₜ] [Module F Gₜ]
     (e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ) (ps : List (G₂ × M)) :
     (simulateQ
-      (fun msg => (liftM
+      ⟨fun msg => (liftM
       (((unifSpec + (M →ₒ G₁)) + (M →ₒ G₁)).query (.inl (.inr msg))) :
-        OracleComp ((unifSpec + (M →ₒ G₁)) + (M →ₒ G₁)) G₁))
+        OracleComp ((unifSpec + (M →ₒ G₁)) + (M →ₒ G₁)) G₁)⟩
       (pairingSum e ps)).IsQueryBoundP (· matches .inl (.inr _)) ps.length := by
   induction ps with
   | nil => simp [pairingSum]
@@ -97,9 +97,9 @@ private theorem pairingSum_sign_bound [Field F]
     [AddCommGroup Gₜ] [Module F Gₜ]
     (e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ) (ps : List (G₂ × M)) :
     (simulateQ
-      (fun msg => (liftM
+      ⟨fun msg => (liftM
       (((unifSpec + (M →ₒ G₁)) + (M →ₒ G₁)).query (.inl (.inr msg))) :
-        OracleComp ((unifSpec + (M →ₒ G₁)) + (M →ₒ G₁)) G₁))
+        OracleComp ((unifSpec + (M →ₒ G₁)) + (M →ₒ G₁)) G₁)⟩
       (pairingSum e ps)).IsQueryBoundP (· matches .inr _) 0 := by
   induction ps with
   | nil => simp [pairingSum]
@@ -170,7 +170,7 @@ private theorem pairingSum_support {V : Type} [Field F]
     (ps : List (G₂ × M)) (s : OracleState V M) (hs : IndexInv j s)
     (z : Gₜ × OracleState V M)
     (hz : z ∈ support ((simulateQ
-      (fun msg => indexedOracle draw hash sign j (.inl (.inr msg)))
+      ⟨fun msg => indexedOracle draw hash sign j (.inl (.inr msg))⟩
       (pairingSum e ps)).run s)) :
     IndexInv j z.2 ∧
       (∀ n v i, s.cache n = some (v, i) → z.2.cache n = some (v, i)) ∧
@@ -225,10 +225,10 @@ theorem withFinalPairings_support {V : Type} [Field F]
   obtain ⟨w, hw, he⟩ := mem_support_map_peel _ _ hz
   subst z
   have heq : simulateQ (indexedOracle draw hash sign j)
-      (simulateQ (fun msg => (liftM
+      (simulateQ ⟨fun msg => (liftM
         (((unifSpec + (M →ₒ G₁)) + (M →ₒ G₁)).query (.inl (.inr msg))) :
-          OracleComp ((unifSpec + (M →ₒ G₁)) + (M →ₒ G₁)) G₁)) (pairingSum e out.1)) =
-      simulateQ (fun msg => indexedOracle draw hash sign j (.inl (.inr msg)))
+          OracleComp ((unifSpec + (M →ₒ G₁)) + (M →ₒ G₁)) G₁)⟩ (pairingSum e out.1)) =
+      simulateQ ⟨fun msg => indexedOracle draw hash sign j (.inl (.inr msg))⟩
         (pairingSum e out.1) := by
     apply QueryImpl.simulateQ_simulateQ_eq_of_apply
     intro msg

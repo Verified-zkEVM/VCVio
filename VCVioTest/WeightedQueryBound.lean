@@ -44,13 +44,13 @@ theorem two_kind_cost_bound (c : Bool → ℕ) :
 /-- A stateful handler spends three queries on the left kind and zero on the right kind. -/
 theorem three_zero_handler_bound :
     let h : QueryImpl (unifSpec + unifSpec) (StateT ℕ (OracleComp unifSpec)) :=
-      fun t s => match t with
+      ⟨fun t s => match t with
       | .inl n => do
         let a ← unifSpec.query n
         let _ ← unifSpec.query 0
         let _ ← unifSpec.query 0
         pure (a, s + 1)
-      | .inr n => pure ((0 : Fin (n + 1)), s)
+      | .inr n => pure ((0 : Fin (n + 1)), s)⟩
     let A : OracleComp (unifSpec + unifSpec) Unit := do
       let _ ← (unifSpec + unifSpec).query (.inl 1)
       let _ ← (unifSpec + unifSpec).query (.inr 2)

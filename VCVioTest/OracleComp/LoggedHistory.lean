@@ -34,14 +34,16 @@ private abbrev runLogged {ι κ τ : Type} {spec : OracleSpec.{0, 0} ι}
     service.withLogging) client).run).run initial
 
 private noncomputable def ambient :
-    QueryImpl rawSpec (StateT Nat (OracleComp rawSpec)) := fun request =>
-  StateT.mk fun n => do
+    QueryImpl rawSpec (StateT Nat (OracleComp rawSpec)) where
+  toFun request :=
+    StateT.mk fun n => do
     let word ← rawSpec.query request
     pure (word, n + 10)
 
 private noncomputable def service :
-    QueryImpl serviceSpec (StateT Nat (OracleComp rawSpec)) := fun request =>
-  StateT.mk fun n => do
+    QueryImpl serviceSpec (StateT Nat (OracleComp rawSpec)) where
+  toFun request :=
+    StateT.mk fun n => do
     let word ← rawSpec.query request.1
     pure (some (word.extractLsb' 0 128), n + 1)
 
@@ -117,8 +119,8 @@ private theorem retains_full_high_trace :
   exact traceSaved
 
 private noncomputable def zeroService :
-    QueryImpl (Nat →ₒ Option Nat) (StateT Nat (OracleComp rawSpec)) :=
-  fun request => StateT.mk fun n => pure (if n % 2 = 0 then none else some n, n + request)
+    QueryImpl (Nat →ₒ Option Nat) (StateT Nat (OracleComp rawSpec)) where
+  toFun request := StateT.mk fun n => pure (if n % 2 = 0 then none else some n, n + request)
 
 /-- A zero-query stateful service changes state and still completes one logged request. -/
 private theorem zero_query_completion (initial : Nat) :
@@ -186,8 +188,9 @@ theorem adaptive_dependent_history {ι τ σ : Type} {spec : OracleSpec.{0, 0} �
 private abbrev ErrorReply := Except Nat (Except Bool Unit)
 private abbrev ErrorSpec := Nat →ₒ ErrorReply
 private noncomputable def errorService :
-    QueryImpl ErrorSpec (StateT Nat (OracleComp rawSpec)) := fun request =>
-  pure (if request = 0 then .ok (.error false) else .error 7)
+    QueryImpl ErrorSpec (StateT Nat (OracleComp rawSpec)) where
+  toFun request :=
+    pure (if request = 0 then .ok (.error false) else .error 7)
 private noncomputable def errorClient (first : Nat) :
     OracleComp (rawSpec + ErrorSpec) ErrorReply := do
   let a ← (rawSpec + ErrorSpec).query (.inr first)

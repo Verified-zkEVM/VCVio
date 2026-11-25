@@ -75,7 +75,7 @@ example : IsQueryBoundP (liftM (flagSpec.query true) : OracleComp flagSpec Bool)
 /-- This deterministic run avoids the forbidden branch and records the answer it received. -/
 example :
     (simulateQ (QueryImpl.withLogging (m := Id)
-      ((fun _ => false) : QueryImpl flagSpec Id)) adaptive).run.run =
+      (⟨fun _ => false⟩ : QueryImpl flagSpec Id)) adaptive).run.run =
     (false, ([⟨true, false⟩] : QueryLog flagSpec)) := by
   simp [adaptive, show Id.run false = false from rfl]
 

@@ -64,7 +64,7 @@ theorem simulateQ_pairingSum [Field F]
     [AddCommGroup G₁] [Module F G₁] [AddCommGroup G₂] [Module F G₂]
     [AddCommGroup Gₜ] [Module F Gₜ]
     (e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ) (H : M → G₁) (pairs : List (G₂ × M)) :
-    simulateQ (r := Id) (fun msg => H msg : QueryImpl (M →ₒ G₁) Id)
+    simulateQ (r := Id) (⟨fun msg => H msg⟩ : QueryImpl (M →ₒ G₁) Id)
         (pairingSum e pairs) = (pairs.map (fun p => e (H p.2) p.1)).sum := by
   induction pairs with
   | nil => rfl
@@ -93,7 +93,7 @@ theorem aggregateVerify_honest [Field F] [SampleableType F]
     [AddCommGroup Gₜ] [Module F Gₜ] [DecidableEq Gₜ] [DecidableEq M]
     (e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ) (g₂ : G₂) (H : M → G₁)
     (signers : List (F × M)) (hd : (signers.map Prod.snd).Nodup) :
-    simulateQ (unifFwdAnswerImpl (fun msg => H msg : QueryImpl (M →ₒ G₁) Id))
+    simulateQ (unifFwdAnswerImpl (⟨fun msg => H msg⟩ : QueryImpl (M →ₒ G₁) Id))
       ((scheme e g₂).aggregateVerify (signers.map (fun p => (p.1 • g₂, p.2)))
         (signers.map (fun p => p.1 • H p.2)).sum) = (pure true : ProbComp Bool) := by
   have hId (a : Gₜ) : (liftM (m := Id) (a : Id Gₜ) : ProbComp Gₜ) = pure a := rfl

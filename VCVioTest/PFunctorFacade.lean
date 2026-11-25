@@ -47,8 +47,8 @@ noncomputable example : EvalDistSemantics (PFunctor.FreeM triPFunctor) := inferI
 
 /-- A deterministic handler used to exercise generic instrumentation. -/
 @[expose]
-def zeroHandler : PFunctor.Handler Option triPFunctor :=
-  fun _ => some 0
+def zeroHandler : PFunctor.Handler Option triPFunctor where
+  toFun _ := some 0
 
 example : zeroHandler.preInsert (fun _ => some ()) () = some 0 := by
   simp [zeroHandler, seqRight_eq]
@@ -98,7 +98,7 @@ example (impl : QueryImpl ((spec₁ + spec₂) + spec₃) Id) (t : spec₃.Domai
 
 example (impl : QueryImpl ((spec₁ + spec₂) + spec₃) Id) :
     QueryImpl spec₃ (StateT (List spec₃.Domain) Id) :=
-  QueryImpl.appendInputLog (fun t => impl (.inr t))
+  QueryImpl.appendInputLog ⟨fun t => impl (.inr t)⟩
 
 example [OracleSpec.AnswerMeasure ((spec₁ + spec₂) + spec₃)] (t : spec₂.Domain)
     (program : OracleComp ((spec₁ + spec₂) + spec₃)

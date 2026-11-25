@@ -96,7 +96,7 @@ example {K ι : Type} [CommSemiring K] (e : K →ₗ[K] K →ₗ[K] K) (g₁ g�
 
 /-- Execute a probability computation with the first answer at every sampling query. -/
 private def firstAnswers {α : Type} (oa : ProbComp α) : α :=
-  simulateQ (fun _ => (pure 0 : Id _)) oa
+  simulateQ ⟨fun _ => (pure 0 : Id _)⟩ oa
 
 private def tracked := firstAnswers
   (runGen (tracking (Model.discrete (fun _ : Unit => F))) (fun _ => Prod.snd)

@@ -54,9 +54,14 @@ variable {m : Type u → Type v}
     {ι : Type*} {spec : OracleSpec ι} {α β γ : Type u}
 
 /-- Oracle-facing compatibility alias for `PFunctor.Handler.preInsert`. -/
-abbrev preInsert (so : QueryImpl spec m) (nx : spec.Domain → n α) :
+@[expose] def preInsert (so : QueryImpl spec m) (nx : spec.Domain → n α) :
     QueryImpl spec n :=
-  PFunctor.Handler.preInsert (P := spec.toPFunctor) so nx
+  ofHandler (so.toHandler.preInsert nx)
+
+@[simp]
+lemma preInsert_apply_seqRight (so : QueryImpl spec m) (nx : spec.Domain → n α)
+    (t : spec.Domain) : so.preInsert nx t = nx t *> liftM (so t) :=
+  PFunctor.Handler.preInsert_apply so.toHandler nx t
 
 @[grind =]
 lemma preInsert_apply [LawfulMonad n] (so : QueryImpl spec m) (nx : spec.Domain → n α)
@@ -130,7 +135,7 @@ lemma simulateQ_preInsert_const_pure [Monad m]
     (so : QueryImpl spec m) (x : α) (oa : OracleComp spec β) :
     simulateQ (so.preInsert (fun _ => (pure x : n α))) oa = liftM (simulateQ so oa) := by
   have h : so.preInsert (fun _ => (pure x : n α)) = so.liftTarget n := by
-    funext t; simp
+    ext t : 1; simp
   rw [h, simulateQ_liftTarget]
 
 lemma support_proj_simulateQ_preInsert [Monad m]
@@ -165,18 +170,18 @@ variable {m : Type u → Type v} {n : Type u → Type w} [Monad n] [MonadLiftT m
     {ι : Type*} {spec : OracleSpec ι}
 
 /-- Oracle-facing compatibility alias for `PFunctor.Handler.postInsert`. -/
-abbrev postInsert (so : QueryImpl spec m) {α}
+@[expose] def postInsert (so : QueryImpl spec m) {α}
     (nx : (t : spec.Domain) → spec.Range t → n α) :
     QueryImpl spec n :=
-  PFunctor.Handler.postInsert (P := spec.toPFunctor) so nx
+  ofHandler (so.toHandler.postInsert nx)
 
 variable {α β : Type u}
 
-@[grind =]
+@[simp, grind =]
 lemma postInsert_apply (so : QueryImpl spec m)
     (nx : (t : spec.Domain) → spec.Range t → n α) (t : spec.Domain) :
     so.postInsert nx t = (do let u ← liftM (so t); let _ ← nx t u; return u) := by
-  exact PFunctor.Handler.postInsert_apply (P := spec.toPFunctor) so nx t
+  exact PFunctor.Handler.postInsert_apply so.toHandler nx t
 
 /-- One-step characterisation of `simulateQ (postInsert so nx)` on a single query. -/
 lemma simulateQ_postInsert_query [LawfulMonad n]
@@ -244,7 +249,7 @@ lemma simulateQ_postInsert_const_pure
     [LawfulMonad m] [LawfulMonad n] [LawfulMonadLiftT m n]
     (so : QueryImpl spec m) (x : α) (oa : OracleComp spec β) :
     simulateQ (so.postInsert (fun _ _ => (pure x : n α))) oa = liftM (simulateQ so oa) := by
-  have h : so.postInsert (fun _ _ => (pure x : n α)) = so.liftTarget n := by funext t; simp
+  have h : so.postInsert (fun _ _ => (pure x : n α)) = so.liftTarget n := by ext t : 1; simp
   rw [h, simulateQ_liftTarget]
 
 lemma support_proj_simulateQ_postInsert

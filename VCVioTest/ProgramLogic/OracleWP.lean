@@ -62,8 +62,8 @@ example (mx : OracleComp fixedSpec (ℕ → ℕ)) (post : (ℕ → ℕ) → ENNR
 
 /-- A handler that increments an unobserved function state at each query. -/
 @[expose]
-def countingImpl : QueryImpl fixedSpec (StateT (ℕ → ℕ) (OracleComp fixedSpec)) :=
-  fun t ↦ do
+def countingImpl : QueryImpl fixedSpec (StateT (ℕ → ℕ) (OracleComp fixedSpec)) where
+  toFun t := do
     modify (fun counts n ↦ counts n + 1)
     query t
 

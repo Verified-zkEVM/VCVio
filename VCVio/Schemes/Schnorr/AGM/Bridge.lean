@@ -59,7 +59,7 @@ private theorem erased_handler_step [Field F] [SampleableType F]
   | random n =>
       conv_lhs => dsimp only [Reduction.handler, StateT.run]
       simp [oracle, simulatedNmaLoggedProbImpl,
-        QueryImpl.mapStateTBase, simulatedNmaImpl, simulatedNmaBaseSim,
+        QueryImpl.mapStateTBase_apply, simulatedNmaImpl, simulatedNmaBaseSim,
         simulatedNmaUnifSim, simulatedNmaFwd, fsUniformImpl,
         cmaOracleSignLogAux, stateProjection]
   | hash m =>
@@ -69,9 +69,9 @@ private theorem erased_handler_step [Field F] [SampleableType F]
         QueryImpl.ofLift_eq_id', simulatedNmaImpl, simulatedNmaBaseSim, oracle, add_apply_inl,
         add_apply_inr, simulateQ_bind, simulateQ_query, OracleQuery.input_query,
         OracleQuery.cont_query, id_map, simulateQ_pure, StateT.run_bind,
-        QueryImpl.extendState_apply, QueryImpl.mapStateTBase, QueryImpl.add_apply_inl,
+        QueryImpl.extendState_apply, QueryImpl.mapStateTBase_apply, QueryImpl.add_apply_inl,
         QueryImpl.add_apply_inr, simulatedNmaRoSim, simulatedNmaFwd,
-        PFunctor.Handler.liftTarget_apply, ofPFunctor_toPFunctor, QueryImpl.id'_apply,
+        QueryImpl.liftTarget_apply, QueryImpl.id'_apply,
         StateT.run_get, pure_bind, StateT.run_mk, cmaOracleSignLogAux, StateT.run_pure]
       dsimp only [explainedSpec, plainSpec, Reply]
       cases hc : s.cache (m, (groups ()).headD 0) with
@@ -92,7 +92,7 @@ private theorem erased_handler_step [Field F] [SampleableType F]
         Functor.map_map, Prod.map_apply, id_eq, stateProjection, simulatedNmaLoggedProbImpl,
         simulatedNmaImpl, oracle, add_apply_inr, simulateQ_map, simulateQ_query,
         OracleQuery.input_query, OracleQuery.cont_query, id_map, StateT.run_map,
-        QueryImpl.extendState_apply, QueryImpl.mapStateTBase, QueryImpl.add_apply_inr,
+        QueryImpl.extendState_apply, QueryImpl.mapStateTBase_apply, QueryImpl.add_apply_inr,
         simulatedNmaSigSim, Schnorr.simTranscript, simulateQ_bind, bind_assoc, bind_map_left,
         StateT.run_bind, StateT.run_modifyGet, Prod.mk.eta, simulatedNmaUnifSim_fsUniform_run,
         StateT.run_mk, cmaOracleSignLogAux]
@@ -140,7 +140,7 @@ private theorem erased_program [Field F] [SampleableType F] [SampleableType G]
       let p ← (simulateQ
         (simulatedNmaLoggedProbImpl (M := M) (Commit := G) (Chal := F)
           (Resp := F) (Schnorr.simTranscript F G g) pk)
-        (simulateQ (fun q => oracle q.value) program)).run (stateProjection s)
+        (simulateQ ⟨fun q => oracle q.value⟩ program)).run (stateProjection s)
       simLoggedVerifyFreshComp (M := M) (Schnorr.sigma F G g) pk (forgery p.1) p.2) := by
   induction program using OracleComp.inductionOn generalizing s with
   | pure out =>

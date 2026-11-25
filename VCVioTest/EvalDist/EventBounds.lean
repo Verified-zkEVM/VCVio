@@ -89,8 +89,9 @@ section game
 @[expose, reducible] def counterSpec : OracleSpec Unit := fun _ ↦ Nat
 
 /-- A stateful implementation answering with the current counter and incrementing it. -/
-@[expose] def counterImpl : QueryImpl counterSpec (StateT Nat ProbComp) := fun _ ↦
-  StateT.mk fun n ↦ pure (n, n + 1)
+@[expose] def counterImpl : QueryImpl counterSpec (StateT Nat ProbComp) where
+  toFun _ :=
+    StateT.mk fun n ↦ pure (n, n + 1)
 
 /-- A program that queries twice and returns the first answer with the sum of both after a
 check that every answer passes. -/

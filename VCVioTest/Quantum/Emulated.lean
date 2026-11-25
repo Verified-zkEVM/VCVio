@@ -216,8 +216,8 @@ example : allZero.Lossless .instruments :=
 
 /-- Answer the classical queries `t : Fin 2` by basis calls of port `t` on the input `|t⟩`. -/
 noncomputable def basisImpl :
-    QueryImpl (Fin 2 →ₒ Fin 2) (QComp spec2 (QReg.of Unit) (QReg.of Unit)) :=
-  fun t ↦ QComp.callBasis (spec := spec2) t (QReg.of Unit) t fun o _ ↦ o
+    QueryImpl (Fin 2 →ₒ Fin 2) (QComp spec2 (QReg.of Unit) (QReg.of Unit)) where
+  toFun t := QComp.callBasis (spec := spec2) t (QReg.of Unit) t fun o _ ↦ o
 
 /-- A classical algorithm making `n` queries runs within `n` basis calls of every port. -/
 example {oa : OracleComp (Fin 2 →ₒ Fin 2) Bool} {n : ℕ}

@@ -181,10 +181,10 @@ operational property: discarding a total sample can leave the advantage unchange
 
 Accepted queries are appended, so the history is in issue order and its `j`-th entry is the `j`-th
 target. -/
-@[expose] def SM_DT_UD_challengeOracle [DecidableEq Tweak] (world : SM_DT_UD_World)
+@[expose, simps] def SM_DT_UD_challengeOracle [DecidableEq Tweak] (world : SM_DT_UD_World)
     (prob : SM_DT_UD_Problem ι PkSeed Tweak M M' Y) (pk : PkSeed) :
-    QueryImpl (SM_DT_UD_challengeSpec Tweak Y) (StateT (SM_DT_UD_State Tweak) ProbComp) :=
-  fun t => do
+    QueryImpl (SM_DT_UD_challengeSpec Tweak Y) (StateT (SM_DT_UD_State Tweak) ProbComp) where
+  toFun t := do
     let s ← get
     if prob.numTargets ≤ s.1.length ∨ ¬ TweakFresh id s.1 s.2 t then
       return none
@@ -249,7 +249,7 @@ theorem SM_DT_UD_challengeOracle_run_of_fresh_real (hlen : qsChal.length < prob.
     (SM_DT_UD_challengeOracle .real prob pk t).run (qsChal, twsColl) =
       (fun x => (some (prob.th.eval pk t (prob.emb x)), (qsChal ++ [t], twsColl))) <$>
         prob.inputGen := by
-  simp [SM_DT_UD_challengeOracle, SM_DT_UD_response, Nat.not_le.mpr hlen, hfresh,
+  simp [SM_DT_UD_challengeOracle_apply, SM_DT_UD_response, Nat.not_le.mpr hlen, hfresh,
     Functor.map_map]
 
 /-- In the ideal world, the same query answers with a sample of `outputGen`, independently of the
@@ -258,7 +258,7 @@ theorem SM_DT_UD_challengeOracle_run_of_fresh_ideal (hlen : qsChal.length < prob
     (hfresh : TweakFresh id qsChal twsColl t) :
     (SM_DT_UD_challengeOracle .ideal prob pk t).run (qsChal, twsColl) =
       (fun y => (some y, (qsChal ++ [t], twsColl))) <$> prob.outputGen := by
-  simp [SM_DT_UD_challengeOracle, SM_DT_UD_response, Nat.not_le.mpr hlen, hfresh,
+  simp [SM_DT_UD_challengeOracle_apply, SM_DT_UD_response, Nat.not_le.mpr hlen, hfresh,
     Functor.map_map]
 
 end AcceptedBranches
@@ -286,7 +286,7 @@ theorem SM_DT_UD_challengeOracle_run_of_refused
     (hrefused : prob.numTargets ≤ qsChal.length ∨ ¬ TweakFresh id qsChal twsColl t) :
     (SM_DT_UD_challengeOracle world prob pk t).run (qsChal, twsColl) =
       pure (none, (qsChal, twsColl)) := by
-  simp [SM_DT_UD_challengeOracle, hrefused]
+  simp [SM_DT_UD_challengeOracle_apply, hrefused]
 
 /-- A query reusing a tweak already in the challenge history is refused, and the state is
 unchanged. -/
@@ -337,7 +337,7 @@ theorem SM_DT_UD_challengeOracle_run_two_queries (hne : t₁ ≠ t₂) (hcap : 2
           SM_DT_UD_response world prob pk t₂) := by
   have h₁ : ¬ prob.numTargets ≤ 0 := by omega
   have h₂ : ¬ prob.numTargets ≤ 1 := by omega
-  simp [SM_DT_UD_challengeOracle, TweakFresh, TweakReserved, h₁, h₂, hne.symm,
+  simp [SM_DT_UD_challengeOracle_apply, TweakFresh, TweakReserved, h₁, h₂, hne.symm,
     StateT.run_bind, Functor.map_map]
 
 end IssueOrder
@@ -361,7 +361,7 @@ theorem SM_DT_UD_oracles_run_collection_repeated (q : (i : ι) × Tweak × prob.
         (SM_DT_UD_oracles world prob pk (.inr (.inr q))).run r.2) =
       pure (some (prob.thColl.eval q.1 pk q.2.1 q.2.2),
         (qsChal, twsColl ++ [q.2.1, q.2.1])) := by
-  simp [SM_DT_UD_oracles, collectionOracle, hnew]
+  simp [SM_DT_UD_oracles, collectionOracle_apply, hnew]
 
 end CollectionHalf
 

@@ -116,7 +116,8 @@ def instKey (i : ℕ) : K := ⟨(i + 2) % 7, Nat.mod_lt _ (by decide)⟩
 @[expose]
 def traceImpl (qEnc : ℕ) (g : QueryImpl spec Id) :
     QueryImpl (indexedSpec 2 S L Salt Salt N K qEnc)
-      (StateM (List (Fin (2 * qEnc) × ByteArray)))
+      (StateM (List (Fin (2 * qEnc) × ByteArray))) where
+  toFun
   | .inl n => pure (0 : Fin (n + 1))
   | .inr (.inl t) => pure (g t)
   | .inr (.inr (i, x)) => do

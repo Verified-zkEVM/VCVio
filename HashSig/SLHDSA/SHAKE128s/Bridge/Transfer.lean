@@ -42,13 +42,15 @@ variable {A B : Type}
 
 /-- Run a query of the `A` world in the `B` world: a uniform query is asked unchanged, and a
 hash query is asked of `B`'s oracle with its answer read back through `e.symm`. -/
-@[expose] def relabel (e : A ≃ B) : QueryImpl (Game.World A) (OracleComp (Game.World B))
+@[expose] def relabel (e : A ≃ B) : QueryImpl (Game.World A) (OracleComp (Game.World B)) where
+  toFun
   | .inl n => liftM ((Game.World B).query (.inl n))
   | .inr x => e.symm <$> liftM ((Game.World B).query (.inr x))
 
 /-- Run a query of the `B` world in the `A` world: a uniform query is asked unchanged, and a
 hash query is asked of `A`'s oracle with its answer read back through `e`. -/
-@[expose] def unlabel (e : A ≃ B) : QueryImpl (Game.World B) (OracleComp (Game.World A))
+@[expose] def unlabel (e : A ≃ B) : QueryImpl (Game.World B) (OracleComp (Game.World A)) where
+  toFun
   | .inl n => liftM ((Game.World A).query (.inl n))
   | .inr x => e <$> liftM ((Game.World A).query (.inr x))
 
@@ -363,8 +365,9 @@ theorem keygen_of_seeds [SampleableType B] {e : A ≃ B} {PKA SKA PKB SKB : Type
 
 /-- Answer a query of the `B` world and signing oracle in the `A` world and signing oracle:
 world queries are unlabelled, signing requests pass through. -/
-@[expose] def unlabelAdversary (e : A ≃ B) :
-    QueryImpl (Game.World B + Game.SigningSpec) (OracleComp (Game.World A + Game.SigningSpec))
+@[expose, simps -isSimp] def unlabelAdversary (e : A ≃ B) :
+    QueryImpl (Game.World B + Game.SigningSpec) (OracleComp (Game.World A + Game.SigningSpec)) where
+  toFun
   | .inl (.inl n) => liftM ((Game.World A + Game.SigningSpec).query (.inl (.inl n)))
   | .inl (.inr x) => e <$> liftM ((Game.World A + Game.SigningSpec).query (.inl (.inr x)))
   | .inr req => liftM ((Game.World A + Game.SigningSpec).query (.inr req))

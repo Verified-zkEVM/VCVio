@@ -528,7 +528,7 @@ lemma idealImpl_inr_run_congr {s : IdealState n m S L Salt Ctx} {ts : List (Poin
         legitLabel m mkCtx initAcc P ℓ₂ s.reached t :=
       legitLabelFrom_congr hR (fun v hv => h v (Finset.mem_union_right _
         (mem_newlyReached_iff_exists.mpr ⟨t, ht, hv⟩))) _
-    simp only [idealPoint, hl]
+    simp only [idealPoint_apply, hl]
   have hafter : ∀ c, s.afterRound m mkCtx initAcc P ℓ₁ ts c =
       s.afterRound m mkCtx initAcc P ℓ₂ ts c := fun c => by
     simp only [IdealState.afterRound, newlyReached_congr hR ts]

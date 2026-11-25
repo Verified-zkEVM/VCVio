@@ -92,8 +92,8 @@ smaller-state monad into the larger-state monad directly. The right fix is a gen
 template for future bad-flag-style instrumentation. -/
 noncomputable def multipleIdealLiftedQueryImpl :
     QueryImpl (UnlinkOracleSpec TagId Nonce Digest)
-      (StateT (MultipleBadState TagId Nonce Digest sessionsPerTag) ProbComp) :=
-  fun q => fun p =>
+      (StateT (MultipleBadState TagId Nonce Digest sessionsPerTag) ProbComp) where
+  toFun q := fun p =>
     (multipleIdealQueryImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
         (sessionsPerTag := sessionsPerTag) q) p.1 >>= fun r =>
       pure (r.1, (r.2, p.2))

@@ -63,9 +63,9 @@ structure State (D R : Type) (q : ℕ) where
     log := s.log ++ [(l, r)] }
 
 /-- Route labels to finite slots, using independent private sampling only on overflow. -/
-@[expose] def routeHash [DecidableEq D] [SampleableType R] :
-    QueryImpl (D →ₒ R) (StateT (State D R q) (OracleComp (unifSpec + (Fin q →ₒ R)))) :=
-  fun l s => match s.slotOf l with
+@[expose, simps -isSimp] def routeHash [DecidableEq D] [SampleableType R] :
+    QueryImpl (D →ₒ R) (StateT (State D R q) (OracleComp (unifSpec + (Fin q →ₒ R)))) where
+  toFun l s := match s.slotOf l with
   | some i => (fun r => (r, record s l r)) <$> (unifSpec + (Fin q →ₒ R)).query (.inr i)
   | none => match s.overflow l with
     | some r => pure (r, record s l r)
@@ -77,8 +77,8 @@ structure State (D R : Type) (q : ℕ) where
 @[expose] def route [DecidableEq D] [SampleableType R] :
     QueryImpl (unifSpec + (D →ₒ R))
       (StateT (State D R q) (OracleComp (unifSpec + (Fin q →ₒ R)))) :=
-  QueryImpl.add (fun n s => (fun x => (x, s)) <$>
-    (liftM ((unifSpec + (Fin q →ₒ R)).query (.inl n)) : OracleComp _ _)) routeHash
+  QueryImpl.add ⟨fun n s => (fun x => (x, s)) <$>
+    (liftM ((unifSpec + (Fin q →ₒ R)).query (.inl n)) : OracleComp _ _)⟩ routeHash
 
 /-- The actual slot oracle runs routing above a lazy random oracle on the finite slot domain. -/
 @[expose] def lazy [DecidableEq D] [SampleableType R] :
@@ -101,8 +101,8 @@ structure State (D R : Type) (q : ℕ) where
     QueryImpl (unifSpec + (D →ₒ R))
       (StateT ((D →ₒ R).QueryCache × List (D × R)) ProbComp) :=
   QueryImpl.add
-    (fun n s => (fun x => (x, s)) <$> (liftM (unifSpec.query n) : ProbComp _))
-    (fun l s => (fun z => (z.1, z.2, s.2 ++ [(l, z.1)])) <$> ((D →ₒ R).randomOracle l).run s.1)
+    ⟨fun n s => (fun x => (x, s)) <$> (liftM (unifSpec.query n) : ProbComp _)⟩
+    ⟨fun l s => (fun z => (z.1, z.2, s.2 ++ [(l, z.1)])) <$> ((D →ₒ R).randomOracle l).run s.1⟩
 
 /-- Slot-cache invariant: assigned slots are occupied, and all slots at or beyond `next`
 are unused. These are the facts needed for exact lazy-oracle simulation. -/
@@ -345,7 +345,7 @@ private theorem lift_id (r : R) : (liftM (m := Id) r : ProbComp R) = pure r := b
 responses. The uniform overflow fallback is unreachable under a sufficient hash-query budget. -/
 @[expose] def tableRun [DecidableEq D] [SampleableType R]
     (oa : OracleComp (unifSpec + (D →ₒ R)) α) (g : Fin q → R) : ProbComp (α × State D R q) :=
-  simulateQ (unifFwdAnswerImpl g) ((simulateQ route oa).run initial)
+  simulateQ (unifFwdAnswerImpl ⟨g⟩) ((simulateQ route oa).run initial)
 
 /-- Forgetting the slot cache, lazy slot execution equals uniform presampling of the finite
 slot table. The remaining state retains the slot assignment and all receipt labels. -/
@@ -568,7 +568,7 @@ private theorem tableCache_spill [DecidableEq D] (g : Fin q → R) (s : State D 
 fresh slot before using the overflow sampler. -/
 theorem tableHandler_apply [DecidableEq D] [SampleableType R]
     (g : Fin q → R) (t : (unifSpec + (D →ₒ R)).Domain) (s : State D R q) :
-    (((unifFwdAnswerImpl g).mapStateTBase route) t).run s =
+    (((unifFwdAnswerImpl ⟨g⟩).mapStateTBase route) t).run s =
       match t with
       | .inl n => (fun r => (r, s)) <$> (liftM (unifSpec.query n) : ProbComp _)
       | .inr l => match s.slotOf l with
@@ -580,12 +580,12 @@ theorem tableHandler_apply [DecidableEq D] [SampleableType R]
             else (fun r => (r, spill s l r)) <$> ($ᵗ R : ProbComp R) := by
   cases t with
   | inl n =>
-    change simulateQ (unifFwdAnswerImpl g)
+    change simulateQ (unifFwdAnswerImpl ⟨g⟩)
       ((fun r => (r, s)) <$> (liftM ((unifSpec + (Fin q →ₒ R)).query (.inl n)) :
         OracleComp _ _)) = _
     simp [unifFwdAnswerImpl]
   | inr l =>
-    change simulateQ (unifFwdAnswerImpl g) ((routeHash l).run s) = _
+    change simulateQ (unifFwdAnswerImpl ⟨g⟩) ((routeHash l).run s) = _
     dsimp only [routeHash, StateT.run]
     cases hs : s.slotOf l with
     | some i => simp [unifFwdAnswerImpl, lift_id]
@@ -595,7 +595,7 @@ theorem tableHandler_apply [DecidableEq D] [SampleableType R]
       | none =>
         by_cases hn : s.next < q
         · simp [hn, unifFwdAnswerImpl, lift_id]
-        · have he : simulateQ (unifFwdAnswerImpl g)
+        · have he : simulateQ (unifFwdAnswerImpl ⟨g⟩)
               (liftM ($ᵗ R) : OracleComp (unifSpec + (Fin q →ₒ R)) R) = $ᵗ R := by
             change simulateQ (QueryImpl.id' unifSpec + ((QueryImpl.ofFn g).liftTarget ProbComp))
               (OracleComp.liftComp ($ᵗ R) _) = _
@@ -606,7 +606,7 @@ theorem tableHandler_apply [DecidableEq D] [SampleableType R]
 private theorem table_receipts_preserves [DecidableEq D] [SampleableType R]
     (g : Fin q → R) (t : (unifSpec + (D →ₒ R)).Domain) (s : State D R q)
     (hs : ∀ p ∈ s.log, tableCache g s p.1 = some p.2) (z)
-    (hz : z ∈ support ((((unifFwdAnswerImpl g).mapStateTBase route) t).run s)) :
+    (hz : z ∈ support ((((unifFwdAnswerImpl ⟨g⟩).mapStateTBase route) t).run s)) :
     ∀ p ∈ z.2.log, tableCache g z.2 p.1 = some p.2 := by
   rw [tableHandler_apply] at hz
   cases t with
@@ -668,7 +668,7 @@ theorem tableRun_receipts [DecidableEq D] [SampleableType R]
     (oa : OracleComp (unifSpec + (D →ₒ R)) α) (g : Fin q → R) (z)
     (hz : z ∈ support (tableRun oa g)) :
     ∀ p ∈ z.2.log, tableCache g z.2 p.1 = some p.2 := by
-  have he : (simulateQ ((unifFwdAnswerImpl g).mapStateTBase route) oa).run initial =
+  have he : (simulateQ ((unifFwdAnswerImpl ⟨g⟩).mapStateTBase route) oa).run initial =
       tableRun oa g := (QueryImpl.simulateQ_mapStateTBase_run _ _ _ _).symm
   rw [← he] at hz
   exact simulateQ_run_preserves_inv_of_query _

@@ -88,7 +88,8 @@ example : ((reindexQueryHom (fun n => n + 1)).comp
 
 abbrev CountSpec : OracleSpec Unit := Unit →ₒ Nat
 
-def countImpl : QueryImpl CountSpec (StateM Nat) := fun _ => do
+def countImpl : QueryImpl CountSpec (StateM Nat) where
+  toFun _ := do
   let s ← get
   set (s + 1)
   pure s

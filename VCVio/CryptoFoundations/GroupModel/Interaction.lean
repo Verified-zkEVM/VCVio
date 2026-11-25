@@ -143,9 +143,9 @@ structure Adversary (F : Type) (G : Tag → Type) (Input Query : Type) (Reply : 
     (A : Adversary F G Input Query Reply Result)
     (impl : QueryImpl (plainSpec G Query Reply) N) (input : Message Input G) :
     N (Explained F Result G × Groups G) :=
-  (simulateQ (fun q => StateT.mk fun basis => do
+  (simulateQ (spec := explainedSpec F G Query Reply) ⟨fun q => StateT.mk fun basis => do
     let reply ← impl q.value
-    pure (reply, extend basis reply.groups)) (A.main input)).run input.groups
+    pure (reply, extend basis reply.groups)⟩ (A.main input)).run input.groups
 
 /-- Certified execution produces valid final explanations over the actual received inputs. -/
 theorem Adversary.run_valid {Input I : Type} {ambient : OracleSpec I}

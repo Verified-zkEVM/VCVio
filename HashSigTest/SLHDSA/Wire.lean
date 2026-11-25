@@ -104,7 +104,8 @@ def toyAdversary (candidate : List Byte → List Byte) :
     return (toyMessage, if key == [10] && first == 13 && second == 13 then candidate sig else [])
 
 /-- Log all ambient calls, including repeated requests, while returning recognizable answers. -/
-def toyHandler : QueryImpl toySpec (StateM (List Nat)) := fun index => do
+def toyHandler : QueryImpl toySpec (StateM (List Nat)) where
+  toFun index := do
   modify (index :: ·)
   return index + 10
 

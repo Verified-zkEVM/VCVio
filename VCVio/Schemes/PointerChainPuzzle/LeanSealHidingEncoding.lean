@@ -330,15 +330,15 @@ theorem byteScheme_gen_eq (m : ℕ) [NeZero n] :
   rw [typedSealScheme, sealScheme, liftSpec, liftComp_def, ← QueryImpl.simulateQ_compose]
   change simulateQ roundImpl _ = _
   congr 1
-  funext t
+  ext t : 1
   rcases t with k | ts
   · rfl
-  · simp only [roundImpl, QueryImpl.apply_compose]
+  · simp only [roundImpl_apply, QueryImpl.apply_compose]
     change _ = simulateQ (sealEncoding hb hn).roundImpl
       (SubSpec.batchOnResponse (inferInstance : typedSpec b n ⊂ₒ sealTypedSpec b n) ts <$>
         liftM ((unifSpec + (sealTypedSpec b n).batch).query (.inr (ts.map Sum.inl))))
     rw [simulateQ_map, simulateQ_spec_query]
-    simp only [RandomOracleEncoding.roundImpl, Functor.map_map]
+    simp only [RandomOracleEncoding.roundImpl_apply, Functor.map_map]
     have hl : (ts.map Sum.inl).map (sealEncoding hb hn).encode = ts.map hashInput := by
       rw [List.map_map]
       rfl
@@ -373,7 +373,7 @@ theorem byteEnvelope_encrypt_eq (m : ℕ) (key : Puzzle b n × Bytes 32) (msg : 
       (liftM ($ᵗ Bytes 16) : OracleComp (unifSpec + sealTypedSpec b n) (Bytes 16)) =
         (liftM ($ᵗ Bytes 16) : OracleComp (unifSpec + byteSpec) (Bytes 16)) := by
     rw [← liftComp_eq_liftM, QueryImpl.simulateQ_liftComp_left_eq_of_apply _
-      (fun k => (liftM (unifSpec.query k) : OracleComp (unifSpec + byteSpec) _)) (fun k => rfl),
+      ⟨fun k => (liftM (unifSpec.query k) : OracleComp (unifSpec + byteSpec) _)⟩ (fun k => rfl),
       ← liftComp_def, liftComp_eq_liftM]
   have hderive : ∀ nonce,
       simulateQ ((sealEncoding hb hn).encodeImpl ∘ₛ RandomOracleEncoding.typedLift)
@@ -383,9 +383,10 @@ theorem byteEnvelope_encrypt_eq (m : ℕ) (key : Puzzle b n × Bytes 32) (msg : 
     intro nonce
     rw [← liftComp_eq_liftM]
     refine (QueryImpl.simulateQ_liftComp_right_eq_of_apply (spec₁' := unifSpec)
-      (spec₂' := sealTypedSpec b n) _ _ (fun t => rfl) _).trans ?_
-    simp only [QueryImpl.apply_compose, RandomOracleEncoding.typedLift,
-      RandomOracleEncoding.encodeImpl, sealEncoding_encode, sealDerive, simulateQ_bind,
+      (spec₂' := sealTypedSpec b n) _ ⟨fun t => ((sealEncoding hb hn).encodeImpl ∘ₛ
+        RandomOracleEncoding.typedLift) (.inr t)⟩ (fun t => rfl) _).trans ?_
+    simp only [QueryImpl.apply_compose, RandomOracleEncoding.typedLift_apply,
+      RandomOracleEncoding.encodeImpl_apply, sealEncoding_encode, sealDerive, simulateQ_bind,
       simulateQ_map, simulateQ_query, OracleQuery.input_query, OracleQuery.cont_query,
       id_map, subkeysQuery, liftM_bind,
       liftM_map, bind_pure_comp]

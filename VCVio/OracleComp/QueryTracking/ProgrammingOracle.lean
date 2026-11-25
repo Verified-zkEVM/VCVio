@@ -96,7 +96,7 @@ call `so t` explicitly to forward a query `t` to the original oracle. -/
 def withRedirect (_so : QueryImpl spec m)
     (redirect : (t : spec.Domain) → m (spec.Range t)) :
     QueryImpl spec m :=
-  redirect
+  ⟨redirect⟩
 
 @[simp] lemma withRedirect_apply (so : QueryImpl spec m)
     (redirect : (t : spec.Domain) → m (spec.Range t)) (t : spec.Domain) :

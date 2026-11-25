@@ -180,17 +180,19 @@ lemma getQueryValue?_wrappedChallengeEntry_succ
 
 /-- Forwards a uniform-spec query through to the wrapped spec's `Sum.inl` summand without
 touching the simulator state. -/
+@[simps -isSimp]
 def unifForward (M Commit Chal : Type) :
-    QueryImpl unifSpec (StateT (SimState M Commit Chal) (OracleComp (wrappedSpec Chal))) :=
-  fun n ↦ StateT.lift (wrappedUniformQuery Chal n)
+    QueryImpl unifSpec (StateT (SimState M Commit Chal) (OracleComp (wrappedSpec Chal))) where
+  toFun n := StateT.lift (wrappedUniformQuery Chal n)
 
 /-- Caching random-oracle implementation: on a cache hit the recorded answer is returned,
 on a cache miss a fresh `Sum.inr ()` query is issued, the answer is cached, and the
 miss input `(msg, c)` is appended to the trace's internal `queryLog`. -/
+@[simps -isSimp]
 def roImpl (M Commit Chal : Type) [DecidableEq M] [DecidableEq Commit] :
     QueryImpl (M × Commit →ₒ Chal)
-      (StateT (SimState M Commit Chal) (OracleComp (wrappedSpec Chal))) :=
-  fun mc => do
+      (StateT (SimState M Commit Chal) (OracleComp (wrappedSpec Chal))) where
+  toFun mc := do
     let (cache, log) ← get
     match cache mc with
     | some v => pure v
@@ -205,7 +207,7 @@ lemma unifForward_run (n : unifSpec.Domain) (st : SimState M Commit Chal) :
       (do
         let u ← wrappedUniformQuery Chal n
         pure (u, st)) := by
-  simp [unifForward]
+  simp [unifForward_apply]
 
 @[simp]
 private lemma support_wrapped_query_inl (n : unifSpec.Domain) :
@@ -222,7 +224,7 @@ lemma roImpl_run_some [DecidableEq M] [DecidableEq Commit]
     (mc : M × Commit) (cache : (M × Commit →ₒ Chal).QueryCache)
     (log : List (M × Commit)) (v : Chal) (hcache : cache mc = some v) :
     (roImpl M Commit Chal mc).run (cache, log) = pure (v, (cache, log)) := by
-  simp [roImpl, StateT.run_bind, StateT.run_get, hcache]
+  simp [roImpl_apply, StateT.run_bind, StateT.run_get, hcache]
 
 @[simp]
 lemma roImpl_run_none [DecidableEq M] [DecidableEq Commit]
@@ -231,7 +233,7 @@ lemma roImpl_run_none [DecidableEq M] [DecidableEq Commit]
     (roImpl M Commit Chal mc).run (cache, log) =
       wrappedChallengeQuery Chal >>=
         fun v ↦ pure (v, (cache.cacheQuery mc v, log ++ [mc])) := by
-  simp [roImpl, StateT.run_bind, StateT.run_get, StateT.run_set, hcache]
+  simp [roImpl_apply, StateT.run_bind, StateT.run_get, StateT.run_set, hcache]
 
 /-- A forwarded uniform query preserves the simulator state throughout its support. -/
 lemma mem_support_unifForward_run_iff
@@ -478,7 +480,7 @@ private lemma support_step_inl
   have hrun : ((unifForward M Commit Chal + roImpl M Commit Chal) (Sum.inl n)).run (c₀, l₀) =
       (liftM ((wrappedSpec Chal).query (Sum.inl n)) : OracleComp _ _) >>=
         fun u => pure (u, (c₀, l₀)) := by
-    simp [QueryImpl.add_apply_inl, unifForward, wrappedUniformQuery]
+    simp [QueryImpl.add_apply_inl, unifForward_apply, wrappedUniformQuery]
   rw [hrun]
   change z ∈ support (simulateQ loggingOracle
       ((liftM ((wrappedSpec Chal).query (Sum.inl n)) : OracleComp _ _) >>=
@@ -503,7 +505,7 @@ private lemma support_step_inr
   · have hrun : ((unifForward M Commit Chal + roImpl M Commit Chal) (Sum.inr mc)).run (c₀, l₀) =
         (liftM ((wrappedSpec Chal).query (Sum.inr ())) : OracleComp _ _) >>=
           fun v => pure (v, (c₀.cacheQuery mc v, l₀ ++ [mc])) := by
-      simp [QueryImpl.add_apply_inr, roImpl, wrappedChallengeQuery,
+      simp [QueryImpl.add_apply_inr, roImpl_apply, wrappedChallengeQuery,
         StateT.run_bind, StateT.run_get, StateT.run_set, hcache]
     rw [hrun]
     change z ∈ support (simulateQ loggingOracle
@@ -523,7 +525,7 @@ private lemma support_step_inr
   · rcases Option.ne_none_iff_exists.mp hcache with ⟨v, hv⟩
     have hrun : ((unifForward M Commit Chal + roImpl M Commit Chal) (Sum.inr mc)).run (c₀, l₀) =
         pure (v, (c₀, l₀)) := by
-      simp [QueryImpl.add_apply_inr, roImpl, StateT.run_bind, StateT.run_get, ← hv]
+      simp [QueryImpl.add_apply_inr, roImpl_apply, StateT.run_bind, StateT.run_get, ← hv]
     rw [hrun]
     change z ∈ support (simulateQ loggingOracle
         (pure (v, (c₀, l₀)) : OracleComp _ _)).run ↔ _

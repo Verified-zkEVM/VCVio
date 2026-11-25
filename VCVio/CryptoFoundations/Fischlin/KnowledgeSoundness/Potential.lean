@@ -173,7 +173,7 @@ private lemma run'_mOfFn_query_mixed [DecidableEq Stmt] [DecidableEq Commit] [De
           rw [simulateQ_bind, StateT.run'_bind', simulateQ_bind,
             roSim.simulateQ_HasQuery_query, StateT.run_bind,
             QueryImpl.withCaching_run_none (so := uniformSampleImpl) hc0]
-          simp only [uniformSampleImpl, bind_map_left, pure_bind, simulateQ_pure,
+          simp only [uniformSampleImpl_apply, bind_map_left, pure_bind, simulateQ_pure,
             StateT.run_pure, bind_assoc]
           simp only [hh, map_bind]
           refine evalDist_bind_congr _ _ _ fun x => ?_

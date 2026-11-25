@@ -48,8 +48,9 @@ local instance (node : Unit) (operation : (network.effect node).A) :
 
 @[expose] def implementation (stored : Bool) :
     (node : Unit) → Handler (StateT Bool ProbComp) (network.effect node)
-  | _, false => fun _ => pure (false, stored)
-  | _, true => fun state => pure (state, state)
+  | _ => ⟨fun
+      | false => fun _ => pure (false, stored)
+      | true => fun state => pure (state, state)⟩
 
 @[expose] def experiment (stored : Bool) (fuel : ℕ) : ProbComp ReactiveSecurity.Result :=
   ReactiveSecurity.observe <$> ReactiveRuntime.tokenExperiment network
@@ -80,9 +81,9 @@ theorem joint_laws_differ :
 
 @[expose] def noisyImplementation :
     (node : Unit) → Handler (StateT Bool ProbComp) (network.effect node) :=
-  fun node operation state => do
+  fun node => ⟨fun operation state => do
     let _ ← $ᵗ Bool
-    (implementation false node operation).run state
+    (implementation false node operation).run state⟩
 
 /-- Discarded local randomness preserves the joint response and service-state law. -/
 theorem noisy_joint_laws :

@@ -366,10 +366,12 @@ theorem run_value {N : Type → Type} [Monad N] [LawfulMonad N]
     (game : QueryImpl (plainSpec G Query Reply) N)
     (p : OracleComp (explainedSpec F G Query Reply) (Explained F Result G))
     (b : Groups G) :
-    (fun z => z.1.value) <$> (simulateQ (fun q => StateT.mk fun basis => do
-      let reply ← game q.value
-      pure (reply, extend basis reply.groups)) p).run b =
-      Explained.value <$> simulateQ (fun q => game q.value) p := by
+    (fun z => z.1.value) <$> (simulateQ (spec := explainedSpec F G Query Reply)
+      ⟨fun q => StateT.mk fun basis => do
+        let reply ← game q.value
+        pure (reply, extend basis reply.groups)⟩ p).run b =
+      Explained.value <$>
+        simulateQ (spec := explainedSpec F G Query Reply) ⟨fun q => game q.value⟩ p := by
   induction p using OracleComp.inductionOn generalizing b with
   | pure out => simp
   | query_bind q next ih =>
@@ -379,10 +381,11 @@ theorem run_value {N : Type → Type} [Monad N] [LawfulMonad N]
       intro reply
       exact ih reply _
 
+@[simps]
 private def valueHandler {N : Type → Type} [Monad N] (random : QueryImpl unifSpec N)
     (game : QueryImpl (plainSpec G Query Reply) N) :
-    QueryImpl (explainedSpec F G (CoinQuery Query) (CoinReply Reply)) N :=
-  fun q => withCoins random game q.value
+    QueryImpl (explainedSpec F G (CoinQuery Query) (CoinReply Reply)) N where
+  toFun q := withCoins random game q.value
 
 private theorem valueHandler_coin {N : Type → Type} [Monad N] (random : QueryImpl unifSpec N)
     (game : QueryImpl (plainSpec G Query Reply) N) (n : ℕ)
@@ -407,15 +410,15 @@ private theorem groupStep_projection (M : Model F (discreteSig S) G)
       pure ((groupStep q tbl).1, mapTbl (fun _ => Prod.snd) (groupStep q tbl).2) := by
   cases q with
   | add s a b =>
-      simp [groupStep, impl, push, modifyGet, MonadStateOf.modifyGet, StateT.modifyGet,
+      simp [groupStep, impl_apply, push, modifyGet, MonadStateOf.modifyGet, StateT.modifyGet,
         StateT.run, mapTbl_append, lookup_snd, mapTbl]
       rfl
   | smul s c a =>
-      simp [groupStep, impl, push, modifyGet, MonadStateOf.modifyGet, StateT.modifyGet,
+      simp [groupStep, impl_apply, push, modifyGet, MonadStateOf.modifyGet, StateT.modifyGet,
         StateT.run, mapTbl_append, lookup_snd, mapTbl]
       rfl
   | eq s a b =>
-      simp only [impl, StateT.run_bind, StateT.run_get, pure_bind, lookup_snd,
+      simp only [impl_apply, StateT.run_bind, StateT.run_get, pure_bind, lookup_snd,
         groupStep, id_eq]
       rfl
   | lin o a => exact o.elim
@@ -469,7 +472,7 @@ private theorem explainProgram_run (M : Model F (discreteSig S) G)
             (next ⟨reply.data, fun s => List.range' (st.2 s).length (reply.groups s).length⟩)
             (receive st reply.groups)) = _
         simp only [simulateQ_bind, simulateQ_spec_query, explain, lookupMessage,
-          valueHandler_game, QueryImpl.add_apply_inr, liftGame, StateT.run,
+          valueHandler_game, QueryImpl.add_apply_inr, liftGame_apply, StateT.run,
           bind_assoc, pure_bind]
         change (Explained.value <$> (game
           ⟨q.data, fun s => (q.groups s).map (fun h => (lookup st.2 s h).2)⟩ >>=

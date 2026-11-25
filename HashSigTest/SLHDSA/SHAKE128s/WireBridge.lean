@@ -64,7 +64,8 @@ def wireAdversary : StrongUnforgeableAdversary (wireAlgorithm context) where
 
 /-- Log actual target queries and answer with recognizable values. -/
 def handler (answer : Option Bytes) :
-    QueryImpl (Game.World FIPS205.Answer + Game.SigningSpec) (StateM (List Event))
+    QueryImpl (Game.World FIPS205.Answer + Game.SigningSpec) (StateM (List Event)) where
+  toFun
   | .inl (.inl index) => do
       modify (· ++ [.sample index])
       return ⟨index, Nat.lt_succ_self index⟩

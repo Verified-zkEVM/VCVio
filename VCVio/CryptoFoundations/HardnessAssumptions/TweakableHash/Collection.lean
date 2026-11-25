@@ -112,10 +112,11 @@ and the tweak is appended to the collection tweak list. Repeated collection twea
 The challenge history is a list of `Q`, read only through `tweakOf`, so a game records whatever its
 winning condition needs — `Tweak × M` for SM-TCR, `Tweak × M'` for SM-PRE, `Tweak` alone for a game
 that needs no payload — and this oracle is unchanged by the choice. -/
+@[simps]
 def collectionOracle [DecidableEq Tweak] (tweakOf : Q → Tweak)
     (thColl : TweakableHashCollection ι PkSeed Tweak Y) (pk : PkSeed) :
-    QueryImpl (collectionSpec thColl) (StateT (List Q × List Tweak) ProbComp) :=
-  fun q => do
+    QueryImpl (collectionSpec thColl) (StateT (List Q × List Tweak) ProbComp) where
+  toFun q := do
     let (qsChal, twsColl) ← get
     if TweakReserved tweakOf qsChal q.2.1 then
       return none
@@ -142,7 +143,7 @@ theorem collectionOracle_run_of_fresh (q : ((i : ι) × Tweak × thColl.Msg i))
     (hnew : ¬ TweakReserved tweakOf qsChal q.2.1) :
     (collectionOracle tweakOf thColl pk q).run (qsChal, twsColl) =
       pure (some (thColl.eval q.1 pk q.2.1 q.2.2), (qsChal, twsColl ++ [q.2.1])) := by
-  simp [collectionOracle, hnew]
+  simp [collectionOracle_apply, hnew]
 
 /-- A collection query at a tweak the challenge oracle has already issued is rejected, and the state
 is unchanged. This is one half of the disjointness of the two tweak sets; the other half is each
@@ -151,7 +152,7 @@ theorem collectionOracle_run_of_challenge_clash (q : ((i : ι) × Tweak × thCol
     (hres : TweakReserved tweakOf qsChal q.2.1) :
     (collectionOracle tweakOf thColl pk q).run (qsChal, twsColl) =
       pure (none, (qsChal, twsColl)) := by
-  simp [collectionOracle, hres]
+  simp [collectionOracle_apply, hres]
 
 /-- Repeating a collection tweak is **accepted**: querying the same tweak twice in a row is answered
 both times, and both occurrences are appended. Only disjointness from the target tweaks is required,
@@ -167,6 +168,6 @@ theorem collectionOracle_run_of_repeated_tweak (q : ((i : ι) × Tweak × thColl
     ((collectionOracle tweakOf thColl pk q).run (qsChal, twsColl) >>= fun r =>
         (collectionOracle tweakOf thColl pk q).run r.2) =
       pure (some (thColl.eval q.1 pk q.2.1 q.2.2), (qsChal, twsColl ++ [q.2.1, q.2.1])) := by
-  simp [collectionOracle, hnew]
+  simp [collectionOracle_apply, hnew]
 
 end TweakableHash

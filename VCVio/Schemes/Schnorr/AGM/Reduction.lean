@@ -91,7 +91,7 @@ The oracle's flag records a fresh programming operation, not a signing collision
 @[expose] def programEntry [DecidableEq G] [DecidableEq M]
     (cache : M × G → Option (Entry F)) (key : M × G) (entry : Entry F) :
     M × G → Option (Entry F) :=
-  let so : QueryImpl (M × G →ₒ Entry F) Id := fun _ => pure entry
+  let so : QueryImpl (M × G →ₒ Entry F) Id := ⟨fun _ => pure entry⟩
   let result := (so.withProgramming (fun _ => some entry) key).run
     (QueryCache.ofFn cache, false)
   result.2.1.toFn
@@ -161,20 +161,20 @@ theorem signedState_basis [Field F] [AddCommGroup G] [Module F G] [DecidableEq G
 /-- Simulate algebraic requests with uniform challenges and programmed signing commitments. Like
 the erasure, a hash request is read at its first commitment (`0` if it supplies none), explained
 by its first coefficient vector, and other requests ignore their group arguments. -/
-@[expose] def handler [Field F] [AddCommGroup G] [Module F G] [DecidableEq F] [DecidableEq G]
+@[expose, simps -isSimp]
+def handler [Field F] [AddCommGroup G] [Module F G] [DecidableEq F] [DecidableEq G]
     [DecidableEq M] [SampleableType F] (g pk : G) :
     QueryImpl (explainedSpec F (Group G) (Request M) (Reply F M))
-      (StateT (State F G M) ProbComp) := by
-  intro ⟨⟨request, groups⟩, coefficients⟩
-  cases request with
-  | random n => exact fun s => do
+      (StateT (State F G M) ProbComp) where
+  toFun
+  | ⟨⟨.random n, _⟩, _⟩ => fun s => do
       let v ← unifSpec.query n
       pure (⟨v, fun _ => []⟩, s)
-  | hash m => exact fun s => do
+  | ⟨⟨.hash m, groups⟩, coefficients⟩ => fun s => do
       let (c, t) ← (read (m, (groups ()).headD 0)
         (flatten ((coefficients ()).headD []) s.representations)).run s
       pure (scalarReply c, t)
-  | sign m => exact fun s => do
+  | ⟨⟨.sign m, _⟩, _⟩ => fun s => do
       let c ← $ᵗ F
       let z ← $ᵗ F
       pure (signingReply (z • g - c • pk) z, signedState s g pk m c z)

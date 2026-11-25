@@ -39,7 +39,7 @@ local notation "toyScheme" =>
 their aggregate signature is 29 and verifies. -/
 theorem two_signer_correctness :
     simulateQ (unifFwdAnswerImpl
-      (fun b => if b then 5 else 7 : QueryImpl (Bool →ₒ ZMod 101) Id))
+      (⟨fun b => if b then 5 else 7⟩ : QueryImpl (Bool →ₒ ZMod 101) Id))
       ((toyScheme).aggregateVerify [(2, false), (3, true)] 29) =
         (pure true : ProbComp Bool) := by
   have h := BLS.Aggregate.aggregateVerify_honest
@@ -131,7 +131,7 @@ theorem adversary_unforgeableAdvantage :
     add_apply_inl, add_apply_inr, SignatureAlg.runWithSigningOracle_def,
     SignatureAlg.signingOracle, QueryImpl.passthrough_add, simulateQ_bind, simulateQ_query,
     OracleQuery.input_query, OracleQuery.cont_query, QueryImpl.add_apply_inl,
-    PFunctor.Handler.liftTarget_apply, ofPFunctor_toPFunctor, QueryImpl.id'_apply, id_map,
+    QueryImpl.liftTarget_apply, QueryImpl.id'_apply, id_map,
     simulateQ_map, QueryImpl.add_apply_inr, QueryImpl.withLogging_apply, map_bind,
     Functor.map_map, id_eq, WriterT.run_bind, WriterT.run_liftM, List.empty_eq, WriterT.run_map,
     WriterT.run_tell, map_pure, List.nil_append, bind_map_left, bind_assoc, List.any_cons,

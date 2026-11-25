@@ -77,7 +77,7 @@ theorem searchCostRun_cons (pk : Stmt) (sk : Wit) (sc : PrvState) (msg : M)
     HasQuery.Program.withAddCost_bind, HasQuery.Program.withAddCost_query]
   simp only [HasQuery.Program.withAddCost,
     monadLift, MonadLift.monadLift, map_eq_bind_pure_comp, AddWriterT.addTell,
-    QueryImpl.withCaching_apply, liftM, uniformSampleImpl, Fin.val_eq_zero_iff,
+    QueryImpl.withCaching_apply, liftM, uniformSampleImpl_apply, Fin.val_eq_zero_iff,
     Fin.val_fin_lt, WriterT.run_bind, WriterT.run_mk, WriterT.run_tell, bind_assoc,
     Function.comp_apply, pure_bind, one_mul, Prod.mk.eta, bind_pure_comp,
     StateT.run_bind, StateT.run_lift, StateT.run_get, StateT.run_pure, hfresh,

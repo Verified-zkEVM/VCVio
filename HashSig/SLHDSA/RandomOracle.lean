@@ -118,6 +118,7 @@ private theorem slhdsaConcreteAlg_components (prims : Primitives p)
       (OracleComp (unifSpec + publicHashSpec prims.core)) ProbComp :=
     { toMonadHom := simulateQ' (unifFwdAnswerImpl (PublicHash.impl prims))
       map_query' := fun q => by
+        change _ = (liftM (PublicHash.impl prims q) : ProbComp _)
         simpa [unifFwdAnswerImpl] using
           (QueryImpl.simulateQ_add_liftM_query_right
             ((QueryImpl.id' unifSpec).liftTarget ProbComp)
@@ -146,7 +147,7 @@ private theorem slhdsaConcreteAlg_components (prims : Primitives p)
   have hImpl :
       (HasQuery.toQueryImpl (spec := publicHashSpec prims.core) (m := ProbComp)) =
         (PublicHash.impl prims).liftTarget ProbComp := by
-    funext q
+    ext q : 1
     rfl
   have hKeygen : ∀ skSeed skPrf pkSeed,
       simulateQ (HasQuery.toQueryImpl (spec := publicHashSpec prims.core) (m := ProbComp))

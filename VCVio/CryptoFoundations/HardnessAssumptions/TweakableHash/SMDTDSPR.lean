@@ -116,10 +116,11 @@ been spent on the collection oracle; a rejected query leaves the state untouched
 
 Accepted queries are appended, so the history is in issue order and its `j`-th entry is the `j`-th
 target. -/
-@[expose] def SM_DT_DSPR_challengeOracle [DecidableEq Tweak]
+@[expose, simps] def SM_DT_DSPR_challengeOracle [DecidableEq Tweak]
     (prob : SM_DT_DSPR_Problem ι PkSeed Tweak M Y) (pk : PkSeed) :
-    QueryImpl (SM_DT_DSPR_challengeSpec Tweak M Y) (StateT (SM_DT_DSPR_State Tweak M) ProbComp) :=
-  fun tm => do
+    QueryImpl (SM_DT_DSPR_challengeSpec Tweak M Y)
+      (StateT (SM_DT_DSPR_State Tweak M) ProbComp) where
+  toFun tm := do
     let (qsChal, twsColl) ← get
     if prob.numTargets ≤ qsChal.length ∨ ¬ TweakFresh Prod.fst qsChal twsColl tm.1 then
       return none
@@ -192,7 +193,7 @@ theorem SM_DT_DSPR_challengeOracle_run_of_fresh (hlen : qsChal.length < prob.num
     (hfresh : TweakFresh Prod.fst qsChal twsColl t) :
     (SM_DT_DSPR_challengeOracle prob pk (t, m)).run (qsChal, twsColl) =
       pure (some (prob.th.eval pk t m), (qsChal ++ [(t, m)], twsColl)) := by
-  simp [SM_DT_DSPR_challengeOracle, Nat.not_le.mpr hlen, hfresh]
+  simp [SM_DT_DSPR_challengeOracle_apply, Nat.not_le.mpr hlen, hfresh]
 
 /-- A query reusing a tweak already in the challenge history is rejected, and the state is
 unchanged. -/
@@ -200,13 +201,13 @@ theorem SM_DT_DSPR_challengeOracle_run_of_reused (m' : M) (hmem : (t, m') ∈ qs
     (SM_DT_DSPR_challengeOracle prob pk (t, m)).run (qsChal, twsColl) =
       pure (none, (qsChal, twsColl)) := by
   have hres : TweakReserved Prod.fst qsChal t := ⟨(t, m'), hmem, rfl⟩
-  simp [SM_DT_DSPR_challengeOracle, TweakFresh, hres]
+  simp [SM_DT_DSPR_challengeOracle_apply, TweakFresh, hres]
 
 /-- A query at the target cap is rejected, and the state is unchanged. -/
 theorem SM_DT_DSPR_challengeOracle_run_of_full (hlen : prob.numTargets ≤ qsChal.length) :
     (SM_DT_DSPR_challengeOracle prob pk (t, m)).run (qsChal, twsColl) =
       pure (none, (qsChal, twsColl)) := by
-  simp [SM_DT_DSPR_challengeOracle, hlen]
+  simp [SM_DT_DSPR_challengeOracle_apply, hlen]
 
 /-- A query at a tweak already spent on the collection oracle is rejected, and the state is
 unchanged. This is the half of the two tweak sets' disjointness that the challenge oracle enforces;
@@ -214,6 +215,6 @@ unchanged. This is the half of the two tweak sets' disjointness that the challen
 theorem SM_DT_DSPR_challengeOracle_run_of_collection_clash (hmem : t ∈ twsColl) :
     (SM_DT_DSPR_challengeOracle prob pk (t, m)).run (qsChal, twsColl) =
       pure (none, (qsChal, twsColl)) := by
-  simp [SM_DT_DSPR_challengeOracle, TweakFresh, hmem]
+  simp [SM_DT_DSPR_challengeOracle_apply, TweakFresh, hmem]
 
 end TweakableHash

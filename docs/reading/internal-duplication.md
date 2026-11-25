@@ -53,7 +53,8 @@ the function type. `AddWriterT.runAdd` exposes untagged counts. The structural b
 remain separate from generic runtime-instantiated accounting.
 
 **Oracle handlers and interaction samplers (2026-10-03).** `QueryImpl spec m` already
-specializes PolyFun's `PFunctor.Handler m spec.toPFunctor` through `QueryImpl.eq_handler`;
+is a one-field structure of its own and converts to PolyFun's
+`PFunctor.Handler m spec.toPFunctor` by `QueryImpl.toHandler`;
 `ProbHandler` in `VCVio/OracleComp/Coinductive/DynSystem.lean` specializes that handler to
 `ProbComp`. `TypeTree.Sampler m tree` decorates every interaction-tree node with a computation of
 its answer type. These have different indexing structures: an oracle signature versus a tree

@@ -59,8 +59,8 @@ example {ι : Type u} {spec : OracleSpec.{u, v} ι}
     (f : (t : spec.Domain) → Option (spec.Range t)) : (QueryCache.ofFn f).toFn = f := by simp
 
 /-- A handler returning its call counter before incrementing it. -/
-def fresh : QueryImpl (Unit →ₒ Nat) (StateT Nat Id) :=
-  fun _ => StateT.mk fun n => pure (n, n + 1)
+def fresh : QueryImpl (Unit →ₒ Nat) (StateT Nat Id) where
+  toFun _ := StateT.mk fun n => pure (n, n + 1)
 
 /-- Asking for the same cached query twice. -/
 def twice : OracleComp (Unit →ₒ Nat) (Nat × Nat) := do
@@ -85,8 +85,8 @@ namespace VCVioTest.ModuleAPI.Cache
 private abbrev fullSpec : OracleSpec Nat := Nat →ₒ (Nat × Nat)
 
 /-- A miss returns the old counter in both coordinates, then advances it once. -/
-private def missCounter : QueryImpl fullSpec (StateT Nat Id) :=
-  fun _ => StateT.mk fun n => pure ((n, n + 100), n + 1)
+private def missCounter : QueryImpl fullSpec (StateT Nat Id) where
+  toFun _ := StateT.mk fun n => pure ((n, n + 100), n + 1)
 
 /-- Two physical requests for one key retain both complete replies. -/
 private def repeated : OracleComp fullSpec ((Nat × Nat) × (Nat × Nat)) := do

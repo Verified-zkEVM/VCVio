@@ -32,12 +32,13 @@ abbrev RealReductionState (F M : Type) (G : Bool → Type) (T : Type) :=
   Pairing.Tracked F G T × LinearFunctional.Transcript M
 
 /-- Real scalar lookup and chronological receipts for the extraction handler. -/
-@[expose] def realReductionHandler [CommSemiring F]
+@[expose, simps -isSimp] def realReductionHandler [CommSemiring F]
     [∀ b, AddCommMonoid (G b)] [∀ b, Module F (G b)] [∀ b, DecidableEq (G b)]
     [AddCommMonoid T] [Module F T] [DecidableEq T]
     (e : G false →ₗ[F] G true →ₗ[F] T) (hash sign : R → G false) :
     QueryImpl (adversarySpec F M)
-      (StateT (RealReductionState F M G T) (OracleComp (unifSpec + (M →ₒ R))))
+      (StateT (RealReductionState F M G T) (OracleComp (unifSpec + (M →ₒ R)))) where
+  toFun
   | .inl q => fun st => pure ((Pairing.step e q st.1).1, (Pairing.step e q st.1).2, st.2)
   | .inr (.inl _) => fun st => pure ((), st)
   | .inr (.inr (.inl n)) => fun st => do
@@ -176,7 +177,7 @@ theorem ReductionRelated.receive [CommSemiring F]
     runGen (pairingReal e) (fun _ => id) (program r) tbl = pure (h, tbl') ∧
     Tbl.Extends tbl tbl' ∧ h < (tbl' .g₁).length ∧ lookup tbl' .g₁ h = value r
 
-private def combinedHandler [CommSemiring F] [DecidableEq F]
+@[simps -isSimp] private def combinedHandler [CommSemiring F] [DecidableEq F]
     [∀ b, AddCommMonoid (G b)] [∀ b, Module F (G b)]
     [AddCommMonoid T] [Module F T]
     [∀ s, DecidableEq (PFam (G false) (G true) T s)]
@@ -184,7 +185,8 @@ private def combinedHandler [CommSemiring F] [DecidableEq F]
     (hash sign : R → OracleComp (genSpec F pairingSig) Handle) :
     QueryImpl (adversarySpec F M)
       (StateT (ReductionState F M × Tbl (PFam (G false) (G true) T))
-        (OracleComp (unifSpec + (M →ₒ R))))
+        (OracleComp (unifSpec + (M →ₒ R)))) where
+  toFun
   | .inl q => fun (st, tbl) => do
       let r ← liftM (runGen (pairingReal e) (fun _ => id)
         ((virtualizeImpl z (.inl q)).run st.handles) tbl)
@@ -211,22 +213,22 @@ private theorem combinedHandler_eq [CommSemiring F] [DecidableEq F]
     combinedHandler (M := M) e z hash sign =
       ((openImpl (M := M) (R := R) (pairingReal e) (fun _ => id)).mapStateTBase
         (reductionHandler z hash sign)).flattenStateT := by
-  funext q st
+  ext q st : 2
   rcases st with ⟨st, tbl⟩
   change (combinedHandler e z hash sign q).run (st, tbl) =
     (((openImpl (M := M) (R := R) (pairingReal e) (fun _ => id)).mapStateTBase
       (reductionHandler z hash sign)).flattenStateT q).run (st, tbl)
   rw [QueryImpl.flattenStateT_mapStateTBase_apply_run]
   rcases q with q | q | n | q
-  · simp only [combinedHandler, reductionHandler, StateT.run, bind_pure_comp]
+  · simp only [combinedHandler_apply, reductionHandler_apply, StateT.run, bind_pure_comp]
     change _ = _ <$> (simulateQ (openImpl (M := M) (R := R)
       (pairingReal e) (fun _ => id)) _).run tbl
     simp only [simulateQ_map, StateT.run_map, openImpl_reductionLift, Functor.map_map]
   · rfl
-  · simp only [combinedHandler, reductionHandler, StateT.run]
+  · simp only [combinedHandler_apply, reductionHandler_apply, StateT.run]
     rfl
   · rcases q with ⟨m | m, gs⟩ <;>
-      simp only [combinedHandler, reductionHandler, StateT.run, bind_pure_comp,
+      simp only [combinedHandler_apply, reductionHandler_apply, StateT.run, bind_pure_comp,
         Bool.false_eq_true, ite_false, ite_true]
     all_goals
       change _ = _ <$> (simulateQ (openImpl (M := M) (R := R)
@@ -268,17 +270,18 @@ private theorem combinedHandler_run_view [CommSemiring F] [DecidableEq F]
           z q st.handles tbl
         obtain ⟨he, h'⟩ := h.group e q r hr
         simp only [StateT.run] at hr
-        simp only [combinedHandler, realReductionHandler, StateT.run, hr,
+        simp only [combinedHandler_apply, realReductionHandler_apply, StateT.run, hr,
           liftM_pure, pure_bind]
         exact (ih r.1.1 _ _ _ h').trans (by rw [he]; rfl)
-      · simpa only [combinedHandler, realReductionHandler, StateT.run, pure_bind] using
+      · simpa only [combinedHandler_apply, realReductionHandler_apply, StateT.run, pure_bind] using
           ih () st tbl real h
-      · simp only [combinedHandler, realReductionHandler, StateT.run, bind_assoc, pure_bind]
+      · simp only [combinedHandler_apply, realReductionHandler_apply, StateT.run, bind_assoc,
+          pure_bind]
         apply bind_congr
         intro coin
         exact ih coin st tbl real h
       · rcases q with ⟨m | m, gs⟩ <;>
-          simp only [combinedHandler, realReductionHandler, StateT.run, bind_assoc,
+          simp only [combinedHandler_apply, realReductionHandler_apply, StateT.run, bind_assoc,
             pure_bind, Bool.false_eq_true, ite_false, ite_true]
         · apply bind_congr
           intro r

@@ -48,8 +48,8 @@ variable {σ : Type} [CacheView σ]
 carrier before the step, exactly as `RecorderView.noticingRecorderOf` applies it before
 `recorderOf`'s; the two blocks and the two recordings ride through untouched. -/
 @[expose] noncomputable def noticingSplitTapeRecorder (leftKeep rightKeep : Bytes → σ → Prop) :
-    QueryImpl OracleWorld (StateT (SplitTapeState σ) ProbComp) :=
-  fun queried state =>
+    QueryImpl OracleWorld (StateT (SplitTapeState σ) ProbComp) where
+  toFun queried state :=
     match queried with
     | Sum.inl coin => ((splitTapeRecorder leftKeep rightKeep) (Sum.inl coin)).run state
     | Sum.inr input =>

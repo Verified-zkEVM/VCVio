@@ -33,11 +33,12 @@ abbrev ambSpec : OracleSpec Bool := fun _ ↦ Unit
 abbrev logSpec : OracleSpec Unit := Unit →ₒ Unit
 
 /-- The ambient query `true` increments the counter; `false` leaves it unchanged. -/
-def counter : QueryImpl ambSpec (StateT ℕ ProbComp) :=
-  fun t ↦ StateT.mk fun n ↦ pure ((), if t then n + 1 else n)
+def counter : QueryImpl ambSpec (StateT ℕ ProbComp) where
+  toFun t := StateT.mk fun n ↦ pure ((), if t then n + 1 else n)
 
 /-- The logged handler answers by the ambient query `true`. -/
-def inner : QueryImpl logSpec (OracleComp ambSpec) := fun _ ↦ ambSpec.query true
+def inner : QueryImpl logSpec (OracleComp ambSpec) where
+  toFun _ := ambSpec.query true
 
 /-- The run of a program through the logged handler under the counter. -/
 def loggedRun {α : Type} (oa : OracleComp (ambSpec + logSpec) α) (n : ℕ) :

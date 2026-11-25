@@ -58,17 +58,16 @@ abbrev rawSpec (M G₁ : Type) := (unifSpec + (M →ₒ G₁)) + (M →ₒ G₁)
     Message Unit (Group G₁ G₂) := ⟨(), groupInputs [g₁, pk.1] [g₂, pk.2]⟩
 
 /-- Translate ordinary BLS replies into received group inputs. Requests use only plain data. -/
-@[expose] def oracle {M G₁ G₂ : Type} :
-    QueryImpl (plainSpec (Group G₁ G₂) (Query M) Reply) (OracleComp (rawSpec M G₁)) := by
-  intro ⟨q, _⟩
-  rcases q with ((n | m) | m)
-  · exact do
+@[expose, simps -isSimp] def oracle {M G₁ G₂ : Type} :
+    QueryImpl (plainSpec (Group G₁ G₂) (Query M) Reply) (OracleComp (rawSpec M G₁)) where
+  toFun
+  | ⟨.inl (.inl n), _⟩ => do
       let r ← (rawSpec M G₁).query (.inl (.inl n))
       return ⟨r, groupInputs [] []⟩
-  · exact do
+  | ⟨.inl (.inr m), _⟩ => do
       let h ← (rawSpec M G₁).query (.inl (.inr m))
       return ⟨(), groupInputs [h] []⟩
-  · exact do
+  | ⟨.inr m, _⟩ => do
       let s ← (rawSpec M G₁).query (.inr m)
       return ⟨(), groupInputs [s] []⟩
 
@@ -98,7 +97,7 @@ requests to the original scheme oracles and returning the raw decoded forgery. -
     {e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ} {g₁ : G₁} {g₂ : G₂}
     (A : AlgebraicAdversary F M G₁ G₂ e g₁ g₂) :
     SignatureAlg.UnforgeableAdversary (scheme (M := M) e g₁ g₂) where
-  main pk := AGM.forgery <$> simulateQ (fun q => AGM.oracle q.value)
+  main pk := AGM.forgery <$> simulateQ ⟨fun q => AGM.oracle q.value⟩
     (A.main (AGM.initialInput g₁ g₂ pk))
 
 end BLS

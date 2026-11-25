@@ -49,8 +49,9 @@ example {ι σ α : Type} {spec : OracleSpec ι} {m : Type → Type} [Monad m] [
 
 /-- A coin oracle: each query draws a uniform `Bool`, returns it, and sets the flag if it is
 `true`. -/
-def coinImpl : QueryImpl (Unit →ₒ Bool) (StateT Bool ProbComp) := fun _ =>
-  StateT.mk fun s => (fun b => (b, s || b)) <$> ($ᵗ Bool)
+def coinImpl : QueryImpl (Unit →ₒ Bool) (StateT Bool ProbComp) where
+  toFun _ :=
+    StateT.mk fun s => (fun b => (b, s || b)) <$> ($ᵗ Bool)
 
 /-- The lottery potential at remaining budget `n`: `1` once the flag is set, `n / 2` before. -/
 noncomputable def coinPotential (n : ℕ) (s : Bool) : ℝ≥0∞ :=
@@ -175,7 +176,8 @@ variable [SampleableType Y] [Inhabited Y]
 /-- The hit oracle: `none` is a fresh draw, which hits the consumed value it equals; `some none`
 is a cached derivation, which draws nothing; `some (some y)` consumes a slot with the value `y`.
 -/
-def hitImpl : QueryImpl (Option (Option Y) →ₒ Y) (StateT (HitState Y) ProbComp)
+def hitImpl : QueryImpl (Option (Option Y) →ₒ Y) (StateT (HitState Y) ProbComp) where
+  toFun
   | none => StateT.mk fun s => (fun y => (y, s.map fun p => (p.1, p.2.erase y))) <$> ($ᵗ Y)
   | some none => StateT.mk fun s => pure (default, s)
   | some (some y) => StateT.mk fun s => pure (y, consume y s)

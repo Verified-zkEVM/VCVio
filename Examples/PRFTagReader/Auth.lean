@@ -44,15 +44,16 @@ the authenticator. Models `authTagQueryImpl` with the hash replaced by a PRF ora
 def authToPRFTagImpl :
     QueryImpl (TagId →ₒ TagTranscript Nonce Digest)
       (StateT (AuthState TagId Nonce Digest)
-        (OracleComp (unifSpec + ((TagId × Nonce) →ₒ Digest)))) := fun tag => do
-  let st ← get
-  let nonce ← (OracleComp.liftComp (spec := unifSpec)
-    (superSpec := unifSpec + ((TagId × Nonce) →ₒ Digest)) ($ᵗ Nonce) :
-    OracleComp (unifSpec + ((TagId × Nonce) →ₒ Digest)) Nonce)
-  let auth ← authPRFQuery (TagId := TagId) (Nonce := Nonce) (Digest := Digest) tag nonce
-  let transcript : TagTranscript Nonce Digest := ⟨nonce, auth⟩
-  set { st with honestOutputs := insert (tag, transcript) st.honestOutputs }
-  return transcript
+        (OracleComp (unifSpec + ((TagId × Nonce) →ₒ Digest)))) where
+  toFun tag := do
+    let st ← get
+    let nonce ← (OracleComp.liftComp (spec := unifSpec)
+      (superSpec := unifSpec + ((TagId × Nonce) →ₒ Digest)) ($ᵗ Nonce) :
+      OracleComp (unifSpec + ((TagId × Nonce) →ₒ Digest)) Nonce)
+    let auth ← authPRFQuery (TagId := TagId) (Nonce := Nonce) (Digest := Digest) tag nonce
+    let transcript : TagTranscript Nonce Digest := ⟨nonce, auth⟩
+    set { st with honestOutputs := insert (tag, transcript) st.honestOutputs }
+    return transcript
 
 /-- Reader-oracle implementation that queries the PRF oracle for every tag at the transcript's
 nonce in order to identify the matching tags. Models `authReaderQueryImpl` with the hash
@@ -60,21 +61,22 @@ replaced by a PRF oracle call. -/
 noncomputable def authToPRFReaderImpl :
     QueryImpl ((TagTranscript Nonce Digest) →ₒ ReaderReply)
       (StateT (AuthState TagId Nonce Digest)
-        (OracleComp (unifSpec + ((TagId × Nonce) →ₒ Digest)))) := fun transcript => do
-  let st ← get
-  let pairs ←
-    (Finset.univ : Finset TagId).toList.mapM
-      (m := OracleComp (unifSpec + ((TagId × Nonce) →ₒ Digest)))
-      (fun tag => do
-        let d ← authPRFQuery (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-          tag transcript.nonce
-        return (tag, d))
-  let accepted : Bool := decide (∃ p ∈ pairs, p.2 = transcript.auth)
-  let newForged : Finset TagId :=
-    ((pairs.filter fun p => decide (p.2 = transcript.auth ∧
-        (p.1, transcript) ∉ st.honestOutputs)).map Prod.fst).toFinset
-  set { st with readerForged := st.readerForged ∪ (newForged.image (·, transcript)) }
-  return ReaderReply.ofBool accepted
+        (OracleComp (unifSpec + ((TagId × Nonce) →ₒ Digest)))) where
+  toFun transcript := do
+    let st ← get
+    let pairs ←
+      (Finset.univ : Finset TagId).toList.mapM
+        (m := OracleComp (unifSpec + ((TagId × Nonce) →ₒ Digest)))
+        (fun tag => do
+          let d ← authPRFQuery (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
+            tag transcript.nonce
+          return (tag, d))
+    let accepted : Bool := decide (∃ p ∈ pairs, p.2 = transcript.auth)
+    let newForged : Finset TagId :=
+      ((pairs.filter fun p => decide (p.2 = transcript.auth ∧
+          (p.1, transcript) ∉ st.honestOutputs)).map Prod.fst).toFinset
+    set { st with readerForged := st.readerForged ∪ (newForged.image (·, transcript)) }
+    return ReaderReply.ofBool accepted
 
 /-- Combined oracle implementation that simulates the authentication game while hashing through
 the PRF oracle. -/
@@ -255,7 +257,7 @@ private lemma simulateQ_prfReal_authToPRFTagImpl_run [SampleableType Nonce]
         ((authToPRFTagImpl (TagId := TagId) tag).run s) =
       (authTagQueryImpl (fun tag nonce => prfs.evalMultiple k tag nonce) tag).run s := by
   let so : QueryImpl ((TagId × Nonce) →ₒ Digest) ProbComp :=
-    fun d => pure (prfs.multiplePRFScheme.eval k d)
+    ⟨fun d => pure (prfs.multiplePRFScheme.eval k d)⟩
   let impl : QueryImpl (unifSpec + ((TagId × Nonce) →ₒ Digest)) ProbComp :=
     unifSpec.passthrough + so
   have hleft : ∀ {α : Type} (oa : ProbComp α),
