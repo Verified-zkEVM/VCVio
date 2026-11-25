@@ -30,11 +30,12 @@ distribution of the projected steps to equality in distribution of the full runs
   only in distribution (`=ᵈ`).
 - `QueryImpl.StateOrnament`: a package for the recurring pattern where one
   stateful handler refines another by carrying extra bookkeeping state.
-- `QueryImpl.fixSndStateT` + `OracleComp.simulateQ_run_eq_of_snd_invariant`: support-based
-  decomposition for product state spaces where one component is invariant.
-- `QueryImpl.extendState` + `OracleComp.extendState_run_proj_eq`: auxiliary-state lift, the
-  inverse direction of `fixSndStateT`. `QueryImpl.mem_support_extendState_run_iff` reads the
-  outcomes of one step of the lift off the outcomes of the base step.
+- `QueryImpl.fixSndStateT` supplies the same second component to each query.
+  `OracleComp.simulateQ_run_eq_of_snd_invariant` recovers the original run when every
+  supported step from that component preserves it.
+- `QueryImpl.extendState` adds bookkeeping to a base handler. Dropping the bookkeeping from
+  a full run recovers the base run (`OracleComp.extendState_run_proj_eq`).
+  `QueryImpl.mem_support_extendState_run_iff` describes the possible outcomes of one step.
 
 ## Layering
 
@@ -278,8 +279,9 @@ end QueryImpl
 
 namespace QueryImpl
 
-/-- Given a `StateT (σ × Q) ProbComp` query implementation, fix the second state component
-at `q₀` and project to `StateT σ ProbComp`. -/
+/-- Run each query from `(s, q₀)`, keep its answer and next `σ` state, and discard its next
+`Q` state. The following query receives `q₀` again. This lets a read-only parameter move
+out of the threaded state. -/
 def fixSndStateT {ι : Type} {spec : OracleSpec ι} {σ Q : Type}
     (impl : QueryImpl spec (StateT (σ × Q) ProbComp)) (q₀ : Q) :
     QueryImpl spec (StateT σ ProbComp) :=
@@ -291,13 +293,10 @@ namespace OracleComp
 
 variable {α : Type}
 
-/-- If the Q-component of product state `(σ × Q)` is invariant under all oracle queries
-starting from `q₀`, then the full `simulateQ` computation decomposes: running with `(s, q₀)`
-produces the same result as running the projected implementation on `s` alone, with `q₀`
-appended back.
-
-This generalizes `map_run_simulateQ_eq_of_query_map_eq` from all-states commutativity to
-support-based invariance. -/
+/-- Suppose that for every query and every `s`, each outcome in the support of the step from
+`(s, q₀)` still has second component `q₀`. Running `fixSndStateT impl q₀` from `s` and
+restoring `q₀` to the final state then gives the original computation from `(s, q₀)`. The
+handler may use `q₀` to choose its answers. -/
 theorem simulateQ_run_eq_of_snd_invariant
     {ι : Type} {spec : OracleSpec ι} {σ Q : Type}
     (impl : QueryImpl spec (StateT (σ × Q) ProbComp))
@@ -339,13 +338,9 @@ end OracleComp
 
 namespace QueryImpl
 
-/-- Extend a stateful query implementation with an auxiliary state component `Q`.
-The base implementation runs on the `σ` component. The auxiliary update may inspect the query
-input, the pre-state, the produced output, the post-state, and the old auxiliary value.
-
-Inverse direction of `QueryImpl.fixSndStateT`: `extendState` adds a passive auxiliary, while
-`fixSndStateT` projects one away. Together they witness the universal property of the product
-state space. -/
+/-- Add bookkeeping such as a counter or a log to a stateful query implementation. The base
+handler sees only the `σ` state. After it answers, `aux` computes the new `Q` from the query,
+the initial `σ`, the answer, the final `σ`, and the previous `Q`. -/
 def extendState
     {ι : Type u} {spec : OracleSpec ι} {σ Q : Type u} {m : Type u → Type v} [Monad m]
     (so : QueryImpl spec (StateT σ m))
@@ -409,12 +404,9 @@ namespace OracleComp
 
 variable {α : Type u}
 
-/-- Forgetting the auxiliary `Q` component commutes with the full simulation.
-Running `so.extendState aux` and projecting away the `Q` component agrees with running `so`
-directly on the `σ` component, irrespective of the initial `Q` value or the auxiliary update.
-
-This is the universal-property statement: the `Q` component is genuinely *passive* in the sense
-that it does not influence the `σ`-side of the simulation. -/
+/-- Projecting away the final `Q` from a run of `extendState so aux` gives the base computation
+of the result and final `σ`. This holds for every update `aux` and initial `q` because only
+`aux` reads the bookkeeping. -/
 theorem extendState_run_proj_eq
     {ι : Type u} {spec : OracleSpec ι} {σ Q : Type u}
     {m : Type u → Type v} [Monad m] [LawfulMonad m]
