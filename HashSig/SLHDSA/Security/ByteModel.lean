@@ -217,9 +217,10 @@ tweakable hash, `R ‖ PK.seed ‖ PK.root ‖ M` for `H_msg`, `SK.prf ‖ opt_r
 
 /-- Each typed query is one query of the single oracle at its encoding: a tweakable-hash or
 `PRF_msg` query reads the first `n` bytes of the answer, an `H_msg` query reads all `m`. -/
-@[expose] noncomputable def encHashImpl :
-    QueryImpl (hashSpec (shakeCore vp)) (OracleComp (unifSpec + shakeSpec vp)) := fun t =>
-  match t with
+@[expose, simps] noncomputable def encHashImpl :
+    QueryImpl (hashSpec (shakeCore vp)) (OracleComp (unifSpec + shakeSpec vp)) where
+  toFun t :=
+    match t with
   | .inl (.thash pkSeed adrsKey xs) =>
       (prefixBytes vp.params.n <$>
         (query (spec := shakeSpec vp) (encode vp (.inl (.thash pkSeed adrsKey xs))) :

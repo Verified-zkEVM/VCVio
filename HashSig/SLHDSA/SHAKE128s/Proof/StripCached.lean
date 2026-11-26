@@ -45,8 +45,9 @@ namespace SLHDSA.SHAKE128s.StripCached
 open CacheReplay
 
 /-- Answer from the cache where it can, and forward the rest. -/
-@[expose] def stripImpl (cache : QueryCache HashSpec) : QueryImpl HashSpec (OracleComp HashSpec) :=
-  fun input =>
+@[expose, simps -isSimp]
+def stripImpl (cache : QueryCache HashSpec) : QueryImpl HashSpec (OracleComp HashSpec) where
+  toFun input :=
     match cache input with
     | some value => pure value
     | none => query (spec := HashSpec) input

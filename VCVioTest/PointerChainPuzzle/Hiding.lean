@@ -99,7 +99,8 @@ def macKey (x : S × N) : K := ⟨(x.1.val + 2 * x.2.val + 1) % 7, Nat.mod_lt _ 
 logs every queried point. -/
 @[expose]
 def traceImpl (g : (p : Point 2 S L Salt Salt) → (oracleSpec 2 S L Salt Salt).Range p) :
-    QueryImpl spec (StateM (List (Point 2 S L Salt Salt ⊕ (S × N ⊕ S × N))))
+    QueryImpl spec (StateM (List (Point 2 S L Salt Salt ⊕ (S × N ⊕ S × N)))) where
+  toFun
   | .inl p => do modify (· ++ [.inl p]); pure (g p)
   | .inr (.inl x) => do modify (· ++ [.inr (.inl x)]); pure (encKey x)
   | .inr (.inr x) => do modify (· ++ [.inr (.inr x)]); pure (macKey x)

@@ -92,10 +92,10 @@ noncomputable def classicalQuery (t : X) :
 
 /-- The implementation of the classical oracle `X →ₒ Y` by quantum programs on the trivial
 register: query `t` is answered by `Quantum.classicalQuery t`. -/
-@[expose]
+@[expose, simps]
 noncomputable def classicalImpl :
-    QueryImpl (X →ₒ Y) (QComp (qromSpec X Y) (QReg.of Unit) (QReg.of Unit)) :=
-  fun t ↦ classicalQuery t
+    QueryImpl (X →ₒ Y) (QComp (qromSpec X Y) (QReg.of Unit) (QReg.of Unit)) where
+  toFun t := classicalQuery t
 
 /-- A classical query is a lossless program. -/
 theorem lossless_classicalQuery (t : X) :

@@ -29,8 +29,8 @@ open OracleComp OracleSpec MeasureTheory UnlinkReduction ENNReal
 
 @[expose] def noisy {S : Type}
     (impl : QueryImpl (UnlinkOracleSpec Bool Bool Bool) (StateT S ProbComp)) :
-    QueryImpl (UnlinkOracleSpec Bool Bool Bool) (StateT S ProbComp) :=
-  fun operation state => do
+    QueryImpl (UnlinkOracleSpec Bool Bool Bool) (StateT S ProbComp) where
+  toFun operation state := do
     let _ ← $ᵗ Bool
     (impl operation).run state
 

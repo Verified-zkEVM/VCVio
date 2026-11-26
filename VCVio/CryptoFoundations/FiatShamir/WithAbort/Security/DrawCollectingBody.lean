@@ -177,18 +177,18 @@ lemma tsum_prEvent_run_ghostSignDrawBody_mul_length_le_tight (pk : Stmt) (sk : W
 /-- The deferred-draw handler for the adversary's oracles, driving the distribution-level mono
 skeleton against `ghostBlindImpl`. Carries the accumulated drawn-commitment list and a monotone
 read-hit flag in place of the eager ghost cache (see `DeferredState`). -/
-@[expose] noncomputable def deferredDrawImpl (pk : Stmt) (sk : Wit) :
+@[expose, simps] noncomputable def deferredDrawImpl (pk : Stmt) (sk : Wit) :
     QueryImpl ((unifSpec + (M × Commit →ₒ Chal)) + (M →ₒ Option (Commit × Resp)))
-      (StateT (DeferredState M Commit Chal) ProbComp) :=
-  fun t => match t with
-  | .inl (.inl n) => StateT.mk fun s =>
-      (fun u => (u, s)) <$> (HasQuery.toQueryImpl (spec := unifSpec) (m := ProbComp)) n
-  | .inl (.inr mc) => StateT.mk fun s =>
-      (fun cu => (cu.1, (((cu.2, s.1.1.2), s.1.2), s.2 || decide (mc.2 ∈ s.1.2)))) <$>
-        roStep M s.1.1.1 mc
-  | .inr msg => StateT.mk fun s =>
-      (fun alc => (alc.1.1, (((alc.2, msg :: s.1.1.2), s.1.2 ++ alc.1.2), s.2))) <$>
-        (ghostSignDrawBody ids M pk sk msg maxAttempts).run s.1.1.1
+      (StateT (DeferredState M Commit Chal) ProbComp) where
+  toFun t := match t with
+    | .inl (.inl n) => StateT.mk fun s =>
+        (fun u => (u, s)) <$> (HasQuery.toQueryImpl (spec := unifSpec) (m := ProbComp)) n
+    | .inl (.inr mc) => StateT.mk fun s =>
+        (fun cu => (cu.1, (((cu.2, s.1.1.2), s.1.2), s.2 || decide (mc.2 ∈ s.1.2)))) <$>
+          roStep M s.1.1.1 mc
+    | .inr msg => StateT.mk fun s =>
+        (fun alc => (alc.1.1, (((alc.2, msg :: s.1.1.2), s.1.2 ++ alc.1.2), s.2))) <$>
+          (ghostSignDrawBody ids M pk sk msg maxAttempts).run s.1.1.1
 
 /-- **Sign-step coupling.** The eager ghost signing body `ghostSignBody` and the deferred draw-
 collecting body `ghostSignDrawBody` are coupled, with their `ids.commit`/`uniformSample`/`respond`

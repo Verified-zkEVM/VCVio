@@ -25,8 +25,9 @@ namespace VCVioTest.OracleNetwork
 abbrev spec : OracleSpec Nat := fun _ => Nat
 
 /-- A deterministic service that charges one state increment per request. -/
-def service : QueryImpl spec (StateT Nat Id) := fun query state =>
-  (query + state, state + 1)
+def service : QueryImpl spec (StateT Nat Id) where
+  toFun query state :=
+    (query + state, state + 1)
 
 /-- A client whose second input depends on its first response. -/
 def adaptive : OracleComp spec Nat := do
@@ -34,12 +35,13 @@ def adaptive : OracleComp spec Nat := do
   FreeM.lift (P := spec.toPFunctor) (first + 1)
 
 /-- The second query depends on the answer delivered to the first one. -/
-theorem adaptive_result : (serialObservation service 2 adaptive 0).run.1.1 = some 12 := by rfl
+theorem adaptive_result :
+    (serialObservation service.toHandler 2 adaptive 0).run.1.1 = some 12 := by rfl
 
-example : (serialObservation service 2 adaptive 0).run.2 = 2 := by rfl
+example : (serialObservation service.toHandler 2 adaptive 0).run.2 = 2 := by rfl
 
 -- A full first round leaves the adaptive second query unexecuted.
-example : (serialObservation service 1 adaptive 0).run.1.1 = none := by rfl
+example : (serialObservation service.toHandler 1 adaptive 0).run.1.1 = none := by rfl
 
 -- Service execution alone has changed private state, but the response remains pending.
 private def afterService :=

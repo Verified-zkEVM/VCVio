@@ -141,7 +141,7 @@ theorem unforgeableAdvantage_keyReader :
     add_apply_inl, add_apply_inr, SignatureAlg.runWithSigningOracle_def,
     SignatureAlg.signingOracle, QueryImpl.passthrough_add, simulateQ_bind, simulateQ_query,
     OracleQuery.input_query, OracleQuery.cont_query, QueryImpl.add_apply_inl,
-    PFunctor.Handler.liftTarget_apply, ofPFunctor_toPFunctor, QueryImpl.id'_apply, id_map,
+    QueryImpl.liftTarget_apply, QueryImpl.id'_apply, id_map,
     simulateQ_map, Functor.map_map, WriterT.run_liftM, List.empty_eq, WriterT.run_map,
     bind_map_left, QueryLog.wasQueried_nil, Bool.not_false, Bool.true_and,
     MonadAttach.support_bind, MonadAttach.mem_support, MonadAttach.support_map, Set.mem_iUnion,

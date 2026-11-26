@@ -168,7 +168,7 @@ theorem evalWithAnswerFn_simulateQ {ι' : Type u} {spec' : OracleSpec ι'}
     (f : QueryImpl spec' Id) (impl : QueryImpl spec (OracleComp spec'))
     (oa : OracleComp spec α) :
     evalWithAnswerFn f (simulateQ impl oa) =
-      evalWithAnswerFn (fun t => evalWithAnswerFn f (impl t)) oa := by
+      evalWithAnswerFn ⟨fun t => evalWithAnswerFn f (impl t)⟩ oa := by
   induction oa using OracleComp.inductionOn with
   | pure a => simp
   | query_bind t k ih =>
@@ -246,7 +246,7 @@ lemma simulateQ_liftTarget {m : Type u → Type v} {n : Type u → Type w}
 /-- Naturality of `simulateQ` along a monad morphism: applying `F` to the simulation by `impl` is
 the simulation by the post-composed implementation `fun t => F (impl t)`. -/
 lemma simulateQ_natural [Monad n] (F : r →ᵐ n) (mx : OracleComp spec α) :
-    F (simulateQ impl mx) = simulateQ (fun t => F (impl t)) mx :=
+    F (simulateQ impl mx) = simulateQ ⟨fun t => F (impl t)⟩ mx :=
   PFunctor.FreeM.liftM_natural (P := spec.toPFunctor) (m := r) impl F mx
 
 /-- Simulating a computation relabelled along a lens `l` answers each query `t` with the answer
@@ -255,7 +255,7 @@ lemma simulateQ_mapLens [LawfulMonad r] {ι' : Type*} {spec' : OracleSpec ι'}
     (l : PFunctor.Lens spec.toPFunctor spec'.toPFunctor) (impl' : QueryImpl spec' r)
     (mx : OracleComp spec α) :
     simulateQ impl' (mx.mapLens l) =
-      simulateQ (fun t => l.toFunB t <$> impl' (l.toFunA t)) mx :=
+      simulateQ ⟨fun t => l.toFunB t <$> impl' (l.toFunA t)⟩ mx :=
   PFunctor.FreeM.liftM_mapLens l impl' mx
 
 end simulateQ
@@ -265,6 +265,12 @@ variable {ι} {spec : OracleSpec ι} {n : Type u → Type v}
 
 lemma simulateQ_def (impl : QueryImpl spec n) (mx : OracleComp spec α) :
     simulateQ impl mx = PFunctor.FreeM.liftMHom impl mx := rfl
+
+/-- Simulating through a handler of the specification's interface is PolyFun's interpretation
+through that handler. -/
+lemma simulateQ_ofHandler {m : Type u → Type v} [Monad m]
+    (h : PFunctor.Handler m spec.toPFunctor) (mx : OracleComp spec α) :
+    simulateQ (QueryImpl.ofHandler h) mx = PFunctor.FreeM.liftM h mx := rfl
 
 /-- `QueryImpl.id'` is an identity for `simulateQ` with implementation in `OracleComp spec`. -/
 @[simp, grind =]

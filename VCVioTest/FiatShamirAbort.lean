@@ -57,8 +57,8 @@ def keys : GenerableRelation Unit Unit (fun _ _ ↦ true) where
   gen_sound _ _ _ := rfl
 
 /-- A handler that fails before producing a challenge. -/
-def failingHandler : QueryImpl (Unit × Unit →ₒ Unit) (OptionT ProbComp) :=
-  fun _ ↦ failure
+def failingHandler : QueryImpl (Unit × Unit →ₒ Unit) (OptionT ProbComp) where
+  toFun _ := failure
 
 example : FiatShamirWithAbort.signAttemptAbortProbability
     abortingIds Unit failingHandler () () () = 0 := by

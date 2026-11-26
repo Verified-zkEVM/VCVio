@@ -65,25 +65,28 @@ def simulatedNmaFwd :
 
 /-- The uniform-sampling handler: each query is forwarded to the ambient `unifSpec` oracle
 by `simulatedNmaFwd`. -/
+@[simps]
 def simulatedNmaUnifSim :
     QueryImpl unifSpec
       (StateT (fsRoSpec M Commit Chal).QueryCache
-        (OracleComp (fsRoSpec M Commit Chal))) :=
-  fun n => simulatedNmaFwd (M := M) (Commit := Commit) (Chal := Chal) (.inl n)
+        (OracleComp (fsRoSpec M Commit Chal))) where
+  toFun n := simulatedNmaFwd (M := M) (Commit := Commit) (Chal := Chal) (.inl n)
 
 /-- The random-oracle handler: a query found in the cache is answered from it, and any
 other query is forwarded to the ambient random oracle and its answer cached. -/
+@[simps]
 def simulatedNmaRoSim
     [DecidableEq M] [DecidableEq Commit] :
     QueryImpl (M × Commit →ₒ Chal)
       (StateT (fsRoSpec M Commit Chal).QueryCache
-        (OracleComp (fsRoSpec M Commit Chal))) := fun mc => do
-  let cache ← get
-  match cache (.inr mc) with
-  | some v => pure v
-  | none => do
-      let v ← simulatedNmaFwd (M := M) (Commit := Commit) (Chal := Chal) (.inr mc)
-      modifyGet fun cache => (v, cache.cacheQuery (.inr mc) v)
+        (OracleComp (fsRoSpec M Commit Chal))) where
+  toFun mc := do
+    let cache ← get
+    match cache (.inr mc) with
+    | some v => pure v
+    | none => do
+        let v ← simulatedNmaFwd (M := M) (Commit := Commit) (Chal := Chal) (.inr mc)
+        modifyGet fun cache => (v, cache.cacheQuery (.inr mc) v)
 
 /-- The handler for `fsRoSpec`: uniform sampling by `simulatedNmaUnifSim` and random-oracle
 queries by the caching `simulatedNmaRoSim`. -/
@@ -98,19 +101,21 @@ def simulatedNmaBaseSim
 /-- The signing handler: answers a message `msg` with `(c, s)` from a transcript
 `(c, ω, s)` drawn from `simTranscript pk`, and programs the cache at `(msg, c)` with `ω`
 unless that entry is already set. -/
+@[simps]
 def simulatedNmaSigSim
     [DecidableEq M] [DecidableEq Commit]
     (simTranscript : Stmt → ProbComp (Commit × Chal × Resp)) (pk : Stmt) :
     QueryImpl (M →ₒ (Commit × Resp))
       (StateT (fsRoSpec M Commit Chal).QueryCache
-        (OracleComp (fsRoSpec M Commit Chal))) := fun msg => do
-  let (c, ω, s) ← simulateQ
-    (simulatedNmaUnifSim (M := M) (Commit := Commit) (Chal := Chal))
-    (simTranscript pk)
-  modifyGet fun cache =>
-    match cache (.inr (msg, c)) with
-    | some _ => ((c, s), cache)
-    | none => ((c, s), cache.cacheQuery (.inr (msg, c)) ω)
+        (OracleComp (fsRoSpec M Commit Chal))) where
+  toFun msg := do
+    let (c, ω, s) ← simulateQ
+      (simulatedNmaUnifSim (M := M) (Commit := Commit) (Chal := Chal))
+      (simTranscript pk)
+    modifyGet fun cache =>
+      match cache (.inr (msg, c)) with
+      | some _ => ((c, s), cache)
+      | none => ((c, s), cache.cacheQuery (.inr (msg, c)) ω)
 
 /-- The handler for all of a chosen-message adversary's oracles, using only the public key:
 `simulatedNmaBaseSim` for `fsRoSpec` and `simulatedNmaSigSim` for signing queries. -/
@@ -174,11 +179,11 @@ private theorem simulatedNmaRoSim_run_hashQueryBound
   cases hs : s (.inr mc) with
   | some v =>
       change Chal at v
-      simp only [simulatedNmaRoSim, StateT.run_bind, StateT.run_get, pure_bind, hs]
+      simp only [simulatedNmaRoSim_apply, StateT.run_bind, StateT.run_get, pure_bind, hs]
       rw [StateT.run_pure]
       trivial
   | none =>
-      simp only [simulatedNmaRoSim, StateT.run_bind, StateT.run_get, pure_bind, hs]
+      simp only [simulatedNmaRoSim_apply, StateT.run_bind, StateT.run_get, pure_bind, hs]
       change nmaHashQueryBound (M := M)
         ((simulatedNmaFwd (M := M) (Commit := Commit) (Chal := Chal) (.inr mc)).run s >>=
           fun p : Chal × (fsRoSpec M Commit Chal).QueryCache =>
@@ -193,7 +198,7 @@ private theorem simulatedNmaSigSim_run_hashQueryBound
     nmaHashQueryBound (M := M) (Commit := Commit) (Chal := Chal)
       (oa := (simulatedNmaSigSim (M := M) (Commit := Commit) (Chal := Chal)
         (Resp := Resp) simTranscript pk msg).run s) 0 := by
-  simpa [simulatedNmaSigSim, nmaHashQueryBound] using
+  simpa [simulatedNmaSigSim_apply, nmaHashQueryBound] using
     (OracleComp.isQueryBoundP_map_iff
       (oa := (simulateQ (simulatedNmaUnifSim (M := M) (Commit := Commit) (Chal := Chal))
         (simTranscript pk)).run s)
@@ -206,7 +211,7 @@ private theorem simulatedNmaSigSim_run_hashQueryBound
       (OracleComp.IsQueryBoundP.simulateQ_run_of_step (p := fun _ : ℕ => False)
         (OracleComp.isQueryBoundP_false _ _) (fun _ h _ => h.elim)
         (fun n _ s' => by
-          simpa [simulatedNmaUnifSim, nmaHashQueryBound] using
+          simpa [simulatedNmaUnifSim_apply, nmaHashQueryBound] using
             simulatedNmaFwd_run_hashQueryBound (M := M) (Commit := Commit) (Chal := Chal)
               (.inl n) s') s)
 

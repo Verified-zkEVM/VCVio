@@ -36,8 +36,9 @@ attribute [local implicit_reducible] spec handleSpec
 abbrev reductionSpec (F M R : Type) := spec F pairingSig + (unifSpec + (M →ₒ R))
 
 /-- Embed a generic pairing computation into the interface with private scalar lookups. -/
-@[expose] def reductionLift : QueryImpl (genSpec F pairingSig)
-    (OracleComp (reductionSpec F M R))
+@[expose, simps -isSimp] def reductionLift : QueryImpl (genSpec F pairingSig)
+    (OracleComp (reductionSpec F M R)) where
+  toFun
   | .inl q => (reductionSpec F M R).query (.inl q)
   | .inr n => (reductionSpec F M R).query (.inr (.inl n))
 
@@ -67,10 +68,11 @@ structure ReductionState (F M : Type) where
     st.transcript ++ [(kind, m)]⟩
 
 /-- Interpret the adversary using virtual handles, real equality, and private scalar lookups. -/
-@[expose] def reductionHandler [CommSemiring F] [DecidableEq F]
+@[expose, simps -isSimp] def reductionHandler [CommSemiring F] [DecidableEq F]
     (z : PSort → Handle) (hash sign : R → OracleComp (genSpec F pairingSig) Handle) :
     QueryImpl (adversarySpec F M)
-      (StateT (ReductionState F M) (OracleComp (reductionSpec F M R)))
+      (StateT (ReductionState F M) (OracleComp (reductionSpec F M R))) where
+  toFun
   | .inl q => fun st => do
       let (a, handles) ← simulateQ reductionLift ((virtualizeImpl z (.inl q)).run st.handles)
       return (a, ⟨handles, (Pairing.step (0 : F →ₗ[F] F →ₗ[F] F) q st.metadata).2,
@@ -96,17 +98,18 @@ structure ReductionState (F M : Type) where
     (initialReductionState pk₁ pk₂)
   let coefficients :=
     ((explain st.metadata.1 (Pairing.sourceMessage out)).coefficients false).headD []
-  let basis ← simulateQ (fun q => ((reductionSpec F M R).query (.inr q) :
-      OracleComp (reductionSpec F M R) _))
+  let basis ← simulateQ ⟨fun q => ((reductionSpec F M R).query (.inr q) :
+      OracleComp (reductionSpec F M R) _)⟩
     (LinearFunctional.readTranscript hashRep signRep st.transcript)
   let target ← (reductionSpec F M R).query (.inr (.inr out.data))
   let repr := evaluate coefficients (initial ++ basis)
   return (repr.1, repr.2, target)
 
 /-- Answer scalar lookups with one cache while forwarding group queries and private coins. -/
-@[expose] def reductionCache [DecidableEq M] [SampleableType R] :
+@[expose, simps -isSimp] def reductionCache [DecidableEq M] [SampleableType R] :
     QueryImpl (reductionSpec F M R)
-      (StateT (M →ₒ R).QueryCache (OracleComp (genSpec F pairingSig)))
+      (StateT (M →ₒ R).QueryCache (OracleComp (genSpec F pairingSig))) where
+  toFun
   | .inl q => fun cache => (fun h => (h, cache)) <$> (genSpec F pairingSig).query (.inl q)
   | .inr (.inl n) => fun cache => (fun r => (r, cache)) <$> (genSpec F pairingSig).query (.inr n)
   | .inr (.inr m) => fun cache => liftM (((M →ₒ R).randomOracle m).run cache)

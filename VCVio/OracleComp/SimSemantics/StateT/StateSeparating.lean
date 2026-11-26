@@ -49,13 +49,14 @@ state.
     Type _ :=
   QueryImpl E (StateT σ (OracleComp I))
 
-/-- `QueryImpl.Stateful` is definitionally PolyFun's generic effectful
-stateful-handler interface specialized to oracle computations. -/
-theorem Stateful.eq_handler
+/-- A `QueryImpl.Stateful` as PolyFun's generic effectful stateful handler, specialized to oracle
+computations. -/
+abbrev Stateful.toHandler
     {ιᵢ : Type uᵢ} {ιₑ : Type uₑ}
-    (I : OracleSpec.{uᵢ, vᵢ} ιᵢ) (E : OracleSpec.{uₑ, v} ιₑ) (σ : Type v) :
-    QueryImpl.Stateful I E σ =
-      PFunctor.Handler.Stateful (OracleComp I) σ E.toPFunctor := rfl
+    {I : OracleSpec.{uᵢ, vᵢ} ιᵢ} {E : OracleSpec.{uₑ, v} ιₑ} {σ : Type v}
+    (h : QueryImpl.Stateful I E σ) :
+    PFunctor.Handler.Stateful (OracleComp I) σ E.toPFunctor :=
+  QueryImpl.toHandler h
 
 namespace Stateful
 
@@ -157,7 +158,7 @@ def runState {α : Type v} (h : QueryImpl.Stateful I E σ) (s₀ : σ) (A : Orac
 generic PolyFun effectful-stateful handler runner. -/
 theorem runState_eq_handler_run {α : Type v} (h : QueryImpl.Stateful I E σ)
     (s₀ : σ) (A : OracleComp E α) :
-    h.runState s₀ A = PFunctor.Handler.Stateful.run h A s₀ := rfl
+    h.runState s₀ A = h.toHandler.run A s₀ := rfl
 
 /-- Run a stateful handler from the default initial state, keeping the final
 state. -/
@@ -220,9 +221,11 @@ theorem simulateQ_liftComp_run_of_query
         bind_map_left, map_bind, ih]
 
 /-- Transport a stateful handler along a state equivalence. -/
+@[simps]
 def transportState (h : QueryImpl.Stateful I E σ) (φ : σ ≃ σ') :
-    QueryImpl.Stateful I E σ' := fun t =>
-  StateT.mk fun s' => Prod.map id φ <$> (h t).run (φ.symm s')
+    QueryImpl.Stateful I E σ' where
+  toFun t :=
+    StateT.mk fun s' => Prod.map id φ <$> (h t).run (φ.symm s')
 
 @[simp]
 lemma transportState_apply_run (h : QueryImpl.Stateful I E σ) (φ : σ ≃ σ')
@@ -239,10 +242,11 @@ and updated inside the combined state `σ`. The linked handler reads both
 component states from the source state, runs the usual nested simulation, then
 writes back the updated outer and inner states through the frame lenses.
 -/
-def linkWith (F : Frame σ σ₁ σ₂)
+@[simps] def linkWith (F : Frame σ σ₁ σ₂)
     (outer : QueryImpl.Stateful M E σ₁) (inner : QueryImpl.Stateful I M σ₂) :
-    QueryImpl.Stateful I E σ := fun t =>
-  StateT.mk fun s =>
+    QueryImpl.Stateful I E σ where
+  toFun t :=
+    StateT.mk fun s =>
     F.linkReshape s <$>
       (simulateQ inner ((outer t).run (F.left.get s))).run (F.right.get s)
 
@@ -439,6 +443,7 @@ state. A left query updates only the left view, and a right query updates only
 the right view. The frame's separation law records that these two updates are
 non-interfering.
 -/
+@[simps]
 def parRouteWith
     {ιᵢ : Type uᵢ} {I : OracleSpec.{uᵢ, v} ιᵢ} {ιₑ : Type uₑ}
     {E : OracleSpec.{uₑ, v} ιₑ} (F : Frame σ σ₁ σ₂)
@@ -446,8 +451,9 @@ def parRouteWith
     [MonadLiftT (OracleQuery I₁) (OracleQuery I)]
     [MonadLiftT (OracleQuery I₂) (OracleQuery I)]
     (h₁ : QueryImpl.Stateful I₁ E₁ σ₁) (h₂ : QueryImpl.Stateful I₂ E₂ σ₂) :
-    QueryImpl.Stateful I E σ := fun t =>
-  match R.route t with
+    QueryImpl.Stateful I E σ where
+  toFun t :=
+    match R.route t with
   | .inl q => StateT.mk fun s =>
       (Prod.map q.2.symm fun s₁' => F.left.put s₁' s) <$>
         liftComp ((h₁ q.1).run (F.left.get s)) I
@@ -491,9 +497,11 @@ def parRouteSeparatedWith
 
 /-- Parallel composition of two stateful handlers using an explicit state
 frame and disjoint sum import and export interfaces. -/
+@[simps]
 def parSumWith (F : Frame σ σ₁ σ₂)
     (h₁ : QueryImpl.Stateful I₁ E₁ σ₁) (h₂ : QueryImpl.Stateful I₂ E₂ σ₂) :
-    QueryImpl.Stateful (I₁ + I₂) (E₁ + E₂) σ
+    QueryImpl.Stateful (I₁ + I₂) (E₁ + E₂) σ where
+  toFun
   | .inl t => StateT.mk fun s =>
       (Prod.map id fun s₁' => F.left.put s₁' s) <$>
         liftComp ((h₁ t).run (F.left.get s)) (I₁ + I₂)

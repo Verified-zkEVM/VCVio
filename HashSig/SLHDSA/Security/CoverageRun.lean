@@ -369,7 +369,7 @@ theorem RunInv.sign {optRand : PublicKeyCore core → ProbComp core.Y} {pkSeed :
     have e : simulateQ (roleImpl core .signer)
         (PublicHash.hmsg core R sk.pkSeed sk.pkRoot msg : OracleComp (deriveSpec core) _) =
         roleImpl core .signer (.inl (.inr (.inl (.hmsg R sk.pkSeed sk.pkRoot msg)))) := rfl
-    simp only [e, roleImpl, simulateQ_spec_query] at h₃
+    simp only [e, roleImpl_apply, simulateQ_spec_query] at h₃
     exact h₃
   have hsig := support_simulateQ_run'_subset (roleRunImpl core ∘ₛ roleImpl core .signer)
     (signTail core sk.pkSeed R digest) s₃ (by

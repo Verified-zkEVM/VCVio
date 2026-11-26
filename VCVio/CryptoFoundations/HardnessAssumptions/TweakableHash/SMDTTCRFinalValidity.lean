@@ -78,9 +78,10 @@ structure Adversary (prob : Problem ι PkSeed Tweak M Y) where
 
 /-- The always-answering target oracle. Every query is appended in issue order; a cap, duplicate
 target tweak, or collection clash poisons final validity without changing the returned digest. -/
+@[simps]
 def challengeOracle [DecidableEq Tweak] (prob : Problem ι PkSeed Tweak M Y) (pk : PkSeed) :
-    QueryImpl (challengeSpec Tweak M Y) (StateT (State Tweak M) ProbComp) :=
-  fun tm => do
+    QueryImpl (challengeSpec Tweak M Y) (StateT (State Tweak M) ProbComp) where
+  toFun tm := do
     let st ← get
     set (st.recordTarget prob.numTargets Prod.fst tm)
     return prob.th.eval pk tm.1 tm.2
@@ -118,7 +119,7 @@ variable [DecidableEq Tweak] {prob : Problem ι PkSeed Tweak M Y} {pk : PkSeed}
 theorem challengeOracle_run :
     (challengeOracle prob pk (t, m)).run st =
       pure (prob.th.eval pk t m, st.recordTarget prob.numTargets Prod.fst (t, m)) := by
-  simp [challengeOracle]
+  simp [challengeOracle_apply]
 
 /-! ## Run-level final-validity correspondence -/
 

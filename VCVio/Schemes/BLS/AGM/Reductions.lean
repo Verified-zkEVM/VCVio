@@ -43,7 +43,7 @@ private def reductionRun {F M G₁ G₂ R V : Type} [Zero F]
   (simulateQ (M →ₒ R).romImpl
     (GroupModel.LinearFunctional.extractionProgram (fun out => out.value.data)
       hash sign hashRep signRep basis
-      (simulateQ (fun q => AGM.oracle q.value)
+      (simulateQ ⟨fun q => AGM.oracle q.value⟩
         (A.main (AGM.initialInput g₁ g₂ pk))))).run' ∅
 
 private def coefficients {F M G₁ G₂ : Type}
@@ -93,20 +93,19 @@ private def rawMain {F M G₁ G₂ Gₜ : Type} [Field F]
     [AddCommGroup Gₜ] [Module F Gₜ]
     {e : G₁ →ₗ[F] G₂ →ₗ[F] Gₜ} {g₁ : G₁} {g₂ : G₂}
     (A : AlgebraicAdversary F M G₁ G₂ e g₁ g₂) (pk : G₁ × G₂) :=
-  simulateQ (fun q => oracle q.value) (A.main (initialInput g₁ g₂ pk))
+  simulateQ ⟨fun q => oracle q.value⟩ (A.main (initialInput g₁ g₂ pk))
 
 private def received {M G₁ G₂ : Type} (initial : Groups (Group G₁ G₂))
     (hash sign : M → G₁) (tr : Transcript M) : Groups (Group G₁ G₂) :=
   groupInputs (initial false ++ tr.map (fun q => if q.1 then sign q.2 else hash q.2))
     (initial true)
 
-private def fixedPlainOracle {M G₁ G₂ : Type} (hash sign : M → G₁) :
-    QueryImpl (plainSpec (Group G₁ G₂) (Query M) Reply) ProbComp := by
-  intro ⟨q, _⟩
-  rcases q with ((n | m) | m)
-  · exact (fun r => ⟨r, groupInputs [] []⟩) <$> (unifSpec.query n : ProbComp _)
-  · exact pure ⟨(), groupInputs [hash m] []⟩
-  · exact pure ⟨(), groupInputs [sign m] []⟩
+@[simps -isSimp] private def fixedPlainOracle {M G₁ G₂ : Type} (hash sign : M → G₁) :
+    QueryImpl (plainSpec (Group G₁ G₂) (Query M) Reply) ProbComp where
+  toFun
+  | ⟨.inl (.inl n), _⟩ => (fun r => ⟨r, groupInputs [] []⟩) <$> (unifSpec.query n : ProbComp _)
+  | ⟨.inl (.inr m), _⟩ => pure ⟨(), groupInputs [hash m] []⟩
+  | ⟨.inr m, _⟩ => pure ⟨(), groupInputs [sign m] []⟩
 
 private theorem received_empty {M G₁ G₂ : Type} (initial : Groups (Group G₁ G₂))
     (hash sign : M → G₁) : received initial hash sign [] = initial := by
@@ -123,17 +122,17 @@ private theorem fixedRun_groups {F M G₁ G₂ Gₜ : Type} [Field F]
       fixedRun hash sign (rawMain A pk) =
       A.toAdversary.run (fixedPlainOracle hash sign) (initialInput g₁ g₂ pk) := by
   let input := initialInput g₁ g₂ pk
-  let impl₁ := (fixedOracle hash sign) ∘ₛ (fun q => oracle q.value
+  let impl₁ := (fixedOracle hash sign) ∘ₛ (⟨fun q => oracle q.value⟩
     : QueryImpl (explainedSpec F (Group G₁ G₂) (Query M) Reply) (OracleComp (rawSpec M G₁)))
   let impl₂ : QueryImpl (explainedSpec F (Group G₁ G₂) (Query M) Reply)
-      (StateT (Groups (Group G₁ G₂)) ProbComp) := fun q => StateT.mk fun basis => do
+      (StateT (Groups (Group G₁ G₂)) ProbComp) := ⟨fun q => StateT.mk fun basis => do
     let reply ← fixedPlainOracle hash sign q.value
-    return (reply, extend basis reply.groups)
+    return (reply, extend basis reply.groups)⟩
   have hstep : ∀ q tr, Prod.map id (received input.groups hash sign) <$>
       (impl₁ q).run tr = (impl₂ q).run (received input.groups hash sign tr) := by
     intro ⟨⟨q, groups⟩, coeff⟩ tr
     rcases q with ((n | m) | m) <;>
-      simp only [impl₁, impl₂, QueryImpl.apply_compose, oracle, fixedPlainOracle,
+      simp only [impl₁, impl₂, QueryImpl.apply_compose, oracle, fixedPlainOracle_apply,
         simulateQ_map, simulateQ_spec_query, StateT.run_map, StateT.run_mk,
         bind_pure_comp, Functor.map_map]
     · rw [fixedOracle_run_random]
@@ -234,14 +233,13 @@ private theorem fixedRun_good_sound {F M G₁ G₂ Gₜ : Type} [Field F]
 private def signedMessages {M : Type} (tr : Transcript M) : List M :=
   tr.filterMap (fun q => if q.1 then some q.2 else none)
 
-private def cachedOracle {M R G : Type} [DecidableEq M] [SampleableType R]
+@[simps -isSimp] private def cachedOracle {M R G : Type} [DecidableEq M] [SampleableType R]
     (hash sign : R → G) : QueryImpl (interfaceSpec M G)
-      (StateT (List M × (M →ₒ R).QueryCache) ProbComp) := by
-  intro q st
-  rcases q with ((n | m) | m)
-  · exact (fun r => (r, st)) <$> (unifSpec.query n : ProbComp _)
-  · exact (fun z => (hash z.1, st.1, z.2)) <$> ((M →ₒ R).randomOracle m).run st.2
-  · exact (fun z => (sign z.1, st.1 ++ [m], z.2)) <$> ((M →ₒ R).randomOracle m).run st.2
+      (StateT (List M × (M →ₒ R).QueryCache) ProbComp) where
+  toFun
+  | .inl (.inl n), st => (fun r => (r, st)) <$> (unifSpec.query n : ProbComp _)
+  | .inl (.inr m), st => (fun z => (hash z.1, st.1, z.2)) <$> ((M →ₒ R).randomOracle m).run st.2
+  | .inr m, st => (fun z => (sign z.1, st.1 ++ [m], z.2)) <$> ((M →ₒ R).randomOracle m).run st.2
 
 private theorem indexed_cached_step {M R G : Type} [DecidableEq M] [SampleableType R]
     (hash sign : R → G) (q : (interfaceSpec M G).Domain) (st : OracleState R M) :
@@ -251,14 +249,14 @@ private theorem indexed_cached_step {M R G : Type} [DecidableEq M] [SampleableTy
   rcases q with ((n | m) | m)
   · change (fun z => (z.1, z.2.signed, valueCache z.2)) <$>
       ((fun r => (r, st)) <$> (unifSpec.query n : ProbComp _)) = _
-    simp only [Functor.map_map, cachedOracle, StateT.run]
+    simp only [Functor.map_map, cachedOracle_apply, StateT.run]
     rfl
   · rw [indexedOracle_run_hash]
     simp only [Functor.map_map]
     rw [indexedEntry_signed none m st (fun v c l => (hash v, l, c))]
     have h := congrArg (fun oa => (fun z => (hash z.1, st.signed, z.2)) <$> oa)
       (indexedEntry_valueCache none m st)
-    simpa only [Functor.map_map, cachedOracle, StateT.run] using h
+    simpa only [Functor.map_map, cachedOracle_apply, StateT.run] using h
   · rw [indexedOracle_run_sign]
     simp only [Functor.map_map]
     change (fun z => (sign z.1.1, z.2.signed ++ [m], valueCache z.2)) <$>
@@ -266,17 +264,17 @@ private theorem indexed_cached_step {M R G : Type} [DecidableEq M] [SampleableTy
     rw [indexedEntry_signed none m st (fun v c l => (sign v, l ++ [m], c))]
     have h := congrArg (fun oa => (fun z => (sign z.1, st.signed ++ [m], z.2)) <$> oa)
       (indexedEntry_valueCache none m st)
-    simpa only [Functor.map_map, cachedOracle, StateT.run] using h
+    simpa only [Functor.map_map, cachedOracle_apply, StateT.run] using h
 
+@[simps -isSimp]
 private def cachedTranscriptOracle {M R G : Type} [DecidableEq M] [SampleableType R]
     (hash sign : R → G) : QueryImpl (interfaceSpec M G)
-      (StateT (Transcript M × (M →ₒ R).QueryCache) ProbComp) := by
-  intro q st
-  rcases q with ((n | m) | m)
-  · exact (fun r => (r, st)) <$> (unifSpec.query n : ProbComp _)
-  · exact (fun z => (hash z.1, st.1 ++ [(false, m)], z.2)) <$>
+      (StateT (Transcript M × (M →ₒ R).QueryCache) ProbComp) where
+  toFun
+  | .inl (.inl n), st => (fun r => (r, st)) <$> (unifSpec.query n : ProbComp _)
+  | .inl (.inr m), st => (fun z => (hash z.1, st.1 ++ [(false, m)], z.2)) <$>
       ((M →ₒ R).randomOracle m).run st.2
-  · exact (fun z => (sign z.1, st.1 ++ [(true, m)], z.2)) <$>
+  | .inr m, st => (fun z => (sign z.1, st.1 ++ [(true, m)], z.2)) <$>
       ((M →ₒ R).randomOracle m).run st.2
 
 private theorem transcript_cached_step {M R G : Type} [DecidableEq M] [SampleableType R]
@@ -286,7 +284,7 @@ private theorem transcript_cached_step {M R G : Type} [DecidableEq M] [Sampleabl
       (cachedTranscriptOracle hash sign q).run st =
       (cachedOracle hash sign q).run (signedMessages st.1, st.2) := by
   rcases q with ((n | m) | m) <;>
-    simp [cachedTranscriptOracle, cachedOracle, StateT.run, Functor.map_map,
+    simp [cachedTranscriptOracle_apply, cachedOracle_apply, StateT.run, Functor.map_map,
       signedMessages, List.filterMap_append]
 
 private theorem transcript_cached_compose {M R G α : Type}
@@ -299,11 +297,11 @@ private theorem transcript_cached_compose {M R G α : Type}
   intro q tr c
   rcases q with ((n | m) | m)
   · rw [transcriptOracle_random]
-    simp [cachedTranscriptOracle, romImpl, unifFwdImpl, Functor.map_map]
+    simp [cachedTranscriptOracle_apply, romImpl, unifFwdImpl, Functor.map_map]
   · rw [transcriptOracle_hash]
-    simp [cachedTranscriptOracle, Functor.map_map]
+    simp [cachedTranscriptOracle_apply, Functor.map_map]
   · rw [transcriptOracle_sign]
-    simp [cachedTranscriptOracle, Functor.map_map]
+    simp [cachedTranscriptOracle_apply, Functor.map_map]
 
 private theorem indexed_transcript {M R G α : Type} [DecidableEq M] [SampleableType R]
     (hash sign : R → G) (oa : OracleComp (interfaceSpec M G) α) :

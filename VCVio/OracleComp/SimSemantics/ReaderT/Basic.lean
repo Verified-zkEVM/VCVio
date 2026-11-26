@@ -26,32 +26,38 @@ namespace QueryImpl
 /-- Given implementations for oracles in `spec₁` and `spec₂` in terms of reader monads for
 two different contexts `ρ₁` and `ρ₂`, implement the combined set `spec₁ + spec₂` in terms
 of a combined `ρ₁ × ρ₂` state. The binary analogue of `QueryImpl.sigmaReaderT`. -/
+@[simps]
 def addReaderT {ι₁ : Type u} {ι₂ : Type v}
     {spec₁ : OracleSpec.{u, w} ι₁} {spec₂ : OracleSpec.{v, w} ι₂}
     {m : Type w → Type x} {ρ₁ ρ₂ : Type w}
     (impl₁ : QueryImpl spec₁ (ReaderT ρ₁ m))
     (impl₂ : QueryImpl spec₂ (ReaderT ρ₂ m)) :
-    QueryImpl (spec₁ + spec₂) (ReaderT (ρ₁ × ρ₂) m)
+    QueryImpl (spec₁ + spec₂) (ReaderT (ρ₁ × ρ₂) m) where
+  toFun
   | .inl t => ReaderT.mk fun s => (impl₁ t).run s.1
   | .inr t => ReaderT.mk fun s => (impl₂ t).run s.2
 
 /-- Indexed version of `QueryImpl.addReaderT`. Each query for index `t` reads from the
 `t`-th component of the pi-product `(t : τ) → ρ t`. Note that `m` cannot vary with `t`. -/
+@[simps]
 def sigmaReaderT {τ : Type} {ι : τ → Type _}
     {spec : (t : τ) → OracleSpec (ι t)}
     {m : Type _ → Type _} {ρ : τ → Type _}
     (impl : (t : τ) → QueryImpl (spec t) (ReaderT (ρ t) m)) :
-    QueryImpl (OracleSpec.sigma spec) (ReaderT ((t : τ) → ρ t) m)
+    QueryImpl (OracleSpec.sigma spec) (ReaderT ((t : τ) → ρ t) m) where
+  toFun
   | ⟨t, q⟩ => ReaderT.mk fun s => (impl t q).run (s t)
 
 /-- Reassociate a nested reader transformer into one product context.
 
 The outer context is the first component of the product; the inner/base context is the
 second. This is the reader-transformer analogue of `flattenStateT` and `flattenWriterT`. -/
+@[simps]
 def flattenReaderT {ι : Type u} {spec : OracleSpec.{u, v} ι}
     {m : Type v → Type w} {ρ₁ ρ₂ : Type v}
     (impl : QueryImpl spec (ReaderT ρ₁ (ReaderT ρ₂ m))) :
-    QueryImpl spec (ReaderT (ρ₁ × ρ₂) m) := fun t =>
-  ReaderT.mk fun (r₁, r₂) => ((impl t).run r₁).run r₂
+    QueryImpl spec (ReaderT (ρ₁ × ρ₂) m) where
+  toFun t :=
+    ReaderT.mk fun (r₁, r₂) => ((impl t).run r₁).run r₂
 
 end QueryImpl

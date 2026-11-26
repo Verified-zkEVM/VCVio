@@ -180,7 +180,7 @@ theorem impl_table_step [DecidableEq S] [CommSemiring F]
     (hz : z ∈ support ((impl M obs (OracleComp spec') t).run tbl)) :
     if t.isOp then ∃ s v, z.2 = append tbl s v else z.2 = tbl := by
   cases t <;>
-    simp only [impl, push, StateT.run, modifyGet, MonadStateOf.modifyGet,
+    simp only [impl_apply, push, StateT.run, modifyGet, MonadStateOf.modifyGet,
       StateT.modifyGet] at hz <;>
     replace hz := (mem_support_pure_iff _ _).mp hz <;>
     subst z
@@ -194,7 +194,7 @@ private theorem impl_length_target [DecidableEq S] [CommSemiring F]
     (hz : z ∈ support ((impl M obs (OracleComp spec') t).run tbl)) (s : S) :
     (z.2 s).length = (tbl s).length + if t.target = some s then 1 else 0 := by
   cases t <;>
-    simp only [impl, push, StateT.run, modifyGet, MonadStateOf.modifyGet,
+    simp only [impl_apply, push, StateT.run, modifyGet, MonadStateOf.modifyGet,
       StateT.modifyGet] at hz <;>
     replace hz := (mem_support_pure_iff _ _).mp hz <;>
     subst z

@@ -108,17 +108,19 @@ def IND_CPA_queryImplFromChallenge
 /-- The cached left/right challenge oracle under public key `pk`: a repeated message pair is
 answered with its cached ciphertext, and a fresh pair `mm` is answered by encrypting the message
 `select mm` and caching the result. -/
+@[simps]
 def IND_CPA_cachedChallengeOracle
     (encAlg : AsymmEncAlg ProbComp M PK SK C)
     (pk : PK) (select : M × M → M) :
-    QueryImpl (M × M →ₒ C) (StateT encAlg.IND_CPA_Cache ProbComp) := fun mm => do
-  let cache ← get
-  match cache mm with
-  | some c => return c
-  | none =>
-      let c ← encAlg.encrypt pk (select mm)
-      set (cache.cacheQuery mm c)
-      return c
+    QueryImpl (M × M →ₒ C) (StateT encAlg.IND_CPA_Cache ProbComp) where
+  toFun mm := do
+    let cache ← get
+    match cache mm with
+    | some c => return c
+    | none =>
+        let c ← encAlg.encrypt pk (select mm)
+        set (cache.cacheQuery mm c)
+        return c
 
 /-- Cached LR-oracle implementation for IND-CPA: repeated challenge queries are answered from the
 cache, and fresh ones encrypt the selected branch. -/
@@ -150,7 +152,8 @@ theorem runAgainst_IND_CPA_responder_eq (encAlg : AsymmEncAlg ProbComp M PK SK C
       (fun p => (some p.1, p.2)) <$>
         (simulateQ (encAlg.IND_CPA_queryImpl' pk b) (adversary pk)).run cache :=
   calc machine.runAgainst (encAlg.IND_CPA_responder pk b) k (cache, machine.init pk)
-      = (machine.runWithInput (encAlg.IND_CPA_responder pk b).toQueryImpl k pk).run cache :=
+      = (machine.runWithInput (encAlg.IND_CPA_responder pk b).toQueryImpl.toHandler k pk).run
+          cache :=
         rfl
     _ = (some <$> simulateQ (encAlg.IND_CPA_queryImpl' pk b) (adversary pk)).run cache := by
         rw [himp.simulateQ_run_eq (encAlg.IND_CPA_responder pk b).toQueryImpl pk]
@@ -185,18 +188,20 @@ abbrev IND_CPA_CountedState (_encAlg : AsymmEncAlg ProbComp M PK SK C) :=
 /-- The cached left/right challenge oracle with a counter of fresh queries. A repeated message
 pair is answered from the cache. A fresh pair `mm`, met when the counter reads `n`, is answered by
 encrypting `select n mm`; the ciphertext is cached and the counter incremented. -/
+@[simps]
 def IND_CPA_countedChallengeOracle
     (pk : PK) (select : ℕ → M × M → M) :
     QueryImpl (M × M →ₒ C)
-      (StateT encAlg'.IND_CPA_CountedState ProbComp) := fun mm => do
-  let st ← get
-  match st.1 mm with
-  | some c => return c
-  | none =>
-      let c ← encAlg'.encrypt pk (select st.2 mm)
-      let cache' := st.1.cacheQuery mm c
-      set (cache', st.2 + 1)
-      return c
+      (StateT encAlg'.IND_CPA_CountedState ProbComp) where
+  toFun mm := do
+    let st ← get
+    match st.1 mm with
+    | some c => return c
+    | none =>
+        let c ← encAlg'.encrypt pk (select st.2 mm)
+        let cache' := st.1.cacheQuery mm c
+        set (cache', st.2 + 1)
+        return c
 
 private lemma IND_CPA_countedChallengeOracle_run_eq_of_select_eq
     (pk : PK) (select₁ select₂ : ℕ → M × M → M) (mm : M × M)
@@ -204,7 +209,7 @@ private lemma IND_CPA_countedChallengeOracle_run_eq_of_select_eq
     (h : select₁ st.2 mm = select₂ st.2 mm) :
     (IND_CPA_countedChallengeOracle (encAlg' := encAlg') pk select₁ mm).run st =
       (IND_CPA_countedChallengeOracle (encAlg' := encAlg') pk select₂ mm).run st := by
-  simp [IND_CPA_countedChallengeOracle, h]
+  simp [IND_CPA_countedChallengeOracle_apply, h]
 
 /-- The real IND-CPA challenge oracle, but with an explicit counter that increments on cache
 misses. -/
@@ -271,14 +276,14 @@ lemma IND_CPA_queryImpl'_counted_counter_le_succ
       change p ∈ support ((encAlg'.IND_CPA_challengeOracle'_counted pk b mm).run st) at hp
       revert hp
       rcases hcache : st.1 mm with _ | c <;> intro hp
-      · simp only [IND_CPA_challengeOracle'_counted, IND_CPA_countedChallengeOracle, hcache,
+      · simp only [IND_CPA_challengeOracle'_counted, IND_CPA_countedChallengeOracle_apply, hcache,
           StateT.run_bind, StateT.run_get, pure_bind] at hp
         rw [mem_support_bind_iff] at hp
         obtain ⟨c, _, hp⟩ := hp
         simp only [StateT.run_set, StateT.run_pure, pure_bind, mem_support_pure_iff] at hp
         subst p
         simp
-      · simp_all [IND_CPA_challengeOracle'_counted, IND_CPA_countedChallengeOracle]
+      · simp_all [IND_CPA_challengeOracle'_counted, IND_CPA_countedChallengeOracle_apply]
 
 private lemma IND_CPA_countedChallengeOracle_proj_eq_cached
     (pk : PK)
@@ -290,7 +295,8 @@ private lemma IND_CPA_countedChallengeOracle_proj_eq_cached
       (IND_CPA_countedChallengeOracle (encAlg' := encAlg') pk selectCount mm).run st =
       (IND_CPA_cachedChallengeOracle encAlg' pk select mm).run st.1 := by
   rcases hcache : st.1 mm with _ | c <;>
-    simp [IND_CPA_countedChallengeOracle, IND_CPA_cachedChallengeOracle, hcache, hselect]
+    simp [IND_CPA_countedChallengeOracle_apply, IND_CPA_cachedChallengeOracle_apply, hcache,
+      hselect]
 
 /-- Projecting away the counter from the counted real IND-CPA implementation recovers the
 ordinary cached real implementation. -/
@@ -542,7 +548,7 @@ lemma IND_CPA_hybridLR_counted_counter_le
     change p ∈ support
       ((IND_CPA_hybridChallengeOracleLR_counted (encAlg' := encAlg') pk k mm).run st) at hp
     revert hp
-    simp only [IND_CPA_hybridChallengeOracleLR_counted, IND_CPA_countedChallengeOracle]
+    simp only [IND_CPA_hybridChallengeOracleLR_counted, IND_CPA_countedChallengeOracle_apply]
     rcases hcache : st.1 mm with _ | c <;> intro hp <;> simp_all
     obtain ⟨x, _, hp⟩ := hp
     subst p
@@ -557,7 +563,7 @@ lemma IND_CPA_hybridChallengeOracleLR_counted_run_none
       (do
         let c ← encAlg'.encrypt pk (if st.2 < k then mm.1 else mm.2)
         pure (c, (st.1.cacheQuery mm c, st.2 + 1))) := by
-  simp [IND_CPA_hybridChallengeOracleLR_counted, IND_CPA_countedChallengeOracle, hcache]
+  simp [IND_CPA_hybridChallengeOracleLR_counted, IND_CPA_countedChallengeOracle_apply, hcache]
 
 /-- Behavior of the hybrid challenge oracle on a cache hit. -/
 lemma IND_CPA_hybridChallengeOracleLR_counted_run_some
@@ -566,7 +572,7 @@ lemma IND_CPA_hybridChallengeOracleLR_counted_run_some
     (hcache : st.1 mm = some c) :
     (encAlg'.IND_CPA_hybridChallengeOracleLR_counted pk k mm).run st =
       pure (c, st) := by
-  simp [IND_CPA_hybridChallengeOracleLR_counted, IND_CPA_countedChallengeOracle, hcache]
+  simp [IND_CPA_hybridChallengeOracleLR_counted, IND_CPA_countedChallengeOracle_apply, hcache]
 
 end MultiQueryHybrid
 

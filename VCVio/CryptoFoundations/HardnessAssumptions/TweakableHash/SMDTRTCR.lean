@@ -177,11 +177,12 @@ a target by construction rather than by a separate branch.
 
 Accepted queries are appended, so the history is in issue order and its `j`-th entry is the `j`-th
 target. -/
-@[expose] noncomputable def SM_DT_RTCR_challengeOracle [DecidableEq Tweak] [SampleableType R]
+@[expose, simps]
+noncomputable def SM_DT_RTCR_challengeOracle [DecidableEq Tweak] [SampleableType R]
     (prob : SM_DT_RTCR_Problem PkSeed Tweak M R Y) (pk : PkSeed) :
     QueryImpl (SM_DT_RTCR_challengeSpec Tweak M R Y)
-      (StateT (SM_DT_RTCR_State Tweak M R) ProbComp) :=
-  fun tm => do
+      (StateT (SM_DT_RTCR_State Tweak M R) ProbComp) where
+  toFun tm := do
     let qsChal ← get
     if prob.numTargets ≤ qsChal.length ∨ TweakReserved Prod.fst qsChal tm.1 then
       return none
@@ -286,7 +287,7 @@ variable [DecidableEq Tweak] [SampleableType R] {prob : SM_DT_RTCR_Problem PkSee
 /-- A query at the target cap is rejected, the history is unchanged, and no randomness is drawn. -/
 theorem SM_DT_RTCR_challengeOracle_run_of_full (hlen : prob.numTargets ≤ qsChal.length) :
     (SM_DT_RTCR_challengeOracle prob pk (t, m)).run qsChal = pure (none, qsChal) := by
-  simp [SM_DT_RTCR_challengeOracle, hlen]
+  simp [SM_DT_RTCR_challengeOracle_apply, hlen]
 
 /-- A query reusing a tweak already in the history is rejected, the history is unchanged, and no
 randomness is drawn. The reused tweak is rejected whatever message accompanies it, and whether or
@@ -295,7 +296,7 @@ theorem SM_DT_RTCR_challengeOracle_run_of_reused (m' : M) (ρ' : Option R)
     (hmem : (t, m', ρ') ∈ qsChal) :
     (SM_DT_RTCR_challengeOracle prob pk (t, m)).run qsChal = pure (none, qsChal) := by
   have hres : TweakReserved Prod.fst qsChal t := ⟨(t, m', ρ'), hmem, rfl⟩
-  simp [SM_DT_RTCR_challengeOracle, hres]
+  simp [SM_DT_RTCR_challengeOracle_apply, hres]
 
 /-- A query below the cap with a fresh tweak, when `prop` accepts everything and the retry budget is
 positive, is answered on the first draw and records the randomness it used. -/
@@ -306,7 +307,7 @@ theorem SM_DT_RTCR_challengeOracle_run_of_fresh (hprop : ∀ y, prob.prop y = tr
       (fun ρ => (some (prob.th.eval pk t (m, ρ), ρ),
         qsChal ++ [(t, m, some ρ)])) <$> ($ᵗ R) := by
   obtain ⟨attempts, hattempts⟩ := Nat.exists_eq_succ_of_ne_zero hretries
-  simp [SM_DT_RTCR_challengeOracle, Nat.not_le.mpr hlen, hnew, hattempts,
+  simp [SM_DT_RTCR_challengeOracle_apply, Nat.not_le.mpr hlen, hnew, hattempts,
     SM_DT_RTCR_resample_of_prop_true hprop, Functor.map_map]
 
 /-- A query below the cap with a fresh tweak, when `prop` rejects everything, is answered `none` and
@@ -320,7 +321,7 @@ theorem SM_DT_RTCR_challengeOracle_run_of_exhausted (hprop : ∀ y, prob.prop y 
     ∀ z ∈ support ((SM_DT_RTCR_challengeOracle prob pk (t, m)).run qsChal),
       z = (none, qsChal ++ [(t, m, none)]) := by
   intro z hz
-  simp only [SM_DT_RTCR_challengeOracle, Nat.not_le.mpr hlen, hnew, or_self, ↓reduceIte,
+  simp only [SM_DT_RTCR_challengeOracle_apply, Nat.not_le.mpr hlen, hnew, or_self, ↓reduceIte,
     bind_pure_comp, StateT.run_bind, StateT.run_get, pure_bind, StateT.run_monadLift,
     monadLift_self, bind_map_left, support_bind, Set.mem_iUnion, exists_prop] at hz
   obtain ⟨res, hres, hz⟩ := hz

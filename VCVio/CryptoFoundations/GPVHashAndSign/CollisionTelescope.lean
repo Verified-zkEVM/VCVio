@@ -92,7 +92,7 @@ the cached entry, while the real signer answers from it. -/
     -- forward-sample a short preimage `s ← domainSample pk`, set the value to `psf.eval pk s`,
     -- and record `s` in the hidden table at the queried point.
     let roImpl : QueryImpl (Salt × M →ₒ Range) (StateT State ProbComp) :=
-      fun t => do
+      ⟨fun t => do
         let st ← get
         match st.1 t with
         | some v => pure v
@@ -100,22 +100,22 @@ the cached entry, while the real signer answers from it. -/
             let s ← (domainSample pk : ProbComp Domain)
             let v := psf.eval pk s
             set ((st.1.cacheQuery t v, fun t' => if t' = t then some s else st.2 t') : State)
-            pure v
+            pure v⟩
     -- Uniform-sampling handler: answer uniform queries by drawing from the ambient `ProbComp`.
     let unifImpl : QueryImpl unifSpec (StateT State ProbComp) :=
-      fun t => (unifSpec.query t : ProbComp _)
+      ⟨fun t => (unifSpec.query t : ProbComp _)⟩
     -- Signing handler (sign-then-hash): draw a fresh salt `r`, forward-sample a short preimage
     -- `s ← domainSample pk`, program the random oracle at `(r, msg) := psf.eval pk s`, record the
     -- hidden preimage, and return the signature `(r, s)`.
     let signImpl : QueryImpl (M →ₒ (Salt × Domain)) (StateT State ProbComp) :=
-      fun msg => do
+      ⟨fun msg => do
         let r ← ($ᵗ Salt : ProbComp Salt)
         let s ← (domainSample pk : ProbComp Domain)
         let v := psf.eval pk s
         let st ← get
         set ((st.1.cacheQuery (r, msg) v,
           fun t' => if t' = (r, msg) then some s else st.2 t') : State)
-        pure (r, s)
+        pure (r, s)⟩
     let impl : QueryImpl ((unifSpec + (Salt × M →ₒ Range)) + (M →ₒ (Salt × Domain)))
         (StateT State ProbComp) := (unifImpl + roImpl) + signImpl
     -- Run the adversary under the simulated oracle stack, then extract a collision candidate.

@@ -110,8 +110,8 @@ observes: simulating with the transported handler is the original simulation wit
 state mapped back. -/
 private theorem simulateQ_run_transport {left : Stateful I E σ₁} (φ : σ₀ ≃ σ₁)
     {α : Type} (client : OracleComp E α) (state : σ₀) :
-    (simulateQ (fun operation ↦ StateT.mk fun s ↦
-        Prod.map id φ.symm <$> (left operation).run (φ s)) client).run state =
+    (simulateQ (⟨fun operation ↦ StateT.mk fun s ↦
+        Prod.map id φ.symm <$> (left operation).run (φ s)⟩ : Stateful I E σ₀) client).run state =
       Prod.map id φ.symm <$> (simulateQ left client).run (φ state) := by
   induction client using OracleComp.inductionOn generalizing state with
   | pure value => simp
@@ -128,8 +128,8 @@ theorem of_step_bij [LawfulEvalDistSemantics (OracleComp I)] {left : Stateful I 
     (h : ∀ operation state,
       (left operation).run state =ᵈ Prod.map id φ.symm <$> (right operation).run (φ state))
     (state : σ₀) : DistEquiv left state right (φ state) := by
-  let transported : Stateful I E σ₀ := fun operation ↦ StateT.mk fun s ↦
-    Prod.map id φ.symm <$> (right operation).run (φ s)
+  let transported : Stateful I E σ₀ := ⟨fun operation ↦ StateT.mk fun s ↦
+    Prod.map id φ.symm <$> (right operation).run (φ s)⟩
   have hstep : DistEquiv left state transported state :=
     of_step (fun operation s ↦ h operation s) state
   intro α _ client

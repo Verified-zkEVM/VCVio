@@ -51,7 +51,7 @@ passive: projecting it away recovers `embedTrapIdxImpl … j y` exactly
         ProbComp) :=
   let State := (((Salt × M →ₒ Range).QueryCache × ℕ) × ((Salt × M) → Option ℕ)) × Finset M
   let roImpl : QueryImpl (Salt × M →ₒ Range) (StateT State ProbComp) :=
-    fun t => do
+    ⟨fun t => do
       let st ← get
       match st.1.1.1 t with
       | some v => pure v
@@ -64,11 +64,11 @@ passive: projecting it away recovers `embedTrapIdxImpl … j y` exactly
           else
             set (((((st.1.1.1.cacheQuery t v, st.1.1.2 + 1),
               fun t' => if t' = t then some st.1.1.2 else st.1.2 t'), st.2)) : State)
-            pure v
+            pure v⟩
   let unifImpl : QueryImpl unifSpec (StateT State ProbComp) :=
-    fun t => (unifSpec.query t : ProbComp _)
+    ⟨fun t => (unifSpec.query t : ProbComp _)⟩
   let signImpl : QueryImpl (M →ₒ (Salt × Domain)) (StateT State ProbComp) :=
-    fun msg => do
+    ⟨fun msg => do
       let r ← ($ᵗ Salt : ProbComp Salt)
       let c ← ($ᵗ Range : ProbComp Range)
       let x ← (psf.trapdoorSample pk sk c : ProbComp Domain)
@@ -76,7 +76,7 @@ passive: projecting it away recovers `embedTrapIdxImpl … j y` exactly
       set (((((st.1.1.1.cacheQuery (r, msg) c, st.1.1.2 + 1),
         fun t' => if t' = (r, msg) then some st.1.1.2 else st.1.2 t'),
         insert msg st.2)) : State)
-      pure (r, x)
+      pure (r, x)⟩
   (unifImpl + roImpl) + signImpl
 
 omit [DecidableEq Range] [Fintype Salt] in
@@ -196,7 +196,7 @@ so it is distributionally passive: projecting it away recovers `embedTrapFreshId
         ProbComp) :=
   let State := (((Salt × M →ₒ Range).QueryCache × ℕ) × ((Salt × M) → Option ℕ)) × Finset M
   let roImpl : QueryImpl (Salt × M →ₒ Range) (StateT State ProbComp) :=
-    fun t => do
+    ⟨fun t => do
       let st ← get
       match st.1.1.1 t with
       | some v => pure v
@@ -204,11 +204,11 @@ so it is distributionally passive: projecting it away recovers `embedTrapFreshId
           let v ← ($ᵗ Range : ProbComp Range)
           set (((((st.1.1.1.cacheQuery t v, st.1.1.2 + 1),
             fun t' => if t' = t then some st.1.1.2 else st.1.2 t'), st.2)) : State)
-          pure v
+          pure v⟩
   let unifImpl : QueryImpl unifSpec (StateT State ProbComp) :=
-    fun t => (unifSpec.query t : ProbComp _)
+    ⟨fun t => (unifSpec.query t : ProbComp _)⟩
   let signImpl : QueryImpl (M →ₒ (Salt × Domain)) (StateT State ProbComp) :=
-    fun msg => do
+    ⟨fun msg => do
       let r ← ($ᵗ Salt : ProbComp Salt)
       let c ← ($ᵗ Range : ProbComp Range)
       let x ← (psf.trapdoorSample pk sk c : ProbComp Domain)
@@ -216,7 +216,7 @@ so it is distributionally passive: projecting it away recovers `embedTrapFreshId
       set (((((st.1.1.1.cacheQuery (r, msg) c, st.1.1.2 + 1),
         fun t' => if t' = (r, msg) then some st.1.1.2 else st.1.2 t'),
         insert msg st.2)) : State)
-      pure (r, x)
+      pure (r, x)⟩
   (unifImpl + roImpl) + signImpl
 
 omit [DecidableEq Range] [Fintype Salt] in

@@ -121,10 +121,11 @@ instance : DecidablePred (hidingBad (M := M) (S := S) (C := C)) :=
 
 /-- Real oracle implementation for the hiding game.
 Standard caching + increments salt counter when any query has salt `s`. -/
+@[simps -isSimp]
 def hidingImpl₁ (s : S) :
     QueryImpl (CMOracle M S C)
-      (StateT (QueryCache (CMOracle M S C) × ℕ) (OracleComp (CMOracle M S C))) :=
-  fun (ms : M × S) => do
+      (StateT (QueryCache (CMOracle M S C) × ℕ) (OracleComp (CMOracle M S C))) where
+  toFun (ms : M × S) := do
     let (cache, cnt) ← get
     match cache ms with
     | some u => return u
@@ -139,8 +140,8 @@ def hidingImpl₁ (s : S) :
 with a per-salt miss counter `S → ℕ` updated at the queried salt on cache miss. -/
 def hidingImplCountAll :
     QueryImpl (CMOracle M S C)
-      (StateT (QueryCache (CMOracle M S C) × (S → ℕ)) (OracleComp (CMOracle M S C))) :=
-  fun (ms : M × S) => do
+      (StateT (QueryCache (CMOracle M S C) × (S → ℕ)) (OracleComp (CMOracle M S C))) where
+  toFun (ms : M × S) := do
     let (cache, counts) ← get
     match cache ms with
     | some u => return u
@@ -259,10 +260,11 @@ theorem run_hidingImplCountAll_proj_eq_cachingOracle
 /-- Intermediate oracle implementation for the hiding game.
 Same as `hidingImpl₁`, except when `cnt ≥ 2` (bad) and cache miss with salt `s`,
 queries the underlying oracle at `(default, default)` instead. -/
+@[simps]
 def hidingImpl₂ [Inhabited M] [Inhabited S] (s : S) :
     QueryImpl (CMOracle M S C)
-      (StateT (QueryCache (CMOracle M S C) × ℕ) (OracleComp (CMOracle M S C))) :=
-  fun (ms : M × S) => do
+      (StateT (QueryCache (CMOracle M S C) × ℕ) (OracleComp (CMOracle M S C))) where
+  toFun (ms : M × S) := do
     let (cache, cnt) ← get
     match cache ms with
     | some u => return u
@@ -285,10 +287,11 @@ change the marginal distribution of the returned value.
 The key difference from `hidingImpl₂` (which only redirects when `cnt ≥ 2`):
 `hidingImplSim` redirects ALL salt-s cache misses, including the very first one
 (the challenge query). This makes `hidingImplSim` match the simulator's behavior. -/
+@[simps]
 def hidingImplSim [Inhabited M] [Inhabited S] (s : S) :
     QueryImpl (CMOracle M S C)
-      (StateT (QueryCache (CMOracle M S C) × ℕ) (OracleComp (CMOracle M S C))) :=
-  fun (ms : M × S) => do
+      (StateT (QueryCache (CMOracle M S C) × ℕ) (OracleComp (CMOracle M S C))) where
+  toFun (ms : M × S) := do
     let (cache, cnt) ← get
     match cache ms with
     | some u => return u

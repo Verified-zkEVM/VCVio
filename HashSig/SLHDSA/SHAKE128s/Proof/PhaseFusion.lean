@@ -51,8 +51,8 @@ writer and the log carried in the state. -/
 @[expose] noncomputable def fuse (outer : QueryImpl OracleWorld (StateT S ProbComp))
     (inner : QueryImpl (OracleWorld + SigningSpec)
       (WriterT ω (StateT SigningLog (OracleComp OracleWorld)))) :
-    QueryImpl (OracleWorld + SigningSpec) (StateT (ω × SigningLog × S) ProbComp) :=
-  fun queried state => do
+    QueryImpl (OracleWorld + SigningSpec) (StateT (ω × SigningLog × S) ProbComp) where
+  toFun queried state := do
     let step ← (simulateQ outer (((inner queried).run).run state.2.1)).run state.2.2
     pure (step.1.1.1, (state.1 * step.1.1.2, step.1.2, step.2))
 
@@ -99,12 +99,12 @@ state, run, clear it. It is stated against an arbitrary pair of state maps becau
 is the carrier's business and not the fusion's. -/
 
 /-- The fused handler with the signing step bracketed by two state maps. -/
-@[expose] noncomputable def fuseServing (outer : QueryImpl OracleWorld (StateT S ProbComp))
+@[expose, simps] noncomputable def fuseServing (outer : QueryImpl OracleWorld (StateT S ProbComp))
     (inner : QueryImpl (OracleWorld + SigningSpec)
       (WriterT ω (StateT SigningLog (OracleComp OracleWorld))))
     (before : Message → S → S) (after : S → S) :
-    QueryImpl (OracleWorld + SigningSpec) (StateT (ω × SigningLog × S) ProbComp) :=
-  fun queried state =>
+    QueryImpl (OracleWorld + SigningSpec) (StateT (ω × SigningLog × S) ProbComp) where
+  toFun queried state :=
     match queried with
     | Sum.inl world => ((fuse outer inner) (Sum.inl world)).run state
     | Sum.inr request => do

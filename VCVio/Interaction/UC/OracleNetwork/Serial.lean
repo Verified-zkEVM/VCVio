@@ -37,9 +37,9 @@ variable {Client ι α S : Type} {spec : OracleSpec ι}
 /-- Erasing the standard trace instrumentation recovers the original stateful oracle game. -/
 theorem map_loggedRun (impl : QueryImpl spec (StateT S m))
     (id : Client) (program : OracleComp spec α) (service : S) :
-    (fun out => (out.1.1, out.2)) <$> loggedRun impl id program service =
+    (fun out => (out.1.1, out.2)) <$> loggedRun impl.toHandler id program service =
       (simulateQ impl program).run service := by
-  exact RequestNetwork.map_loggedRun impl id program service
+  exact RequestNetwork.map_loggedRun impl.toHandler id program service
 
 variable [DecidableEq ι]
 
@@ -47,9 +47,9 @@ variable [DecidableEq ι]
 theorem map_serialObservation (impl : QueryImpl spec (StateT S m))
     (n : ℕ) (program : OracleComp spec α) (hbound : IsTotalQueryBound program n)
     (service : S) :
-    (fun out => (out.1.1, out.2)) <$> serialObservation impl n program service =
+    (fun out => (out.1.1, out.2)) <$> serialObservation impl.toHandler n program service =
       (fun out => (some out.1, out.2)) <$> (simulateQ impl program).run service := by
-  rw [serialObservation_eq_loggedRun impl n program hbound service,
+  rw [serialObservation_eq_loggedRun impl.toHandler n program hbound service,
     ← map_loggedRun impl () program service]
   simp only [Functor.map_map]
 

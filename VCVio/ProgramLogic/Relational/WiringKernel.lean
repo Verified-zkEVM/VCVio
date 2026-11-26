@@ -37,8 +37,7 @@ variable {Boxes Inputs : Type} {Arity : Boxes → Type}
 
 /-- Local service contracts compose through the actual recursive wiring syntax. -/
 noncomputable def couplingContract
-    (implementation : (b : Boxes) →
-      (a : (Cod b).A) → FreeM (PFunctor.sigma (Dom b)) ((Cod b).B a))
+    (implementation : (b : Boxes) → PFunctor.Handler (FreeM (PFunctor.sigma (Dom b))) (Cod b))
     (contract : KernelHandler.CouplingContract left right R)
     {output : PFunctor.{uB, uB}} [∀ a, MeasurableSpace (output.B a)]
     (wiring : Wiring Boxes Arity Dom Cod Inputs inputInterface output) :
@@ -48,8 +47,7 @@ noncomputable def couplingContract
 
 /-- A whole wired invocation relates random initial states using only local service contracts. -/
 theorem bind_state_laws
-    (implementation : (b : Boxes) →
-      (a : (Cod b).A) → FreeM (PFunctor.sigma (Dom b)) ((Cod b).B a))
+    (implementation : (b : Boxes) → PFunctor.Handler (FreeM (PFunctor.sigma (Dom b))) (Cod b))
     (contract : KernelHandler.CouplingContract left right R)
     {output : PFunctor.{uB, uB}}
     (wiring : Wiring Boxes Arity Dom Cod Inputs inputInterface output)

@@ -36,8 +36,8 @@ namespace QueryImpl
 variable {m : Type u → Type v} [Monad m]
 
 /-- Modify a query implementation to cache previous call and return that output in the future. -/
-def withCaching (so : QueryImpl spec m) : QueryImpl spec (StateT spec.QueryCache m) :=
-  fun t => do match (← get) t with
+def withCaching (so : QueryImpl spec m) : QueryImpl spec (StateT spec.QueryCache m) where
+  toFun t := do match (← get) t with
     | Option.some u => return u
     | Option.none =>
         let u ← so t
@@ -75,8 +75,8 @@ response is then installed in the cache. -/
 def withCachingAux
     (hit : (t : spec.Domain) → spec.Range t → spec.QueryCache → Q → Q)
     (miss : (t : spec.Domain) → spec.QueryCache → Q → m' (spec.Range t × Q)) :
-    QueryImpl spec (StateT (spec.QueryCache × Q) m') :=
-  fun t => StateT.mk fun s =>
+    QueryImpl spec (StateT (spec.QueryCache × Q) m') where
+  toFun t := StateT.mk fun s =>
     match s with
     | (cache, q) =>
         match cache t with
@@ -472,7 +472,7 @@ theorem isTotalQueryBound_run_simulateQ {ι₀ : Type} [DecidableEq ι₀]
     {oa : OracleComp spec₀ α} {n : ℕ}
     (h : OracleComp.IsTotalQueryBound oa n) (cache : spec₀.QueryCache) :
     OracleComp.IsTotalQueryBound ((simulateQ spec₀.cachingOracle oa).run cache) n :=
-  OracleComp.IsTotalQueryBound.simulateQ_run_withCaching _ h
+  OracleComp.IsTotalQueryBound.simulateQ_run_withCaching (QueryImpl.ofLift spec₀ _) h
     (fun t => (OracleComp.isQueryBound_query_iff t 1 _ _).mpr Nat.one_pos) cache
 
 theorem isQueryBoundP_run_simulateQ {ι₀ : Type} [DecidableEq ι₀]

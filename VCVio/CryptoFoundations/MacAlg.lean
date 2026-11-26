@@ -56,7 +56,7 @@ variable {m : Type → Type v} [Monad m] {M K T : Type}
 /-- Oracle exposing chosen-message tagging queries while logging every queried message. -/
 def taggingOracle (macAlg : MacAlg m M K T) (k : K) :
     QueryImpl (M →ₒ T) (WriterT (QueryLog (M →ₒ T)) m) :=
-  QueryImpl.withLogging (fun msg => macAlg.tag k msg)
+  QueryImpl.withLogging ⟨fun msg => macAlg.tag k msg⟩
 
 end taggingOracle
 

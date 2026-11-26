@@ -72,7 +72,7 @@ query `Sum.inl q`, the composed real handler re-emits the query through `realGam
 lemma gpvRealImpl_inl_eq_gpvOuter (pk : PK) (sk : SK)
     (q : (unifSpec + (Salt × M →ₒ Range)).Domain) :
     gpvRealImpl psf hr M Salt pk sk (Sum.inl q) = gpvOuter M Salt q := by
-  simp only [gpvRealImpl_eq_compose, QueryImpl.compose, realGameRunImplNoLog, HAdd.hAdd,
+  simp only [gpvRealImpl_eq_compose, QueryImpl.compose_apply, realGameRunImplNoLog, HAdd.hAdd,
     QueryImpl.add, HasQuery.toQueryImpl_apply, HasQuery.query]
   exact simulateQ_spec_query (gpvOuter M Salt) q
 
@@ -97,15 +97,15 @@ lemma gpvOuter_writerTMapBase_implW (pk : PK) (sk : SK) :
           (WriterT (QueryLog (M →ₒ (Salt × Domain)))
             (StateT ((Salt × M →ₒ Range).QueryCache) ProbComp)) +
         QueryImpl.withLogging
-          (fun msg => gpvRealImpl psf hr M Salt pk sk (Sum.inr msg) :
+          (⟨fun msg => gpvRealImpl psf hr M Salt pk sk (Sum.inr msg)⟩ :
             QueryImpl (M →ₒ (Salt × Domain))
               (StateT ((Salt × M →ₒ Range).QueryCache) ProbComp)) := by
-  funext t
+  ext t : 1
   rcases t with bq | sq
   · -- public/random-oracle base query: `writerTMapBase` runs the lifted query through `gpvOuter`.
     ext s
     simp only [QueryImpl.writerTMapBase, QueryImpl.add_apply_inl, QueryImpl.liftTarget_apply,
-      QueryImpl.toHasQuery_query, WriterT.mk, HasQuery.toQueryImpl_apply]
+      WriterT.mk, HasQuery.toQueryImpl_apply]
     rfl
   · -- signing query: `signingOracle = withLogging sign`; `(withLogging sign sq).run = sign sq >>=
     -- fun u => (u, [⟨sq, u⟩])` re-emits the log, so the fused LHS commutes the monad-morphism
@@ -121,8 +121,6 @@ lemma gpvOuter_writerTMapBase_implW (pk : PK) (sk : SK) :
       QueryImpl.add_apply_inr, StateT.run_bind, StateT.run_pure,
       WriterT.run_bind, WriterT.run_liftM,
       WriterT.run_tell, WriterT.run_pure, map_eq_bind_pure_comp]
-    simp only [HAdd.hAdd, QueryImpl.add, simulateQ_bind, simulateQ_pure,
-      StateT.run_bind, StateT.run_pure, bind_assoc, pure_bind, Function.comp_def]
 
 omit [Fintype Salt] in
 /-- **Per-query state-projection of the flattened append-log handler onto `gpvRealImplFresh`.**
@@ -141,7 +139,7 @@ lemma flattenAppendLog_proj_gpvRealImplFresh (pk : PK) (sk : SK)
         ((((gpvOuter M Salt).liftTarget
               (StateT (List M) (StateT ((Salt × M →ₒ Range).QueryCache) ProbComp))) +
             QueryImpl.appendInputLog
-              (fun msg => gpvRealImpl psf hr M Salt pk sk (Sum.inr msg) :
+              (⟨fun msg => gpvRealImpl psf hr M Salt pk sk (Sum.inr msg)⟩ :
                 QueryImpl (M →ₒ (Salt × Domain))
                   (StateT ((Salt × M →ₒ Range).QueryCache) ProbComp))).flattenStateT t).run s =
       (gpvRealImplFresh psf hr M Salt pk sk t).run (s.2, s.1.toFinset) := by
@@ -151,7 +149,7 @@ lemma flattenAppendLog_proj_gpvRealImplFresh (pk : PK) (sk : SK)
       -- public/random-oracle base query: the list is untouched, the cache evolves through
       -- `gpvRealImpl`; both sides drop to the same base step `gpvOuter q = gpvRealImpl … (inl q)`.
       rw [gpvRealImplFresh_run_inl, gpvRealImpl_inl_eq_gpvOuter]
-      simp only [QueryImpl.flattenStateT, QueryImpl.add_apply_inl, QueryImpl.liftTarget_apply,
+      simp only [QueryImpl.flattenStateT_apply, QueryImpl.add_apply_inl, QueryImpl.liftTarget_apply,
         StateT.run_mk, Prod.map, id_eq, map_eq_bind_pure_comp, bind_assoc, pure_bind,
         Function.comp_def]
       -- `(liftM (gpvOuter q)).run l = gpvOuter q >>= fun a => (a, l)` is definitional; rephrase the
@@ -168,7 +166,7 @@ lemma flattenAppendLog_proj_gpvRealImplFresh (pk : PK) (sk : SK)
       -- Normalize the logging/caching handler stack, splice in the explicit sign body via
       -- `gpvRealImpl_run_sign` under the outer projection, and renormalize; the appended log
       -- entry `(l ++ [msg]).toFinset = insert msg l.toFinset` reconciles the signed-set.
-      simp only [OracleSpec.add_apply_inr, QueryImpl.add_apply_inr, QueryImpl.flattenStateT,
+      simp only [OracleSpec.add_apply_inr, QueryImpl.add_apply_inr, QueryImpl.flattenStateT_apply,
         QueryImpl.appendInputLog_apply, StateT.run_bind, StateT.run_modify,
         StateT.run_monadLift, monadLift_self, bind_pure_comp, pure_bind, StateT.run_map,
         Functor.map_map, StateT.run_mk, Prod.map_apply, id_eq, List.toFinset_append,
@@ -224,7 +222,7 @@ lemma map_simulateQ_gpvOuter_writerLog_eq_gpvRealImplFresh (pk : PK) (sk : SK) {
   have hreplay := QueryImpl.map_run_withLogging_inputs_eq_run_appendInputLog
     (spec₀ := unifSpec + (Salt × M →ₒ Range)) (loggedSpec := M →ₒ (Salt × Domain))
     (m₀ := StateT ((Salt × M →ₒ Range).QueryCache) ProbComp)
-    (fun msg => gpvRealImpl psf hr M Salt pk sk (Sum.inr msg)) oa ([] : List M)
+    ⟨fun msg => gpvRealImpl psf hr M Salt pk sk (Sum.inr msg)⟩ oa ([] : List M)
   simp only [List.nil_append] at hreplay
   -- Apply the run, flatten the nested `StateT (List M) (StateT cache)`, and project to
   -- `gpvRealImplFresh` via the per-query `hmatch`.
@@ -232,7 +230,7 @@ lemma map_simulateQ_gpvOuter_writerLog_eq_gpvRealImplFresh (pk : PK) (sk : SK) {
     ((gpvOuter M Salt).liftTarget
         (StateT (List M) (StateT ((Salt × M →ₒ Range).QueryCache) ProbComp)) +
       QueryImpl.appendInputLog
-        (fun msg => gpvRealImpl psf hr M Salt pk sk (Sum.inr msg) :
+        (⟨fun msg => gpvRealImpl psf hr M Salt pk sk (Sum.inr msg)⟩ :
           QueryImpl (M →ₒ (Salt × Domain))
             (StateT ((Salt × M →ₒ Range).QueryCache) ProbComp)))
     oa ([] : List M) (∅ : (Salt × M →ₒ Range).QueryCache)
@@ -240,7 +238,7 @@ lemma map_simulateQ_gpvOuter_writerLog_eq_gpvRealImplFresh (pk : PK) (sk : SK) {
     (((gpvOuter M Salt).liftTarget
         (StateT (List M) (StateT ((Salt × M →ₒ Range).QueryCache) ProbComp)) +
       QueryImpl.appendInputLog
-        (fun msg => gpvRealImpl psf hr M Salt pk sk (Sum.inr msg) :
+        (⟨fun msg => gpvRealImpl psf hr M Salt pk sk (Sum.inr msg)⟩ :
           QueryImpl (M →ₒ (Salt × Domain))
             (StateT ((Salt × M →ₒ Range).QueryCache) ProbComp))).flattenStateT)
     (gpvRealImplFresh psf hr M Salt pk sk)

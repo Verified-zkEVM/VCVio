@@ -206,10 +206,10 @@ theorem explainProgram_isAlgebraic [CommSemiring F]
   ⟨msg.data, fun | false => msg.groups .g₁ | true => msg.groups .g₂⟩
 
 /-- Lift a source-valued game to the pairing interface with no target-group replies. -/
-@[expose] def game {N : Type → Type} [Monad N]
+@[expose, simps] def game {N : Type → Type} [Monad N]
     (impl : QueryImpl (plainSpec G Query Reply) N) :
-    QueryImpl (plainSpec (PFam (G false) (G true) T) Query Reply) N :=
-  fun q => pairingMessage <$> impl (sourceValue q)
+    QueryImpl (plainSpec (PFam (G false) (G true) T) Query Reply) N where
+  toFun q := pairingMessage <$> impl (sourceValue q)
 
 /-- Receiving source elements appends precisely their real values to the pairing table. -/
 theorem table_receive [Zero F] [One F]
@@ -370,7 +370,7 @@ theorem explainProgram_run [CommSemiring F]
     (handler : QueryImpl (plainSpec G Query Reply) N)
     (p : OracleComp (HandleSpec F Query Reply) (Message Result (fun _ : PSort => Handle)))
     (st : Tracked F G T) :
-    Explained.value <$> simulateQ (fun q => withCoins random handler q.value)
+    Explained.value <$> simulateQ ⟨fun q => withCoins random handler q.value⟩
       (explainProgram e p st) =
     (fun z => sourceValue (lookupMessage z.2 z.1)) <$>
       (simulateQ (impl (pairingReal e) (fun _ => id) N +
@@ -415,13 +415,13 @@ theorem explainProgram_run [CommSemiring F]
               | .g₂ => List.range' (st.1.2 true).length (reply.groups true).length
               | .gₜ => []⟩) (receive st.1 reply.groups, st.2)) = _
         simp only [simulateQ_bind, simulateQ_spec_query, explain, sourceMessage,
-          QueryImpl.add_apply_inr, liftGame, StateT.run, game,
+          QueryImpl.add_apply_inr, liftGame_apply, StateT.run, game_apply,
           bind_assoc, pure_bind, map_bind]
         simp only [withCoins_apply_inl]
         change (handler
           ⟨q.data, fun b => (sourceMessage q).groups b |>.map
             (fun h => (lookup st.1.2 b h).2)⟩ >>= fun reply : Message (Reply q.data) G =>
-          Explained.value <$> simulateQ (fun q => withCoins random handler q.value)
+          Explained.value <$> simulateQ ⟨fun q => withCoins random handler q.value⟩
             (explainProgram e
               (next ⟨reply.data, fun
                 | .g₁ => List.range' (st.1.2 false).length (reply.groups false).length

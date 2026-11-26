@@ -44,10 +44,10 @@ def decode (cache : List (D × R)) : (D →ₒ R).QueryCache :=
   · simp [decode, List.lookup_cons, beq_eq_false_iff_ne.mpr h, h, QueryCache.cacheQuery_of_ne]
 
 /-- Reuse the first cached answer or draw and prepend a new binding on a miss. -/
-@[expose]
+@[expose, simps]
 def handler {m : Type u → Type v} [Monad m]
-    (draw : QueryImpl (D →ₒ R) m) : QueryImpl (D →ₒ R) (StateT (List (D × R)) m) :=
-  fun d cache => match cache.lookup d with
+    (draw : QueryImpl (D →ₒ R) m) : QueryImpl (D →ₒ R) (StateT (List (D × R)) m) where
+  toFun d cache := match cache.lookup d with
     | some r => pure (r, cache)
     | none => (fun r => (r, (d, r) :: cache)) <$> draw d
 
@@ -60,10 +60,10 @@ theorem local_projection {m : Type u → Type v} [Monad m] [LawfulMonad m]
   cases h : cache.lookup d with
   | none =>
       erw [QueryImpl.withCaching_run_none draw (show decode cache d = none from h)]
-      simp only [handler, h, Functor.map_map, Prod.map_apply, id_eq, decode_cons]
+      simp only [handler_apply, h, Functor.map_map, Prod.map_apply, id_eq, decode_cons]
   | some r =>
       erw [QueryImpl.withCaching_run_some draw (show decode cache d = some r from h)]
-      simp only [handler, h, map_pure]
+      simp only [handler_apply, h, map_pure]
       rfl
 
 /-- Decoding commutes with the whole run of any adaptive oracle client. -/

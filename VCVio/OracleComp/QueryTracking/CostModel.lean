@@ -189,7 +189,7 @@ def addCostOracle [AddCommMonoid ω] (costFn : spec.Domain → ω) :
 writes its charge and is then issued unchanged. -/
 theorem addCostOracle_eq_withChargeW [AddCommMonoid ω] (costFn : spec.Domain → ω) :
     addCostOracle costFn =
-      PFunctor.Handler.withChargeW (PFunctor.Handler.id spec.toPFunctor) costFn :=
+      .ofHandler ((PFunctor.Handler.id spec.toPFunctor).withChargeW costFn) :=
   QueryImpl.withAddCost_eq_withChargeW _ costFn
 
 @[simp]

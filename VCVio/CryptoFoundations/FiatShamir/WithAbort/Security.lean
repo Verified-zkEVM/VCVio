@@ -384,22 +384,22 @@ lemma simulatedNmaAdv_nmaHashQueryBound
   let fwd : QueryImpl spec (StateT spec.QueryCache (OracleComp spec)) :=
     (HasQuery.toQueryImpl (spec := spec) (m := OracleComp spec)).liftTarget _
   let unifSim : QueryImpl unifSpec (StateT spec.QueryCache (OracleComp spec)) :=
-    fun n => fwd (.inl n)
+    ⟨fun n => fwd (.inl n)⟩
   let roSim : QueryImpl (M × Commit →ₒ Chal)
-      (StateT spec.QueryCache (OracleComp spec)) := fun mc => do
+      (StateT spec.QueryCache (OracleComp spec)) := ⟨fun mc => do
     let cache ← get
     match cache (.inr mc) with
     | some v => pure v
     | none => do
         let v ← fwd (.inr mc)
-        modifyGet fun cache => (v, cache.cacheQuery (.inr mc) v)
+        modifyGet fun cache => (v, cache.cacheQuery (.inr mc) v)⟩
   let sigSim : QueryImpl (M →ₒ Option (Commit × Resp))
-      (StateT spec.QueryCache (OracleComp spec)) := fun msg => do
+      (StateT spec.QueryCache (OracleComp spec)) := ⟨fun msg => do
     let r ← simulateQ unifSim (firstSome (sim pk) maxAttempts)
     match r with
     | some (w, c, z) =>
         modifyGet fun cache => (some (w, z), cache.cacheQuery (.inr (msg, w)) c)
-    | none => pure none
+    | none => pure none⟩
   -- Step bound for `fwd`: 0 live hash queries on `.inl`, exactly 1 on `.inr`.
   have hfwd :
       ∀ (t : spec.Domain) (s : spec.QueryCache),

@@ -429,7 +429,7 @@ private lemma fischlinSearch_run_cache_eq [Inhabited Chal] [Inhabited Resp]
           FischlinROInput Stmt Commit Chal Resp ρ M) = none :=
         hfresh ω (by simp) resp
       rw [QueryImpl.withCaching_run_none (so := uniformSampleImpl) hc]
-      simp only [uniformSampleImpl, map_bind, bind_map_left]
+      simp only [uniformSampleImpl_apply, map_bind, bind_map_left]
       refine evalDist_bind_congr _ _ _ fun x => ?_
       by_cases hx : x.val = 0
       · simp only [hx, ite_true, simulateQ_pure, StateT.run_pure, map_pure, map_pure,
@@ -588,7 +588,7 @@ private lemma fischlinSearch_run_preserves_offrep (pk : Stmt) (sk : Wit) (sc : P
       by_cases hc : cache (⟨pk, msg, comList, i, ω, resp⟩ :
           FischlinROInput Stmt Commit Chal Resp ρ M) = none
       · rw [QueryImpl.withCaching_run_none (so := uniformSampleImpl) hc] at hmem
-        simp only [uniformSampleImpl, bind_map_left, support_bind,
+        simp only [uniformSampleImpl_apply, bind_map_left, support_bind,
           support_uniformSample, Set.mem_univ, Set.iUnion_true, Set.mem_iUnion] at hmem
         obtain ⟨x, hxmem⟩ := hmem
         by_cases hx : x.val = 0

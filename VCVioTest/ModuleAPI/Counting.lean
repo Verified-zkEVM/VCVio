@@ -36,7 +36,8 @@ def program : OracleComp signature Bool := do
   pure answer
 
 /-- A deterministic implementation reflecting each query label. -/
-def handler : QueryImpl signature Id := fun label => pure label
+def handler : QueryImpl signature Id where
+  toFun label := pure label
 
 example : (simulateQ handler.withCounting program).runAdd.run.1 = false := by
   simp [program, QueryImpl.withCounting_apply, handler]
@@ -52,7 +53,8 @@ example :
   simp
 
 /-- An implementation that aborts before returning an answer. -/
-def refusing : QueryImpl signature Option := fun _ => none
+def refusing : QueryImpl signature Option where
+  toFun _ := none
 
 example : (simulateQ refusing.withCounting program).runAdd = none := by
   simp [program, QueryImpl.withCounting_apply, refusing]

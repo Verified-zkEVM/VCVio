@@ -55,10 +55,10 @@ theorem pushGroups_map (φ : (s : S) → G s → W s) (groups : Groups G) (tbl :
     simp [pushGroups, mapTbl]
 
 /-- Run an element-valued game request and install its reply in the handle table. -/
-@[expose] def liftGame [∀ s, Zero (G s)] {Query : Type} {Reply : Query → Type}
+@[expose, simps] def liftGame [∀ s, Zero (G s)] {Query : Type} {Reply : Query → Type}
     {m : Type → Type} [Monad m] (impl : QueryImpl (plainSpec G Query Reply) m) :
-    QueryImpl (handleSpec (S := S) Query Reply) (StateT (Tbl G) m) :=
-  fun q tbl => do
+    QueryImpl (handleSpec (S := S) Query Reply) (StateT (Tbl G) m) where
+  toFun q tbl := do
     let reply ← impl (lookupMessage tbl q)
     let (handles, tbl') := pushGroups reply.groups tbl
     pure (⟨reply.data, handles⟩, tbl')
@@ -70,7 +70,7 @@ theorem liftGame_extends [∀ s, Zero (G s)] {Query : Type} {Reply : Query → T
     (impl : QueryImpl (plainSpec G Query Reply) m) (q : Message Query (fun _ : S => Handle))
     (tbl : Tbl G) (z : (handleSpec (S := S) Query Reply).Range q × Tbl G)
     (hz : z ∈ support ((liftGame impl q).run tbl)) : Tbl.Extends tbl z.2 := by
-  simp only [liftGame, StateT.run, MonadAttach.mem_support] at hz
+  simp only [liftGame_apply, StateT.run, MonadAttach.mem_support] at hz
   obtain ⟨r, -, hr⟩ := LawfulMonadAttach.canReturn_bind_imp' hz
   obtain rfl := LawfulMonadAttach.eq_of_canReturn_pure hr
   exact fun s => List.prefix_append _ _
@@ -153,7 +153,7 @@ theorem run_toAlgebraic {F : Type} [CommSemiring F] [DecidableEq S] {σ : Sig S}
   congr 1
   rw [liftComp_def, ← QueryImpl.simulateQ_compose]
   congr 1
-  funext t
+  ext t : 1
   rcases t with t | t
   · change simulateQ _ (liftM ((spec F σ + (encSpec E + (unifSpec + Γ))).query
       (.inl t))) = _

@@ -131,14 +131,19 @@ namespace QueryImpl
 
 variable {ι : Type u} {spec : OracleSpec.{u, v} ι} {m : Type v → Type w}
 
-/-- Answer a round point by point, in the order of its list. -/
+/-- The answers of `impl` to the points of a round, in the order of its list. -/
 @[expose]
-def batch [Monad m] (impl : QueryImpl spec m) : QueryImpl spec.batch m
+def batchAnswers [Monad m] (impl : QueryImpl spec m) : (ts : List ι) → m (spec.batch.Range ts)
   | [] => pure batchNil
   | t :: ts => do
       let u ← impl t
-      let us ← impl.batch ts
+      let us ← impl.batchAnswers ts
       pure (batchCons u us)
+
+/-- Answer a round point by point, in the order of its list. -/
+@[expose, simps -isSimp]
+def batch [Monad m] (impl : QueryImpl spec m) : QueryImpl spec.batch m where
+  toFun := impl.batchAnswers
 
 @[simp] lemma batch_nil [Monad m] (impl : QueryImpl spec m) :
     impl.batch [] = pure batchNil := rfl
@@ -172,7 +177,7 @@ lemma batch_congr {ι : Type} {spec : OracleSpec.{0, 0} ι} {m' : Type → Type}
 lemma compose_batch {ι' : Type*} {spec' : OracleSpec ι'} {m : Type v → Type w} [Monad m]
     [LawfulMonad m] (so' : QueryImpl spec' m) (so : QueryImpl spec (OracleComp spec')) :
     so' ∘ₛ so.batch = (so' ∘ₛ so).batch := by
-  funext ts
+  ext ts : 1
   induction ts with
   | nil => simp
   | cons t ts ih => simp [← ih]
@@ -195,13 +200,13 @@ variable {τ ι : Type} {free : OracleSpec.{0, 0} τ} {spec : OracleSpec.{0, 0} 
 them, and a round is answered point by point by `impl`. -/
 @[expose]
 def batch' (impl : QueryImpl (free + spec) m) : QueryImpl (free + spec.batch) m :=
-  QueryImpl.add (fun n => impl (.inl n)) (QueryImpl.batch fun t => impl (.inr t))
+  QueryImpl.add ⟨fun n => impl (.inl n)⟩ (QueryImpl.batch ⟨fun t => impl (.inr t)⟩)
 
 @[simp] lemma batch'_apply_inl (impl : QueryImpl (free + spec) m) (n : τ) :
     impl.batch' (.inl n) = impl (.inl n) := rfl
 
 @[simp] lemma batch'_apply_inr (impl : QueryImpl (free + spec) m) (ts : List ι) :
-    impl.batch' (.inr ts) = QueryImpl.batch (fun t => impl (.inr t)) ts := rfl
+    impl.batch' (.inr ts) = QueryImpl.batch ⟨fun t => impl (.inr t)⟩ ts := rfl
 
 /-- The batched form of a sum handler batches its right summand. -/
 @[simp] lemma batch'_add (impl₁ : QueryImpl free m) (impl₂ : QueryImpl spec m) :
@@ -219,7 +224,7 @@ variable {τ ι : Type} (spec : OracleSpec.{0, 0} ι) {free : OracleSpec.{0, 0} 
 `free` pass through unchanged. -/
 @[expose]
 def unbatch : QueryImpl (free + spec.batch) (OracleComp (free + spec)) :=
-  QueryImpl.batch' fun t => liftM ((free + spec).query t)
+  QueryImpl.batch' ⟨fun t => liftM ((free + spec).query t)⟩
 
 variable {spec}
 
@@ -228,7 +233,7 @@ variable {spec}
 
 @[simp] lemma unbatch_apply_inr (ts : List ι) :
     spec.unbatch (free := free) (.inr ts) =
-      QueryImpl.batch (fun t => liftM ((free + spec).query (.inr t))) ts := rfl
+      QueryImpl.batch ⟨fun t => liftM ((free + spec).query (.inr t))⟩ ts := rfl
 
 end OracleSpec
 
@@ -247,8 +252,8 @@ theorem simulateQ_simulateQ_unbatch (impl : QueryImpl (free + spec) m) {α : Typ
   · exact simulateQ_spec_query impl (.inl n)
   · change (impl ∘ₛ QueryImpl.batch _) ts = _
     rw [compose_batch]
-    congr 1
-    funext t
+    refine congrArg (fun so => QueryImpl.batch so ts) ?_
+    ext t : 1
     exact simulateQ_spec_query impl (.inr t)
 
 end QueryImpl
@@ -486,7 +491,7 @@ variable {ι : Type} {spec : OracleSpec.{0, 0} ι}
 
 /-- Answering each point of a round from the table `f` answers the round with `f` pointwise. -/
 lemma batch_unifFwdAnswerImpl (f : QueryImpl spec Id) (ts : List ι) :
-    QueryImpl.batch (fun t => unifFwdAnswerImpl f (.inr t)) ts =
+    QueryImpl.batch ⟨fun t => unifFwdAnswerImpl f (.inr t)⟩ ts =
       (pure (fun j => (f ts[j]).run) : ProbComp (spec.batch.Range ts)) := by
   induction ts with
   | nil =>

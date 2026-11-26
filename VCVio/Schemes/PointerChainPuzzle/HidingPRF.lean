@@ -136,7 +136,7 @@ def indexedExperiment [NeZero n] [AddCommGroup L] [DecidableEq S] [SampleableTyp
         (StateT ℕ (OracleComp (indexedSpec n S L Salt Ctx N K qEnc))) +
       LeftOrRight.oracle (indexedEncrypt (n := n) (S := S) (L := L) (Salt := Salt) (Ctx := Ctx)
         (K := K) codec qEnc (encodePuzzle puzzle)) plaintextLength b) +
-      (fun t => liftM ((indexedSpec n S L Salt Ctx N K qEnc).query (.inr (.inl t))) :
+      (⟨fun t => liftM ((indexedSpec n S L Salt Ctx N K qEnc).query (.inr (.inl t)))⟩ :
         QueryImpl (sealSpec n S L Salt Ctx N K)
           (StateT ℕ (OracleComp (indexedSpec n S L Salt Ctx N K qEnc)))))
     (simulateQ (sealSpec n S L Salt Ctx N K).unbatch (adv.online σ puzzle))) 0
@@ -170,7 +170,7 @@ def indexedRun (mkCtx : Salt → Ctx) (initAcc : Ctx → S)
        ((sealSpec n S L Salt Ctx N K).randomOracle.liftTarget
           (StateT (sealSpec n S L Salt Ctx N K).QueryCache
             (OracleComp (PRFOracleSpec (Fin (2 * qEnc) × ByteArray) (Bytes 32)))) +
-        (fun x => liftM (functionQuery (R := Bytes 32) x) : QueryImpl (instanceSpec qEnc)
+        (⟨fun x => liftM (functionQuery (R := Bytes 32) x)⟩ : QueryImpl (instanceSpec qEnc)
           (StateT (sealSpec n S L Salt Ctx N K).QueryCache
             (OracleComp (PRFOracleSpec (Fin (2 * qEnc) × ByteArray) (Bytes 32)))))))
       (indexedExperiment m codec encodePuzzle qEnc mkCtx initAcc adv b)).run' ∅

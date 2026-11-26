@@ -29,10 +29,10 @@ theorem exists_hint_upperBound_iff (cache : T → spec.QueryCache) (hint : T →
       ∀ t t', hint t = hint t' → ∀ q b b', cache t q = some b →
         cache t' q = some b' → b = b' := by
   refine Iff.trans ?_ (PFunctor.Handler.Hint.exists_preservesSettled_iff
-    (P := spec.toPFunctor) (fun t => (cache t).toPartialImpl) hint)
+    (P := spec.toPFunctor) (fun t => (cache t).toPartialImpl.toHandler) hint)
   constructor
   · rintro ⟨replay, extendsCache⟩
-    exact ⟨fun s => (replay s).toPartialImpl, fun t _ _ hb => extendsCache t hb⟩
+    exact ⟨fun s => (replay s).toPartialImpl.toHandler, fun t _ _ hb => extendsCache t hb⟩
   · rintro ⟨d, hd⟩
     exact ⟨fun s => ofFn (d s), fun t q b hb => hd t q b hb⟩
 

@@ -37,9 +37,10 @@ variable {ι : Type} (pub : OracleSpec.{0, 0} ι) (X R : Type)
 /-- Interpret the duplicated forwarded interface over `pub + (X →ₒ R)` in
 `pub.withDerivations X R`: a uniform draw is forwarded, and either copy of a public query or a
 derivation becomes that public query or derivation. -/
-@[expose] noncomputable def collapseFwd :
+@[expose, simps] noncomputable def collapseFwd :
     QueryImpl (unifSpec + ((pub + (X →ₒ R)) + (pub + (X →ₒ R))))
-      (OracleComp (pub.withDerivations X R))
+      (OracleComp (pub.withDerivations X R)) where
+  toFun
   | .inl n => liftM ((pub.withDerivations X R).query (.inl (.inl n)))
   | .inr (.inl (.inl t)) | .inr (.inr (.inl t)) =>
       liftM ((pub.withDerivations X R).query (.inl (.inr t)))
@@ -68,9 +69,9 @@ theorem map_run_simulateQ_idealImpl_collapseFwd {α : Type}
         ((idealImpl pub X R ∘ₛ collapseFwd pub X R) (.inr (.inr t))).run st =
           ((QueryImpl.parallelStateT pub.randomOracle (X →ₒ R).randomOracle) t).run st := by
     rcases t with t | x <;>
-      simp [QueryImpl.apply_compose, collapseFwd, idealImpl, QueryImpl.parallelStateT] <;> rfl
+      simp [collapseFwd_apply, idealImpl_apply, QueryImpl.parallelStateT_apply] <;> rfl
   rintro (n | t | t) st
-  · simp [QueryImpl.apply_compose, collapseFwd, idealImpl, unifFwdImpl]
+  · simp [collapseFwd_apply, idealImpl_apply, unifFwdImpl]
   · rw [(hpar t st).1, QueryImpl.add_apply_inr, AnswerTape.dupRandomOracle_apply_inl]
     exact QueryImpl.run_parallelStateT_randomOracle_map_eq t st
   · rw [(hpar t st).2, QueryImpl.add_apply_inr, AnswerTape.dupRandomOracle_apply_inr]

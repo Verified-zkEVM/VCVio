@@ -62,11 +62,12 @@ private def twoSortInput : Message Unit (fun _ : Bool => ZMod 7) :=
   ⟨(), fun s => if s then [1, 2] else [3, 5]⟩
 
 /-- Coins answer each request with the largest value. -/
-private def lastCoin : QueryImpl unifSpec Id := fun n => Fin.last n
+private def lastCoin : QueryImpl unifSpec Id where
+  toFun n := Fin.last n
 
 /-- The game replies at each sort with one more than the first element it receives there. -/
-private def succGame : QueryImpl (plainSpec (fun _ : Bool => ZMod 7) Unit (fun _ => Unit)) Id :=
-  fun q => ⟨(), fun s => [(q.groups s).getD 0 0 + 1]⟩
+private def succGame : QueryImpl (plainSpec (fun _ : Bool => ZMod 7) Unit (fun _ => Unit)) Id where
+  toFun q := ⟨(), fun s => [(q.groups s).getD 0 0 + 1]⟩
 
 /-- The explained run of the two-sort adversary. The game replies `6` to `c = 5` and `5` to
 `e = 4`. The output `r + c = r + 3 x₀ + x₁` at sort `true` has coefficients `[3, 1, 1]` over
@@ -114,8 +115,8 @@ private def coinAdversary : HandleAdversary (ZMod 7) (discreteSig Bool) (fun _ =
   pure ⟨coin, fun _ => []⟩
 
 /-- The game has no requests. -/
-private def emptyGame : QueryImpl (plainSpec (fun _ : Bool => ZMod 7) Empty Empty.elim) Id :=
-  fun q => q.data.elim
+private def emptyGame : QueryImpl (plainSpec (fun _ : Bool => ZMod 7) Empty Empty.elim) Id where
+  toFun q := q.data.elim
 
 /-- A private-coin-only adversary keeps its sample and has no group explanations. -/
 private theorem private_coin_explanation :
@@ -148,8 +149,8 @@ theorem repeat_game_state :
       let second ← Ω.query (.inr (.inr (.inr ⟨(), fun _ => []⟩)))
       pure ⟨(first.data, coin, second.data), fun _ => []⟩
     let game : QueryImpl (plainSpec (fun _ : Bool => ZMod 7) Unit (fun _ => Bool)) (StateM ℕ) :=
-      fun _ => modifyGet fun n => (⟨decide (0 < n), fun _ => []⟩, n + 1)
-    let random : QueryImpl unifSpec (StateM ℕ) := fun n => pure (Fin.last n)
+      ⟨fun _ => modifyGet fun n => (⟨decide (0 < n), fun _ => []⟩, n + 1)⟩
+    let random : QueryImpl unifSpec (StateM ℕ) := ⟨fun n => pure (Fin.last n)⟩
     let explained :=
       ((toExplained A (fun _ => id)).run (withCoins random game) ⟨(), fun _ => []⟩).run 0
     let handles := (A.run (Model.discrete _) (fun _ => id) random game ⟨(), fun _ => []⟩).run 0

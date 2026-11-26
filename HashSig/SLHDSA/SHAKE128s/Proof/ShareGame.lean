@@ -205,9 +205,9 @@ abbrev ShareSpec := OracleWorld + DrawSpec + AssembleSpec + ClaimSpec
   Sum.inl (Sum.inl (Sum.inl queried))
 
 /-- **A signing request, split.** -/
-@[expose]
-noncomputable def splitter : QueryImpl (OracleWorld + SigningSpec) (OracleComp ShareSpec) :=
-  fun queried => match queried with
+@[expose, simps]
+noncomputable def splitter : QueryImpl (OracleWorld + SigningSpec) (OracleComp ShareSpec) where
+  toFun queried := match queried with
     | Sum.inl world => (query (spec := ShareSpec) (worldQuery world) :
         OracleComp ShareSpec (OracleWorld.Range world))
     | Sum.inr request => do
@@ -229,8 +229,8 @@ def fallbackForgery : Forgery := { message := { context := [], message := [] }, 
 /-- The verifier, as world queries of the game. -/
 @[expose]
 noncomputable def verifyShare (pk : PublicKey) (forgery : Forgery) : OracleComp ShareSpec Bool :=
-  simulateQ (fun world => (query (spec := ShareSpec) (worldQuery world) :
-      OracleComp ShareSpec (OracleWorld.Range world)))
+  simulateQ ⟨fun world => (query (spec := ShareSpec) (worldQuery world) :
+      OracleComp ShareSpec (OracleWorld.Range world))⟩
     (Scheme.verify (m := OracleComp OracleWorld) pk forgery.message forgery.signature)
 
 /-- **The computation both games run.** -/
@@ -268,9 +268,9 @@ theorem mem_unfiled {record : List (Bytes × List HashOutput)} {served : List Ha
 
 open scoped Classical in
 /-- **The handler**, lenient or blind, with the sticky flag beside its state. -/
-@[expose] noncomputable def handler (lenient : Bool) (setup : Setup) :
-    QueryImpl ShareSpec (StateT (St × Bool) ProbComp) :=
-  fun queried state => match queried with
+@[expose, simps] noncomputable def handler (lenient : Bool) (setup : Setup) :
+    QueryImpl ShareSpec (StateT (St × Bool) ProbComp) where
+  toFun queried state := match queried with
     | Sum.inl (Sum.inl (Sum.inl (Sum.inl coin))) => do
         let value ← ($ᵗ (OracleWorld.Range (Sum.inl coin)) : ProbComp _)
         pure (value, state)

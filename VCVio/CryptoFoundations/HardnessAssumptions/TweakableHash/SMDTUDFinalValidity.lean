@@ -161,11 +161,12 @@ def response (world : World)
 
 /-- The always-answering challenge oracle. Every query is appended to the target history; a cap,
 duplicate-target, or collection clash poisons final validity without changing the response. -/
+@[simps]
 def challengeOracle [DecidableEq Tweak] (world : World)
     (prob : Problem ι PkSeed Tweak M M' Y) (pk : PkSeed) :
     QueryImpl (challengeSpec Tweak Y)
-      (StateT (State Tweak) ProbComp) :=
-  fun t => do
+      (StateT (State Tweak) ProbComp) where
+  toFun t := do
     let y ← (response world prob pk t :
       StateT (State Tweak) ProbComp Y)
     let st ← get
@@ -221,7 +222,7 @@ theorem challengeOracle_run :
     (challengeOracle world prob pk t).run st =
       (fun y => (y, st.recordTarget prob.numTargets id t)) <$>
         response world prob pk t := by
-  simp [challengeOracle, Functor.map_map]
+  simp [challengeOracle_apply, Functor.map_map]
 
 /-! ## Run-level final-validity correspondence -/
 

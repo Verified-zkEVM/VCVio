@@ -129,7 +129,7 @@ lemma ghostHybridImpl_proj_prog (pk : Stmt) (sk : Wit)
           hybridSignImpl M (progSignBody ids M pk sk · maxAttempts)) t).run
         (overlayCache M s.1.1.1 s.1.1.2, s.1.2) := by
   rcases t with (n | mc) | msg
-  · simp only [ghostHybridImpl, StateT.run_mk, QueryImpl.add_apply_inl, hybridBaseImpl,
+  · simp only [ghostHybridImpl_apply, StateT.run_mk, QueryImpl.add_apply_inl, hybridBaseImpl,
       unifFwdImpl, QueryImpl.liftTarget_apply, Functor.map_map]
     rfl
   · refine Eq.trans ?_
@@ -175,7 +175,7 @@ lemma ghostHybridImpl_proj_trans (pk : Stmt) (sk : Wit)
           hybridSignImpl M (transSignBody ids M maxAttempts pk sk)) t).run
         (s.1.1.1, s.1.2) := by
   rcases t with (n | mc) | msg
-  · simp only [ghostHybridImpl, StateT.run_mk, QueryImpl.add_apply_inl, hybridBaseImpl,
+  · simp only [ghostHybridImpl_apply, StateT.run_mk, QueryImpl.add_apply_inl, hybridBaseImpl,
       unifFwdImpl, QueryImpl.liftTarget_apply, Functor.map_map]
     rfl
   · refine Eq.trans ?_ (hybridBaseImpl_run_ro M mc s.1.1.1 s.1.2).symm
@@ -242,10 +242,10 @@ lemma ghostHybridImpl_preserves_signed_inv (progSide : Bool) (pk : Stmt) (sk : W
       ∀ q : M × Commit, z.2.1.1.2 q ≠ none → q.1 ∈ z.2.1.2 := by
   intro z hz
   rcases t with (n | mc) | msg
-  · simp only [ghostHybridImpl, StateT.run_mk, support_map] at hz
+  · simp only [ghostHybridImpl_apply, StateT.run_mk, support_map] at hz
     obtain ⟨u, -, rfl⟩ := hz
     exact hs
-  · simp only [ghostHybridImpl, StateT.run_mk] at hz
+  · simp only [ghostHybridImpl_apply, StateT.run_mk] at hz
     rcases hgh : s.1.1.2 mc with - | v
     · simp only [hgh, support_map] at hz
       obtain ⟨cu, -, rfl⟩ := hz
@@ -260,7 +260,7 @@ lemma ghostHybridImpl_preserves_signed_inv (progSide : Bool) (pk : Stmt) (sk : W
           rw [ite_eq_right Bool.false_ne_true, support_map] at hz
           obtain ⟨cu, -, rfl⟩ := hz
           exact hs
-  · simp only [ghostHybridImpl, StateT.run_mk, support_map] at hz
+  · simp only [ghostHybridImpl_apply, StateT.run_mk, support_map] at hz
     obtain ⟨alc, halc, rfl⟩ := hz
     intro q hq
     rcases ghostSignBody_support_ghost ids M pk sk msg maxAttempts s.1.1.1 s.1.1.2

@@ -56,7 +56,7 @@ example [EvalDistSemantics (OracleComp Import)] [LawfulEvalDistSemantics (Oracle
 abbrev counter : OracleRuntime (fun _ : Empty => PUnit) (fun _ : Nat => Nat) where
   State := Nat
   setup := pure 7
-  handler := fun n => fun s => pure (s + n, s + n)
+  handler := ⟨fun n => fun s => pure (s + n, s + n)⟩
 
 @[expose] def program : OracleComp (fun _ : Nat => Nat) (Nat × Nat) := do
   let a ← (query (spec := fun _ : Nat => Nat) 2)

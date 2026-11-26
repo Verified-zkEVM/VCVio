@@ -50,8 +50,8 @@ VCVio owns cryptographic specialization:
 Generic code should accept `PFunctor`, `PFunctor.Handler`, or
 `PFunctor.FreeM` directly. Oracle- and cryptography-facing code should use the
 VCVio names. `OracleComp spec` remains definitionally the free monad on
-`spec.toPFunctor`, and `QueryImpl` compatibility operations are thin aliases
-of the generic handler operations.
+`spec.toPFunctor`. `QueryImpl` is a one-field structure of its own that
+converts to the generic handlers with `toHandler` and `ofHandler`.
 
 The generic measure semantics lives in PolyFun, in `Measure` companions
 beside the constructions it interprets, under the names VCVio uses:
@@ -185,6 +185,28 @@ that determine typeclass discrimination keys must not be made locally
 reducible after their instances have been indexed. Prefer the narrowest stable
 normal form that makes the intended dependent types well-formed.
 
+### Choosing between an abbreviation and a structure
+
+| The type and its representation | Form |
+| --- | --- |
+| Same instances, notation and coercions, and code may see through it | `abbrev` |
+| Different instances, notation or coercions | One-field structure with `toFun`-style projection, `ext` and application lemmas |
+| Recursively defined predicate | `inductive` |
+| Value whose body is not part of the contract | Unexposed `def` with stated equations; never for an instance |
+
+An `abbrev` over a function type lends its instances to that function type, because
+instance search unfolds it: `HAdd` on handlers was found for ordinary functions.
+Mathlib has converted `Set`
+([#41506](https://github.com/leanprover-community/mathlib4/pull/41506)), `FreeMonoid`
+([#45212](https://github.com/leanprover-community/mathlib4/pull/45212)) and other synonyms with
+their own instances to one-field structures, places the structure at the lowest layer with
+abbreviations above it
+([#45407](https://github.com/leanprover-community/mathlib4/pull/45407),
+[#45508](https://github.com/leanprover-community/mathlib4/pull/45508)), and replaces
+`irreducible_def` by `no_expose` definitions with public lemmas
+([#45063](https://github.com/leanprover-community/mathlib4/pull/45063)). `QueryImpl` and PolyFun's
+`Handler` follow the second row.
+
 ### Implicit transparency in Lean 4.33
 
 With `backward.isDefEq.respectTransparency.types` enabled, the type of a value
@@ -296,12 +318,10 @@ the PolyFun coproduct has a small intrinsic normal form that works with the
 check enabled. `MathlibTest/TacticCheckInstances*.lean` exercises the same
 linter used by the canaries here.
 
-`PFunctor.Handler.liftTarget` is one deliberate transparent exception. Its
-pointwise reduction changes only the target monad, and dependent handler
-result types need that reduction during elaboration; an application theorem
-alone leaves casts that Lean's rewriting tactics cannot always normalize.
-The effectful `preInsert` / `postInsert` and tracing combinators remain opaque
-and are consumed through their public application and factorization laws.
+Handlers are consumed through application lemmas. `QueryImpl.liftTarget` has the
+simp lemma `liftTarget_apply`, and the effectful `preInsert` / `postInsert` and
+tracing combinators are used through their public application and factorization
+laws.
 
 The compatibility migration uses broad `@[expose] public section`s so current
 downstream proofs continue to elaborate. New code should expose individual

@@ -43,7 +43,7 @@ theorem explainProgram_transcript_view [Field F]
       (if (a.1.value.groups false).isEmpty then []
         else (a.1.coefficients false).headD []), a.2)) <$>
       (simulateQ (LinearFunctional.transcriptOracle hash sign)
-        (simulateQ (fun q => AGM.oracle q.value)
+        (simulateQ ⟨fun q => AGM.oracle q.value⟩
           (simulateQ relabel
             (Pairing.explainProgram (G := AGM.Group G₁ G₂) e program st)))).run tr =
     (fun a => realReductionView a.1 a.2) <$>
@@ -64,9 +64,9 @@ theorem explainProgram_transcript_view [Field F]
       rw [run_simulateQ_query_bind]
       simp only [map_bind]
       rcases q with q | q | n | q
-      · simpa only [Pairing.explainProgram_query_bind, realReductionHandler,
+      · simpa only [Pairing.explainProgram_query_bind, realReductionHandler_apply,
           StateT.run, pure_bind] using ih (Pairing.step e q st).1 (Pairing.step e q st).2 tr
-      · simpa only [Pairing.explainProgram_query_bind, realReductionHandler,
+      · simpa only [Pairing.explainProgram_query_bind, realReductionHandler_apply,
           StateT.run, pure_bind] using ih () st tr
       · have hcoin : simulateQ (LinearFunctional.transcriptOracle hash sign)
             (liftM (unifSpec.query n) : OracleComp (AGM.rawSpec M G₁) _) =
@@ -78,8 +78,8 @@ theorem explainProgram_transcript_view [Field F]
           simulateQ_pure,
           StateT.run_bind, StateT.run_pure,
           map_bind]
-        simp only [realReductionHandler, StateT.run, bind_assoc, pure_bind,
-          LinearFunctional.transcriptOracle, bind_map_left, receive_empty]
+        simp only [realReductionHandler_apply, StateT.run, bind_assoc, pure_bind,
+          LinearFunctional.transcriptOracle_apply, bind_map_left, receive_empty]
         apply bind_congr
         intro coin
         simpa only [StateT.run] using ih coin st tr
@@ -91,7 +91,7 @@ theorem explainProgram_transcript_view [Field F]
             LinearFunctional.transcriptOracle_hash, LinearFunctional.transcriptOracle_sign,
             map_bind]
         all_goals
-          simp only [realReductionHandler, StateT.run, bind_assoc, pure_bind,
+          simp only [realReductionHandler_apply, StateT.run, bind_assoc, pure_bind,
             Bool.false_eq_true, ite_false, ite_true, OracleComp.liftM_map, bind_map_left]
           apply bind_congr
           intro r

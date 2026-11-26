@@ -179,10 +179,12 @@ def choiceProgram : OracleComp choiceSpec Unit := do
     pure ()
 
 /-- A deterministic handler selecting the shorter response branch. -/
-def shortBranch : QueryImpl choiceSpec Id := fun _ => pure false
+def shortBranch : QueryImpl choiceSpec Id where
+  toFun _ := pure false
 
 /-- A deterministic handler selecting the longer response branch. -/
-def longBranch : QueryImpl choiceSpec Id := fun _ => pure true
+def longBranch : QueryImpl choiceSpec Id where
+  toFun _ := pure true
 
 example :
     (simulateQ (shortBranch.withAddCost (fun _ => (1 : Nat)))

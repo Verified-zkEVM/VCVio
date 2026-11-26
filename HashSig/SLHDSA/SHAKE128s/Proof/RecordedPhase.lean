@@ -68,12 +68,13 @@ open Security RecordedQueries
   | .inr _ => (Counts.single .signing 1, 0)
 
 /-- The signer with nothing charged and nothing recorded: it answers and records to the log. -/
-@[expose]
+@[expose, simps]
 noncomputable def unchargedSigner (signer : Message → OracleComp OracleWorld (Option Bytes)) :
-    QueryImpl SigningSpec (StateT SigningLog (OracleComp OracleWorld)) := fun request => do
-  let answer ← liftM (signer request)
-  modify (fun signed => signed ++ [⟨request, answer⟩])
-  return answer
+    QueryImpl SigningSpec (StateT SigningLog (OracleComp OracleWorld)) where
+  toFun request := do
+    let answer ← liftM (signer request)
+    modify (fun signed => signed ++ [⟨request, answer⟩])
+    return answer
 
 /-- The phase's pair of oracles with nothing charged and nothing recorded. -/
 @[expose]
@@ -106,7 +107,7 @@ theorem run_unchargedPhase_inr (signer : Message → OracleComp OracleWorld (Opt
 theorem phase_eq (signer : Message → OracleComp OracleWorld (Option Bytes)) :
     recordedAdversaryImpl + recordedSigningOracle signer =
       (unchargedPhase signer).withAddCost phaseCost := by
-  funext queried
+  ext queried : 1
   cases queried with
   | inl input =>
     rw [QueryImpl.add_apply_inl, recordedAdversaryImpl, QueryImpl.withAddCost_apply,

@@ -47,14 +47,14 @@ variable [DecidableEq TagId] [DecidableEq Nonce] [DecidableEq Digest]
 @[expose] def verdict
     (impl : QueryImpl (UnlinkOracleSpec TagId Nonce Digest) (StateT S ProbComp))
     (budget : ℕ) (adversary : UnlinkAdversary TagId Nonce Digest) (state : S) : ProbComp Bool :=
-  (fun out => out.1.1.getD false) <$> serialObservation impl budget adversary state
+  (fun out => out.1.1.getD false) <$> serialObservation impl.toHandler budget adversary state
 
 /-- Observe a predicate of the service state after actual bounded packet execution. -/
 @[expose] def stateEvent
     (impl : QueryImpl (UnlinkOracleSpec TagId Nonce Digest) (StateT S ProbComp))
     (budget : ℕ) (adversary : UnlinkAdversary TagId Nonce Digest) (state : S)
     (event : S → Bool) : ProbComp Bool :=
-  (fun out => event out.2) <$> serialObservation impl budget adversary state
+  (fun out => event out.2) <$> serialObservation impl.toHandler budget adversary state
 
 /-- Packet execution preserves the complete ordered response transcript and verdict. -/
 theorem transcript_eq
@@ -62,9 +62,10 @@ theorem transcript_eq
     (adversary : UnlinkAdversary TagId Nonce Digest) (state : S) (qReader qTag : ℕ)
     (hReader : IsQueryBoundP adversary (·.isRight) qReader)
     (hTag : IsQueryBoundP adversary (·.isLeft) qTag) :
-    serialObservation impl (qReader + qTag) adversary state =
-      (fun out => ((some out.1.1, out.1.2), out.2)) <$> loggedRun impl () adversary state :=
-  serialObservation_eq_loggedRun impl _ adversary
+    serialObservation impl.toHandler (qReader + qTag) adversary state =
+      (fun out => ((some out.1.1, out.1.2), out.2)) <$>
+        loggedRun impl.toHandler () adversary state :=
+  serialObservation_eq_loggedRun impl.toHandler _ adversary
     (totalQueryBound adversary qReader qTag hReader hTag) state
 
 /-- Every bounded client's network verdict is exactly its original oracle-game verdict. -/

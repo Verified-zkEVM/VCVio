@@ -83,8 +83,8 @@ theorem tapeList_succ (m : ℕ) :
 uniformly once the list is exhausted. Its state is the answer cache together with the
 unconsumed tape. -/
 def tapeCachingImpl (D R : Type) [DecidableEq D] [SampleableType R] :
-    QueryImpl (D →ₒ R) (StateT ((D →ₒ R).QueryCache × List R) ProbComp) :=
-  fun t => StateT.mk fun s =>
+    QueryImpl (D →ₒ R) (StateT ((D →ₒ R).QueryCache × List R) ProbComp) where
+  toFun t := StateT.mk fun s =>
     match s.1 t with
     | some u => pure (u, s)
     | none => match s.2 with

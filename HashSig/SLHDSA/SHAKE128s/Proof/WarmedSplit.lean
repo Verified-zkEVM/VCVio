@@ -73,7 +73,7 @@ theorem verify_liftM (pk : PublicKey) (request : Message) (signature : Bytes) :
       liftM (Scheme.verify (m := OracleComp HashSpec) pk request signature) := by
   rw [← OracleComp.liftComp_eq_liftM, OracleComp.liftComp_def]
   exact (VerifierNaturality.verify_simulate (m := OracleComp OracleWorld)
-    (fun t => liftM (HashSpec.query t)) (fun _ => rfl) pk request signature).symm
+    ⟨fun t => liftM (HashSpec.query t)⟩ (fun _ => rfl) pk request signature).symm
 
 /-- The game's key generation is the hash-only key generation, lifted. -/
 theorem keygenInternal_liftM (secretSeed prfSeed publicSeed : Digest) :
@@ -82,7 +82,7 @@ theorem keygenInternal_liftM (secretSeed prfSeed publicSeed : Digest) :
       liftM (Scheme.keygenInternal (m := OracleComp HashSpec) secretSeed prfSeed publicSeed) := by
   rw [← OracleComp.liftComp_eq_liftM, OracleComp.liftComp_def]
   exact (Correctness.Naturality.keygenInternal_simulate (m := OracleComp OracleWorld)
-    (fun t => liftM (HashSpec.query t)) (fun _ => rfl) secretSeed prfSeed publicSeed).symm
+    ⟨fun t => liftM (HashSpec.query t)⟩ (fun _ => rfl) secretSeed prfSeed publicSeed).symm
 
 /-! ## Replaying against a later cache
 

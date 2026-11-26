@@ -30,23 +30,25 @@ namespace QueryImpl
 /-- Given implementations for oracles in `spec₁` and `spec₂` in terms of writer monads for
 two different log monoids `ω₁` and `ω₂`, implement the combined set `spec₁ + spec₂` in terms
 of the product monoid `ω₁ × ω₂`. Each side leaves the other component at the identity. -/
-@[expose] def parallelWriterT {ι₁ : Type u} {ι₂ : Type v}
+@[expose, simps] def parallelWriterT {ι₁ : Type u} {ι₂ : Type v}
     {spec₁ : OracleSpec.{u, w} ι₁} {spec₂ : OracleSpec.{v, w} ι₂}
     {m : Type w → Type x} [Functor m] {ω₁ ω₂ : Type w} [Monoid ω₁] [Monoid ω₂]
     (impl₁ : QueryImpl spec₁ (WriterT ω₁ m))
     (impl₂ : QueryImpl spec₂ (WriterT ω₂ m)) :
-    QueryImpl (spec₁ + spec₂) (WriterT (ω₁ × ω₂) m)
+    QueryImpl (spec₁ + spec₂) (WriterT (ω₁ × ω₂) m) where
+  toFun
   | .inl t => WriterT.mk <| Prod.map id (·, (1 : ω₂)) <$> (impl₁ t).run
   | .inr t => WriterT.mk <| Prod.map id ((1 : ω₁), ·) <$> (impl₂ t).run
 
 /-- Indexed version of `QueryImpl.parallelWriterT`. Each query for index `t` writes into the
 `t`-th component of the pi-product `(t : τ) → ω t`, leaving every other component at the
 identity. Note that `m` cannot vary with `t`. -/
-@[expose] def sigmaWriterT {τ : Type} [DecidableEq τ] {ι : τ → Type v}
+@[expose, simps] def sigmaWriterT {τ : Type} [DecidableEq τ] {ι : τ → Type v}
     {spec : (t : τ) → OracleSpec.{v, w} (ι t)}
     {m : Type w → Type x} [Functor m] {ω : τ → Type w} [(t : τ) → Monoid (ω t)]
     (impl : (t : τ) → QueryImpl (spec t) (WriterT (ω t) m)) :
-    QueryImpl (OracleSpec.sigma spec) (WriterT ((t : τ) → ω t) m)
+    QueryImpl (OracleSpec.sigma spec) (WriterT ((t : τ) → ω t) m) where
+  toFun
   | ⟨t, q⟩ => WriterT.mk <| Prod.map id (Function.update (fun _ => 1) t) <$> (impl t q).run
 
 /-- Reassociate a nested writer transformer into one product log.
@@ -54,22 +56,24 @@ identity. Note that `m` cannot vary with `t`. -/
 The outer log is the first component of the product; the inner/base log is the second. This
 is the writer-transformer analogue of `flattenStateT`. The resulting `WriterT (ω₁ × ω₂) m`
 carries both logs as a product. -/
-@[expose] def flattenWriterT {ι : Type _} {spec : OracleSpec ι}
+@[expose, simps] def flattenWriterT {ι : Type _} {spec : OracleSpec ι}
     {m : Type u → Type v} [Monad m] {ω₁ ω₂ : Type u}
     (impl : QueryImpl spec (WriterT ω₁ (WriterT ω₂ m))) :
-    QueryImpl spec (WriterT (ω₁ × ω₂) m) := fun t =>
-  WriterT.mk <| do
+    QueryImpl spec (WriterT (ω₁ × ω₂) m) where
+  toFun t :=
+    WriterT.mk <| do
     let ((a, w₁), w₂) ← (impl t).run.run
     pure (a, (w₁, w₂))
 
 /-- Read a handler over `StateT σ (WriterT ω m)` as a handler over the product state `σ × ω`:
 each query appends the log it writes to the second component. This is the state-over-writer
 analogue of `flattenStateT`. -/
-@[expose] def flattenStateTWriterT {ι : Type _} {spec : OracleSpec ι}
+@[expose, simps -isSimp] def flattenStateTWriterT {ι : Type _} {spec : OracleSpec ι}
     {m : Type u → Type v} [Functor m] {σ ω : Type u} [Append ω]
     (impl : QueryImpl spec (StateT σ (WriterT ω m))) :
-    QueryImpl spec (StateT (σ × ω) m) := fun t =>
-  StateT.mk fun p => (fun z => (z.1.1, (z.1.2, p.2 ++ z.2))) <$> ((impl t).run p.1).run
+    QueryImpl spec (StateT (σ × ω) m) where
+  toFun t :=
+    StateT.mk fun p => (fun z => (z.1.1, (z.1.2, p.2 ++ z.2))) <$> ((impl t).run p.1).run
 
 end QueryImpl
 
@@ -146,7 +150,7 @@ theorem simulateQ_flattenStateTWriterT_run (impl : QueryImpl spec (StateT σ (Wr
   | pure x => simp
   | query_bind t k ih =>
     simp only [simulateQ_bind, simulateQ_spec_query, StateT.run_bind, WriterT.run_bind',
-      map_bind, QueryImpl.flattenStateTWriterT, StateT.run_mk, bind_map_left]
+      map_bind, QueryImpl.flattenStateTWriterT_apply, StateT.run_mk, bind_map_left]
     refine bind_congr fun z => ?_
     rw [ih z.1.1 z.1.2 (w₀ ++ z.2)]
     simp [Functor.map_map, LawfulAppend.append_assoc]

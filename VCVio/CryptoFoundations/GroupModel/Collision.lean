@@ -114,10 +114,10 @@ private theorem flagHandler_agree {ι' : Type} {spec' : OracleSpec ι'} [AnswerM
   cases q with
   | eq s a b =>
     by_cases he : lookup st.1 s a = lookup st.1 s b
-    · simp [implFlag, flagHandler, impl, IsCollision, he]
+    · simp [implFlag, flagHandler, impl_apply, IsCollision, he]
     · by_cases ho : obs s (lookup st.1 s a) = obs s (lookup st.1 s b)
-      · simp [implFlag, flagHandler, impl, IsCollision, he, ho]
-      · simp [implFlag, flagHandler, impl, IsCollision, he, ho]
+      · simp [implFlag, flagHandler, impl_apply, IsCollision, he, ho]
+      · simp [implFlag, flagHandler, impl_apply, IsCollision, he, ho]
   | _ => rfl
 
 /-- **Identical until a collision (L2).** The total variation of observation-based and exact

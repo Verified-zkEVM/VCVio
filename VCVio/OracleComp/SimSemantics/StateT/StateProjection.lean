@@ -282,10 +282,10 @@ namespace QueryImpl
 /-- Run each query from `(s, q₀)`, keep its answer and next `σ` state, and discard its next
 `Q` state. The following query receives `q₀` again. This lets a read-only parameter move
 out of the threaded state. -/
-def fixSndStateT {ι : Type} {spec : OracleSpec ι} {σ Q : Type}
+@[simps] def fixSndStateT {ι : Type} {spec : OracleSpec ι} {σ Q : Type}
     (impl : QueryImpl spec (StateT (σ × Q) ProbComp)) (q₀ : Q) :
-    QueryImpl spec (StateT σ ProbComp) :=
-  fun t => StateT.mk fun s => Prod.map id Prod.fst <$> (impl t).run (s, q₀)
+    QueryImpl spec (StateT σ ProbComp) where
+  toFun t := StateT.mk fun s => Prod.map id Prod.fst <$> (impl t).run (s, q₀)
 
 end QueryImpl
 
@@ -313,7 +313,7 @@ theorem simulateQ_run_eq_of_snd_invariant
     simp only [simulateQ_bind, simulateQ_query, OracleQuery.input_query,
       OracleQuery.cont_query, id_map, StateT.run_bind]
     rw [map_bind]
-    simp only [QueryImpl.fixSndStateT, StateT.run, StateT.mk, bind_map_left]
+    simp only [QueryImpl.fixSndStateT_apply, StateT.run, StateT.mk, bind_map_left]
     refine OracleComp.bind_congr_of_forall_mem_support _ (fun ⟨u, s', q'⟩ hx => ?_)
     obtain rfl := h_inv t s ⟨u, s', q'⟩ hx
     simpa [StateT.run, Functor.map_map, Function.comp_def] using ih u s'
@@ -345,8 +345,8 @@ def extendState
     {ι : Type u} {spec : OracleSpec ι} {σ Q : Type u} {m : Type u → Type v} [Monad m]
     (so : QueryImpl spec (StateT σ m))
     (aux : (t : spec.Domain) → σ → spec.Range t → σ → Q → Q) :
-    QueryImpl spec (StateT (σ × Q) m) :=
-  fun t => StateT.mk fun s => do
+    QueryImpl spec (StateT (σ × Q) m) where
+  toFun t := StateT.mk fun s => do
     let (u, s') ← (so t).run s.1
     pure (u, (s', aux t s.1 u s' s.2))
 
@@ -385,8 +385,8 @@ def extendStateLeft
     {ι : Type u} {spec : OracleSpec ι} {σ Q : Type u} {m : Type u → Type v} [Monad m]
     (so : QueryImpl spec (StateT σ m))
     (aux : (t : spec.Domain) → σ → spec.Range t → σ → Q → Q) :
-    QueryImpl spec (StateT (Q × σ) m) :=
-  fun t => StateT.mk fun s => do
+    QueryImpl spec (StateT (Q × σ) m) where
+  toFun t := StateT.mk fun s => do
     let (u, s') ← (so t).run s.2
     pure (u, (aux t s.2 u s' s.1, s'))
 

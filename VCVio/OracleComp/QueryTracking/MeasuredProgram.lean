@@ -116,12 +116,12 @@ theorem simulateQ_withAddCost_comp {A B C : Type} [AddMonoid ω]
   congr 1
   · congr 1
     funext op
-    simp only [Handler.comapLens_apply, innerLens, QueryImpl.withAddCost_apply]
+    simp only [innerLens, QueryImpl.withAddCost_apply]
     exact id_map' _
   · funext result
     congr 1
     funext op
-    simp only [Handler.comapLens_apply, outerLens, QueryImpl.withAddCost_apply]
+    simp only [outerLens, QueryImpl.withAddCost_apply]
     exact id_map' _
 
 end PFunctor.FreeM.MeasuredProgram

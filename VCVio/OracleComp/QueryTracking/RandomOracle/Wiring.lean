@@ -30,8 +30,7 @@ variable {D R Boxes : Type} [DecidableEq D] [Finite D] [SampleableType R] [Sampl
 /-- Cached/eager equivalence is preserved by recursive polynomial wiring with a shared service.
 The result may be any measurable observation returned by the wired handler. -/
 theorem evalDist_randomOracle_wiring_eq_tableExtending
-    (implementation : (b : Boxes) → (a : (Cod b).A) →
-      FreeM (PFunctor.sigma (Dom b)) ((Cod b).B a))
+    (implementation : (b : Boxes) → Handler (FreeM (PFunctor.sigma (Dom b))) (Cod b))
     {output : PFunctor}
     (wiring : Wiring Boxes Arity Dom Cod Unit (fun _ => (D →ₒ R).toPFunctor) output)
     (a : output.A) [MeasurableSpace (output.B a)] (cache : (D →ₒ R).QueryCache) :

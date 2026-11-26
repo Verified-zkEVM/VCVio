@@ -206,8 +206,8 @@ end EncodedToy
 namespace IntertwinesOnToy
 
 /-- Answers a uniform query honestly from the zero state, and with `0` from any other state. -/
-def gated : QueryImpl unifSpec (StateT ℕ ProbComp) :=
-  fun n ↦ StateT.mk fun k ↦
+def gated : QueryImpl unifSpec (StateT ℕ ProbComp) where
+  toFun n := StateT.mk fun k ↦
     if k = 0 then (fun u ↦ (u, k)) <$> (unifSpec.query n : ProbComp (Fin (n + 1)))
     else pure (0, k)
 

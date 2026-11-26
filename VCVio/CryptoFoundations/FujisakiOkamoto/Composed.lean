@@ -49,19 +49,21 @@ abbrev SingleROQueryCache (PKHash M R K : Type) :=
   (singleROHashOracleSpec PKHash M R K).QueryCache
 
 /-- Lazy single random oracle returning both coins and the derived key. -/
+@[simps]
 def singleROOracleImpl {PKHash M R K : Type}
     [DecidableEq PKHash] [DecidableEq M] [SampleableType R] [SampleableType K] :
     QueryImpl (singleROHashOracleSpec PKHash M R K)
-      (StateT (SingleROQueryCache PKHash M R K) ProbComp) := fun inp => do
-  let cache ← get
-  match cache inp with
-  | some out => return out
-  | none =>
-      let r ← ($ᵗ R : ProbComp R)
-      let k ← ($ᵗ K : ProbComp K)
-      let out : R × K := (r, k)
-      set (cache.cacheQuery inp out)
-      return out
+      (StateT (SingleROQueryCache PKHash M R K) ProbComp) where
+  toFun inp := do
+    let cache ← get
+    match cache inp with
+    | some out => return out
+    | none =>
+        let r ← ($ᵗ R : ProbComp R)
+        let k ← ($ᵗ K : ProbComp K)
+        let out : R × K := (r, k)
+        set (cache.cacheQuery inp out)
+        return out
 
 /-- Single-RO FO hash world: both the encryption coins and the shared key are derived from the
 same public random-oracle query on `(pkh pk, msg)`. -/

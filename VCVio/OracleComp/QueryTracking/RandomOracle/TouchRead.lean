@@ -123,7 +123,7 @@ theorem eagerImpl_touchCell_run (c : X ⊕ K) (st : RelabelState pub X K R) :
     (simulateQ G.eagerImpl (touchCell (some c))).run st =
       (fun z => ((), z.2)) <$> (RelabelState.drawCell c).run st := by
   simp only [touchCell, simulateQ_HasQuery_query, eagerImpl_apply_inr]
-  simp [RelabelState.labelImpl]
+  simp [RelabelState.labelImpl_apply]
 
 /-- In the eager game a touch is a read whose value is discarded, whether or not the cell
 exists. -/

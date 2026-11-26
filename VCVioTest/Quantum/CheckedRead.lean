@@ -593,6 +593,6 @@ example {P : Type} [Fintype P] [DecidableEq P] {In : P → QReg}
     {E : EmulatedOracle P In} {X Y : Type} [Fintype Y] [DecidableEq Y]
     (H : ProjectiveClassicalAnswers E X Y) (B : QReg) (log : QueryLog (X →ₒ Y)) :
     ((E.withClassicalReads H).run₂ .instruments
-      ((QueryLog.recheck log).toQuantumAt (H.classicalCall B))).branch true =
+      ((QueryLog.recheck log).toQuantumAt ⟨H.classicalCall B⟩)).branch true =
         MatrixMap.conj ((1 : Matrix B B ℂ) ⊗ₖ H.projector log) :=
   H.actual_accept_eq_projectorProduct B log

@@ -390,7 +390,7 @@ private lemma perfectlyCorrect_evalDist_eq [SampleableType Chal] (msg : M) :
           (rest r).run' ((∅ : (M × Commit →ₒ Chal).QueryCache).cacheQuery q r) := by
     intro β q rest
     rw [StateT.run'_bind']
-    simp [randomOracle, QueryImpl.withCaching_apply, uniformSampleImpl]
+    simp [randomOracle, QueryImpl.withCaching_apply, uniformSampleImpl_apply]
   simp only [monad_norm]
   rw [hpeel]
   simp_rw [hpeel, hSimQuery, hro_miss, hpeel]

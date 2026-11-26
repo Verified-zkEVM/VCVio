@@ -119,8 +119,8 @@ lemma nmaHashQueryBound_liftComp_zero {α : Type} (oa : ProbComp α) :
   rw [nmaHashQueryBound, OracleComp.liftComp_def]
   refine OracleComp.IsQueryBoundP.simulateQ_of_step
     (p := fun _ : ℕ => False)
-    (impl := fun t => (liftM (unifSpec.query t) :
-      OracleComp (unifSpec + (M × Commit →ₒ Chal)) (unifSpec.Range t)))
+    (impl := ⟨fun t => (liftM (unifSpec.query t) :
+      OracleComp (unifSpec + (M × Commit →ₒ Chal)) (unifSpec.Range t))⟩)
     (OracleComp.isQueryBoundP_false oa 0)
     (fun _ h => h.elim) ?_
   intro t _

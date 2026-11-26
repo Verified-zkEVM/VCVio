@@ -118,7 +118,7 @@ and these embeddings are essential to the API.
 
 Cartesianness preserves operational possibilities and permits transport of uniform measures.
 Preservation of arbitrary weighted measures is a separate semantic contract. The public
-`LawfulSubSpec.toLens_isCartesian` equation exposes the polynomial lens certificate. -/
+`LawfulSubSpec.toLens_isCartesian` instance gives cartesianness of the underlying lens. -/
 class LawfulSubSpec (spec : OracleSpec.{u, w} ι) (superSpec : OracleSpec.{v, w} τ)
     [h : SubSpec spec superSpec] : Prop where
   /-- The backward translation is bijective on every fiber. -/
@@ -134,11 +134,9 @@ namespace LawfulSubSpec
 variable {ι : Type u} {τ : Type v} {spec : OracleSpec ι} {superSpec : OracleSpec τ}
     [h : spec ⊂ₒ superSpec] [spec ˡ⊂ₒ superSpec]
 
-/-- The lens-level statement of `LawfulSubSpec`: the underlying
-`PFunctor.Lens` is cartesian. This makes the dictionary between the
-oracle-spec layer and the polynomial-functor lens layer explicit. -/
-lemma toLens_isCartesian : h.toLens.IsCartesian := fun t =>
-  onResponse_bijective (h := h) t
+/-- The lens of a lawful sub-spec embedding is cartesian at each query. -/
+instance toLens_isCartesian : h.toLens.IsCartesian where
+  bijective t := onResponse_bijective (h := h) t
 
 
 end LawfulSubSpec
@@ -181,14 +179,14 @@ Usually `liftM` should be preferred but this can allow more explicit annotation.
 def liftComp (mx : OracleComp spec α) (superSpec : OracleSpec τ)
     [h : MonadLiftT (OracleQuery spec) (OracleQuery superSpec)] :
     OracleComp superSpec α :=
-    simulateQ (fun t => liftM (spec.query t)) mx
+    simulateQ (r := OracleComp superSpec) ⟨fun t => liftM (spec.query t)⟩ mx
 
 variable (superSpec : OracleSpec τ)
     [h : MonadLiftT (OracleQuery spec) (OracleQuery superSpec)]
 
 @[grind =, aesop unsafe norm]
 lemma liftComp_def (mx : OracleComp spec α) : liftComp mx superSpec =
-    simulateQ (fun t => liftM (spec.query t)) mx := rfl
+    simulateQ (r := OracleComp superSpec) ⟨fun t => liftM (spec.query t)⟩ mx := rfl
 
 @[simp]
 lemma liftComp_pure (x : α) : liftComp (pure x : OracleComp spec α) superSpec = pure x := rfl
@@ -390,12 +388,13 @@ section OptionT
 
 instance [MonadLift (OracleQuery spec) (OracleQuery superSpec)] :
     MonadLift (OptionT (OracleComp spec)) (OptionT (OracleComp superSpec)) where
-  monadLift mx := OptionT.mk (simulateQ (fun t => liftM (query t)) (OptionT.run mx))
+  monadLift mx := OptionT.mk
+    (simulateQ (r := OracleComp superSpec) ⟨fun t => liftM (spec.query t)⟩ (OptionT.run mx))
 
 @[simp]
 lemma liftM_OptionT_eq [MonadLift (OracleQuery spec) (OracleQuery superSpec)]
     (mx : OptionT (OracleComp spec) α) : (liftM mx : OptionT (OracleComp superSpec) α) =
-      let impl : QueryImpl spec (OracleComp superSpec) := fun t => liftM (query t)
+      let impl : QueryImpl spec (OracleComp superSpec) := ⟨fun t => liftM (spec.query t)⟩
       simulateQ impl mx := rfl
 
 lemma liftM_failure [MonadLift (OracleQuery spec) (OracleQuery superSpec)] :

@@ -85,7 +85,7 @@ theorem adversary_unforgeableAdvantage :
     LinearMap.mul_apply_apply, LinearMap.mul_apply', adversary, add_apply_inl, add_apply_inr,
     SignatureAlg.runWithSigningOracle_def, SignatureAlg.signingOracle, QueryImpl.passthrough_add,
     simulateQ_bind, simulateQ_query, OracleQuery.input_query, OracleQuery.cont_query,
-    QueryImpl.add_apply_inl, PFunctor.Handler.liftTarget_apply, ofPFunctor_toPFunctor,
+    QueryImpl.add_apply_inl, QueryImpl.liftTarget_apply,
     QueryImpl.id'_apply, id_map, simulateQ_map, QueryImpl.add_apply_inr,
     QueryImpl.withLogging_apply, map_bind, Functor.map_map, id_eq, WriterT.run_bind,
     WriterT.run_liftM, List.empty_eq, WriterT.run_map, WriterT.run_tell, map_pure, List.nil_append,

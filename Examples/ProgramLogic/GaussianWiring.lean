@@ -46,10 +46,11 @@ abbrev Network := Wiring Unit (fun _ => Bool) (fun _ _ => tick) (fun _ => tick)
   Unit (fun _ => tick) tick
 
 /-- The box calls both of its ports in sequence. -/
-@[expose] def implementation (_ : Unit) (_ : tick.A) :
-    FreeM (PFunctor.sigma fun _ : Bool => tick) Unit := do
-  let _ ← FreeM.lift (P := PFunctor.sigma fun _ : Bool => tick) ⟨true, ()⟩
-  FreeM.lift (P := PFunctor.sigma fun _ : Bool => tick) ⟨false, ()⟩
+@[expose, simps] def implementation (_ : Unit) :
+    Handler (FreeM (PFunctor.sigma fun _ : Bool => tick)) tick where
+  toFun _ := do
+    let _ ← FreeM.lift (P := PFunctor.sigma fun _ : Bool => tick) ⟨true, ()⟩
+    FreeM.lift (P := PFunctor.sigma fun _ : Bool => tick) ⟨false, ()⟩
 
 /-- Each of the two ports refers to the same external state service. -/
 @[expose] def twice : Network := .box () (fun _ => .input ())

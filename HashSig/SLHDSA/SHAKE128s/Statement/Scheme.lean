@@ -623,9 +623,9 @@ def keygenInternal (secretSeed prfSeed publicSeed : Digest) : m (SecretKey × Pu
 
 /-- Algorithm 21: three uniform seeds. -/
 @[expose] noncomputable def keygen [HasQuery unifSpec m] : m (SecretKey × PublicKey) := do
-  let secretSeed ← simulateQ (fun i => query (spec := unifSpec) i) ($ᵗ Digest)
-  let prfSeed ← simulateQ (fun i => query (spec := unifSpec) i) ($ᵗ Digest)
-  let publicSeed ← simulateQ (fun i => query (spec := unifSpec) i) ($ᵗ Digest)
+  let secretSeed ← simulateQ ⟨fun i => query (spec := unifSpec) i⟩ ($ᵗ Digest)
+  let prfSeed ← simulateQ ⟨fun i => query (spec := unifSpec) i⟩ ($ᵗ Digest)
+  let publicSeed ← simulateQ ⟨fun i => query (spec := unifSpec) i⟩ ($ᵗ Digest)
   keygenInternal secretSeed prfSeed publicSeed
 
 /-- The `FORS_TREE` address of the FORS instance a message digest selects. -/

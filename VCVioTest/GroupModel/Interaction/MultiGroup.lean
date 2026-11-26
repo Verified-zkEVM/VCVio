@@ -54,7 +54,8 @@ private def secondReply : Message Nat Group :=
   ⟨4, fun s => match s with | false => [] | true => [19]⟩
 
 private def impl : QueryImpl (plainSpec Group Nat (fun _ => Nat))
-    (StateM (List (Message Nat Group))) := fun q => do
+    (StateM (List (Message Nat Group))) where
+  toFun q := do
   modify (· ++ [q])
   return if q.data = 0 then firstReply else secondReply
 

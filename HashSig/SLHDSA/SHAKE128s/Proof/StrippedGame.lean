@@ -91,7 +91,7 @@ theorem sign_lift (sk : SecretKey) (request : Message) :
     (Scheme.sign (m := OracleComp OracleWorld) sk request) =
       OracleComp.liftComp (Scheme.sign (m := OracleComp HashSpec) sk request) OracleWorld :=
   (Correctness.Naturality.sign_simulate
-    (fun input => query (spec := HashSpec) input : QueryImpl HashSpec (OracleComp OracleWorld))
+    (⟨fun input => query (spec := HashSpec) input⟩ : QueryImpl HashSpec (OracleComp OracleWorld))
     (fun _ => rfl) sk request).symm
 
 /-- Key generation, answered from the warm table wherever it can be. -/
@@ -160,7 +160,8 @@ theorem run_liftM_state {α : Type} (x : StateT SigningLog (OracleComp OracleWor
 signer, and append the answer to the log. -/
 @[expose] noncomputable def signingOracleWith
     (signer : Message → OracleComp OracleWorld (Option Bytes)) :
-    QueryImpl SigningSpec CountedRun := fun request => do
+    QueryImpl SigningSpec CountedRun where
+  toFun request := do
   AddWriterT.addTell (Counts.single .signing 1)
   let answer ← liftM (signer request)
   liftM (modify (fun signed => signed ++ [⟨request, answer⟩]) :

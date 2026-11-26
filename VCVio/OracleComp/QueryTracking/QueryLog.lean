@@ -152,7 +152,7 @@ theorem withQueryLog_swapRight (p : OracleComp ((a + b) + c) α) :
   apply withQueryLog_simulateQ_of_query QueryImpl.swapRight QueryLog.swapRightEntry
   intro q
   rcases q with (q | q) | q <;>
-    simp [QueryImpl.swapRight, QueryLog.swapRightEntry, withQueryLog_query]
+    simp [QueryImpl.swapRight_apply, QueryLog.swapRightEntry, withQueryLog_query]
 
 /-- Embedding a logged computation preserves its log, with the corresponding query labels. -/
 theorem withQueryLog_insertMiddle (p : OracleComp (a + b) α) :
@@ -160,7 +160,7 @@ theorem withQueryLog_insertMiddle (p : OracleComp (a + b) α) :
       (fun z => (z.1, z.2.insertMiddle)) <$> p.withQueryLog.insertMiddle := by
   apply withQueryLog_simulateQ_of_query QueryImpl.insertMiddle QueryLog.insertMiddleEntry
   intro q
-  cases q <;> simp [QueryImpl.insertMiddle, QueryLog.insertMiddleEntry, withQueryLog_query]
+  cases q <;> simp [QueryImpl.insertMiddle_apply, QueryLog.insertMiddleEntry, withQueryLog_query]
 
 /-- Projecting away both merged slots preserves the retained query log. -/
 theorem fst_withQueryLog_mergeRight

@@ -26,8 +26,8 @@ namespace VCVioTest.MerkleTreeCacheRefinement
 private abbrev rawSpec : OracleSpec Nat := Nat →ₒ BitVec 256
 
 /-- A miss returns the old sampler counter and advances it once. -/
-private def miss : QueryImpl rawSpec (StateT Nat Id) :=
-  fun _ => StateT.mk fun n => pure (BitVec.ofNat 256 n, n + 1)
+private def miss : QueryImpl rawSpec (StateT Nat Id) where
+  toFun _ := StateT.mk fun n => pure (BitVec.ofNat 256 n, n + 1)
 
 /-- Leaf query indices retain their global offsets. -/
 private def leaf (idx : Nat) : OracleComp rawSpec Nat :=
@@ -159,7 +159,8 @@ private theorem height_zero :
     (z.1.1, z.2, z.1.2 37) = (5, 6, some (BitVec.ofNat 256 5)) := by decide
 
 /-- A failing miss still retains its update of the underlying sampler state. -/
-private def failingMiss : QueryImpl rawSpec (ExceptT Unit (StateT Nat Id)) := fun q => do
+private def failingMiss : QueryImpl rawSpec (ExceptT Unit (StateT Nat Id)) where
+  toFun q := do
   let n : Nat ← get
   modify (· + 1)
   if q = 110 then throw () else pure (BitVec.ofNat 256 n)

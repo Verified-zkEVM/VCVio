@@ -25,9 +25,9 @@ namespace Rewinding.ResetPolicy
 variable {ι W : Type} {spec : OracleSpec ι}
 
 /-- Add a unit cursor to a persistent oracle implementation. -/
-@[expose] def persistentAnswer (impl : QueryImpl spec (StateT W ProbComp)) :
-    QueryImpl spec (StateT (W × Unit) ProbComp) :=
-  fun q => StateT.mk fun s => (fun z => (z.1, (z.2, ()))) <$> (impl q).run s.1
+@[expose, simps] def persistentAnswer (impl : QueryImpl spec (StateT W ProbComp)) :
+    QueryImpl spec (StateT (W × Unit) ProbComp) where
+  toFun q := StateT.mk fun s => (fun z => (z.1, (z.2, ()))) <$> (impl q).run s.1
 
 /-- A persistent oracle whose answers are stable under extension defines a reset policy with
 no execution-local state. -/
@@ -58,20 +58,20 @@ no execution-local state. -/
         cases q with
         | inl q => simp [QueryImpl.add_apply_inl, coins, Functor.map_map, Prod.map]
         | inr q =>
-            simp [QueryImpl.add_apply_inr, persistentAnswer, Functor.map_map, Prod.map])
+            simp [QueryImpl.add_apply_inr, persistentAnswer_apply, Functor.map_map, Prod.map])
       oa (empty, ())
     simp only [pure_bind]
     rw [h]
   grows q w c z hz := by
-    simp only [persistentAnswer, StateT.run_mk, support_map] at hz
+    simp only [persistentAnswer_apply, StateT.run_mk, support_map] at hz
     obtain ⟨y, hy, rfl⟩ := hz
     exact grows q w y hy
   frozen q w w' c z hz hw := by
-    simp only [persistentAnswer, StateT.run_mk, support_map] at hz
+    simp only [persistentAnswer_apply, StateT.run_mk, support_map] at hz
     obtain ⟨y, hy, rfl⟩ := hz
-    simp [persistentAnswer, frozen q w w' y hy hw]
+    simp [persistentAnswer_apply, frozen q w w' y hy hw]
   commute q₁ q₂ c₁ c₂ w := by
-    simpa [persistentAnswer, bind_map_left, map_bind, Function.comp_def] using
+    simpa [persistentAnswer_apply, bind_map_left, map_bind, Function.comp_def] using
       (commute q₁ q₂ w).map (fun z => ((z.1, ()), (z.2.1, ()), z.2.2))
 
 /-- The reset policy for a lazily sampled random-oracle table. Repeated queries read the same
@@ -90,8 +90,9 @@ entry, and extensions only install previously missing entries. -/
         (fun a b c => pure (a, b, c)))
 
 /-- A deterministic query handler carries no oracle state. -/
-@[expose] def statelessImpl (answer : (q : spec.Domain) → spec.Range q) :
-    QueryImpl spec (StateT Unit ProbComp) := fun q => pure (answer q)
+@[expose, simps] def statelessImpl (answer : (q : spec.Domain) → spec.Range q) :
+    QueryImpl spec (StateT Unit ProbComp) where
+  toFun q := pure (answer q)
 
 /-- A deterministic stateless oracle has a trivial frozen world and cursor. -/
 @[expose] def stateless (answer : (q : spec.Domain) → spec.Range q) :
@@ -99,18 +100,19 @@ entry, and extensions only install previously missing entries. -/
   persistent () (statelessImpl answer)
     (fun _ _ _ _ => le_rfl)
     (fun _ _ _ z hz _ => by
-      simp only [statelessImpl, StateT.run_pure, support_pure, Set.mem_singleton_iff] at hz
+      simp only [statelessImpl_apply, StateT.run_pure, support_pure, Set.mem_singleton_iff] at hz
       subst hz
       rfl)
-    (fun _ _ _ => by simp [statelessImpl])
+    (fun _ _ _ => by simp [statelessImpl_apply])
 
 /-- The empty oracle signature has a reset policy with no effects. -/
 @[expose] def ofEmptySpec :
     ResetPolicy (pure ()) (statelessImpl (spec := emptySpec) (fun q => PEmpty.elim q)) :=
   stateless (spec := emptySpec) (fun q => PEmpty.elim q)
 
-private def uniformInl : QueryImpl unifSpec (OracleComp (unifSpec + spec)) :=
-  fun q => query (spec := unifSpec + spec) (.inl q)
+@[simps]
+private def uniformInl : QueryImpl unifSpec (OracleComp (unifSpec + spec)) where
+  toFun q := query (spec := unifSpec + spec) (.inl q)
 
 private theorem simulateQ_uniformInl {σ α : Type}
     (handler : QueryImpl spec (StateT σ ProbComp)) (mx : ProbComp α) :
@@ -119,12 +121,14 @@ private theorem simulateQ_uniformInl {σ α : Type}
   rw [QueryImpl.simulateQ_simulateQ_eq_of_apply
     (impl := coins (S := σ)) (by
       intro q
-      simp [uniformInl, QueryImpl.add_apply_inl])]
+      simp [uniformInl_apply, QueryImpl.add_apply_inl])]
   simp [coins]
 
+@[simps]
 private def stageRight {κ T : Type} {ctxSpec : OracleSpec κ}
     (ctx : QueryImpl ctxSpec (StateT T ProbComp)) :
-    QueryImpl (ctxSpec + spec) (StateT T (OracleComp (unifSpec + spec)))
+    QueryImpl (ctxSpec + spec) (StateT T (OracleComp (unifSpec + spec))) where
+  toFun
   | .inl q => StateT.mk fun t => simulateQ uniformInl ((ctx q).run t)
   | .inr q => StateT.mk fun t => (fun a => (a, t)) <$> query (spec := unifSpec + spec) (.inr q)
 
@@ -142,10 +146,10 @@ private theorem stageRight_run {κ T σ α : Type} {ctxSpec : OracleSpec κ}
       ((QueryImpl.parallelStateT ctx handler) q).run (t, s)
   cases q with
   | inl q =>
-      simp [stageRight, simulateQ_uniformInl, QueryImpl.parallelStateT,
+      simp [stageRight_apply, simulateQ_uniformInl, QueryImpl.parallelStateT_apply,
         StateT.run_monadLift, Functor.map_map, Prod.map]
   | inr q =>
-      simp [stageRight, QueryImpl.add_apply_inr, QueryImpl.parallelStateT,
+      simp [stageRight_apply, QueryImpl.add_apply_inr, QueryImpl.parallelStateT_apply,
         Functor.map_map, Prod.map]
 
 private theorem stageRight_run' {κ T σ α : Type} {ctxSpec : OracleSpec κ}
@@ -168,8 +172,10 @@ private theorem replaceRight {κ T σ α : Type} {ctxSpec : OracleSpec κ}
   simpa only [stageRight_run', map_bind] using
     P.faithful_coins (Prod.fst <$> (simulateQ (stageRight ctx) oa).run t)
 
+@[simps]
 private def reassocQueries {κ : Type} {ctxSpec : OracleSpec κ} :
-    QueryImpl (unifSpec + (ctxSpec + spec)) (OracleComp ((unifSpec + ctxSpec) + spec))
+    QueryImpl (unifSpec + (ctxSpec + spec)) (OracleComp ((unifSpec + ctxSpec) + spec)) where
+  toFun
   | .inl q => query (spec := (unifSpec + ctxSpec) + spec) (.inl (.inl q))
   | .inr (.inl q) => query (spec := (unifSpec + ctxSpec) + spec) (.inl (.inr q))
   | .inr (.inr q) => query (spec := (unifSpec + ctxSpec) + spec) (.inr q)
@@ -186,8 +192,8 @@ private theorem reassoc_run' {κ T σ α : Type} {ctxSpec : OracleSpec κ}
     intro q
     rcases q with q | (q | q) <;>
       apply StateT.ext <;> intro z <;>
-        simp [reassocQueries, QueryImpl.add_apply_inl, QueryImpl.add_apply_inr,
-          QueryImpl.parallelStateT, coins, Functor.map_map, Prod.map]
+        simp [reassocQueries_apply, QueryImpl.add_apply_inl, QueryImpl.add_apply_inr,
+          QueryImpl.parallelStateT_apply, coins, Functor.map_map, Prod.map]
   exact congrArg (fun x => x.run' (t, s))
     (QueryImpl.simulateQ_simulateQ_eq_of_apply h oa).symm
 
@@ -204,8 +210,10 @@ private theorem replaceRightCoins {κ T σ α : Type} {ctxSpec : OracleSpec κ}
   simpa only [← reassoc_run'] using
     replaceRight P (coins (S := T) + ctx) (simulateQ reassocQueries oa) t
 
+@[simps]
 private def swapInnerQueries {κ : Type} {ctxSpec : OracleSpec κ} :
-    QueryImpl (unifSpec + (spec + ctxSpec)) (OracleComp (unifSpec + (ctxSpec + spec)))
+    QueryImpl (unifSpec + (spec + ctxSpec)) (OracleComp (unifSpec + (ctxSpec + spec))) where
+  toFun
   | .inl q => query (spec := unifSpec + (ctxSpec + spec)) (.inl q)
   | .inr (.inl q) => query (spec := unifSpec + (ctxSpec + spec)) (.inr (.inr q))
   | .inr (.inr q) => query (spec := unifSpec + (ctxSpec + spec)) (.inr (.inl q))
@@ -250,8 +258,9 @@ variable {ι₁ ι₂ σ₁ σ₂ : Type} {spec₁ : OracleSpec ι₁} {spec₂ 
   (P₁ : ResetPolicy init₁ impl₁) (P₂ : ResetPolicy init₂ impl₂)
 
 /-- Run two frozen handlers on separate persistent worlds and separate local cursors. -/
-@[expose] def productAnswer : QueryImpl (spec₁ + spec₂)
-    (StateT ((P₁.World × P₂.World) × (P₁.Cursor × P₂.Cursor)) ProbComp)
+@[expose, simps] def productAnswer : QueryImpl (spec₁ + spec₂)
+    (StateT ((P₁.World × P₂.World) × (P₁.Cursor × P₂.Cursor)) ProbComp) where
+  toFun
   | .inl q => StateT.mk fun s =>
       (fun z => (z.1, ((z.2.1, s.1.2), (z.2.2, s.2.2)))) <$>
         (P₁.answer q).run (s.1.1, s.2.1)
@@ -264,11 +273,11 @@ theorem productAnswer_grows (q : (spec₁ + spec₂).Domain) (w) (c) (z)
     (hz : z ∈ support ((productAnswer P₁ P₂ q).run (w, c))) : w ≤ z.2.1 := by
   cases q with
   | inl q =>
-      simp only [productAnswer, StateT.run_mk, support_map] at hz
+      simp only [productAnswer_apply, StateT.run_mk, support_map] at hz
       obtain ⟨y, hy, rfl⟩ := hz
       exact ⟨P₁.grows q _ _ _ hy, le_rfl⟩
   | inr q =>
-      simp only [productAnswer, StateT.run_mk, support_map] at hz
+      simp only [productAnswer_apply, StateT.run_mk, support_map] at hz
       obtain ⟨y, hy, rfl⟩ := hz
       exact ⟨le_rfl, P₂.grows q _ _ _ hy⟩
 
@@ -278,13 +287,13 @@ theorem productAnswer_frozen (q : (spec₁ + spec₂).Domain) (w w') (c) (z)
     (productAnswer P₁ P₂ q).run (w', c) = pure (z.1, (w', z.2.2)) := by
   cases q with
   | inl q =>
-      simp only [productAnswer, StateT.run_mk, support_map] at hz
+      simp only [productAnswer_apply, StateT.run_mk, support_map] at hz
       obtain ⟨y, hy, rfl⟩ := hz
-      simp [productAnswer, P₁.frozen q _ _ _ y hy hw.1]
+      simp [productAnswer_apply, P₁.frozen q _ _ _ y hy hw.1]
   | inr q =>
-      simp only [productAnswer, StateT.run_mk, support_map] at hz
+      simp only [productAnswer_apply, StateT.run_mk, support_map] at hz
       obtain ⟨y, hy, rfl⟩ := hz
-      simp [productAnswer, P₂.frozen q _ _ _ y hy hw.2]
+      simp [productAnswer_apply, P₂.frozen q _ _ _ y hy hw.2]
 
 /-- Queries on a product policy commute, including their separate local cursor updates. -/
 theorem productAnswer_commute (q₁ q₂ : (spec₁ + spec₂).Domain) (c₁ c₂) (w) :
@@ -300,7 +309,7 @@ theorem productAnswer_commute (q₁ q₂ : (spec₁ + spec₂).Domain) (c₁ c�
   | inl q₁ =>
       cases q₂ with
       | inl q₂ =>
-          simpa [productAnswer, bind_map_left, map_bind, Function.comp_def] using
+          simpa [productAnswer_apply, bind_map_left, map_bind, Function.comp_def] using
             (P₁.commute q₁ q₂ c₁.1 c₂.1 w.1).map
               (fun z => ((z.1.1, (z.1.2, c₁.2)),
                 (z.2.1.1, (z.2.1.2, c₂.2)), (z.2.2, w.2)))
@@ -310,7 +319,7 @@ theorem productAnswer_commute (q₁ q₂ : (spec₁ + spec₂).Domain) (c₁ c�
                 ((spec₁ + spec₂).Range (.inr q₂) × (P₁.Cursor × P₂.Cursor)) ×
                 (P₁.World × P₂.World)) := ⊤
           apply EvalDistEq.of_evalDist_eq
-          simp only [productAnswer, StateT.run_mk, bind_map_left]
+          simp only [productAnswer_apply, StateT.run_mk, bind_map_left]
           exact OracleComp.evalDist_bind_bind_swap _ _ _
   | inr q₁ =>
       cases q₂ with
@@ -320,10 +329,10 @@ theorem productAnswer_commute (q₁ q₂ : (spec₁ + spec₂).Domain) (c₁ c�
                 ((spec₁ + spec₂).Range (.inl q₂) × (P₁.Cursor × P₂.Cursor)) ×
                 (P₁.World × P₂.World)) := ⊤
           apply EvalDistEq.of_evalDist_eq
-          simp only [productAnswer, StateT.run_mk, bind_map_left]
+          simp only [productAnswer_apply, StateT.run_mk, bind_map_left]
           exact OracleComp.evalDist_bind_bind_swap _ _ _
       | inr q₂ =>
-          simpa [productAnswer, bind_map_left, map_bind, Function.comp_def] using
+          simpa [productAnswer_apply, bind_map_left, map_bind, Function.comp_def] using
             (P₂.commute q₁ q₂ c₁.2 c₂.2 w.2).map
               (fun z => ((z.1.1, (c₁.1, z.1.2)),
                 (z.2.1.1, (c₂.1, z.2.1.2)), (w.1, z.2.2)))
@@ -341,7 +350,7 @@ private theorem productAnswer_coins_run' {α : Type}
       ((s.1.1, s.2.1), (s.1.2, s.2.2)))
   intro q s
   rcases q with q | (q | q) <;>
-    simp [productAnswer, QueryImpl.parallelStateT, QueryImpl.add_apply_inl,
+    simp [productAnswer_apply, QueryImpl.parallelStateT_apply, QueryImpl.add_apply_inl,
       QueryImpl.add_apply_inr, coins, Functor.map_map, Prod.map] <;> rfl
 
 /-- The product of independent reset policies freezes each summand in its own world and resets

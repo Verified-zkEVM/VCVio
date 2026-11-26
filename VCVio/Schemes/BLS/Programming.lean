@@ -46,11 +46,11 @@ when the selected insertion has not yet occurred. -/
 
 /-- Honest hash/signing handler with an upfront challenge and scalar-tagged other entries.
 The challenge is an immutable component of its state. -/
-abbrev programmedOracle {V W M : Type} [SampleableType V] [DecidableEq M]
+@[expose, simps -isSimp] def programmedOracle {V W M : Type} [SampleableType V] [DecidableEq M]
     (f : V → W) (sign : W → W) (j : ℕ) :
     QueryImpl ((unifSpec + (M →ₒ W)) + (M →ₒ W))
-      (StateT (OracleState (Option V) M × W) ProbComp) :=
-  fun t s => (fun z => (z.1, z.2, s.2)) <$>
+      (StateT (OracleState (Option V) M × W) ProbComp) where
+  toFun t s := (fun z => (z.1, z.2, s.2)) <$>
     (indexedOracle (tagDraw j) (fun tag => tag.elim s.2 f)
       (fun tag => sign (tag.elim s.2 f)) (some j) t).run s.1
 

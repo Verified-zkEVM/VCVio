@@ -119,9 +119,11 @@ def privateDraws {τ : Type} {spec' : OracleSpec.{0, 0} τ} [MonadLiftT ProbComp
 /-- The preprocessing step of the adapter: a raw input draws its private value; if it is the
 encoding of a typed point, the answer is the typed answer there completed from the private value,
 and otherwise it is the private value. Uniform queries pass through. -/
-@[expose]
+@[expose, simps]
 def preprocessImpl :
-    QueryImpl (unifSpec + (D →ₒ M)) (StateT (D →ₒ M).QueryCache (OracleComp (unifSpec + spec)))
+    QueryImpl (unifSpec + (D →ₒ M))
+      (StateT (D →ₒ M).QueryCache (OracleComp (unifSpec + spec))) where
+  toFun
   | .inl k => StateT.lift (liftM ((unifSpec + spec).query (.inl k)))
   | .inr x => do
       let p ← privateDraw x
@@ -132,9 +134,10 @@ def preprocessImpl :
 /-- The online step of the adapter on a raw round: draw the private values of all its inputs,
 submit the encoded typed points as one typed round, and reassemble the answers. Uniform queries
 pass through. -/
-@[expose]
+@[expose, simps]
 def onlineImpl : QueryImpl (unifSpec + (D →ₒ M).batch)
-    (StateT (D →ₒ M).QueryCache (OracleComp (unifSpec + spec.batch)))
+    (StateT (D →ₒ M).QueryCache (OracleComp (unifSpec + spec.batch))) where
+  toFun
   | .inl k => StateT.lift (liftM ((unifSpec + spec.batch).query (.inl k)))
   | .inr xs => do
       let ps ← privateDraws xs
@@ -147,9 +150,9 @@ lemma isQueryBoundP_preprocessImpl (t : (unifSpec + (D →ₒ M)).Domain)
     (s : (D →ₒ M).QueryCache) :
     IsQueryBoundP ((E.preprocessImpl t).run s) (·.isRight) (if t.isRight then 1 else 0) := by
   rcases t with k | x
-  · simp only [preprocessImpl, Sum.isRight_inl, Bool.false_eq_true, ↓reduceIte]
+  · simp only [preprocessImpl_apply, Sum.isRight_inl, Bool.false_eq_true, ↓reduceIte]
     exact isQueryBoundP_bind_zero _ _ (by simp) fun _ => isQueryBoundP_pure _ _ _
-  · simp only [preprocessImpl, Sum.isRight_inr, ↓reduceIte, StateT.run_bind]
+  · simp only [preprocessImpl_apply, Sum.isRight_inr, ↓reduceIte, StateT.run_bind]
     rw [← Nat.zero_add 1]
     refine isQueryBoundP_bind (isQueryBoundP_liftM_isRight _) fun z _ => ?_
     rcases E.route x with _ | q
@@ -162,9 +165,9 @@ lemma isOnlineQueryBound_onlineImpl (t : (unifSpec + (D →ₒ M).batch).Domain)
     (s : (D →ₒ M).QueryCache) :
     IsOnlineQueryBound ((E.onlineImpl t).run s) (onlineStep t) := by
   rcases t with k | xs
-  · simp only [onlineImpl, onlineStep_inl, StateT.run_lift]
+  · simp only [onlineImpl_apply, onlineStep_inl, StateT.run_lift]
     exact (isOnlineQueryBound_query_bind_inl_iff _ _ _).2 fun _ => isOnlineQueryBound_pure _ _
-  · simp only [onlineImpl, onlineStep_inr, StateT.run_bind]
+  · simp only [onlineImpl_apply, onlineStep_inr, StateT.run_bind]
     refine isOnlineQueryBound_bind_le (0, 0) (1, xs.length) (isOnlineQueryBound_liftComp _ _)
       (fun z => ?_) ⟨by omega, by omega⟩
     rw [StateT.run_lift, bind_assoc]
@@ -179,14 +182,16 @@ end adapter
 /-! ## The combined interface and encoded rounds -/
 
 /-- The raw interface as part of the combined interface of typed points and raw inputs. -/
-@[expose]
-def rawLift : QueryImpl (unifSpec + (D →ₒ M)) (OracleComp (unifSpec + (spec + (D →ₒ M))))
+@[expose, simps]
+def rawLift : QueryImpl (unifSpec + (D →ₒ M)) (OracleComp (unifSpec + (spec + (D →ₒ M)))) where
+  toFun
   | .inl n => liftM ((unifSpec + (spec + (D →ₒ M))).query (.inl n))
   | .inr x => liftM ((unifSpec + (spec + (D →ₒ M))).query (.inr (.inr x)))
 
 /-- The typed interface as part of the combined interface of typed points and raw inputs. -/
-@[expose]
-def typedLift : QueryImpl (unifSpec + spec) (OracleComp (unifSpec + (spec + (D →ₒ M))))
+@[expose, simps]
+def typedLift : QueryImpl (unifSpec + spec) (OracleComp (unifSpec + (spec + (D →ₒ M)))) where
+  toFun
   | .inl n => liftM ((unifSpec + (spec + (D →ₒ M))).query (.inl n))
   | .inr t => liftM ((unifSpec + (spec + (D →ₒ M))).query (.inr (.inl t)))
 
@@ -205,8 +210,9 @@ lemma truncRound_cons (t : ι) (ts : List ι) (u : M)
 
 /-- The encoding as a translation of rounds: a typed round is the raw round of the encodings of
 its points, with every answer truncated. Uniform queries pass through. -/
-@[expose]
-def roundImpl : QueryImpl (unifSpec + spec.batch) (OracleComp (unifSpec + (D →ₒ M).batch))
+@[expose, simps -isSimp]
+def roundImpl : QueryImpl (unifSpec + spec.batch) (OracleComp (unifSpec + (D →ₒ M).batch)) where
+  toFun
   | .inl n => liftM ((unifSpec + (D →ₒ M).batch).query (.inl n))
   | .inr ts => E.truncRound ts <$>
       liftM ((unifSpec + (D →ₒ M).batch).query (.inr (ts.map E.encode)))
@@ -215,12 +221,12 @@ lemma simulateQ_encodeImpl_rawLift {α : Type} (oa : OracleComp (unifSpec + (D �
     simulateQ E.encodeImpl (simulateQ rawLift oa) = oa := by
   rw [QueryImpl.simulateQ_simulateQ_eq_of_apply (impl := QueryImpl.id' _) (fun t => ?_),
     simulateQ_id']
-  rcases t with n | x <;> simp [rawLift, encodeImpl]
+  rcases t with n | x <;> simp [rawLift_apply, encodeImpl_apply]
 
 lemma batch_encodeImpl_typedLift (ts : List ι) :
-    QueryImpl.batch (fun t => simulateQ E.encodeImpl (typedLift (.inr t))) ts =
+    QueryImpl.batch ⟨fun t => simulateQ E.encodeImpl (typedLift (.inr t))⟩ ts =
       E.truncRound ts <$> QueryImpl.batch (spec := D →ₒ M)
-        (fun x => liftM ((unifSpec + (D →ₒ M)).query (.inr x))) (ts.map E.encode) := by
+        ⟨fun x => liftM ((unifSpec + (D →ₒ M)).query (.inr x))⟩ (ts.map E.encode) := by
   induction ts with
   | nil =>
     change _ = E.truncRound [] <$> QueryImpl.batch _ []
@@ -228,16 +234,17 @@ lemma batch_encodeImpl_typedLift (ts : List ι) :
   | cons t ts ih =>
     change _ = E.truncRound (t :: ts) <$> QueryImpl.batch _ (E.encode t :: ts.map E.encode)
     rw [QueryImpl.batch_cons, QueryImpl.batch_cons, ih]
-    simp only [typedLift, simulateQ_spec_query, encodeImpl, map_bind, bind_map_left, map_pure,
+    simp only [typedLift_apply, simulateQ_spec_query, encodeImpl_apply, map_bind, bind_map_left,
+      map_pure,
       truncRound_cons]
     rfl
 
 lemma encodeImpl_compose_typedLift_batch' :
     (E.encodeImpl ∘ₛ typedLift).batch' = (D →ₒ M).unbatch ∘ₛ E.roundImpl := by
-  funext t
+  ext t : 1
   rcases t with n | ts
-  · simp [typedLift, encodeImpl, roundImpl]
-  · simp only [QueryImpl.batch'_apply_inr, QueryImpl.apply_compose, roundImpl, simulateQ_map,
+  · simp [typedLift_apply, encodeImpl_apply, roundImpl_apply]
+  · simp only [QueryImpl.batch'_apply_inr, QueryImpl.apply_compose, roundImpl_apply, simulateQ_map,
       simulateQ_spec_query, OracleSpec.unbatch_apply_inr]
     exact E.batch_encodeImpl_typedLift ts
 
@@ -250,10 +257,10 @@ lemma preprocessImpl_run_step (t : (unifSpec + (D →ₒ M)).Domain) (pv : (D �
     (simulateQ spec.romImpl ((E.preprocessImpl t).run pv)).run c =
       (fun z => ((z.1, z.2.2), z.2.1)) <$> ((E.typedImpl ∘ₛ rawLift) t).run (c, pv) := by
   rcases t with n | x
-  · simp only [preprocessImpl, rawLift, QueryImpl.apply_compose, simulateQ_spec_query]
+  · simp only [preprocessImpl_apply, rawLift_apply, QueryImpl.apply_compose, simulateQ_spec_query]
     rw [typedImpl_inl_run]
     simp [OracleSpec.romImpl]
-  · simp only [preprocessImpl, rawLift, QueryImpl.apply_compose, simulateQ_spec_query,
+  · simp only [preprocessImpl_apply, rawLift_apply, QueryImpl.apply_compose, simulateQ_spec_query,
       typedImpl, QueryImpl.add_apply_inr]
     rw [typedHashImpl_inr_run]
     simp only [privateDraw, StateT.run_bind, StateT.run_mk, simulateQ_bind, StateT.run_bind,
@@ -266,7 +273,7 @@ lemma preprocessImpl_run_step (t : (unifSpec + (D →ₒ M)).Domain) (pv : (D �
 /-- A raw round answered input by input in the typed world is equal in distribution to drawing
 all private values first, then the typed round of the encoded points, and reassembling. -/
 lemma batch_typedHashImpl_run (xs : List D) (c : spec.QueryCache) (pv : (D →ₒ M).QueryCache) :
-    (QueryImpl.batch (spec := D →ₒ M) (fun x => E.typedHashImpl (.inr x)) xs).run (c, pv) =ᵈ
+    (QueryImpl.batch (spec := D →ₒ M) ⟨fun x => E.typedHashImpl (.inr x)⟩ xs).run (c, pv) =ᵈ
       ((D →ₒ M).randomOracle.batch xs).run pv >>= fun z =>
         (spec.randomOracle.batch (xs.filterMap E.route)).run c >>= fun y =>
           pure (E.assemble xs z.1 y.1, (y.2, z.2)) := by
@@ -298,7 +305,7 @@ lemma batch_typedHashImpl_run (xs : List D) (c : spec.QueryCache) (pv : (D →�
 
 lemma typedImpl_compose_rawLift_inr (x : D) :
     (E.typedImpl ∘ₛ rawLift) (.inr x) = E.typedHashImpl (.inr x) := by
-  simp only [QueryImpl.apply_compose, rawLift, simulateQ_spec_query, typedImpl,
+  simp only [QueryImpl.apply_compose, rawLift_apply, simulateQ_spec_query, typedImpl,
     QueryImpl.add_apply_inr]
 
 lemma onlineImpl_run_step (t : (unifSpec + (D →ₒ M).batch).Domain) (pv : (D →ₒ M).QueryCache)
@@ -306,14 +313,14 @@ lemma onlineImpl_run_step (t : (unifSpec + (D →ₒ M).batch).Domain) (pv : (D 
     (simulateQ (unifFwdImpl spec + spec.randomOracle.batch) ((E.onlineImpl t).run pv)).run c =ᵈ
       (fun z => ((z.1, z.2.2), z.2.1)) <$> ((E.typedImpl ∘ₛ rawLift).batch' t).run (c, pv) := by
   rcases t with n | xs
-  · simp only [onlineImpl, QueryImpl.batch'_apply_inl, QueryImpl.apply_compose, rawLift,
+  · simp only [onlineImpl_apply, QueryImpl.batch'_apply_inl, QueryImpl.apply_compose, rawLift_apply,
       simulateQ_spec_query]
     rw [typedImpl_inl_run]
     simp [OracleSpec.romImpl]
   · rw [QueryImpl.batch'_apply_inr, show (fun x => (E.typedImpl ∘ₛ rawLift) (.inr x)) =
       fun x => E.typedHashImpl (.inr x) from funext E.typedImpl_compose_rawLift_inr]
     refine EvalDistEq.trans ?_ ((E.batch_typedHashImpl_run xs c pv).map _).symm
-    simp [onlineImpl, privateDraws, run_simulateQ_unifFwdImpl_add_liftM]
+    simp [onlineImpl_apply, privateDraws, run_simulateQ_unifFwdImpl_add_liftM]
 
 lemma simulateQ_typedImpl_typedLift_run {α : Type} (oa : OracleComp (unifSpec + spec) α)
     (c : spec.QueryCache) (pv : (D →ₒ M).QueryCache) :
@@ -325,9 +332,9 @@ lemma simulateQ_typedImpl_typedLift_run {α : Type} (oa : OracleComp (unifSpec +
     have ht : (simulateQ E.typedImpl (typedLift t)).run (c, pv) =
         (fun z => (z.1, (z.2, pv))) <$> (spec.romImpl t).run c := by
       rcases t with n | t
-      · simp only [typedLift, simulateQ_spec_query]
+      · simp only [typedLift_apply, simulateQ_spec_query]
         exact typedImpl_inl_run n c pv
-      · simp only [typedLift, simulateQ_spec_query]
+      · simp only [typedLift_apply, simulateQ_spec_query]
         exact typedImpl_inr_inl_run t c pv
     simp only [simulateQ_bind, simulateQ_spec_query, StateT.run_bind, ht, bind_map_left, ih,
       map_bind]

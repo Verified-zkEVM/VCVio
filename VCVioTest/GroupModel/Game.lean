@@ -28,10 +28,10 @@ open Interaction
 theorem handle_game_fixed_coin (coin : Fin 2) :
     let M : Model (ZMod 7) (discreteSig Bool) (fun _ => ZMod 7) :=
       ⟨Empty.elim, Empty.elim⟩
-    let random : QueryImpl unifSpec Id := fun n =>
-      pure ⟨coin.val % (n + 1), Nat.mod_lt _ (Nat.succ_pos _)⟩
+    let random : QueryImpl unifSpec Id := ⟨fun n =>
+      pure ⟨coin.val % (n + 1), Nat.mod_lt _ (Nat.succ_pos _)⟩⟩
     let game : QueryImpl (plainSpec (fun _ : Bool => ZMod 7) Unit (fun _ => Unit)) Id :=
-      fun q => pure ⟨(), fun s => q.groups s ++ [if s then 6 else 4]⟩
+      ⟨fun q => pure ⟨(), fun s => q.groups s ++ [if s then 6 else 4]⟩⟩
     let Ω := spec (ZMod 7) (discreteSig Bool) +
       (encSpec (fun _ : Bool => ZMod 7) +
         (unifSpec + handleSpec (S := Bool) Unit (fun _ => Unit)))
@@ -54,10 +54,10 @@ theorem handle_game_hidden_state :
     let random : QueryImpl unifSpec (StateT Bool ProbComp) :=
       (QueryImpl.ofLift unifSpec ProbComp).liftTarget (StateT Bool ProbComp)
     let game : QueryImpl (plainSpec (fun _ : Bool => ZMod 7) Unit (fun _ => Bool))
-        (StateT Bool ProbComp) := fun _ => do
+        (StateT Bool ProbComp) := ⟨fun _ => do
       let b ← get
       set (!b)
-      pure ⟨b, fun s => [if s then (if b then 6 else 5) else (if b then 4 else 3)]⟩
+      pure ⟨b, fun s => [if s then (if b then 6 else 5) else (if b then 4 else 3)]⟩⟩
     let Ω := spec (ZMod 7) (discreteSig Bool) +
       (encSpec (fun _ : Bool => ZMod 7) +
         (unifSpec + handleSpec (S := Bool) Unit (fun _ => Bool)))
@@ -92,8 +92,8 @@ theorem generic_game_inclusion :
       let c ← Ω.query (.inr (.inl 1))
       let _ ← Ω.query (.inr (.inr ()))
       pure (h, c)
-    let random : QueryImpl unifSpec Id := fun n => pure ⟨n, Nat.lt_succ_self n⟩
-    let game : QueryImpl Γ (StateT (Tbl fun _ : Bool => ZMod 7) Id) := fun _ => pure ()
+    let random : QueryImpl unifSpec Id := ⟨fun n => pure ⟨n, Nat.lt_succ_self n⟩⟩
+    let game : QueryImpl Γ (StateT (Tbl fun _ : Bool => ZMod 7) Id) := ⟨fun _ => pure ()⟩
     let lhs := run M (fun _ => id)
       (encImpl (m := Id) (V := fun _ : Bool => ZMod 7) (fun _ => id) +
         (coinImpl (G := fun _ : Bool => ZMod 7) random + game)) (toAlgebraic A) (fun _ => [1, 2])

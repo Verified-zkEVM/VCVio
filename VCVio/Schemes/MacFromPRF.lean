@@ -116,7 +116,7 @@ def macToPRFQueryImpl :
     QueryImpl (unifSpec + (D →ₒ R))
       (WriterT (QueryLog (D →ₒ R)) (OracleComp (unifSpec + (D →ₒ R)))) :=
   let fwdTag : QueryImpl (D →ₒ R) (OracleComp (unifSpec + (D →ₒ R))) :=
-    fun msg => prfFuncQuery msg
+    ⟨fun msg => prfFuncQuery msg⟩
   unifSpec.passthrough +
   fwdTag.withLogging
 
@@ -131,7 +131,7 @@ private theorem simulateQ_prfReal_macToPRFQueryImpl_run [DecidableEq R]
       (prf.toMacAlg).runWithTaggingOracle k oa := by
   rw [MacAlg.runWithTaggingOracle_def, QueryImpl.simulateQ_writerTMapBase_run]
   congr 2
-  funext t
+  ext t : 1
   cases t with
   | inl n =>
       ext

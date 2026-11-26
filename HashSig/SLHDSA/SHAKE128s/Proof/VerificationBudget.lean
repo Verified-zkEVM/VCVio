@@ -44,7 +44,7 @@ theorem verify_lift (pk : PublicKey) (request : Message) (signature : Bytes) :
       OracleComp.liftComp (Scheme.verify pk request signature : OracleComp HashSpec Bool)
         OracleWorld := by
   exact (VerifierNaturality.verify_simulate
-    (fun input => query (spec := HashSpec) input : QueryImpl HashSpec (OracleComp OracleWorld))
+    (⟨fun input => query (spec := HashSpec) input⟩ : QueryImpl HashSpec (OracleComp OracleWorld))
     (fun _ => rfl) pk request signature).symm
 
 /-- Counting the queries of a pure computation records no cost. -/

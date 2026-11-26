@@ -274,7 +274,7 @@ theorem collectChildren_counted (f : C → Bool) (n : ℕ) :
               simp only [QueryImpl.simulateQ_add_liftM_query_left, coins,
                 QueryImpl.liftTarget_apply_run, QueryImpl.ofLift_apply, bind_map_left]
               simp only [acceptanceChild, simulateQ_bind, simulateQ_pure,
-                QueryImpl.simulateQ_add_liftM_query_right, counted]
+                QueryImpl.simulateQ_add_liftM_query_right, counted_apply]
               simp only [StateT.run_bind, StateT.run_pure, StateT.run_modify,
                 pure_bind]
               congr 1
@@ -311,7 +311,7 @@ theorem thresholdRound_counted (f : C → Bool) (r : ℕ) (c : C) (cs : List C)
   simp only [thresholdRound, thresholdChildren, simulateQ_bind, StateT.run_bind,
     QueryImpl.simulateQ_add_liftM_query_left, coins, QueryImpl.liftTarget_apply_run,
     QueryImpl.ofLift_apply, bind_map_left, acceptanceChild, simulateQ_pure,
-    QueryImpl.simulateQ_add_liftM_query_right, counted, StateT.run_modify,
+    QueryImpl.simulateQ_add_liftM_query_right, counted_apply, StateT.run_modify,
     StateT.run_pure, pure_bind]
   congr 1
   funext i

@@ -294,7 +294,7 @@ theorem impl_tracking_preservesInv {U : S → Type} [∀ s, DecidableEq (U s)]
   intro q tbl ht z hz
   cases q with
   | add s a b =>
-    simp only [impl, push, StateT.run_modifyGet, MonadAttach.mem_support] at hz
+    simp only [impl_apply, push, StateT.run_modifyGet, MonadAttach.mem_support] at hz
     obtain rfl := LawfulMonadAttach.eq_of_canReturn_pure hz
     apply ht.append
     · intro j hj
@@ -310,7 +310,7 @@ theorem impl_tracking_preservesInv {U : S → Type} [∀ s, DecidableEq (U s)]
         ((lookup tbl s a).1 + (lookup tbl s b).1).eval (tbl s)
       rw [Coeffs.eval_add, ← ht.lookup_eval s a, ← ht.lookup_eval s b]
   | smul s c a =>
-    simp only [impl, push, StateT.run_modifyGet, MonadAttach.mem_support] at hz
+    simp only [impl_apply, push, StateT.run_modifyGet, MonadAttach.mem_support] at hz
     obtain rfl := LawfulMonadAttach.eq_of_canReturn_pure hz
     apply ht.append
     · intro j hj
@@ -320,7 +320,8 @@ theorem impl_tracking_preservesInv {U : S → Type} [∀ s, DecidableEq (U s)]
     · change c • (lookup tbl s a).2 = (c • (lookup tbl s a).1).eval (tbl s)
       rw [Coeffs.eval_smul, ← ht.lookup_eval s a]
   | eq s a b =>
-    simp only [impl, StateT.run_bind, StateT.run_get, pure_bind, MonadAttach.mem_support] at hz
+    simp only [impl_apply, StateT.run_bind, StateT.run_get, pure_bind,
+      MonadAttach.mem_support] at hz
     obtain rfl := LawfulMonadAttach.eq_of_canReturn_pure hz
     exact ht
   | lin o a => exact o.elim

@@ -26,7 +26,10 @@ variable {ι₁ ι₂} {spec₁ : OracleSpec ι₁} {spec₂ : OracleSpec ι₂}
 The actual add notation for `QueryImpl` uses `QueryImpl.addLift` which adds monad lifting
 to this definition for greater flexibility. -/
 @[expose] protected def add (impl₁ : QueryImpl spec₁ m) (impl₂ : QueryImpl spec₂ m) :
-    QueryImpl (spec₁ + spec₂) m | .inl t => impl₁ t | .inr t => impl₂ t
+    QueryImpl (spec₁ + spec₂) m where
+  toFun
+  | .inl t => impl₁ t
+  | .inr t => impl₂ t
 
 /-- Add two `QueryImpl` to get an implementation on the sum of the two `OracleSpec`. -/
 instance : HAdd (QueryImpl spec₁ m) (QueryImpl spec₂ m) (QueryImpl (spec₁ + spec₂) m) where

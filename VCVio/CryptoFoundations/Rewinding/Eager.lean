@@ -134,7 +134,7 @@ theorem commute_draw {n : ℕ} (qs : Fin n → Q) (q : Q) (w : P.World)
 theorem rerun_run (q : Q) (w : P.World) (m : ℕ) :
     (P.rerun run q).run (w, m) =
       (fun z => (z.1, (z.2, m + 1))) <$> (P.runWorld run q).run w := by
-  simp only [rerun, runWorld, StateT.run_mk, Functor.map_map]
+  simp only [rerun_apply, runWorld, StateT.run_mk, Functor.map_map]
 
 /-- An eager finite draw commutes with an adaptive black-box algorithm, including its fresh
 coins and complete-run count. -/
@@ -187,7 +187,7 @@ theorem algorithm_of_settled {β : Type} (f : Q → α) (w : P.World)
     | inr q =>
       simp only [simulateQ_bind, simulateQ_spec_query, QueryImpl.add_apply_inr,
         StateT.run_bind, P.rerun_run, hf, map_pure, pure_bind]
-      simpa [counted] using ih (f q) (m + 1)
+      simpa [counted_apply] using ih (f q) (m + 1)
 
 /-- Every coordinate of the eager table has the marginal of its complete frozen rerun. -/
 theorem draw_marginal {n : ℕ} (qs : Fin n → Q) (i : Fin n) (w : P.World) :

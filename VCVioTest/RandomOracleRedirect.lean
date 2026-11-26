@@ -34,7 +34,8 @@ namespace RedirectToy
 abbrev spec := Bool →ₒ Bool
 
 /-- Answer every query at the point `false`. -/
-def toFalse : QueryImpl spec (OracleComp spec) := fun _ => spec.query false
+def toFalse : QueryImpl spec (OracleComp spec) where
+  toFun _ := spec.query false
 
 /-- The cache holding the answer `b` at `false` and nothing at `true`. -/
 def cacheAt (b : Bool) : spec.QueryCache := (∅ : spec.QueryCache).cacheQuery false b
@@ -106,10 +107,12 @@ theorem viewBy_cacheAt_le_viewBy_both : (cacheAt true).viewBy toFalse ≤ both.v
 abbrev single := Unit →ₒ Bool
 
 /-- Send every point of `spec` to the one point of `single`. -/
-def collapse : QueryImpl spec (OracleComp single) := fun _ => single.query ()
+def collapse : QueryImpl spec (OracleComp single) where
+  toFun _ := single.query ()
 
 /-- Answer the one point of `single` at the point `false` of `spec`. -/
-def expand : QueryImpl single (OracleComp spec) := fun _ => spec.query false
+def expand : QueryImpl single (OracleComp spec) where
+  toFun _ := spec.query false
 
 theorem viewBy_both_expand : both.viewBy expand () = some true := by
   simp [expand, both, cacheAt, QueryCache.cacheQuery_of_ne]

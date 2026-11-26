@@ -125,9 +125,11 @@ theorem isOnlineQueryBound_sideDraws_run {τ : Type} {free : OracleSpec.{0, 0} �
 /-- The preprocessing handler answering `side` privately: local coins and queries to `spec` pass
 through, and a query to `side` is answered by the private lazy random oracle, whose local coins
 are local coins of the preprocessing phase. -/
-@[expose]
+@[expose, simps]
 def sidePreprocessImpl :
-    QueryImpl (unifSpec + (spec + side)) (StateT side.QueryCache (OracleComp (unifSpec + spec)))
+    QueryImpl (unifSpec + (spec + side))
+      (StateT side.QueryCache (OracleComp (unifSpec + spec))) where
+  toFun
   | .inl n => StateT.lift (liftM ((unifSpec + spec).query (.inl n)))
   | .inr (.inl t) => StateT.lift (liftM ((unifSpec + spec).query (.inr t)))
   | .inr (.inr t) => StateT.mk fun c => liftComp ((side.randomOracle t).run c) (unifSpec + spec)
@@ -135,11 +137,12 @@ def sidePreprocessImpl :
 /-- The online handler answering `side` privately: queries to the free summand pass through, and
 a mixed round draws its `side` points from the private cache (`sideDraws`), submits its `spec`
 points as one round, and reassembles the answer tuple (`batchMerge`). -/
-@[expose]
+@[expose, simps]
 def sideOnlineImpl {τ : Type} {free : OracleSpec.{0, 0} τ}
     [MonadLiftT (OracleQuery unifSpec) (OracleQuery free)] :
     QueryImpl (free + (spec + side).batch)
-      (StateT side.QueryCache (OracleComp (free + spec.batch)))
+      (StateT side.QueryCache (OracleComp (free + spec.batch))) where
+  toFun
   | .inl n => StateT.lift (liftM ((free + spec.batch).query (.inl n)))
   | .inr ts => do
       let vs ← sideDraws (ts.filterMap Sum.getRight?)
@@ -177,13 +180,13 @@ lemma isPreprocessingQueryBound_sidePreprocessImpl_run (t : (unifSpec + (spec + 
     (c : side.QueryCache) :
     IsPreprocessingQueryBound ((sidePreprocessImpl t).run c) (if t.isRight then 1 else 0) := by
   rcases t with n | t | t
-  · simp only [sidePreprocessImpl, Sum.isRight_inl, Bool.false_eq_true, ↓reduceIte,
+  · simp only [sidePreprocessImpl_apply, Sum.isRight_inl, Bool.false_eq_true, ↓reduceIte,
       StateT.run_lift]
     exact isQueryBoundP_bind_zero _ _ (by simp) fun _ => isQueryBoundP_pure _ _ _
-  · simp only [sidePreprocessImpl, Sum.isRight_inr, ↓reduceIte, StateT.run_lift]
+  · simp only [sidePreprocessImpl_apply, Sum.isRight_inr, ↓reduceIte, StateT.run_lift]
     rw [← Nat.add_zero 1]
     exact isQueryBoundP_bind (by simp) fun _ _ => isQueryBoundP_pure _ _ _
-  · simp only [sidePreprocessImpl, Sum.isRight_inr, ↓reduceIte]
+  · simp only [sidePreprocessImpl_apply, Sum.isRight_inr, ↓reduceIte]
     exact (isPreprocessingQueryBound_liftComp _).mono (Nat.zero_le 1)
 
 /-- A mixed round `ts` is simulated by one round holding its `spec` points and no others: its
@@ -193,7 +196,7 @@ theorem isOnlineQueryBound_sideOnlineImpl_inr_run {τ : Type} {free : OracleSpec
     (c : side.QueryCache) :
     IsOnlineQueryBound ((sideOnlineImpl (spec := spec) (free := free) (.inr ts)).run c)
       (1, (ts.filterMap Sum.getLeft?).length) := by
-  simp only [sideOnlineImpl, StateT.run_bind]
+  simp only [sideOnlineImpl_apply, StateT.run_bind]
   refine isOnlineQueryBound_bind_le (0, 0) (1, (ts.filterMap Sum.getLeft?).length)
     (isOnlineQueryBound_sideDraws_run _ _ _) (fun z => ?_) ⟨by omega, by omega⟩
   rw [StateT.run_lift, bind_assoc]
@@ -211,7 +214,7 @@ theorem isOnlineQueryBound_sideOnlineImpl_run {τ : Type} {free : OracleSpec.{0,
     (t : (free + (spec + side).batch).Domain) (c : side.QueryCache) :
     IsOnlineQueryBound ((sideOnlineImpl (spec := spec) t).run c) (onlineStep t) := by
   rcases t with n | ts
-  · simp only [sideOnlineImpl, onlineStep_inl, StateT.run_lift]
+  · simp only [sideOnlineImpl_apply, onlineStep_inl, StateT.run_lift]
     exact (isOnlineQueryBound_query_bind_inl_iff _ _ _).2 fun _ => isOnlineQueryBound_pure _ _
   · exact (isOnlineQueryBound_sideOnlineImpl_inr_run ts c).mono
       (Prod.mk_le_mk.mpr ⟨le_rfl, List.length_filterMap_le _ _⟩)
@@ -305,14 +308,14 @@ private lemma sidePreprocessImpl_run_step (t : (unifSpec + (spec + side)).Domain
       (fun z => ((z.1, z.2.2), z.2.1)) <$>
         ((sumRomImpl (spec := spec) (side := side)) t).run (c, sc) := by
   rcases t with n | t | t
-  · simp [sidePreprocessImpl, unifFwdImpl]
-  · simp only [sidePreprocessImpl, StateT.run_lift, simulateQ_bind, simulateQ_spec_query,
+  · simp [sidePreprocessImpl_apply, unifFwdImpl]
+  · simp only [sidePreprocessImpl_apply, StateT.run_lift, simulateQ_bind, simulateQ_spec_query,
       simulateQ_pure, StateT.run_bind, StateT.run_pure, OracleSpec.romImpl_apply_inr]
     rw [show (sumRomImpl (spec := spec) (side := side) (.inr (.inl t))).run (c, sc) =
       Prod.map id (·, sc) <$> (spec.randomOracle t).run c from rfl, Functor.map_map,
       bind_pure_comp]
     rfl
-  · simp only [sidePreprocessImpl, StateT.run_mk]
+  · simp only [sidePreprocessImpl_apply, StateT.run_mk]
     rw [roSim.simulateQ_liftComp, unifFwdImpl.simulateQ_run,
       show (sumRomImpl (spec := spec) (side := side) (.inr (.inr t))).run (c, sc) =
         Prod.map id (c, ·) <$> (side.randomOracle t).run sc from rfl, Functor.map_map]
@@ -326,9 +329,9 @@ private lemma sideOnlineImpl_run_step (t : (unifSpec + (spec + side).batch).Doma
       (fun z => ((z.1, z.2.2), z.2.1)) <$>
         ((sumRomImpl (spec := spec) (side := side)).batch' t).run (c, sc) := by
   rcases t with n | ts
-  · simp [sideOnlineImpl, unifFwdImpl]
+  · simp [sideOnlineImpl_apply, unifFwdImpl]
   · refine EvalDistEq.trans ?_ ((run_batch_parallelStateT_evalDistEq _ _ ts c sc).map _).symm
-    simp only [add_apply_inr, sideOnlineImpl, sideDraws, liftComp_eq_liftM,
+    simp only [add_apply_inr, sideOnlineImpl_apply, sideDraws, liftComp_eq_liftM,
       bind_pure_comp, StateT.run_bind, StateT.run_mk, StateT.run_map, StateT.run_lift,
       Functor.map_map, simulateQ_bind, simulateQ_map, simulateQ_query, OracleQuery.input_query,
       OracleQuery.cont_query, QueryImpl.add_apply_inr, id_map, map_bind]

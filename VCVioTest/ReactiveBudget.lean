@@ -39,9 +39,9 @@ open PFunctor Interaction.Execution.ReactiveProcess Interaction.Execution.Reacti
 
 @[expose] def impl (n : ℕ) :
     (node : Unit) → Handler (StateT Unit ProbComp) ((network n).effect node) :=
-  fun _ _ state => do
+  fun _ => ⟨fun _ state => do
     let bit ← $ᵗ Bool
-    pure (bit, state)
+    pure (bit, state)⟩
 
 attribute [local implicit_reducible] network step effect signature Response
 

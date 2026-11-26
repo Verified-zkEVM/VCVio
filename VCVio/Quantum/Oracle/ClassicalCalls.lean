@@ -69,10 +69,10 @@ variable {spec : QuantumOracleSpec.{u₁, v₁}} {B : QReg}
 
 /-- **Coins inside an experiment.** The query `n` of `unifSpec` (a uniform element of
 `Fin (n + 1)`) is answered by a uniform coin that leaves the held register `B` untouched. -/
-@[expose]
+@[expose, simps]
 noncomputable def coinImpl (spec : QuantumOracleSpec.{u₁, v₁}) (B : QReg) :
-    QueryImpl unifSpec (QComp.{u₁, v₁, 0} spec B B) :=
-  fun n ↦ QComp.act (SubInstrument.uniform (Fin (n + 1)) B)
+    QueryImpl unifSpec (QComp.{u₁, v₁, 0} spec B B) where
+  toFun n := QComp.act (SubInstrument.uniform (Fin (n + 1)) B)
 
 /-- Coins are lossless. -/
 theorem lossless_coinImpl (n : ℕ) : (coinImpl spec B n).Lossless .instruments :=

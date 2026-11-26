@@ -361,7 +361,7 @@ theorem extractabilityExperiment_isTotalQueryBound [DecidableEq Query]
     (h : 𝒜.IsTwoPhaseTotalQueryBound qb) :
     IsTotalQueryBound (extractabilityExperiment model addressKey 𝒜) (qb + s.depth) := by
   apply (isQueryBound_map_iff _ _ (qb + s.depth) _ _).mpr
-  exact IsTotalQueryBound.simulateQ_run_withCaching _
+  exact IsTotalQueryBound.simulateQ_run_withCaching (QueryImpl.ofLift _ _)
     (extractabilityInner_isTotalQueryBound model addressKey 𝒜 qb h)
     (fun t => (isQueryBound_query_iff t 1 _ _).mpr Nat.one_pos) ∅
 

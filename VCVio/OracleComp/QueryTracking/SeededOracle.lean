@@ -42,8 +42,8 @@ variable {m : Type u → Type v} [Monad m]
 If a seed value is available for the query, it is used and the seed is consumed (the tail
 replaces the head). When no seed remains, falls back to the underlying implementation. -/
 def withPregen (so : QueryImpl spec m) :
-    QueryImpl spec (StateT (QuerySeed spec) m) :=
-  fun t => StateT.mk fun seed =>
+    QueryImpl spec (StateT (QuerySeed spec) m) where
+  toFun t := StateT.mk fun seed =>
     match seed t with
     | u :: us => pure (u, seed.update t us)
     | [] => (·, seed) <$> so t
@@ -618,7 +618,7 @@ theorem isTotalQueryBound_run_simulateQ {ι₀ : Type} [DecidableEq ι₀] {spec
     (h : OracleComp.IsTotalQueryBound oa n) (seed : QuerySeed spec₀) :
     OracleComp.IsTotalQueryBound ((simulateQ spec₀.seededOracle oa).run seed) n := by
   rw [eq_withPregen]
-  exact OracleComp.IsTotalQueryBound.simulateQ_run_withPregen _ h
+  exact OracleComp.IsTotalQueryBound.simulateQ_run_withPregen (QueryImpl.ofLift spec₀ _) h
     (fun t => (OracleComp.isQueryBound_query_iff t 1 _ _).mpr Nat.one_pos) seed
 
 theorem isQueryBoundP_run_simulateQ {ι₀ : Type} [DecidableEq ι₀] {spec₀ : OracleSpec ι₀}

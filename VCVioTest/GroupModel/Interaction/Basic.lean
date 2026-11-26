@@ -23,7 +23,7 @@ private def noOracles : Adversary Nat Group Unit Empty (fun _ => Unit) Unit wher
   main input := pure (Explained.ofVectors input.groups () (fun _ => [fun _ => 1]))
   algebraic input := Explained.valid_ofVectors input.groups () (fun _ => [fun _ => 1])
 
-example : (noOracles.run (N := Id) (fun q => nomatch q.data) ⟨(), fun _ => [2, 3]⟩).1.value =
+example : (noOracles.run (N := Id) ⟨fun q => nomatch q.data⟩ ⟨(), fun _ => [2, 3]⟩).1.value =
     ⟨(), fun _ => [5]⟩ := rfl
 
 -- Replies may be ordinary scalar data; neither hashing nor signing is prescribed.
@@ -40,7 +40,7 @@ private def measured : Adversary Nat Group Nat Nat (fun _ => Nat) Nat where
     refine ⟨fun _ => List.Forall₂.nil, fun second => ?_⟩
     exact Explained.valid_ofVectors _ _ _
 
-example : (measured.run (N := Id) (fun q => pure ⟨q.data + 1, fun _ => []⟩)
+example : (measured.run (N := Id) ⟨fun q => pure ⟨q.data + 1, fun _ => []⟩⟩
     ⟨2, fun _ => [4, 5]⟩).1.value = ⟨6, fun _ => [27]⟩ := rfl
 
 private abbrev spec := explainedSpec Nat Group Nat (fun _ => Unit)
@@ -69,7 +69,8 @@ private def adversary : Adversary Nat Group Unit Nat (fun _ => Unit) String wher
 
 -- Replies are plain messages: no coefficient vectors or known logarithms are supplied.
 private def impl : QueryImpl (plainSpec Group Nat (fun _ => Unit))
-    (StateM (List (Message Nat Group))) := fun q => do
+    (StateM (List (Message Nat Group))) where
+  toFun q := do
   modify (· ++ [q])
   return ⟨(), fun _ => if q.data = 0 then [7] else [11]⟩
 

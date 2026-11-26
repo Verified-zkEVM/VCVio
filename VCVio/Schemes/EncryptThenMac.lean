@@ -141,22 +141,24 @@ variable {Λ : Type} [DecidableEq Λ]
 
 /-- The left-or-right oracle of the games at bit `b`: encrypt-then-MAC the selected message and
 log the challenge ciphertext. -/
-@[expose] def challengeImpl (enc : SymmEncAlg ProbComp M Ke C) (mac : MacAlg ProbComp C Km T)
+@[expose, simps]
+def challengeImpl (enc : SymmEncAlg ProbComp M Ke C) (mac : MacAlg ProbComp C Km T)
     (ke : Ke) (km : Km) (leak : M → Λ) (b : Bool) :
-    QueryImpl (LeftOrRight.spec M (C × T)) (StateT (GameState C T) ProbComp) := fun mm => do
-  let c? ← (LeftOrRight.oracle ((scheme enc mac).encrypt (ke, km)) leak b mm :
-    ProbComp (Option (C × T)))
-  modify fun s => match c? with
-    | some c => (c :: s.1, s.2)
-    | none => s
-  return c?
+    QueryImpl (LeftOrRight.spec M (C × T)) (StateT (GameState C T) ProbComp) where
+  toFun mm := do
+    let c? ← (LeftOrRight.oracle ((scheme enc mac).encrypt (ke, km)) leak b mm :
+      ProbComp (Option (C × T)))
+    modify fun s => match c? with
+      | some c => (c :: s.1, s.2)
+      | none => s
+    return c?
 
 /-- The challenge oracle changes only the challenge log. -/
 private lemma snd_of_mem_support_challengeImpl (enc : SymmEncAlg ProbComp M Ke C)
     (mac : MacAlg ProbComp C Km T) (ke : Ke) (km : Km) (leak : M → Λ) (b : Bool)
     (mm : M × M) (s : GameState C T) {z : Option (C × T) × GameState C T}
     (hz : z ∈ support ((challengeImpl enc mac ke km leak b mm).run s)) : z.2.2 = s.2 := by
-  simp only [challengeImpl, StateT.run_bind, StateT.run_monadLift, StateT.run_modify,
+  simp only [challengeImpl_apply, StateT.run_bind, StateT.run_monadLift, StateT.run_modify,
     StateT.run_pure, bind_assoc, pure_bind, monadLift_self, mem_support_bind_iff,
     mem_support_pure_iff] at hz
   obtain ⟨c?, _, rfl⟩ := hz
@@ -166,20 +168,23 @@ variable [DecidableEq C] [DecidableEq T]
 
 /-- The decryption oracle of the CCA game with the decryption queries logged: a decryption query
 is logged with its freshness, rejected if it is a challenge ciphertext, and decrypted otherwise. -/
-@[expose] def ccaDecryptImpl (enc : SymmEncAlg ProbComp M Ke C) (mac : MacAlg ProbComp C Km T)
+@[expose, simps]
+def ccaDecryptImpl (enc : SymmEncAlg ProbComp M Ke C) (mac : MacAlg ProbComp C Km T)
     (ke : Ke) (km : Km) :
-    QueryImpl (C × T →ₒ Option M) (StateT (GameState C T) ProbComp) := fun ct => do
-  let s ← get
-  set (s.1, s.2 ++ [(ct, decide (ct ∉ s.1))])
-  if ct ∈ s.1 then return none else ((scheme enc mac).decrypt (ke, km) ct : ProbComp (Option M))
+    QueryImpl (C × T →ₒ Option M) (StateT (GameState C T) ProbComp) where
+  toFun ct := do
+    let s ← get
+    set (s.1, s.2 ++ [(ct, decide (ct ∉ s.1))])
+    if ct ∈ s.1 then return none else ((scheme enc mac).decrypt (ke, km) ct : ProbComp (Option M))
 
 /-- The decryption oracle that logs every decryption query with its freshness and answers it with
 `none`. -/
-@[expose] def rejectDecryptImpl :
-    QueryImpl (C × T →ₒ Option M) (StateT (GameState C T) ProbComp) := fun ct => do
-  let s ← get
-  set (s.1, s.2 ++ [(ct, decide (ct ∉ s.1))])
-  return none
+@[expose, simps] def rejectDecryptImpl :
+    QueryImpl (C × T →ₒ Option M) (StateT (GameState C T) ProbComp) where
+  toFun ct := do
+    let s ← get
+    set (s.1, s.2 ++ [(ct, decide (ct ∉ s.1))])
+    return none
 
 /-- The CCA game at bit `b` with the decryption queries logged. -/
 @[expose] def ccaLogImpl (enc : SymmEncAlg ProbComp M Ke C) (mac : MacAlg ProbComp C Km T)
@@ -208,15 +213,17 @@ theorem IND_CCA_Experiment_eq (enc : SymmEncAlg ProbComp M Ke C) (mac : MacAlg P
     adversary ([], [])).symm
   rcases t with (n | mm) | ct
   · simp [ccaLogImpl, SymmEncAlg.IND_CCA_impl]
-  · simp only [ccaLogImpl, SymmEncAlg.IND_CCA_impl, challengeImpl,
-      SymmEncAlg.IND_CCA_challengeImpl, QueryImpl.passthrough_add, QueryImpl.add_apply_inl,
+  · simp only [ccaLogImpl, SymmEncAlg.IND_CCA_impl, challengeImpl_apply,
+      SymmEncAlg.IND_CCA_challengeImpl_apply, QueryImpl.passthrough_add, QueryImpl.add_apply_inl,
       QueryImpl.add_apply_inr, StateT.run_bind, StateT.run_monadLift, StateT.run_modify,
       StateT.run_pure, bind_assoc, pure_bind, map_bind, map_pure, monadLift_self]
     refine bind_congr fun c? => ?_
     cases c? <;> rfl
   · by_cases h : ct ∈ s.1
-    · simp [ccaLogImpl, SymmEncAlg.IND_CCA_impl, ccaDecryptImpl, SymmEncAlg.IND_CCA_decryptImpl, h]
-    · simp [ccaLogImpl, SymmEncAlg.IND_CCA_impl, ccaDecryptImpl, SymmEncAlg.IND_CCA_decryptImpl, h]
+    · simp [ccaLogImpl, SymmEncAlg.IND_CCA_impl, ccaDecryptImpl_apply,
+      SymmEncAlg.IND_CCA_decryptImpl_apply, h]
+    · simp [ccaLogImpl, SymmEncAlg.IND_CCA_impl, ccaDecryptImpl_apply,
+      SymmEncAlg.IND_CCA_decryptImpl_apply, h]
 
 /-! ## Identical until a forgery -/
 
@@ -233,20 +240,22 @@ theorem agreeUntilBad_ccaLogImpl_rejectImpl (enc : SymmEncAlg ProbComp M Ke C)
   rcases t with t | ct
   · exact Or.inl rfl
   · by_cases hmem : ct ∈ s.1
-    · exact Or.inl (by simp [ccaLogImpl, rejectImpl, ccaDecryptImpl, rejectDecryptImpl, hmem])
+    · exact Or.inl (by simp [ccaLogImpl, rejectImpl, ccaDecryptImpl_apply, rejectDecryptImpl_apply,
+      hmem])
     · by_cases hv : vf km ct.1 ct.2 = true
       · refine Or.inr ⟨fun z hz => ?_, fun z hz => ?_⟩
-        · simp only [ccaLogImpl, QueryImpl.add_apply_inr, ccaDecryptImpl, hmem, ite_false,
+        · simp only [ccaLogImpl, QueryImpl.add_apply_inr, ccaDecryptImpl_apply, hmem, ite_false,
             StateT.run_bind, StateT.run_get, StateT.run_set, pure_bind, StateT.run_monadLift,
             mem_support_bind_iff, mem_support_pure_iff] at hz
           obtain ⟨_, _, rfl⟩ := hz
           exact ⟨(ct, true), List.mem_append_right _ (by simp), rfl, hv⟩
-        · simp only [rejectImpl, QueryImpl.add_apply_inr, rejectDecryptImpl, StateT.run_bind,
+        · simp only [rejectImpl, QueryImpl.add_apply_inr, rejectDecryptImpl_apply, StateT.run_bind,
             StateT.run_get, StateT.run_set, pure_bind, StateT.run_pure, mem_support_pure_iff] at hz
           subst hz
           exact ⟨(ct, true), List.mem_append_right _ (by simp [hmem]), rfl, hv⟩
       · exact Or.inl (by
-          simp [ccaLogImpl, rejectImpl, ccaDecryptImpl, rejectDecryptImpl, hmem, scheme, hvf, hv])
+          simp [ccaLogImpl, rejectImpl, ccaDecryptImpl_apply, rejectDecryptImpl_apply, hmem,
+            scheme, hvf, hv])
 
 /-- An ambient query of the rejecting game leaves the state unchanged. -/
 private lemma rejectImpl_run_inl_inl (enc : SymmEncAlg ProbComp M Ke C)
@@ -269,7 +278,7 @@ theorem preservesInv_rejectImpl (enc : SymmEncAlg ProbComp M Ke C)
   · have h := snd_of_mem_support_challengeImpl enc mac ke km leak b mm s hz
     obtain ⟨e, he, he'⟩ := hs
     exact ⟨e, h ▸ he, he'⟩
-  · simp only [rejectImpl, QueryImpl.add_apply_inr, rejectDecryptImpl, StateT.run_bind,
+  · simp only [rejectImpl, QueryImpl.add_apply_inr, rejectDecryptImpl_apply, StateT.run_bind,
       StateT.run_get, StateT.run_set, pure_bind, StateT.run_pure, mem_support_pure_iff] at hz
     subst hz
     exact forgeryLogged_append hs _ _
@@ -326,9 +335,9 @@ theorem boolDist_IND_CCA_Experiment_rejectExperiment_le (enc : SymmEncAlg ProbCo
 
 /-- The challenge oracle of the CPA adversary: forward the pair to the CPA challenge oracle and tag
 the ciphertext it returns. -/
-@[expose] def cpaChallengeImpl (mac : MacAlg ProbComp C Km T) (km : Km) :
-    QueryImpl (LeftOrRight.spec M (C × T)) (OracleComp (unifSpec + LeftOrRight.spec M C)) :=
-  fun mm => do
+@[expose, simps] def cpaChallengeImpl (mac : MacAlg ProbComp C Km T) (km : Km) :
+    QueryImpl (LeftOrRight.spec M (C × T)) (OracleComp (unifSpec + LeftOrRight.spec M C)) where
+  toFun mm := do
     let c? ← (unifSpec + LeftOrRight.spec M C).query (Sum.inr mm)
     match c? with
     | some c => do
@@ -337,9 +346,9 @@ the ciphertext it returns. -/
     | none => return none
 
 /-- The decryption oracle of the CPA adversary, which answers every query with `none`. -/
-@[expose] def cpaDecryptImpl :
-    QueryImpl (C × T →ₒ Option M) (OracleComp (unifSpec + LeftOrRight.spec M C)) :=
-  fun _ => return none
+@[expose, simps] def cpaDecryptImpl :
+    QueryImpl (C × T →ₒ Option M) (OracleComp (unifSpec + LeftOrRight.spec M C)) where
+  toFun _ := return none
 
 /-- The handler of the CPA adversary under its own MAC key `km`. -/
 @[expose] def cpaReductionImpl (mac : MacAlg ProbComp C Km T) (km : Km) :
@@ -375,10 +384,11 @@ theorem run'_simulateQ_rejectImpl (enc : SymmEncAlg ProbComp M Ke C)
       · rw [rejectImpl_run_inl_inl]
         simp [cpaReductionImpl, QueryImpl.simulateQ_add_liftM_left]
       · by_cases h : leak m₀ = leak m₁
-        · simp [rejectImpl, challengeImpl, cpaReductionImpl, cpaChallengeImpl, h, scheme,
+        · simp [rejectImpl, challengeImpl_apply, cpaReductionImpl, cpaChallengeImpl_apply, h,
+          scheme,
             QueryImpl.simulateQ_add_liftM_left]
-        · simp [rejectImpl, challengeImpl, cpaReductionImpl, cpaChallengeImpl, h]
-      · simp [rejectImpl, rejectDecryptImpl, cpaReductionImpl, cpaDecryptImpl]
+        · simp [rejectImpl, challengeImpl_apply, cpaReductionImpl, cpaChallengeImpl_apply, h]
+      · simp [rejectImpl, rejectDecryptImpl_apply, cpaReductionImpl, cpaDecryptImpl_apply]
     simp only [StateT.run'_eq] at ih
     simp only [simulateQ_bind, simulateQ_query, OracleQuery.input_query, OracleQuery.cont_query,
       id_map, StateT.run'_eq, StateT.run_bind, map_bind, ih]
@@ -399,11 +409,13 @@ theorem rejectExperiment_eq_IND_CPA_Experiment (enc : SymmEncAlg ProbComp M Ke C
 
 /-- The challenge oracle of the rejecting game stopped at the `j`-th decryption query: once `j`
 decryption queries have been logged before it, it answers `none` and changes nothing. -/
-@[expose] def stopChallengeImpl (enc : SymmEncAlg ProbComp M Ke C) (mac : MacAlg ProbComp C Km T)
+@[expose, simps]
+def stopChallengeImpl (enc : SymmEncAlg ProbComp M Ke C) (mac : MacAlg ProbComp C Km T)
     (ke : Ke) (km : Km) (leak : M → Λ) (b : Bool) (j : ℕ) :
-    QueryImpl (LeftOrRight.spec M (C × T)) (StateT (GameState C T) ProbComp) := fun mm => do
-  let s ← get
-  if j < s.2.length then return none else challengeImpl enc mac ke km leak b mm
+    QueryImpl (LeftOrRight.spec M (C × T)) (StateT (GameState C T) ProbComp) where
+  toFun mm := do
+    let s ← get
+    if j < s.2.length then return none else challengeImpl enc mac ke km leak b mm
 
 /-- The rejecting game stopped after the `j`-th decryption query: from then on challenge queries
 are answered with `none`. -/
@@ -418,14 +430,14 @@ private lemma rejectImpl_run_inr (enc : SymmEncAlg ProbComp M Ke C) (mac : MacAl
     (ke : Ke) (km : Km) (leak : M → Λ) (b : Bool) (ct : C × T) (s : GameState C T) :
     ((rejectImpl enc mac ke km leak b) (Sum.inr ct)).run s =
       pure (none, (s.1, s.2 ++ [(ct, decide (ct ∉ s.1))])) := by
-  simp [rejectImpl, rejectDecryptImpl]
+  simp [rejectImpl, rejectDecryptImpl_apply]
 
 /-- A decryption query of the stopped game appends its logged entry. -/
 private lemma stopImpl_run_inr (enc : SymmEncAlg ProbComp M Ke C) (mac : MacAlg ProbComp C Km T)
     (ke : Ke) (km : Km) (leak : M → Λ) (b : Bool) (j : ℕ) (ct : C × T) (s : GameState C T) :
     ((stopImpl enc mac ke km leak b j) (Sum.inr ct)).run s =
       pure (none, (s.1, s.2 ++ [(ct, decide (ct ∉ s.1))])) := by
-  simp [stopImpl, rejectDecryptImpl]
+  simp [stopImpl, rejectDecryptImpl_apply]
 
 /-- An ambient query of the stopped game leaves the state unchanged. -/
 private lemma stopImpl_run_inl_inl (enc : SymmEncAlg ProbComp M Ke C) (mac : MacAlg ProbComp C Km T)
@@ -439,7 +451,7 @@ private lemma stopImpl_run_inl_inr (enc : SymmEncAlg ProbComp M Ke C) (mac : Mac
     (ke : Ke) (km : Km) (leak : M → Λ) (b : Bool) (j : ℕ) (mm : M × M) (s : GameState C T) :
     ((stopImpl enc mac ke km leak b j) (Sum.inl (Sum.inr mm))).run s =
       if j < s.2.length then pure (none, s) else (challengeImpl enc mac ke km leak b mm).run s := by
-  by_cases h : j < s.2.length <;> simp [stopImpl, stopChallengeImpl, h]
+  by_cases h : j < s.2.length <;> simp [stopImpl, stopChallengeImpl_apply, h]
 
 /-- The `j`-th logged decryption query has the same distribution in the rejecting game and in
 the game stopped at it. -/
@@ -557,24 +569,27 @@ theorem preservesInv_stopImpl (enc : SymmEncAlg ProbComp M Ke C) (mac : MacAlg P
 
 /-- The challenge oracle of the forger, stopped at the `j`-th decryption query: encrypt the
 selected message under its own key and ask the tagging oracle for the tag. -/
-@[expose] def forgerChallengeImpl (enc : SymmEncAlg ProbComp M Ke C) (ke : Ke) (leak : M → Λ)
+@[expose, simps]
+def forgerChallengeImpl (enc : SymmEncAlg ProbComp M Ke C) (ke : Ke) (leak : M → Λ)
     (b : Bool) (j : ℕ) : QueryImpl (LeftOrRight.spec M (C × T))
-      (StateT (List (C × T)) (OracleComp (unifSpec + (C →ₒ T)))) := fun mm => do
-  let d ← get
-  if j < d.length then return none else do
-    let c? ← (liftM (LeftOrRight.oracle (enc.encrypt ke) leak b mm : ProbComp (Option C)) :
-      OracleComp (unifSpec + (C →ₒ T)) (Option C))
-    match c? with
-    | some c => do
-      let t ← ((unifSpec + (C →ₒ T)).query (Sum.inr c) : OracleComp (unifSpec + (C →ₒ T)) T)
-      return some (c, t)
-    | none => return none
+      (StateT (List (C × T)) (OracleComp (unifSpec + (C →ₒ T)))) where
+  toFun mm := do
+    let d ← get
+    if j < d.length then return none else do
+      let c? ← (liftM (LeftOrRight.oracle (enc.encrypt ke) leak b mm : ProbComp (Option C)) :
+        OracleComp (unifSpec + (C →ₒ T)) (Option C))
+      match c? with
+      | some c => do
+        let t ← ((unifSpec + (C →ₒ T)).query (Sum.inr c) : OracleComp (unifSpec + (C →ₒ T)) T)
+        return some (c, t)
+      | none => return none
 
 /-- The decryption oracle of the forger: log the query and answer `none`. -/
-@[expose] def forgerDecryptImpl : QueryImpl (C × T →ₒ Option M)
-    (StateT (List (C × T)) (OracleComp (unifSpec + (C →ₒ T)))) := fun ct => do
-  modify (· ++ [ct])
-  return none
+@[expose, simps] def forgerDecryptImpl : QueryImpl (C × T →ₒ Option M)
+    (StateT (List (C × T)) (OracleComp (unifSpec + (C →ₒ T)))) where
+  toFun ct := do
+    modify (· ++ [ct])
+    return none
 
 /-- The handler of the forger. -/
 @[expose] def forgerImpl (enc : SymmEncAlg ProbComp M Ke C) (ke : Ke) (leak : M → Λ) (b : Bool)
@@ -622,8 +637,9 @@ theorem map_run_simulateQ_stopImpl (enc : SymmEncAlg ProbComp M Ke C)
           (fun u => (u, (forgerView s).1)) <$>
             (liftM (unifSpec.query n) : OracleComp (unifSpec + (C →ₒ T)) _) := by
       simp [map_eq_bind_pure_comp]
-    simp only [forgerTaggedImpl, QueryImpl.flattenStateTWriterT, forgerImpl,
-      QueryImpl.mapStateTBase, StateT.run_mk, QueryImpl.passthrough_add, QueryImpl.add_apply_inl,
+    simp only [forgerTaggedImpl, QueryImpl.flattenStateTWriterT_apply, forgerImpl,
+      QueryImpl.mapStateTBase_apply, StateT.run_mk, QueryImpl.passthrough_add,
+      QueryImpl.add_apply_inl,
       QueryImpl.liftTarget_apply, QueryImpl.id'_apply]
     erw [hq, simulateQ_map, QueryImpl.simulateQ_add_liftM_query_left]
     simp [Functor.map_map]
@@ -631,19 +647,23 @@ theorem map_run_simulateQ_stopImpl (enc : SymmEncAlg ProbComp M Ke C)
     rw [stopImpl_run_inl_inr]
     by_cases hst : j < s.2.length
     · rw [ite_eq_left hst]
-      simp [forgerTaggedImpl, QueryImpl.flattenStateTWriterT, forgerImpl, forgerChallengeImpl,
-        QueryImpl.mapStateTBase, forgerView, hst]
+      simp [forgerTaggedImpl, QueryImpl.flattenStateTWriterT_apply, forgerImpl,
+        forgerChallengeImpl_apply,
+        QueryImpl.mapStateTBase_apply, forgerView, hst]
     · rw [ite_eq_right hst]
       by_cases h : leak m₀ = leak m₁
-      · simp [challengeImpl, forgerTaggedImpl, QueryImpl.flattenStateTWriterT, forgerImpl,
-          forgerChallengeImpl, QueryImpl.mapStateTBase, forgerView, hst, h, scheme,
+      · simp [challengeImpl_apply, forgerTaggedImpl, QueryImpl.flattenStateTWriterT_apply,
+        forgerImpl,
+          forgerChallengeImpl_apply, QueryImpl.mapStateTBase_apply, forgerView, hst, h, scheme,
           MacAlg.taggingOracle,
           QueryImpl.simulateQ_add_liftM_left, writerT_run_simulateQ_liftTarget, simulateQ_id']
-      · simp [challengeImpl, forgerTaggedImpl, QueryImpl.flattenStateTWriterT, forgerImpl,
-          forgerChallengeImpl, QueryImpl.mapStateTBase, forgerView, h]
+      · simp [challengeImpl_apply, forgerTaggedImpl, QueryImpl.flattenStateTWriterT_apply,
+        forgerImpl,
+          forgerChallengeImpl_apply, QueryImpl.mapStateTBase_apply, forgerView, h]
   · rw [stopImpl_run_inr]
-    simp [forgerTaggedImpl, QueryImpl.flattenStateTWriterT, forgerImpl, forgerDecryptImpl,
-      QueryImpl.mapStateTBase, forgerView]
+    simp [forgerTaggedImpl, QueryImpl.flattenStateTWriterT_apply, forgerImpl,
+      forgerDecryptImpl_apply,
+      QueryImpl.mapStateTBase_apply, forgerView]
 
 /-- The SUF-CMA experiment of the forger: the forger run against the tagging oracle, with the
 `j`-th logged decryption query as the forgery. -/

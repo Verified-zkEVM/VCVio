@@ -119,7 +119,7 @@ private theorem runTrace_proverWithFinalQuery [SampleableType Chal]
   rintro ⟨⟨pc, resp⟩, cache, log⟩
   cases hc : cache (msg, pc) <;>
     simp [finishTrace, HasQuery.query, QueryImpl.simulateQ_add_liftM_query_right,
-      Fork.roImpl, hc, monad_norm]
+      Fork.roImpl_apply, hc, monad_norm]
 
 private theorem forkPoint_isSome_eq_verified (Q : ℕ)
     (t : Fork.Trace Commit Chal Resp M)
@@ -144,13 +144,13 @@ private theorem finishTrace_forkable (pk : Stmt) (msg : M) (proof : Commit × Re
         roCache := cache
         queryLog := log
         verified := σ.verify pk proof.1 c proof.2 } := by
-      simpa [finishTrace, Fork.roImpl, hc] using ht
+      simpa [finishTrace, Fork.roImpl_apply, hc] using ht
     subst t
     apply forkPoint_isSome_eq_verified M Q
     · exact hinv _ c hc
     · exact hlen.trans (Nat.le_succ Q)
   | none =>
-    simp only [finishTrace, Fork.roImpl, hc, StateT.run_bind, StateT.run_get,
+    simp only [finishTrace, Fork.roImpl_apply, hc, StateT.run_bind, StateT.run_get,
       StateT.run_lift, StateT.run_set, StateT.run_pure, monad_norm,
       mem_support_bind_iff, mem_support_pure_iff] at ht
     obtain ⟨c, _, rfl⟩ := ht

@@ -90,7 +90,7 @@ def UniformKey [SampleableType K] (prf : PRFScheme K D R) : Prop :=
 by the ambient `unifSpec`; function queries are answered by `prf.eval k`. -/
 def prfRealQueryImpl (prf : PRFScheme K D R) (k : K) :
     QueryImpl (PRFOracleSpec D R) ProbComp :=
-  let so : QueryImpl (D →ₒ R) ProbComp := fun d => pure (prf.eval k d)
+  let so : QueryImpl (D →ₒ R) ProbComp := ⟨fun d => pure (prf.eval k d)⟩
   unifSpec.passthrough + so
 
 /-- Query implementation for the ideal PRF experiment: the random oracle model handler

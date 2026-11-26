@@ -77,8 +77,8 @@ theorem run_withAddCost_eq_extendState
   have natural := PFunctor.FreeM.liftM_natural
     ((QueryImpl.id' spec).withAddCost weight) accumulated body
   change accumulated (simulateQ ((QueryImpl.id' spec).withAddCost weight) body) =
-    simulateQ (fun input => accumulated
-      (((QueryImpl.id' spec).withAddCost weight) input)) body at natural
+    simulateQ ⟨fun input => accumulated
+      (((QueryImpl.id' spec).withAddCost weight) input)⟩ body at natural
   have querywise :
       (fun input => accumulated (((QueryImpl.id' spec).withAddCost weight) input)) =
         impl.extendState (fun input _before _reply _after counter => counter + weight input) := by

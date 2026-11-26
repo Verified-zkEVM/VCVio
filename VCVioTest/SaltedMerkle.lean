@@ -458,7 +458,7 @@ def encY : QueryEncoding (ULift.{2} X) Unit Unit
 honest root and trapdoor. -/
 example (H : ULift.{2} X → ULift.{1} Bool) (msg : Fin (2 ^ 1) → ULift.{3} Bool)
     (γ : Fin (2 ^ 1) → ULift.{1} Bool) :
-    simulateQ (fun x ↦ (pure (H x) : Id (ULift.{1} Bool))) (commitTree encY 1 msg γ) =
+    simulateQ ⟨fun x ↦ (pure (H x) : Id (ULift.{1} Bool))⟩ (commitTree encY 1 msg γ) =
       pure (honestTree encY 1 H msg γ) :=
   simulateQ_commitTree encY 1 H msg γ
 

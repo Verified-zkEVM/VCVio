@@ -47,9 +47,11 @@ theorem costCertificate_iff_withinCharge
     (c : (spec F σ + Γ).Domain → ℕ) :
     CostCertificate h c ↔
       PFunctor.Handler.Stateful.WithinCharge (E := (spec F σ + Γ).toPFunctor)
-        (M := (spec F σ + Γ').toPFunctor) h (fun i => if isGroupOp i = true then 1 else 0) c := by
+        (M := (spec F σ + Γ').toPFunctor) h.toHandler
+        (fun i => if isGroupOp i = true then 1 else 0) c := by
   unfold CostCertificate PFunctor.Handler.Stateful.WithinCharge
   simp only [isQueryBoundP_iff_isChargeBound]
+  rfl
 
 /-- A certified handler turns an adversary's weighted budget into group work. -/
 theorem CostCertificate.simulateQ_run
@@ -89,7 +91,7 @@ theorem costCertificate_virtualizeImpl [DecidableEq S] (z : S → Handle) :
     CostCertificate (virtualizeImpl (F := F) (σ := σ) z)
       (fun t => if isGroupOp t then 1 else 0) := by
   rintro (t | n) s
-  · cases t <;> simp [virtualizeImpl, StateT.run, isGroupOp, Query.isOp]
-  · simp [virtualizeImpl, StateT.run, isGroupOp]
+  · cases t <;> simp [virtualizeImpl_apply, StateT.run, isGroupOp, Query.isOp]
+  · simp [virtualizeImpl_apply, StateT.run, isGroupOp]
 
 end GroupModel

@@ -72,7 +72,7 @@ Every successful response is recorded as its exact `(message, signature)` pair i
 SUF-CMA checks whether the exact final pair occurs in it. -/
 def signingOracle (sigAlg : SignatureAlg m M PK SK S) (pk : PK) (sk : SK) :
     QueryImpl (M →ₒ S) (WriterT (QueryLog (M →ₒ S)) m) :=
-  QueryImpl.withLogging (sigAlg.sign pk sk)
+  QueryImpl.withLogging ⟨sigAlg.sign pk sk⟩
 
 end signingOracle
 

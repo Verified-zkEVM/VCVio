@@ -121,7 +121,7 @@ example : (capRun.1.toList, capRun.2) =
         { kind := .wide, context := 7, address := 9,
           inputs := [.child [1], .child [2], .child [3]] }
       ]) := by
-  simp [capRun, cap, mixedRoot, hashedLeaf, hashedLeafRight, wideRoot,
+  simp [HasQuery.query, capRun, cap, mixedRoot, hashedLeaf, hashedLeafRight, wideRoot,
     evaluateForest, evaluateTree, Internal.evaluateTree, Internal.evaluateInputs,
     Internal.evaluateInput, answer, inputCode, kindCode, List.Vector.head_cons,
     List.Vector.tail_cons]
@@ -203,7 +203,8 @@ example : (deepBinaryRun.1, deepBinaryRun.2) =
         { kind := .node, context := (), address := .node .root,
           inputs := [.child 122, .child 23] }
       ]) := by
-  simp [deepBinaryRun, binaryTree, binaryTreeAt, deepBinaryAddressing, deepBinaryPayloads,
+  simp [HasQuery.query, deepBinaryRun, binaryTree, binaryTreeAt, deepBinaryAddressing,
+    deepBinaryPayloads,
     evaluateTree, Internal.evaluateTree, Internal.evaluateInputs, Internal.evaluateInput,
     deepBinaryAnswer, StateT.run, Id.run, bind, StateT.bind]
 
@@ -221,7 +222,7 @@ example : (providedDigestBinaryRun.1, providedDigestBinaryRun.2) =
         { kind := .node, context := (), address := .node .root,
           inputs := [.child 442, .child 33] }
       ]) := by
-  simp [providedDigestBinaryRun, binaryTree, binaryTreeAt, deepBinaryAddressing,
+  simp [HasQuery.query, providedDigestBinaryRun, binaryTree, binaryTreeAt, deepBinaryAddressing,
     deepBinaryPayloads, evaluateTree, Internal.evaluateTree, Internal.evaluateInputs,
     Internal.evaluateInput, deepBinaryAnswer, StateT.run, Id.run, bind, StateT.bind,
     pure, StateT.pure]

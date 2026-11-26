@@ -28,15 +28,14 @@ abbrev interfaceSpec (M G : Type) := (unifSpec + (M →ₒ G)) + (M →ₒ G)
 abbrev Transcript (M : Type) := List (Bool × M)
 
 /-- Answer both interfaces using one private lookup oracle, retaining the chronological labels. -/
-@[expose] def transcriptOracle {M R G : Type} (hash sign : R → G) :
+@[expose, simps -isSimp] def transcriptOracle {M R G : Type} (hash sign : R → G) :
     QueryImpl (interfaceSpec M G)
-      (StateT (Transcript M) (OracleComp (unifSpec + (M →ₒ R)))) := by
-  intro q tr
-  rcases q with ((n | m) | m)
-  · exact (fun r => (r, tr)) <$> (unifSpec + (M →ₒ R)).query (.inl n)
-  · exact (fun r => (hash r, tr ++ [(false, m)])) <$>
+      (StateT (Transcript M) (OracleComp (unifSpec + (M →ₒ R)))) where
+  toFun
+  | .inl (.inl n), tr => (fun r => (r, tr)) <$> (unifSpec + (M →ₒ R)).query (.inl n)
+  | .inl (.inr m), tr => (fun r => (hash r, tr ++ [(false, m)])) <$>
       (unifSpec + (M →ₒ R)).query (.inr m)
-  · exact (fun r => (sign r, tr ++ [(true, m)])) <$>
+  | .inr m, tr => (fun r => (sign r, tr ++ [(true, m)])) <$>
       (unifSpec + (M →ₒ R)).query (.inr m)
 
 /-- Public randomness leaves the chronological transcript unchanged. -/
@@ -60,13 +59,12 @@ abbrev Transcript (M : Type) := List (Bool × M)
         (unifSpec + (M →ₒ R)).query (.inr m) := rfl
 
 /-- A fixed pair of public functions supplies replies while preserving ordinary randomness. -/
-@[expose] def fixedOracle {M G : Type} (hash sign : M → G) :
-    QueryImpl (interfaceSpec M G) (StateT (Transcript M) ProbComp) := by
-  intro q tr
-  rcases q with ((n | m) | m)
-  · exact (fun r => (r, tr)) <$> (unifSpec.query n : ProbComp _)
-  · exact pure (hash m, tr ++ [(false, m)])
-  · exact pure (sign m, tr ++ [(true, m)])
+@[expose, simps -isSimp] def fixedOracle {M G : Type} (hash sign : M → G) :
+    QueryImpl (interfaceSpec M G) (StateT (Transcript M) ProbComp) where
+  toFun
+  | .inl (.inl n), tr => (fun r => (r, tr)) <$> (unifSpec.query n : ProbComp _)
+  | .inl (.inr m), tr => pure (hash m, tr ++ [(false, m)])
+  | .inr m, tr => pure (sign m, tr ++ [(true, m)])
 
 /-- Fixed-table execution, retaining every group-reply occurrence. -/
 @[expose] def fixedRun {M G α : Type} (hash sign : M → G)

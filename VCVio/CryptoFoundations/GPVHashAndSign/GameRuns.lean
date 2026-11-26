@@ -113,7 +113,7 @@ noncomputable def progGameRun
     ProbComp (M × (Salt × Domain)) :=
   let State := (Salt × M →ₒ Range).QueryCache × ((Salt × M) → Option Domain)
   let roImpl : QueryImpl (Salt × M →ₒ Range) (StateT State ProbComp) :=
-    fun t => do
+    ⟨fun t => do
       let st ← get
       match st.1 t with
       | some v => pure v
@@ -121,18 +121,18 @@ noncomputable def progGameRun
           let s ← (domainSample pk : ProbComp Domain)
           let v := psf.eval pk s
           set ((st.1.cacheQuery t v, fun t' => if t' = t then some s else st.2 t') : State)
-          pure v
+          pure v⟩
   let unifImpl : QueryImpl unifSpec (StateT State ProbComp) :=
-    fun t => (unifSpec.query t : ProbComp _)
+    ⟨fun t => (unifSpec.query t : ProbComp _)⟩
   let signImpl : QueryImpl (M →ₒ (Salt × Domain)) (StateT State ProbComp) :=
-    fun msg => do
+    ⟨fun msg => do
       let r ← ($ᵗ Salt : ProbComp Salt)
       let s ← (domainSample pk : ProbComp Domain)
       let v := psf.eval pk s
       let st ← get
       set ((st.1.cacheQuery (r, msg) v,
         fun t' => if t' = (r, msg) then some s else st.2 t') : State)
-      pure (r, s)
+      pure (r, s)⟩
   let impl : QueryImpl ((unifSpec + (Salt × M →ₒ Range)) + (M →ₒ (Salt × Domain)))
       (StateT State ProbComp) := (unifImpl + roImpl) + signImpl
   Prod.fst <$> (simulateQ impl (adv.main pk)).run (∅, fun _ => none)
@@ -234,8 +234,8 @@ the logged stack with its log discarded (`realGameRun_writerLog_discard`). -/
       (OracleComp (unifSpec + (Salt × M →ₒ Range))) :=
   (HasQuery.toQueryImpl (spec := (unifSpec + (Salt × M →ₒ Range)))
       (m := OracleComp (unifSpec + (Salt × M →ₒ Range)))) +
-    (fun msg => (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range)))
-      psf hr M Salt).sign pk sk msg)
+    (⟨fun msg => (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range)))
+      psf hr M Salt).sign pk sk msg⟩ : QueryImpl (M →ₒ (Salt × Domain)) _)
 
 omit [Fintype Salt] in
 /-- **Real-side WriterT-log discard (pinned).**
@@ -398,7 +398,7 @@ runtime `withStateOracle` bundle), the shared shape required before the fold cou
       (StateT ((Salt × M →ₒ Range).QueryCache) ProbComp) :=
   let roImpl : QueryImpl (Salt × M →ₒ Range)
       (StateT ((Salt × M →ₒ Range).QueryCache) ProbComp) :=
-    fun t => do
+    ⟨fun t => do
       let st ← get
       match st t with
       | some v => pure v
@@ -406,18 +406,18 @@ runtime `withStateOracle` bundle), the shared shape required before the fold cou
           let s ← (domainSample pk : ProbComp Domain)
           let v := psf.eval pk s
           set (st.cacheQuery t v)
-          pure v
+          pure v⟩
   let unifImpl : QueryImpl unifSpec (StateT ((Salt × M →ₒ Range).QueryCache) ProbComp) :=
-    fun t => (unifSpec.query t : ProbComp _)
+    ⟨fun t => (unifSpec.query t : ProbComp _)⟩
   let signImpl : QueryImpl (M →ₒ (Salt × Domain))
       (StateT ((Salt × M →ₒ Range).QueryCache) ProbComp) :=
-    fun msg => do
+    ⟨fun msg => do
       let r ← ($ᵗ Salt : ProbComp Salt)
       let s ← (domainSample pk : ProbComp Domain)
       let v := psf.eval pk s
       let st ← get
       set (st.cacheQuery (r, msg) v)
-      pure (r, s)
+      pure (r, s)⟩
   (unifImpl + roImpl) + signImpl
 
 open Classical in
@@ -538,31 +538,31 @@ exactly as the real handler and leave the tape untouched. The tape is over-provi
 `qSign`, one salt per signing query); a missing head (empty tape) defaults to the inline draw so the
 handler is total. Its per-query unfoldings are recorded by `gpvRealImplTape_run_unif` / `_read` /
 `_sign` below. -/
-@[expose] noncomputable def gpvRealImplTape (pk : PK) (sk : SK) :
+@[expose, simps] noncomputable def gpvRealImplTape (pk : PK) (sk : SK) :
     QueryImpl ((unifSpec + (Salt × M →ₒ Range)) + (M →ₒ (Salt × Domain)))
-      (StateT ((Salt × M →ₒ Range).QueryCache × List Salt) ProbComp) :=
-  fun t => match t with
-  | .inl (.inl n) => StateT.mk fun s =>
-      (fun u => (u, s)) <$> (unifSpec.query n : ProbComp _)
-  | .inl (.inr mc) => StateT.mk fun s =>
-      (fun p : Range × (Salt × M →ₒ Range).QueryCache => (p.1, (p.2, s.2))) <$>
-        (randomOracle (spec := (Salt × M →ₒ Range)) mc).run s.1
-  | .inr msg => StateT.mk fun s =>
-      match s.2 with
-      | [] =>
-          (fun rsc : (Salt × Domain) × (Salt × M →ₒ Range).QueryCache =>
-              (rsc.1, (rsc.2, ([] : List Salt)))) <$>
-            (do
-              let r ← ($ᵗ Salt : ProbComp Salt)
-              let p ← (randomOracle (spec := (Salt × M →ₒ Range)) (r, msg)).run s.1
-              let sgn ← psf.trapdoorSample pk sk p.1
-              pure ((r, sgn), p.2))
-      | r :: tl =>
-          (fun rsc : (Salt × Domain) × (Salt × M →ₒ Range).QueryCache => (rsc.1, (rsc.2, tl))) <$>
-            (do
-              let p ← (randomOracle (spec := (Salt × M →ₒ Range)) (r, msg)).run s.1
-              let sgn ← psf.trapdoorSample pk sk p.1
-              pure ((r, sgn), p.2))
+      (StateT ((Salt × M →ₒ Range).QueryCache × List Salt) ProbComp) where
+  toFun t := match t with
+    | .inl (.inl n) => StateT.mk fun s =>
+        (fun u => (u, s)) <$> (unifSpec.query n : ProbComp _)
+    | .inl (.inr mc) => StateT.mk fun s =>
+        (fun p : Range × (Salt × M →ₒ Range).QueryCache => (p.1, (p.2, s.2))) <$>
+          (randomOracle (spec := (Salt × M →ₒ Range)) mc).run s.1
+    | .inr msg => StateT.mk fun s =>
+        match s.2 with
+        | [] =>
+            (fun rsc : (Salt × Domain) × (Salt × M →ₒ Range).QueryCache =>
+                (rsc.1, (rsc.2, ([] : List Salt)))) <$>
+              (do
+                let r ← ($ᵗ Salt : ProbComp Salt)
+                let p ← (randomOracle (spec := (Salt × M →ₒ Range)) (r, msg)).run s.1
+                let sgn ← psf.trapdoorSample pk sk p.1
+                pure ((r, sgn), p.2))
+        | r :: tl =>
+            (fun rsc : (Salt × Domain) × (Salt × M →ₒ Range).QueryCache => (rsc.1, (rsc.2, tl))) <$>
+              (do
+                let p ← (randomOracle (spec := (Salt × M →ₒ Range)) (r, msg)).run s.1
+                let sgn ← psf.trapdoorSample pk sk p.1
+                pure ((r, sgn), p.2))
 
 omit [Fintype Salt] [DecidableEq Range] in
 /-- **One-step unfolding of `gpvRealImplTape` on a uniform query.** The tape is untouched. -/
@@ -604,28 +604,29 @@ random-oracle handler programs a miss with `psf.eval pk (domainSample pk)` and t
 is the bare sample, both leaving the tape untouched. This is the programmed dual of
 `gpvRealImplTape`; its per-query unfoldings are recorded by `progGameRunImplTape_run_unif` /
 `_read` / `_sign` below. -/
-@[expose] noncomputable def progGameRunImplTape (domainSample : PK → ProbComp Domain) (pk : PK) :
+@[expose, simps]
+noncomputable def progGameRunImplTape (domainSample : PK → ProbComp Domain) (pk : PK) :
     QueryImpl ((unifSpec + (Salt × M →ₒ Range)) + (M →ₒ (Salt × Domain)))
-      (StateT ((Salt × M →ₒ Range).QueryCache × List Salt) ProbComp) :=
-  fun t => match t with
-  | .inl (.inl n) => StateT.mk fun s =>
-      (fun u => (u, s)) <$> (unifSpec.query n : ProbComp _)
-  | .inl (.inr mc) => StateT.mk fun s =>
-      match s.1 mc with
-      | some v => pure (v, s)
-      | none =>
-          (fun sd : Domain => (psf.eval pk sd, (s.1.cacheQuery mc (psf.eval pk sd), s.2))) <$>
-            (domainSample pk : ProbComp Domain)
-  | .inr msg => StateT.mk fun s =>
-      match s.2 with
-      | [] =>
-          (do
-            let r ← ($ᵗ Salt : ProbComp Salt)
-            let sd ← (domainSample pk : ProbComp Domain)
-            pure ((r, sd), (s.1.cacheQuery (r, msg) (psf.eval pk sd), ([] : List Salt))))
-      | r :: tl =>
-          (fun sd : Domain => ((r, sd), (s.1.cacheQuery (r, msg) (psf.eval pk sd), tl))) <$>
-            (domainSample pk : ProbComp Domain)
+      (StateT ((Salt × M →ₒ Range).QueryCache × List Salt) ProbComp) where
+  toFun t := match t with
+    | .inl (.inl n) => StateT.mk fun s =>
+        (fun u => (u, s)) <$> (unifSpec.query n : ProbComp _)
+    | .inl (.inr mc) => StateT.mk fun s =>
+        match s.1 mc with
+        | some v => pure (v, s)
+        | none =>
+            (fun sd : Domain => (psf.eval pk sd, (s.1.cacheQuery mc (psf.eval pk sd), s.2))) <$>
+              (domainSample pk : ProbComp Domain)
+    | .inr msg => StateT.mk fun s =>
+        match s.2 with
+        | [] =>
+            (do
+              let r ← ($ᵗ Salt : ProbComp Salt)
+              let sd ← (domainSample pk : ProbComp Domain)
+              pure ((r, sd), (s.1.cacheQuery (r, msg) (psf.eval pk sd), ([] : List Salt))))
+        | r :: tl =>
+            (fun sd : Domain => ((r, sd), (s.1.cacheQuery (r, msg) (psf.eval pk sd), tl))) <$>
+              (domainSample pk : ProbComp Domain)
 
 omit [Fintype Salt] [DecidableEq Range] [SampleableType Range] in
 /-- **One-step unfolding of `progGameRunImplTape` on a uniform query.** The tape is untouched. -/
@@ -800,10 +801,10 @@ runs may diverge off-flag there; firing the flag makes the empty-tape signing st
 the bad set, which is what makes the off-bad per-query agreement (`h_agree_good`) universal over all
 states. In the actual `qSign`-salt run this branch is unreachable (the query bound permits at most
 `qSign` signing queries and the tape holds `qSign` salts), so it contributes no probability mass. -/
-@[expose] noncomputable def gpvRealImplTapeFlag (pk : PK) (sk : SK) :
+@[expose, simps] noncomputable def gpvRealImplTapeFlag (pk : PK) (sk : SK) :
     QueryImpl ((unifSpec + (Salt × M →ₒ Range)) + (M →ₒ (Salt × Domain)))
-      (StateT (((Salt × M →ₒ Range).QueryCache × List Salt) × Bool) ProbComp) :=
-  fun t => StateT.mk fun s =>
+      (StateT (((Salt × M →ₒ Range).QueryCache × List Salt) × Bool) ProbComp) where
+  toFun t := StateT.mk fun s =>
     match t with
     | .inl q =>
         (fun p => (p.1, (p.2, s.2))) <$> (gpvRealImplTape psf M Salt pk sk (.inl q)).run s.1
@@ -817,11 +818,11 @@ open Classical in
 `progGameRunImplTape` threaded with the same collision flag (set on a signing step when the consumed
 head salt `r` is already a key of the cache). Its `run'`-projection is the original
 `progGameRunImplTape`. -/
-@[expose]
+@[expose, simps]
 noncomputable def progGameRunImplTapeFlag (domainSample : PK → ProbComp Domain) (pk : PK) :
     QueryImpl ((unifSpec + (Salt × M →ₒ Range)) + (M →ₒ (Salt × Domain)))
-      (StateT (((Salt × M →ₒ Range).QueryCache × List Salt) × Bool) ProbComp) :=
-  fun t => StateT.mk fun s =>
+      (StateT (((Salt × M →ₒ Range).QueryCache × List Salt) × Bool) ProbComp) where
+  toFun t := StateT.mk fun s =>
     match t with
     | .inl q =>
         (fun p => (p.1, (p.2, s.2))) <$>

@@ -515,7 +515,7 @@ theorem shakeEncoding_trunc_prfMsg (q : PrfMsgQuery (shakeCore vp).SkPrf (shakeC
 /-- **The encoding translates the three-oracle scheme as `encImpl` does.** -/
 theorem encodeImpl_shakeEncoding_compose_liftTypedImpl :
     (shakeEncoding vp hn hnm pkSeed).encodeImpl ∘ₛ liftTypedImpl = encImpl vp := by
-  funext u
+  ext u : 1
   rcases u with k | ((⟨_, _, _⟩ | ⟨_, _, _, _⟩) | _)
   · rfl
   · rfl

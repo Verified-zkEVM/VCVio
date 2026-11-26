@@ -130,12 +130,14 @@ attribute [local implicit_reducible] network DynComputation.ofFreeM
 @[expose] def implementation (env : Environment Message Cipher Memory)
     (ops : Operations Message Cipher S) :
     (id : Bool) → Handler (StateT S ProbComp) ((network Message Cipher Memory).effect id)
-  | false, .choose => fun state => (fun message => (message, state)) <$> env.choose
-  | false, .observe input view => fun state =>
-      (fun verdict => (verdict, state)) <$> env.observe input.1 input.2 view
-  | true, .encrypt message => ops.encrypt message
-  | true, .allow ciphertext => ops.allow ciphertext
-  | true, .decrypt ciphertext => ops.decrypt ciphertext
+  | false => ⟨fun
+      | .choose => fun state => (fun message => (message, state)) <$> env.choose
+      | .observe input view => fun state =>
+          (fun verdict => (verdict, state)) <$> env.observe input.1 input.2 view⟩
+  | true => ⟨fun
+      | .encrypt message => ops.encrypt message
+      | .allow ciphertext => ops.allow ciphertext
+      | .decrypt ciphertext => ops.decrypt ciphertext⟩
 
 /-- Direct interpretation of the same single-use conversation, retaining shared state. -/
 @[expose] def conversation (env : Environment Message Cipher Memory)

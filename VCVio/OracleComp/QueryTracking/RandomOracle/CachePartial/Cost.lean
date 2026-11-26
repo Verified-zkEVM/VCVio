@@ -42,9 +42,10 @@ theorem simulateQ_withAddCost_runAdd_fusion (impl : QueryImpl spec m)
   let F := WriterT.mapHom (ω := Multiplicative Nat) (simulateQ' impl)
   have natural := PFunctor.FreeM.liftM_natural ((QueryImpl.id' spec).withAddCost w) F body
   change F (simulateQ ((QueryImpl.id' spec).withAddCost w) body) =
-    simulateQ (fun t => F (((QueryImpl.id' spec).withAddCost w) t)) body at natural
-  have point : (fun t => F (((QueryImpl.id' spec).withAddCost w) t)) = impl.withAddCost w := by
-    funext t
+    simulateQ ⟨fun t => F (((QueryImpl.id' spec).withAddCost w) t)⟩ body at natural
+  have point : (⟨fun t => F (((QueryImpl.id' spec).withAddCost w) t)⟩ : QueryImpl spec _) =
+      impl.withAddCost w := by
+    ext t : 1
     apply WriterT.ext
     simp [F, withAddCost, withCost_apply, WriterT.run_bind, simulateQ_map]
   rw [point] at natural

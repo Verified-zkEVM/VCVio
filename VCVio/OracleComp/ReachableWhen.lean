@@ -64,7 +64,7 @@ lemma reachableWhen_query_bind (o : QueryImpl spec Set) (t : spec.Domain)
       ⋃ direction ∈ o t, reachableWhen o (next direction) := by
   simp
 
-@[gcongr]
+@[gcongr only]
 lemma reachableWhen_mono {o₁ o₂ : QueryImpl spec Set}
     (h : ∀ q, o₁ q ⊆ o₂ q) (oa : OracleComp spec α) :
     reachableWhen o₁ oa ⊆ reachableWhen o₂ oa := by
@@ -72,7 +72,7 @@ lemma reachableWhen_mono {o₁ o₂ : QueryImpl spec Set}
 
 /-- Admitting every typed response recovers the free tree's attachment support. -/
 theorem reachableWhen_univ_eq_support (oa : OracleComp spec α) :
-    reachableWhen (fun _ ↦ Set.univ) oa = support oa := by
+    reachableWhen ⟨fun _ ↦ Set.univ⟩ oa = support oa := by
   simpa [reachableWhen, PFunctor.FreeM.reachable] using
     (PFunctor.FreeM.reachable_eq_support oa)
 

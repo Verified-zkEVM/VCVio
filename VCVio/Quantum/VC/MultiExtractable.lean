@@ -628,9 +628,9 @@ noncomputable def checkedRead (B : QReg) (j : Fin k) (t : X) :
 @[expose]
 noncomputable def checkedOracleImpl (B : QReg) (j : Fin k) :
     QueryImpl (unifSpec + (X →ₒ Y)) (OptionT (QComp (mixedExtSpec k X Y Cm Z) B B)) :=
-  (fun n ↦ OptionT.mk (some <$> QComp.coinImpl (mixedExtSpec k X Y Cm Z) B n) :
+  (⟨fun n ↦ OptionT.mk (some <$> QComp.coinImpl (mixedExtSpec k X Y Cm Z) B n)⟩ :
     QueryImpl unifSpec (OptionT (QComp (mixedExtSpec k X Y Cm Z) B B))) +
-    (fun t ↦ OptionT.mk (checkedRead B j t) :
+    (⟨fun t ↦ OptionT.mk (checkedRead B j t)⟩ :
       QueryImpl (X →ₒ Y) (OptionT (QComp (mixedExtSpec k X Y Cm Z) B B)))
 
 /-- Interpret a classical algorithm using uniform coins and checked oracle answers. -/
@@ -770,7 +770,7 @@ theorem runClassicalChecked_rom [AddCommGroup Y] {α : Type} (H : Fin k → X �
     R.run₂ .instruments (runClassicalChecked B j p) =
       (R.run₂ .instruments (p.toQuantumAt
         (QComp.coinImpl (mixedExtSpec k X Y Cm Z) B +
-          (fun t ↦ QuantumComp₂.pure (H j t) :
+          (⟨fun t ↦ QuantumComp₂.pure (H j t)⟩ :
             QueryImpl (X →ₒ Y) (QComp (mixedExtSpec k X Y Cm Z) B B))))).map some := by
   dsimp only
   induction p using OracleComp.inductionOn with

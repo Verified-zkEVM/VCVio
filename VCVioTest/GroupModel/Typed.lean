@@ -58,8 +58,8 @@ private def adversary : Adversary Scalar Group Unit Unit (fun _ => Scalar) Scala
     intro reply
     exact Explained.valid_ofVectors _ _ _
 
-private def game : QueryImpl (plainSpec Group Unit (fun _ => Scalar)) (OracleComp unifSpec) :=
-  fun _ => pure ⟨3, fun _ => []⟩
+private def game : QueryImpl (plainSpec Group Unit (fun _ => Scalar)) (OracleComp unifSpec) where
+  toFun _ := pure ⟨3, fun _ => []⟩
 
 private theorem game_empty : EmptyGroupReplies game := by
   intro q reply hr

@@ -31,7 +31,7 @@ open PFunctor Interaction Interaction.UC Interaction.Execution.ReactiveNetwork
 
 def noEffects (value : Bool) :
     (id : Unit) → Handler (StateT Unit ProbComp) ((returnedNetwork value).effect id) :=
-  fun _ operation => operation.elim
+  fun _ => ⟨fun operation => operation.elim⟩
 
 instance : MeasurableSpace (Option (Outcome Bool)) := ⊤
 

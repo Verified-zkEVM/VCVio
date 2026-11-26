@@ -106,7 +106,7 @@ def subkeysQuery (key : Bytes 32) (nonce : Bytes 16) : OracleComp byteSpec (Byte
 
 /-- With the oracle answered by `h`, the subkey queries give the subkeys at `h`. -/
 lemma subkeysAt_subkeysQuery (h : ByteArray → Bytes 32) (key : Bytes 32) :
-    subkeysAt (spec := byteSpec) (fun x => (h x : Id (Bytes 32))) (subkeysQuery key) =
+    subkeysAt (spec := byteSpec) ⟨fun x => (h x : Id (Bytes 32))⟩ (subkeysQuery key) =
       subkeys h key := by
   funext nonce
   simp only [subkeysAt, subkeysQuery, bind_pure_comp, simulateQ_bind, simulateQ_query,
@@ -155,7 +155,7 @@ variable {b n : ℕ} (h : ByteArray → Bytes 32) (m : ℕ)
 /-- With local coins kept and the oracle answered by `h`, the DEM's encryption is the executable
 envelope at `h` under a uniform nonce. -/
 theorem simulateQ_byteEnvelope_encrypt (key : Puzzle b n × Bytes 32) (msg : Plaintext) :
-    simulateQ (unifFwdAnswerImpl (spec := byteSpec) fun x => (h x : Id (Bytes 32)))
+    simulateQ (unifFwdAnswerImpl (spec := byteSpec) ⟨fun x => (h x : Id (Bytes 32))⟩)
         ((byteEnvelope b n m).encrypt key msg) =
       (fun nonce => sealBytes h (encode m key.1) key.2 nonce msg) <$> ($ᵗ Bytes 16) := by
   rw [byteEnvelope, simulateQ_dem_encrypt, subkeysAt_subkeysQuery]
@@ -164,7 +164,7 @@ theorem simulateQ_byteEnvelope_encrypt (key : Puzzle b n × Bytes 32) (msg : Pla
 /-- With local coins kept and the oracle answered by `h`, the DEM's decryption is the executable
 opening at `h`, a rejection read as the empty message. -/
 theorem simulateQ_byteEnvelope_decrypt (key : Puzzle b n × Bytes 32) (env : ByteArray) :
-    simulateQ (unifFwdAnswerImpl (spec := byteSpec) fun x => (h x : Id (Bytes 32)))
+    simulateQ (unifFwdAnswerImpl (spec := byteSpec) ⟨fun x => (h x : Id (Bytes 32))⟩)
         ((byteEnvelope b n m).decrypt key env) =
       pure ((openBytes h (encode m key.1) key.2 env).getD default) := by
   rw [byteEnvelope, simulateQ_dem_decrypt, subkeysAt_subkeysQuery]
@@ -175,9 +175,9 @@ function `h`. -/
 theorem byteEnvelope_perfectlyCorrect :
     (byteEnvelope b n m).PerfectlyCorrect
       (ProbCompRuntime.withStateOracle
-        (fun x => (pure (h x) : StateT Unit ProbComp (Bytes 32))) ()) :=
+        ⟨fun x => (pure (h x) : StateT Unit ProbComp (Bytes 32))⟩ ()) :=
   dem_perfectlyCorrect_answerTable hmacPRF (FixedCodec.bytes 16)
-    (spec := byteSpec) (fun x => (h x : Id (Bytes 32))) subkeysQuery (encode m)
+    (spec := byteSpec) ⟨fun x => (h x : Id (Bytes 32))⟩ subkeysQuery (encode m)
 
 /-- The byte-level envelope is perfectly correct in the random oracle model, from every initial
 cache. -/

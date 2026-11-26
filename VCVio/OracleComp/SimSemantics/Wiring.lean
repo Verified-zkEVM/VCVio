@@ -31,8 +31,7 @@ variable {ι Boxes : Type} {spec : OracleSpec.{0, uB} ι} {Arity : Boxes → Typ
 
 /-- Compile a recursively wired handler to its single shared oracle boundary. -/
 @[expose] def oracleProgram
-    (implementation : (b : Boxes) → (a : (Cod b).A) →
-      FreeM (PFunctor.sigma (Dom b)) ((Cod b).B a))
+    (implementation : (b : Boxes) → Handler (FreeM (PFunctor.sigma (Dom b))) (Cod b))
     {output : PFunctor.{0, uB}}
     (wiring : Wiring Boxes Arity Dom Cod Unit (fun _ => spec.toPFunctor) output)
     (a : output.A) : OracleComp spec (output.B a) :=
@@ -43,8 +42,7 @@ variable {ι Boxes : Type} {spec : OracleSpec.{0, uB} ι} {Arity : Boxes → Typ
 /-- An external wire performs one query against the shared handler. -/
 @[simp]
 theorem oracleProgram_input
-    (implementation : (b : Boxes) → (a : (Cod b).A) →
-      FreeM (PFunctor.sigma (Dom b)) ((Cod b).B a)) (a : ι) :
+    (implementation : (b : Boxes) → Handler (FreeM (PFunctor.sigma (Dom b))) (Cod b)) (a : ι) :
     oracleProgram (spec := spec) implementation (.input ()) a =
       FreeM.lift (P := spec.toPFunctor) a := by
   simp only [oracleProgram, eval_input]
@@ -54,8 +52,7 @@ theorem oracleProgram_input
 
 /-- Expanding a box runs its implementation against the recursively compiled child handlers. -/
 theorem oracleProgram_box
-    (implementation : (b : Boxes) → (a : (Cod b).A) →
-      FreeM (PFunctor.sigma (Dom b)) ((Cod b).B a)) (b : Boxes)
+    (implementation : (b : Boxes) → Handler (FreeM (PFunctor.sigma (Dom b))) (Cod b)) (b : Boxes)
     (children : (port : Arity b) →
       Wiring Boxes Arity Dom Cod Unit (fun _ => spec.toPFunctor) (Dom b port))
     (a : (Cod b).A) :

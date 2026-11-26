@@ -185,8 +185,9 @@ variable (vp : ValidatedParams)
 
 /-- **SHAKE256 as the byte-string oracle**: the answer at `x` is the `m`-byte output
 `SHAKE256(x, 8m)`. -/
-@[expose] def shakeAnswer : QueryImpl (shakeSpec vp) Id := fun x =>
-  byteArrayPrefixOrZero (Keccak.shake256 x.toByteArray vp.params.m) vp.params.m
+@[expose, simps -isSimp] def shakeAnswer : QueryImpl (shakeSpec vp) Id where
+  toFun x :=
+    byteArrayPrefixOrZero (Keccak.shake256 x.toByteArray vp.params.m) vp.params.m
 
 variable {vp}
 
@@ -228,7 +229,7 @@ private theorem prefixBytes_shakeAnswer_thash (hnm : vp.params.n ≤ vp.params.m
 private theorem shakeAnswer_hmsg (r pkSeed pkRoot : Bytes vp.params.n) (msg : List Byte) :
     shakeAnswer vp (r.toList ++ pkSeed.toList ++ pkRoot.toList ++ msg) =
       shakeHmsg vp.params r pkSeed pkRoot msg := by
-  rw [shakeAnswer, shakeHmsg,
+  rw [shakeAnswer_apply, shakeHmsg,
     toByteArray_eq_of_toList_data_eq (l := r.toList ++ pkSeed.toList ++ pkRoot.toList ++ msg)]
   simp [ByteArray.data_append]
 
@@ -297,7 +298,7 @@ theorem romScheme_shakeCore_map_romAnswer
 theorem unifFwdAnswerImpl_shakeAnswer_compose_encImpl_of_le (hnm : vp.params.n ≤ vp.params.m) :
     unifFwdAnswerImpl (shakeAnswer vp) ∘ₛ encImpl vp =
       unifFwdAnswerImpl (romAnswer (shakePrimitives vp.params)) := by
-  funext t
+  ext t : 1
   rcases t with n | (q | q)
   · simp [encImpl, unifFwdAnswerImpl, QueryImpl.simulateQ_add_liftM_query_left]
   · cases q with

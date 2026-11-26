@@ -35,14 +35,14 @@ open scoped ENNReal
     (FreeM.liftBind .receive fun _ =>
       .liftBind (.effect ()) fun bit =>
       .liftBind (.send ⟨(), bit⟩) fun _ => .pure (.returned bit) :
-        FreeM (signature bitEffect boundary) (Outcome Bool))) fun _ => draw
+        FreeM (signature bitEffect boundary) (Outcome Bool))) ⟨fun _ => draw⟩
 
 @[expose] def receiver : System (PortBoundary.swap boundary) :=
   HandledAssembly.atom (DynComputation.ofFreeM fun _ =>
     (FreeM.liftBind (.send ⟨(), ()⟩) fun _ =>
       .liftBind .receive fun packet => .pure (.returned packet.2) :
         FreeM (signature noEffect (PortBoundary.swap boundary)) (Outcome Bool)))
-    fun operation => operation.elim
+    ⟨fun operation => operation.elim⟩
 
 @[expose] def context (fuel : ℕ) : Context boundary := ⟨receiver, (), fuel⟩
 
@@ -176,7 +176,7 @@ theorem executed_half_comparison_false :
   system := HandledAssembly.atom
     (DynComputation.ofFreeM fun _ =>
       (.pure .aborted : FreeM (signature noEffect (PortBoundary.swap boundary)) (Outcome Bool)))
-    fun operation => operation.elim
+    ⟨fun operation => operation.elim⟩
   environment := ()
   fuel := 0
 

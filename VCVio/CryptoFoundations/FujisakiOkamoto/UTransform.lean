@@ -127,26 +127,30 @@ abbrev oracleSpec (M R KD K : Type) := unifSpec + hashOracleSpec M R KD K
 abbrev QueryCache (M R KD K : Type) := (M →ₒ R).QueryCache × (KD →ₒ K).QueryCache
 
 /-- Lazy random oracle for encryption coins, threaded through the combined U-transform state. -/
+@[simps]
 def coinOracleImpl {M R KD K : Type} [DecidableEq M] [SampleableType R] :
-    QueryImpl (M →ₒ R) (StateT (QueryCache M R KD K) ProbComp) := fun msg => do
-  let st ← get
-  match st.1 msg with
-  | some r => return r
-  | none =>
-      let r ← ($ᵗ R : ProbComp R)
-      set (st.1.cacheQuery msg r, st.2)
-      return r
+    QueryImpl (M →ₒ R) (StateT (QueryCache M R KD K) ProbComp) where
+  toFun msg := do
+    let st ← get
+    match st.1 msg with
+    | some r => return r
+    | none =>
+        let r ← ($ᵗ R : ProbComp R)
+        set (st.1.cacheQuery msg r, st.2)
+        return r
 
 /-- Lazy random oracle for key derivation, threaded through the combined U-transform state. -/
+@[simps]
 def keyOracleImpl {M R KD K : Type} [DecidableEq KD] [SampleableType K] :
-    QueryImpl (KD →ₒ K) (StateT (QueryCache M R KD K) ProbComp) := fun kd => do
-  let st ← get
-  match st.2 kd with
-  | some k => return k
-  | none =>
-      let k ← ($ᵗ K : ProbComp K)
-      set (st.1, st.2.cacheQuery kd k)
-      return k
+    QueryImpl (KD →ₒ K) (StateT (QueryCache M R KD K) ProbComp) where
+  toFun kd := do
+    let st ← get
+    match st.2 kd with
+    | some k => return k
+    | none =>
+        let k ← ($ᵗ K : ProbComp K)
+        set (st.1, st.2.cacheQuery kd k)
+        return k
 
 /-- Query implementation for the full two-RO FO hash world. -/
 def queryImpl {M R KD K : Type}

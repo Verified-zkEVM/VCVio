@@ -143,10 +143,10 @@ abbrev signingSpec (E M S : Type) : OracleSpec (E × M) :=
 `none` and leaves the history unchanged. A request at an unused epoch runs the callback once and
 records its answer, including `none`. Reductions use this form to answer signing queries with a
 simulated signer under the same epoch discipline. -/
-@[expose] def signingKernelOracle [DecidableEq E]
+@[expose, simps] def signingKernelOracle [DecidableEq E]
     {m : Type → Type v} [Monad m] (kernel : E → M → m (Option S)) :
-    QueryImpl (signingSpec E M S) (StateT (History E M S) m) :=
-  fun ⟨ep, msg⟩ history =>
+    QueryImpl (signingSpec E M S) (StateT (History E M S) m) where
+  toFun := fun ⟨ep, msg⟩ history =>
     match history ep with
     | some _ => pure (none, history)
     | none => do
@@ -158,7 +158,7 @@ theorem signingKernelOracle_used [DecidableEq E]
     (history : History E M S) (ep : E) (msg first : M) (answer : Option S)
     (h : history ep = some (first, answer)) :
     signingKernelOracle kernel (ep, msg) history = pure (none, history) := by
-  simp [signingKernelOracle, h]
+  simp [signingKernelOracle_apply, h]
 
 theorem signingKernelOracle_unused [DecidableEq E]
     {m : Type → Type v} [Monad m] (kernel : E → M → m (Option S))
@@ -166,7 +166,7 @@ theorem signingKernelOracle_unused [DecidableEq E]
     signingKernelOracle kernel (ep, msg) history = (do
       let answer ← kernel ep msg
       pure (answer, Function.update history ep (some (msg, answer)))) := by
-  simp [signingKernelOracle, record, h]
+  simp [signingKernelOracle_apply, record, h]
 
 /-- The scheme's signing oracle: `signingKernelOracle` with the callback `alg.sign sk`. -/
 @[expose] def signingOracle [DecidableEq E]

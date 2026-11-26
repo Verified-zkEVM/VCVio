@@ -72,7 +72,8 @@ abbrev CountedRun := AddWriterT Counts (StateT SigningLog (OracleComp OracleWorl
     (simulateQ (addCostOracle hashCost) computation).run
 
 /-- Signs with the real key, counts each request and logs each answer. -/
-@[expose] def signingOracle (sk : SecretKey) : QueryImpl SigningSpec CountedRun := fun request => do
+@[expose, simps] def signingOracle (sk : SecretKey) : QueryImpl SigningSpec CountedRun where
+  toFun request := do
   AddWriterT.addTell (Counts.single .signing 1)
   let answer ← liftM (Scheme.sign sk request : OracleComp OracleWorld (Option Bytes))
   liftM (modify (fun signed => signed ++ [⟨request, answer⟩]) :

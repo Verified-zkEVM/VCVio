@@ -347,13 +347,14 @@ variable (m : ℕ) (mkCtx : Salt → Ctx) (initAcc : Ctx → S) [NeZero n] [AddC
 legitimate for some path value is answered with that value's label (`legitLabel`) and leaves the
 cache unchanged; every other point is answered by the lazy random oracle, which samples and caches
 on a miss. -/
-@[expose]
+@[expose, simps]
 def idealPoint (P : Puzzle n S L Salt) (ℓ : Labels n m S L) (R : Finset (PathValue n m)) :
     QueryImpl (oracleSpec n S L Salt Ctx)
-      (StateT (oracleSpec n S L Salt Ctx).QueryCache ProbComp) := fun t =>
-  match legitLabel m mkCtx initAcc P ℓ R t with
-  | some a => pure a
-  | none => (oracleSpec n S L Salt Ctx).randomOracle t
+      (StateT (oracleSpec n S L Salt Ctx).QueryCache ProbComp) where
+  toFun t :=
+    match legitLabel m mkCtx initAcc P ℓ R t with
+    | some a => pure a
+    | none => (oracleSpec n S L Salt Ctx).randomOracle t
 
 /-- The atomic ideal handler of the online phase. Uniform queries pass through. A round `ts` reads
 the reached set once, answers its points one after the other with `idealPoint` against that
@@ -364,9 +365,10 @@ def idealImpl (P : Puzzle n S L Salt) (ℓ : Labels n m S L) :
     QueryImpl (unifSpec + (oracleSpec n S L Salt Ctx).batch)
       (StateT (IdealState n m S L Salt Ctx) ProbComp) :=
   (QueryImpl.ofLift unifSpec ProbComp).liftTarget (StateT (IdealState n m S L Salt Ctx) ProbComp) +
-    fun ts => StateT.mk fun s : IdealState n m S L Salt Ctx =>
+    (⟨fun ts => StateT.mk fun s : IdealState n m S L Salt Ctx =>
       (fun z => (z.1, s.afterRound m mkCtx initAcc P ℓ ts z.2)) <$>
-        (QueryImpl.batch (idealPoint m mkCtx initAcc P ℓ s.reached) ts).run s.cache
+        (QueryImpl.batch (idealPoint m mkCtx initAcc P ℓ s.reached) ts).run s.cache⟩ :
+      QueryImpl (oracleSpec n S L Salt Ctx).batch _)
 
 variable {m mkCtx initAcc}
 
@@ -374,13 +376,13 @@ lemma idealPoint_of_legitLabel_eq_some {P : Puzzle n S L Salt} {ℓ : Labels n m
     {R : Finset (PathValue n m)} {t : Point n S L Salt Ctx}
     {a : (oracleSpec n S L Salt Ctx).Range t} (h : legitLabel m mkCtx initAcc P ℓ R t = some a) :
     idealPoint m mkCtx initAcc P ℓ R t = pure a := by
-  simp only [idealPoint, h]
+  simp only [idealPoint_apply, h]
 
 lemma idealPoint_of_legitLabel_eq_none {P : Puzzle n S L Salt} {ℓ : Labels n m S L}
     {R : Finset (PathValue n m)} {t : Point n S L Salt Ctx}
     (h : legitLabel m mkCtx initAcc P ℓ R t = none) :
     idealPoint m mkCtx initAcc P ℓ R t = (oracleSpec n S L Salt Ctx).randomOracle t := by
-  simp only [idealPoint, h]
+  simp only [idealPoint_apply, h]
 
 /-- A point already answered is answered again with the same answer, leaving the cache: a
 repeated point of a round, or of a later round against the same reached set, gets one answer. -/

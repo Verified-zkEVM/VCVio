@@ -29,12 +29,12 @@ namespace UntilBadBindTest
 abbrev spec := Unit →ₒ Bool
 
 /-- The first handler raises bad and returns false. -/
-@[expose] def first : QueryImpl spec (StateT Bool ProbComp) :=
-  fun _ => StateT.mk fun _ => pure (false, true)
+@[expose] def first : QueryImpl spec (StateT Bool ProbComp) where
+  toFun _ := StateT.mk fun _ => pure (false, true)
 
 /-- The second handler remains good and returns true. -/
-@[expose] def second : QueryImpl spec (StateT Bool ProbComp) :=
-  fun _ => StateT.mk fun _ => pure (true, false)
+@[expose] def second : QueryImpl spec (StateT Bool ProbComp) where
+  toFun _ := StateT.mk fun _ => pure (true, false)
 
 private theorem dominated :
     QueryImpl.DominatedUntilBad first second id (fun _ => True) (· = true) := by
@@ -75,8 +75,8 @@ example :
   simp [first, second, after, prEvent_norm]
 
 /-- A concrete query counter increments for every occurrence. -/
-@[expose] def counted : QueryImpl spec (StateT Nat ProbComp) :=
-  fun _ => StateT.mk fun n => pure (true, n + 1)
+@[expose, simps -isSimp] def counted : QueryImpl spec (StateT Nat ProbComp) where
+  toFun _ := StateT.mk fun n => pure (true, n + 1)
 
 /-- A normal error is data after two completed queries. -/
 @[expose] def normalError : OracleComp spec (Except String Bool) := do

@@ -54,7 +54,7 @@ variable {ι : Type u} {spec : OracleSpec ι} {α : Type u}
 
 /-- A cache read as a partial oracle: a cached query is answered from the cache and an uncached
 one fails. -/
-@[expose] def toPartialImpl (cache : spec.QueryCache) : QueryImpl spec Option := cache.toFn
+@[expose] def toPartialImpl (cache : spec.QueryCache) : QueryImpl spec Option := ⟨cache.toFn⟩
 
 @[simp] lemma toPartialImpl_apply (cache : spec.QueryCache) (t : spec.Domain) :
     cache.toPartialImpl t = cache t := rfl

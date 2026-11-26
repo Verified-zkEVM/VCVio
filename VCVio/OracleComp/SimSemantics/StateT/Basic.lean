@@ -29,14 +29,15 @@ namespace QueryImpl
 
 /-- Push an outer oracle interpretation through the base monad of a
 `StateT`-valued query implementation. -/
-@[expose]
+@[expose, simps]
 def mapStateTBase {ι₀ ι₁ : Type _}
     {spec₀ : OracleSpec ι₀} {spec₁ : OracleSpec ι₁}
     {m : Type u → Type v} [Monad m] {σ : Type u}
     (outer : QueryImpl spec₁ m)
     (inner : QueryImpl spec₀ (StateT σ (OracleComp spec₁))) :
-    QueryImpl spec₀ (StateT σ m) := fun t =>
-  StateT.mk fun s => simulateQ outer ((inner t).run s)
+    QueryImpl spec₀ (StateT σ m) where
+  toFun t :=
+    StateT.mk fun s => simulateQ outer ((inner t).run s)
 
 /-- Running a `StateT` handler and then interpreting its base oracle
 computations is the same as first mapping the handler's base through the
@@ -84,13 +85,14 @@ theorem mapStateTBase_preserves_inv {ι₀ ι₁ ι₂ : Type u}
 /-- Given implementations for oracles in `spec₁` and `spec₂` in terms of state monads for
 two different contexts `σ₁` and `σ₂`, implement the combined set `spec₁ + spec₂` in terms
 of a combined `σ₁ × σ₂` state. -/
-@[expose]
+@[expose, simps]
 def parallelStateT {ι₁ : Type u} {ι₂ : Type v}
     {spec₁ : OracleSpec.{u, w} ι₁} {spec₂ : OracleSpec.{v, w} ι₂}
     {m : Type w → Type x} [Functor m] {σ₁ σ₂ : Type w}
     (impl₁ : QueryImpl spec₁ (StateT σ₁ m))
     (impl₂ : QueryImpl spec₂ (StateT σ₂ m)) :
-    QueryImpl (spec₁ + spec₂) (StateT (σ₁ × σ₂) m)
+    QueryImpl (spec₁ + spec₂) (StateT (σ₁ × σ₂) m) where
+  toFun
   | .inl t => StateT.mk fun | (s₁, s₂) => Prod.map id (·, s₂) <$> (impl₁ t).run s₁
   | .inr t => StateT.mk fun | (s₁, s₂) => Prod.map id (s₁, ·) <$> (impl₂ t).run s₂
 
@@ -99,12 +101,13 @@ def parallelStateT {ι₁ : Type u} {ι₂ : Type v}
 The outer state is the first component of the product; the inner/base state is
 the second component. This is the state-transformer analogue of reassociating
 handler stacks into an explicit joint state before applying projection lemmas. -/
-@[expose]
+@[expose, simps -isSimp]
 def flattenStateT {ι : Type _} {spec : OracleSpec ι}
     {m : Type u → Type v} [Monad m] {σ τ : Type u}
     (impl : QueryImpl spec (StateT σ (StateT τ m))) :
-    QueryImpl spec (StateT (σ × τ) m) := fun t =>
-  StateT.mk fun (s, q) =>
+    QueryImpl spec (StateT (σ × τ) m) where
+  toFun t :=
+    StateT.mk fun (s, q) =>
     (fun ((u, s'), q') => (u, (s', q'))) <$> ((impl t).run s |>.run q)
 
 @[simp, grind =] theorem flattenStateT_liftTarget_apply_run {ι : Type _} {spec : OracleSpec ι}
@@ -112,16 +115,17 @@ def flattenStateT {ι : Type _} {spec : OracleSpec ι}
     (impl : QueryImpl spec (StateT τ m)) (t : spec.Domain) (s : σ) (q : τ) :
     ((impl.liftTarget (StateT σ (StateT τ m))).flattenStateT t).run (s, q) =
       (fun y : spec.Range t × τ => (y.1, (s, y.2))) <$> (impl t).run q := by
-  simp [flattenStateT]
+  simp [flattenStateT_apply]
 
 /-- Push a `StateT`-valued handler into a deeper `StateT` stack, leaving the new inner state
 untouched: each query runs in the original stack and its result is lifted. -/
-@[expose]
+@[expose, simps]
 def liftBase {ι : Type _} {spec : OracleSpec ι}
     {m : Type u → Type v} [Monad m] {σ τ : Type u}
     (impl : QueryImpl spec (StateT σ m)) :
-    QueryImpl spec (StateT σ (StateT τ m)) := fun t =>
-  StateT.mk fun s => liftM ((impl t).run s)
+    QueryImpl spec (StateT σ (StateT τ m)) where
+  toFun t :=
+    StateT.mk fun s => liftM ((impl t).run s)
 
 /-- Flattening a base-lifted handler leaves the new inner state untouched: the query runs in the
 original stack and the inner state is reattached unchanged. -/
@@ -130,7 +134,7 @@ theorem flattenStateT_liftBase_apply_run {ι : Type _} {spec : OracleSpec ι}
     (impl : QueryImpl spec (StateT σ m)) (t : spec.Domain) (s : σ) (q : τ) :
     ((liftBase (τ := τ) impl).flattenStateT t).run (s, q) =
       (fun z : spec.Range t × σ => (z.1, (z.2, q))) <$> (impl t).run s := by
-  simp [flattenStateT, liftBase, StateT.run_monadLift, Functor.map_map]
+  simp [flattenStateT_apply, liftBase_apply, StateT.run_monadLift, Functor.map_map]
 
 /-- Flattening a stateless handler lifted into a two-level `StateT` stack gives the same handler
 lifted into the flattened stack. -/
@@ -139,10 +143,10 @@ theorem flattenStateT_liftTarget_base {ι : Type _} {spec : OracleSpec ι}
     (impl : QueryImpl spec m) :
     (impl.liftTarget (StateT σ (StateT τ m))).flattenStateT =
       impl.liftTarget (StateT (σ × τ) m) := by
-  funext t
+  ext t : 1
   refine StateT.ext fun p => ?_
   obtain ⟨s, q⟩ := p
-  simp [flattenStateT, StateT.run_monadLift, Functor.map_map]
+  simp [flattenStateT_apply, StateT.run_monadLift, Functor.map_map]
 
 /-- A stateless handler lifted into `StateT` runs the handler and keeps the state. -/
 theorem liftTarget_apply_run {ι : Type _} {spec : OracleSpec ι}
@@ -175,34 +179,37 @@ theorem run_liftTarget_map_eq {ι : Type _} {spec : OracleSpec ι}
 
 /-- Indexed version of `QueryImpl.parallelStateT`. Note that `m` cannot vary with `t`.
 dtumad: The `Function.update` thing is nice but forces `DecidableEq`. -/
-@[expose]
+@[expose, simps]
 def piStateT {τ : Type} [DecidableEq τ] {ι : τ → Type v}
     {spec : (t : τ) → OracleSpec.{v, w} (ι t)}
     {m : Type w → Type x} [Monad m] {σ : τ → Type w}
     (impl : (t : τ) → QueryImpl (spec t) (StateT (σ t) m)) :
-    QueryImpl (OracleSpec.sigma spec) (StateT ((t : τ) → σ t) m)
+    QueryImpl (OracleSpec.sigma spec) (StateT ((t : τ) → σ t) m) where
+  toFun
   | ⟨t, q⟩ => StateT.mk fun s => Prod.map id (Function.update s t) <$> (impl t q).run (s t)
 
 /-- Lift a stateful query implementation to a `(state × Bool)`-stateful version that threads
 the boolean (bad) flag unchanged. The output value and updated state come from the
 underlying `impl`; the second `Bool` component is preserved verbatim across each query. -/
-@[expose]
+@[expose, simps]
 def withBadFlag {ι : Type u} {spec : OracleSpec.{u, v} ι}
     {m : Type v → Type w} [Functor m] {σ : Type v}
     (impl : QueryImpl spec (StateT σ m)) :
-    QueryImpl spec (StateT (σ × Bool) m) := fun t =>
-  StateT.mk fun | (s, b) => Prod.map id (·, b) <$> (impl t).run s
+    QueryImpl spec (StateT (σ × Bool) m) where
+  toFun t :=
+    StateT.mk fun | (s, b) => Prod.map id (·, b) <$> (impl t).run s
 
 /-- Lift a stateful query implementation to a `(state × Bool)`-stateful version that OR-updates
 the boolean (bad) flag with a predicate `f` evaluated on the pre-state and produced output.
 The flag is monotone: if it was already `true`, it stays `true`. -/
-@[expose]
+@[expose, simps]
 def withBadUpdate {ι : Type u} {spec : OracleSpec.{u, v} ι}
     {m : Type v → Type w} [Functor m] {σ : Type v}
     (impl : QueryImpl spec (StateT σ m))
     (f : (t : spec.Domain) → σ → spec.Range t → Bool) :
-    QueryImpl spec (StateT (σ × Bool) m) := fun t =>
-  StateT.mk fun | (s, b) => (fun (v, s') => (v, s', b || f t s v)) <$> (impl t).run s
+    QueryImpl spec (StateT (σ × Bool) m) where
+  toFun t :=
+    StateT.mk fun | (s, b) => (fun (v, s') => (v, s', b || f t s v)) <$> (impl t).run s
 
 /-- Run-shape of `withBadFlag`: the lifted implementation maps the underlying run by tagging
 each `(value, state)` pair with the unchanged bad flag `b`. -/
@@ -283,7 +290,7 @@ theorem simulateQ_flattenStateT_run
         let ((a, s'), q') ← (simulateQ impl oa).run s |>.run q
         pure (a, (s', q')) : m (α × (σ × τ))) := by
   induction oa using OracleComp.inductionOn generalizing s q <;>
-    simp_all [QueryImpl.flattenStateT]
+    simp_all [QueryImpl.flattenStateT_apply]
 
 /-- Output-only corollary of `simulateQ_flattenStateT_run`. -/
 theorem simulateQ_flattenStateT_run'

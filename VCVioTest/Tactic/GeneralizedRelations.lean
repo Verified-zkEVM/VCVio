@@ -155,7 +155,8 @@ end EqualInDistribution
 example {ι α : Type} {spec : OracleSpec ι} (oa : OracleComp spec α)
     (o₁ o₂ : QueryImpl spec Set) (h : ∀ q, o₁ q ⊆ o₂ q) :
     reachableWhen o₁ oa ⊆ reachableWhen o₂ oa := by
-  gcongr with q
+  gcongr
+  intro q
   guard_target = o₁ q ⊆ o₂ q
   exact h q
 

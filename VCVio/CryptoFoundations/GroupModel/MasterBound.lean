@@ -122,14 +122,14 @@ theorem impl_degreeLE [CommSemiring F] [DecidableEq S]
     DegreeLE D z.2 := by
   cases t with
   | add s a b =>
-    simp only [impl, push, StateT.run, modifyGet, MonadStateOf.modifyGet,
+    simp only [impl_apply, push, StateT.run, modifyGet, MonadStateOf.modifyGet,
       StateT.modifyGet] at hz
     replace hz := (mem_support_pure_iff _ _).mp hz
     subst z
     exact degreeLE_append htbl s _ ((MvPolynomial.totalDegree_add _ _).trans
       (max_le (htbl.lookup s a) (htbl.lookup s b)))
   | smul s c a =>
-    simp only [impl, push, StateT.run, modifyGet, MonadStateOf.modifyGet,
+    simp only [impl_apply, push, StateT.run, modifyGet, MonadStateOf.modifyGet,
       StateT.modifyGet] at hz
     replace hz := (mem_support_pure_iff _ _).mp hz
     subst z
@@ -140,14 +140,14 @@ theorem impl_degreeLE [CommSemiring F] [DecidableEq S]
     have he : z.2 = tbl := h
     simpa only [he] using htbl
   | lin o a =>
-    simp only [impl, push, StateT.run, modifyGet, MonadStateOf.modifyGet,
+    simp only [impl_apply, push, StateT.run, modifyGet, MonadStateOf.modifyGet,
       StateT.modifyGet] at hz
     replace hz := (mem_support_pure_iff _ _).mp hz
     subst z
     apply degreeLE_append htbl (σ.ltgt o)
     simpa only [symbolic_lin_apply] using (htbl.lookup (σ.lsrc o) a).trans (hD.1 o)
   | bil o a b =>
-    simp only [impl, push, StateT.run, modifyGet, MonadStateOf.modifyGet,
+    simp only [impl_apply, push, StateT.run, modifyGet, MonadStateOf.modifyGet,
       StateT.modifyGet] at hz
     replace hz := (mem_support_pure_iff _ _).mp hz
     subst z

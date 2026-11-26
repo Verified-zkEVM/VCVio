@@ -45,8 +45,7 @@ theorem fixedTableLoggedRun_completeTable_project {D α : Type} {R : D → Type}
           cases hc : c d with
           | none =>
               rw [QueryImpl.withCaching_run_none _ hc]
-              simp only [add_apply_inr, PFunctor.Handler.liftTarget_apply,
-                ofPFunctor_toPFunctor, QueryImpl.ofFn_apply, Functor.map_map, bind_map_left,
+              simp only [add_apply_inr, Functor.map_map, bind_map_left,
                 List.cons_append, List.nil_append, map_bind]
               have hi := ih (completeTable c g d) (c.cacheQuery d (completeTable c g d))
               rw [completeTable_cacheQuery_value] at hi

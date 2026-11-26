@@ -59,9 +59,9 @@ theorem ofExplained_two_sorts :
       let B : Adversary (ZMod 7) G Unit (CoinQuery Unit) (CoinReply (fun _ => Unit)) (Fin 2) :=
         ⟨program, cert⟩
       let M : Model (ZMod 7) (discreteSig Bool) G := ⟨(fun o => nomatch o), (fun o => nomatch o)⟩
-      let random : QueryImpl unifSpec Id := fun n => pure ⟨1 % (n + 1), Nat.mod_lt _ (by omega)⟩
+      let random : QueryImpl unifSpec Id := ⟨fun n => pure ⟨1 % (n + 1), Nat.mod_lt _ (by omega)⟩⟩
       let game : QueryImpl (plainSpec G Unit (fun _ => Unit)) Id :=
-        fun q => pure ⟨(), fun s => [(q.groups s).headD 0 + 1]⟩
+        ⟨fun q => pure ⟨(), fun s => [(q.groups s).headD 0 + 1]⟩⟩
       let input : Message Unit G := ⟨(), fun s => if s then [3, 4] else [1, 2]⟩
       (fun z => lookupMessage z.2 z.1) <$>
           (ofExplained B (fun _ => id)).run M (fun _ => id) random game input =
@@ -92,8 +92,8 @@ theorem ofExplained_private_coin :
       let B : Adversary (ZMod 7) G Unit (CoinQuery Empty) (CoinReply Empty.elim) (Fin 2) :=
         ⟨program, cert⟩
       let M : Model (ZMod 7) (discreteSig Bool) G := ⟨(fun o => nomatch o), (fun o => nomatch o)⟩
-      let random : QueryImpl unifSpec Id := fun _ => pure 0
-      let game : QueryImpl (plainSpec G Empty Empty.elim) Id := fun q => q.data.elim
+      let random : QueryImpl unifSpec Id := ⟨fun _ => pure 0⟩
+      let game : QueryImpl (plainSpec G Empty Empty.elim) Id := ⟨fun q => q.data.elim⟩
       lookupMessage ((ofExplained B (fun _ => id)).run M (fun _ => id) random game
           ⟨(), fun _ => []⟩).2
         ((ofExplained B (fun _ => id)).run M (fun _ => id) random game
@@ -120,8 +120,8 @@ theorem ofExplained_zero_coefficients :
       let B : Adversary (ZMod 7) G Unit (CoinQuery Empty) (CoinReply Empty.elim) Unit :=
         ⟨program, cert⟩
       let M : Model (ZMod 7) (discreteSig Unit) G := ⟨(fun o => nomatch o), (fun o => nomatch o)⟩
-      let random : QueryImpl unifSpec Id := fun _ => pure 0
-      let game : QueryImpl (plainSpec G Empty Empty.elim) Id := fun q => q.data.elim
+      let random : QueryImpl unifSpec Id := ⟨fun _ => pure 0⟩
+      let game : QueryImpl (plainSpec G Empty Empty.elim) Id := ⟨fun q => q.data.elim⟩
       let z := (ofExplained B (fun _ => id)).run M (fun _ => id) random game ⟨(), fun _ => [3, 5]⟩
       z.1.groups () = [2, 3, 6] ∧ z.2 () = [3, 5, 6, 0, 3, 6, 2] ∧
         (lookupMessage z.2 z.1).groups () = [6, 0, 2] := by

@@ -31,9 +31,9 @@ variable {Q : Type}
 
 /-- Answer an acceptance query from a fixed function, record the query, and charge one complete
 run. -/
-@[expose] def logCounted (g : Q → Bool) :
-    QueryImpl (rerunSpec Q Bool) (StateT (Set Q × ℕ) ProbComp) :=
-  fun q => do
+@[expose, simps] def logCounted (g : Q → Bool) :
+    QueryImpl (rerunSpec Q Bool) (StateT (Set Q × ℕ) ProbComp) where
+  toFun q := do
     modify fun s => (insert q s.1, s.2 + 1)
     pure (g q)
 
@@ -57,7 +57,7 @@ theorem log_subset_of_mem_support_logCounted (g : Q → Bool) {β : Type}
       exact ih u s hz
     | inr q =>
       simp only [simulateQ_bind, simulateQ_spec_query, QueryImpl.add_apply_inr, StateT.run_bind,
-        logCounted, StateT.run_modify, StateT.run_pure, pure_bind] at hz
+        logCounted_apply, StateT.run_modify, StateT.run_pure, pure_bind] at hz
       exact (Set.subset_insert q s.1).trans (ih (g q) _ hz)
 
 /-- Along a possible run, the answers depend only on the acceptance function's values at the
@@ -79,7 +79,7 @@ theorem mem_support_logCounted_of_eqOn (g g' : Q → Bool) {β : Type}
       exact ⟨u, hu, ih u s hz⟩
     | inr q =>
       simp only [simulateQ_bind, simulateQ_spec_query, QueryImpl.add_apply_inr, StateT.run_bind,
-        logCounted, StateT.run_modify, StateT.run_pure, pure_bind] at hz ⊢
+        logCounted_apply, StateT.run_modify, StateT.run_pure, pure_bind] at hz ⊢
       have hq : q ∈ z.2.1 :=
         log_subset_of_mem_support_logCounted g _ _ z hz (Set.mem_insert q s.1)
       rw [hg q hq]
@@ -100,7 +100,7 @@ theorem map_run_simulateQ_logCounted (g : Q → Bool) {β : Type}
         coins, QueryImpl.liftTarget_apply_run, QueryImpl.ofLift_apply, bind_map_left, map_bind, ih]
     | inr q =>
       simp only [simulateQ_bind, simulateQ_spec_query, QueryImpl.add_apply_inr, StateT.run_bind,
-        logCounted, counted, StateT.run_modify, StateT.run_pure, pure_bind]
+        logCounted_apply, counted_apply, StateT.run_modify, StateT.run_pure, pure_bind]
       exact ih (g q) _ _
 
 variable {R : Type} {C : R → Type}

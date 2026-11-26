@@ -378,7 +378,7 @@ theorem IsQueryBoundP.simulateQ_run_StateT_of_step
     (s : σ) :
     IsQueryBoundP ((simulateQ impl oa).run s) q n := by
   rw [isQueryBoundP_iff_isChargeBound] at h ⊢
-  exact h.run_liftM impl
+  exact h.run_liftM impl.toHandler
     (fun t s => (isQueryBoundP_iff_isChargeBound q _ _).1 (hstep t s)) s
 
 /-- Predicate-extensionality: replacing `p` with an equivalent predicate does not change the
@@ -691,8 +691,8 @@ theorem IsPerIndexQueryBound.simulateQ_run_of_uniform_step
     (s : σ) :
     IsPerIndexQueryBound ((simulateQ impl oa).run s) qb := by
   rw [isPerIndexQueryBound_iff_isChargeBound] at h ⊢
-  exact h.run_liftM impl (fun t s => by
-    simpa only [Pi.single, Function.update] using
+  exact h.run_liftM impl.toHandler (fun t s => by
+    simpa only [Pi.single, Function.update, QueryImpl.toHandler_apply] using
       (isPerIndexQueryBound_iff_isChargeBound _ _).1 (hstep t s)) s
 
 /-- Stateless analogue of `IsPerIndexQueryBound.simulateQ_run_of_uniform_step`: when the
@@ -846,7 +846,7 @@ theorem IsTotalQueryBound.simulateQ_run_of_step {ι' : Type u} {spec' : OracleSp
     (s : σ) :
     IsTotalQueryBound ((simulateQ impl oa).run s) n := by
   rw [isTotalQueryBound_iff_isChargeBound] at h ⊢
-  exact h.run_liftM impl
+  exact h.run_liftM impl.toHandler
     (fun t s => (isTotalQueryBound_iff_isChargeBound _ _).1 (hstep t s)) s
 
 /-- Stateless analogue of `IsTotalQueryBound.simulateQ_run_of_step`: when the simulation

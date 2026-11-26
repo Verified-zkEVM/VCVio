@@ -821,7 +821,9 @@ def demoSpec : OracleSpec.{0, 0} DemoQuery := fun _ => PUnit
 
 /-- A toy probabilistic handler with heap effects. Two branches write cells,
 and one branch reads the flag without modifying it. -/
-def demoImpl : QueryImpl demoSpec (StateT (Heap DemoCell) ProbComp)
+@[simps]
+def demoImpl : QueryImpl demoSpec (StateT (Heap DemoCell) ProbComp) where
+  toFun
   | .touchLog => logRef.writeM 1
   | .touchCache => cacheRef.writeM 1
   | .readFlag => do
@@ -842,18 +844,18 @@ theorem demoImpl_writesOnly :
   | touchLog =>
       change CellRef.SupportWritesOnly
         (logRef.writeM 1 : StateT (Heap DemoCell) ProbComp PUnit) {DemoCell.log}
-      simpa [demoSpec, demoImpl, demoWrites, logRef] using
+      simpa [demoSpec, demoImpl_apply, demoWrites, logRef] using
         CellRef.writeM_supportWritesOnly_single logRef 1
   | touchCache =>
       change CellRef.SupportWritesOnly
         (cacheRef.writeM 1 : StateT (Heap DemoCell) ProbComp PUnit) {DemoCell.cache}
-      simpa [demoSpec, demoImpl, demoWrites, cacheRef] using
+      simpa [demoSpec, demoImpl_apply, demoWrites, cacheRef] using
         CellRef.writeM_supportWritesOnly_single cacheRef 1
   | readFlag =>
       change CellRef.SupportWritesOnly
         ((do let _ ← (flagRef.readM : StateT (Heap DemoCell) ProbComp Bool)
              pure PUnit.unit) : StateT (Heap DemoCell) ProbComp PUnit) ∅
-      simpa [demoSpec, demoImpl, demoWrites] using
+      simpa [demoSpec, demoImpl_apply, demoWrites] using
         CellRef.supportWritesOnly_bind
           (CellRef.readM_supportWritesOnly_empty (m := ProbComp) flagRef)
           (fun _ => CellRef.supportWritesOnly_pure_empty (m := ProbComp) PUnit.unit)

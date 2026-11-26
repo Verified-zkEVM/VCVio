@@ -70,7 +70,7 @@ adversary's interaction, and the verification of what it returns. -/
 /-- **The experiment is its seeds, then the rest.** -/
 theorem experiment_eq (adversary : Adversary) :
     experiment adversary = (liftM seeds : OracleComp OracleWorld _) >>= afterSeeds adversary := by
-  have hsample : (simulateQ (fun i => query (spec := unifSpec) i) ($ᵗ Digest) :
+  have hsample : (simulateQ ⟨fun i => query (spec := unifSpec) i⟩ ($ᵗ Digest) :
       OracleComp OracleWorld Digest) = liftM ($ᵗ Digest : ProbComp Digest) := rfl
   unfold experiment afterSeeds seeds Scheme.keygen
   simp only [liftM_bind, bind_pure_comp, bind_assoc, liftM_map, bind_map_left, hsample]

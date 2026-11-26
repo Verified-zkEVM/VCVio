@@ -68,20 +68,20 @@ abbrev rawSpec (F M G : Type) := (unifSpec + (M × G →ₒ F)) + (M →ₒ G ×
 
 /-- Forward requests to the original Schnorr oracles. A hash request is hashed at its first
 commitment (`0` if it supplies none); group arguments of other requests are ignored. -/
-@[expose] def oracle {F M G : Type} [Zero G] :
+@[expose, simps -isSimp] def oracle {F M G : Type} [Zero G] :
     QueryImpl (plainSpec (Group G) (Request M) (Reply F M))
-      (OracleComp (rawSpec F M G)) := by
-  intro ⟨q, groups⟩
-  cases q with
-  | random n => exact do
-      let r ← (rawSpec F M G).query (.inl (.inl n))
-      pure ⟨r, fun _ => []⟩
-  | hash m => exact do
-      let c ← (rawSpec F M G).query (.inl (.inr (m, (groups ()).headD 0)))
-      pure (scalarReply c)
-  | sign m => exact do
-      let sig ← (rawSpec F M G).query (.inr m)
-      pure (signingReply sig.1 sig.2)
+      (OracleComp (rawSpec F M G)) where
+  toFun msg := show OracleComp (rawSpec F M G) (Message (Reply F M msg.data) (Group G)) from
+    match msg.data with
+    | .random n => do
+        let r ← (rawSpec F M G).query (.inl (.inl n))
+        pure ⟨r, fun _ => []⟩
+    | .hash m => do
+        let c ← (rawSpec F M G).query (.inl (.inr (m, (msg.groups ()).headD 0)))
+        pure (scalarReply c)
+    | .sign m => do
+        let sig ← (rawSpec F M G).query (.inr m)
+        pure (signingReply sig.1 sig.2)
 
 /-- Decode a final message, commitment, and scalar response. -/
 @[expose] def forgery {F M G : Type} [Zero G]
@@ -107,6 +107,6 @@ structure AlgebraicAdversary (F G M : Type) [Field F] [AddCommGroup G] [Module F
     [Field F] [SampleableType F] [AddCommGroup G] [Module F G] [DecidableEq G]
     [SampleableType G] (A : AlgebraicAdversary F G M) (g : G) :
     SignatureAlg.UnforgeableAdversary (signature F G g M) where
-  main pk := AGM.forgery <$> simulateQ (fun q => AGM.oracle q.value) (A.main (AGM.initial g pk))
+  main pk := AGM.forgery <$> simulateQ ⟨fun q => AGM.oracle q.value⟩ (A.main (AGM.initial g pk))
 
 end Schnorr

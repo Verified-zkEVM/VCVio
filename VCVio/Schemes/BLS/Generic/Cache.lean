@@ -59,8 +59,8 @@ private theorem openImpl_reductionLift_step [CommSemiring F]
     (simulateQ (openImpl (M := M) (R := R) model obs) (reductionLift q)).run tbl =
       liftM ((realImpl model obs q).run tbl) := by
   rcases q with q | n
-  · cases q <;> simp [reductionLift, openImpl, realImpl, impl, push] <;> rfl
-  · simp [reductionLift, openImpl, realImpl]
+  · cases q <;> simp [reductionLift_apply, openImpl, realImpl, push] <;> rfl
+  · simp [reductionLift_apply, openImpl, realImpl]
     rfl
 
 /-- Interpreting a lifted generic program forwards its coins to the scalar interface. -/
@@ -89,8 +89,8 @@ theorem openImpl_scalar [CommSemiring F]
     (model : Model F pairingSig V) (obs : (s : PSort) → V s → U s)
     (program : OracleComp (unifSpec + (M →ₒ R)) α) (tbl : Tbl V) :
     (simulateQ (openImpl model obs)
-      (simulateQ (fun q => ((reductionSpec F M R).query (.inr q) :
-        OracleComp (reductionSpec F M R) _)) program)).run tbl =
+      (simulateQ ⟨fun q => ((reductionSpec F M R).query (.inr q) :
+        OracleComp (reductionSpec F M R) _)⟩ program)).run tbl =
       (fun a => (a, tbl)) <$> program := by
   induction program using OracleComp.inductionOn generalizing tbl with
   | pure a => simp
@@ -124,7 +124,7 @@ theorem openImpl_smul [CommSemiring F]
     (simulateQ (openImpl (M := M) (R := R) model obs)
       (liftM ((reductionSpec F M R).query (.inl (.smul s c h))))).run tbl =
       pure ((tbl s).length, append tbl s (c • lookup tbl s h)) := by
-  simp [openImpl, impl, push, StateT.run, modifyGet, MonadStateOf.modifyGet, StateT.modifyGet]
+  simp [openImpl, push, StateT.run, modifyGet, MonadStateOf.modifyGet, StateT.modifyGet]
 
 private theorem cache_step [CommSemiring F] [DecidableEq M] [SampleableType R]
     [∀ s, AddCommMonoid (V s)] [∀ s, Module F (V s)] [∀ s, DecidableEq (U s)]
@@ -136,10 +136,8 @@ private theorem cache_step [CommSemiring F] [DecidableEq M] [SampleableType R]
   simp only [QueryImpl.flattenStateT_mapStateTBase_apply_run]
   rcases q with q | n | m
   · cases q <;>
-      simp [reductionCache, realImpl,
-        QueryImpl.parallelStateT, impl, push, Prod.map, Prod.swap] <;> rfl
-  · simp [reductionCache, realImpl,
-      QueryImpl.parallelStateT, Prod.map, Prod.swap, unifFwdImpl]
+      simp [reductionCache_apply, realImpl, push, Prod.map, Prod.swap] <;> rfl
+  · simp [reductionCache_apply, realImpl, Prod.map, Prod.swap, unifFwdImpl]
     rfl
   · change Prod.map id Prod.swap <$> ((fun y => (y.1.1, y.1.2, y.2)) <$>
         (simulateQ (realImpl model obs)
@@ -158,10 +156,8 @@ private theorem open_step [CommSemiring F] [DecidableEq M] [SampleableType R]
   simp only [QueryImpl.flattenStateT_mapStateTBase_apply_run]
   rcases q with q | q
   · cases q <;>
-      simp [openImpl,
-        QueryImpl.parallelStateT, impl, push] <;> rfl
-  · simp [openImpl,
-      QueryImpl.parallelStateT]
+      simp [openImpl, push] <;> rfl
+  · simp [openImpl]
     rfl
 
 /-- Closing the scalar oracle commutes with real group interpretation, retaining both states. -/
@@ -181,7 +177,7 @@ theorem run_reductionCache [CommSemiring F] [DecidableEq M] [SampleableType R]
     Prod.swap (fun q st => cache_step model obs q st.1 st.2) program (c, tbl)
   have hopen : ((M →ₒ R).romImpl.mapStateTBase (openImpl model obs)).flattenStateT =
       QueryImpl.parallelStateT (impl model obs ProbComp) (M →ₒ R).romImpl := by
-    funext q st
+    ext q st : 2
     exact open_step model obs q st.1 st.2
   rw [← hopen] at h
   simpa only [simulateQ_flattenStateT_run, ← QueryImpl.simulateQ_mapStateTBase_run,

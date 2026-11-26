@@ -122,8 +122,8 @@ variable {ι : Type u} {ι' : Type u'} {spec : OracleSpec.{u, v} ι}
 `impl (l.toFunA t)`, mapped by `l.toFunB t`. -/
 @[expose]
 def comapLens [Functor m] (impl : QueryImpl spec' m) (l : Lens spec.toPFunctor spec'.toPFunctor) :
-    QueryImpl spec m :=
-  fun t => l.toFunB t <$> impl (l.toFunA t)
+    QueryImpl spec m where
+  toFun t := l.toFunB t <$> impl (l.toFunA t)
 
 /-- The pulled-back handler at a query `t`. -/
 @[simp]
@@ -135,7 +135,8 @@ lemma comapLens_apply [Functor m] (impl : QueryImpl spec' m)
 @[simp]
 lemma comapLens_id [Functor m] [LawfulFunctor m] (impl : QueryImpl spec m) :
     impl.comapLens (Lens.id spec.toPFunctor) = impl := by
-  grind only [comapLens_apply, id_map']
+  ext t : 1
+  exact id_map (impl t)
 
 end QueryImpl
 
@@ -172,11 +173,11 @@ theorem liftComp_eq_mapLens [h : spec ⊂ₒ superSpec] (mx : OracleComp spec α
     liftComp mx superSpec = mx.mapLens h.toLens := by
   rw [mapLens_eq_simulateQ, liftComp_def]
   congr 1
-  funext t
+  ext t : 1
   have e : (liftM (spec.query t) : OracleQuery superSpec _) =
       ⟨h.onQuery t, h.onResponse t⟩ :=
     SubSpec.liftM_eq_lift (self := h) _
-  rw [liftM_eq_liftM_liftM (superSpec := superSpec), e]
+  rw [QueryImpl.mk_apply, liftM_eq_liftM_liftM (superSpec := superSpec), e]
   rfl
 
 variable {ι₁ : Type u} {ι₂ : Type u'} {spec₁ : OracleSpec.{u, w} ι₁}

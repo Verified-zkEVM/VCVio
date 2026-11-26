@@ -26,9 +26,9 @@ namespace BLS
   QueryCache.ofFn fun msg => (s.cache msg).map Prod.fst
 
 /-- Honest signing through the standard lazy random-oracle cache. -/
-private abbrev realSign {F G M : Type} [SMul F G] [SampleableType G] [DecidableEq M]
-    (x : F) : QueryImpl (M →ₒ G) (StateT (M →ₒ G).QueryCache ProbComp) :=
-  fun msg => (x • ·) <$> (M →ₒ G).randomOracle msg
+@[simps] private def realSign {F G M : Type} [SMul F G] [SampleableType G] [DecidableEq M]
+    (x : F) : QueryImpl (M →ₒ G) (StateT (M →ₒ G).QueryCache ProbComp) where
+  toFun msg := (x • ·) <$> (M →ₒ G).randomOracle msg
 
 /-- The real hash/signing handler, with its signing input log and random-oracle cache flattened
 into a single state. -/
@@ -39,7 +39,7 @@ into a single state. -/
       (StateT (List M) (StateT (M →ₒ G).QueryCache ProbComp)) :=
     ((M →ₒ G).romImpl.liftTarget
       (StateT (List M) (StateT (M →ₒ G).QueryCache ProbComp))) +
-      QueryImpl.appendInputLog (fun msg => (x • ·) <$> (M →ₒ G).randomOracle msg)
+      QueryImpl.appendInputLog ⟨fun msg => (x • ·) <$> (M →ₒ G).randomOracle msg⟩
   impl.flattenStateT
 
 private theorem valueCache_insert {V M : Type} [DecidableEq M]
@@ -87,7 +87,7 @@ private theorem indexedOracle_realOracle_proj {F G M : Type} [SMul F G]
       (indexedOracle (fun _ => $ᵗ G) id (x • ·) j t).run s =
       (realOracle x t).run (s.signed, valueCache s) := by
   rcases t with (t | msg) | msg
-  · simp only [realOracle, QueryImpl.flattenStateT, indexedOracle, HAdd.hAdd, QueryImpl.add,
+  · simp only [realOracle, QueryImpl.flattenStateT_apply, indexedOracle, HAdd.hAdd, QueryImpl.add,
       OracleSpec.romImpl, unifFwdImpl, QueryImpl.liftTarget_apply, QueryImpl.ofLift_apply,
       StateT.run_monadLift, monadLift_self, Functor.map_map, StateT.run_mk,
       StateT.run_map, bind_pure_comp]
@@ -100,7 +100,7 @@ private theorem indexedOracle_realOracle_proj {F G M : Type} [SMul F G]
       (indexedEntry_valueCache j msg s)
     simp only [Functor.map_map] at he
     rw [he]
-    simp only [realOracle, QueryImpl.flattenStateT, OracleSpec.romImpl,
+    simp only [realOracle, QueryImpl.flattenStateT_apply, OracleSpec.romImpl,
       QueryImpl.add_apply_inl, QueryImpl.add_apply_inr, QueryImpl.liftTarget_apply,
       StateT.run_monadLift, monadLift_self, StateT.run_map,
       StateT.run_mk, Functor.map_map, bind_pure_comp]
@@ -114,7 +114,7 @@ private theorem indexedOracle_realOracle_proj {F G M : Type} [SMul F G]
       (indexedEntry_valueCache j msg s)
     simp only [Functor.map_map] at he
     rw [he]
-    simp only [realOracle, QueryImpl.flattenStateT, QueryImpl.add_apply_inr,
+    simp only [realOracle, QueryImpl.flattenStateT_apply, QueryImpl.add_apply_inr,
       QueryImpl.appendInputLog_apply, StateT.run_bind, StateT.run_map,
       StateT.run_modify, StateT.run_monadLift, monadLift_self, StateT.run_mk,
       Functor.map_map, pure_bind, bind_pure_comp]
@@ -140,14 +140,13 @@ private theorem rom_writerTMapBase {F G₁ G₂ Gₜ M : Type}
     ((M →ₒ G₁).romImpl.liftTarget
       (WriterT (QueryLog (M →ₒ G₁)) (StateT (M →ₒ G₁).QueryCache ProbComp))) +
       QueryImpl.withLogging (realSign (M := M) (G := G₁) x) := by
-  funext t
+  ext t : 1
   rcases t with t | msg
   · ext c
-    simp only [QueryImpl.writerTMapBase, QueryImpl.add_apply_inl, QueryImpl.liftTarget_apply,
-      WriterT.mk]
+    simp only [QueryImpl.writerTMapBase_apply, QueryImpl.add_apply_inl, QueryImpl.liftTarget_apply]
     rfl
   · ext c
-    simp [QueryImpl.writerTMapBase, SignatureAlg.signingOracle, QueryImpl.withLogging_apply,
+    simp [QueryImpl.writerTMapBase_apply, SignatureAlg.signingOracle, QueryImpl.withLogging_apply,
       scheme, realSign, OracleSpec.romImpl, QueryImpl.add_apply_inr,
       StateT.run_bind, StateT.run_pure, simulateQ_bind, simulateQ_pure,
       WriterT.run_bind, WriterT.run_liftM, WriterT.run_tell, WriterT.run_pure,
@@ -174,7 +173,9 @@ theorem runWithSigningOracle_realOracle {F G₁ G₂ Gₜ M α : Type}
     (m₀ := StateT (M →ₒ G₁).QueryCache ProbComp) (realSign (M := M) (G := G₁) x) oa l
   have hr' := congrArg (fun z : StateT (M →ₒ G₁).QueryCache ProbComp _ => z.run c) hr
   simp only [StateT.run_map] at hr'
-  rw [realOracle, simulateQ_flattenStateT_run]
+  have hsign : (⟨fun msg => (x • ·) <$> (M →ₒ G₁).randomOracle msg⟩ :
+      QueryImpl (M →ₒ G₁) (StateT (M →ₒ G₁).QueryCache ProbComp)) = realSign x := rfl
+  rw [realOracle, hsign, simulateQ_flattenStateT_run]
   have hbase : @HasQuery.toQueryImpl _ (unifSpec + (M →ₒ G₁))
       (StateT (M →ₒ G₁).QueryCache ProbComp) hq = (M →ₒ G₁).romImpl := rfl
   simp only [hbase] at hr'

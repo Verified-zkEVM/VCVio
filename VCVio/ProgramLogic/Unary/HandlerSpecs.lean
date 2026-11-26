@@ -285,7 +285,8 @@ theorem loggingOracle_triple (t : spec.Domain) (log₀ : QueryLog spec) :
     ⦃ fun log => log = log₀ ⦄
       (loggingOracle t : WriterT (QueryLog spec) (OracleComp spec) (spec.Range t))
     ⦃ fun v log' => log' = log₀ ++ [⟨t, v⟩] ⦄ := by
-  vcgen [loggingOracle, QueryImpl.withLogging_apply, QueryImpl.ofLift_apply] with finish
+  rw [loggingOracle]
+  vcgen [QueryImpl.withLogging_apply, QueryImpl.ofLift_apply] with finish
 
 /-- Log monotonicity: the log only grows, as a list prefix. -/
 theorem loggingOracle_triple_prefix (t : spec.Domain) (log₀ : QueryLog spec) :

@@ -46,7 +46,9 @@ variable {vp : ValidatedParams}
 /-- The answer function of the random-oracle interface given by a deterministic primitive
 bundle: the tweakable hash and `H_msg` by `PublicHash.impl prims`, and `PRF_msg` by
 `prims.PRFmsg`. -/
-@[expose] def romAnswer (prims : Primitives vp.params) : QueryImpl (hashSpec prims.core) Id
+@[expose, simps -isSimp] def romAnswer (prims : Primitives vp.params) :
+    QueryImpl (hashSpec prims.core) Id where
+  toFun
   | .inl q => PublicHash.impl prims q
   | .inr q => prims.PRFmsg q.skPrf q.optRand q.msg
 
@@ -94,6 +96,7 @@ theorem romScheme_map_romAnswer (e : prims.SkSeed ≃ prims.Y)
       (OracleComp (unifSpec + hashSpec prims.core)) ProbComp :=
     { toMonadHom := simulateQ' (unifFwdAnswerImpl (romAnswer prims))
       map_query' := fun q => by
+        change _ = (liftM (PublicHash.impl prims q) : ProbComp _)
         simp [unifFwdAnswerImpl, romAnswer] }
   have hLift : ∀ {α : Type} (oa : ProbComp α),
       F.toMonadHom (liftM oa : OracleComp (unifSpec + hashSpec prims.core) α) = oa := by
@@ -107,7 +110,7 @@ theorem romScheme_map_romAnswer (e : prims.SkSeed ≃ prims.Y)
     intro α oa
     have hImpl : HasQuery.toQueryImpl (spec := publicHashSpec prims.core) (m := ProbComp) =
         (PublicHash.impl prims).liftTarget ProbComp := by
-      funext q
+      ext q : 1
       rfl
     rw [HasQuery.QueryHom.ofSimulateQ_apply, hImpl, simulateQ_liftTarget]
     rfl

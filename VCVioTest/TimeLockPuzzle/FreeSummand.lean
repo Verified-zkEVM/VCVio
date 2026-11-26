@@ -42,13 +42,16 @@ def prog : OracleComp (freeSpec + boolSpec.batch) Bool := do
   pure !d
 
 /-- A deterministic handler for local coins, always answering `0`. -/
-def zeroCoins : QueryImpl unifSpec Id := fun _ => (0 : Fin _)
+def zeroCoins : QueryImpl unifSpec Id where
+  toFun _ := (0 : Fin _)
 
 /-- A deterministic challenge oracle returning its query. -/
-def echoImpl : QueryImpl (Bool →ₒ Bool) Id := fun b => b
+def echoImpl : QueryImpl (Bool →ₒ Bool) Id where
+  toFun b := b
 
 /-- A deterministic handler negating its point. -/
-def notImpl : QueryImpl boolSpec Id := fun b => !b
+def notImpl : QueryImpl boolSpec Id where
+  toFun b := !b
 
 /-! ## Budgets: challenge queries are free -/
 
@@ -127,7 +130,8 @@ example : runCountingRounds ((zeroCoins + echoImpl) + notImpl).batch' prog = (tr
 
 /-- Answer the challenge oracle by a local coin, and pass local coins and rounds through. -/
 def coinChallenger :
-    QueryImpl (freeSpec + boolSpec.batch) (OracleComp (unifSpec + boolSpec.batch))
+    QueryImpl (freeSpec + boolSpec.batch) (OracleComp (unifSpec + boolSpec.batch)) where
+  toFun
   | .inl (.inl n) => liftM ((unifSpec + boolSpec.batch).query (.inl n))
   | .inl (.inr _) =>
       (fun i : Fin 2 => decide (i = 1)) <$> liftM ((unifSpec + boolSpec.batch).query (.inl 1))

@@ -56,15 +56,15 @@ variable {m : Type → Type} [Monad m]
 
 /-- Deliver the oldest request or response, threading the single shared service state. -/
 abbrev deliver (impl : QueryImpl spec (StateT S m)) (state : State Client spec α S) :=
-  RequestNetwork.deliver impl state
+  RequestNetwork.deliver impl.toHandler state
 
 /-- Execute one explicitly selected client or delivery activation. -/
 abbrev step (impl : QueryImpl spec (StateT S m)) (activation : Activation Client)
-    (state : State Client spec α S) := RequestNetwork.step impl activation state
+    (state : State Client spec α S) := RequestNetwork.step impl.toHandler activation state
 
 /-- Run a finite schedule, preserving all residual clients and pending packets. -/
 abbrev run (impl : QueryImpl spec (StateT S m)) (schedule : List (Activation Client))
-    (state : State Client spec α S) := RequestNetwork.run impl schedule state
+    (state : State Client spec α S) := RequestNetwork.run impl.toHandler schedule state
 
 export RequestNetwork (run_append emit_waiting accept_wrong_ticket run_roundtrip)
 

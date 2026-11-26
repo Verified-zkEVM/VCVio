@@ -134,7 +134,9 @@ instance instCellSpecUsedFlag : CellSpec UsedFlag where
 * **Handler.** On the first `enc m` call (`h .used = false`), sample a
   uniform key `k` *locally*, return `k ⊕ m`, and flip `.used := true`.
   On subsequent calls (`h .used = true`), short-circuit to `0#sp`. -/
-def realImpl (sp : ℕ) : QueryImpl.Stateful unifSpec (otpSpec sp) (Heap UsedFlag)
+@[simps]
+def realImpl (sp : ℕ) : QueryImpl.Stateful unifSpec (otpSpec sp) (Heap UsedFlag) where
+  toFun
   | .enc m => StateT.mk fun (h : Heap UsedFlag) =>
         if h .used then
           pure (0#sp, h)
@@ -154,7 +156,9 @@ The same identifier set as `realImpl` is shared on purpose: it lets the
 proof `realImpl_distEquiv_idealImpl` use the simple
 `QueryImpl.Stateful.DistEquiv.of_step` constructor (per-handler measure
 equality), avoiding any heap bijection bookkeeping. -/
-def idealImpl (sp : ℕ) : QueryImpl.Stateful unifSpec (otpSpec sp) (Heap UsedFlag)
+@[simps]
+def idealImpl (sp : ℕ) : QueryImpl.Stateful unifSpec (otpSpec sp) (Heap UsedFlag) where
+  toFun
   | .enc _ => StateT.mk fun (h : Heap UsedFlag) =>
         if h .used then
           pure (0#sp, h)

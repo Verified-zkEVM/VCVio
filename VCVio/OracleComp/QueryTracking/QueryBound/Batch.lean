@@ -218,7 +218,7 @@ lemma isOnlineQueryBound_queryPoint (t : ι) :
 
 /-- Answering a round point by point makes one query to `spec` per point. -/
 lemma isQueryBoundP_batch_query (ts : List ι) :
-    IsQueryBoundP (QueryImpl.batch (fun t => liftM ((free + spec).query (.inr t))) ts :
+    IsQueryBoundP (QueryImpl.batch ⟨fun t => liftM ((free + spec).query (.inr t))⟩ ts :
         OracleComp (free + spec) _) (·.isRight) ts.length := by
   induction ts with
   | nil => exact isQueryBoundP_pure _ _ _

@@ -41,7 +41,7 @@ than at the definition sites. -/
 
 attribute [fs_simp]
   simulatedNmaFwd
-  simulatedNmaUnifSim
+  simulatedNmaUnifSim_apply
   simulatedNmaRoSim
   simulatedNmaBaseSim
   simulatedNmaSigSim
@@ -162,14 +162,16 @@ private lemma nma_runProb_shiftLeft_signedFreshAdv_eq_forkH5Body
   simp only [simulateQ_bind, simulateQ_query, OracleQuery.cont_query,
     OracleQuery.input_query, id_map, StateT.run_bind, bind_assoc]
   conv_lhs =>
-    simp [cmaSim, cmaToNma, nma, nmaPublic, postKeygenCandidateAdv,
+    simp [cmaSim, cmaSignLogImpl_apply, cmaToNma_apply, nma_apply, nmaPublic_apply,
+      postKeygenCandidateAdv,
       SourceSigAlg, _root_.FiatShamir, forkH5Body, forkWrappedUniformImpl,
       forkLoggedImpl, forkInitialState, forkVerifyFreshComp, forkBaseImpl,
       simulatedNmaImpl, simulatedNmaBaseSim, cmaInit, cmaDataInit, cmaFrame,
       cmaOuterLens, cmaNmaLens, QueryImpl.Stateful.Frame.linkReshape,
       Functor.map_map]
   conv_rhs =>
-    simp [cmaSim, cmaToNma, nma, nmaPublic, postKeygenCandidateAdv,
+    simp [cmaSim, cmaSignLogImpl_apply, cmaToNma_apply, nma_apply, nmaPublic_apply,
+      postKeygenCandidateAdv,
       SourceSigAlg, _root_.FiatShamir, forkH5Body, forkWrappedUniformImpl,
       forkLoggedImpl, forkInitialState, forkVerifyFreshComp, forkBaseImpl,
       simulatedNmaImpl, simulatedNmaBaseSim, cmaInit, cmaDataInit, cmaFrame,

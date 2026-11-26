@@ -32,8 +32,8 @@ theorem isQueryBoundP_reductionLift {A : OracleComp (genSpec F pairingSig) α} {
       (fun i => isGroupOp i = true) q := by
   refine h.simulateQ_of_step ?_ ?_ <;> rintro (t | n) ht
   all_goals first
-    | (cases t <;> simp_all [reductionLift, isGroupOp, GroupModel.Query.isOp])
-    | simp_all [reductionLift, isGroupOp]
+    | (cases t <;> simp_all [reductionLift_apply, isGroupOp, GroupModel.Query.isOp])
+    | simp_all [reductionLift_apply, isGroupOp]
 
 private theorem coins_free {α : Type} (oa : ProbComp α) :
     IsQueryBoundP (liftM oa : OracleComp (genSpec F pairingSig) α)
@@ -55,8 +55,8 @@ theorem isQueryBoundP_closeReduction [DecidableEq M] [SampleableType R]
   rw [isQueryBoundP_map_iff]
   apply h.simulateQ_run_StateT_of_step
   rintro (t | n | m) cache
-  · cases t <;> simp [reductionCache, StateT.run, isGroupOp, GroupModel.Query.isOp]
-  · simp [reductionCache, StateT.run, isGroupOp]
+  · cases t <;> simp [reductionCache_apply, StateT.run, isGroupOp, GroupModel.Query.isOp]
+  · simp [reductionCache_apply, StateT.run, isGroupOp]
   · exact coins_free _
 
 /-- Per-query charges for adversarial group work, direct hashing, and signing. -/
@@ -72,15 +72,15 @@ theorem costCertificate_reductionHandler [CommSemiring F] [DecidableEq F]
     (hS : ∀ r, IsQueryBoundP (sign r) (fun i => isGroupOp i = true) cS) :
     CostCertificate (reductionHandler (M := M) z hash sign) (reductionCharge cH cS) := by
   rintro (t | t | n | t) st
-  · simp only [reductionHandler, StateT.run, bind_pure_comp, isQueryBoundP_map_iff]
+  · simp only [reductionHandler_apply, StateT.run, bind_pure_comp, isQueryBoundP_map_iff]
     have hc := isQueryBoundP_reductionLift (M := M) (R := R)
       (costCertificate_virtualizeImpl (F := F) z (.inl t) st.handles)
     convert hc using 1 <;> rfl
-  · simp [reductionHandler, StateT.run, reductionCharge, IsHashQuery, IsSignQuery, isGroupOp]
-  · simp [reductionHandler, StateT.run, reductionCharge, IsHashQuery, IsSignQuery, isGroupOp]
+  · simp [reductionHandler_apply, StateT.run, reductionCharge, IsHashQuery, IsSignQuery, isGroupOp]
+  · simp [reductionHandler_apply, StateT.run, reductionCharge, IsHashQuery, IsSignQuery, isGroupOp]
   · rcases t with ⟨m | m, groups⟩
     all_goals
-      simp only [reductionHandler, StateT.run, Bool.false_eq_true, ↓reduceIte,
+      simp only [reductionHandler_apply, StateT.run, Bool.false_eq_true, ↓reduceIte,
         bind_pure_comp, isQueryBoundP_query_bind_iff, isGroupOp, Bool.false_eq_true,
         ↓reduceIte, isQueryBoundP_map_iff]
     · simpa [reductionCharge, IsHashQuery, IsSignQuery, isGroupOp] using
@@ -124,8 +124,8 @@ theorem isQueryBoundP_reductionHandler_run [CommSemiring F] [DecidableEq F]
 
 private theorem readTranscript_free (hash sign : R → F × F)
     (tr : LinearFunctional.Transcript M) :
-    IsQueryBoundP (simulateQ (fun q => ((reductionSpec F M R).query (.inr q) :
-      OracleComp (reductionSpec F M R) _)) (LinearFunctional.readTranscript hash sign tr))
+    IsQueryBoundP (simulateQ ⟨fun q => ((reductionSpec F M R).query (.inr q) :
+      OracleComp (reductionSpec F M R) _)⟩ (LinearFunctional.readTranscript hash sign tr))
       (fun i => isGroupOp i = true) 0 := by
   induction tr with
   | nil => simp [LinearFunctional.readTranscript]

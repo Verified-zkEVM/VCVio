@@ -130,9 +130,9 @@ abbrev OW_CPA_Adversary := PK → C → OracleComp pke.OW_CPA_oracleSpec M
 /-- Implementation of the OW-CPA encryption oracle. -/
 def OW_CPA_queryImpl (pk : PK) : QueryImpl pke.OW_CPA_oracleSpec ProbComp :=
   QueryImpl.add unifSpec.passthrough
-    (fun msg => do
+    ⟨fun msg => do
       let r ← ($ᵗ R)
-      pure (pke.encrypt pk msg r))
+      pure (pke.encrypt pk msg r)⟩
 
 /-- Main one-way under chosen-plaintext attack (OW-CPA) experiment.
 
@@ -280,13 +280,13 @@ challenge is answered `false` without decrypting. -/
 def OW_PCVA_queryImpl (encAlg : AsymmEncAlg (OracleComp spec) M PK SK C)
     [DecidableEq M] [DecidableEq C] (sk : SK) (cStar : C) :
     QueryImpl (OW_PCVA_oracleSpec encAlg) (OracleComp spec) :=
-  let checkImpl : QueryImpl ((C × M) →ₒ Bool) (OracleComp spec) := fun (c, msg) => do
+  let checkImpl : QueryImpl ((C × M) →ₒ Bool) (OracleComp spec) := ⟨fun (c, msg) => do
     let msg' ← encAlg.decrypt sk c
-    return decide (msg' = some msg)
-  let validImpl : QueryImpl (C →ₒ Bool) (OracleComp spec) := fun c =>
+    return decide (msg' = some msg)⟩
+  let validImpl : QueryImpl (C →ₒ Bool) (OracleComp spec) := ⟨fun c =>
     if c = cStar then return false else do
       let msg' ← encAlg.decrypt sk c
-      return msg'.isSome
+      return msg'.isSome⟩
   spec.passthrough + (checkImpl + validImpl)
 
 /-- The validity oracle refuses the challenge ciphertext. -/

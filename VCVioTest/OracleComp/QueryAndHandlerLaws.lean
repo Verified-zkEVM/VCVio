@@ -47,11 +47,11 @@ handler sums, composition, and a passive log extension. No probability interpret
 forwarded interface is required. -/
 example (draw : OptionT ProbComp Bool) {spec : OracleSpec ι}
     (forward : QueryImpl spec (OracleComp (coinSpec + coinSpec))) :
-    let bump : QueryImpl coinSpec (StateT ℕ (OptionT ProbComp)) := fun _ => do
+    let bump : QueryImpl coinSpec (StateT ℕ (OptionT ProbComp)) := ⟨fun _ => do
       let n ← get
       set (n + 1)
-      monadLift draw
-    let idle : QueryImpl coinSpec (StateT ℕ (OptionT ProbComp)) := fun _ => pure false
+      monadLift draw⟩
+    let idle : QueryImpl coinSpec (StateT ℕ (OptionT ProbComp)) := ⟨fun _ => pure false⟩
     QueryImpl.PreservesInv
       ((bump + idle).extendState (fun _ _ _ _ (count : ℕ) => count + 1) ∘ₛ forward)
       (fun state => 0 < state.1) := by

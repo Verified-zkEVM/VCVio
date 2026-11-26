@@ -189,10 +189,11 @@ abbrev collectionSpec (thColl : TweakableHashCollection ι PkSeed Tweak Y) :
   _ →ₒ Y
 
 /-- The always-answering collection oracle for source-final-validity games. -/
+@[simps]
 def collectionOracle [DecidableEq Tweak] (tweakOf : Q → Tweak)
     (thColl : TweakableHashCollection ι PkSeed Tweak Y) (pk : PkSeed) :
-    QueryImpl (collectionSpec thColl) (StateT (State Q Tweak) ProbComp) :=
-  fun q => do
+    QueryImpl (collectionSpec thColl) (StateT (State Q Tweak) ProbComp) where
+  toFun q := do
     let st ← get
     set (st.recordCollection tweakOf q.2.1)
     return thColl.eval q.1 pk q.2.1 q.2.2
@@ -204,7 +205,7 @@ theorem collectionOracle_run [DecidableEq Tweak] (tweakOf : Q → Tweak)
     (q : (i : ι) × Tweak × thColl.Msg i) (st : State Q Tweak) :
     (collectionOracle tweakOf thColl pk q).run st =
       pure (thColl.eval q.1 pk q.2.1 q.2.2, st.recordCollection tweakOf q.2.1) := by
-  simp [collectionOracle]
+  simp [collectionOracle_apply]
 
 /-- At the empty collection (`ι := Empty`) the oracle's query type is uninhabited, so a game
 instantiated there cannot issue a collection query at all. This is what makes the stand-alone notion

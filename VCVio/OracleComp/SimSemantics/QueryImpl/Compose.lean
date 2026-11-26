@@ -31,10 +31,10 @@ variable {m : Type u → Type v} [Monad m]
 
 /-- Given an implementation of `spec` in terms of a new set of oracles `spec'`,
 and an implementation of `spec'` in terms of arbitrary `m`, implement `spec` in terms of `m`. -/
-@[expose]
+@[expose, simps]
 def compose (so' : QueryImpl spec' m) (so : QueryImpl spec (OracleComp spec')) :
-    QueryImpl spec m :=
-  fun t => simulateQ so' (so t)
+    QueryImpl spec m where
+  toFun t := simulateQ so' (so t)
 
 /-- `so' ∘ₛ so` is `QueryImpl.compose so' so`: answer each query with the `spec'`-program from
 `so`, then run that program under `so'`. -/
@@ -57,7 +57,7 @@ lemma simulateQ_simulateQ_eq_of_apply [LawfulMonad m] {so' : QueryImpl spec' m}
     (h : ∀ t, simulateQ so' (so t) = impl t) (oa : OracleComp spec α) :
     simulateQ so' (simulateQ so oa) = simulateQ impl oa := by
   rw [← simulateQ_compose]
-  exact congrArg (simulateQ · oa) (funext h)
+  exact congrArg (simulateQ · oa) (QueryImpl.ext h)
 
 @[simp]
 lemma compose_id' [LawfulMonad m] (so : QueryImpl spec m) :

@@ -31,9 +31,10 @@ namespace GroupModel
 variable {F S : Type} {σ : Sig S} {V : S → Type}
 
 /-- Translate group handles, recording each fresh handle privately, and forward private coins. -/
-@[expose] def virtualizeImpl [DecidableEq S] (z : S → Handle) :
+@[expose, simps] def virtualizeImpl [DecidableEq S] (z : S → Handle) :
     QueryImpl (genSpec F σ) (StateT (Tbl (fun _ : S => Handle))
-      (OracleComp (genSpec F σ)))
+      (OracleComp (genSpec F σ))) where
+  toFun
   | .inl (.add s a b) => fun τ => do
       let h ← (genSpec F σ).query (.inl (.add s ((τ s).getD a (z s)) ((τ s).getD b (z s))))
       pure ((τ s).length, append τ s h)
@@ -170,7 +171,7 @@ theorem virtualize_step_wellFormed [DecidableEq S] [CommSemiring F]
       rw [mem_support_pure_iff] at hr <;>
       subst r
     all_goals first | exact wellFormed_append hw _ _ | exact hw
-  · simp only [virtualizeImpl, StateT.run] at hr
+  · simp only [virtualizeImpl_apply, StateT.run] at hr
     simp only [runGen, run, simulateQ_bind, simulateQ_pure, simulateQ_spec_query,
       StateT.run_bind, StateT.run_pure, QueryImpl.add_apply_inr] at hr
     change r ∈ support ((do
@@ -239,7 +240,7 @@ theorem virtualize_step_readBack [DecidableEq S] [CommSemiring F]
             pure ((decide (obs s (lookup T s ((τ s).getD a (z s))) =
               obs s (lookup T s ((τ s).getD b (z s)))), τ), T)
       simp only [map_pure, lookup_readBack _ (hw _).2.2]
-  · simp only [virtualizeImpl, StateT.run]
+  · simp only [virtualizeImpl_apply, StateT.run]
     simp only [runGen, run, simulateQ_bind, simulateQ_pure, simulateQ_spec_query,
       StateT.run_bind, StateT.run_pure, QueryImpl.add_apply_inr]
     change (do let b ← (liftM (unifSpec.query n) : ProbComp _)
@@ -299,10 +300,10 @@ theorem isQueryBoundP_virtualize [DecidableEq S] (z : S → Handle)
     IsQueryBoundP ((virtualize z A).run τ) (fun i => isGroupOp i = true) q := by
   apply h.simulateQ_run_of_step (impl := virtualizeImpl z) ?_ ?_ τ
   · rintro (t | n) ht τ
-    · cases t <;> simp_all [virtualizeImpl, StateT.run, isGroupOp, Query.isOp]
+    · cases t <;> simp_all [virtualizeImpl_apply, StateT.run, isGroupOp, Query.isOp]
     · simp [isGroupOp] at ht
   · rintro (t | n) ht τ
-    · cases t <;> simp_all [virtualizeImpl, StateT.run, isGroupOp, Query.isOp]
-    · simp [virtualizeImpl, StateT.run, isGroupOp]
+    · cases t <;> simp_all [virtualizeImpl_apply, StateT.run, isGroupOp, Query.isOp]
+    · simp [virtualizeImpl_apply, StateT.run, isGroupOp]
 
 end GroupModel

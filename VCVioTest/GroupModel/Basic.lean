@@ -31,8 +31,8 @@ def singleModel : Model (ZMod 7) groupSig (fun _ => ZMod 7) where
 abbrev gameSpec : OracleSpec Unit := fun _ => Handle
 
 /-- Insert three into the one-sort table. -/
-def singleGame : QueryImpl gameSpec (StateT (Tbl fun _ : Unit => ZMod 7) Id) :=
-  fun _ => push () 3
+def singleGame : QueryImpl gameSpec (StateT (Tbl fun _ : Unit => ZMod 7) Id) where
+  toFun _ := push () 3
 
 /-- Insert, add, scale, and compare values in one sort. -/
 def singleProgram : OracleComp (spec (ZMod 7) groupSig + gameSpec)
@@ -53,8 +53,8 @@ example : (run singleModel (fun _ => id) singleGame singleProgram (fun _ => [1])
   [1, 3, 4, 5] := by decide
 
 /-- A game that clears the table. -/
-def clearGame : QueryImpl gameSpec (StateT (Tbl fun _ : Unit => ZMod 7) Id) :=
-  fun _ => do set (fun _ : Unit => ([] : List (ZMod 7))); pure 0
+def clearGame : QueryImpl gameSpec (StateT (Tbl fun _ : Unit => ZMod 7) Id) where
+  toFun _ := do set (fun _ : Unit => ([] : List (ZMod 7))); pure 0
 
 /-- A run whose game clears the table does not extend it, so `run_extends` needs its hypothesis
 on the game. -/
@@ -75,8 +75,8 @@ def pairingTable : Tbl (fun _ : PSort => ZMod 7)
 
 /-- Insert four into the second source sort. -/
 def pairingGame :
-    QueryImpl gameSpec (StateT (Tbl fun _ : PSort => ZMod 7) Id) :=
-  fun _ => push .g₂ 4
+    QueryImpl gameSpec (StateT (Tbl fun _ : PSort => ZMod 7) Id) where
+  toFun _ := push .g₂ 4
 
 /-- Pairing queries together with a table-inserting game oracle. -/
 abbrev pairingQueries := spec (ZMod 7) pairingIsoSig + gameSpec

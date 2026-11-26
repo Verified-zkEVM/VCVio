@@ -222,13 +222,14 @@ abbrev ActorSignature (Message Cipher Random SendKey ReceiveKey Memory Advice : 
     | .receiver, ⟨_, .inr delivered⟩ => .inl ⟨.environment, ⟨(), .inr delivered⟩⟩
   ingress packet := packet.1.elim
   handler
-    | .environment, .choose => env.choose
-    | .environment, .advise input ciphertext => env.advise input.1 input.2 ciphertext
-    | .environment, .observe input ciphertext delivered =>
-      env.observe input.1 input.2 ciphertext delivered
-    | .setup, _ => draw
-    | .adversary, input => adversary.allow input.1 input.2
-    | .sender, operation | .channel, operation | .receiver, operation => operation.elim
+    | .environment => ⟨fun
+        | .choose => env.choose
+        | .advise input ciphertext => env.advise input.1 input.2 ciphertext
+        | .observe input ciphertext delivered =>
+          env.observe input.1 input.2 ciphertext delivered⟩
+    | .setup => ⟨fun _ => draw⟩
+    | .adversary => ⟨fun input => adversary.allow input.1 input.2⟩
+    | .sender | .channel | .receiver => ⟨fun operation => operation.elim⟩
 
 /-- A finite closed assembly of the six actual actors. -/
 @[expose] def assembly (encoding : Encoding Message Cipher Random SendKey ReceiveKey)

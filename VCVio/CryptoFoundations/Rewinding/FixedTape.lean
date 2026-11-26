@@ -40,8 +40,9 @@ abbrev Cursor := ℕ → ℕ
 @[expose] def advance (c : Cursor) (q : ℕ) : Cursor := Function.update c q (c q + 1)
 
 /-- Read the next private-tape entry, sampling and retaining it on first use. -/
-@[expose] def answer : QueryImpl unifSpec (StateT (tapeSpec.QueryCache × Cursor) ProbComp) :=
-  fun q => StateT.mk fun s =>
+@[expose, simps]
+def answer : QueryImpl unifSpec (StateT (tapeSpec.QueryCache × Cursor) ProbComp) where
+  toFun q := StateT.mk fun s =>
     (fun z => (z.1, (z.2, advance s.2 q))) <$> (tapeSpec.randomOracle (q, s.2 q)).run s.1
 
 /-- The tape step is a lazy random-oracle lookup followed by a deterministic cursor update. -/

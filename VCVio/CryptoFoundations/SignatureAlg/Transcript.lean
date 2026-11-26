@@ -283,7 +283,7 @@ theorem exists_mem_support_run_sign_of_mem_log {σ : Type} [Preorder σ]
     exists_mem_support_run_of_mem_support_run_unforgeableTranscriptExperiment so adv hz
   obtain ⟨t₁, t₂, -, ht₂, hmem⟩ :=
     QueryImpl.exists_le_mem_support_run_of_mem_log_add_withLogging so hmono
-      (sigAlg.sign z.1.pk z.1.sk) (adv.main z.1.pk) hf he
+      ⟨sigAlg.sign z.1.pk z.1.sk⟩ (adv.main z.1.pk) hf he
   exact ⟨t₁, t₂, ht₂.trans (hmono _ _ (z.1.verified, z.2) hv), hmem⟩
 
 /-- **Invariants of the signing stage.** Let `I` be a predicate on a signing log and the state of
@@ -303,7 +303,7 @@ theorem holds_of_mem_support_run_runWithSigningOracle {σ : Type}
     (hz : z ∈ support ((simulateQ so (sigAlg.runWithSigningOracle pk sk oa)).run s₀)) :
     I z.1.2 z.2 := by
   simpa only [List.nil_append] using
-    QueryImpl.holds_of_mem_support_run_add_withLogging so (sigAlg.sign pk sk) I hamb hsign hoa h₀ hz
+    QueryImpl.holds_of_mem_support_run_add_withLogging so ⟨sigAlg.sign pk sk⟩ I hamb hsign hoa h₀ hz
 
 /-- **Invariants of the transcript experiment.** Let `I pk sk log s` be a predicate on a key pair,
 a signing log and the state of a stateful interpretation of the ambient oracles. Suppose key

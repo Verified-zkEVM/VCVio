@@ -29,13 +29,13 @@ theorem idealImpl_cache_le (input : (pub.withDerivations X R).Domain)
     (initial : SplitCache pub X R) (z : (pub.withDerivations X R).Range input × SplitCache pub X R)
     (supported : z ∈ support ((idealImpl pub X R input).run initial)) : initial ≤ z.2 := by
   rcases input with (draw | backend) | label
-  · simp only [idealImpl, StateT.run_mk, support_map, Set.mem_image] at supported
+  · simp only [idealImpl_apply, StateT.run_mk, support_map, Set.mem_image] at supported
     obtain ⟨answer, _, rfl⟩ := supported
     exact le_rfl
-  · simp only [idealImpl, StateT.run_mk, support_map, Set.mem_image] at supported
+  · simp only [idealImpl_apply, StateT.run_mk, support_map, Set.mem_image] at supported
     obtain ⟨result, reached, rfl⟩ := supported
     exact ⟨QueryImpl.withCaching_cache_le _ _ _ _ reached, le_rfl⟩
-  · simp only [idealImpl, StateT.run_mk, support_map, Set.mem_image] at supported
+  · simp only [idealImpl_apply, StateT.run_mk, support_map, Set.mem_image] at supported
     obtain ⟨result, reached, rfl⟩ := supported
     exact ⟨le_rfl, QueryImpl.withCaching_cache_le _ _ _ _ reached⟩
 

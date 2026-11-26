@@ -973,7 +973,7 @@ theorem keygenInternal_lift (secretSeed prfSeed publicSeed : Digest) :
         (Scheme.keygenInternal (m := OracleComp HashSpec) secretSeed prfSeed publicSeed)
         OracleWorld :=
   (Correctness.Naturality.keygenInternal_simulate
-    (fun input => query (spec := HashSpec) input : QueryImpl HashSpec (OracleComp OracleWorld))
+    (⟨fun input => query (spec := HashSpec) input⟩ : QueryImpl HashSpec (OracleComp OracleWorld))
     (fun _ => rfl) secretSeed prfSeed publicSeed).symm
 
 /-- **Key generation in the game's monad, run from the walk's cache, is a pure computation.** -/

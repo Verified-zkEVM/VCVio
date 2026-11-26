@@ -25,12 +25,14 @@ open OracleComp OracleSpec
 namespace VCVioTest.PreservesInv
 
 /-- Bump a counter on every query. -/
-def bumpImpl : QueryImpl (Unit →ₒ Unit) (StateT ℕ ProbComp) := fun _ => do
+def bumpImpl : QueryImpl (Unit →ₒ Unit) (StateT ℕ ProbComp) where
+  toFun _ := do
   let n ← get
   set (n + 1)
 
 /-- Replace the counter by a fresh coin's value, read as a number. -/
-def coinImpl : QueryImpl (Unit →ₒ Unit) (StateT ℕ ProbComp) := fun _ => do
+def coinImpl : QueryImpl (Unit →ₒ Unit) (StateT ℕ ProbComp) where
+  toFun _ := do
   let b ← ($ᵗ Bool : ProbComp Bool)
   set (if b then 1 else 2)
 
