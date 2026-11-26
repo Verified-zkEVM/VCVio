@@ -154,13 +154,17 @@ The fields *are* a lens. We extend `MonadLift` for two pragmatic reasons:
 
 ### LawfulSubSpec ↔ cartesian lens
 
-`LawfulSubSpec spec superSpec` (notation `spec ˡ⊂ₒ superSpec`) is a `Prop`-valued class over an instance `[spec ⊂ₒ superSpec]` requiring that **every backward fiber `onResponse t` is a bijection** (`onResponse_bijective`). This is *exactly* the `PFunctor.Lens.IsCartesian` predicate from `PolyFun.PFunctor.Lens.Cartesian`:
+For a given `[h : SubSpec spec superSpec]`, `LawfulSubSpec spec superSpec`
+(`spec ˡ⊂ₒ superSpec`) says that every backward map `h.onResponse t` is bijective.
+The instance `LawfulSubSpec.toLens_isCartesian` gives the corresponding PolyFun
+property of `h.toLens` by typeclass inference.
 
 ```lean
-def Lens.IsCartesian (l : Lens P Q) : Prop := ∀ a, Function.Bijective (l.toFunB a)
-```
+open OracleSpec
 
-The bridge lemma `LawfulSubSpec.toLens_isCartesian` is the one-line statement that the underlying lens of a `LawfulSubSpec` is cartesian.
+example {ι τ : Type} {s : OracleSpec ι} {t : OracleSpec τ}
+    [h : SubSpec s t] [LawfulSubSpec s t] : h.toLens.IsCartesian := inferInstance
+```
 
 A *cartesian* lens is a fiberwise isomorphism over an arbitrary forward map on positions. This is **strictly weaker** than `PFunctor.Lens.Equiv` (an isomorphism in the lens category), which would *also* require `onQuery` to be a bijection. We intentionally only require fiberwise bijectivity because the basic `SubSpec` instances embed a small spec into a larger one (e.g. `spec₁ ⊂ₒ (spec₁ + spec₂)` with `onQuery = Sum.inl`); these embeddings are essential and would be ruled out by `Equiv`.
 
