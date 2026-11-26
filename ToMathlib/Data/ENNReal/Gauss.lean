@@ -22,6 +22,11 @@ in a separate module that only the files that need them pull in.
   used when combining two bounded failure probabilities.
 - `ENNReal.one_sub_add_le_one_sub_mul_one_sub` — `1 - (x + y) ≤ (1 - x)(1 - y)`: the complement
   of a sum of two failure probabilities is below the product of their complements.
+- `ENNReal.one_sub_one_sub_mul_one_sub_eq_add_one_sub_mul` and `ENNReal.one_sub_add_one_sub_mul` —
+  `1 - (1 - a)(1 - b) = a + (1 - a) b` and its complement form, the algebra of affine error
+  recursions such as the rewinding threshold finder's.
+- `ENNReal.one_sub_prod_one_sub_le_sum` — `1 - ∏ (1 - aᵢ) ≤ ∑ aᵢ` over a finite set: the union
+  bound for a product of complements.
 - `ENNReal.toReal_sub_le_abs_toReal_sub` — real-valued bridge for truncated subtraction.
 - `ENNReal.gauss_sum_inv_le` and `ENNReal.gauss_sum_inv_eq` — the Gauss sum
   `∑_{k<n} k/N ≤ n²/(2N)` (and its equality variant), the arithmetic core of the
@@ -66,6 +71,48 @@ lemma one_sub_add_le_one_sub_mul_one_sub (x y : ℝ≥0∞) :
         _ = (1 - x) * (1 - y) + (x + y) := by rw [one_mul, add_assoc, add_comm y]
     · simp [tsub_eq_zero_of_le ((le_of_not_ge hy).trans le_add_self)]
   · simp [tsub_eq_zero_of_le ((le_of_not_ge hx).trans le_self_add)]
+
+/-- The union-error identity for two numbers between zero and one, in the form
+`1 - (1 - a)(1 - b) = a + (1 - a) b` used by affine error recursions. -/
+lemma one_sub_one_sub_mul_one_sub_eq_add_one_sub_mul {a b : ℝ≥0∞} (ha : a ≤ 1) (hb : b ≤ 1) :
+    1 - (1 - a) * (1 - b) = a + (1 - a) * b := by
+  apply ENNReal.sub_eq_of_eq_add' (by finiteness)
+  symm
+  calc
+    _ = a + (1 - a) * (b + (1 - b)) := by ring
+    _ = 1 := by rw [add_tsub_cancel_of_le hb, mul_one, add_tsub_cancel_of_le ha]
+
+/-- The complement of the union error `a + (1 - a) * b` is the product of the two complements. -/
+lemma one_sub_add_one_sub_mul {a b : ℝ≥0∞} (ha : a ≤ 1) (hb : b ≤ 1) :
+    1 - (a + (1 - a) * b) = (1 - a) * (1 - b) := by
+  rw [← one_sub_one_sub_mul_one_sub_eq_add_one_sub_mul ha hb]
+  apply ENNReal.sub_sub_cancel (by finiteness)
+  calc
+    _ ≤ (1 : ℝ≥0∞) * 1 :=
+      mul_le_mul' (show 1 - a ≤ 1 from tsub_le_self) (show 1 - b ≤ 1 from tsub_le_self)
+    _ = 1 := one_mul 1
+
+/-- The union bound for a product of complements: `1 - ∏ r ∈ s, (1 - a r) ≤ ∑ r ∈ s, a r`. -/
+lemma one_sub_prod_one_sub_le_sum {R : Type*} (s : Finset R) (a : R → ℝ≥0∞) :
+    1 - ∏ r ∈ s, (1 - a r) ≤ ∑ r ∈ s, a r := by
+  classical
+  induction s using Finset.induction_on with
+  | empty => simp
+  | insert j s hj ih =>
+      rw [Finset.prod_insert hj, Finset.sum_insert hj]
+      by_cases ha : 1 ≤ a j
+      · rw [tsub_eq_zero_of_le ha, zero_mul, tsub_zero]
+        exact le_add_right ha
+      · have ha' : a j ≤ 1 := (not_le.mp ha).le
+        have hP : ∏ r ∈ s, (1 - a r) ≤ 1 := Finset.prod_le_one fun r _ => tsub_le_self
+        rw [tsub_le_iff_right]
+        calc 1 ≤ ∑ r ∈ s, a r + ∏ r ∈ s, (1 - a r) := tsub_le_iff_right.mp ih
+          _ = ∑ r ∈ s, a r + ((1 - a j) * ∏ r ∈ s, (1 - a r) + a j * ∏ r ∈ s, (1 - a r)) := by
+              rw [← add_mul, tsub_add_cancel_of_le ha', one_mul]
+          _ ≤ ∑ r ∈ s, a r + ((1 - a j) * ∏ r ∈ s, (1 - a r) + a j) := by
+              gcongr
+              exact mul_le_of_le_one_right zero_le hP
+          _ = a j + ∑ r ∈ s, a r + (1 - a j) * ∏ r ∈ s, (1 - a r) := by ring
 
 /-- Real bridge for truncated `ENNReal` subtraction:
 `(a - b).toReal` is bounded by `|a.toReal - b.toReal|`. -/

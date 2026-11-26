@@ -69,9 +69,11 @@ Common instantiations:
 
 ## Universe constraints
 
-The runtime layer requires the spec and state type universes to be `0`,
-since `ProbComp : Type → Type` operates in `Type`. This is satisfied by
-concrete protocols whose move types and state types live in `Type`.
+The runtime layer requires the spec and state type universes to be `0`:
+its uniform samplers come from `SampleableType`, which is stated for types
+in `Type`, and its semantics run in a monad `m : Type → Type`. This is
+satisfied by concrete protocols whose move types and state types live in
+`Type`.
 -/
 
 @[expose] public section
