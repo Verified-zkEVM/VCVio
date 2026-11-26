@@ -132,6 +132,13 @@ noncomputable def probComp : ProbCompRuntime ProbComp where
 lemma probComp_evalDist [MeasurableSpace α] (mx : ProbComp α) :
     probComp.evalDist mx = 𝒟[mx] := rfl
 
+/-- The canonical `ProbComp` runtime's randomness capability is the identity lift. -/
+lemma probComp_toProbCompLift : probComp.toProbCompLift = ProbCompLift.id := rfl
+
+/-- The canonical `ProbComp` runtime lifts a `ProbComp` computation to itself. -/
+@[simp]
+lemma probComp_liftProbComp (mx : ProbComp α) : probComp.liftProbComp mx = mx := rfl
+
 /-- The canonical `ProbComp` runtime assigns every computation a probability measure. -/
 instance [MeasurableSpace α] (mx : ProbComp α) :
     MeasureTheory.IsProbabilityMeasure (probComp.evalDist mx) := by

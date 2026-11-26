@@ -7,6 +7,9 @@ The current design is intentionally **weighted-first**:
 - `QueryCost[...]` and `ExpectedQueryCost[...]` are the primary notions.
 - `Queries[...]` and `ExpectedQueries[...]` are the unit-cost specializations.
 
+For a stateful handler, `OracleComp.expectedSimulatedQueryCount_mono` lets `gcongr`
+and `apply_rw` lift an implication between charged-query predicates through the expected count.
+
 The stack is also intentionally split into:
 
 - a writer-cost layer for pathwise and expected-cost facts
@@ -18,6 +21,12 @@ The structural instrumentation owners are `Tracing.Core`, `CountingOracle.Core`,
 `LoggingOracle.Core`. Query bounds, cache/programming handlers, and enforcement build on the same
 handler machinery; their structural laws need no probability specification. `VCVio.Foundations`
 imports these owners together with the measure semantics.
+
+Import `VCVio.OracleComp.QueryTracking.QueryBound` to compare a structural budget with CSLib's
+deterministic oracle model. `OracleComp.queryUpperBound_of_isTotalQueryBound` turns a family of
+total query budgets into a `Cslib.Query.UpperBound` on `toQueryProgram` for a monotone size
+bound. Every fixed oracle follows one response path. A structural budget also covers response
+paths on which repeated queries to the same index receive different answers.
 
 Enforcement event laws use `Pr{...}[...]` and a chosen `AnswerMeasure`, with discrete query-answer
 spaces to interpret arbitrary oracle continuations. They do not require uniform sampling or
@@ -78,6 +87,23 @@ agree on `P`, `QueryImpl.fst_map_run_simulateQ_withCaching_eq_of_allQueriesSatis
 same results, and so does
 `OracleSpec.fst_map_run_simulateQ_romImpl_eq_of_allQueriesSatisfy` in the random oracle model.
 
+## Universes
+
+`CostModel` and `WorstCaseCostBound` take the query index, the responses, the program result and
+the cost carrier in four independent universes. `WorstCaseCostBound` quantifies over completed
+paths with `PFunctor.FreeM.Path.charge`, so it never runs the program; use
+`worstCaseCostBound_iff_support_bound` or `worstCaseCostBound_iff_pathwiseCostAtMost` to move to
+the `costDist` support form.
+
+The executable layer (`addCostOracle`, `costDist`, `instrumentedRun`, `expectedCost`,
+`QueryImpl.withAddCost`, `withCost`) runs the program through `simulateQ` into `AddWriterT ω`.
+`simulateQ` puts responses and results in one universe and `AddWriterT ω m α` puts `ω` and `α` in
+one universe, so this layer keeps the index free and ties responses, results and costs together.
+Declarations that use natural-number costs (`expectedCostNat`, `CostModel.unit` bridges,
+`withUnitCost`), `ProbComp` lifts, or `Pr{…}[…]` (which evaluates `m Prop`) stay in `Type`.
+Per-index counting writes `QueryCount ι` into the writer, so there the index shares the response
+universe.
+
 ## Main Files
 
 | File | Role |
@@ -86,10 +112,10 @@ same results, and so does
 | `VCVio/OracleComp/QueryTracking/QueryCost.lean` | Generic query-cost accounting for direct-style `HasQuery.Program` computations |
 | `VCVio/OracleComp/QueryTracking/CostModel.lean` | `OracleComp`-specific facade over the generic semantics |
 | `VCVio/OracleComp/QueryTracking/CostModel/Simulation.lean` | Weighted cost bounds for actual oracle-query substitution |
+| `VCVio/OracleComp/QueryTracking/QueryBound/Weighted.lean` | Weighted charge bounds through stateful and stateless handlers, per-kind budgets, and the completed-path bound |
 | `VCVio/OracleComp/QueryTracking/DeterminedCost.lean` | Deterministic executions and singleton-response complete-path costs |
 | `VCVio/OracleComp/QueryTracking/RunLog.lean` | The query log of a run with fixed answers |
-| `VCVio/OracleComp/QueryTracking/MeasuredProgram.lean` | Named deterministic instruction programs, realization and declared budgets |
-| `VCVio/OracleComp/QueryTracking/MeasuredProgram/Composition.lean` | Sequential programs retaining both instruction traces and adding budgets |
+| `VCVio/OracleComp/QueryTracking/MeasuredProgram.lean` | PolyFun's measured programs as oracle computations: `queryImpl`, `withAddCost` runs and `WorstCaseCostBound` |
 | `VCVio/OracleComp/QueryTracking/AdaptivePrefix.lean` | Shared-ROM stopping-time bounds for an adaptive prefix followed by a transcript-dependent suffix |
 | `ToMathlib/Control/WriterT.lean` | Pathwise and output-indexed cost predicates for `AddWriterT` |
 | `ToMathlib/Probability/TailSums.lean` | Tail-sum integration for measurable Nat observables under arbitrary measures |
@@ -99,14 +125,16 @@ same results, and so does
 `WorstCaseCostBound.simulateQ` transfers a source cost bound through the actual query programs
 supplied by a `QueryImpl source (OracleComp target)`. The theorem does not thread additional
 handler-local `StateT` state between calls; the target oracle may be interpreted in a stateful
-runtime separately. Stateful query-count bounds are available in `QueryBound/Simulation.lean`; this
-weighted theorem does not supply a stateful refinement. Every completed run of each handler must
-fit that source query's charge, including all repeated target queries. The cost type may be a
-coordinate vector or any ordered additive commutative monoid; no probability interpretation is
-required. Signed weights may cancel, and idempotent or saturating addition may collapse repeated
-charges. A nonnegative, canonically ordered monoid therefore need not count operations; ordinary
-pointwise natural-number addition supplies counting arithmetic, with the observed coordinates
-and charge table still part of the accounting boundary.
+runtime separately. Stateful query-count bounds are available in `QueryBound/Simulation.lean`, and
+`isChargeBound_run_simulateQ` (`QueryBound/Weighted.lean`) transfers a weighted charge bound through
+a stateful handler. That budget also charges a query with no possible answer, which completes no
+path, so `WorstCaseCostBound` alone cannot supply it. Every completed run of each handler must fit
+that source query's charge, including all repeated target queries. The cost type may be a coordinate
+vector or any ordered additive commutative monoid; no probability interpretation is required. Signed
+weights may cancel, and idempotent or saturating addition may collapse repeated charges. A
+nonnegative, canonically ordered monoid therefore need not count operations; ordinary pointwise
+natural-number addition supplies counting arithmetic, with the observed coordinates and charge table
+still part of the accounting boundary.
 
 `mem_support_costDist_simulateQ` retains the returned value in its source support witness and
 bounds the target charge by the source charge. It supplies a support refinement, not equality of
@@ -136,7 +164,10 @@ no running-time claim about association-list lookup or the network schedule.
 [`RandomOracle/Routing.lean`](../../VCVio/OracleComp/QueryTracking/RandomOracle/Routing.lean)
 proves that injective input encodings preserve the full output measure of every adaptive
 client of an initially empty finite random oracle. The eager-table and lazy-cache forms
-share the same structural routing operation. Disjoint injective encodings of two domains
+share the same structural routing operation, `RandomOracleRouting.route` along
+`RandomOracleRouting.lens`, which
+[`RandomOracle/RoutingLens.lean`](../../VCVio/OracleComp/QueryTracking/RandomOracle/RoutingLens.lean)
+defines with only the lens API. Disjoint injective encodings of two domains
 use Mathlib's `Function.Injective.sumElim` to discharge the routing condition.
 
 [`Examples/ProgramLogic/RandomOracleRouting.lean`](../../Examples/ProgramLogic/RandomOracleRouting.lean)
@@ -257,30 +288,36 @@ Use `QueryCost` when you want:
 
 #### Named measured programs
 
-`OracleComp.MeasuredProgram` names an instruction program, its deterministic handlers, an input
-view and the instruction charges. `Realizes` equates the resulting function with the handler's
-execution; `CostAtMost` is `WorstCaseCostBound` on every view. `BudgetedProgram` bundles these
-proofs for one function. For singleton-response instruction sets, the determined-response laws
-identify the complete-path bound with the actual writer-instrumented run.
-
-`outer.comp inner` executes both instruction programs and passes the actual inner result to the
-outer program. The outer view is computed without charge from that intermediate result.
-Its disjoint instruction tags retain the originating view and cost; the proved
+PolyFun's `PFunctor.FreeM.MeasuredProgram` (`PolyFun/PFunctor/Free/Cost/Measured.lean`) names a
+free program, its deterministic answers, an input view and the operation prices. `Realizes`
+equates the resulting function with the run. `CostAtMost` bounds the charge of every completed
+path on every view. `BudgetedProgram` bundles these proofs for one function. `outer.comp inner`
+runs both programs and passes the actual inner result to the outer program. The outer view is
+computed without charge from that result. Each operation keeps its view and its price, and the
 budget is the inner budget plus the outer budget. `contramap` precomposes only the input view.
+
+Its interface at a view is an `OracleSpec`, and its program is an `OracleComp`, so oracle syntax
+builds one directly. `VCVio/OracleComp/QueryTracking/MeasuredProgram.lean` relates it to query
+accounting. `queryImpl` gives the answers of a view as a `QueryImpl` into `Id`.
+`run_eq_evalWithAnswerFn` states the run as `evalWithAnswerFn`, and
+`costAtMost_iff_worstCaseCostBound` states the budget as `WorstCaseCostBound` on every view.
+`runAdd_fst_eq_run` and `CostAtMost.runAdd_le` relate the `withAddCost` run of `queryImpl` to the
+run and the budget. For singleton-response interfaces, `costAtMost_of_runAdd_le` derives
+the all-path budget from that one run. `simulateQ_withAddCost_comp` splits the instrumented run of
+a composite into the inner run and the outer run.
+
 These are weighted bounds in the declared order, not complete-execution or expected-cost
 composition. Signed weights can cancel earlier charges and a reversed order changes an upper
 bound into a lower bound. Idempotent or saturating addition may collapse repeated positive
 charges, even in a canonically ordered nonnegative monoid. Operation counts require justified
 counting arithmetic and a charge table, such as ordinary natural-number vectors with designated
-unit charges; zero charges and omitted work still need their own interpretation. Pure computation,
-view preparation and handler evaluation remain uncharged, and `BudgetedProgram.ofFun` gives every
-function a zero-instruction program. Naming retains the accounting boundary for review; naming
-alone does not justify it.
-`runAdd_fst_eq_run` identifies the writer run's result with `run`; `Realizes` identifies the
-returned function, without proving a step-by-step refinement of other host code.
-Existential measured programs give no running-time guarantee. The persistent
-`lake exe oracle_cost_tests` regression checks the actual composed output and both vector
-coordinates, alongside response-dependent query substitution.
+unit charges. Zero charges and omitted work still need their own interpretation. Pure computation,
+view preparation and answer evaluation remain uncharged, and `BudgetedProgram.ofFun` gives every
+function a zero-operation program. Naming retains the accounting boundary for review. Naming
+alone does not justify it. `Realizes` identifies the returned function, without proving a
+step-by-step refinement of other host code. Existential measured programs give no running-time
+guarantee. The persistent `lake exe oracle_cost_tests` regression checks the actual composed
+output and both vector coordinates, alongside response-dependent query substitution.
 
 `ResourceProfile` separates intrinsic work from capability usage. Its substitution algebra does
 not by itself certify implementing handlers; changed-cost/profile refinement remains a separate
