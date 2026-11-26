@@ -1,0 +1,5 @@
+# Extract into the Lean modules `Interop.Aeneas.Hax.Computation.Extraction.*` next to this crate.
+[scenario.computation]
+backend = "lean"
+project-files = false
+aeneas-args = ["-dest", "../../../..", "-subdir", "Interop/Aeneas/Hax/Computation/Extraction"]

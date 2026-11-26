@@ -421,8 +421,8 @@ This regenerates the active module root files covered by the build import check:
 `ToMathlib.lean`, `VCVio.lean`, `LatticeCrypto.lean`, `Extern.lean`,
 `HashSig.lean`, `Examples.lean`, and `VCVioTest.lean`.
 CI runs `scripts/check-imports.sh`, which regenerates the umbrellas and fails if any differs
-from the committed file. The `Interop/` package lists its library roots in `Interop/lakefile.toml`
-and has no generated umbrella.
+from the committed file. Each `Interop/` sub-project lists its library roots in its own
+`lakefile.toml` (`Interop/Aeneas/lakefile.toml`) and has no generated umbrella.
 
 ### 25. Active Lean sources use explicit module scopes
 
@@ -436,7 +436,8 @@ use opaque `public section` when downstream code does not need definitional unfo
 `backward.proofsInPublic`; make helper visibility explicit or give proof terms enough type
 information to avoid public metavariables.
 
-The `Interop/` package builds separately; its unported hax examples are not built.
+The `Interop/` sub-projects build separately, each as its own package; the modules hax extracts
+keep the form the tool emits.
 `LatticeCryptoTest.lean` remains a curated umbrella and `HashSigTest` has no root umbrella because
 their executable modules contain colliding root-level `main` declarations.
 

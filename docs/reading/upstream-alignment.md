@@ -985,7 +985,7 @@ guardrails (no native rebuilds on the PR path, no convention gating by script) b
 | Tag-pinned actions | SHA pins + dependabot (PolyFun) | **adopt**; no actionlint/shellcheck/pr-title jobs (no new gating without need) |
 | `leanOptions`: `modulesUpperCamelCase`, `style.whitespace` | already implied (`TextBased.lean:560` default; member of `mathlibStandardSet`, `Mathlib/Init.lean:84`) | **adopt** — drop |
 | No `moreServerOptions`, no per-library options, no Reservoir metadata | PolyFun, cslib, importGraph | **adopt** — small |
-| `Interop/` non-module, excluded from the build | — | **keep** (dormant by design) |
+| `Interop/` sub-projects, each its own Lake package with its own CI job | — | **keep** — one package per trusted base (`Interop/README.md`) |
 | `downstream_stub_link` job, extern-lib stub archives, isolation ratchets, nightly FFI KATs | no sibling equivalent | **keep** |
 
 ## Unused surface
