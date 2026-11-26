@@ -657,25 +657,25 @@ theorem evalDist_Exp_frozenProbe :
 
 theorem advantage_forge : advantage ProbCompRuntime.probComp forgeAdv = 1 / 2 := by
   unfold advantage
-  rw [show ProbCompRuntime.probComp.toProbCompLift = ProbCompLift.id from rfl,
+  rw [ProbCompRuntime.probComp_toProbCompLift,
     ProbCompRuntime.probComp_evalDist, evalDist_Exp_forge]
   norm_num
 
 theorem advantage_relay : advantage ProbCompRuntime.probComp relayAdv = 1 / 4 := by
   unfold advantage
-  rw [show ProbCompRuntime.probComp.toProbCompLift = ProbCompLift.id from rfl,
+  rw [ProbCompRuntime.probComp_toProbCompLift,
     ProbCompRuntime.probComp_evalDist, evalDist_Exp_relay]
   norm_num
 
 theorem advantage_relayReveal : advantage ProbCompRuntime.probComp relayRevealAdv = 0 := by
   unfold advantage
-  rw [show ProbCompRuntime.probComp.toProbCompLift = ProbCompLift.id from rfl,
+  rw [ProbCompRuntime.probComp_toProbCompLift,
     ProbCompRuntime.probComp_evalDist, evalDist_Exp_relayReveal]
   norm_num
 
 theorem advantage_reject : advantage ProbCompRuntime.probComp rejectAdv = 0 := by
   unfold advantage
-  rw [show ProbCompRuntime.probComp.toProbCompLift = ProbCompLift.id from rfl,
+  rw [ProbCompRuntime.probComp_toProbCompLift,
     ProbCompRuntime.probComp_evalDist, evalDist_Exp_reject]
   norm_num
 

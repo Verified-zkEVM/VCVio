@@ -43,8 +43,11 @@ at the data level it contains `ℓ(k-1)+1` accepting transcripts whose challenge
 Collecting replacements is a *total* lookup here: which `k - 1` accepting values a coordinate
 contributes is irrelevant to the counting argument, so the core takes the first `k - 1` in
 enumeration order. This is not the paper's oracle algorithm: the entire table is already available,
-and neither query order, exhaustion, repeated execution, nor expected cost is represented. The
-paper's expected-query clause therefore remains unproved.
+and neither query order, exhaustion, repeated execution, nor expected cost is represented. Only
+this total-table core leaves cost out. The paper's algorithm is the resampling loop `coordForkOp`
+in `CoordinateFork/Operational.lean`, and `lintegral_cost_coordForkOp_le` proves its expected-query
+clause: at most `1 + ℓ(k - 1)` lookups. `isFinder_coordFinder` in `CoordinateFork/Finder.lean`
+states the same bound as the cost clause of a black-box finder.
 -/
 
 public section
@@ -174,8 +177,10 @@ end Averaging
 /-! ## The deterministic core -/
 
 /-- The replacements available at coordinate `j`: values other than the one `c₀` already uses that
-keep the challenge accepting. -/
-@[expose] def hitSet (ρ : (ι → S) → Bool) (c₀ : ι → S) (j : ι) : Finset S :=
+keep the challenge accepting. Coordinate `i` may range over its own alphabet `S i`. -/
+@[expose] def hitSet {ι : Type} [DecidableEq ι] {S : ι → Type} [∀ i, DecidableEq (S i)]
+    [∀ i, Fintype (S i)] (ρ : ((i : ι) → S i) → Bool) (c₀ : (i : ι) → S i) (j : ι) :
+    Finset (S j) :=
   (Finset.univ.erase (c₀ j)).filter fun x => ρ (Function.update c₀ j x)
 
 /-- The `k - 1` replacements the table core keeps at coordinate `j`. Any choice would do; this one
@@ -194,15 +199,15 @@ takes the first `k - 1` in enumeration order. -/
 
 /-! ### The core's success condition -/
 
-omit [Fintype ι] in
 /-- An accepting challenge occupies one slot of each of its own columns, so the remaining
 replacements number one fewer than the column count. -/
-theorem card_hitSet_succ (hacc : ρ c₀) (j : ι) :
-    (hitSet ρ c₀ j).card + 1 = columnCount (fun c => ρ c = true) j c₀ := by
+theorem card_hitSet_succ {ι : Type} [DecidableEq ι] {S : ι → Type} [∀ i, DecidableEq (S i)]
+    [∀ i, Fintype (S i)] {ρ : ((i : ι) → S i) → Bool} {c₀ : (i : ι) → S i} (hacc : ρ c₀)
+    (j : ι) : (hitSet ρ c₀ j).card + 1 = columnCount (fun c => ρ c = true) j c₀ := by
   classical
-  have hmem : c₀ j ∈ Finset.univ.filter fun x : S => ρ (Function.update c₀ j x) :=
+  have hmem : c₀ j ∈ Finset.univ.filter fun x : S j => ρ (Function.update c₀ j x) :=
     mem_filter_coord_self (accept := fun c => ρ c = true) hacc j
-  have hpos : 0 < (Finset.univ.filter fun x : S => ρ (Function.update c₀ j x)).card :=
+  have hpos : 0 < (Finset.univ.filter fun x : S j => ρ (Function.update c₀ j x)).card :=
     Finset.card_pos.mpr ⟨_, hmem⟩
   rw [hitSet, Finset.filter_erase, Finset.card_erase_of_mem hmem]
   simp only [columnCount]
@@ -391,7 +396,8 @@ Because `GoodOutput` constrains the payload, the bound is sensitive to what the 
 actually returns — one emitting `some (ρ, ∅)` would fail it.
 
 Not proved here: existence of the paper's oracle extractor or its expected-query clause. This
-object consumes a pre-sampled acceptance table rather than querying an adversary. -/
+object consumes a pre-sampled acceptance table rather than querying an adversary. For Figure 11's
+resampling loop, `lintegral_cost_coordForkOp_le` proves the expected-query clause. -/
 theorem sub_div_le_prEvent_goodOutput_coordFork [Nonempty S] (k : ℕ)
     (D : ProbComp ((ι → S) → Bool)) :
     acceptRatio D - (Fintype.card ι : ℝ≥0∞) * (k - 1 : ℕ) / Fintype.card S

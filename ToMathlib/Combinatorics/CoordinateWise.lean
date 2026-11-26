@@ -27,6 +27,14 @@ which is the output shape targeted by coordinate-wise rewinding. `card_coordFami
 exact size `Fintype.card ι * (k - 1) + 1`, and `isCoordSpecialSound_iff_of_unique` records
 that a single coordinate recovers ordinary `k`-special soundness.
 
+The neighbour relation and the column counts take an alphabet per coordinate: a challenge is
+`c : (i : ι) → S i`, and each coordinate `j` has its own threshold `k j`. A *block star*
+(`IsBlockSpecialSound`) is a centre with `k j - 1` neighbours at every `j`, and `neighbourFamily`
+builds one from a centre and per-coordinate neighbour sets. The one-alphabet predicates are its
+constant case: `HasCoordNeighbours k` is `HasBlockNeighbours (fun _ => k)`, and the bridges
+`isCoordSpecialSound_iff_isBlockSpecialSound` and `coordFamily_eq_neighbourFamily` say so for the
+other two.
+
 ## Main definitions
 
 * `Function.DiffersOnlyAt j x y` — `x` and `y` differ in coordinate `j` and only there.
@@ -37,9 +45,12 @@ that a single coordinate recovers ordinary `k`-special soundness.
   whose challenges form such a set.
 * `CoordinateWise.coordFamily e A` — the challenge set with centre `e` whose coordinate-`j`
   neighbours replace `e j` by each value of `A j`.
+* `CoordinateWise.HasBlockNeighbours k X`, `CoordinateWise.IsBlockSpecialSound k X` — the same
+  with an alphabet `S j` and a threshold `k j` per coordinate.
+* `CoordinateWise.neighbourFamily e N` — the block star with centre `e` and neighbours `N j`.
 * `CoordinateWise.columnCount accept j c` — how many values of coordinate `j` keep `c` accepting.
 
-`HasCoordNeighbours` is a nested existential, so both predicates carry accessors — `centre`,
+`HasCoordNeighbours` unfolds to a nested existential, so both predicates carry accessors — `centre`,
 `neighbours j`, and `exists_pair` — that hand back the structure without unfolding. `exists_pair`
 is the one a consumer wants: at `2 ≤ k` it produces, in any prescribed coordinate, two accepting
 transcripts whose challenges differ there and nowhere else. That pair is what a reduction turning
@@ -57,6 +68,10 @@ time are outside this file.
 * `CoordinateWise.sub_div_le_div_card_filter` — the table success condition holds for at least an
   `ε - ℓ * (k - 1) / N` fraction of challenges, where `ε` is the accepting fraction. This is the
   counting inequality used in Lemma 7.1; it does not construct or cost an oracle extractor.
+* `CoordinateWise.div_card_filter_le_affine_pi` — with an alphabet and a threshold per
+  coordinate, the accepted fraction is at most `κ + (1 - κ) p`, where
+  `κ = ∑ j, (k j - 1) / |S j|` and `p` is the fraction of challenges that satisfy the table
+  success condition. `CoordinateWise.div_card_filter_le_affine` is its constant case.
 * `CoordinateWise.isCoordSpecialSound_coordFamily` and `CoordinateWise.card_coordFamily` — what
   the table core's candidate output must satisfy to be an `SS(S, ℓ, k)` set.
 * `CoordinateWise.le_card_of_hasCoordNeighbours` — the paper's cardinality is already forced as a
@@ -74,20 +89,21 @@ open scoped ENNReal
 
 namespace Function
 
-variable {ι S : Type*}
+variable {ι : Type*} {S : ι → Type*}
 
-/-- `x` and `y` differ in coordinate `j`, and agree in every other coordinate. -/
-@[expose] def DiffersOnlyAt (j : ι) (x y : ι → S) : Prop :=
+/-- `x` and `y` differ in coordinate `j`, and agree in every other coordinate. Coordinate `i`
+ranges over its own type `S i`; vectors `ι → S` over one type are the case of a constant `S`. -/
+@[expose] def DiffersOnlyAt (j : ι) (x y : (i : ι) → S i) : Prop :=
   x j ≠ y j ∧ ∀ j', j' ≠ j → x j' = y j'
 
 namespace DiffersOnlyAt
 
-variable {j j' : ι} {x y : ι → S}
+variable {j j' : ι} {x y : (i : ι) → S i}
 
 theorem symm (h : DiffersOnlyAt j x y) : DiffersOnlyAt j y x :=
   ⟨h.1.symm, fun j' hj' => (h.2 j' hj').symm⟩
 
-theorem irrefl (x : ι → S) (j : ι) : ¬ DiffersOnlyAt j x x := fun h => h.1 rfl
+theorem irrefl (x : (i : ι) → S i) (j : ι) : ¬ DiffersOnlyAt j x x := fun h => h.1 rfl
 
 theorem ne (h : DiffersOnlyAt j x y) : x ≠ y := fun hxy => h.1 (congrFun hxy j)
 
@@ -100,11 +116,11 @@ end DiffersOnlyAt
 
 variable [DecidableEq ι]
 
-theorem differsOnlyAt_update {j : ι} {x : ι → S} {u : S} (hu : x j ≠ u) :
+theorem differsOnlyAt_update {j : ι} {x : (i : ι) → S i} {u : S j} (hu : x j ≠ u) :
     DiffersOnlyAt j x (Function.update x j u) :=
   ⟨by simpa using hu, fun j' hj' => (Function.update_of_ne hj' _ _).symm⟩
 
-theorem differsOnlyAt_iff_exists_update {j : ι} {x y : ι → S} :
+theorem differsOnlyAt_iff_exists_update {j : ι} {x y : (i : ι) → S i} :
     DiffersOnlyAt j x y ↔ ∃ u, x j ≠ u ∧ y = Function.update x j u := by
   refine ⟨fun h => ⟨y j, h.1, funext fun j' => ?_⟩,
     fun ⟨_, hu, hy⟩ => hy ▸ differsOnlyAt_update hu⟩
@@ -118,13 +134,81 @@ namespace CoordinateWise
 
 open Function
 
+/-! ## Neighbour families with a threshold per coordinate
+
+A challenge `(j : ι) → S j` has an alphabet `S j` at every coordinate, and a *block star* with
+thresholds `k` has a centre and, at every coordinate `j`, `k j - 1` further members that differ from
+the centre at `j` and nowhere else. With one alphabet and one threshold this is
+`IsCoordSpecialSound` (`isCoordSpecialSound_iff_isBlockSpecialSound`). -/
+
+section BlockNeighbours
+
+variable {ι : Type*} [Fintype ι] {S : ι → Type*} [∀ j, DecidableEq (S j)]
+
+/-- The neighbour condition for thresholds `k`: some *centre* of `X` has, at every coordinate `j`,
+`k j - 1` further members of `X` that differ from it at `j` and nowhere else. -/
+@[expose] def HasBlockNeighbours (k : ι → ℕ) (X : Finset ((i : ι) → S i)) : Prop :=
+  ∃ e ∈ X, ∀ j : ι, ∃ J ⊆ X.erase e, J.card = k j - 1 ∧ ∀ y ∈ J, DiffersOnlyAt j e y
+
+/-- A set of challenges is a **block star** with thresholds `k` when it has the neighbour structure
+and exactly `∑ j, (k j - 1) + 1` members. -/
+@[expose] def IsBlockSpecialSound (k : ι → ℕ) (X : Finset ((i : ι) → S i)) : Prop :=
+  HasBlockNeighbours k X ∧ X.card = ∑ j, (k j - 1) + 1
+
+/-- The set made of a centre `e` and the given neighbours at each coordinate. -/
+@[expose] def neighbourFamily (e : (i : ι) → S i) (N : ι → Finset ((i : ι) → S i)) :
+    Finset ((i : ι) → S i) :=
+  insert e (Finset.univ.biUnion N)
+
+variable {k : ι → ℕ} {e : (i : ι) → S i} {N : ι → Finset ((i : ι) → S i)}
+
+theorem mem_neighbourFamily {x : (i : ι) → S i} :
+    x ∈ neighbourFamily e N ↔ x = e ∨ ∃ j, x ∈ N j := by
+  simp [neighbourFamily]
+
+theorem centre_notMem_biUnion_of_differsOnlyAt (hN : ∀ j, ∀ y ∈ N j, DiffersOnlyAt j e y) :
+    e ∉ Finset.univ.biUnion N := by
+  simp only [Finset.mem_biUnion, Finset.mem_univ, true_and]
+  rintro ⟨j, hj⟩
+  exact (hN j e hj).ne rfl
+
+omit [∀ j, DecidableEq (S j)] in
+/-- Neighbours at different coordinates are different. -/
+theorem pairwiseDisjoint_of_differsOnlyAt (hN : ∀ j, ∀ y ∈ N j, DiffersOnlyAt j e y) :
+    ∀ j ∈ (Finset.univ : Finset ι), ∀ j' ∈ (Finset.univ : Finset ι), j ≠ j' →
+      Disjoint (N j) (N j') := by
+  intro j _ j' _ hjj'
+  refine Finset.disjoint_left.mpr fun y hy hy' => hjj' ?_
+  exact (hN j y hy).coord_eq (hN j' y hy')
+
+/-- A neighbour family has exactly `∑ j, (k j - 1) + 1` challenges. -/
+theorem card_neighbourFamily (hN : ∀ j, ∀ y ∈ N j, DiffersOnlyAt j e y)
+    (hcard : ∀ j, (N j).card = k j - 1) :
+    (neighbourFamily e N).card = ∑ j, (k j - 1) + 1 := by
+  rw [neighbourFamily, Finset.card_insert_of_notMem (centre_notMem_biUnion_of_differsOnlyAt hN),
+    Finset.card_biUnion (pairwiseDisjoint_of_differsOnlyAt hN)]
+  simp [hcard]
+
+/-- **A neighbour family with thresholds `k` is a block star.** -/
+theorem isBlockSpecialSound_neighbourFamily (hN : ∀ j, ∀ y ∈ N j, DiffersOnlyAt j e y)
+    (hcard : ∀ j, (N j).card = k j - 1) : IsBlockSpecialSound k (neighbourFamily e N) := by
+  refine ⟨⟨e, Finset.mem_insert_self _ _, fun j => ⟨N j, ?_, hcard j, hN j⟩⟩,
+    card_neighbourFamily hN hcard⟩
+  intro y hy
+  exact Finset.mem_erase.mpr ⟨(hN j y hy).ne.symm, mem_neighbourFamily.mpr (Or.inr ⟨j, hy⟩)⟩
+
+end BlockNeighbours
+
+section Families
+
 variable {ι S : Type*} [DecidableEq ι] [Fintype ι] [DecidableEq S]
 variable {k : ℕ} {X : Finset (ι → S)} {e : ι → S} {A : ι → Finset S}
 
 /-- The neighbour condition: some *central* vector of `X` has, in every coordinate, `k - 1`
-further members of `X` differing from it in that coordinate and only there. -/
+further members of `X` differing from it in that coordinate and only there. It is the block
+neighbour condition with the constant threshold `k`. -/
 @[expose] def HasCoordNeighbours (k : ℕ) (X : Finset (ι → S)) : Prop :=
-  ∃ e ∈ X, ∀ j : ι, ∃ J ⊆ X.erase e, J.card = k - 1 ∧ ∀ y ∈ J, DiffersOnlyAt j e y
+  HasBlockNeighbours (fun _ => k) X
 
 /-- A finite set of challenge vectors is coordinate-wise `k`-special sound when it has the
 neighbour structure *and* exactly `ℓ * (k - 1) + 1` members.
@@ -383,182 +467,231 @@ theorem isCoordSpecialSound_iff_of_unique [Unique ι] (hk : 1 ≤ k) :
       exact ⟨fun h => hyne (funext fun j' => by rw [Subsingleton.elim j' j, ← h]),
         fun j' hj' => absurd (Subsingleton.elim j' j) hj'⟩
 
+end Families
+
+section Bridges
+
+variable {ι : Type*} [Fintype ι]
+
+/-- With one alphabet and one threshold, a block star is a coordinate-wise special sound set. -/
+theorem isCoordSpecialSound_iff_isBlockSpecialSound {S : Type*} [DecidableEq S] {k : ℕ}
+    {X : Finset (ι → S)} : IsCoordSpecialSound k X ↔ IsBlockSpecialSound (fun _ => k) X := by
+  unfold IsCoordSpecialSound IsBlockSpecialSound
+  rw [Finset.sum_const, Finset.card_univ, smul_eq_mul]
+  rfl
+
+/-- A coordinate family is the neighbour family of its centre and the replaced challenges. -/
+theorem coordFamily_eq_neighbourFamily [DecidableEq ι] {S : Type*} [DecidableEq S] (e : ι → S)
+    (A : ι → Finset S) :
+    coordFamily e A = neighbourFamily e fun j => (A j).image fun u => Function.update e j u :=
+  rfl
+
+end Bridges
+
 /-! ## Column counts
 
-Fixing every coordinate of a challenge except `j` leaves a *column* of `Fintype.card S`
-challenges. The number of accepting challenges in that column is what limits how often
-coordinate `j` can be resampled, and `card_mul_card_filter_columnCount_lt` is the whole content
-of the union-bound step in Lemma 7.1 of Fenzi–Moghaddas–Nguyen — stated as a counting inequality,
-with no probability anywhere. -/
+Coordinate `j` of a challenge ranges over its own alphabet `S j`. Fixing every coordinate except
+`j` leaves a *column* of `Fintype.card (S j)` challenges. The number of accepting challenges in
+that column is what limits how often coordinate `j` can be resampled, and
+`card_mul_card_filter_columnCount_lt` is the whole content of the union-bound step in Lemma 7.1 of
+Fenzi–Moghaddas–Nguyen — stated as a counting inequality, with no probability anywhere. The union
+bound over all coordinates, `div_card_filter_le_affine_pi`, allows a threshold `k j` per
+coordinate; the bounds with one alphabet and one threshold follow from it. -/
 
 section ColumnCount
 
-variable [Fintype S] (accept : (ι → S) → Prop) [DecidablePred accept]
+variable {ι : Type*} [DecidableEq ι] {S : ι → Type*}
 
-/-- The number of values of coordinate `j` that keep `c` accepting. -/
-@[expose] def columnCount (j : ι) (c : ι → S) : ℕ :=
-  (Finset.univ.filter fun x : S => accept (Function.update c j x)).card
-
-variable {accept}
-
-omit [Fintype ι] [DecidableEq S] in
-/-- A column count depends only on the coordinates other than `j`. -/
-@[simp] theorem columnCount_update (j : ι) (c : ι → S) (y : S) :
-    columnCount accept j (Function.update c j y) = columnCount accept j c := by
-  simp [columnCount, Function.update_idem]
-
-omit [Fintype ι] [DecidableEq S] [Fintype S] [DecidablePred accept] in
 /-- A challenge is recovered from its column representative by refilling coordinate `j`. -/
-theorem update_coord_self {j : ι} {c r : ι → S} {d : S} (h : Function.update c j d = r) :
+theorem update_coord_self {j : ι} {c r : (i : ι) → S i} {d : S j} (h : Function.update c j d = r) :
     Function.update r j (c j) = c := by
   subst h; simp
 
-omit [DecidablePred accept] in
+variable [∀ j, Fintype (S j)] (accept : ((i : ι) → S i) → Prop) [DecidablePred accept]
+
+/-- The number of values of coordinate `j` that keep `c` accepting. -/
+@[expose] def columnCount (j : ι) (c : (i : ι) → S i) : ℕ :=
+  (Finset.univ.filter fun x : S j => accept (Function.update c j x)).card
+
+variable {accept}
+
+/-- A column count depends only on the coordinates other than `j`. -/
+@[simp] theorem columnCount_update (j : ι) (c : (i : ι) → S i) (y : S j) :
+    columnCount accept j (Function.update c j y) = columnCount accept j c := by
+  simp [columnCount, Function.update_idem]
+
 /-- The challenges sharing a column representative are exactly the refillings of coordinate
 `j`. -/
-theorem filter_update_eq_image {j : ι} {d : S} {r : ι → S} (hrj : r j = d) :
-    (Finset.univ.filter fun c : ι → S => Function.update c j d = r)
-      = Finset.univ.image fun x : S => Function.update r j x := by
+theorem filter_update_eq_image [Fintype ι] [∀ j, DecidableEq (S j)] {j : ι} {d : S j}
+    {r : (i : ι) → S i} (hrj : r j = d) :
+    (Finset.univ.filter fun c : (i : ι) → S i => Function.update c j d = r)
+      = Finset.univ.image fun x : S j => Function.update r j x := by
   ext c
   simp only [Finset.mem_filter, Finset.mem_univ, true_and, Finset.mem_image]
   refine ⟨fun hc => ⟨c j, update_coord_self hc⟩, ?_⟩
   rintro ⟨x, hx⟩
   rw [← hx, Function.update_idem, ← hrj, Function.update_eq_self]
 
-omit [DecidableEq S] in
-/-- Scaled by `Fintype.card S`, the accepting challenges whose column at `j` holds fewer than `k`
-accepting values take up at most a `(k - 1) / Fintype.card S` fraction of all challenges.
+variable {c : (i : ι) → S i}
 
-Fixing the coordinates other than `j` leaves `Fintype.card S` challenges, of which exactly
+/-- An accepting challenge is one of the accepting values of each of its own columns. -/
+theorem mem_filter_coord_self (hacc : accept c) (j : ι) :
+    c j ∈ Finset.univ.filter fun x : S j => accept (Function.update c j x) := by
+  simpa [Function.update_eq_self] using hacc
+
+/-- Restricting acceptance to the challenges whose column at `j` holds fewer than `k` accepting
+values keeps the count of such a sparse column and empties every other column, since a column
+count is constant along its column. -/
+theorem columnCount_restrict (j : ι) (k : ℕ) (c : (i : ι) → S i) :
+    columnCount (fun c => accept c ∧ columnCount accept j c < k) j c =
+      if columnCount accept j c < k then columnCount accept j c else 0 := by
+  change (Finset.univ.filter fun x : S j =>
+      accept (Function.update c j x) ∧ columnCount accept j (Function.update c j x) < k).card = _
+  simp only [columnCount_update]
+  by_cases h : columnCount accept j c < k
+  · simp only [h, and_true, ite_true]
+    rfl
+  · simp [h]
+
+variable [Fintype ι]
+
+/-- Scaled by `Fintype.card (S j)`, the accepting challenges whose column at `j` holds fewer than
+`k` accepting values take up at most a `(k - 1) / Fintype.card (S j)` fraction of all challenges.
+
+Fixing the coordinates other than `j` leaves `Fintype.card (S j)` challenges, of which exactly
 `columnCount accept j c` are accepting; when that count is below `k` it contributes at most
 `k - 1`. -/
-theorem card_mul_card_filter_columnCount_lt [Nonempty S] (j : ι) (k : ℕ) :
-    Fintype.card S *
-        (Finset.univ.filter fun c : ι → S => accept c ∧ columnCount accept j c < k).card
-      ≤ (k - 1) * Fintype.card (ι → S) := by
+theorem card_mul_card_filter_columnCount_lt (j : ι) [Nonempty (S j)] (k : ℕ) :
+    Fintype.card (S j) *
+        (Finset.univ.filter fun c : (i : ι) → S i => accept c ∧ columnCount accept j c < k).card
+      ≤ (k - 1) * Fintype.card ((i : ι) → S i) := by
   classical
-  obtain ⟨d⟩ := (inferInstance : Nonempty S)
-  have hmaps : Set.MapsTo (fun c : ι → S => Function.update c j d)
-      ↑(Finset.univ : Finset (ι → S))
-      ↑((Finset.univ : Finset (ι → S)).image fun c => Function.update c j d) := fun c _ =>
+  obtain ⟨d⟩ := (inferInstance : Nonempty (S j))
+  have hmaps : Set.MapsTo (fun c : (i : ι) → S i => Function.update c j d)
+      ↑(Finset.univ : Finset ((i : ι) → S i))
+      ↑((Finset.univ : Finset ((i : ι) → S i)).image fun c => Function.update c j d) := fun c _ =>
     Finset.mem_coe.mpr (Finset.mem_image_of_mem _ (Finset.mem_univ c))
   -- Column representatives have their `j`-th coordinate pinned to `d`.
-  have hrj : ∀ r ∈ (Finset.univ : Finset (ι → S)).image fun c => Function.update c j d,
+  have hrj : ∀ r ∈ (Finset.univ : Finset ((i : ι) → S i)).image fun c => Function.update c j d,
       r j = d := by
     rintro r hr
     obtain ⟨c₀, -, rfl⟩ := Finset.mem_image.mp hr
     simp
-  have hcard_fiber : ∀ r ∈ (Finset.univ : Finset (ι → S)).image fun c => Function.update c j d,
-      (Finset.univ.filter fun c : ι → S => Function.update c j d = r).card = Fintype.card S :=
+  have hcard_fiber :
+      ∀ r ∈ (Finset.univ : Finset ((i : ι) → S i)).image fun c => Function.update c j d,
+      (Finset.univ.filter fun c : (i : ι) → S i => Function.update c j d = r).card =
+        Fintype.card (S j) :=
     fun r hr => by
       rw [filter_update_eq_image (hrj r hr),
         Finset.card_image_of_injective _ (Function.update_injective r j), Finset.card_univ]
   -- Every challenge lies in exactly one column, so the columns partition the whole space.
-  have htotal : Fintype.card (ι → S) =
-      ((Finset.univ : Finset (ι → S)).image fun c => Function.update c j d).card *
-        Fintype.card S := by
+  have htotal : Fintype.card ((i : ι) → S i) =
+      ((Finset.univ : Finset ((i : ι) → S i)).image fun c => Function.update c j d).card *
+        Fintype.card (S j) := by
     have hsum := Finset.card_eq_sum_card_fiberwise hmaps
     rw [Finset.card_univ] at hsum
     rw [hsum, Finset.sum_const_nat hcard_fiber]
   -- A column contributes only when it is thin, and then it contributes its own count.
-  have hbad : ∀ r ∈ (Finset.univ : Finset (ι → S)).image fun c => Function.update c j d,
-      ((Finset.univ.filter fun c : ι → S => accept c ∧ columnCount accept j c < k).filter
+  have hbad : ∀ r ∈ (Finset.univ : Finset ((i : ι) → S i)).image fun c => Function.update c j d,
+      ((Finset.univ.filter fun c : (i : ι) → S i => accept c ∧ columnCount accept j c < k).filter
         fun c => Function.update c j d = r).card ≤ k - 1 := by
     intro r _
     rcases Finset.eq_empty_or_nonempty
-        ((Finset.univ.filter fun c : ι → S => accept c ∧ columnCount accept j c < k).filter
+        ((Finset.univ.filter fun c : (i : ι) → S i => accept c ∧ columnCount accept j c < k).filter
           fun c => Function.update c j d = r) with hempty | ⟨w, hw⟩
     · simp [hempty]
     · simp only [Finset.mem_filter, Finset.mem_univ, true_and] at hw
       obtain ⟨⟨-, hcol⟩, hwrep⟩ := hw
       -- The column count is constant on a column, so the representative is thin too.
       have hcolr : columnCount accept j r < k := by rw [← hwrep]; simpa using hcol
-      have hsub : ((Finset.univ.filter fun c : ι → S =>
+      have hsub : ((Finset.univ.filter fun c : (i : ι) → S i =>
           accept c ∧ columnCount accept j c < k).filter fun c => Function.update c j d = r) ⊆
-          (Finset.univ.filter fun x : S => accept (Function.update r j x)).image
+          (Finset.univ.filter fun x : S j => accept (Function.update r j x)).image
             fun x => Function.update r j x := by
         intro c hc
         simp only [Finset.mem_filter, Finset.mem_univ, true_and] at hc
         obtain ⟨⟨hacc, -⟩, hcrep⟩ := hc
         refine Finset.mem_image.mpr ⟨c j, ?_, update_coord_self hcrep⟩
         simpa only [Finset.mem_filter, Finset.mem_univ, true_and, update_coord_self hcrep]
-      calc ((Finset.univ.filter fun c : ι → S =>
+      calc ((Finset.univ.filter fun c : (i : ι) → S i =>
               accept c ∧ columnCount accept j c < k).filter
                 fun c => Function.update c j d = r).card
-          ≤ ((Finset.univ.filter fun x : S => accept (Function.update r j x)).image
+          ≤ ((Finset.univ.filter fun x : S j => accept (Function.update r j x)).image
               fun x => Function.update r j x).card := Finset.card_le_card hsub
         _ = columnCount accept j r :=
             Finset.card_image_of_injective _ (Function.update_injective r j)
         _ ≤ k - 1 := by omega
-  -- Assemble: at most `k - 1` per column, and there are `|ι → S| / |S|` columns.
-  calc Fintype.card S *
-        (Finset.univ.filter fun c : ι → S => accept c ∧ columnCount accept j c < k).card
-      = Fintype.card S * ∑ r ∈ (Finset.univ : Finset (ι → S)).image
+  -- Assemble: at most `k - 1` per column, and there are `|(i : ι) → S i| / |S j|` columns.
+  calc Fintype.card (S j) *
+        (Finset.univ.filter fun c : (i : ι) → S i => accept c ∧ columnCount accept j c < k).card
+      = Fintype.card (S j) * ∑ r ∈ (Finset.univ : Finset ((i : ι) → S i)).image
             (fun c => Function.update c j d),
-          ((Finset.univ.filter fun c : ι → S => accept c ∧ columnCount accept j c < k).filter
+          ((Finset.univ.filter fun c : (i : ι) → S i =>
+              accept c ∧ columnCount accept j c < k).filter
             fun c => Function.update c j d = r).card := by
         rw [← Finset.card_eq_sum_card_fiberwise (fun c _ => hmaps (Finset.mem_univ c))]
-    _ ≤ Fintype.card S * ∑ _r ∈ (Finset.univ : Finset (ι → S)).image
+    _ ≤ Fintype.card (S j) * ∑ _r ∈ (Finset.univ : Finset ((i : ι) → S i)).image
             (fun c => Function.update c j d), (k - 1) :=
         Nat.mul_le_mul_left _ (Finset.sum_le_sum hbad)
-    _ = (k - 1) * (((Finset.univ : Finset (ι → S)).image
-            fun c => Function.update c j d).card * Fintype.card S) := by
+    _ = (k - 1) * (((Finset.univ : Finset ((i : ι) → S i)).image
+            fun c => Function.update c j d).card * Fintype.card (S j)) := by
         rw [Finset.sum_const_nat (m := k - 1) fun _ _ => rfl]; ring
-    _ = (k - 1) * Fintype.card (ι → S) := by rw [htotal]
+    _ = (k - 1) * Fintype.card ((i : ι) → S i) := by rw [htotal]
 
-omit [DecidableEq S] in
 /-- **Weighted column counting.** Give every accepting challenge a weight of `w` divided by its own
 column count at `j`. Each column then contributes at most `w` in total, whatever its count, because
 a column with `l` accepting values gives each of them weight `w / l`. Summed over the
-`|ι → S| / |S|` columns this is at most `w * |ι → S| / |S|`, which is the statement below with the
-division cleared.
+`|(i : ι) → S i| / |S j|` columns this is at most `w * |(i : ι) → S i| / |S j|`, which is the
+statement below with the division cleared.
 
 This is the counting content of the `𝔼[Tᵢ] ≤ k - 1` step in Lemma 7.1 of
-Fenzi–Moghaddas–Nguyen: there `w = (k - 1) * |S|`, and the weight attached to an accepting
+Fenzi–Moghaddas–Nguyen: there `w = (k - 1) * |S j|`, and the weight attached to an accepting
 challenge is the expected number of draws its coordinate resampling makes. -/
-theorem card_mul_sum_div_columnCount_le [Nonempty S] (j : ι) (w : ℝ≥0∞) :
-    (Fintype.card S : ℝ≥0∞) *
-        ∑ c : ι → S, (if accept c then w / columnCount accept j c else 0)
-      ≤ w * (Finset.univ.filter fun c : ι → S => 0 < columnCount accept j c).card := by
+theorem card_mul_sum_div_columnCount_le (j : ι) [Nonempty (S j)] (w : ℝ≥0∞) :
+    (Fintype.card (S j) : ℝ≥0∞) *
+        ∑ c : (i : ι) → S i, (if accept c then w / columnCount accept j c else 0)
+      ≤ w * (Finset.univ.filter fun c : (i : ι) → S i => 0 < columnCount accept j c).card := by
   classical
-  obtain ⟨d⟩ := (inferInstance : Nonempty S)
-  set good : Finset (ι → S) :=
-    (Finset.univ : Finset (ι → S)).filter fun c => 0 < columnCount accept j c with hgood
-  set reps : Finset (ι → S) :=
-    (Finset.univ : Finset (ι → S)).image fun c => Function.update c j d with hreps
-  have hmaps : ∀ c ∈ (Finset.univ : Finset (ι → S)), Function.update c j d ∈ reps := fun c _ =>
+  obtain ⟨d⟩ := (inferInstance : Nonempty (S j))
+  set good : Finset ((i : ι) → S i) :=
+    (Finset.univ : Finset ((i : ι) → S i)).filter fun c => 0 < columnCount accept j c with hgood
+  set reps : Finset ((i : ι) → S i) :=
+    (Finset.univ : Finset ((i : ι) → S i)).image fun c => Function.update c j d with hreps
+  have hmaps : ∀ c ∈ (Finset.univ : Finset ((i : ι) → S i)), Function.update c j d ∈ reps :=
+      fun c _ =>
     Finset.mem_image_of_mem _ (Finset.mem_univ c)
   have hrj : ∀ r ∈ reps, r j = d := by
     rintro r hr
     obtain ⟨c₀, -, rfl⟩ := Finset.mem_image.mp hr
     simp
   -- Each column contributes `w` exactly when it holds an accepting challenge, and its whole
-  -- `Fintype.card S` challenges are then counted on the right.
+  -- `Fintype.card (S j)` challenges are then counted on the right.
   have hcol : ∀ r ∈ reps,
-      (Fintype.card S : ℝ≥0∞) *
-          (∑ c ∈ (Finset.univ : Finset (ι → S)).filter fun c => Function.update c j d = r,
+      (Fintype.card (S j) : ℝ≥0∞) *
+          (∑ c ∈ (Finset.univ : Finset ((i : ι) → S i)).filter fun c => Function.update c j d = r,
             (if accept c then w / columnCount accept j c else 0))
         ≤ w * ((good.filter fun c => Function.update c j d = r).card : ℝ≥0∞) := by
     intro r hr
     have himage := filter_update_eq_image (hrj r hr)
-    have hconst : ∀ x : S, columnCount accept j (Function.update r j x) = columnCount accept j r :=
+    have hconst : ∀ x : S j,
+        columnCount accept j (Function.update r j x) = columnCount accept j r :=
       fun x => columnCount_update j r x
     rcases Nat.eq_zero_or_pos (columnCount accept j r) with hzero | hpos
     · -- An empty column has no accepting challenge: one would occupy a slot of its own column.
-      have hnone : ∀ c ∈ (Finset.univ : Finset (ι → S)).filter
+      have hnone : ∀ c ∈ (Finset.univ : Finset ((i : ι) → S i)).filter
           fun c => Function.update c j d = r, ¬ accept c := by
         intro c hc hacc
         rw [Finset.mem_filter] at hc
         have hcc : columnCount accept j c = columnCount accept j r := by
           rw [← update_coord_self hc.2, hconst]
-        have hself : c j ∈ Finset.univ.filter fun x : S => accept (Function.update c j x) := by
+        have hself : c j ∈ Finset.univ.filter fun x : S j => accept (Function.update c j x) := by
           simpa [Function.update_eq_self] using hacc
         have hpos' : 0 < columnCount accept j c := Finset.card_pos.mpr ⟨c j, hself⟩
         omega
       rw [Finset.sum_congr rfl fun c hc => ite_eq_right (hnone c hc)]
       simp
-    · -- A nonempty column contributes `w`, and all `Fintype.card S` of its challenges are good.
-      have hsum : (∑ c ∈ (Finset.univ : Finset (ι → S)).filter
+    · -- A nonempty column contributes `w`, and all `Fintype.card (S j)` of its challenges are good.
+      have hsum : (∑ c ∈ (Finset.univ : Finset ((i : ι) → S i)).filter
           fun c => Function.update c j d = r,
             (if accept c then w / columnCount accept j c else 0)) = w := by
         rw [himage, Finset.sum_image fun x _ y _ h => Function.update_injective r j h,
@@ -566,21 +699,21 @@ theorem card_mul_sum_div_columnCount_le [Nonempty S] (j : ι) (w : ℝ≥0∞) :
           nsmul_eq_mul, ← columnCount]
         exact ENNReal.mul_div_cancel (by exact_mod_cast hpos.ne') (by finiteness)
       have hset : (good.filter fun c => Function.update c j d = r)
-          = ((Finset.univ : Finset (ι → S)).filter fun c => Function.update c j d = r) := by
+          = ((Finset.univ : Finset ((i : ι) → S i)).filter fun c => Function.update c j d = r) := by
         refine Finset.ext fun c => ?_
         simp only [hgood, Finset.mem_filter, Finset.mem_univ, true_and]
         refine ⟨fun h => h.2, fun h => ⟨?_, h⟩⟩
         rw [← update_coord_self h, hconst]
         exact hpos
-      have hcard : (good.filter fun c => Function.update c j d = r).card = Fintype.card S := by
+      have hcard : (good.filter fun c => Function.update c j d = r).card = Fintype.card (S j) := by
         rw [hset, himage, Finset.card_image_of_injective _ (Function.update_injective r j),
           Finset.card_univ]
       rw [hsum, hcard]
       exact le_of_eq (mul_comm _ _)
-  calc (Fintype.card S : ℝ≥0∞) *
-        ∑ c : ι → S, (if accept c then w / columnCount accept j c else 0)
-      = ∑ r ∈ reps, (Fintype.card S : ℝ≥0∞) *
-          ∑ c ∈ (Finset.univ : Finset (ι → S)).filter fun c => Function.update c j d = r,
+  calc (Fintype.card (S j) : ℝ≥0∞) *
+        ∑ c : (i : ι) → S i, (if accept c then w / columnCount accept j c else 0)
+      = ∑ r ∈ reps, (Fintype.card (S j) : ℝ≥0∞) *
+          ∑ c ∈ (Finset.univ : Finset ((i : ι) → S i)).filter fun c => Function.update c j d = r,
             (if accept c then w / columnCount accept j c else 0) := by
         rw [← Finset.mul_sum, Finset.sum_fiberwise_of_maps_to hmaps]
     _ ≤ ∑ r ∈ reps, w * ((good.filter fun c => Function.update c j d = r).card : ℝ≥0∞) :=
@@ -589,26 +722,213 @@ theorem card_mul_sum_div_columnCount_le [Nonempty S] (j : ι) (w : ℝ≥0∞) :
         rw [← Finset.mul_sum, ← Nat.cast_sum,
           ← Finset.card_eq_sum_card_fiberwise fun c _ => hmaps c (Finset.mem_univ c)]
 
-omit [DecidableEq S] in
 /-- The cruder form: a column contributes at most `w` whether or not it holds an accepting
 challenge, so the whole space bounds the count of columns that do. -/
-theorem card_mul_sum_div_columnCount_le_card [Nonempty S] (j : ι) (w : ℝ≥0∞) :
-    (Fintype.card S : ℝ≥0∞) *
-        ∑ c : ι → S, (if accept c then w / columnCount accept j c else 0)
-      ≤ w * Fintype.card (ι → S) :=
+theorem card_mul_sum_div_columnCount_le_card (j : ι) [Nonempty (S j)] (w : ℝ≥0∞) :
+    (Fintype.card (S j) : ℝ≥0∞) *
+        ∑ c : (i : ι) → S i, (if accept c then w / columnCount accept j c else 0)
+      ≤ w * Fintype.card ((i : ι) → S i) :=
   (card_mul_sum_div_columnCount_le j w).trans <| mul_le_mul' le_rfl <| by
     exact_mod_cast Finset.card_le_card (Finset.filter_subset _ _)
 
-variable {c : ι → S}
+/-- **The refined column bound.** A column holding fewer than `k` accepting challenges contributes
+at most `k - 1` of them, and an *empty* column contributes none, so the count is proportional to
+the number of challenges whose column is nonempty rather than to the whole space.
 
-omit [Fintype ι] [DecidableEq S] in
-/-- An accepting challenge is one of the accepting values of each of its own columns. -/
-theorem mem_filter_coord_self (hacc : accept c) (j : ι) :
-    c j ∈ Finset.univ.filter fun x : S => accept (Function.update c j x) := by
-  simpa [Function.update_eq_self] using hacc
+`card_mul_card_filter_columnCount_lt` is the cruder statement, with `Fintype.card ((i : ι) → S i)`
+on the right. The refinement is what lets the loss term of §8 of Fenzi–Moghaddas–Nguyen carry
+the factor `P` — the chance that a block holds a hit at all — instead of collapsing to one. -/
+theorem card_mul_card_filter_columnCount_lt_le (j : ι) [Nonempty (S j)] (k : ℕ) :
+    (Fintype.card (S j) : ℝ≥0∞) *
+        (Finset.univ.filter fun c : (i : ι) → S i => accept c ∧ columnCount accept j c < k).card
+      ≤ ((k - 1 : ℕ) : ℝ≥0∞) *
+          (Finset.univ.filter fun c : (i : ι) → S i => 0 < columnCount accept j c).card := by
+  classical
+  refine le_trans (mul_le_mul' le_rfl ?_) (card_mul_sum_div_columnCount_le j ((k - 1 : ℕ) : ℝ≥0∞))
+  rw [← Finset.sum_boole]
+  refine Finset.sum_le_sum fun c _ => ?_
+  by_cases hc : accept c ∧ columnCount accept j c < k
+  · rw [ite_eq_left hc, ite_eq_left hc.1]
+    have hpos : 0 < columnCount accept j c :=
+      Finset.card_pos.mpr ⟨c j, mem_filter_coord_self hc.1 j⟩
+    refine (ENNReal.le_div_iff_mul_le (Or.inl (by exact_mod_cast hpos.ne'))
+      (Or.inl (by finiteness))).mpr ?_
+    rw [one_mul]
+    exact_mod_cast Nat.le_sub_one_of_lt hc.2
+  · rw [ite_eq_right hc]
+    exact zero_le
 
+/-- **The sparse column bound.** A column holding fewer than `k` accepting challenges contributes
+at most `k - 1` of them, and every one of its `Fintype.card (S j)` challenges has a sparse column
+at `j`. So the accepting challenges with a sparse column are bounded by a
+`(k - 1) / Fintype.card (S j)` fraction of the challenges with a sparse column, not of the whole
+space. -/
+theorem card_mul_card_filter_columnCount_lt_le_sparse (j : ι) [Nonempty (S j)] (k : ℕ) :
+    (Fintype.card (S j) : ℝ≥0∞) *
+        (Finset.univ.filter fun c : (i : ι) → S i => accept c ∧ columnCount accept j c < k).card
+      ≤ ((k - 1 : ℕ) : ℝ≥0∞) *
+          (Finset.univ.filter fun c : (i : ι) → S i => columnCount accept j c < k).card := by
+  classical
+  have h := card_mul_card_filter_columnCount_lt_le
+    (accept := fun c => accept c ∧ columnCount accept j c < k) j k
+  simp only [columnCount_restrict] at h
+  have hleft : (Finset.univ.filter fun c : (i : ι) → S i =>
+        (accept c ∧ columnCount accept j c < k) ∧
+        (if columnCount accept j c < k then columnCount accept j c else 0) < k) =
+      Finset.univ.filter fun c : (i : ι) → S i => accept c ∧ columnCount accept j c < k := by
+    ext c
+    simp only [Finset.mem_filter, Finset.mem_univ, true_and]
+    constructor
+    · exact fun h => h.1
+    · intro hc
+      exact ⟨hc, by rw [ite_eq_left hc.2]; exact hc.2⟩
+  have hright : (Finset.univ.filter fun c : (i : ι) → S i =>
+        0 < if columnCount accept j c < k then columnCount accept j c else 0) ⊆
+      Finset.univ.filter fun c : (i : ι) → S i => columnCount accept j c < k := by
+    intro c
+    simp only [Finset.mem_filter, Finset.mem_univ, true_and]
+    split_ifs with hc
+    · exact fun _ => hc
+    · exact fun h => absurd h (lt_irrefl 0)
+  rw [hleft] at h
+  exact h.trans (mul_le_mul' le_rfl (by exact_mod_cast Finset.card_le_card hright))
 
-omit [DecidableEq S] in
+/-- **The affine union bound**, with an alphabet and a threshold per coordinate. The accepted
+challenges exceed the good ones by at most `κ` times the challenges that are not good, where
+`κ = ∑ j, (k j - 1) / |S j|`.
+
+An accepted challenge that is not good has a sparse column at some coordinate `j`. Such challenges
+are charged to the challenges with a sparse column at `j`
+(`card_mul_card_filter_columnCount_lt_le_sparse`), and a sparse column holds no good challenge. -/
+theorem card_filter_accept_le_affine_pi [∀ j, Nonempty (S j)] (k : ι → ℕ) :
+    ((Finset.univ.filter fun c : (i : ι) → S i => accept c).card : ℝ≥0∞)
+      ≤ ((Finset.univ.filter fun c : (i : ι) → S i =>
+            accept c ∧ ∀ j, k j ≤ columnCount accept j c).card : ℝ≥0∞)
+        + (∑ j, ((k j - 1 : ℕ) : ℝ≥0∞) / (Fintype.card (S j) : ℝ≥0∞)) *
+          ((Finset.univ.filter fun c : (i : ι) → S i =>
+            ¬ (accept c ∧ ∀ j, k j ≤ columnCount accept j c)).card : ℝ≥0∞) := by
+  classical
+  set good : ((i : ι) → S i) → Prop := fun c => accept c ∧ ∀ j, k j ≤ columnCount accept j c
+    with hgood
+  have hcover : (Finset.univ.filter fun c : (i : ι) → S i => accept c) ⊆
+      (Finset.univ.filter fun c : (i : ι) → S i => good c) ∪
+        Finset.univ.biUnion fun j =>
+          Finset.univ.filter fun c : (i : ι) → S i => accept c ∧ columnCount accept j c < k j := by
+    intro c hc
+    simp only [Finset.mem_filter, Finset.mem_univ, true_and] at hc
+    by_cases hall : ∀ j, k j ≤ columnCount accept j c
+    · exact Finset.mem_union_left _ (by simp [hgood, hc, hall])
+    · push Not at hall
+      obtain ⟨j, hj⟩ := hall
+      exact Finset.mem_union_right _
+        (Finset.mem_biUnion.mpr ⟨j, Finset.mem_univ _, by simp [hc, hj]⟩)
+  have hcard : (Finset.univ.filter fun c : (i : ι) → S i => accept c).card ≤
+      (Finset.univ.filter fun c : (i : ι) → S i => good c).card
+        + ∑ j : ι, (Finset.univ.filter fun c : (i : ι) → S i =>
+            accept c ∧ columnCount accept j c < k j).card :=
+    le_trans (Finset.card_le_card hcover)
+      (le_trans (Finset.card_union_le _ _) (Nat.add_le_add_left Finset.card_biUnion_le _))
+  have hthin : ∀ j, (Finset.univ.filter fun c : (i : ι) → S i =>
+        columnCount accept j c < k j) ⊆
+      Finset.univ.filter fun c : (i : ι) → S i => ¬ good c := by
+    intro j c hc
+    simp only [Finset.mem_filter, Finset.mem_univ, true_and, hgood] at hc ⊢
+    exact fun h => absurd (h.2 j) (not_le.mpr hc)
+  have hj : ∀ j, ((Finset.univ.filter fun c : (i : ι) → S i =>
+        accept c ∧ columnCount accept j c < k j).card : ℝ≥0∞)
+      ≤ ((k j - 1 : ℕ) : ℝ≥0∞) / (Fintype.card (S j) : ℝ≥0∞) *
+          ((Finset.univ.filter fun c : (i : ι) → S i => ¬ good c).card : ℝ≥0∞) := by
+    intro j
+    have hN0 : (Fintype.card (S j) : ℝ≥0∞) ≠ 0 := by simp
+    have hNtop : (Fintype.card (S j) : ℝ≥0∞) ≠ ⊤ := ENNReal.natCast_ne_top _
+    have h' := (card_mul_card_filter_columnCount_lt_le_sparse (accept := accept) j (k j)).trans
+      (mul_le_mul' le_rfl (Nat.cast_le.mpr (Finset.card_le_card (hthin j))))
+    have hrw : ((k j - 1 : ℕ) : ℝ≥0∞) / (Fintype.card (S j) : ℝ≥0∞) *
+        ((Finset.univ.filter fun c : (i : ι) → S i => ¬ good c).card : ℝ≥0∞)
+        = ((k j - 1 : ℕ) : ℝ≥0∞) *
+          ((Finset.univ.filter fun c : (i : ι) → S i => ¬ good c).card : ℝ≥0∞)
+          / (Fintype.card (S j) : ℝ≥0∞) := by
+      simp only [div_eq_mul_inv]; ring
+    rw [hrw]
+    exact (ENNReal.le_div_iff_mul_le (Or.inl hN0) (Or.inl hNtop)).mpr (by rw [mul_comm]; exact h')
+  calc ((Finset.univ.filter fun c : (i : ι) → S i => accept c).card : ℝ≥0∞)
+      ≤ (((Finset.univ.filter fun c : (i : ι) → S i => good c).card
+          + ∑ j : ι, (Finset.univ.filter fun c : (i : ι) → S i =>
+            accept c ∧ columnCount accept j c < k j).card : ℕ) : ℝ≥0∞) := by
+        exact_mod_cast hcard
+    _ = ((Finset.univ.filter fun c : (i : ι) → S i => good c).card : ℝ≥0∞)
+          + ∑ j : ι, ((Finset.univ.filter fun c : (i : ι) → S i =>
+            accept c ∧ columnCount accept j c < k j).card : ℝ≥0∞) := by
+        push_cast; rfl
+    _ ≤ ((Finset.univ.filter fun c : (i : ι) → S i => good c).card : ℝ≥0∞)
+          + ∑ j : ι, ((k j - 1 : ℕ) : ℝ≥0∞) / (Fintype.card (S j) : ℝ≥0∞) *
+            ((Finset.univ.filter fun c : (i : ι) → S i => ¬ good c).card : ℝ≥0∞) :=
+        add_le_add le_rfl (Finset.sum_le_sum fun j _ => hj j)
+    _ = _ := by rw [Finset.sum_mul]
+
+/-- **The affine table bound**, with an alphabet and a threshold per coordinate. Write `ε` for the
+fraction of accepted challenges, `p` for the fraction of good ones, and
+`κ = ∑ j, (k j - 1) / |S j|`. Then `ε ≤ κ + (1 - κ) p`.
+
+When `κ ≥ 1` it holds because `ε ≤ 1`. Below one, `p + κ (1 - p)` and `κ + (1 - κ) p` are both
+`κ + p - κ p`. -/
+theorem div_card_filter_le_affine_pi [∀ j, Nonempty (S j)] (k : ι → ℕ) :
+    ((Finset.univ.filter fun c : (i : ι) → S i => accept c).card : ℝ≥0∞)
+        / Fintype.card ((i : ι) → S i)
+      ≤ (∑ j, ((k j - 1 : ℕ) : ℝ≥0∞) / (Fintype.card (S j) : ℝ≥0∞))
+        + (1 - ∑ j, ((k j - 1 : ℕ) : ℝ≥0∞) / (Fintype.card (S j) : ℝ≥0∞))
+          * (((Finset.univ.filter fun c : (i : ι) → S i =>
+              accept c ∧ ∀ j, k j ≤ columnCount accept j c).card : ℝ≥0∞)
+            / Fintype.card ((i : ι) → S i)) := by
+  classical
+  set T : ℝ≥0∞ := (Fintype.card ((i : ι) → S i) : ℝ≥0∞) with hT
+  set A : ℝ≥0∞ := ((Finset.univ.filter fun c : (i : ι) → S i => accept c).card : ℝ≥0∞) with hA
+  set G : ℝ≥0∞ := ((Finset.univ.filter fun c : (i : ι) → S i =>
+    accept c ∧ ∀ j, k j ≤ columnCount accept j c).card : ℝ≥0∞) with hG
+  set B : ℝ≥0∞ := ((Finset.univ.filter fun c : (i : ι) → S i =>
+    ¬ (accept c ∧ ∀ j, k j ≤ columnCount accept j c)).card : ℝ≥0∞) with hB
+  set κ : ℝ≥0∞ := ∑ j, ((k j - 1 : ℕ) : ℝ≥0∞) / (Fintype.card (S j) : ℝ≥0∞) with hκ
+  have hT0 : T ≠ 0 := by rw [hT]; exact_mod_cast Fintype.card_ne_zero
+  have hTtop : T ≠ ⊤ := ENNReal.natCast_ne_top _
+  have hGB : G + B = T := by
+    rw [hG, hB, hT, ← Nat.cast_add, Finset.card_filter_add_card_filter_not, Finset.card_univ]
+  have hAT : A ≤ T := by
+    rw [hA, hT]
+    exact_mod_cast (Finset.card_filter_le _ _).trans Finset.card_univ.le
+  have hGtop : G ≠ ⊤ := ENNReal.natCast_ne_top _
+  have hg1 : G / T ≤ 1 :=
+    (ENNReal.div_le_iff hT0 hTtop).mpr (by rw [one_mul, ← hGB]; exact le_self_add)
+  have hε1 : A / T ≤ 1 := (ENNReal.div_le_iff hT0 hTtop).mpr (by rwa [one_mul])
+  have hBT : B / T = 1 - G / T := by
+    have hBeq : B = T - G := ENNReal.eq_sub_of_add_eq hGtop (by rw [add_comm]; exact hGB)
+    rw [hBeq, ENNReal.sub_div fun _ _ => hT0, ENNReal.div_self hT0 hTtop]
+  have hmain : A / T ≤ G / T + κ * (1 - G / T) := by
+    have hc := card_filter_accept_le_affine_pi (accept := accept) k
+    rw [← hA, ← hG, ← hB, ← hκ] at hc
+    rw [← hBT]
+    calc A / T ≤ (G + κ * B) / T := ENNReal.div_le_div_right hc _
+      _ = G / T + κ * (B / T) := by rw [ENNReal.add_div, mul_div_assoc]
+  rcases le_or_gt 1 κ with hκ1 | hκ1
+  · exact hε1.trans (hκ1.trans le_self_add)
+  · have hκtop : κ ≠ ⊤ := (hκ1.trans ENNReal.one_lt_top).ne
+    have hgtop : G / T ≠ ⊤ := (hg1.trans_lt ENNReal.one_lt_top).ne
+    have hκg_le_κ : κ * (G / T) ≤ κ := mul_le_of_le_one_right zero_le hg1
+    have hκg_le_g : κ * (G / T) ≤ G / T := mul_le_of_le_one_left zero_le hκ1.le
+    have hκgtop : κ * (G / T) ≠ ⊤ := ENNReal.mul_ne_top hκtop hgtop
+    refine hmain.trans (le_of_eq ?_)
+    rw [ENNReal.mul_sub fun _ _ => hκtop, mul_one, ENNReal.sub_mul fun _ _ => hgtop, one_mul,
+      ← (ENNReal.cancel_of_ne hκgtop).add_tsub_assoc_of_le hκg_le_κ,
+      ← (ENNReal.cancel_of_ne hκgtop).add_tsub_assoc_of_le hκg_le_g, add_comm]
+
+end ColumnCount
+
+/-! ## Union bounds for one alphabet and one threshold -/
+
+section Homogeneous
+
+variable {ι S : Type*} [DecidableEq ι] [Fintype ι] [Fintype S] {accept : (ι → S) → Prop}
+  [DecidablePred accept]
+
 /-- The union-bound counting inequality used in Lemma 7.1: scaled by `Fintype.card S`, the
 accepting challenges that fail somewhere exceed those that succeed everywhere by at most
 `ℓ * (k - 1) * |ι → S|`.
@@ -656,39 +976,10 @@ theorem card_mul_card_filter_accept_le [Nonempty S] (k : ℕ) :
             accept c ∧ ∀ j, k ≤ columnCount accept j c).card
           + ∑ _j : ι, (k - 1) * Fintype.card (ι → S) :=
         Nat.add_le_add_left
-          (Finset.sum_le_sum fun j _ => card_mul_card_filter_columnCount_lt j k) _
+          (Finset.sum_le_sum fun j _ => card_mul_card_filter_columnCount_lt (S := fun _ => S) j k) _
     _ = _ := by rw [Finset.sum_const_nat (m := (k - 1) * Fintype.card (ι → S)) fun _ _ => rfl,
         Finset.card_univ]
 
-omit [DecidableEq S] in
-/-- **The refined column bound.** A column holding fewer than `k` accepting challenges contributes
-at most `k - 1` of them, and an *empty* column contributes none, so the count is proportional to
-the number of challenges whose column is nonempty rather than to the whole space.
-
-`card_mul_card_filter_columnCount_lt` is the cruder statement, with `Fintype.card (ι → S)` on the
-right. The refinement is what lets the loss term of §8 of Fenzi–Moghaddas–Nguyen carry the factor
-`P` — the chance that a block holds a hit at all — instead of collapsing to one. -/
-theorem card_mul_card_filter_columnCount_lt_le [Nonempty S] (j : ι) (k : ℕ) :
-    (Fintype.card S : ℝ≥0∞) *
-        (Finset.univ.filter fun c : ι → S => accept c ∧ columnCount accept j c < k).card
-      ≤ ((k - 1 : ℕ) : ℝ≥0∞) *
-          (Finset.univ.filter fun c : ι → S => 0 < columnCount accept j c).card := by
-  classical
-  refine le_trans (mul_le_mul' le_rfl ?_) (card_mul_sum_div_columnCount_le j ((k - 1 : ℕ) : ℝ≥0∞))
-  rw [← Finset.sum_boole]
-  refine Finset.sum_le_sum fun c _ => ?_
-  by_cases hc : accept c ∧ columnCount accept j c < k
-  · rw [ite_eq_left hc, ite_eq_left hc.1]
-    have hpos : 0 < columnCount accept j c :=
-      Finset.card_pos.mpr ⟨c j, mem_filter_coord_self hc.1 j⟩
-    refine (ENNReal.le_div_iff_mul_le (Or.inl (by exact_mod_cast hpos.ne'))
-      (Or.inl (by finiteness))).mpr ?_
-    rw [one_mul]
-    exact_mod_cast Nat.le_sub_one_of_lt hc.2
-  · rw [ite_eq_right hc]
-    exact zero_le
-
-omit [DecidableEq S] in
 /-- The union bound over a *chosen* set of coordinates, with the refined column bound.
 
 `card_mul_card_filter_accept_le` is the case `T = Finset.univ` with each column count relaxed to
@@ -733,9 +1024,8 @@ theorem card_mul_card_filter_accept_le_sum [Nonempty S] (k : ℕ) (T : Finset ι
               accept c ∧ columnCount accept j c < k).card : ℝ≥0∞) := by
         rw [mul_add, Finset.mul_sum]
     _ ≤ _ := add_le_add le_rfl
-        (Finset.sum_le_sum fun j _ => card_mul_card_filter_columnCount_lt_le j k)
+        (Finset.sum_le_sum fun j _ => card_mul_card_filter_columnCount_lt_le (S := fun _ => S) j k)
 
-omit [DecidableEq S] in
 /-- The table success bound used in Lemma 7.1, as a ratio of cardinalities.
 
 Writing `ε` for the fraction of accepting challenges and `N = Fintype.card S`, the fraction of
@@ -794,56 +1084,6 @@ theorem sub_div_le_div_card_filter [Nonempty S] (k : ℕ) :
                 ((Fintype.card S : ℝ≥0∞))⁻¹) from by ring,
           hcN, hcT, one_mul, one_mul]
 
-omit [Fintype ι] [DecidableEq S] in
-/-- Restricting acceptance to the challenges whose column at `j` holds fewer than `k` accepting
-values keeps the count of such a sparse column and empties every other column, since a column
-count is constant along its column. -/
-theorem columnCount_restrict (j : ι) (k : ℕ) (c : ι → S) :
-    columnCount (fun c => accept c ∧ columnCount accept j c < k) j c =
-      if columnCount accept j c < k then columnCount accept j c else 0 := by
-  change (Finset.univ.filter fun x : S =>
-      accept (Function.update c j x) ∧ columnCount accept j (Function.update c j x) < k).card = _
-  simp only [columnCount_update]
-  by_cases h : columnCount accept j c < k
-  · simp only [h, and_true, ite_true]
-    rfl
-  · simp [h]
-
-omit [DecidableEq S] in
-/-- **The sparse column bound.** A column holding fewer than `k` accepting challenges contributes
-at most `k - 1` of them, and every one of its `Fintype.card S` challenges has a sparse column at
-`j`. So the accepting challenges with a sparse column are bounded by a `(k - 1) / Fintype.card S`
-fraction of the challenges with a sparse column, not of the whole space. -/
-theorem card_mul_card_filter_columnCount_lt_le_sparse [Nonempty S] (j : ι) (k : ℕ) :
-    (Fintype.card S : ℝ≥0∞) *
-        (Finset.univ.filter fun c : ι → S => accept c ∧ columnCount accept j c < k).card
-      ≤ ((k - 1 : ℕ) : ℝ≥0∞) *
-          (Finset.univ.filter fun c : ι → S => columnCount accept j c < k).card := by
-  classical
-  have h := card_mul_card_filter_columnCount_lt_le
-    (accept := fun c => accept c ∧ columnCount accept j c < k) j k
-  simp only [columnCount_restrict] at h
-  have hleft : (Finset.univ.filter fun c : ι → S => (accept c ∧ columnCount accept j c < k) ∧
-        (if columnCount accept j c < k then columnCount accept j c else 0) < k) =
-      Finset.univ.filter fun c : ι → S => accept c ∧ columnCount accept j c < k := by
-    ext c
-    simp only [Finset.mem_filter, Finset.mem_univ, true_and]
-    constructor
-    · exact fun h => h.1
-    · intro hc
-      exact ⟨hc, by rw [ite_eq_left hc.2]; exact hc.2⟩
-  have hright : (Finset.univ.filter fun c : ι → S =>
-        0 < if columnCount accept j c < k then columnCount accept j c else 0) ⊆
-      Finset.univ.filter fun c : ι → S => columnCount accept j c < k := by
-    intro c
-    simp only [Finset.mem_filter, Finset.mem_univ, true_and]
-    split_ifs with hc
-    · exact fun _ => hc
-    · exact fun h => absurd h (lt_irrefl 0)
-  rw [hleft] at h
-  exact h.trans (mul_le_mul' le_rfl (by exact_mod_cast Finset.card_le_card hright))
-
-omit [DecidableEq S] in
 /-- **The affine union bound.** Scaled by `Fintype.card S`, the accepting challenges exceed those
 whose every column is thick by at most `ℓ * (k - 1)` times the challenges that are *not* of that
 kind.
@@ -859,52 +1099,16 @@ theorem card_mul_card_filter_accept_le_affine [Nonempty S] (k : ℕ) :
             (Finset.univ.filter fun c : ι → S =>
               ¬ (accept c ∧ ∀ j, k ≤ columnCount accept j c)).card := by
   classical
-  have hcover : (Finset.univ.filter fun c : ι → S => accept c) ⊆
-      (Finset.univ.filter fun c : ι → S => accept c ∧ ∀ j, k ≤ columnCount accept j c) ∪
-        Finset.univ.biUnion fun j =>
-          Finset.univ.filter fun c : ι → S => accept c ∧ columnCount accept j c < k := by
-    intro c hc
-    simp only [Finset.mem_filter, Finset.mem_univ, true_and] at hc
-    by_cases hall : ∀ j, k ≤ columnCount accept j c
-    · exact Finset.mem_union_left _ (by simp [hc, hall])
-    · push Not at hall
-      obtain ⟨j, hj⟩ := hall
-      exact Finset.mem_union_right _
-        (Finset.mem_biUnion.mpr ⟨j, Finset.mem_univ _, by simp [hc, hj]⟩)
-  have hcard : ((Finset.univ.filter fun c : ι → S => accept c).card : ℝ≥0∞) ≤
-      ((Finset.univ.filter fun c : ι → S =>
-          accept c ∧ ∀ j, k ≤ columnCount accept j c).card : ℝ≥0∞)
-        + ∑ j : ι, ((Finset.univ.filter fun c : ι → S =>
-            accept c ∧ columnCount accept j c < k).card : ℝ≥0∞) := by
-    rw [← Nat.cast_sum, ← Nat.cast_add]
-    exact_mod_cast le_trans (Finset.card_le_card hcover)
-      (le_trans (Finset.card_union_le _ _) (Nat.add_le_add_left Finset.card_biUnion_le _))
-  have hsparse : ∀ j : ι, (Finset.univ.filter fun c : ι → S => columnCount accept j c < k) ⊆
-      Finset.univ.filter fun c : ι → S => ¬ (accept c ∧ ∀ j, k ≤ columnCount accept j c) := by
-    intro j c
-    simp only [Finset.mem_filter, Finset.mem_univ, true_and]
-    exact fun hc h => absurd (h.2 j) (not_le.mpr hc)
-  calc (Fintype.card S : ℝ≥0∞) * (Finset.univ.filter fun c : ι → S => accept c).card
-      ≤ (Fintype.card S : ℝ≥0∞) * (((Finset.univ.filter fun c : ι → S =>
-            accept c ∧ ∀ j, k ≤ columnCount accept j c).card : ℝ≥0∞)
-          + ∑ j : ι, ((Finset.univ.filter fun c : ι → S =>
-              accept c ∧ columnCount accept j c < k).card : ℝ≥0∞)) := mul_le_mul' le_rfl hcard
-    _ = (Fintype.card S : ℝ≥0∞) * ((Finset.univ.filter fun c : ι → S =>
-            accept c ∧ ∀ j, k ≤ columnCount accept j c).card : ℝ≥0∞)
-          + ∑ j : ι, (Fintype.card S : ℝ≥0∞) * ((Finset.univ.filter fun c : ι → S =>
-              accept c ∧ columnCount accept j c < k).card : ℝ≥0∞) := by
-        rw [mul_add, Finset.mul_sum]
-    _ ≤ (Fintype.card S : ℝ≥0∞) * ((Finset.univ.filter fun c : ι → S =>
-            accept c ∧ ∀ j, k ≤ columnCount accept j c).card : ℝ≥0∞)
-          + ∑ _j : ι, ((k - 1 : ℕ) : ℝ≥0∞) * ((Finset.univ.filter fun c : ι → S =>
-              ¬ (accept c ∧ ∀ j, k ≤ columnCount accept j c)).card : ℝ≥0∞) := by
-        refine add_le_add le_rfl (Finset.sum_le_sum fun j _ => ?_)
-        exact (card_mul_card_filter_columnCount_lt_le_sparse j k).trans
-          (mul_le_mul' le_rfl (by exact_mod_cast Finset.card_le_card (hsparse j)))
-    _ = _ := by
-        rw [Finset.sum_const, Finset.card_univ, nsmul_eq_mul, mul_assoc]
+  have h := card_filter_accept_le_affine_pi (accept := accept) (fun _ => k)
+  have hN0 : (Fintype.card S : ℝ≥0∞) ≠ 0 := by simp
+  have hNtop : (Fintype.card S : ℝ≥0∞) ≠ ⊤ := ENNReal.natCast_ne_top _
+  have hκ : (∑ _j : ι, ((k - 1 : ℕ) : ℝ≥0∞) / (Fintype.card S : ℝ≥0∞))
+      = (Fintype.card ι : ℝ≥0∞) * ((k - 1 : ℕ) : ℝ≥0∞) / Fintype.card S := by
+    rw [Finset.sum_const, Finset.card_univ, nsmul_eq_mul, mul_div_assoc]
+  rw [hκ] at h
+  refine (mul_le_mul' le_rfl h).trans (le_of_eq ?_)
+  rw [mul_add, ← mul_assoc, ENNReal.mul_div_cancel hN0 hNtop]
 
-omit [DecidableEq S] in
 /-- **The affine table bound** of Lemma 7.1. Write `ε` for the fraction of accepting challenges,
 `p` for the fraction that accept and have every column thick, and `κ = ℓ (k - 1) / N` with
 `N = Fintype.card S`. Then `ε ≤ κ + (1 - κ) p`.
@@ -921,62 +1125,14 @@ theorem div_card_filter_le_affine [Nonempty S] (k : ℕ) :
           * (((Finset.univ.filter fun c : ι → S =>
               accept c ∧ ∀ j, k ≤ columnCount accept j c).card : ℝ≥0∞)
             / Fintype.card (ι → S)) := by
-  classical
-  set N : ℝ≥0∞ := (Fintype.card S : ℝ≥0∞) with hN
-  set T : ℝ≥0∞ := (Fintype.card (ι → S) : ℝ≥0∞) with hT
-  set A : ℝ≥0∞ := ((Finset.univ.filter fun c : ι → S => accept c).card : ℝ≥0∞) with hA
-  set G : ℝ≥0∞ := ((Finset.univ.filter fun c : ι → S =>
-    accept c ∧ ∀ j, k ≤ columnCount accept j c).card : ℝ≥0∞) with hG
-  set B : ℝ≥0∞ := ((Finset.univ.filter fun c : ι → S =>
-    ¬ (accept c ∧ ∀ j, k ≤ columnCount accept j c)).card : ℝ≥0∞) with hB
-  set κ : ℝ≥0∞ := (Fintype.card ι : ℝ≥0∞) * (k - 1 : ℕ) / N with hκ
-  have hN0 : N ≠ 0 := by simp [hN]
-  have hNtop : N ≠ ⊤ := ENNReal.natCast_ne_top _
-  have hT0 : T ≠ 0 := by simp [hT]
-  have hTtop : T ≠ ⊤ := ENNReal.natCast_ne_top _
-  have hGB : G + B = T := by
-    rw [hG, hB, hT, ← Nat.cast_add, Finset.card_filter_add_card_filter_not,
-      Finset.card_univ]
-  have hAT : A ≤ T := by
-    rw [hA, hT]
-    exact_mod_cast (Finset.card_filter_le _ _).trans Finset.card_univ.le
-  have hGtop : G ≠ ⊤ := ENNReal.natCast_ne_top _
-  have hg1 : G / T ≤ 1 :=
-    (ENNReal.div_le_iff hT0 hTtop).mpr (by rw [one_mul, ← hGB]; exact le_self_add)
-  have hε1 : A / T ≤ 1 := (ENNReal.div_le_iff hT0 hTtop).mpr (by rwa [one_mul])
-  -- `B / T` is the complement of the success fraction.
-  have hBT : B / T = 1 - G / T := by
-    have hBeq : B = T - G := ENNReal.eq_sub_of_add_eq hGtop (by rw [add_comm]; exact hGB)
-    rw [hBeq, ENNReal.sub_div fun _ _ => hT0, ENNReal.div_self hT0 hTtop]
-  -- Divide the counting bound through by `N * T`.
-  have hmain : A / T ≤ G / T + κ * (1 - G / T) := by
-    have hc := card_mul_card_filter_accept_le_affine (accept := accept) k
-    rw [← hA, ← hG, ← hB, ← hN] at hc
-    have hinv : (N * T)⁻¹ = N⁻¹ * T⁻¹ := ENNReal.mul_inv (Or.inl hN0) (Or.inl hNtop)
-    rw [← hBT]
-    calc A / T = (N * A) / (N * T) := (ENNReal.mul_div_mul_left _ _ hN0 hNtop).symm
-      _ ≤ (N * G + (Fintype.card ι : ℝ≥0∞) * (k - 1 : ℕ) * B) / (N * T) := by gcongr
-      _ = (N * N⁻¹) * (G * T⁻¹) +
-            (Fintype.card ι : ℝ≥0∞) * (k - 1 : ℕ) * N⁻¹ * (B * T⁻¹) := by
-          rw [div_eq_mul_inv, hinv]
-          ring
-      _ = G / T + κ * (B / T) := by
-          rw [ENNReal.mul_inv_cancel hN0 hNtop, one_mul, hκ, div_eq_mul_inv, div_eq_mul_inv,
-            div_eq_mul_inv]
-  rcases le_or_gt 1 κ with hκ1 | hκ1
-  · exact hε1.trans (hκ1.trans le_self_add)
-  · -- Below one, `p + κ (1 - p)` and `κ + (1 - κ) p` are both `κ + p - κ p`.
-    have hκtop : κ ≠ ⊤ := (hκ1.trans ENNReal.one_lt_top).ne
-    have hgtop : G / T ≠ ⊤ := (hg1.trans_lt ENNReal.one_lt_top).ne
-    have hκg_le_κ : κ * (G / T) ≤ κ := mul_le_of_le_one_right zero_le hg1
-    have hκg_le_g : κ * (G / T) ≤ G / T := mul_le_of_le_one_left zero_le hκ1.le
-    have hκgtop : κ * (G / T) ≠ ⊤ := ENNReal.mul_ne_top hκtop hgtop
-    refine hmain.trans (le_of_eq ?_)
-    rw [ENNReal.mul_sub fun _ _ => hκtop, mul_one, ENNReal.sub_mul fun _ _ => hgtop, one_mul,
-      ← (ENNReal.cancel_of_ne hκgtop).add_tsub_assoc_of_le hκg_le_κ,
-      ← (ENNReal.cancel_of_ne hκgtop).add_tsub_assoc_of_le hκg_le_g, add_comm]
+  have h := div_card_filter_le_affine_pi (accept := accept) (fun _ => k)
+  have hκ : (∑ _j : ι, ((k - 1 : ℕ) : ℝ≥0∞) / (Fintype.card S : ℝ≥0∞))
+      = (Fintype.card ι : ℝ≥0∞) * (k - 1 : ℕ) / Fintype.card S := by
+    rw [Finset.sum_const, Finset.card_univ, nsmul_eq_mul, mul_div_assoc]
+  rw [hκ] at h
+  exact h
 
-end ColumnCount
+end Homogeneous
 
 /-! ## The worked example of Fenzi–Moghaddas–Nguyen §2.9
 

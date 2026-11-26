@@ -21,11 +21,11 @@ import VCVio.OracleComp.EvalDist.Measure
 /-!
 # Canonical uniform samplers: the `$ᵗ` notation class
 
-`SampleableType β` gives the notation `$ᵗ β` its meaning: an executable `ProbComp β` together
-with the one law that makes it a *uniform* sampler, `𝒟[$ᵗ β] = uniformOn Set.univ` for every
-measurable structure with measurable singletons. The law is part of the contract because no
-consumer wants a canonical sampler that is not uniform; it is the only field besides the
-program, and every construction below discharges it once.
+`SampleableType β` supplies the program `$ᵗ β : ProbComp β` and a proof that its output
+measure is `uniformOn Set.univ` for every measurable structure with measurable singletons.
+For a nonempty type, `FinEnum.SampleableType` builds an executable sampler from a computable
+enumeration. `SampleableType.ofFintype` supplies the same uniformity law for a noncomputable
+sampler.
 
 Nonemptiness of `β` follows from having a sampler at all (`SampleableType.nonempty`), and
 finiteness and full operational support follow from the law (`SampleableType.finite`,
@@ -46,8 +46,8 @@ universe u v w
 
 open ENNReal MeasureTheory ProbabilityTheory
 
-/-- A canonical uniform sampler for `β`, written `$ᵗ β`: an executable program whose output
-measure is uniform for every measurable structure with measurable singletons. -/
+/-- A uniform sampler for `β`, written `$ᵗ β`, together with a proof of uniformity for every
+measurable structure with measurable singletons. -/
 class SampleableType (β : Type) where
   /-- The canonical sampler of `β`, written `$ᵗ β`. -/
   selectElem : ProbComp β
@@ -175,15 +175,15 @@ lemma uniformSample_prod (α β : Type) [SampleableType α] [SampleableType β] 
     rw [evalDist_map_of_discrete, SampleableType.evalDist_uniformSample]
     exact map_uniformOn_univ_of_bijective Measurable.of_discrete e.bijective
 
-/-- Any finitely enumerable type can be sampled uniformly using the underlying equivalence. -/
+/-- Sample a nonempty `FinEnum` type by drawing a uniform index and returning the element
+at that index. -/
 instance FinEnum.SampleableType (α : Type) [h : FinEnum α] [Nonempty α] : SampleableType α :=
   haveI : NeZero (FinEnum.card α) := NeZero.mk FinEnum.card_ne_zero
   SampleableType.ofEquiv h.equiv.symm
 
-/-- Noncomputable bridge from a nonempty `Fintype` with decidable equality to `SampleableType`,
-via `Fintype.equivFin`. Used by downstream instances (e.g. `Sym α n`, `Equiv.Perm α`, `β ↪ α`)
-whose Mathlib `Fintype` instances are not paired with a `FinEnum`. Provided as a `def` rather
-than an `instance` to avoid overlap with `FinEnum.SampleableType`. -/
+/-- Build a noncomputable uniform sampler from `[Fintype α]` and `[Nonempty α]` using
+`Fintype.equivFin`. A proof can install it with `letI := SampleableType.ofFintype α`
+when it needs uniform sampling and has no chosen enumeration. -/
 @[reducible] noncomputable def SampleableType.ofFintype (α : Type)
     [Fintype α] [Nonempty α] : SampleableType α :=
   haveI : NeZero (Fintype.card α) := ⟨Fintype.card_ne_zero⟩
@@ -313,15 +313,9 @@ inhabited by `∅`, so no `Nonempty` hypothesis is needed. -/
 instance instSampleableTypeFinset {α : Type} [FinEnum α] : SampleableType (Finset α) :=
   inferInstance
 
-/-- Uniform sampling of size-`n` multisets over a `FinEnum` type. `Sym α n` is the correct finite
-analogue of `Multiset α`: a plain `Multiset α` is unbounded in multiplicity and thus not finite,
-while `Sym α n` is finite whenever `α` is. We obtain a *computable* uniform sampler from the
-canonical enumeration `Sym.finEnum`; for a base type with only a `Fintype` instance use
-`SampleableType.ofFintype` instead.
-
-Note this is genuinely uniform on multisets: mapping a uniform `List.Vector α n` through
-`Sym.ofVector` is *not* (it weights each multiset by its number of orderings), so we enumerate
-`Sym α n` canonically rather than pushing forward from vectors. -/
+/-- Sample a size-`n` multiset uniformly using `Sym.finEnum n`. Each multiset occurs once in
+the enumeration. Sampling a uniform vector and forgetting its order would weight each
+multiset by the number of vectors that represent it. -/
 instance instSampleableTypeSym {α : Type} {n : ℕ} [FinEnum α] [Nonempty α] :
     SampleableType (Sym α n) :=
   letI : FinEnum (Sym α n) := Sym.finEnum n
@@ -329,8 +323,8 @@ instance instSampleableTypeSym {α : Type} {n : ℕ} [FinEnum α] [Nonempty α] 
   FinEnum.SampleableType _
 
 /-- Uniform sampling of permutations of a `FinEnum` type. `Equiv.Perm α` has `n!` elements when
-`Fintype.card α = n`. We obtain a *computable* uniform sampler from the canonical enumeration
-`Equiv.Perm.finEnum`. Useful for shuffle-based protocols and oblivious-permutation games. -/
+`Fintype.card α = n`. The sampler draws a uniform index in `Equiv.Perm.finEnum`, for example
+to choose a shuffle in a protocol. -/
 instance instSampleableTypePerm {α : Type} [FinEnum α] :
     SampleableType (Equiv.Perm α) :=
   letI : FinEnum (Equiv.Perm α) := Equiv.Perm.finEnum
@@ -339,8 +333,8 @@ instance instSampleableTypePerm {α : Type} [FinEnum α] :
 
 /-- Uniform sampling of injections `β ↪ α` for `FinEnum` types. The number of such embeddings is
 `α.card! / (α.card - β.card)!` when `β.card ≤ α.card`, else `0`; the `Nonempty (β ↪ α)`
-hypothesis rules out the latter case. We obtain a *computable* uniform sampler from the canonical
-enumeration `Function.Embedding.finEnum` (itself computable, unlike Mathlib's `Fintype (β ↪ α)`). -/
+hypothesis rules out the latter case. The sampler draws a uniform index in the computable
+enumeration `Function.Embedding.finEnum`. -/
 instance instSampleableTypeEmbedding {β α : Type}
     [FinEnum β] [FinEnum α] [Nonempty (β ↪ α)] :
     SampleableType (β ↪ α) :=
