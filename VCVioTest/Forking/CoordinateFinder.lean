@@ -15,8 +15,8 @@ public import VCVio.CryptoFoundations.Rewinding.FixedTape
 `2 / 5 < 1` and cost `3`, so neither bound collapses.
 
 **Agreement with the threshold finder.** On one coordinate, the coordinate-wise error
-`ℓ (k - 1) / N` equals the threshold error `1 - ∏ (1 - (k - 1) / N)`; the two finders differ only
-from two coordinates on.
+`ℓ (k - 1) / N` equals the threshold error `1 - ∏ (1 - (k - 1) / N)`. The example compares the two
+error terms only, not the two finders' laws.
 
 **Transfer to a prover.** `Rewinding.ResetPolicy.finder_bounds_honest` applies to the finder as it
 does to the threshold finder: against reruns of a prover with a frozen coin tape, the honest

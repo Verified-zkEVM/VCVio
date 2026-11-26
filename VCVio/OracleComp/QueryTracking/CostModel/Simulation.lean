@@ -23,14 +23,24 @@ The support refinement retains the returned value and compares the charges of th
 does not identify their probability distributions. Bounds concern completed runs only: an
 implementation with no completed run satisfies every such bound. Availability and termination
 therefore require separate hypotheses where those properties are needed.
+
+`WorstCaseCostBound.simulateQ` reads only completed paths, so the two query indices, the target
+responses and the cost carrier have independent universes. The source responses share the
+results' universe, because `simulateQ` folds into a monad over the response universe. The support
+lemmas run `costDist` on both sides, so there the responses, the results and the costs share one
+universe.
 -/
 
 public section
 
 open OracleSpec OracleComp
 
-variable {ι κ α ω : Type} {source : OracleSpec ι} {target : OracleSpec κ}
-  [AddCommMonoid ω]
+universe uι uκ v v' w u
+
+section Support
+
+variable {ι : Type uι} {κ : Type uκ} {α ω : Type u} {source : OracleSpec.{uι, u} ι}
+  {target : OracleSpec.{uκ, u} κ} [AddCommMonoid ω]
 
 /-- A chosen response extends any supported continuation with the query's designated charge. -/
 theorem mem_support_costDist_query_bind (query : source.Domain)
@@ -45,15 +55,11 @@ theorem mem_support_costDist_query_bind (query : source.Domain)
   rw [support_map]
   exact ⟨result, member, rfl⟩
 
-section Ordered
-
-variable [Preorder ω] [IsOrderedAddMonoid ω]
-
 /-- Every completed substituted run has a source run with the same result and at least its charge.
 The source query charge must bound the entire implementing program, including repeated queries.
 This is PolyFun's completed-path refinement `PFunctor.FreeM.Path.exists_path_liftM` read through
 `support_costDist_eq_range_path`. -/
-theorem mem_support_costDist_simulateQ
+theorem mem_support_costDist_simulateQ [Preorder ω] [IsOrderedAddMonoid ω]
     (route : QueryImpl source (OracleComp target)) (program : OracleComp source α)
     (sourceCost : CostModel source ω) (targetCost : CostModel target ω)
     (hstep : ∀ query, WorstCaseCostBound (route query) targetCost (sourceCost.queryCost query))
@@ -69,12 +75,15 @@ theorem mem_support_costDist_simulateQ
   rw [support_costDist_eq_range_path]
   exact ⟨p, Prod.ext hout rfl⟩
 
+end Support
+
 /-- A source weighted bound transfers through the same stateless handler programs whose costs
 are bounded. The charge of each complete handler call includes all its target queries. This is
 PolyFun's completed-path transfer `PFunctor.FreeM.Path.charge_liftM_le_of_forall`. -/
-theorem WorstCaseCostBound.simulateQ
-    {program : OracleComp source α} {sourceCost : CostModel source ω}
-    {targetCost : CostModel target ω} {budget : ω}
+theorem WorstCaseCostBound.simulateQ {ι : Type uι} {κ : Type uκ} {α : Type v} {ω : Type w}
+    {source : OracleSpec.{uι, v} ι} {target : OracleSpec.{uκ, v'} κ}
+    [AddCommMonoid ω] [Preorder ω] [IsOrderedAddMonoid ω] {program : OracleComp source α}
+    {sourceCost : CostModel source ω} {targetCost : CostModel target ω} {budget : ω}
     (hprogram : WorstCaseCostBound program sourceCost budget)
     (route : QueryImpl source (OracleComp target))
     (hstep : ∀ query, WorstCaseCostBound (route query) targetCost (sourceCost.queryCost query)) :
@@ -82,5 +91,3 @@ theorem WorstCaseCostBound.simulateQ
   rw [worstCaseCostBound_iff_forall_charge_le] at hprogram ⊢
   exact PFunctor.FreeM.Path.charge_liftM_le_of_forall route
     (fun query => (worstCaseCostBound_iff_forall_charge_le _ _ _).1 (hstep query)) hprogram
-
-end Ordered
