@@ -6,7 +6,7 @@ Authors: Quang Dao
 
 module
 public import VCVio.OracleComp.QueryTracking.RandomOracle.DependentTable
-public import VCVio.OracleComp.QueryTracking.LoggingOracle.Core
+public import VCVio.OracleComp.QueryTracking.RunLog
 public import VCVio.OracleComp.QueryTracking.CostModel
 public import VCVio.EvalDist.ProbabilityBounds
 
@@ -35,42 +35,35 @@ namespace OracleComp
 
 variable {D α : Type} {R : D → Type}
 
-/-- The actual query/response log from deterministic execution against a complete answer table. -/
+/-- The actual query/response log from deterministic execution against a complete answer table:
+the log `runLog` of the run answered by the table. -/
 @[expose] def tableQueryLog (oa : OracleComp (OracleSpec.ofFn R) α)
     (g : (d : D) → R d) : QueryLog (OracleSpec.ofFn R) :=
-  ((simulateQ (QueryImpl.ofFn g).withLogging oa).run).2
+  runLog (QueryImpl.ofFn g) oa
 
 /-- Returning a result makes no oracle queries. -/
 @[simp] theorem tableQueryLog_pure (a : α) (g : (d : D) → R d) :
-    tableQueryLog (pure a : OracleComp (OracleSpec.ofFn R) α) g = [] := by
-  simp [tableQueryLog]
-  rfl
+    tableQueryLog (pure a : OracleComp (OracleSpec.ofFn R) α) g = [] :=
+  runLog_pure _ a
 
 /-- A query appears before the log of its answer-selected continuation. -/
 @[simp] theorem tableQueryLog_query_bind (t : D) (k : R t → OracleComp (OracleSpec.ofFn R) α)
     (g : (d : D) → R d) :
     tableQueryLog (liftM ((OracleSpec.ofFn R).query t) >>= k) g =
-      ⟨t, g t⟩ :: tableQueryLog (k (g t)) g := by
-  simp [tableQueryLog, QueryImpl.ofFn, WriterT.run_bind, WriterT.run_tell]
-  rfl
+      ⟨t, g t⟩ :: tableQueryLog (k (g t)) g :=
+  runLog_query_bind _ t k
 
 /-- A primitive query contributes its actual input and table answer to the log. -/
 @[simp] theorem tableQueryLog_query (t : D) (g : ∀ d, R d) :
-    tableQueryLog (liftM ((ofFn R).query t) : OracleComp (ofFn R) (R t)) g = [⟨t, g t⟩] := by
-  simpa only [bind_pure, tableQueryLog_pure] using
-    tableQueryLog_query_bind t (fun r => pure r) g
-
+    tableQueryLog (liftM ((ofFn R).query t) : OracleComp (ofFn R) (R t)) g = [⟨t, g t⟩] :=
+  runLog_query _ t
 
 /-- Sequential computation concatenates the actual query logs. -/
 theorem tableQueryLog_bind {β : Type} (oa : OracleComp (ofFn R) α)
     (ob : α → OracleComp (ofFn R) β) (g : ∀ d, R d) :
     tableQueryLog (oa >>= ob) g =
-      tableQueryLog oa g ++ tableQueryLog (ob (evalWithAnswerFn (QueryImpl.ofFn g) oa)) g := by
-  induction oa using OracleComp.inductionOn with
-  | pure a => simp
-  | query_bind t k ih =>
-      simp only [bind_assoc, tableQueryLog_query_bind, evalWithAnswerFn_bind,
-        evalWithAnswerFn_liftM_query, QueryImpl.ofFn_apply, ih, List.cons_append]
+      tableQueryLog oa g ++ tableQueryLog (ob (evalWithAnswerFn (QueryImpl.ofFn g) oa)) g :=
+  runLog_bind _ oa ob
 
 /-- The log of an oracle reduction concatenates the logs of its query implementations,
 using the same answer table throughout. -/
@@ -79,13 +72,8 @@ theorem tableQueryLog_simulateQ {D' : Type} {R' : D' → Type} (g : ∀ d, R' d)
     (oa : OracleComp (ofFn R) α) :
     tableQueryLog (simulateQ impl oa) g =
       (tableQueryLog oa (fun t => evalWithAnswerFn (QueryImpl.ofFn g) (impl t))).flatMap
-        (fun q => tableQueryLog (impl q.1) g) := by
-  induction oa using OracleComp.inductionOn with
-  | pure a => simp
-  | query_bind t k ih =>
-      simp only [simulateQ_bind, simulateQ_spec_query, tableQueryLog_bind,
-        tableQueryLog_query, evalWithAnswerFn_liftM_query, QueryImpl.ofFn_apply,
-        List.flatMap_append, List.flatMap_cons, List.flatMap_nil, List.append_nil, ih]
+        (fun q => tableQueryLog (impl q.1) g) :=
+  runLog_simulateQ _ impl oa
 
 
 private theorem query_budget_tail [∀ d, Nonempty (R d)]
@@ -428,7 +416,7 @@ theorem tableQueryLog_restrictQueries (S : Finset D) (oa : OracleComp (ofFn R) �
     (tableQueryLog (restrictQueries S oa h) (fun d : S => g d.val)).map
       (fun q => (⟨q.1.val, q.2⟩ : Σ d, R d)) = tableQueryLog oa g := by
   induction oa using OracleComp.inductionOn with
-  | pure a => rfl
+  | pure a => simp [restrictQueries_pure]
   | query_bind t k ih =>
       simp only [restrictQueries_query_bind, tableQueryLog_query_bind, List.map_cons]
       exact congrArg (List.cons _) (ih _ (((allQueriesSatisfy_query_bind_iff _ _ _).mp h).2 _))

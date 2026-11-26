@@ -61,9 +61,10 @@ namespace AxiomSweep
 
 /-- Root modules swept when no `--root` is given.
 
-`Interop` is deliberately excluded: it is the declared TCB (bounded by the import
-isolation gate), sits outside the certified surface this sweep accounts for, and is not
-built by the main CI build job. Sweep it explicitly with `--root Interop` if needed. -/
+`Interop` is deliberately excluded: its sub-projects are separate Lake packages, outside the
+certified surface this sweep accounts for and not built by the main CI build job. Each
+sub-project's CI job runs this tool from its own directory with an explicit `--root` per root of
+its default libraries (`scripts/interop-subprojects.py roots`). -/
 def defaultRoots : Array Name :=
   #[`VCVio, `ToMathlib, `Extern, `LatticeCrypto, `HashSig, `Examples]
 
