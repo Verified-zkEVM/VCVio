@@ -302,52 +302,23 @@ private lemma IND_CPA_stepPrefix_resume_eq_hybridLR (pk : PK) (k : ℕ) (branch 
               (if branch then k + 1 else k) mm c oa st hcache]
             exact ih c st hst
 
-/-- The one-time IND-CPA game of the extracted step adversary is the uniform-bit branch between
-adjacent LR hybrids. -/
-private lemma IND_CPA_stepAdversary_game_eq_hybridBranch [Inhabited M]
-    (adversary : encAlg'.IND_CPA_Adversary) (k : ℕ) :
-    ProbCompRuntime.probComp.evalDist (IND_CPA_OneTime_Game (encAlg := encAlg')
-        (IND_CPA_stepAdversary (encAlg' := encAlg') adversary k) ProbCompRuntime.probComp) =
-      𝒟[do
-          let bit ← ($ᵗ Bool)
-          let z ← if bit then encAlg'.IND_CPA_LR_hybrid adversary (k + 1)
-                   else encAlg'.IND_CPA_LR_hybrid adversary k
-          pure (bit == z)] := by
-  change 𝒟[($ᵗ Bool) >>= fun bit => _] = _
-  refine evalDist_bind_congr _ _ _ fun bit => ?_
-  change 𝒟[do
-      let (pk, _sk) ← encAlg'.keygen
-      let (m₁, m₂, state) ←
-        (IND_CPA_stepAdversary (encAlg' := encAlg') adversary k).chooseMessages pk
-      let c ← encAlg'.encrypt pk (if bit then m₁ else m₂)
-      let b' ← (IND_CPA_stepAdversary (encAlg' := encAlg') adversary k).distinguish state c
-      pure (bit == b')] =
-    𝒟[do
-      let z ← if bit then encAlg'.IND_CPA_LR_hybrid adversary (k + 1)
-               else encAlg'.IND_CPA_LR_hybrid adversary k
-      pure (bit == z)]
-  simp only [IND_CPA_LR_hybrid, monad_norm,
-    ← apply_ite (f := fun g => encAlg'.keygen >>= g)]
-  refine evalDist_bind_congr _ _ _ fun pk_sk => ?_
-  simp only [IND_CPA_stepAdversary, monad_norm,
-    apply_ite (f := fun h : PK × SK → ProbComp Bool => h pk_sk),
-    ← apply_ite (f := fun n => (do
-      let b' ← (simulateQ (encAlg'.IND_CPA_queryImpl_hybridLR_counted pk_sk.1 n)
-        (adversary pk_sk.1)).run' (∅, 0)
-      pure (bit == b') : ProbComp Bool))]
+/-- The fixed-branch one-time IND-CPA experiment of the extracted step adversary is an adjacent
+LR hybrid: hybrid `k + 1` on the branch that encrypts the first message, hybrid `k` on the other. -/
+private lemma evalDist_IND_CPA_OneTime_Experiment_stepAdversary [Inhabited M]
+    (adversary : encAlg'.IND_CPA_Adversary) (k : ℕ) (bit : Bool) :
+    𝒟[IND_CPA_OneTime_Experiment (IND_CPA_stepAdversary (encAlg' := encAlg') adversary k) bit] =
+      𝒟[encAlg'.IND_CPA_LR_hybrid adversary (if bit then k + 1 else k)] := by
+  unfold IND_CPA_OneTime_Experiment IND_CPA_LR_hybrid
+  refine evalDist_bind_congr _ _ _ fun ⟨pk, _sk⟩ => ?_
   have hresume := IND_CPA_stepPrefix_resume_eq_hybridLR (encAlg' := encAlg')
-    pk_sk.1 k bit (adversary pk_sk.1) (∅, 0) (Nat.zero_le k)
+    pk k bit (adversary pk) (∅, 0) (Nat.zero_le k)
   dsimp at hresume
-  have hmap (mx : ProbComp Bool) :
-      (do let b' ← mx; pure (bit == b')) = (bit == ·) <$> mx := by
-    rw [map_eq_bind_pure_comp]
-    rfl
-  conv_rhs =>
-    rw [StateT.run'_eq, hmap]
-  refine Eq.trans ?_ (((EvalDistEq.of_evalDist_eq hresume).map (bit == ·)).evalDist_eq)
-  simp only [monad_norm]
+  refine Eq.trans ?_ (EvalDistEq.of_evalDist_eq hresume).evalDist_eq
+  simp only [IND_CPA_stepAdversary, monad_norm]
   refine evalDist_bind_congr _ _ _ fun ⟨res, _st⟩ => ?_
-  cases res <;> simp
+  cases res
+  · simp
+  · simp [map_eq_bind_pure_comp]
 
 end MultiQueryToOneTime
 
@@ -364,8 +335,9 @@ theorem IND_CPA_OneTime_Advantage_stepAdversary [Inhabited M]
         (IND_CPA_stepAdversary (encAlg' := encAlg') adversary k) =
       𝒟[encAlg'.IND_CPA_LR_hybrid adversary (k + 1)].boolDist
         𝒟[encAlg'.IND_CPA_LR_hybrid adversary k] := by
-  rw [IND_CPA_OneTime_Advantage, IND_CPA_stepAdversary_game_eq_hybridBranch,
-    evalDist_boolBias_bind_uniformBool]
+  rw [IND_CPA_OneTime_Advantage_eq_boolDist, evalDist_IND_CPA_OneTime_Experiment_stepAdversary,
+    evalDist_IND_CPA_OneTime_Experiment_stepAdversary]
+  rfl
 
 /-- Generic one-time-to-many-time lift: the IND-CPA advantage of an oracle adversary making at
 most `q` fresh LR queries is at most the sum of the one-time advantages of the extracted step

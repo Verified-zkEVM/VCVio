@@ -11,6 +11,7 @@ public import VCVio.OracleComp.Constructions.Replicate.Basic
 public import VCVio.OracleComp.EvalDist.Measure
 public import VCVio.OracleComp.SimSemantics.Measure
 public import ToCslib.MeasureTheory.MeasurableSpace.Instances
+import VCVio.EvalDist.Monad.DependentTable
 import VCVio.EvalDist.Monad.Measure
 import VCVio.EvalDist.ProbabilityBounds
 import Mathlib.Logic.Equiv.Bool
@@ -22,7 +23,9 @@ Finite-range sampling and transport through an equivalence preserve the uniform 
 certified by `SampleableType`. Events of a uniform sample are counting statements: comparisons with
 fractions of the sample space reduce to comparisons of counts, probability one and zero are
 universal and empty events, and independent uniform draws combined by a bijection are a single
-uniform draw. `natCast_mul_prEvent_le_sum_prEvent_of_le_card_filter` is the double-counting
+uniform draw. Overwriting coordinates of a uniform table with independent uniform values leaves it
+uniform (`prEvent_uniformSample_prod_update`, `prEvent_uniformSample_prod_update_update`).
+`natCast_mul_prEvent_le_sum_prEvent_of_le_card_filter` is the double-counting
 bound for uniform events: if every bad sample satisfies at least `k` of a finite family of
 events, then `k` times the bad probability is at most the sum of their probabilities.
 `natCast_card_mul_prEvent_uniformSample_bind` averages over a uniform first draw: the number of
@@ -173,6 +176,12 @@ theorem prEvent_uniformSample_exists_eq_le {α : Type} [SampleableType α] [_roo
   refine (prEvent_exists_le_card_mul ($ᵗ α) (fun i x => f i = x)
     fun i => (prEvent_uniformSample_eq_singleton' (f i)).le).trans (le_of_eq ?_)
   simp [div_eq_mul_inv]
+
+/-- A uniform sample lies in a list with probability at most its length over `|α|`. -/
+theorem prEvent_uniformSample_mem_le {α : Type} [SampleableType α] [_root_.Fintype α]
+    (l : List α) : Pr{let x ← $ᵗ α}[x ∈ l] ≤ l.length / Fintype.card α :=
+  le_of_eq_of_le (prEvent_congr _ _ _ fun _ => List.mem_iff_get)
+    (prEvent_uniformSample_exists_eq_le l.get)
 
 /-- Each length-`n` list is drawn by `n` independent uniform samples with probability
 `(|α| ^ n)⁻¹`. -/
@@ -480,6 +489,158 @@ theorem evalDist_uniformSample_bind_equiv_symm [SampleableType γ] {δ : Type} [
         simp
 
 end transport
+
+/-! ## Overwriting coordinates of a uniform table
+
+A uniform draw of a dependent table `∀ d, R d` over a finite index type is unchanged in
+distribution when some of its coordinates are overwritten with independent uniform values
+(`evalDist_bind_bind_update_map_dependent`). The lemmas here overwrite coordinates of the table in
+a uniform pair of a value and a table, with the overwriting values drawn before and after the
+pair. They are the couplings by which a reduction that receives some coordinates from its game and
+draws the others itself presents a uniform table. -/
+
+section update
+
+variable {D β : Type} {R : D → Type} [DecidableEq D] [Finite D] [∀ d, SampleableType (R d)]
+  [SampleableType (∀ d, R d)]
+
+private theorem update_uniformSample_evalDistEq (t : D) :
+    (do
+        let u ← $ᵗ (R t)
+        let g ← $ᵗ (∀ d, R d)
+        pure (Function.update g t u) : ProbComp (∀ d, R d)) =ᵈ
+      ($ᵗ (∀ d, R d) : ProbComp (∀ d, R d)) := EvalDistEq.of_forall_prEvent_eq fun p => by
+  let : ∀ d, MeasurableSpace (R d) := fun _ => ⊤
+  have h := evalDist_bind_bind_update_map_dependent t ($ᵗ (R t)) ($ᵗ (∀ d, R d))
+    evalDist_uniformSample evalDist_uniformSample p
+  simpa only [prEvent_norm, evalDist_singleton_true] using
+    congrArg (fun μ : Measure Prop => μ {True}) h
+
+private theorem update_update_uniformSample_evalDistEq (t₀ t₁ : D) :
+    (do
+        let g ← $ᵗ (∀ d, R d)
+        let u₀ ← $ᵗ (R t₀)
+        let u₁ ← $ᵗ (R t₁)
+        pure (Function.update (Function.update g t₀ u₀) t₁ u₁) : ProbComp (∀ d, R d)) =ᵈ
+      ($ᵗ (∀ d, R d) : ProbComp (∀ d, R d)) :=
+  calc (do
+          let g ← $ᵗ (∀ d, R d)
+          let u₀ ← $ᵗ (R t₀)
+          let u₁ ← $ᵗ (R t₁)
+          pure (Function.update (Function.update g t₀ u₀) t₁ u₁) : ProbComp (∀ d, R d))
+      =ᵈ (do
+          let u₀ ← $ᵗ (R t₀)
+          let g ← $ᵗ (∀ d, R d)
+          let u₁ ← $ᵗ (R t₁)
+          pure (Function.update (Function.update g t₀ u₀) t₁ u₁) : ProbComp (∀ d, R d)) :=
+        OracleComp.EvalDistEq.bind_bind_swap _ _ _
+    _ = (do
+          let g ← (do
+            let u₀ ← $ᵗ (R t₀)
+            let g ← $ᵗ (∀ d, R d)
+            pure (Function.update g t₀ u₀))
+          let u₁ ← $ᵗ (R t₁)
+          pure (Function.update g t₁ u₁) : ProbComp (∀ d, R d)) := by
+        simp only [bind_assoc, pure_bind]
+    _ =ᵈ (do
+          let g ← $ᵗ (∀ d, R d)
+          let u₁ ← $ᵗ (R t₁)
+          pure (Function.update g t₁ u₁) : ProbComp (∀ d, R d)) :=
+        (update_uniformSample_evalDistEq t₀).bind_left _
+    _ =ᵈ (do
+          let u₁ ← $ᵗ (R t₁)
+          let g ← $ᵗ (∀ d, R d)
+          pure (Function.update g t₁ u₁) : ProbComp (∀ d, R d)) :=
+        OracleComp.EvalDistEq.bind_bind_swap _ _ _
+    _ =ᵈ ($ᵗ (∀ d, R d) : ProbComp (∀ d, R d)) := update_uniformSample_evalDistEq t₁
+
+/-- Overwriting a coordinate of the table in a uniform pair of a value and a dependent table with
+an independent uniform value, drawn before the pair, leaves the pair uniform. -/
+theorem prEvent_uniformSample_prod_update [SampleableType β] (t : D)
+    (p : β × (∀ d, R d) → Prop) :
+    Pr{let u ← $ᵗ (R t); let x ← $ᵗ (β × ∀ d, R d)}[p (x.1, Function.update x.2 t u)] =
+      Pr{let x ← $ᵗ (β × ∀ d, R d)}[p x] := by
+  have h : (do
+        let u ← $ᵗ (R t)
+        let x ← $ᵗ (β × ∀ d, R d)
+        pure (x.1, Function.update x.2 t u) : ProbComp (β × ∀ d, R d)) =ᵈ
+      ($ᵗ (β × ∀ d, R d) : ProbComp (β × ∀ d, R d)) :=
+    calc (do
+            let u ← $ᵗ (R t)
+            let x ← $ᵗ (β × ∀ d, R d)
+            pure (x.1, Function.update x.2 t u) : ProbComp (β × ∀ d, R d))
+        = (do
+            let u ← $ᵗ (R t)
+            let b ← $ᵗ β
+            let g ← $ᵗ (∀ d, R d)
+            pure (b, Function.update g t u) : ProbComp (β × ∀ d, R d)) := by
+          simp [uniformSample_prod_eq_bind]
+      _ =ᵈ (do
+            let b ← $ᵗ β
+            let u ← $ᵗ (R t)
+            let g ← $ᵗ (∀ d, R d)
+            pure (b, Function.update g t u) : ProbComp (β × ∀ d, R d)) :=
+          OracleComp.EvalDistEq.bind_bind_swap _ _ _
+      _ = (do
+            let b ← $ᵗ β
+            Prod.mk b <$> (do
+              let u ← $ᵗ (R t)
+              let g ← $ᵗ (∀ d, R d)
+              pure (Function.update g t u)) : ProbComp (β × ∀ d, R d)) := by
+          simp [map_eq_bind_pure_comp, bind_assoc]
+      _ =ᵈ (do
+            let b ← $ᵗ β
+            Prod.mk b <$> ($ᵗ (∀ d, R d) : ProbComp (∀ d, R d)) : ProbComp (β × ∀ d, R d)) :=
+          EvalDistEq.bind_right _ fun _ => (update_uniformSample_evalDistEq t).map _
+      _ = ($ᵗ (β × ∀ d, R d) : ProbComp (β × ∀ d, R d)) := by
+          simp [uniformSample_prod_eq_bind, map_eq_bind_pure_comp]
+  simpa only [prEvent_norm] using h.prEvent_eq p
+
+/-- Overwriting two coordinates of the table in a uniform pair of a value and a dependent table
+with independent uniform values, the first drawn before the pair and the second after, leaves the
+pair uniform. -/
+theorem prEvent_uniformSample_prod_update_update [SampleableType β] (t₀ t₁ : D)
+    (p : β × (∀ d, R d) → Prop) :
+    Pr{let u₀ ← $ᵗ (R t₀); let x ← $ᵗ (β × ∀ d, R d); let u₁ ← $ᵗ (R t₁)}[
+        p (x.1, Function.update (Function.update x.2 t₀ u₀) t₁ u₁)] =
+      Pr{let x ← $ᵗ (β × ∀ d, R d)}[p x] := by
+  have h : (do
+        let u₀ ← $ᵗ (R t₀)
+        let x ← $ᵗ (β × ∀ d, R d)
+        let u₁ ← $ᵗ (R t₁)
+        pure (x.1, Function.update (Function.update x.2 t₀ u₀) t₁ u₁) :
+        ProbComp (β × ∀ d, R d)) =ᵈ ($ᵗ (β × ∀ d, R d) : ProbComp (β × ∀ d, R d)) :=
+    calc (do
+            let u₀ ← $ᵗ (R t₀)
+            let x ← $ᵗ (β × ∀ d, R d)
+            let u₁ ← $ᵗ (R t₁)
+            pure (x.1, Function.update (Function.update x.2 t₀ u₀) t₁ u₁) :
+            ProbComp (β × ∀ d, R d))
+        =ᵈ (do
+            let x ← $ᵗ (β × ∀ d, R d)
+            let u₀ ← $ᵗ (R t₀)
+            let u₁ ← $ᵗ (R t₁)
+            pure (x.1, Function.update (Function.update x.2 t₀ u₀) t₁ u₁) :
+            ProbComp (β × ∀ d, R d)) :=
+          OracleComp.EvalDistEq.bind_bind_swap _ _ _
+      _ = (do
+            let b ← $ᵗ β
+            Prod.mk b <$> (do
+              let g ← $ᵗ (∀ d, R d)
+              let u₀ ← $ᵗ (R t₀)
+              let u₁ ← $ᵗ (R t₁)
+              pure (Function.update (Function.update g t₀ u₀) t₁ u₁)) :
+            ProbComp (β × ∀ d, R d)) := by
+          simp [uniformSample_prod_eq_bind, bind_assoc, map_eq_bind_pure_comp]
+      _ =ᵈ (do
+            let b ← $ᵗ β
+            Prod.mk b <$> ($ᵗ (∀ d, R d) : ProbComp (∀ d, R d)) : ProbComp (β × ∀ d, R d)) :=
+          EvalDistEq.bind_right _ fun _ => (update_update_uniformSample_evalDistEq t₀ t₁).map _
+      _ = ($ᵗ (β × ∀ d, R d) : ProbComp (β × ∀ d, R d)) := by
+          simp [uniformSample_prod_eq_bind, map_eq_bind_pure_comp]
+  simpa only [prEvent_norm] using h.prEvent_eq p
+
+end update
 
 /-- Two injections of a uniform sample space give the same distribution to any continuation that
 ignores its argument outside a set both of them cover. A permutation of the sample space matches

@@ -38,6 +38,7 @@ public import ToMathlib.Data.List.FirstWrite
 public import ToMathlib.Data.List.Forall2
 public import ToMathlib.Data.List.MapM
 public import ToMathlib.Data.Nat.Digits
+public import ToMathlib.Data.Nat.Log
 public import ToMathlib.Data.Set.Functor
 public import ToMathlib.Data.Vector
 public import ToMathlib.Data.Vector.Count

@@ -14,6 +14,11 @@ public import Mathlib.Analysis.SpecificLimits.Normed
 Checks that `negligible` connects to Mathlib's real-valued `SuperpolynomialDecay`: a concrete
 geometric family is shown negligible from Mathlib's `tendsto_pow_const_mul_const_pow_of_lt_one`,
 its little-`o` form is read off the bridge, and eventual domination suffices.
+
+The closure lemmas are checked at their edges. A constant is negligible only at `0`, however
+small it is otherwise. A list sum may repeat an entry, and one entry that is not negligible makes
+the sum not negligible. Geometric decay needs a ratio below `1`, and `2 ^ (-c n)` a positive `c`:
+at ratio `1`, or at `c = 0`, the family is the constant `1`.
 -/
 
 public section
@@ -37,6 +42,33 @@ example : ∀ z : ℤ, (fun n : ℕ => (ENNReal.ofReal ((1 / 2 : ℝ) ^ n)).toRe
 
 example {f g : ℕ → ℝ≥0∞} (hg : negligible g) (h : ∀ n ≥ 5, f n ≤ g n) : negligible f :=
   negligible_of_eventuallyLE (Filter.eventually_atTop.2 ⟨5, h⟩) hg
+
+example : negligible fun _ : ℕ => (0 : ℝ≥0∞) := negligible_const_iff.2 rfl
+
+example : ¬ negligible fun _ : ℕ => ((2 : ℝ≥0∞) ^ 100)⁻¹ := fun h =>
+  ENNReal.inv_ne_zero.2 (ENNReal.pow_ne_top ofNat_ne_top) (negligible_const_iff.1 h)
+
+example : ¬ negligible fun _ : ℕ => (1 : ℝ≥0∞) := not_negligible_one
+
+example : negligible fun n =>
+    ([fun n : ℕ => (2⁻¹ : ℝ≥0∞) ^ n, fun n => (2⁻¹ : ℝ≥0∞) ^ n].map fun f => f n).sum :=
+  negligible_list_sum (by simpa using negligible_pow_of_lt_one (ENNReal.inv_lt_one.2 one_lt_two))
+
+example : ¬ negligible fun n =>
+    ([fun n : ℕ => (2⁻¹ : ℝ≥0∞) ^ n, fun _ => 1].map fun f => f n).sum := fun h =>
+  not_negligible_one (negligible_of_le (fun n => by simp) h)
+
+example : negligible fun n => (2⁻¹ : ℝ≥0∞) ^ n :=
+  negligible_pow_of_lt_one (ENNReal.inv_lt_one.2 one_lt_two)
+
+example : ¬ negligible fun n => (1 : ℝ≥0∞) ^ n := by
+  simpa using not_negligible_one
+
+example : negligible fun n : ℕ => (2 : ℝ≥0∞) ^ (-((1 / 2 : ℝ) * n)) :=
+  negligible_two_rpow_neg_mul (by norm_num)
+
+example : ¬ negligible fun n : ℕ => (2 : ℝ≥0∞) ^ (-((0 : ℝ) * n)) := by
+  simpa using not_negligible_one
 
 /-- Infinity at the first parameter does not affect decay. -/
 example : negligible (fun n : ℕ => if n = 0 then ⊤ else 0) := by
