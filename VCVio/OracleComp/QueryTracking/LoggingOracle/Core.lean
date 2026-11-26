@@ -651,6 +651,20 @@ theorem isTotalQueryBound_withQueryLog_iff {α : Type}
     (isTotalQueryBound_run_simulateQ_withLogging_iff
       (QueryImpl.ofLift spec (OracleComp spec)) mx n)
 
+/-- Query logging preserves every predicate-targeted query bound. -/
+theorem isQueryBoundP_withQueryLog_iff {α : Type} (mx : OracleComp spec α) (p : ι → Prop)
+    [DecidablePred p] (n : ℕ) :
+    IsQueryBoundP mx.withQueryLog p n ↔ IsQueryBoundP mx p n := by
+  simpa [withQueryLog] using
+    (isQueryBoundP_run_simulateQ_withLogging_iff
+      (QueryImpl.ofLift spec (OracleComp spec)) mx p n)
+
+/-- A logged program makes the queries of the program. -/
+theorem allQueriesSatisfy_withQueryLog_iff {α : Type} (mx : OracleComp spec α) (P : ι → Prop) :
+    AllQueriesSatisfy mx.withQueryLog P ↔ AllQueriesSatisfy mx P := by
+  rw [allQueriesSatisfy_def, allQueriesSatisfy_def]
+  exact isQueryBound_iff_of_map_eq (loggingOracle.fst_map_run_simulateQ mx) _ _
+
 /-- Logging after substitution records the target queries actually made by each handler program.
 One source query may make zero, one, or many target queries, in the handler's execution order.
 The right side interprets source queries with these logged programs rather than mapping entries

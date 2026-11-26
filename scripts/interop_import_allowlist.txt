@@ -1,0 +1,5 @@
+# Imports between `Interop/` sub-projects that `scripts/check-interop-isolation.sh` accepts, one
+# pair `<importer> <imported>` per line with an optional `# reason`: modules of
+# `Interop/<importer>/` may import modules `Interop.<imported>.…`. Every other import between
+# sub-projects fails the check. A pair needs a matching `[[require]]` of the imported sub-project's
+# package in the importer's lakefile. No sub-project imports another.
