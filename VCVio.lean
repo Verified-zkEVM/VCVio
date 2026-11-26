@@ -559,6 +559,7 @@ public import VCVio.OracleComp.QueryTracking.RandomOracle.Tape
 public import VCVio.OracleComp.QueryTracking.RandomOracle.TouchRead
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Wiring
 public import VCVio.OracleComp.QueryTracking.ResourceProfile
+public import VCVio.OracleComp.QueryTracking.RunLog
 public import VCVio.OracleComp.QueryTracking.SeededOracle
 public import VCVio.OracleComp.QueryTracking.Structures
 public import VCVio.OracleComp.QueryTracking.SubSpec
