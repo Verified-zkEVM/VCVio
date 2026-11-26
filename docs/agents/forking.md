@@ -14,7 +14,9 @@ of genuine acceptance-oracle calls, and its guarantees transfer to frozen reruns
 |---|---|---|---|
 | **Seeded** (Bellare–Neven) | every oracle answer, into a `QuerySeed` | `acc²/q − acc/h` | [`VCVio/CryptoFoundations/SeededFork.lean`](../../VCVio/CryptoFoundations/SeededFork.lean) |
 | **Replay** (cursor-native) | only the forked oracle family | `acc²/q − acc/h` | [`VCVio/CryptoFoundations/ReplayFork.lean`](../../VCVio/CryptoFoundations/ReplayFork.lean) |
-| **Coordinate-wise** | the whole acceptance table | `ε ≤ κ + (1 − κ) p`, `κ = ℓ(k−1)/N` | [`VCVio/CryptoFoundations/CoordinateFork.lean`](../../VCVio/CryptoFoundations/CoordinateFork.lean), [`CoordinateFork/Finder.lean`](../../VCVio/CryptoFoundations/CoordinateFork/Finder.lean) |
+| **Coordinate-wise** (table model) | the whole acceptance table | `ε − κ ≤ p`, `κ = ℓ(k−1)/N` | [`VCVio/CryptoFoundations/CoordinateFork.lean`](../../VCVio/CryptoFoundations/CoordinateFork.lean) |
+| **Coordinate-wise** (finder) | nothing: a black-box finder | `ε ≤ κ + (1 − κ) p`, `κ = ℓ(k−1)/N` | [`VCVio/CryptoFoundations/CoordinateFork/Finder.lean`](../../VCVio/CryptoFoundations/CoordinateFork/Finder.lean) |
+| **Block** (finder, alphabet and threshold per coordinate) | nothing: a black-box finder | `ε ≤ κ + (1 − κ) p`, `κ = ∑ⱼ (kⱼ−1)/Nⱼ` | [`VCVio/CryptoFoundations/CoordinateFork/BlockFinder.lean`](../../VCVio/CryptoFoundations/CoordinateFork/BlockFinder.lean) |
 | **Threshold tree** (Attema–Cramer–Kohl) | nothing: a black-box finder | `ε ≤ κ + (1 − κ) p`, `κ = 1 − ∏(1 − (kᵣ−1)/Nᵣ)` | [`VCVio/CryptoFoundations/Rewinding/ThresholdFinder.lean`](../../VCVio/CryptoFoundations/Rewinding/ThresholdFinder.lean) |
 
 Seeded and replay share a generic core in
@@ -31,6 +33,28 @@ extractor; the present formalization proves all three of its clauses — the out
 probability and the expected number of oracle calls — of the paper's own algorithm, against a
 fixed acceptance table. Stated as a finder (`OracleComp.isFinder_coordFinder`), the success and
 cost clauses transfer to frozen reruns of a prover (`Rewinding.ResetPolicy.finder_bounds`).
+
+## Block forking
+
+`OracleComp.blockFinder` is a generalization of Figure 11 to a challenge `(j : ι) → S j` with an
+alphabet `S j` and a threshold `k j` at every coordinate. It draws the neighbours of a uniform
+centre at each coordinate without replacement (`Rewinding.blockChildren`, run on
+`OracleComp.neighbourPool`), and returns a block star
+(`CoordinateWise.IsBlockSpecialSound`): a centre and, at every `j`, `k j - 1` accepted challenges
+that differ from it at `j` and nowhere else. `OracleComp.isFinder_blockFinder` gives the finder
+contract at error `∑ j, (k j - 1) / |S j|` and cost `1 + ∑ j, (k j - 1)`. The counting lives in
+[`ToMathlib/Combinatorics/CoordinateWise.lean`](../../ToMathlib/Combinatorics/CoordinateWise.lean),
+whose column counts take an alphabet per coordinate: a column that holds fewer than `k j` accepted
+challenges holds at most `k j - 1` of them, and all of its challenges are outside the good set
+(`CoordinateWise.div_card_filter_le_affine_pi`). The bounds for one alphabet and one threshold are
+its constant case, and so is the loop: `OracleComp.coordFinder k` is the block finder at one
+alphabet and the constant threshold `k`, `OracleComp.blockForkOpAt_const` identifies the block loop
+with `coordForkOpAt`, and the success and cost results of `coordForkOp` and the contract
+`OracleComp.isFinder_coordFinder` are derived from the block ones. A call site with one alphabet
+names it, as in `blockFinder (S := fun _ => S)`, since Lean does not infer a constant family.
+At width one, the round of `blockChildren` is the threshold round of Attema–Cramer–Kohl
+(`Rewinding.thresholdChildren_eq_blockChildren`). The sampler for the whole challenge is an
+argument: `SampleableType.piOfFintype` supplies it for a dependent product.
 
 ## Quadratic forks: seeded vs replay
 
@@ -110,7 +134,8 @@ states the fixed-statement, extensional clause of Definition 2.29 against a `Sig
 challenge type is `ι → S`:
 
 ```lean
-def CoordSpeciallySoundAt (σ : SigmaProtocol Stmt Wit Commit PrvState (ι → S) Resp rel) (k : ℕ)
+def CoordSpeciallySoundAt
+    (σ : SigmaProtocol ProbComp Stmt Wit Commit PrvState (ι → S) Resp rel) (k : ℕ)
     (ext : Stmt → Commit → Finset ((ι → S) × Resp) → ProbComp Wit) (x : Stmt) : Prop :=
   ∀ pc T, (∀ p ∈ T, σ.verify x pc p.1 p.2 = true) →
     IsCoordSpecialSound k (T.image Prod.fst) → ∀ w ∈ support (ext x pc T), rel x w = true
@@ -122,7 +147,9 @@ a `k`-ary extractor cannot be one. `HVZK` takes `simTranscript` as a parameter f
 through a pair.
 
 [`CoordinateFork/Extraction.lean`](../../VCVio/CryptoFoundations/CoordinateFork/Extraction.lean)
-composes that with the fork to give **Lemma 2.31 at `μ = 1`**. The extractor it names is
+composes that with the fork to give **the table-model form of Lemma 2.31 at `μ = 1`**: the prover
+enters as a distribution of response tables, not as a rewound prover (see
+[Against a rewound prover](#against-a-rewound-prover)). The extractor it names is
 `coordExtractOp`: run Figure 11 carrying the prover's responses (`OracleComp.coordForkOpT`), then
 hand the accepting transcripts to `ext`. All three of Lemma 7.1's clauses are about that one
 computation —
@@ -161,8 +188,8 @@ identifies the accepting ratio the table bound consumes with `ε_V(A)`, the adve
 probability on a uniform challenge. The transfer is cheap precisely because
 `le_lintegral_card_goodSet` reads only the *marginals* of the table distribution, so realizing some
 distribution with the adversary's marginals is all it needs. No side condition appears: a
-`ProbComp` always carries full mass (`prEvent_true_probComp`), so the hypothesis the general
-marginal lemma requires is automatic.
+`ProbComp` always carries full mass (`OracleComp.prEvent_true_eq_one`), so the hypothesis the
+general marginal lemma requires is automatic.
 
 **`indepTable` is not a rewound prover, and the file does not claim it is.** A prover holding one
 coin tape answers two challenges with values that share those coins; `Fintype.mPi` gives the two
@@ -203,8 +230,8 @@ What is **not** covered:
 - **No transcript extraction against a rewound prover.** The finder's calls are genuine
   acceptance-oracle calls (`OracleComp.runFinder_coordFinder` identifies them with the loop's
   lookups), and frozen reruns carry its success and cost to a prover. Recovering the prover's
-  *responses* on the found challenges, by replaying them against the frozen world, is not yet a
-  library construction; see *Against a rewound prover* below.
+  *responses* on the found challenges is `Rewinding.recover`, which is generic in the finder and
+  is not specialized here; see *Against a rewound prover* below.
 - **No security parameter.** `CoordSpeciallySoundAt` is the extensional, fixed-statement clause of
   Definition 2.29 — no polynomial-time requirement, no joint bad event, no asymptotics. So this is
   not Definition 2.28.
@@ -425,10 +452,9 @@ and cost bounds to an acceptance oracle implemented by such reruns, with the acc
 as the prover's honest acceptance probability averaged over challenges (`finder_bounds_honest`).
 So `isFinder_coordFinder` already bounds Figure 11 against a real prover.
 
-What is not yet a library construction is the last step of extraction: a finder returns
-challenges, and a witness extractor needs the prover's responses on them. Replaying the found
-challenges against the same frozen world returns the responses of the runs the finder saw, by the
-policy's `frozen` law (`Rewinding.ResetPolicy.frozen_run`). That transcript-recovery layer is
-generic over finders, so it serves the threshold finder as well, and is planned as its own change.
-Until it lands, `CoordinateFork/Extraction.lean` extracts in the table model, where the responses
-are a table.
+The last step of extraction is transcript recovery: a finder returns challenges, and a witness
+extractor needs the prover's responses on them. `Rewinding.recover` runs any finder against frozen
+reruns, caches the output of every run it makes, and hands the extractor the transcripts at the
+points of the finder's output (`Rewinding.ResetPolicy.recover_bounds_honest`).
+[rewinding.md](rewinding.md) describes it. `CoordinateFork/Extraction.lean` still extracts in the
+table model, where the responses are a table.

@@ -39,11 +39,15 @@ acceptance table — a product across challenges — which is a fact about this 
 
 No side condition on `A` is needed. Marginalizing one coordinate out of an independent product is
 an equality only when the remaining factors carry full mass; a `ProbComp` always does
-(`prEvent_true_probComp`), so the hypothesis is discharged here rather than assumed.
+(`OracleComp.prEvent_true_eq_one`), so the hypothesis is discharged here rather than assumed.
 
-Still absent, and unchanged by this file: the expected-query clause. `indepTable` runs the
-adversary once per challenge, so it is not the paper's extractor, which queries it `ℓ(k-1)+1` times
-in expectation.
+This file proves no query bound. `indepTable` runs the adversary once per challenge, so it is not
+the paper's extractor, which queries it at most `1 + ℓ(k - 1)` times in expectation. That bound is
+proved for Figure 11's resampling loop against an acceptance table (`lintegral_cost_coordForkOp_le`
+in `CoordinateFork/Operational.lean`) and for the black-box finder (`isFinder_coordFinder` in
+`CoordinateFork/Finder.lean`), whose cost clause carries over to reruns of a prover on a frozen
+tape through `Rewinding.ResetPolicy.finder_bounds_honest`. Only the total-table core in
+`CoordinateFork.lean` leaves cost out.
 -/
 
 public section
@@ -84,11 +88,6 @@ theorem prEvent_verdict (V : (ι → S) → Y → Bool) (A : (ι → S) → Prob
     Pr{let b ← verdict V A c}[b] = Pr{let y ← A c}[V c y] := by
   rw [verdict, prEvent_map]
 
-omit [DecidableEq ι] [Fintype ι] [DecidableEq S] [Fintype S] [SampleableType (ι → S)] in
-/-- A `ProbComp` carries full mass, which is the losslessness the coordinate marginals need. -/
-theorem prEvent_true_probComp {α : Type} (mx : ProbComp α) : Pr{let _ ← mx}[True] = 1 :=
-  OracleComp.prEvent_true_eq_one mx
-
 /-! ## The adversary's success probability -/
 
 /-- `ε_V(A)`: the probability that the verifier accepts the adversary's answer to a uniformly
@@ -121,7 +120,7 @@ theorem prEvent_apply_acceptTable_indepTable (V : (ι → S) → Y → Bool)
     Pr{let ρ ← acceptTable V (indepTable A)}[ρ c] = Pr{let y ← A c}[V c y] := by
   simp only [acceptTable, indepTable]
   rw [prEvent_map]
-  exact prEvent_coord_mPi A c (fun y => V c y) fun c' _ => prEvent_true_probComp (A c')
+  exact prEvent_coord_mPi A c (fun y => V c y) fun c' _ => OracleComp.prEvent_true_eq_one (A c')
 
 omit [DecidableEq S] in
 /-- The accepting ratio of the induced table is the adversary's own success probability. -/

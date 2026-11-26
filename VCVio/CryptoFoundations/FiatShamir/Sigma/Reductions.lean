@@ -57,6 +57,35 @@ abbrev cmaToNmaAdv
       (FiatShamir.inROM σ hr M) :=
   Stateful.nmaAdvFromCmaWithFinalQuery σ hr M adv simTranscript
 
+/-- The Fiat-Shamir EUF-CMA advantage is at most the success of the simulated CMA game, which
+signs with the HVZK simulator `simTranscript` over a programmed random oracle, plus the
+signing-simulation loss `qS · ζ_zk + qS · (qS + qH) · β`. The final verification hash is not
+charged to the simulation. -/
+theorem unforgeableAdvantage_le_cmaSim_add
+    [DecidableEq M] [DecidableEq Commit] [SampleableType Chal]
+    (simTranscript : Stmt → ProbComp (Commit × Chal × Resp))
+    (ζ_zk : ℝ≥0∞) (hHVZK : σ.HVZK simTranscript ζ_zk)
+    (β : ℝ≥0∞) (hPredSim : σ.simCommitPredictability simTranscript β)
+    (adv : SignatureAlg.UnforgeableAdversary (FiatShamir.inROM σ hr M))
+    (qS qH : ℕ)
+    (hQ : ∀ pk, signHashQueryBound (M := M) (Commit := Commit) (Chal := Chal)
+      (S' := Commit × Resp) (oa := adv.main pk) qS qH) :
+    SignatureAlg.unforgeableAdvantage (runtime M) adv ≤
+      Pr{let b ← (Stateful.cmaSim M Commit Chal hr simTranscript).runProb
+          (Stateful.cmaInit M Commit Chal Stmt Wit)
+          (Stateful.signedFreshAdv σ hr M adv)}[b = true] +
+        ((qS : ℝ≥0∞) * ζ_zk + (qS : ℝ≥0∞) * (qS + qH) * β) := by
+  have he := (Stateful.unforgeableAdvantage_eq_statefulPostKeygenFreshAdvantage
+      (σ := σ) (hr := hr) (M := M) (Commit := Commit) (Chal := Chal) (Resp := Resp) adv).trans
+    (Stateful.statefulPostKeygenFreshAdvantage_eq_cmaRealRunProb_signedFreshAdv
+      (σ := σ) (hr := hr) (M := M) (Commit := Commit) (Chal := Chal) (Resp := Resp) adv)
+  have hc := Stateful.signedFreshAdv_H3_bound σ hr M adv simTranscript ζ_zk β hHVZK hPredSim
+    qS qH hQ
+  rw [he, prEvent_eq_evalDist_singleton]
+  exact (MeasureTheory.Measure.apply_true_le_add_boolDist _ _).trans
+    (add_le_add le_rfl (by simpa only [Stateful.cmaH3Advantage,
+      QueryImpl.Stateful.advantage] using hc))
+
 /-- CMA-to-NMA bound for Fiat-Shamir signatures built from a Sigma protocol.
 
 The reduction `cmaToNmaAdv` runs the CMA adversary with simulated signing transcripts and a

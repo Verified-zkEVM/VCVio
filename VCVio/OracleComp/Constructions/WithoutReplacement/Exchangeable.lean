@@ -45,16 +45,6 @@ public section
 open scoped ENNReal
 open MeasureTheory
 
-namespace Finset
-
-/-- Counting a `Finset`'s elements through its list is filtering it. -/
-theorem countP_toList {α : Type*} (s : Finset α) (p : α → Bool) :
-    s.toList.countP p = (s.filter fun x => p x).card := by
-  classical
-  rw [List.countP_eq_sum_map, Finset.sum_map_toList, Finset.card_filter]
-
-end Finset
-
 namespace ProbComp
 
 variable {S : Type}
