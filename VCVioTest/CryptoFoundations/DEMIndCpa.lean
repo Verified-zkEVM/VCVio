@@ -49,15 +49,11 @@ lemma echo_makesAtMostQueries (dem : DEMScheme ProbComp Bool Bool Bool) :
     (echo dem).MakesAtMostQueries 1 := by
   simp [DEMScheme.IND_CPA_Adversary.MakesAtMostQueries, echo]
 
-lemma liftProbComp_probComp {α : Type} (x : ProbComp α) :
-    ProbCompRuntime.probComp.liftProbComp x = x := rfl
-
 /-- Against the insecure DEM, the guess is always the hidden bit. -/
 lemma clear_game :
     clear.IND_CPA_Game ProbCompRuntime.probComp (fun _ => ()) (echo clear) =
       (do let _ ← $ᵗ Bool; let _ ← $ᵗ Bool; pure true) := by
-  simp [DEMScheme.IND_CPA_Game, DEMScheme.IND_CPA_Experiment, echo, clear,
-    liftProbComp_probComp]
+  simp [DEMScheme.IND_CPA_Game, DEMScheme.IND_CPA_Experiment, echo, clear]
 
 /-- The echo adversary wins against the insecure DEM with advantage `1`. -/
 theorem clear_advantage :
@@ -70,7 +66,7 @@ lemma pad_game :
     pad.IND_CPA_Game ProbCompRuntime.probComp (fun _ => ()) (echo pad) =
       (do let _ ← $ᵗ Bool; (!·) <$> ($ᵗ Bool)) := by
   simp only [DEMScheme.IND_CPA_Game, DEMScheme.IND_CPA_Experiment, echo, pad,
-    liftProbComp_probComp]
+    ProbCompRuntime.probComp_liftProbComp]
   refine bind_congr fun b => ?_
   simp only [map_eq_bind_pure_comp, bind_assoc]
   refine bind_congr fun k => ?_
@@ -102,7 +98,7 @@ lemma pad_game_xorTwo :
     pad.IND_CPA_Game ProbCompRuntime.probComp (fun _ => ()) xorTwo =
       (do let _ ← $ᵗ Bool; let _ ← $ᵗ Bool; pure true) := by
   simp only [DEMScheme.IND_CPA_Game, DEMScheme.IND_CPA_Experiment, xorTwo, pad,
-    liftProbComp_probComp]
+    ProbCompRuntime.probComp_liftProbComp]
   refine bind_congr fun b => ?_
   simp only [bind_assoc]
   refine bind_congr fun k => ?_
@@ -119,7 +115,7 @@ against the insecure DEM the guess does not depend on the hidden bit. -/
 lemma clear_experiment_leak (b : Bool) :
     clear.IND_CPA_Experiment ProbCompRuntime.probComp id (echo clear) b =
       (do let _ ← $ᵗ Bool; pure false) := by
-  simp [DEMScheme.IND_CPA_Experiment, echo, liftProbComp_probComp]
+  simp [DEMScheme.IND_CPA_Experiment, echo]
 
 /-! ## One-time adversaries -/
 

@@ -77,7 +77,7 @@ message with the forged tag. -/
     (adversary : (scheme mac H).UnforgeableAdversary) : mac.UnforgeableAdversary where
   main := do
     let s ← H.keygen
-    let (msg, τ) ← simulateQ (QueryImpl.translate (H.hash s)) adversary.main
+    let (msg, τ) ← adversary.main.mapLens (translateLens unifSpec (H.hash s))
     return (H.hash s msg, τ)
 
 /-- The keyed-CR adversary against the hash family: given the hash key, sample a MAC key, run the
@@ -101,7 +101,7 @@ theorem runWithTaggingOracle_macReduction (mac : MacAlg ProbComp D K T)
       let s ← H.keygen
       let ((msg, τ), log) ← (scheme mac H).runWithTaggingOracle (k, s) adversary.main
       return ((H.hash s msg, τ), QueryLog.relabel (H.hash s) log)) := by
-  have htr := fun s => QueryImpl.run_simulateQ_withLogging_translate (mac.tag k)
+  have htr := fun s => QueryImpl.run_simulateQ_withLogging_mapLens_translateLens (mac.tag k)
     ((scheme mac H).tag (k, s)) (H.hash s) (fun _ => rfl) adversary.main
   have hkey := QueryImpl.run_simulateQ_passthrough_add_liftM (QueryImpl.withLogging (mac.tag k))
     H.keygen
@@ -143,34 +143,6 @@ theorem evalDist_keyedCRExperiment_crReduction [DecidableEq M] [DecidableEq D]
     map_bind, Functor.map_map, forgeryRun, collides, QueryLog.hasCollision]
   exact OracleComp.evalDist_bind_bind_swap _ _ _
 
-/-- The union bound behind both security statements: if the forger's test implies the reduced
-forger's test whenever the run `collides` is false, the forger's success probability is
-at most the reduced forger's plus the probability of a collision. -/
-theorem evalDist_le_add_of_not_collides [DecidableEq M] [DecidableEq D]
-    (mac : MacAlg ProbComp D K T) (H : KeyedHashFamily Kh M D)
-    (adversary : (scheme mac H).UnforgeableAdversary)
-    (win winMac : K × Kh × ((M × T) × QueryLog (M →ₒ T)) → Bool)
-    (hwin : ∀ a, collides H a = false → win a = true → winMac a = true) :
-    𝒟[forgeryRun mac H adversary >>= fun a => do
-        let v ← mac.verify a.1 (H.hash a.2.1 a.2.2.1.1) a.2.2.1.2
-        return (win a && v)] {true} ≤
-      𝒟[forgeryRun mac H adversary >>= fun a => do
-          let v ← mac.verify a.1 (H.hash a.2.1 a.2.2.1.1) a.2.2.1.2
-          return (winMac a && v)] {true} +
-        𝒟[forgeryRun mac H adversary >>= fun a => pure (collides H a)] {true} := by
-  refine OracleComp.evalDist_bind_apply_le_add_of_support _ _ _ _ (measurableSet_singleton true)
-    fun a _ => ?_
-  cases hc : collides H a
-  · rw [evalDist_pure,
-      show MeasureTheory.Measure.dirac false {true} = 0 by simp, add_zero]
-    refine OracleComp.evalDist_bind_apply_mono_of_support _ _ _ (measurableSet_singleton true)
-      fun v _ => ?_
-    cases hw : win a
-    · cases v <;> cases winMac a <;> simp
-    · simp [hwin a hc hw]
-  · rw [evalDist_pure, MeasureTheory.Measure.dirac_apply_of_mem (Set.mem_singleton _)]
-    exact MeasureTheory.prob_le_one.trans le_add_self
-
 /-! ## Security -/
 
 /-- **Hash-and-MAC, strong unforgeability.** The SUF-CMA advantage against the hash-and-MAC
@@ -197,7 +169,8 @@ theorem strongUnforgeableAdvantage_le [DecidableEq M] [DecidableEq D] [Decidable
   rw [MacAlg.strongUnforgeableAdvantage, MacAlg.strongUnforgeableAdvantage,
     ProbCompRuntime.probComp_evalDist, ProbCompRuntime.probComp_evalDist, hscheme, hmac,
     keyedCRAdvantage, evalDist_keyedCRExperiment_crReduction]
-  refine evalDist_le_add_of_not_collides mac H adversary _ _ fun ⟨k, s, ⟨msg, τ⟩, log⟩ hc hw => ?_
+  refine OracleComp.evalDist_bind_and_le_add_of_not_bad _ _ (collides H) _ _
+    fun ⟨k, s, ⟨msg, τ⟩, log⟩ _ hc hw => ?_
   simp only [Bool.not_eq_eq_eq_not, Bool.not_true] at hw ⊢
   cases hmem : MacAlg.taggingLogContains (QueryLog.relabel (H.hash s) log) (H.hash s msg) τ
   · rfl
@@ -227,7 +200,8 @@ theorem unforgeableAdvantage_le [DecidableEq M] [DecidableEq D]
   rw [MacAlg.unforgeableAdvantage, MacAlg.unforgeableAdvantage,
     ProbCompRuntime.probComp_evalDist, ProbCompRuntime.probComp_evalDist, hscheme, hmac,
     keyedCRAdvantage, evalDist_keyedCRExperiment_crReduction]
-  refine evalDist_le_add_of_not_collides mac H adversary _ _ fun ⟨k, s, ⟨msg, τ⟩, log⟩ hc hw => ?_
+  refine OracleComp.evalDist_bind_and_le_add_of_not_bad _ _ (collides H) _ _
+    fun ⟨k, s, ⟨msg, τ⟩, log⟩ _ hc hw => ?_
   simp only [Bool.not_eq_eq_eq_not, Bool.not_true] at hw ⊢
   cases hmem : (QueryLog.relabel (H.hash s) log).wasQueried (H.hash s msg)
   · rfl

@@ -12,11 +12,12 @@ public import VCVio.CryptoFoundations.CoordinateFork.SpecialSoundness
 /-!
 # Extracting a witness from a coordinate-wise fork
 
-`coordExtractOp` is the `μ = 1` Σ-protocol case of Lemma 2.31 of Fenzi–Moghaddas–Nguyen, over the
-paper's own algorithm: run Figure 11's resampling loop (`OracleComp.coordForkOpT`) against the
-prover's response table, then hand the accepting transcripts it returns to an extensional
-`ℓ`-coordinate-wise `k`-special sound extractor. All three clauses of Lemma 7.1 hold of that one
-computation:
+`coordExtractOp` is the table-model form of Lemma 2.31 of Fenzi–Moghaddas–Nguyen at `μ = 1`, for
+Σ-protocols: the prover enters as a distribution of response tables, not as a rewound prover (see
+"What this is not" below). It uses the paper's own algorithm: it runs Figure 11's resampling
+loop (`OracleComp.coordForkOpT`) against the prover's response table, then hands the accepting
+transcripts it returns to an extensional `ℓ`-coordinate-wise `k`-special sound extractor. All
+three clauses of Lemma 7.1 hold of that one computation:
 
 * **output** — `OracleComp.coordForkOpT_success`: a successful run's fork produced `ℓ(k-1)+1`
   transcripts the verifier accepts, whose challenges form an `SS(S, ℓ, k)` set;
@@ -182,7 +183,7 @@ theorem sub_div_le_prEvent_extracted_coordExtractOp [Nonempty S]
 
 /-- **The expected-lookup clause, for the paper's algorithm.** The composite reports exactly the
 lookups its fork made, so the bound is the fork's. -/
-theorem lintegral_cost_coordExtractOp_le [Nonempty S]
+theorem lintegral_cost_coordExtractOp_le
     (σ : SigmaProtocol ProbComp Stmt Wit Commit PrvState (ι → S) Resp rel) (k : ℕ)
     (ext : Stmt → Commit → Finset ((ι → S) × Resp) → ProbComp Wit) (x : Stmt)
     (pc : Commit) (P : ProbComp ((ι → S) → Resp)) :

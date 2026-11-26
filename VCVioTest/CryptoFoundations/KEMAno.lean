@@ -15,10 +15,9 @@ public import VCVio.OracleComp.Constructions.SampleableType.Measure
 A toy KEM on `Bool` whose ciphertext is the public key itself, with every encapsulation carrying
 the same fixed shared key. An ANO-CPA adversary that compares the challenge ciphertext with the
 second challenge public key recovers the hidden bit exactly when the two independently generated
-public keys differ, and guesses `false` — which is right half the time — when they coincide. The
-tag is informative on three of the four equally likely keygen outcomes, so the game returns `true`
-with probability `3 / 4` and the ANO-CPA advantage, the Boolean bias of the game, is exactly
-`1 / 2`.
+public keys differ, which they do on two of the four equally likely keygen outcomes. When they
+coincide it guesses `true`, which is right half the time. So the game returns `true` with
+probability `3 / 4`, and the ANO-CPA advantage, the Boolean bias of the game, is exactly `1 / 2`.
 
 The scheme is perfectly correct, and the adversary ignores the encapsulated key it is handed, so
 the computation also witnesses that the key-revealing game does not trivialise the notion: the
@@ -51,10 +50,6 @@ def tagAdv : tagKem.ANO_CPA_Adversary where
   preChallenge _ pk1 := pure pk1
   postChallenge pk1 c _ := pure (c == pk1)
 
-/-- Lifting a `ProbComp` computation into `ProbComp` is the identity. -/
-lemma liftProbComp_probComp {α : Type} (x : ProbComp α) :
-    ProbCompRuntime.probComp.liftProbComp x = x := rfl
-
 /-- The game is three independent uniform `Bool` draws — the two keypairs and the hidden bit —
 followed by a comparison of the challenge ciphertext with the second public key. -/
 lemma tagKem_game :
@@ -64,14 +59,15 @@ lemma tagKem_game :
         let pk1 : Bool ← $ᵗ Bool
         let b : Bool ← $ᵗ Bool
         pure (b == ((if b then pk1 else pk0) == pk1)) : ProbComp Bool) := by
-  simp only [KEMScheme.ANO_CPA_Game, tagKem, tagAdv, liftProbComp_probComp, bind_assoc,
-    pure_bind]
+  simp only [KEMScheme.ANO_CPA_Game, tagKem, tagAdv, ProbCompRuntime.probComp_liftProbComp,
+    bind_assoc, pure_bind]
 
 set_option maxHeartbeats 1600000 in
 -- Peeling three nested `evalDist_bind_of_discrete` layers and evaluating the resulting
 -- eight-term `ℝ≥0∞` sum exceeds the default heartbeat budget.
-/-- The game returns `true` with probability `3 / 4`: the ciphertext reveals the hidden bit on the
-three of four keygen outcomes where the two public keys differ. -/
+/-- The game returns `true` with probability `3 / 4`: the ciphertext reveals the hidden bit when
+the two public keys differ, on two of the four keygen outcomes, and the guess is right half the
+time on the other two. -/
 lemma tagKem_game_true :
     𝒟[tagKem.ANO_CPA_Game ProbCompRuntime.probComp tagAdv] {true} = 3 / 4 := by
   rw [tagKem_game]

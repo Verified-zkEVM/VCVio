@@ -14,6 +14,12 @@ public import Mathlib.Data.Fintype.EquivFin
 On a finite input set, drawing the outputs of all runs once gives a random function. Freezing
 makes its table stable under further executions; commutation permits drawing it before any
 adaptive black-box algorithm without changing the algorithm's output or complete-run count.
+
+Every table in the eager table's support is settled in one world
+(`Rewinding.ResetPolicy.eagerTable_settled`). So runs that begin with a common phase publish the
+same value from it in every such table (`Rewinding.ResetPolicy.eagerTable_proj_eq_of_key_eq`), as
+the transcripts of a Σ-protocol prover share its commitment
+(`Rewinding.ResetPolicy.eagerTable_fst_eq`).
 -/
 
 public section
@@ -261,5 +267,66 @@ theorem attempt_eagerTable [Finite Q] {β : Type}
   simpa only [eagerTable, bind_map_left] using
     P.attempt_draw run (Fintype.equivFin Q).symm (Fintype.equivFin Q)
       (fun q => (Fintype.equivFin Q).symm_apply_apply q) alg
+
+
+/-- Every table in the eager table's support is settled in one world: each complete rerun is a
+pure lookup of its entry there. -/
+theorem eagerTable_settled [Finite Q] {F : Q → α} (hF : F ∈ support (P.eagerTable run)) :
+    ∃ w, ∀ q, (P.runWorld run q).run w = pure (F q, w) := by
+  classical
+  let : Fintype Q := Fintype.ofFinite Q
+  simp only [eagerTable, support_map, Set.mem_image] at hF
+  obtain ⟨z, hz, rfl⟩ := hF
+  refine ⟨z.2, fun q => ?_⟩
+  simpa only [Equiv.symm_apply_apply] using
+    (P.draw_support run (Fintype.equivFin Q).symm P.empty z hz).2 (Fintype.equivFin Q q)
+
+/-- Prefix consistency: if `run q` first executes a phase that depends only on `key q`, and every
+output of the rest has the projection `pub s` of that phase's result `s`, then two inputs with the
+same key give one projection in every table of the eager table's support. For a multi-round
+prover, `key q` is the prefix of challenges up to a round and `proj` reads the messages sent
+before that round, so sibling transcripts in a tree share them. -/
+theorem eagerTable_proj_eq_of_key_eq {K S A : Type} [Finite Q] (proj : α → A) (key : Q → K)
+    (pre : K → OracleComp spec S) (pub : S → A) (post : S → Q → OracleComp spec α)
+    (hrun : ∀ q, run q = pre (key q) >>= fun s => post s q)
+    (hpub : ∀ s q, ∀ y ∈ support (post s q), proj y = pub s)
+    {F : Q → α} (hF : F ∈ support (P.eagerTable run))
+    {q q' : Q} (hq : key q = key q') : proj (F q) = proj (F q') := by
+  obtain ⟨w, hw⟩ := P.eagerTable_settled run hF
+  have hkey : ∀ q, ∀ s ∈ support ((simulateQ P.answer (pre (key q))).run (w, P.begin)),
+      proj (F q) = pub s.1 := by
+    intro q s hs
+    obtain ⟨y, hy⟩ := support_nonempty ((simulateQ P.answer (post s.1 q)).run s.2)
+    have hmem : (y.1, y.2.1) ∈ support ((P.runWorld run q).run w) := by
+      simp only [runWorld, StateT.run_mk, hrun, simulateQ_bind, StateT.run_bind,
+        support_map, support_bind, Set.mem_image, Set.mem_iUnion]
+      exact ⟨y, ⟨s, hs, hy⟩, rfl⟩
+    rw [hw q, support_pure, Set.mem_singleton_iff, Prod.mk.injEq] at hmem
+    rw [← hmem.1]
+    exact hpub s.1 q y.1 (mem_support_of_mem_support_simulateQ_run _ _ _ hy)
+  obtain ⟨s, hs⟩ := support_nonempty ((simulateQ P.answer (pre (key q))).run (w, P.begin))
+  rw [hkey q s hs, hkey q' s (hq ▸ hs)]
+
+/-- Runs whose first phase depends only on `key q` and publishes `pub` of its result give one
+public value whenever their keys agree, in every table of the eager table's support. -/
+theorem eagerTable_fst_eq_of_key_eq {K S A B : Type} [Finite Q] (key : Q → K)
+    (pre : K → OracleComp spec S) (pub : S → A) (post : S → Q → OracleComp spec B)
+    {F : Q → A × B}
+    (hF : F ∈ support (P.eagerTable fun q => pre (key q) >>= fun s => (pub s, ·) <$> post s q))
+    {q q' : Q} (hq : key q = key q') : (F q).1 = (F q').1 :=
+  P.eagerTable_proj_eq_of_key_eq _ Prod.fst key pre pub (fun s q => (pub s, ·) <$> post s q)
+    (fun _ => rfl) (fun s q y hy => by
+      rw [support_map] at hy
+      obtain ⟨b, -, rfl⟩ := hy
+      rfl) hF hq
+
+/-- Runs that share a first phase `pre` and publish `pub` of its result give one public value in
+every table of the eager table's support. For a Σ-protocol prover, the first phase is the
+commitment, so every recovered transcript has the same commitment. -/
+theorem eagerTable_fst_eq {S A B : Type} [Finite Q] (pre : OracleComp spec S) (pub : S → A)
+    (post : S → Q → OracleComp spec B) {F : Q → A × B}
+    (hF : F ∈ support (P.eagerTable fun q => pre >>= fun s => (pub s, ·) <$> post s q))
+    (q q' : Q) : (F q).1 = (F q').1 :=
+  P.eagerTable_fst_eq_of_key_eq (fun _ => ()) (fun _ => pre) pub post hF rfl
 
 end Rewinding.ResetPolicy
