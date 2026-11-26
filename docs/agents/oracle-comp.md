@@ -400,3 +400,18 @@ def myImpl : QueryImpl spec (StateT MyState ProbComp) := fun t => do
 ```
 
 Then run with `(simulateQ myImpl computation).run initialState`.
+
+### Adding or fixing a component of handler state
+
+Use `QueryImpl.extendState` to record information that the base handler never reads.
+For example, `SignatureAlg.forgerCountingRomImpl` increments a counter for each hash query
+from the adversary, including cache hits. `OracleComp.extendState_run_proj_eq` lets the proof
+drop the final counter and keep both the experiment result and the final cache.
+[Counted random-oracle experiment](../../VCVio/CryptoFoundations/SignatureAlg/RomQueryCount.lean)
+
+Use `QueryImpl.fixSndStateT impl q₀` when a `ProbComp` handler reads a parameter from its
+second state component. Each query receives `q₀` afresh. To recover the full run, prove that
+every supported step starting with `q₀` leaves it in place, then apply
+`OracleComp.simulateQ_run_eq_of_snd_invariant`. The pointer-chain puzzle uses this to run with
+a fixed key table while still threading the cache and encryption counter.
+[Key-table projection](../../VCVio/Schemes/PointerChainPuzzle/HidingNonce.lean)
