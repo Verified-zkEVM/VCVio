@@ -81,6 +81,19 @@ theorem prEvent_exists_finset_le {ι : Type} (s : Finset ι) (mx : m α) (p : ι
   obtain ⟨i, hi, hp⟩ := hx
   exact Set.mem_biUnion hi hp
 
+/-- Union bound over a list. -/
+theorem prEvent_exists_list_le {ι : Type*} (L : List ι) (mx : m α) (p : ι → α → Prop) :
+    Pr{let x ← mx}[∃ i ∈ L, p i x] ≤ (L.map fun i ↦ Pr{let x ← mx}[p i x]).sum := by
+  induction L with
+  | nil => simp
+  | cons a L ih =>
+    rw [List.map_cons, List.sum_cons]
+    refine (prEvent_mono _ _ (fun x ↦ p a x ∨ ∃ i ∈ L, p i x) fun x ⟨i, hi, h⟩ ↦ ?_).trans
+      ((prEvent_or_le _ _ _).trans (add_le_add le_rfl ih))
+    rcases List.mem_cons.1 hi with rfl | hi
+    · exact .inl h
+    · exact .inr ⟨i, hi, h⟩
+
 /-- Over a finite type of values, the event that an optional observation is present has the total
 probability of its individual values. -/
 theorem prEvent_isSome_eq_sum {γ : Type} [Fintype γ] (mx : m α) (f : α → Option γ) :
@@ -153,6 +166,14 @@ theorem prEvent_le_prEvent_add_prEvent_and_not (mx : m α) (p q : α → Prop) :
   rw [prEvent_eq_prEvent_and_add_prEvent_and_not mx p q]
   exact add_le_add_left (prEvent_mono mx (fun x ↦ p x ∧ q x) q fun x hx ↦ hx.2) _
 
+/-- An event is at most a second one plus a third, when the first implies the second wherever
+the third fails. -/
+theorem prEvent_le_prEvent_add_prEvent_of_imp (mx : m α) {p q r : α → Prop}
+    (h : ∀ x, p x → ¬ r x → q x) :
+    Pr{let x ← mx}[p x] ≤ Pr{let x ← mx}[q x] + Pr{let x ← mx}[r x] :=
+  (prEvent_le_prEvent_add_prEvent_and_not mx p q).trans
+    (add_le_add le_rfl (prEvent_mono _ _ _ fun x hx ↦ by_contra fun hr ↦ hx.2 (h x hx.1 hr)))
+
 /-- An event and its negation partition the successful mass. -/
 theorem prEvent_add_prEvent_not_eq_prEvent_true (mx : m α) (p : α → Prop) :
     Pr{let x ← mx}[p x] + Pr{let x ← mx}[¬p x] = Pr{let _ ← mx}[True] := by
@@ -194,6 +215,35 @@ theorem prEvent_and_le_left (mx : m α) (p q : α → Prop) :
 theorem prEvent_and_le_right (mx : m α) (p q : α → Prop) :
     Pr{let x ← mx}[p x ∧ q x] ≤ Pr{let x ← mx}[q x] :=
   prEvent_mono mx _ _ fun _ hx ↦ hx.2
+
+/-- The distance between the probabilities of two events is at most their distance where a third
+event fails, plus the probability of the third. -/
+theorem absDiff_prEvent_le_absDiff_prEvent_and_not_add (mx : m α) (p q r : α → Prop) :
+    ENNReal.absDiff Pr{let x ← mx}[p x] Pr{let x ← mx}[q x] ≤
+      ENNReal.absDiff Pr{let x ← mx}[p x ∧ ¬ r x] Pr{let x ← mx}[q x ∧ ¬ r x] +
+        Pr{let x ← mx}[r x] := by
+  have key : ∀ p q : α → Prop, Pr{let x ← mx}[p x] ≤ Pr{let x ← mx}[q x] +
+      (ENNReal.absDiff Pr{let x ← mx}[p x ∧ ¬ r x] Pr{let x ← mx}[q x ∧ ¬ r x] +
+        Pr{let x ← mx}[r x]) := fun p q ↦
+    calc Pr{let x ← mx}[p x]
+        ≤ Pr{let x ← mx}[p x ∧ ¬ r x] + Pr{let x ← mx}[r x] :=
+          prEvent_le_prEvent_add_prEvent_of_imp mx fun _ hp hr ↦ ⟨hp, hr⟩
+      _ ≤ Pr{let x ← mx}[q x ∧ ¬ r x] +
+            ENNReal.absDiff Pr{let x ← mx}[p x ∧ ¬ r x] Pr{let x ← mx}[q x ∧ ¬ r x] +
+              Pr{let x ← mx}[r x] :=
+          add_le_add_left (ENNReal.absDiff_le_iff.1 le_rfl).1 _
+      _ ≤ _ := by
+          rw [add_assoc]
+          exact add_le_add_left (prEvent_and_le_left mx q _) _
+  refine ENNReal.absDiff_le_iff.2 ⟨key p q, ?_⟩
+  rw [ENNReal.absDiff_comm]
+  exact key q p
+
+/-- An event that never holds after two steps has probability zero. -/
+@[simp]
+theorem prEvent_bind_bind_false {β : Type} (mx : m α) (my : α → m β) :
+    Pr{let a ← mx; let _ ← my a}[False] = 0 := by
+  rw [← prEvent_false (mx >>= my), map_bind]
 
 end eventAlgebra
 

@@ -16,7 +16,7 @@ Status: current placement policy; the migration table distinguishes planned move
 | `Examples/Widgets/` | Interactive proof visualizations used by the examples | Presentation dependency, never a scheme dependency |
 | `VCVioTest/`, `LatticeCryptoTest/`, `HashSigTest/` | Tests, vectors and executable regressions | Mirror the owning implementation; fixtures do not enter proof libraries |
 | `Extern/`, `csrc/`, `third_party/` | FFI bindings, native shims and vendored backends | Proof libraries never import Extern; downstream links work without submodules |
-| `Interop/` | Source-language models, imported references and conformance | Optional downstream development; core never imports it |
+| `Interop/` | Sub-projects connecting VCVio to outside code and tools: source-language models, imported references and conformance | One Lake package per sub-project (`Interop/<Sub>/`), each with its own trusted base; core never imports it, and a sub-project imports another only through a listed `require` |
 | `docs/`, `scripts/`, `.github/` | Guides, validation tools and CI | Commands and references follow the same ownership boundaries |
 
 Root Lean files are public umbrellas; root Lake files define package and target boundaries.
@@ -30,6 +30,10 @@ contain instructional uses, not forwarding aliases for library definitions. Test
 be shared by other test libraries without pulling a scheme into pure implementation imports.
 
 ## Optional backends and external bridges
+
+External bridges live in `Interop/`, one Lake package per sub-project, each with its own trusted
+base, assumptions and coverage; [`Interop/README.md`](../../Interop/README.md) indexes them and
+states the rules they share.
 
 Core VCVio stays backend-neutral: PolyFun owns the generic realizability theory, and a concrete
 machine model enters only through an optional package. A planned nested package, `VCVioFrontier`,
@@ -65,10 +69,11 @@ including transitive imports. Its configuration is partly specific to Mathlib, a
 version keeps its rules in Lean. [importGraph](https://github.com/leanprover-community/import-graph)
 provides reusable graph analysis; both projects use Lean's import parser.
 
-VCVio uses `Lean.parseImports'` for its existing interop and FFI guards and the pure-algorithm
-boundary. These are a few coarse independence requirements. The other placement rules above
-are review guidance; the guard does not encode a total directory order or the whole framework
-DAG. The source check needs the pinned Lean toolchain but no built modules or Lake dependencies.
+VCVio uses `Lean.parseImports'` for its existing interop and FFI guards, the boundaries between
+`Interop/` sub-projects and the pure-algorithm boundary. These are a few coarse independence
+requirements. The other placement rules above are review guidance; the guard does not encode a
+total directory order or the whole framework DAG. The source check needs the pinned Lean
+toolchain but no built modules or Lake dependencies.
 
 ## Migration slices
 

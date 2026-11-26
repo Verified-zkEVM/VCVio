@@ -19,6 +19,10 @@ cache results to return to the same query in the future.
 
 We also define `cachingOracle`, which caches queries to the oracles in `spec`,
 querying fresh values from `spec` if no cached value exists.
+
+A cached run of a program whose queries all satisfy a predicate `P` does not read the cache
+outside `P`: from two caches that agree on `P` it returns the same results
+(`QueryImpl.fst_map_run_simulateQ_withCaching_eq_of_allQueriesSatisfy`).
 -/
 
 @[expose] public section
@@ -614,5 +618,34 @@ lemma map_withCaching_run_of_commute (so : QueryImpl spec m)
   | none =>
     rw [withCaching_run_none so hc, withCaching_run_none so (h₁.trans hc), Functor.map_map]
     simp only [Prod.map_apply, id_eq, h₂]
+
+/-- At a query satisfying `P`, a `withCaching` step commutes with replacing every entry of the
+cache outside `P` by the entry of `cache'`. -/
+lemma map_withCaching_run_ofFn_ite (so : QueryImpl spec m) {P : ι → Prop} [DecidablePred P]
+    (cache' : spec.QueryCache) {t : spec.Domain} (ht : P t) (cache : spec.QueryCache) :
+    Prod.map id (fun c : spec.QueryCache => QueryCache.ofFn fun t' => if P t' then c t' else
+        cache' t') <$> (so.withCaching t).run cache =
+      (so.withCaching t).run (QueryCache.ofFn fun t' => if P t' then cache t' else cache' t') := by
+  refine map_withCaching_run_of_commute so _ (by simp [ht]) fun u => QueryCache.ext fun t' => ?_
+  by_cases ht' : P t'
+  · by_cases htt : t' = t
+    · subst htt
+      simp [ht']
+    · simp [ht', QueryCache.cacheQuery_of_ne _ _ htt]
+  · simp [ht', QueryCache.cacheQuery_of_ne _ _ fun h : t' = t => ht' (h ▸ ht)]
+
+/-- **Unqueried cache entries do not matter.** A cached run of a program whose queries all satisfy
+`P` returns the same results from two caches that agree at every query satisfying `P`. -/
+theorem fst_map_run_simulateQ_withCaching_eq_of_allQueriesSatisfy (so : QueryImpl spec m)
+    {P : ι → Prop} {α : Type u} {oa : OracleComp spec α} (h : oa.AllQueriesSatisfy P)
+    {cache cache' : spec.QueryCache} (hcache : ∀ t, P t → cache t = cache' t) :
+    Prod.fst <$> (simulateQ so.withCaching oa).run cache =
+      Prod.fst <$> (simulateQ so.withCaching oa).run cache' := by
+  classical
+  have hg : (QueryCache.ofFn fun t => if P t then cache t else cache' t) = cache' :=
+    QueryCache.ext fun t => by by_cases ht : P t <;> simp [ht, hcache]
+  rw [← hg, ← h.map_run_simulateQ_eq_of_query_map_eq _
+    (fun t ht c => map_withCaching_run_ofFn_ite so cache' ht c), Functor.map_map]
+  rfl
 
 end QueryImpl
