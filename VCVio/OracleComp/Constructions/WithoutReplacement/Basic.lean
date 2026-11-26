@@ -164,7 +164,6 @@ theorem drawUntil_map {T : Type} (g : S → T) (accept : T → Bool) (n : ℕ) :
             simp only [Functor.map_map, Function.comp_def]
             rfl
 
-
 /-! ## What the loop returns
 
 Success is a property of the pool alone: the loop collects `r` accepting values exactly when the
