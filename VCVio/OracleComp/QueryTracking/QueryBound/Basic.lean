@@ -324,6 +324,14 @@ lemma isQueryBoundP_bind
   rw [isQueryBoundP_iff_isChargeBound] at h ⊢
   exact h.bind_support fun x hx => (isQueryBoundP_iff_isChargeBound p (ob x) m).1 (h' x hx)
 
+/-- `oa >>= ob` is `p`-bounded by any `k ≥ n + m` when `oa` is `p`-bounded by `n` and every
+reachable continuation `ob x` is `p`-bounded by `m`. -/
+lemma isQueryBoundP_bind_le
+    {oa : OracleComp spec α} {ob : α → OracleComp spec β} {n m k : ℕ}
+    (h : IsQueryBoundP oa p n) (h' : ∀ x ∈ support oa, IsQueryBoundP (ob x) p m)
+    (hk : n + m ≤ k) : IsQueryBoundP (oa >>= ob) p k :=
+  (isQueryBoundP_bind h h').mono hk
+
 /-- `oa >>= ob` makes no `p`-query when `oa` and every continuation `ob x` make none. The
 continuations are taken at every value, so the bound composes as a predicate on programs that
 holds of every `pure` and is preserved by `bind`. -/
@@ -562,6 +570,23 @@ lemma allQueriesSatisfy_of_forall {P : ι → Prop} (hP : ∀ t, P t) (oa : Orac
     AllQueriesSatisfy oa P := by
   exact (PFunctor.FreeM.callsIn_iff_forall_mayCall (P := spec.toPFunctor) oa).2
     fun t _ => hP t
+
+@[simp]
+lemma allQueriesSatisfy_map_iff (oa : OracleComp spec α) (f : α → β) (P : ι → Prop) :
+    AllQueriesSatisfy (f <$> oa) P ↔ AllQueriesSatisfy oa P :=
+  isQueryBound_map_iff oa f () _ _
+
+/-- Answer functions that agree on every query satisfying `P` give the same run of a program
+whose queries all satisfy `P`. -/
+theorem evalWithAnswerFn_eq_of_allQueriesSatisfy {ans ans' : QueryImpl spec Id} {P : ι → Prop}
+    (hans : ∀ t, P t → ans t = ans' t) {oa : OracleComp spec α} (h : AllQueriesSatisfy oa P) :
+    evalWithAnswerFn ans oa = evalWithAnswerFn ans' oa := by
+  induction oa using OracleComp.inductionOn with
+  | pure a => rfl
+  | query_bind t k ih =>
+    rw [allQueriesSatisfy_query_bind_iff] at h
+    rw [evalWithAnswerFn_bind, evalWithAnswerFn_bind, evalWithAnswerFn_liftM_query,
+      evalWithAnswerFn_liftM_query, hans t h.1, ih (ans' t) (h.2 _)]
 
 end AllQueriesSatisfy
 
@@ -836,6 +861,24 @@ lemma IsTotalQueryBound.of_bind_query_prefix [∀ t, Nonempty (spec.Range t)]
       have hn : 0 < n := Nat.pos_of_ne_zero fun hz =>
         absurd (hz ▸ h.2 (Classical.arbitrary _)) not_isTotalQueryBound_bind_query_prefix_zero
       exact ⟨hn, fun u => ih u (n := n - 1) (Nat.sub_add_cancel hn ▸ h.2 u)⟩
+
+/-- A total query bound implies a predicate-targeted bound for every predicate `p`. -/
+theorem IsTotalQueryBound.isQueryBoundP {p : ι → Prop} [DecidablePred p] {oa : OracleComp spec α}
+    {n : ℕ} (h : IsTotalQueryBound oa n) : IsQueryBoundP oa p n := by
+  induction oa using OracleComp.inductionOn generalizing n with
+  | pure _ => trivial
+  | query_bind t mx ih =>
+      rw [isTotalQueryBound_query_bind_iff] at h
+      rw [isQueryBoundP_query_bind_iff]
+      refine ⟨Or.inr h.1, fun u => ?_⟩
+      split
+      · exact ih u (h.2 u)
+      · exact (ih u (h.2 u)).mono (Nat.sub_le _ _)
+
+/-- With the always-true predicate, `IsQueryBoundP` reduces to `IsTotalQueryBound`. -/
+lemma isQueryBoundP_true_iff (oa : OracleComp spec α) (n : ℕ) :
+    IsQueryBoundP oa (fun _ => True) n ↔ IsTotalQueryBound oa n := by
+  refine isQueryBound_congr (fun t b => ?_) (fun t b => ?_) <;> simp
 
 theorem IsTotalQueryBound.simulateQ_run_of_step {ι' : Type u} {spec' : OracleSpec ι'}
      {σ : Type u}

@@ -1,0 +1,54 @@
+name = "VCVioInteropSquirrel"
+defaultTargets = ["InteropSquirrel"]
+testDriver = "InteropSquirrelTest"
+
+# The Squirrel sub-project of `Interop/`: the logic of the Squirrel prover, embedded deeply on
+# PolyFun's scoped syntax, with its semantics and the soundness of its rules. It requires only
+# VCVio. Sources are read from the repository root, so modules keep their `Interop.Squirrel.`
+# names, and the dependency cache is the root's. See README.md.
+srcDir = "../.."
+packagesDir = "../../.lake/packages"
+
+# The root package's options, so the development meets the same style.
+[leanOptions]
+pp.unicode.fun = true
+pp.proofs.withType = false
+autoImplicit = false
+relaxedAutoImplicit = false
+weak.linter.mathlibStandardSet = true
+weak.linter.redundantVisibility = true
+weak.linter.style.longFile = 1500
+experimental.vcgen = true
+weak.linter.unicodeLinter = false
+weak.linter.constructorNameAsVariable = false
+
+[[require]]
+name = "VCVio"
+path = "../.."
+
+# The syntax, the models and machines, global formulas, the rules proved sound and their
+# derivations. As the default target, its roots are the roots of the sub-project's axiom sweep in
+# CI.
+[[lean_lib]]
+name = "InteropSquirrel"
+roots = [
+  "Interop.Squirrel.Syntax", "Interop.Squirrel.Model", "Interop.Squirrel.RandomVariable",
+  "Interop.Squirrel.Machine", "Interop.Squirrel.Indist", "Interop.Squirrel.Global",
+  "Interop.Squirrel.Avoids", "Interop.Squirrel.Rules.Local", "Interop.Squirrel.Rules.Equiv",
+  "Interop.Squirrel.Rules.Rename", "Interop.Squirrel.Rules.Enc", "Interop.Squirrel.Secrecy",
+  "Interop.Squirrel.Rules.Secrecy", "Interop.Squirrel.Rules.Deduce", "Interop.Squirrel.Rules.Fresh",
+  "Interop.Squirrel.TapeBounds", "Interop.Squirrel.Rules.FreshL", "Interop.Squirrel.Derivation",
+]
+
+# Satisfiability checks, countermodels, bound checks and worked derivations; `lake test` builds
+# them.
+[[lean_lib]]
+name = "InteropSquirrelTest"
+roots = [
+  "Interop.Squirrel.Test.Validity", "Interop.Squirrel.Test.Bounds",
+  "Interop.Squirrel.Test.Structural", "Interop.Squirrel.Test.Constructions",
+  "Interop.Squirrel.Test.TwoTimePad", "Interop.Squirrel.Test.CaseStudy",
+  "Interop.Squirrel.Test.EncExamples", "Interop.Squirrel.Test.WorkedEnc",
+  "Interop.Squirrel.Test.SecrecyExamples", "Interop.Squirrel.Test.FreshLExamples",
+  "Interop.Squirrel.Test.FreshLCountermodel",
+]

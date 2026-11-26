@@ -272,6 +272,92 @@ Preprint: <https://eprint.iacr.org/2017/604>
 Used in:
 - `VCVio/CryptoFoundations/FujisakiOkamoto/Defs.lean`
 
+### BC14
+
+Bana and Comon-Lundh.
+*A Computationally Complete Symbolic Attacker for Equivalence Properties*.
+In *Proceedings of the 2014 ACM SIGSAC Conference on Computer and Communications Security*
+(CCS 2014).
+PDF: <https://www.lsv.ens-paris-saclay.fr/Publis/PAPERS/PDF/BC-ccs14.pdf>
+
+Used in:
+- `Interop/Squirrel/Indist.lean`
+- `Interop/Squirrel/Rules/Equiv.lean`
+- `Interop/Squirrel/Rules/Rename.lean`
+- `Interop/Squirrel/Rules/Enc.lean`
+- `Interop/Squirrel/Derivation.lean`
+- `Interop/Squirrel/Test/TwoTimePad.lean`
+- `Interop/Squirrel/Test/CaseStudy.lean`
+- `Interop/Squirrel/Test/WorkedEnc.lean`
+- `Interop/Squirrel/README.md`
+- `docs/design/interop-squirrel.md`
+
+### SP21
+
+Baelde, Delaune, Jacomme, Koutsos and Moreau.
+*An Interactive Prover for Protocol Verification in the Computational Model*.
+In *2021 IEEE Symposium on Security and Privacy* (S&P 2021).
+Long version: <https://adrienkoutsos.fr/papers/metabc_long.pdf>
+
+Used in:
+- `Interop/Squirrel/Test/TwoTimePad.lean`
+- `Interop/Squirrel/README.md`
+- `docs/design/interop-squirrel.md`
+
+### LICS23
+
+Baelde, Koutsos and Lallemand.
+*A Higher-Order Indistinguishability Logic for Cryptographic Reasoning*.
+In *38th Annual ACM/IEEE Symposium on Logic in Computer Science* (LICS 2023).
+Author report (30 pp.), the version read:
+<https://people.irisa.fr/Joseph.Lallemand/files/papers/lics23-report.pdf>
+Paper: <https://adrienkoutsos.fr/papers/ho-squirrel.pdf>
+
+Used in:
+- `Interop/Squirrel/Syntax.lean`
+- `Interop/Squirrel/Model.lean`
+- `Interop/Squirrel/RandomVariable.lean`
+- `Interop/Squirrel/Machine.lean`
+- `Interop/Squirrel/Indist.lean`
+- `Interop/Squirrel/Global.lean`
+- `Interop/Squirrel/Rules/Local.lean`
+- `Interop/Squirrel/Rules/Equiv.lean`
+- `Interop/Squirrel/Rules/Rename.lean`
+- `Interop/Squirrel/Rules/Enc.lean`
+- `Interop/Squirrel/Derivation.lean`
+- `Interop/Squirrel/Test/TwoTimePad.lean`
+- `Interop/Squirrel/Test/CaseStudy.lean`
+- `Interop/Squirrel/README.md`
+- `docs/design/interop-squirrel.md`
+
+### CSF24
+
+Baelde, Fontaine, Koutsos, Scerri and Vignon.
+*A Probabilistic Logic for Concrete Security*.
+In *37th IEEE Computer Security Foundations Symposium* (CSF 2024).
+Long version: <https://adrienkoutsos.fr/papers/concrete-long.pdf>
+
+Used in:
+- `Interop/Squirrel/Model.lean`
+- `Interop/Squirrel/Global.lean`
+- `Interop/Squirrel/Derivation.lean`
+- `Interop/Squirrel/README.md`
+- `docs/design/interop-squirrel.md`
+
+### CCS26
+
+Hérouard, Jacomme, Koutsos and Lallemand.
+*Secrecy in Squirrel and the Post-Compromise Security of a Ratchet*.
+In *ACM SIGSAC Conference on Computer and Communications Security* (CCS 2026).
+ePrint: <https://eprint.iacr.org/2026/1912> (the authors' PDF of 2026-09-07 was read)
+
+Used in:
+- `Interop/Squirrel/Model.lean`
+- `Interop/Squirrel/Global.lean`
+- `Interop/Squirrel/Derivation.lean`
+- `Interop/Squirrel/README.md`
+- `docs/design/interop-squirrel.md`
+
 ## Projects and Repositories
 
 ### MATHLIB4
@@ -310,3 +396,13 @@ GitHub repository: <https://github.com/dtumad/lean-crypto-formalization>
 
 Used in:
 - `README.md`
+
+### SQUIRREL-REPO
+
+The Squirrel developers.
+*squirrel-prover*: the Squirrel prover, its theories, documentation and examples.
+GitHub repository: <https://github.com/squirrel-prover/squirrel-prover>
+
+Used in:
+- `Interop/Squirrel/README.md`
+- `docs/design/interop-squirrel.md`

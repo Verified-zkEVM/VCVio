@@ -1,78 +1,87 @@
 # Interop
 
-Bridges that let VCVio reason about Lean code produced by external verification tools: today, the
-Rust frontends [hax](https://github.com/cryspen/hax) and
-[Aeneas](https://github.com/AeneasVerif/aeneas).
+Sub-projects that connect VCVio to code and tools outside Lean. Each one is a directory
+`Interop/<Sub>/` with its own Lake package, its own trusted base, its own assumptions and the
+implementations it covers. This page is their index and states the rules they share; each
+sub-project's README states the rest.
 
 ## Stability
 
 `Interop/` is experimental, and it changes much faster than the rest of VCVio.
-- *No stable interface.* Any PR may rename its modules, restate its theorems or move its hax and
-  Aeneas pins, without deprecations.
-- *It follows the tools.* hax and Aeneas change their Lean output and libraries between releases,
-  and the bridges change with them.
+- *No stable interface.* Any PR may rename a sub-project's modules, restate its theorems or move
+  its pins, without deprecations.
+- *It follows the tools.* The outside tools change their Lean output and libraries between
+  releases, and the sub-projects change with them.
 - *The core is unaffected.* Core VCVio never depends on `Interop/` (see
-  [TCB isolation](#tcb-isolation)).
+  [shared rules](#shared-rules)).
 
-To build on these bridges, pin a VCVio commit and open an issue describing what you rely on.
+To build on a sub-project, pin a VCVio commit and open an issue describing what you rely on.
 
-## A separate package
+## Sub-projects
 
-The Rust bridges need hax's and Aeneas's Lean libraries, and every package that requires VCVio
-would resolve any `require` in VCVio's root lakefile. So `Interop/lakefile.toml` is its own Lake
-package. It requires VCVio by path and pins hax and its Aeneas backend by commit. The Aeneas fork
-combines hax's `RustM` interface with the upstream Lean 4.36 fixes for enum declarations and
-scalar set-membership rules. The override can be removed when hax pins a compatible backend.
-[Aeneas Lean update](https://github.com/AeneasVerif/aeneas/pull/1547).
-- *Sources.* It reads them from the repository root (`srcDir = ".."`), so modules keep their
-  `Interop.` names.
-- *Pins.* Its pins equal the root's (Lean v4.36.0, Mathlib v4.36.0), so it shares the root's
-  dependency cache. A bridge with no Lake dependency of its own can build in the root package
-  instead.
+| Sub-project | What it connects | Trusted base | Assumptions | Implementations covered |
+|---|---|---|---|---|
+| [`Interop/Aeneas`](Aeneas/README.md) | Rust code extracted by hax 0.5 and Aeneas, in Aeneas's monad `RustM`, lifted into `OracleComp` | hax's frontend, Charon and Aeneas, which translate the Rust crates, and the Rust models in the Lean libraries of Aeneas and hax; the extractions are committed and checked fresh in CI | a Rust function means its extracted `RustM` program, which returns, panics or diverges; Aeneas's scalar operations panic on overflow and on division by zero | ML-KEM's centred binomial sampler (η = 1) and signed Barrett reduction, 32-bit add-with-carry, checked arithmetic and division, and a Rust step after an oracle query |
+| [`Interop/Squirrel`](Squirrel/README.md) | the higher-order CCSA logic of the Squirrel prover (LICS23, CSF24, CCS26), embedded deeply on PolyFun's scoped syntax, with a semantics over VCVio's machines and the soundness of its rules | nothing beyond Lean | the modelling choices in the obligations table of its [design record](../docs/design/interop-squirrel.md) | none yet |
 
-```bash
-cd Interop
-lake build      # VCVio, hax, Aeneas and the bridges (`InteropRust`)
-```
+## Shared rules
 
-CI's `Interop Bridges` job (`.github/workflows/build.yml`) builds the package on every PR and runs
-the axiom sweep over `InteropRust`'s modules.
+- **Core never imports `Interop`.** `VCVio/`, `ToMathlib/`, `LatticeCrypto/`, `LatticeCryptoTest/`,
+  `HashSig/`, `HashSigTest/`, `Examples/`, `Extern/` and `VCVioTest/` never import `Interop.…`,
+  `Hax.…` or `Aeneas.…`, so no sub-project's trusted base reaches a routine build of the core.
+  `Interop/**` may import VCVio, ToMathlib, PolyFun and its own tools, but not the libraries that
+  are themselves VCVio's clients.
+- **A sub-project imports another only through a declared `require`.** A module `Interop.<A>.…`
+  imports `Interop.<B>.…` only when the package of `Interop/<A>/` requires that of `Interop/<B>/`
+  and the pair `A B` is listed in `scripts/interop_import_allowlist.txt`. No pair is listed.
+- **Generic code moves to VCVio or PolyFun first.** Code that does not depend on a sub-project's
+  tools, and that another sub-project could use, belongs in VCVio, or in PolyFun when it is general
+  theory of free programs.
+- **Each sub-project is its own Lake package.** `Interop/<Sub>/lakefile.toml` requires VCVio by path
+  (`path = "../.."`). A package that requires VCVio resolves only the root lakefile's requires, so a
+  tool required here never reaches VCVio's dependents. Two tools whose Lean libraries declare the
+  same names can only live in different sub-projects.
+  - When its pins equal the root's (Lean, Mathlib and the transitive pins), it shares the root's
+    dependency cache: `packagesDir = "../../.lake/packages"`.
+  - When its requirements conflict with the root's, it keeps its own cache, under the default
+    `packagesDir`.
+- **Sources are read from the repository root** (`srcDir = "../.."`), so a sub-project's modules are
+  `Interop.<Sub>.…`, named after their paths, and the core's import guard sees them under one prefix.
+- **Tests run through the sub-project's own test driver** (`testDriver` in its lakefile), when it
+  has tests.
 
-## TCB isolation
+## Adding a sub-project
 
-Nothing in core VCVio depends on `Interop`. A Rust frontend's trusted base (its extraction engine,
-Charon, its runtime library) must never reach a routine build of the core.
-- `VCVio/`, `ToMathlib/`, `LatticeCrypto/`, `LatticeCryptoTest/`, `Examples/`, `Extern/` and
-  `VCVioTest/` never import `Interop.…`, `Hax.…` or `Aeneas.…`.
-- `Interop/**` may import `VCVio/**`, `ToMathlib/**`, PolyFun, hax and Aeneas, but not the
-  libraries that are themselves VCVio's clients.
-- `scripts/check-interop-isolation.sh` checks both directions, and
-  `.github/workflows/interop-isolation.yml` runs it on every PR.
-- To share infrastructure between `Interop` and another library, move it into `VCVio/` first.
+A sub-project is a new directory and a row in the table above:
+- `lakefile.toml`, `lake-manifest.json` and `lean-toolchain` for its package, and a `.gitignore`
+  holding `/.lake`;
+- a `README.md` with the sections of the [template](#readme-template).
 
-## The Rust bridges
+The libraries in its lakefile's `defaultTargets` list their `roots`, which are also the roots of
+its axiom sweep. CI finds the directory by itself. A check that only one tool needs, such as
+re-running an extraction, is a workflow of its own beside the generic job.
 
-A `Std.WP` contract for `RustOracleComp` can specify each exception channel by type.
-`throws (e : Interop.Rust.Error) => …` describes a panic and `throws (u : Unit) => …`
-describes divergence. The [Lean example](Hax/Examples/Verification.lean) uses different
-postconditions for the two exits under an arbitrary interpretation of oracle queries. Its
-caller applies the generated `panicOrDiverge.spec` theorem directly. On Lean 4.36, bare
-`vcgen` fails to reconstruct this two-slot rule at a call site.
+## README template
 
-hax and Aeneas emit code in one monad, `Aeneas.Std.RustM`. hax's Lean library builds on Aeneas's,
-and the fork of Aeneas it pins names it `RustM`; upstream Aeneas calls the same definition
-`Result`.
-- It is an interaction tree over Aeneas's effect `RustEffect`, from Aeneas's own coinductive
-  library.
-- That effect's only event is `fail e`, with no answer. So a `RustM` computation unfolds in one step
-  to a returned value, a failure or divergence, and one lift serves both tools.
+Every sub-project's `README.md` has these sections, in this order:
+1. *Connects to*: the outside tools and code, with their versions and pins.
+2. *Trusted base*: what is trusted, and how outside code enters the repository (for example,
+   extractions committed and checked fresh in CI).
+3. *Assumptions*: what the Lean statements take for granted about the outside code.
+4. *Implementations covered*.
+5. *What is proved*.
+6. *Stability*: what changes with the tools, beyond the [stability](#stability) of `Interop/`.
+7. *Build and test*.
 
-| Module | Content |
-|---|---|
-| `Interop.Rust.Common` | `RustOracleComp spec α := ExceptT Error (OptionT (OracleComp spec)) α`: Rust panics, then divergence, then oracle queries |
-| `Interop.Rust.Run` | `.run.run` equations for that stack, for probabilistic proofs |
-| `Interop.Rust.RustM` | the lift `RustM → RustOracleComp spec`, with its `pure`/`bind` laws, `LawfulMonadLift` and a bundled `MonadHom` |
-| `Interop.Rust.Triple` | Aeneas's specifications (`spec`, `dspec`, `Std.Do` triples, and the implication form of hax's extracted contracts) as `Std.WP` triples for the lift, under any interpretation of `OracleComp spec`, and the `vcgen` rule `Spec.liftRustM` |
-| `Interop.Aeneas.ITree` | Aeneas's interaction trees as PolyFun's: an injective monad morphism into `ITree ⟨E.I, E.O⟩`, sending `div` to `ITree.diverge` |
-| `Interop.Aeneas.WP` | Aeneas's total and partial correctness (`DWP`, `DWLP`) are PolyFun's `ITree.wpTotal` and `ITree.wpPartial` along `toPolyFun`, for every Aeneas effect, with exact `bind` laws as corollaries |
-| `Interop.Hax.*` | hax examples, extracted from Rust crates by the hax CLI and proved in VCVio: ML-KEM's centred binomial sampler and Barrett reduction, add-with-carry, checked arithmetic and division, and a Rust step after an oracle query; see [their README](Hax/README.md) |
+## CI
+
+- **Build, tests and axiom sweep.** CI's `Interop <Sub>` jobs (`.github/workflows/build.yml`) run
+  once for every directory `Interop/<Sub>/` holding a `lakefile.toml`, as listed by
+  `scripts/interop-subprojects.py`. Each runs `lake exe cache get` and `lake build` in that
+  directory, then `lake test` when `lake check-test` finds a test driver. It then runs
+  `lake exe axiomsweep` over the roots of the default libraries against
+  `scripts/axiom_baseline.json`, which holds them at zero `sorry` and nonstandard-axiom debt.
+- **Imports.** `scripts/check-interop-isolation.sh` checks the import rules above, and the
+  `Interop TCB Isolation` workflow (`.github/workflows/interop-isolation.yml`) runs it on every PR.
+- **Tool-specific checks** belong to their sub-project, such as `Interop/Aeneas`'s
+  `.github/workflows/hax-extraction.yml`.

@@ -26,6 +26,9 @@ about `simulateQ`, still matches after a `simp` step. The structural equations `
 `simulateQ_natural`, relabelling along a lens is `simulateQ_mapLens`, composition of
 implementations is `QueryImpl.simulateQ_compose`, and lifting the target monad is
 `simulateQ_liftTarget`.
+
+`evalWithAnswerFn f` answers every query with the fixed answer function `f`; answering every
+query with `pure (f t)` in any lawful monad is `pure` of it (`simulateQ_pure_eq_evalWithAnswerFn`).
 -/
 
 @[expose] public section
@@ -248,6 +251,13 @@ the simulation by the post-composed implementation `fun t => F (impl t)`. -/
 lemma simulateQ_natural [Monad n] (F : r →ᵐ n) (mx : OracleComp spec α) :
     F (simulateQ impl mx) = simulateQ (fun t => F (impl t)) mx :=
   PFunctor.FreeM.liftM_natural (P := spec.toPFunctor) (m := r) impl F mx
+
+/-- Answering every query with `pure` of the answer `f t`, in any lawful monad, is `pure` of the
+run with the answers `f`: `pure` is a monad morphism out of `Id`, so it commutes with the fold. -/
+theorem simulateQ_pure_eq_evalWithAnswerFn [Monad m] [LawfulMonad m] (f : QueryImpl spec Id)
+    (mx : OracleComp spec α) :
+    simulateQ (fun t => (pure (f t) : m (spec.Range t))) mx = pure (evalWithAnswerFn f mx) :=
+  (simulateQ_natural f (MonadHom.pure m) mx).symm
 
 /-- Simulating a computation relabelled along a lens `l` answers each query `t` with the answer
 to `l.toFunA t`, translated back by `l.toFunB t`. -/

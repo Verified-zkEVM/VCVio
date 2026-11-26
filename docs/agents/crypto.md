@@ -423,6 +423,11 @@ For a hand-written q-query IND-CPA → DDH hybrid proof:
 
 `Examples/ElGamal/Basic.lean` currently obtains its q-query bound by instantiating
 the generic one-time IND-CPA lift in `VCVio/CryptoFoundations/AsymmEncAlg/INDCPA/GenericLift.lean`.
+Its one-time advantage at the `ProbComp` runtime is the distance between the two fixed-branch
+experiments (`AsymmEncAlg.IND_CPA_OneTime_Advantage_eq_boolDist`), as the many-time advantage is
+the distance between the all-left and all-right games (`IND_CPA_Advantage_eq_boolDist_LR`). The
+game admits any pair of messages; a scheme that leaks, say, the message length is secure only
+against adversaries admissible for that leakage (`IND_CPA_OneTime_Adversary.IsAdmissible`).
 
 ### Oracle Wiring for Stateful Reductions
 
@@ -447,12 +452,14 @@ def negligible (f : ℕ → ℝ≥0∞) : Prop := SuperpolynomialDecay atTop (fu
 ```
 
 Closure properties: `negligible_add`, `negligible_const_mul`, `negligible_sum`,
-`negligible_of_le`, `negligible_pow_mul`, `negligible_polynomial_mul`.
+`negligible_list_sum`, `negligible_of_le`, `negligible_pow_mul`, `negligible_polynomial_mul`.
 If `h : negligible ε` and `hq : Cslib.PolynomiallyBounded q`, then
 `h.polynomiallyBounded_mul hq` absorbs a query count or parameter size as a loss factor.
 `negligible_coe_nnreal_iff` transports CSLib's finite-valued notion directly.
 For extended values, `negligible_iff_eventually_ne_top_and_toNNReal` also requires
 eventual finiteness, since `toNNReal` sends infinity to zero.
+Geometric decay is negligible (`negligible_pow_of_lt_one`, `negligible_two_rpow_neg_mul`), and a
+constant is negligible only at `0` (`negligible_const_iff`, `not_negligible_one`).
 
 ### `SecurityGame` (`Security.lean`)
 
