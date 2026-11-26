@@ -25,10 +25,12 @@ open OracleComp ENNReal
 
 universe u v w
 
-/-- Simplified notation for computations with no oracles besides random inputs.
+/-- Computations with no oracles besides random inputs.
 This specific case can be used with `#eval` to run a random program, see `OracleComp.runIO`.
-NOTE: Need to decide if this should be more opaque than `abbrev`, seems like no as of now.. -/
-abbrev ProbComp : Type → Type := OracleComp unifSpec
+
+The result type lies in any universe: the query index `ℕ` and the answers `Fin (n + 1)` of
+`unifSpec` are small, and `OracleComp unifSpec` returns values in every universe. -/
+abbrev ProbComp : Type u → Type u := OracleComp.{0, 0, u} unifSpec
 
 namespace ProbComp
 

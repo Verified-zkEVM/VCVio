@@ -12,6 +12,7 @@ public import VCVio.OracleComp.ProbCompLift
 public import VCVio.CryptoFoundations.LeftOrRight
 public import VCVio.OracleComp.SimSemantics.Append
 public import VCVio.OracleComp.QueryTracking.SubSpec
+public import VCVio.CryptoFoundations.SymmEncAlg.INDCPA
 
 /-!
 # Data Encapsulation Mechanisms
@@ -30,6 +31,11 @@ left-or-right IND-CPA games under a uniform key.
 `DEMScheme.IND_CPA_OneTime_Advantage_eq_IND_CPA_Advantage` relates the two: the one-time
 advantage of an adversary is the multi-query advantage, without leakage, of
 `DEMScheme.IND_CPA_OneTime_Adversary.toMultiQuery`, which makes a single challenge query.
+
+The multi-query game is the left-or-right CPA game `SymmEncAlg.IND_CPA_Game` of the symmetric
+encryption scheme `DEMScheme.toSymmEncAlg`, whose key generation samples a uniform key
+(`DEMScheme.IND_CPA_Advantage_toSymmEncAlg`). The adversary types and query budgets of the two
+games are the same.
 
 `DEMScheme.comap f` changes the key type of a DEM along a function `f`, so that a DEM under a key
 is also a DEM under any data from which the key is read off.
@@ -279,5 +285,54 @@ theorem IND_CPA_OneTime_Advantage_eq_IND_CPA_Advantage
   rw [IND_CPA_OneTime_Advantage, IND_CPA_Advantage, IND_CPA_Game_toMultiQuery]
 
 end OneTimeToMultiQuery
+
+/-! ## The DEM as a symmetric encryption scheme under a uniform key -/
+
+section toSymmEncAlg
+
+variable {ι : Type} {spec : OracleSpec ι} [SampleableType K]
+
+/-- The symmetric encryption scheme of a DEM under a uniform key: key generation samples `$ᵗ K`
+through `runtime`, encryption is the DEM's, and decryption never fails. -/
+def toSymmEncAlg (dem : DEMScheme (OracleComp spec) K M C)
+    (runtime : ProbCompRuntime (OracleComp spec)) : SymmEncAlg (OracleComp spec) M K C where
+  keygen := runtime.liftProbComp ($ᵗ K)
+  encrypt := dem.encrypt
+  decrypt k c := some <$> dem.decrypt k c
+
+variable (dem : DEMScheme (OracleComp spec) K M C) (runtime : ProbCompRuntime (OracleComp spec))
+
+/-- A CPA adversary against `dem.toSymmEncAlg runtime` makes at most `q` challenge queries exactly
+when it does as an adversary against `dem`. -/
+theorem IND_CPA_Adversary.makesAtMostQueries_toSymmEncAlg_iff
+    (adversary : dem.IND_CPA_Adversary) (q : ℕ) :
+    SymmEncAlg.IND_CPA_Adversary.MakesAtMostQueries
+        (encAlg := dem.toSymmEncAlg runtime) adversary q ↔
+      adversary.MakesAtMostQueries q := by
+  unfold SymmEncAlg.IND_CPA_Adversary.MakesAtMostQueries IND_CPA_Adversary.MakesAtMostQueries
+  congr! 2 with t
+  rcases t with t | t <;> rfl
+
+variable {Λ : Type} [DecidableEq Λ]
+
+/-- The fixed-bit CPA experiment of `dem.toSymmEncAlg runtime` is the multi-query experiment of
+`dem`. -/
+theorem IND_CPA_Experiment_toSymmEncAlg (leak : M → Λ) (adversary : dem.IND_CPA_Adversary)
+    (b : Bool) :
+    (dem.toSymmEncAlg runtime).IND_CPA_Experiment leak adversary b =
+      dem.IND_CPA_Experiment runtime leak adversary b := rfl
+
+/-- The CPA game of `dem.toSymmEncAlg runtime` is the multi-query game of `dem`. -/
+theorem IND_CPA_Game_toSymmEncAlg (leak : M → Λ) (adversary : dem.IND_CPA_Adversary) :
+    (dem.toSymmEncAlg runtime).IND_CPA_Game runtime leak adversary =
+      dem.IND_CPA_Game runtime leak adversary := rfl
+
+/-- The CPA advantage against `dem.toSymmEncAlg runtime` is the multi-query advantage against
+`dem`. -/
+theorem IND_CPA_Advantage_toSymmEncAlg (leak : M → Λ) (adversary : dem.IND_CPA_Adversary) :
+    (dem.toSymmEncAlg runtime).IND_CPA_Advantage runtime leak adversary =
+      dem.IND_CPA_Advantage runtime leak adversary := rfl
+
+end toSymmEncAlg
 
 end DEMScheme

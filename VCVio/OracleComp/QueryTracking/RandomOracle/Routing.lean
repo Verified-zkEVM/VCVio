@@ -7,6 +7,7 @@ Authors: Devon Tuma
 module
 
 public import VCVio.OracleComp.QueryTracking.RandomOracle.EagerTable
+public import VCVio.OracleComp.QueryTracking.RandomOracle.RoutingLens
 public import VCVio.EvalDist.Monad.UniformTable
 
 /-!
@@ -15,8 +16,10 @@ public import VCVio.EvalDist.Monad.UniformTable
 A polynomial lens may alias distinct oracle inputs. Injective encodings preserve the full
 output measure for every adaptive client of an initially empty finite random oracle.
 Disjoint encodings supply the corresponding law for two domains sharing a target service.
-The structural routing API is universe polymorphic. The measure results use the finite-table
-sampling API in `Type 0` and make no claim about arbitrary preloaded caches.
+The structural routing API (`RandomOracleRouting.lens`, `RandomOracleRouting.route`, in
+`VCVio.OracleComp.QueryTracking.RandomOracle.RoutingLens`, and `evalWithAnswerFn_route`) is
+universe polymorphic. The measure results use the finite-table sampling API in `Type 0` and make
+no claim about arbitrary preloaded caches.
 -/
 
 public section
@@ -30,18 +33,6 @@ universe u
 section Structural
 
 variable {A B R X : Type u}
-
-/-- Route inputs through an encoding while retaining each response unchanged. -/
-@[expose]
-def lens (encode : A → B) :
-    PFunctor.Lens (A →ₒ R).toPFunctor (B →ₒ R).toPFunctor where
-  toFunA := encode
-  toFunB _ := id
-
-/-- Apply an input encoding at every query of an adaptive client. -/
-@[expose]
-def route (encode : A → B) (program : OracleComp (A →ₒ R) X) :
-    OracleComp (B →ₒ R) X := program.mapLens (lens encode)
 
 /-- Routed table execution equals source execution against the restricted table. -/
 theorem evalWithAnswerFn_route (encode : A → B) (program : OracleComp (A →ₒ R) X)

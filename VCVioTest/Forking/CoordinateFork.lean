@@ -189,7 +189,7 @@ theorem coinFlip_same_marginals (c : CouplingChal) :
     Pr{let τ ← indepTable coinFlipAdv}[τ c] = Pr{let τ ← coinFlipSharedTape}[τ c] := by
   rw [indepTable,
     prEvent_coord_mPi coinFlipAdv c (fun y => y = true)
-      (fun c' _ => prEvent_true_probComp (coinFlipAdv c')),
+      (fun c' _ => OracleComp.prEvent_true_eq_one (coinFlipAdv c')),
     prEvent_coinFlip, coinFlipSharedTape, prEvent_map]
   exact (prEvent_coinFlip c).symm
 
