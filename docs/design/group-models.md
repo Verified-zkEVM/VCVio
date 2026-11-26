@@ -891,7 +891,11 @@ target sort are the given target entries and the products of a given `G₁` entr
 `G₂` entry. At `pairingIsoSig` the given `G₂` entries are reachable in `G₁` as well, through
 `ψ`, and so are their products with given `G₂` entries at the target sort. Call the span of the
 reachable entries of a sort its *accessible span*: it is the image of the evaluation map out of
-the free model of the signature. Call the condition on `T₀` and `T₁` *the same relation kernel*.
+the free model of the signature. In Lean, `accessibleSpan` is the least family of submodules that
+contains the tables and is closed under the signature's maps; every entry a symbolic run reaches
+lies in it (`runGen_mem_accessibleSpan`), and at `pairingSig` it is the explicit span of the
+tables and the products (`accessibleSpan_pairingSig`). That it equals the image of the evaluation
+map is not proved. Call the condition on `T₀` and `T₁` *the same relation kernel*.
 Then:
 
 **T7 (decisional master theorem).** If `T₀` and `T₁` have the same relation kernel, with degree
@@ -966,7 +970,7 @@ on the sorted collision sum of every reachable exact output.
 | CDH | `[1, A, B]` | a handle with entry `p` | `A · B − p` | `2` |
 | co-CDH with `ψ` (Type 2) | `[H]`, `[1, A]` | a `G₁` handle with entry `p` | `A · H − p` | `2` |
 | co-CDH with `x • g₁` given (Type 3) | `[1, A, H]`, `[1, A]` | a `G₁` handle with entry `p` | `A · H − p` | `2` |
-| uber, computational, target `f` of sort `s` outside the accessible span of `s` | `P`, `R`, `Q` | a handle of sort `s` with entry `p` | `f − p` | `max (deg f) (D s)` |
+| uber, computational, target `f` of sort `s` outside the accessible span of `s` (`prEvent_runGen_symbolic_uber_le` at every degree-closed signature and sort; `Uber.computationalExperiment_ofGeneric_le` at Type 3 and sort `gₜ`) | `P`, `R`, `Q` | a handle of sort `s` with entry `p` | `f − p` | `max (deg f) (D s)` |
 | `t`-SDH | `[1, X, …, X^D]`, `[1, X]` | `c` and a `G₁` handle with entry `p` | `p · (X + c) − 1` | `D + 1` |
 | ARSDH | `[1, X, …, X^D]`, `[1, X]` | a set `S` of `D + 1` scalars and `G₁` handles with entries `a`, `b` | `b · Z_S − a` | `2D + 1` |
 
@@ -1227,7 +1231,7 @@ are equal, free equality tests find them, and their difference is a relation.
 |---|---|---|---|
 | generic `(q₁, q₂)`-DLog; co-CDH in both forms | T8. The `(q₁, q₂)`-DLog bound is proved as `PairingDLog.experiment_ofGeneric_le`: with `n₁`, `n₂` and `nₜ` appends to the three sorts, `((q₁ + n₁ + 2).choose 2 · q₁ + (q₂ + n₂ + 2).choose 2 · q₂ + (nₜ + 1).choose 2 · (q₁ + q₂) + 1)/\|F\|`, for generators whose pairing is nonzero; `PairingDLog.experiment_ofGeneric_le_of_total` takes one total budget. Co-CDH is a target | the signature repository's `dlog11Exp` and `coCDHExp` (the Type 3 form) | Bauer, Fuchsbauer, Loss; Boneh, Gentry, Lynn, Shacham |
 | generic `t`-SDH and ARSDH | T8, for ArkLib's experiments: `tSdhExperiment D (ofGeneric A)` and `arsdhExperiment D (ofGeneric A)` | ArkLib `KZG/HardnessAssumptions.lean` | Boneh, Boyen; Chiesa, Guan, Knabenhans, Yu, Definition 9.6 |
-| XDH; SXDH; decisional uber | T7, with the accessible span of the signature at hand. XDH (DDH in the first source group, with `g₂` and the pairing public) is proved as `XDH.advantage_ofGeneric_le`: with `n₁`, `n₂` and `nₜ` appends to the three sorts, `3 · ((n₁ + 5).choose 2 + (nₜ + 1).choose 2)/\|F\|`, for generators whose pairing is nonzero. SXDH and decisional uber are targets |  | Boneh, Boyen, Goh; Boyen |
+| XDH; SXDH; decisional uber | T7, with the accessible span of the signature at hand. XDH (DDH in the first source group, with `g₂` and the pairing public) is proved as `XDH.advantage_ofGeneric_le`: with `n₁`, `n₂` and `nₜ` appends to the three sorts, `3 · ((n₁ + 5).choose 2 + (nₜ + 1).choose 2)/\|F\|`, for generators whose pairing is nonzero. DDH in the second source group, the other half of SXDH, is proved as `XDH₂.advantage_ofGeneric_le`. Decisional uber at Type 3, for a target outside the accessible span, is proved as `Uber.advantage_ofGeneric_le`: a sum of collision terms over the three sorts at the two degree profiles, for the generators as above |  | Boneh, Boyen, Goh; Boyen |
 | KZG evaluation binding and function binding, unconditional | for a generic adversary, at most the generic `t`-SDH and ARSDH bounds at a counted number of operations | ArkLib `KZG.CommitmentScheme.binding` with `bindingReduction`, `KZG.CommitmentScheme.function_binding` with `reduction` |  |
 | KZG extraction | a named straight-line extractor; `Pr[accept ∧ p(z) ≠ v] ≤` the `t`-SDH advantage of a named reduction | ArkLib `Commitment.extractability`, today a placeholder, once its game says what the extractor receives (below) | Marlin, Theorem B.12 |
 | uber family from `q`-DLog, algebraic adversaries | a reduction that factors `W` |  | Bauer, Fuchsbauer, Loss; Rotem |
@@ -1334,7 +1338,7 @@ against the paper before a theorem cites it).
 | Maurer, *Abstract models of computation in cryptography* (2005) | `spec F`, `impl`, equality as a relation query | library target | recalled |
 | Fuchsbauer, Kiltz, Loss, ePrint 2017/620 | the algebraic class; T1, T2; Groth16 in the algebraic model | L1 in slice 1 | abstract |
 | Boneh, Boyen, *Short signatures without random oracles* (2004) | `t`-SDH and its generic bound (T8) | target | recalled; the assumption as restated in Marlin was read |
-| Boneh, Boyen, Goh, ePrint 2005/015; Boyen, *The uber-assumption family* (2008) | T7; the independence condition as equality of relation kernels | T6 proved; T7 proved at `discreteSig S` | recalled |
+| Boneh, Boyen, Goh, ePrint 2005/015; Boyen, *The uber-assumption family* (2008) | T7; the independence condition as equality of relation kernels; the uber problems (`HardnessAssumptions/Uber.lean`) | T6 proved; T7 proved at `discreteSig S` and at `pairingSig`; generic uber proved at Type 3 | recalled; the problem definitions are not checked against the papers |
 | Galbraith, Paterson, Smart, ePrint 2006/165 | the three pairing signatures; hashing per sort | library target | abstract |
 | Boneh, Gentry, Lynn, Shacham, *Aggregate and verifiably encrypted signatures from bilinear maps* (2003) | `pairingIsoSig`; co-CDH; aggregate BLS | proved (`BLS.Aggregate.unforgeableAdvantage_le`) | read |
 | Jager, Rupp, *The semi-generic group model and applications to pairing-based cryptography* (2010) | a per-sort choice of knobs (Section 6.6) | target | abstract |
@@ -1452,9 +1456,9 @@ as `XDH.advantage_ofGeneric_le`.
 
 Everything else is a paper argument or theorem target: T5 beyond its cost certificate and its BLS
 instance, T7 in its
-per-sort form at `discreteSig S` and at the Type 1 and Type 2 signatures, T8 for problems other than `(q₁, q₂)`-DLog, S1–S3,
+per-sort form at `discreteSig S` and at the Type 1 and Type 2 signatures, T8 for problems other than `(q₁, q₂)`-DLog and uber at Type 3, S1–S3,
 P1–P3, restriction along a map of signatures, the invariant at the target sort over `CoeffsT`,
-the free and tracking models for Types 1 and 2, the accessible spans, the polynomial-table
+the free and tracking models for Types 1 and 2, the polynomial-table
 instance of T6, and the numeric constants in Section 8 other than those of T4, T7, the relation
 problem, `(q₁, q₂)`-DLog and XDH. The trilemma in
 Section 3 and the argument about ArkLib's KZG hypotheses in Section 8.3 are paper arguments.
