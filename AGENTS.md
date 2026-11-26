@@ -44,7 +44,8 @@ unfold their definitions.
   access an unexposed implementation from the same dependency when proving its public API.
 - Do not enable `backward.privateInPublic` or `backward.proofsInPublic`; resolve visibility and
   proof-metavariable issues directly.
-- The `Interop/` package's built bridges follow this policy. The unported hax examples in `Interop/Hax/` are not built and keep their old form until ported.
+- The `Interop/` sub-projects follow this policy; the modules hax extracts keep the form the tool
+  emits.
 
 Section `variable` lines carry an instance assumption only when the theorems in scope share it:
 Lean auto-includes an instance-implicit section variable in every theorem mentioning its types,
@@ -111,7 +112,11 @@ build boundaries and the staged consolidation.
 - `LatticeCryptoTest/`: ACVP vectors, executable regression tests, and cross-checks against native backends.
 - `VCVioTest/`: framework smoke tests and test support modules.
 - `Examples/`: compact framework examples such as OneTimePad, ElGamal, Schnorr, and program-logic tactic walkthroughs; `Examples/Widgets/` holds the proof widgets they display.
-- `Interop/`: bridges to external verification tools (hax and Aeneas today), built as their own Lake package so their requires never reach VCVio's dependents. **Strict TCB isolation**: nothing in core VCVio depends on it. See `docs/agents/interop.md`.
+- `Interop/`: sub-projects connecting VCVio to code and tools outside Lean, each a directory with
+  its own Lake package, trusted base and README, so their requires never reach VCVio's dependents;
+  `Interop/Aeneas` carries Rust code extracted by hax and Aeneas, and `Interop/Squirrel` the logic
+  of the Squirrel prover with the soundness of its rules. **Strict TCB isolation**: nothing in core
+  VCVio depends on it. See `Interop/README.md` and `docs/agents/interop.md`.
 - `csrc/`: C FFI shims used for differential testing against native ML-DSA, ML-KEM, and Falcon code.
 - `third_party/`: native backends as git submodules; when they are not checked out (fresh clones, Lake dependency checkouts), the native `extern_lib` targets build as empty stub archives.
 
@@ -158,14 +163,16 @@ keeps every proof library — and any downstream Lake project requiring VCVio �
 link-safe when the `third_party/` submodules are absent. Enforced by
 `scripts/check-extern-isolation.sh` on every PR.
 
-For `Interop/`, the dependency contract is one-way:
+For `Interop/`, each sub-project `Interop/<A>/` is its own Lake package, and the dependency
+contract is one-way:
 
 ```
-Interop/{Hax,Aeneas,Rust}/  →  VCVio/, ToMathlib/, (Hax.…), (Aeneas.…)
+Interop/<A>/  →  VCVio/, ToMathlib/, PolyFun, its own tools (Hax.…, Aeneas.…)
+Interop/<A>/  →  Interop/<B>/  only through a require listed in scripts/interop_import_allowlist.txt
 ```
 
 `Interop/**` may **never** be imported from `VCVio/`, `LatticeCrypto/`,
-`LatticeCryptoTest/`, `Examples/`, `ToMathlib/`, `Extern/`,
+`LatticeCryptoTest/`, `HashSig/`, `HashSigTest/`, `Examples/`, `ToMathlib/`, `Extern/`,
 or `VCVioTest/`. This contract is enforced by
 `scripts/check-interop-isolation.sh` and the
 `Interop TCB Isolation` GitHub workflow on every PR.
@@ -270,7 +277,7 @@ Security notions, experiments, games, and advantages follow
 - Falcon GPV instantiation: `LatticeCrypto/Falcon/Scheme.lean`
 - Lattice hardness assumptions: `LatticeCrypto/HardnessAssumptions/LearningWithErrors.lean`, `LatticeCrypto/HardnessAssumptions/ShortIntegerSolution.lean`
 - Differential and vector tests: `LatticeCryptoTest/`
-- Rust verification interop (hax / aeneas): `Interop/lakefile.toml`, `Interop/Rust/RustM.lean`, `Interop/README.md`, `scripts/check-interop-isolation.sh`
+- Rust verification interop (hax / aeneas): `Interop/README.md`, `Interop/Aeneas/README.md`, `Interop/Aeneas/lakefile.toml`, `Interop/Aeneas/Lift/RustM.lean`, `scripts/check-interop-isolation.sh`
 
 ## Program Logic Tactics
 
@@ -311,7 +318,7 @@ the build just produced; `--test` runs it a second time over `VCVioTest` and
 
 CI runs the timed build on the non-test Lean libraries:
 `ToMathlib`, `VCVio`, `LatticeCrypto`, `Extern`, `HashSig`, and `Examples`.
-The `Interop/` package builds separately.
+Each `Interop/` sub-project builds separately, in its own CI job.
 Test libraries and test executables are not part of the timed build; CI only
 times the smoke module separately with `lake env lean VCVioTest/Smoke.lean`.
 
@@ -337,8 +344,8 @@ declaration in the non-test libraries, held at zero debt. Any declaration depend
 (`native_decide`, which mints per-declaration `._native.` axioms). The committed baseline
 `scripts/axiom_baseline.json` must stay `{"sorry": [], "nonstandard": []}`: a nonempty one
 is a policy error rather than an allowlist, and `lake exe axiomsweep --update-baseline`
-refuses to write one. `Interop/` (the declared TCB) is excluded — its boundary is enforced by
-the import-isolation gate instead. The `VCVioAxiomSweepTestFixtures` library carries
+refuses to write one. `Interop/` is excluded here: each sub-project's CI job sweeps the roots of
+its default libraries against the same baseline. The `VCVioAxiomSweepTestFixtures` library carries
 synthetic taint for the tool's own tests and is deliberately excluded from every
 aggregate. Pull-request and merge-queue runs skip the tool's self-test, and the init sweep's,
 unless `scripts/`, the toolchain, the manifest, the lakefile or the build workflow changed: their
@@ -362,7 +369,8 @@ is the only thing that sees the doc-comment form anywhere; over the six proof an
 libraries it deliberately repeats for the other forms what the whitespace linter already says;
 and in three further places it is the only check that can *fail* on any form of the shape, for
 three different reasons. `lakefile.lean` is elaborated by Lake from `import Lake`, with no
-Mathlib linter registered. `Interop/` is not a default target and no job builds it. `scripts/`
+Mathlib linter registered. `Interop/` is not a default target, and its sub-project jobs do not
+gate on warnings. `scripts/`
 is built on every pull request, but nothing there imports Mathlib, so the `weak.` option is
 silently dropped and the linter is never registered — one Mathlib import in one axiom-sweep
 fixture would flip that. A block comment that

@@ -45,6 +45,8 @@ does, so a probability-one claim about `romImpl` reduces to the same claim for e
 
 * `OracleComp.prEvent_eq_one_simulateQ_romImpl_run_iff`: reduces a probability-one claim for
   `romImpl` to all fixed answer tables agreeing with the initial cache
+* `OracleSpec.fst_map_run_simulateQ_romImpl_eq_of_allQueriesSatisfy`: a program that never makes
+  a hash query outside `P` returns the same results from two caches that agree on `P`
 -/
 
 @[expose] public section
@@ -241,6 +243,29 @@ unchanged. -/
 lemma simulateQ_romImpl_liftM_run {α : Type} (oa : ProbComp α) (cache : hashSpec.QueryCache) :
     (simulateQ hashSpec.romImpl (liftM oa)).run cache = (·, cache) <$> oa :=
   roSim.run_liftM _ oa cache
+
+/-- **Unqueried points of the random oracle do not matter.** In the random oracle model, a program
+whose hash queries all satisfy `P` returns the same results from two caches that agree at every
+hash query satisfying `P`. -/
+lemma fst_map_run_simulateQ_romImpl_eq_of_allQueriesSatisfy {α : Type} {P : ι → Prop}
+    {oa : OracleComp (unifSpec + hashSpec) α}
+    (h : oa.AllQueriesSatisfy (Sum.elim (fun _ => True) P))
+    {cache cache' : hashSpec.QueryCache} (hcache : ∀ t, P t → cache t = cache' t) :
+    Prod.fst <$> (simulateQ hashSpec.romImpl oa).run cache =
+      Prod.fst <$> (simulateQ hashSpec.romImpl oa).run cache' := by
+  classical
+  have hg : (QueryCache.ofFn fun t => if P t then cache t else cache' t) = cache' :=
+    QueryCache.ext fun t => by by_cases ht : P t <;> simp [ht, hcache]
+  have hstep : ∀ t, Sum.elim (fun _ => True) P t → ∀ c,
+      Prod.map id (fun c : hashSpec.QueryCache => QueryCache.ofFn fun t' =>
+          if P t' then c t' else cache' t') <$> (hashSpec.romImpl t).run c =
+        (hashSpec.romImpl t).run (QueryCache.ofFn fun t' => if P t' then c t' else cache' t') := by
+    rintro (n | t) ht c
+    · rw [roSim.run_apply_inl, roSim.run_apply_inl, Functor.map_map]
+      rfl
+    · exact QueryImpl.map_withCaching_run_ofFn_ite uniformSampleImpl cache' ht c
+  rw [← hg, ← h.map_run_simulateQ_eq_of_query_map_eq _ hstep, Functor.map_map]
+  rfl
 
 end OracleSpec
 
