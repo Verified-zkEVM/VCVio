@@ -16,6 +16,14 @@ public import VCVio.OracleComp.QueryTracking.QueryBound.Basic
 
 /-!
 # Query-bound transfer through oracle simulation
+
+A handler whose program at each query satisfying `p` makes at most `cost` queries satisfying `q`,
+and none at the other queries, multiplies a bound: a program making at most `n` queries satisfying
+`p` is simulated by one making at most `n * cost` queries satisfying `q`
+(`OracleComp.IsQueryBoundP.simulateQ_of_step_le`, with a `StateT` form
+`OracleComp.IsQueryBoundP.simulateQ_run_of_step_le`). A program whose queries all satisfy `P` only
+needs a stateful handler to behave well at the queries satisfying `P`
+(`OracleComp.AllQueriesSatisfy.map_run_simulateQ_eq_of_query_map_eq` and its siblings).
 -/
 
 public section
@@ -73,8 +81,33 @@ theorem isTotalQueryBound_simulateQ_postInsert
   exact isTotalQueryBound_bind (h_nx t u)
     (fun _ => show IsTotalQueryBound (pure u : OracleComp spec' _) 0 from trivial)
 
-/-- Predicated version of `simulateQ_of_step_le`: a total bound on the source plus a
-predicated step bound transfers to a predicated bound on the simulation. -/
+/-- A simulation uses at most `cost` target queries satisfying `q` per source query satisfying
+`p`, and none per other source query, so prefix bounds multiply: a source program making at most
+`n` queries satisfying `p` is simulated by a program making at most `n * cost` queries satisfying
+`q`. -/
+theorem IsQueryBoundP.simulateQ_of_step_le {ι' : Type u} {spec' : OracleSpec ι'}
+    {p : ι → Prop} [DecidablePred p] {q : ι' → Prop} [DecidablePred q]
+    {impl : QueryImpl spec (OracleComp spec')} {oa : OracleComp spec α} {n cost : ℕ}
+    (h : IsQueryBoundP oa p n)
+    (hstep_p : ∀ t, p t → IsQueryBoundP (impl t) q cost)
+    (hstep_np : ∀ t, ¬ p t → IsQueryBoundP (impl t) q 0) :
+    IsQueryBoundP (simulateQ impl oa) q (n * cost) := by
+  induction oa using OracleComp.inductionOn generalizing n with
+  | pure x => simp
+  | query_bind t mx ih =>
+      rw [isQueryBoundP_query_bind_iff] at h
+      rw [simulateQ_bind, simulateQ_spec_query]
+      by_cases hp : p t
+      · obtain ⟨n, rfl⟩ := Nat.exists_eq_add_one_of_ne_zero
+          (Nat.pos_iff_ne_zero.1 (h.1.resolve_left (not_not.2 hp)))
+        refine (isQueryBoundP_bind (hstep_p t hp)
+          fun u _ => ih u (by simpa [hp] using h.2 u)).mono ?_
+        rw [Nat.add_mul, one_mul, add_comm]
+      · simpa using isQueryBoundP_bind (hstep_np t hp)
+          fun u _ => ih u (by simpa [hp] using h.2 u)
+
+/-- Predicated version of `IsTotalQueryBound.simulateQ_of_step_le`: a total bound on the source
+plus a predicated step bound transfers to a predicated bound on the simulation. -/
 theorem IsQueryBoundP.simulateQ_of_step_le_total
     {ι' : Type u} {spec' : OracleSpec ι'}
     {q : ι' → Prop} [DecidablePred q]
@@ -82,18 +115,9 @@ theorem IsQueryBoundP.simulateQ_of_step_le_total
     {oa : OracleComp spec α} {n step : ℕ}
     (h : IsTotalQueryBound oa n)
     (hstep : ∀ t : spec.Domain, IsQueryBoundP (impl t) q step) :
-    IsQueryBoundP (simulateQ impl oa) q (n * step) := by
-  induction oa using OracleComp.inductionOn generalizing n with
-  | pure x => simp
-  | query_bind t mx ih =>
-      rw [isTotalQueryBound_query_bind_iff] at h
-      simp only [simulateQ_query_bind, OracleQuery.input_query, monadLift_self]
-      have hrest : ∀ u, IsQueryBoundP (simulateQ impl (mx u)) q ((n - 1) * step) :=
-        fun u => ih u (h.2 u)
-      have hbind := isQueryBoundP_bind (hstep t) (fun u _ => hrest u)
-      exact hbind.mono
-        (Nat.le_of_eq (by rw [Nat.sub_one_mul,
-          Nat.add_sub_cancel' (Nat.le_mul_of_pos_left step h.1)]))
+    IsQueryBoundP (simulateQ impl oa) q (n * step) :=
+  (h.isQueryBoundP (p := fun _ => True)).simulateQ_of_step_le (fun t _ => hstep t)
+    fun _ ht => (ht trivial).elim
 
 theorem isQueryBoundP_simulateQ_preInsert
     {ι' : Type u} {spec' : OracleSpec ι'} {β : Type u}
@@ -415,24 +439,6 @@ private lemma sum_single_filter_eq_zero [DecidableEq ι] [Fintype ι] {t : ι} (
     have hjt : j ≠ t := fun he => hpt (he ▸ (Finset.mem_filter.mp hj).2)
     by simp [QueryCount.single, hjt]
 
-/-- A total query bound implies a predicate-targeted bound for every predicate `p`. -/
-theorem IsTotalQueryBound.isQueryBoundP {oa : OracleComp spec α} {n : ℕ}
-    (h : IsTotalQueryBound oa n) : IsQueryBoundP oa p n := by
-  induction oa using OracleComp.inductionOn generalizing n with
-  | pure _ => trivial
-  | query_bind t mx ih =>
-      rw [isTotalQueryBound_query_bind_iff] at h
-      rw [isQueryBoundP_query_bind_iff]
-      refine ⟨Or.inr h.1, fun u => ?_⟩
-      split
-      · exact ih u (h.2 u)
-      · exact (ih u (h.2 u)).mono (Nat.sub_le _ _)
-
-/-- With the always-true predicate, `IsQueryBoundP` reduces to `IsTotalQueryBound`. -/
-lemma isQueryBoundP_true_iff (oa : OracleComp spec α) (n : ℕ) :
-    IsQueryBoundP oa (fun _ => True) n ↔ IsTotalQueryBound oa n := by
-  refine isQueryBound_congr (fun t b => ?_) (fun t b => ?_) <;> simp
-
 /-- The always-false predicate places no constraint. -/
 @[simp]
 lemma isQueryBoundP_false (oa : OracleComp spec α) (n : ℕ) :
@@ -647,17 +653,7 @@ theorem IsQueryBoundP.simulateQ_of_step {ι' : Type u} {spec' : OracleSpec ι'}
     (hstep_p : ∀ t, p t → IsQueryBoundP (impl t) q 1)
     (hstep_np : ∀ t, ¬ p t → IsQueryBoundP (impl t) q 0) :
     IsQueryBoundP (simulateQ impl oa) q n := by
-  induction oa using OracleComp.inductionOn generalizing n with
-  | pure x => simp
-  | query_bind t mx ih =>
-      rw [isQueryBoundP_query_bind_iff] at h
-      simp only [simulateQ_query_bind, OracleQuery.input_query, monadLift_self]
-      have hlift : IsQueryBoundP (impl t) q (if p t then 1 else 0) := by
-        by_cases hpt : p t
-        · simpa [ite_eq_left hpt] using hstep_p t hpt
-        · simpa [ite_eq_right hpt] using hstep_np t hpt
-      have hbound : (if p t then 1 else 0) + (if p t then n - 1 else n) = n := by grind
-      simpa [hbound] using isQueryBoundP_bind hlift fun u _ => ih u (h.2 u)
+  simpa only [Nat.mul_one] using h.simulateQ_of_step_le hstep_p hstep_np
 
 /-- A simulation whose every step makes no `q`-query makes no `q`-query, whatever the
 simulated computation. -/
@@ -928,6 +924,24 @@ theorem AllQueriesSatisfy.simulateQ_run'_bind
   rw [simulateQ_bind, StateT.run'_eq, StateT.run_bind, h.simulateQ_run_eq_map_run' himpl s,
     bind_map_left, map_bind]
   rfl
+
+/-- A state map that commutes with every step of the handlers at the queries satisfying `P`
+commutes with the simulation of a program whose queries all satisfy `P`: running the program and
+mapping the final state is running it from the mapped state. -/
+theorem AllQueriesSatisfy.map_run_simulateQ_eq_of_query_map_eq
+    {m : Type u → Type v} [Monad m] [LawfulMonad m] {σ₁ σ₂ : Type u}
+    {impl₁ : QueryImpl spec (StateT σ₁ m)} {impl₂ : QueryImpl spec (StateT σ₂ m)}
+    {P : ι → Prop} {oa : OracleComp spec α} (h : AllQueriesSatisfy oa P) (proj : σ₁ → σ₂)
+    (hproj : ∀ t, P t → ∀ s, Prod.map id proj <$> (impl₁ t).run s = (impl₂ t).run (proj s))
+    (s : σ₁) :
+    Prod.map id proj <$> (simulateQ impl₁ oa).run s = (simulateQ impl₂ oa).run (proj s) := by
+  induction oa using OracleComp.inductionOn generalizing s with
+  | pure x => simp
+  | query_bind t k ih =>
+      rw [allQueriesSatisfy_query_bind_iff] at h
+      simp only [simulateQ_bind, simulateQ_spec_query, StateT.run_bind, map_bind]
+      rw [← hproj t h.1 s, bind_map_left]
+      exact bind_congr fun x => ih x.1 (h.2 x.1) x.2
 
 /-- **Invariants of a run with restricted queries.** If every query of `oa` satisfies `P`, and
 every step of `impl` at a query satisfying `P` preserves `Inv`, then a run of `oa` from a state

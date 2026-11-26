@@ -64,9 +64,9 @@ script lint (args) do
   child.wait
 
 /-
-The Rust bridges under `Interop/` require hax and Aeneas, and every dependent of this package would
-resolve any `require` written here. They are built by the separate package in `Interop/lakefile.toml`
-instead, which requires this one by path.
+The sub-projects under `Interop/` require outside tools (hax and Aeneas in `Interop/Aeneas`), and
+every dependent of this package would resolve any `require` written here. Each sub-project is built
+by its own package, `Interop/<Sub>/lakefile.toml`, which requires this one by path.
 -/
 
 /-
@@ -76,8 +76,8 @@ requirement authoritative over their inherited pins and makes
 `lake update --keep-toolchain` idempotent.
 -/
 require PolyFun from git
-  "https://github.com/Verified-zkEVM/PolyFun" @
-  "713d8857e49d20927c1447b3ba7397acc5537319"
+  "https://github.com/dtumad/PolyFun" @
+  "e67f951658b2738b77a249afea3a27ebe471e7fe"
 
 /-
 The Mathlib-only quantum foundation (matrix maps, instruments, registers,

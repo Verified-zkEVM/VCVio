@@ -14,7 +14,8 @@ public import ToMathlib.Data.ENNReal.AbsDiff
 `ENNReal.absDiff` is the extended distance Mathlib puts on `ℝ≥0∞` through the weak extended
 metric on `WithTop ℝ≥0`. The bridge `absDiff_eq_edist` is what lets the metric axioms be read
 off `WeakEMetricSpace ℝ≥0∞` instead of being re-proved from truncated subtraction; the entries
-pin that bridge and the two laws that go through it.
+pin that bridge and the two laws that go through it. Subadditivity along sums is strict when the
+two differences cancel.
 -/
 
 public section
@@ -35,5 +36,12 @@ example (a b : ℝ≥0∞) : edist a b = 0 ↔ a = b := by
 
 example : edist (3 : ℝ≥0∞) ⊤ = ⊤ :=
   (ENNReal.edist_eq_top_iff 3 ⊤).2 ⟨ENNReal.ofNat_ne_top, Or.inr rfl⟩
+
+example (a b c d : ℝ≥0∞) :
+    ENNReal.absDiff (a + b) (c + d) ≤ ENNReal.absDiff a c + ENNReal.absDiff b d :=
+  ENNReal.absDiff_add_add_le a b c d
+
+example : ENNReal.absDiff (1 + 0) (0 + 1) < ENNReal.absDiff 1 0 + ENNReal.absDiff 0 1 := by
+  simp
 
 end VCVioTest.AbsDiff
