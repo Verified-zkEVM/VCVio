@@ -13,10 +13,10 @@ public import VCVio.OracleComp.SimSemantics.StateT.Basic
 /-!
 # State-Projection Lemmas for `simulateQ`
 
-This file collects the *equational* state-projection theorems for `simulateQ` over `StateT`-valued
-query implementations. They are pure equalities on distributions, with no relational, coupling, or
-TV-distance content, and so live at the `SimSemantics` layer alongside `StateT.lean` rather than in
-`ProgramLogic`.
+If projecting the state after each query gives the same computation as running the base
+handler, the projection also commutes with `simulateQ` for the whole program. This equality
+holds in any lawful base monad. For `ProbComp`, a separate theorem lifts equality in
+distribution of the projected steps to equality in distribution of the full runs.
 
 ## Main results
 
@@ -429,9 +429,8 @@ theorem extendState_run_proj_eq
   intro t ⟨s', q'⟩
   simp
 
-/-- `run'` projection corollary of `extendState_run_proj_eq`: dropping both the auxiliary `Q`
-and the `σ` state of the extended simulation gives the same output distribution as the base
-simulation. -/
+/-- Discarding both components of the final state gives the same output computation as
+running the base handler with `run'`. This follows from `extendState_run_proj_eq`. -/
 theorem extendState_run'_eq
     {ι : Type u} {spec : OracleSpec ι} {σ Q : Type u}
     {m : Type u → Type v} [Monad m] [LawfulMonad m]
