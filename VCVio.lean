@@ -305,6 +305,7 @@ public import VCVio.CryptoFoundations.PRG
 public import VCVio.CryptoFoundations.ReplayFork
 public import VCVio.CryptoFoundations.ReplayForkCost
 public import VCVio.CryptoFoundations.Rewinding.Basic
+public import VCVio.CryptoFoundations.Rewinding.BlockEager
 public import VCVio.CryptoFoundations.Rewinding.BlockRound
 public import VCVio.CryptoFoundations.Rewinding.Cost
 public import VCVio.CryptoFoundations.Rewinding.Eager
