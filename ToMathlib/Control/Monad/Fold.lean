@@ -17,7 +17,8 @@ public import Mathlib.Control.Basic
 
 `Fin.mOfFn`: run a `Fin n`-indexed family of monadic computations in order and collect the
 results as a function.
-`Fintype.mPi` transports this construction to any finite index type.
+`Fintype.mPi` transports this construction to any finite index type; over an index type with one
+element it is the computation at that element (`Fintype.mPi_unique`).
 -/
 
 public section
@@ -59,6 +60,27 @@ theorem Fin.mOfFn_map {α β : Type u} {m : Type u → Type v} [Monad m] [Lawful
       congr 1
       funext i
       exact Fin.cases rfl (fun _ ↦ rfl) i
+
+/-- A finite family of computations over an index type with one element is the computation at
+that element. -/
+theorem Fintype.mPi_unique {α : Type u} {m : Type u → Type v} [Monad m] [LawfulMonad m]
+    {ι : Type} [Fintype ι] [Unique ι] (g : ι → m α) :
+    Fintype.mPi g = (fun a _ => a) <$> g default := by
+  unfold Fintype.mPi
+  generalize Fintype.equivFin ι = e
+  have hn : Fintype.card ι = 1 := Fintype.card_unique
+  revert e
+  rw [hn]
+  intro e
+  simp only [Fin.mOfFn, map_bind, map_pure]
+  rw [show e.symm 0 = default from Subsingleton.elim _ _, map_eq_bind_pure_comp]
+  refine bind_congr fun a => ?_
+  rw [pure_bind]
+  congr 1
+  funext i
+  simp only [Equiv.arrowCongr_apply, Equiv.refl_apply, Function.comp_apply, Equiv.symm_symm]
+  rw [show e i = 0 from Subsingleton.elim _ _]
+  rfl
 
 /-- Coordinate observations commute with sequencing over a finite index type. -/
 theorem Fintype.mPi_map {α β : Type u} {m : Type u → Type v} [Monad m] [LawfulMonad m]
