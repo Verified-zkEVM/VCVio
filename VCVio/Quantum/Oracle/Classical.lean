@@ -56,10 +56,16 @@ adversary's register. Over any signature and any held register `B`:
 * `Quantum.QuantumComp₂.forgetReg x`: a fixed-register program read as a general program, with
   the same observed laws (`Quantum.QuantumRuntime.outcomeLawWith_forgetReg`).
 
+## Private randomness
+
+The module `VCVio.Quantum.Oracle.ClassicalRandomized` embeds algorithms over
+`unifSpec + (X →ₒ Y)` using local uniform coins and ordinary function queries. The module
+`VCVio.Quantum.Oracle.ClassicalParallel` handles local uniform coins with batches of function
+queries. Both embeddings preserve the classical lazy random-oracle law and charge no oracle
+queries for private coins.
+
 ## Not covered
 
-* **Private randomness.** Algorithms that also sample coins, `OracleComp (unifSpec + (X →ₒ Y)) α`,
-  are not embedded.
 * **Result universes.** The result type is `α : Type`. Allowing any universe needs universe
   generalizations in the classical layer (`simulateQ`, `evalWithAnswerFn`, `IsTotalQueryBound`,
   `randomOracle`) first.
@@ -223,6 +229,37 @@ theorem additiveOracleRuntime_step_branch_single (H : X → Y) (m : X × Y) (d :
     ((additiveOracleRuntime H).step ()).branch () (Matrix.single (m, d) (m, d) 1) =
       Matrix.single ((m.1, m.2 + H m.1), d) ((m.1, m.2 + H m.1), d) 1 :=
   frame_oracleQuery_branch_single H m d
+
+/-- A basis query against a fixed function returns its table answer as a pure instrument. -/
+theorem run_classicalQuery (H : X → Y) (t : X) :
+    (additiveOracleRuntime H).run₂ .instruments (classicalQuery t) =
+      SubInstrument.pure (H t) := by
+  classical
+  apply DSubInstrument.ext
+  funext y
+  apply LinearMap.ext
+  intro ρ
+  let : Subsingleton (additiveOracleRuntime H).D := inferInstanceAs (Subsingleton Unit)
+  let e : (QReg.of Unit) × (additiveOracleRuntime H).D := ((), ())
+  have hρ : ρ = ρ e e • Matrix.single e e 1 := by
+    ext a b
+    have ha : a = e := Subsingleton.elim _ _
+    have hb : b = e := Subsingleton.elim _ _
+    subst a b
+    simp
+  rw [hρ, map_smul, map_smul]
+  change ρ e e • _ = ρ e e • _
+  congr 1
+  dsimp only [e]
+  rw [run_classicalQuery_branch_of_basis H (additiveOracleRuntime_step_branch_single H)
+    t ((): (additiveOracleRuntime H).D) y]
+  split_ifs with h
+  · subst y
+    exact (LinearMap.congr_fun (SubInstrument.branch_pure_self _) _).symm
+  · exact (LinearMap.congr_fun
+      (SubInstrument.branch_pure_of_ne
+        (A := (QReg.of Unit) × (additiveOracleRuntime H).D) (Ne.symm h))
+      (Matrix.single e e 1)).symm
 
 /-- Against a runtime that answers a call on a basis state `|x, y⟩` by moving it to
 `|x, y + H x⟩` and leaves its private register alone, the program of a classical algorithm from

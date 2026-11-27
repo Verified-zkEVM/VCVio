@@ -13,5 +13,11 @@ This dictionary pairs classical VCVio interfaces with their quantum counterparts
 | subprobability distributions; failure as missing mass | subinstruments; failure as missing trace |
 | `evalDist`, `SemanticsVia` | `outcomeMeasure`, `evalDist`, `SubInstrument.semanticsVia` |
 | `randomOracle`, lazily sampled | `qromEvalDist`: $H$ sampled once, queried through $U_H$ |
-| `IsTotalQueryBound` | `IsQueryBound` |
+| `IsTotalQueryBound` | `QuantumComp.IsTotalQueryBound` |
 | `OracleComp (X →ₒ Y) α` | embedded by `OracleComp.toQuantum`, with the same distribution |
+| `OracleComp (unifSpec + (X →ₒ Y)) α` | `OracleComp.toQuantumRandomized`: ordinary basis queries, free local private coins, and the same lazy random-oracle law |
+| `OracleComp (unifSpec + (X →ₒ Y).batch) α` | `OracleComp.toQuantumBatch`: one quantum call per list round, local private coins, the same lazy random-oracle law |
+| classical `IsOnlineQueryBound oa (r, q)` | round bound `r` and point bound `q` for `oa.toQuantumBatch` |
+| classical list-order unbatching | quantum sequentialization of `oa.toQuantumBatch`, with the same observed law |
+
+Depth-sensitive marked-search and preimage bounds require separate analysis.
