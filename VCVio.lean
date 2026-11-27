@@ -310,8 +310,6 @@ public import VCVio.CryptoFoundations.VectorCommitment.Basic
 public import VCVio.CryptoFoundations.VectorCommitment.Completeness
 public import VCVio.CryptoFoundations.VectorCommitment.Hiding
 public import VCVio.CryptoFoundations.VectorCommitment.Merkle
-public import VCVio.CryptoFoundations.VectorCommitment.Monadic
-public import VCVio.CryptoFoundations.VectorCommitment.MonadicMerkle
 public import VCVio.CryptoFoundations.VectorCommitment.NonadaptiveCheck
 public import VCVio.CryptoFoundations.VectorCommitment.OnlineExtraction
 public import VCVio.CryptoFoundations.VectorCommitment.PositionBinding
