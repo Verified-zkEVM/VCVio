@@ -129,6 +129,7 @@ public import VCVioTest.ModuleAPI.QueryImpl
 public import VCVioTest.MonadProbability
 public import VCVioTest.OracleComp.AdaptiveMeasure
 public import VCVioTest.OracleComp.BudgetedPotential
+public import VCVioTest.OracleComp.Constructions.SampleableType.GuessIndex
 public import VCVioTest.OracleComp.CostSimulation
 public import VCVioTest.OracleComp.CostedCacheReplay
 public import VCVioTest.OracleComp.EqDistTriple
@@ -139,6 +140,7 @@ public import VCVioTest.OracleComp.PreservesInv
 public import VCVioTest.OracleComp.Query
 public import VCVioTest.OracleComp.QueryAndHandlerLaws
 public import VCVioTest.OracleComp.QueryLogRelabel
+public import VCVioTest.OracleComp.QueryTracking.LoggingOracle.Guess
 public import VCVioTest.OracleComp.QueryTracking.QueryLog
 public import VCVioTest.OracleComp.QueryTracking.SlotRenaming
 public import VCVioTest.OracleComp.SchwartzZippel
@@ -292,6 +294,8 @@ public import VCVioTest.TimeLockPuzzle.LogSide
 public import VCVioTest.TimeLockPuzzle.Truncate
 public import VCVioTest.ToFinalValidity
 public import VCVioTest.ToMathlib.AbsDiff
+public import VCVioTest.ToMathlib.Data.List.GetD
+public import VCVioTest.ToMathlib.Data.Nat.Max
 public import VCVioTest.UniformOn
 public import VCVioTest.UniversePolymorphism
 public import VCVioTest.Unpredictability

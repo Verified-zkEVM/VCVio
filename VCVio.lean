@@ -448,6 +448,7 @@ public import VCVio.OracleComp.Constructions.Replicate.Basic
 public import VCVio.OracleComp.Constructions.ReplicateMeasure
 public import VCVio.OracleComp.Constructions.SampleableType
 public import VCVio.OracleComp.Constructions.SampleableType.Basic
+public import VCVio.OracleComp.Constructions.SampleableType.GuessIndex
 public import VCVio.OracleComp.Constructions.SampleableType.Measure
 public import VCVio.OracleComp.Constructions.SampleableType.SchwartzZippel
 public import VCVio.OracleComp.Constructions.UniformFinMeasure
@@ -498,6 +499,7 @@ public import VCVio.OracleComp.QueryTracking.Instability.Collision
 public import VCVio.OracleComp.QueryTracking.Iter
 public import VCVio.OracleComp.QueryTracking.ListCache
 public import VCVio.OracleComp.QueryTracking.LoggingOracle.Core
+public import VCVio.OracleComp.QueryTracking.LoggingOracle.Guess
 public import VCVio.OracleComp.QueryTracking.LoggingOracle.History
 public import VCVio.OracleComp.QueryTracking.LoggingOracle.Relabel
 public import VCVio.OracleComp.QueryTracking.MeasuredProgram

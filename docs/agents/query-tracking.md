@@ -44,6 +44,13 @@ uniform oracle answer measures. The online-target counterpart is
 `MerkleTreeMultiExtractability.measure_onlineAdaptivePrefixRunFrom_logged_le`; its target set
 is evaluated on the pre-query log.
 
+A reduction that guesses which query is the bad one uses
+`OracleComp.prEvent_exists_mem_withQueryLog_le_mul_prEvent_getD` (`LoggingOracle/Guess.lean`): for
+a computation with a total query bound `q`, the probability that some logged query satisfies an
+event is at most `q` times the probability that the one at a uniform index of `Fin (max q 1)`
+does. The same bound for any computation returning lists of at most `q` entries is
+`prEvent_exists_mem_le_mul_prEvent_getD` (`Constructions/SampleableType/GuessIndex.lean`).
+
 The structural `QueryCache.log_consistent_append`, `log_consistent_cacheQuery_append`,
 `cache_covered_append`, `cache_covered_cacheQuery_append`, and `domain_bound_cacheQuery` lemmas
 in `CachingLoggingOracle.lean` transport cache/log hypotheses without probability assumptions
