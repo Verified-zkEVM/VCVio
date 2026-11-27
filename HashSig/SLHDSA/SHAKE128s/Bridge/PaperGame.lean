@@ -26,10 +26,8 @@ namespace SLHDSA.SHAKE128s.Bridge
 
 /-- The proof's transcription of SLH-DSA-SHAKE-128s, as a pure-mode scheme over one oracle with
 `240`-bit answers. -/
-@[expose] noncomputable def model : Game.ExternalScheme HashOutput PublicKey SecretKey where
-  keygen := Scheme.keygen
-  sign := Scheme.sign
-  verify := Scheme.verify
+@[expose] noncomputable def model : Game.ExternalScheme HashOutput PublicKey SecretKey :=
+  Security.externalScheme
 
 /-- The proof's game is the generic game at `model`. -/
 theorem securityGame_model : Security.securityGame = Game.securityGame model := rfl

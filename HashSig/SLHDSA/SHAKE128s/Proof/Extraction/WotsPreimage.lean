@@ -42,6 +42,6 @@ theorem sign_eq_chain (message secretSeed publicSeed : Digest) (address : Addres
         0 (Checksum.encode message i).val
         (Hashing.derive (m := Id) publicSeed secretSeed
           (SLHDSA.SHAKE128s.Wots.secretAddress address i)) := by
-  simp only [SLHDSA.SHAKE128s.Wots.sign, Correctness.sequenceFin_id, bind, chainAddress]
+  simp only [SLHDSA.SHAKE128s.Wots.sign_eq, Correctness.sequenceFin_id, bind, chainAddress]
 
 end SLHDSA.SHAKE128s.Extraction.WotsPreimage

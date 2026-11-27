@@ -235,6 +235,7 @@ Security notions, experiments, games, and advantages follow
 - Query enforcement: `VCVio/OracleComp/QueryTracking/Enforcement.lean`
 - Seeded (Bellare-Neven) forking lemma: `VCVio/CryptoFoundations/SeededFork.lean`
 - Replay-based forking lemma: `VCVio/CryptoFoundations/ReplayFork.lean`
+- Coordinate-wise special soundness and its single-round rewinding extractor (eprint 2023/846 §2.9 and §7.1): `VCVio/CryptoFoundations/CoordinateFork.lean`, `VCVio/CryptoFoundations/CoordinateFork/Operational.lean`, `VCVio/CryptoFoundations/CoordinateFork/Realizability.lean`, `VCVio/CryptoFoundations/CoordinateFork/SpecialSoundness.lean`, `VCVio/CryptoFoundations/CoordinateFork/Extraction.lean`, `VCVio/CryptoFoundations/CoordinateFork/Finder.lean`, and with an alphabet and a threshold per coordinate `VCVio/CryptoFoundations/CoordinateFork/BlockOperational.lean` and `VCVio/CryptoFoundations/CoordinateFork/BlockFinder.lean`, over the combinatorics in `ToMathlib/Combinatorics/CoordinateWise.lean`
 - Independent products of computations: `VCVio/EvalDist/IndepProduct.lean`
 - Drawing without replacement and its expected draw count: `VCVio/OracleComp/Constructions/WithoutReplacement.lean`, `ToMathlib/Probability/NegativeHypergeometric.lean`
 - Expected values of `ℝ≥0∞`-valued functionals (`wp` and `∫⁻` against `𝒟[mx]`): `VCVio/ProgramLogic/Unary/HoareTriple.lean`
@@ -339,7 +340,10 @@ is a policy error rather than an allowlist, and `lake exe axiomsweep --update-ba
 refuses to write one. `Interop/` (the declared TCB) is excluded — its boundary is enforced by
 the import-isolation gate instead. The `VCVioAxiomSweepTestFixtures` library carries
 synthetic taint for the tool's own tests and is deliberately excluded from every
-aggregate.
+aggregate. Pull-request and merge-queue runs skip the tool's self-test, and the init sweep's,
+unless `scripts/`, the toolchain, the manifest, the lakefile or the build workflow changed: their
+fixtures depend on nothing else, so the result is the one the last `main` run recorded. `main`,
+the nightly and manual runs always run them; the sweeps themselves run everywhere.
 
 `uv run --no-project --python 3.12 python ./scripts/check-comment-fences.py` enforces one rule over every Lean source the
 repository tracks or would track — tracked files plus untracked ones that are not ignored, the
@@ -460,6 +464,8 @@ Before working in a specific area, read the relevant guide in `docs/agents/`:
 - **Probability reasoning (EvalDist, ProbComp)**: [`docs/agents/probability.md`](docs/agents/probability.md)
 - **Converting code written against the removed discrete `Pr[…]` API**: [`docs/agents/probability-migration.md`](docs/agents/probability-migration.md)
 - **Crypto primitives and reductions**: [`docs/agents/crypto.md`](docs/agents/crypto.md)
+- **Forking lemmas and black-box finders (seeded / replay / coordinate-wise / threshold)**: [`docs/agents/forking.md`](docs/agents/forking.md)
+- **Rewinding: reset policies, finders against frozen reruns, transcript recovery, query cost**: [`docs/agents/rewinding.md`](docs/agents/rewinding.md)
 - **End-to-end crypto examples**: [`docs/agents/end-to-end-examples.md`](docs/agents/end-to-end-examples.md)
 - **Program logic tactics**: [`docs/agents/program-logic.md`](docs/agents/program-logic.md)
 - **All notation**: [`docs/agents/notation.md`](docs/agents/notation.md)

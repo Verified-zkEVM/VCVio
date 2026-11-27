@@ -180,6 +180,7 @@ theorem probes_fors_sign (cache : QueryCache HashSpec) (secretSeed publicSeed : 
     Probes cache
       (Fors.sign (m := OracleComp HashSpec) indices secretSeed publicSeed key.address)
       (Canonical publicSeed (replayCells cache secretSeed publicSeed)) := by
+  rw [Fors.sign_eq_sequenceFin]
   refine probes_sequenceFin cache _ forsTrees _ fun tree => ?_
   have hsecret : tree.val * 2 ^ forsHeight + (indices tree).val < forsTrees * 2 ^ forsHeight := by
     have := (indices tree).isLt
@@ -225,7 +226,7 @@ theorem fors_sign_entry (cache : QueryCache HashSpec) (indices : Fors.Indices)
           @Fors.node Id _ (replayQuery cache) secretSeed publicSeed address level.val
             (tree.val * 2 ^ (forsHeight - level.val) +
               Nat.xor ((indices tree).val / 2 ^ level.val) 1) } := by
-  simp only [Fors.sign, Correctness.sequenceFin_id, bind, pure]
+  simp only [Fors.sign_eq_sequenceFin, Correctness.sequenceFin_id, bind, pure]
 
 /-! ## The entries a FORS signature discloses are cells
 
@@ -377,6 +378,7 @@ theorem probes_fors_publicKeyFromSignature (cache : QueryCache HashSpec)
       (Fors.publicKeyFromSignature (m := OracleComp HashSpec) signature indices publicSeed
         key.address)
       (Canonical publicSeed (replayCells cache secretSeed publicSeed)) := by
+  rw [Fors.publicKeyFromSignature_eq_fold]
   refine probes_bind cache _ _ _
     (fun tree : Fin forsTrees => @Fors.node Id _ (replayQuery cache) secretSeed publicSeed
       key.address forsHeight tree.val) ?_ ?_ ?_
@@ -474,7 +476,7 @@ theorem wots_sign_entry (cache : QueryCache HashSpec) (message secretSeed public
         (Checksum.encode message chain).val
         (@Hashing.derive Id _ (replayQuery cache) publicSeed secretSeed
           (Wots.secretAddress address chain)) := by
-  simp only [Wots.sign, Correctness.sequenceFin_id, bind]
+  simp only [Wots.sign_eq, Correctness.sequenceFin_id, bind]
 
 /-- The WOTS half of an honest XMSS signature. -/
 theorem merkle_sign_wots (cache : QueryCache HashSpec)
@@ -483,7 +485,7 @@ theorem merkle_sign_wots (cache : QueryCache HashSpec)
     (@Merkle.sign Id _ (replayQuery cache) message secretSeed publicSeed address leaf).wots =
       @Wots.sign Id _ (replayQuery cache) message secretSeed publicSeed
         (Merkle.wotsAddress address leaf.val) := by
-  simp only [Merkle.sign, Correctness.sequenceFin_id, bind, pure]
+  simp only [Merkle.sign_eq_sequenceFin, Correctness.sequenceFin_id, bind, pure]
 
 /-- The authentication half of an honest XMSS signature. -/
 theorem merkle_sign_authentication (cache : QueryCache HashSpec)
@@ -493,7 +495,7 @@ theorem merkle_sign_authentication (cache : QueryCache HashSpec)
         leaf).authentication level =
       @Merkle.node Id _ (replayQuery cache) secretSeed publicSeed address level.val
         (Nat.xor (leaf.val / 2 ^ level.val) 1) := by
-  simp only [Merkle.sign, Correctness.sequenceFin_id, bind, pure]
+  simp only [Merkle.sign_eq_sequenceFin, Correctness.sequenceFin_id, bind, pure]
 
 /-- A checksum-encoded digit never exceeds `w - 1`. -/
 theorem checksum_digit_le (message : Digest) (chain : Fin chains) :
@@ -515,12 +517,14 @@ theorem probes_wots_sign (cache : QueryCache HashSpec) (secretSeed publicSeed : 
     Probes cache
       (Wots.sign (m := OracleComp HashSpec) message secretSeed publicSeed key.address)
       (Canonical publicSeed (replayCells cache secretSeed publicSeed)) := by
+  rw [Wots.sign_eq]
   refine probes_sequenceFin cache _ chains _ fun chain => ?_
   refine probes_tweakable cache publicSeed (Wots.secretAddress key.address chain)
     (bytesBE n secretSeed) _ _
     ⟨.wotsPrf key chain, (canonicalInput_wotsPrf cache secretSeed publicSeed key chain).symm⟩ ?_
-  exact probes_chain cache secretSeed publicSeed key chain
-    (Checksum.encode message chain).val 0 (by simpa using checksum_digit_le message chain)
+  simpa only [@Wots.chain_zero Id _ (replayQuery cache), pure, Hashing.derive] using
+    probes_chain cache secretSeed publicSeed key chain
+      (Checksum.encode message chain).val 0 (by simpa using checksum_digit_le message chain)
 
 /-- **Recovering a WOTS public key from an honest signature consults only canonical
 inputs.** -/
@@ -537,6 +541,7 @@ theorem probes_wots_publicKeyFromSignature (cache : QueryCache HashSpec)
       (Wots.publicKeyFromSignature (m := OracleComp HashSpec) signature message publicSeed
         key.address)
       (Canonical publicSeed (replayCells cache secretSeed publicSeed)) := by
+  rw [Wots.publicKeyFromSignature_eq]
   refine probes_bind cache _ _ _
     (fun chain : Fin chains => @Wots.chain Id _ (replayQuery cache) publicSeed
       { key.address with chainOrHeight := BitVec.ofNat 32 chain.val } 0 (w - 1)
@@ -581,6 +586,7 @@ theorem probes_merkle_sign (cache : QueryCache HashSpec) (secretSeed publicSeed 
     Probes cache
       (Merkle.sign (m := OracleComp HashSpec) message secretSeed publicSeed tree.address leaf)
       (Canonical publicSeed (replayCells cache secretSeed publicSeed)) := by
+  rw [Merkle.sign_eq_sequenceFin]
   refine probes_bind_replay cache _ _ _ ?_ ?_
   · refine probes_sequenceFin cache _ subtreeHeight _ fun level => ?_
     exact probes_merkle_node cache secretSeed publicSeed tree level.val (le_of_lt level.isLt)
@@ -677,7 +683,13 @@ theorem signLayers_succ_eq (cache : QueryCache HashSpec) (secretSeed publicSeed 
             (@Merkle.sign Id _ (replayQuery cache) message secretSeed publicSeed
               (Hypertree.address layer tree) leaf)
             message publicSeed (Hypertree.address layer tree))) := by
-  cases remaining <;> rfl
+  cases remaining with
+  | zero =>
+      simpa only [Hypertree.signLayers_zero, pure, bind] using
+        (@Hypertree.signLayers_one Id _ (replayQuery cache) _ secretSeed publicSeed
+          layer tree leaf message)
+  | succ remaining =>
+      simp only [Hypertree.signLayers_add_two, pure, bind]
 
 /-- **The layer the signer is standing in** is the subtree signature it writes there. -/
 theorem signLayers_head (cache : QueryCache HashSpec) (secretSeed publicSeed : Digest)
@@ -733,6 +745,7 @@ theorem probes_merkle_publicKeyFromSignature (cache : QueryCache HashSpec)
       (Merkle.publicKeyFromSignature (m := OracleComp HashSpec) leaf signature message
         publicSeed tree.address)
       (Canonical publicSeed (replayCells cache secretSeed publicSeed)) := by
+  rw [Merkle.publicKeyFromSignature_eq_fold]
   have hwots : ∀ chain : Fin chains, signature.wots chain =
       @Wots.chain Id _ (replayQuery cache) publicSeed
         { (WotsKey.mk tree leaf).address with chainOrHeight := BitVec.ofNat 32 chain.val } 0
@@ -782,7 +795,7 @@ theorem probes_hypertree_signLayers (cache : QueryCache HashSpec)
       have hlayer : layer < layers := by omega
       have hdiv : tree / 2 ^ subtreeHeight < 2 ^ (totalHeight - subtreeHeight) :=
         lt_of_le_of_lt (Nat.div_le_self _ _) htree
-      rw [Hypertree.signLayers]
+      rw [Hypertree.signLayers_succ]
       refine probes_bind cache _ _ _
         (@Merkle.sign Id _ (replayQuery cache) message secretSeed publicSeed
           (Hypertree.address layer tree) leaf)
@@ -884,7 +897,7 @@ request rather than to a byte string. -/
 theorem probes_sign_none (cache : QueryCache HashSpec) (sk : SecretKey) (request : Message)
     (hframe : request.frame = none) (predicate : Bytes → Prop) :
     Probes cache (Scheme.sign (m := OracleComp HashSpec) sk request) predicate := by
-  rw [Scheme.sign, hframe]
+  rw [Scheme.sign, SignatureAlg.SigningView.Encoding.sign, hframe]
   exact probes_pure cache _ _
 
 /-- **A served request consults only canonical inputs and the two its own frame names.** -/
@@ -894,7 +907,8 @@ theorem probes_sign (cache : QueryCache HashSpec) (sk : SecretKey) (request : Me
       (fun probe =>
         Canonical sk.publicKey.seed (replayCells cache sk.seed sk.publicKey.seed) probe ∨
           MessageProbe cache sk message probe) := by
-  rw [Scheme.sign, hframe]
+  simp only [Scheme.sign, SignatureAlg.SigningView.Encoding.sign, hframe]
+  rw [map_eq_bind_pure_comp]
   exact probes_bind_replay cache _ _ _ (probes_signInternal cache sk message)
     (probes_pure cache _ _)
 

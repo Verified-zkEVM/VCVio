@@ -149,9 +149,8 @@ theorem countQueries_query_bind {α : Type} (cost : OracleWorld.Domain → Count
       liftM (OracleWorld.query queried) >>= fun answer =>
         (fun result => (result.1, cost queried + result.2)) <$>
           countQueries cost (next answer) := by
-  simp only [countQueries, simulateQ_bind, simulateQ_spec_query, addCostOracle,
-    QueryImpl.withAddCost, QueryImpl.withCost]
-  simp [Functor.map_map, map_bind, bind_map_left]
+  simp only [VerificationBudget.countQueries_bind, VerificationBudget.countQueries_query]
+  simp [bind_assoc, map_eq_bind_pure_comp]
 
 /-- Instrumentation adds bookkeeping to the value and nothing to the oracle: a counted run's
 value and final cache are those of the underlying run. -/

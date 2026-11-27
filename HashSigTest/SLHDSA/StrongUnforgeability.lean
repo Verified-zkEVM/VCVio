@@ -220,8 +220,8 @@ section EverySeed
 
 /-- The hedged every-seed right-hand side at SLH-DSA-SHAKE-256s is below one. -/
 theorem hedgedEverySeedRhs_256s_lt_one :
-    securityBound vp256s.params (2 ^ 256) 2 1 (2 ^ 64 + 8444) (2 ^ 64) + 1 / (2 ^ 256 : ℕ) +
-        ((2 ^ 64 : ℕ) : ℝ≥0∞) * (((2 ^ 64 + 8444 : ℕ) : ℝ≥0∞) + ((2 ^ 64 : ℕ) : ℝ≥0∞) + 1) /
+    securityBound vp256s.params (2 ^ 256) 2 1 (2 ^ 64 + 8324) (2 ^ 64) + 1 / (2 ^ 256 : ℕ) +
+        ((2 ^ 64 : ℕ) : ℝ≥0∞) * (((2 ^ 64 + 8324 : ℕ) : ℝ≥0∞) + ((2 ^ 64 : ℕ) : ℝ≥0∞) + 1) /
           ((2 ^ 256 : ℕ) : ℝ≥0∞) ^ 2 +
         (((2 ^ 64 : ℕ) : ℝ≥0∞) + 1) / ((2 ^ 256 : ℕ) : ℝ≥0∞) < 1 :=
   lt_of_le_of_lt (by

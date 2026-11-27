@@ -73,6 +73,8 @@ patched on the steps that raise `bad` and from bad states, where it follows `imp
 - `QueryImpl.AgreeUntilBad.extendState`: agreement until `bad` under a shared passive extension.
 - `QueryImpl.IntertwinesOn.prEvent_simulateQ_run_le_or_bad`: an intertwining followed by
   agreement until `bad` bounds an event of the intertwined run by the event or `bad`.
+- `OracleComp.map_run_simulateQ_evalDistEq_of_eq_until_stopped`: two handlers that agree until
+  a stopping state, after which each freezes an observation, give the observation the same law.
 
 A state-separating-package form of the same idea is in
 `VCVio/StateSeparating/IdenticalUntilBad.lean`.
@@ -297,6 +299,61 @@ theorem prEvent_simulateQ_run_le_add_bad_right (h : AgreeUntilBad impl₁ impl�
     (h.symm.prEvent_simulateQ_run_and_not_bad_le h₂ oa s fun z ↦ ¬P z)
   rw [prEvent_true_eq_one, prEvent_true_eq_one]
 
+/-- A shared lossless terminal kernel preserves the event bound until a persistent bad state. -/
+theorem prEvent_simulateQ_run_bind_le_or_bad {β : Type}
+    (agreement : AgreeUntilBad impl₁ impl₂ bad) (persistent : PreservesInv impl₁ bad)
+    (program : OracleComp spec α) (initial : σ)
+    (kernel : α × σ → ProbComp β) (event : β → Prop) :
+    Pr{let result ← (simulateQ impl₂ program).run initial
+       let observation ← kernel result}[event observation] ≤
+      Pr{let result ← (simulateQ impl₁ program).run initial
+         let observation ← kernel result}[event observation ∨ bad result.2] := by
+  classical
+  let _ : MeasurableSpace (α × σ) := ⊤
+  let left := (simulateQ impl₂ program).run initial
+  let right := (simulateQ impl₁ program).run initial
+  let complete : α × σ → ProbComp (β × σ) := fun z =>
+    (fun observation => (observation, z.2)) <$> kernel z
+  have domination : (𝒟[right]).restrict {z | ¬bad z.2} ≤ 𝒟[left] := by
+    refine Measure.le_iff.2 fun set _ => ?_
+    rw [Measure.restrict_apply MeasurableSet.of_discrete]
+    simpa only [left, right, prEvent_eq_evalDist_of_discrete, Set.inter_def,
+      Set.mem_ofPred_eq, Set.ofPred_mem_eq] using
+      agreement.prEvent_simulateQ_run_and_not_bad_le persistent program initial (· ∈ set)
+  have core : Pr{let z ← right >>= complete}[¬event z.1 ∧ ¬bad z.2] ≤
+      Pr{let z ← left >>= complete}[¬event z.1] := by
+    simp only [complete, prEvent_norm]
+    rw [prEvent_bind_bind_eq_lintegral_of_discrete,
+      prEvent_bind_bind_eq_lintegral_of_discrete]
+    have support : (fun z : α × σ =>
+        Pr{let observation ← kernel z}[¬event observation ∧ ¬bad z.2]).support ⊆
+        {z | ¬bad z.2} := by
+      intro z hz hb
+      exact hz (by simp [hb])
+    calc _ = ∫⁻ z in {z | ¬bad z.2},
+          Pr{let observation ← kernel z}[¬event observation ∧ ¬bad z.2] ∂𝒟[right] :=
+        (setLIntegral_eq_of_support_subset support).symm
+      _ = ∫⁻ z in {z | ¬bad z.2},
+          Pr{let observation ← kernel z}[¬event observation] ∂𝒟[right] := by
+        apply setLIntegral_congr_fun MeasurableSet.of_discrete
+        intro z hz
+        change ¬bad z.2 at hz
+        exact prEvent_congr _ _ _ fun _ => ⟨And.left, fun h => ⟨h, hz⟩⟩
+      _ ≤ _ := lintegral_mono' domination le_rfl
+  have partitionLeft := prEvent_add_prEvent_not_eq_prEvent_true
+    (left >>= complete) (fun z => event z.1)
+  have partitionRight := prEvent_add_prEvent_not_eq_prEvent_true
+    (right >>= complete) (fun z => event z.1 ∨ bad z.2)
+  rw [prEvent_true_eq_one] at partitionLeft partitionRight
+  have bound : Pr{let z ← left >>= complete}[event z.1] ≤
+      Pr{let z ← right >>= complete}[event z.1 ∨ bad z.2] := by
+    refine ENNReal.le_of_add_le_add_right
+      (prEvent_ne_top ((fun z => ¬event z.1) <$> (left >>= complete))) ?_
+    rw [partitionLeft, ← partitionRight]
+    refine add_le_add le_rfl (le_trans (le_of_eq ?_) core)
+    exact prEvent_congr _ _ _ fun z => not_or
+  simpa only [left, right, complete, prEvent_norm] using bound
+
 end AgreeUntilBad
 
 /-! ## Intertwining, then agreement until bad -/
@@ -329,8 +386,8 @@ theorem IntertwinesOn.prEvent_simulateQ_run_le_or_bad {σB : Type}
     rw [prEvent_eq_evalDist_decide, prEvent_eq_evalDist_decide]
     exact congrFun (congrArg DFunLike.coe h.symm) {true}
   rw [heq]
-  exact hA.dominatedUntilBad.prEvent_simulateQ_run_le_map_or_bad
-    (fun _ _ _ _ _ ↦ trivial) hbad oa s trivial fun z ↦ P z.1
+  simpa only [prEvent_norm] using
+    hA.prEvent_simulateQ_run_bind_le_or_bad hbad oa s (fun z ↦ pure z.1) P
 
 end QueryImpl
 
@@ -355,3 +412,50 @@ theorem of_evalDistEq_or_bad (h : ∀ t s, inv s → ¬bad s →
     exact zero_le
 
 end QueryImpl.DominatedUntilBad
+
+/-! ## Stopping a simulation -/
+
+namespace OracleComp
+
+variable {ι : Type} {spec : OracleSpec ι} {σ β : Type}
+
+/-- From a stopped state, a handler that keeps the state stopped and its observation fixed ends
+every run with the same observation. -/
+theorem map_run_simulateQ_evalDistEq_pure_of_stopped (impl : QueryImpl spec (StateT σ ProbComp))
+    (stopped : σ → Prop) (obs : σ → β)
+    (h : ∀ t s, stopped s → ∀ z ∈ support ((impl t).run s), stopped z.2 ∧ obs z.2 = obs s)
+    {α : Type} (oa : OracleComp spec α) {s : σ} (hs : stopped s) :
+    (fun z => obs z.2) <$> (simulateQ impl oa).run s =ᵈ (pure (obs s) : ProbComp β) := by
+  have hinv := OracleComp.simulateQ_run_preserves_inv_of_query impl
+    (fun s' => stopped s' ∧ obs s' = obs s) (fun t s' hs' z hz => ⟨(h t s' hs'.1 z hz).1,
+      (h t s' hs'.1 z hz).2.trans hs'.2⟩) oa s ⟨hs, rfl⟩
+  have hmap : (fun z => obs z.2) <$> (simulateQ impl oa).run s =ᵈ
+      (fun _ => obs s) <$> (simulateQ impl oa).run s := by
+    rw [map_eq_bind_pure_comp, map_eq_bind_pure_comp]
+    exact OracleComp.EvalDistEq.bind_congr_of_support _ fun z hz => by
+      simp [(hinv z hz).2]
+  exact hmap.trans (OracleComp.EvalDistEq.map_const _ _)
+
+/-- **Stopping.** Two handlers that agree on every state that is not stopped, and that each keep a
+stopped state stopped and its observation fixed, give every run the same distribution of the
+final observation. Unlike `QueryImpl.AgreeUntilBad`, the handlers may disagree arbitrarily once
+the state is stopped. -/
+theorem map_run_simulateQ_evalDistEq_of_eq_until_stopped
+    (impl₁ impl₂ : QueryImpl spec (StateT σ ProbComp)) (stopped : σ → Prop) (obs : σ → β)
+    (hagree : ∀ t s, ¬stopped s → (impl₁ t).run s = (impl₂ t).run s)
+    (h₁ : ∀ t s, stopped s → ∀ z ∈ support ((impl₁ t).run s), stopped z.2 ∧ obs z.2 = obs s)
+    (h₂ : ∀ t s, stopped s → ∀ z ∈ support ((impl₂ t).run s), stopped z.2 ∧ obs z.2 = obs s)
+    {α : Type} (oa : OracleComp spec α) (s : σ) :
+    (fun z => obs z.2) <$> (simulateQ impl₁ oa).run s =ᵈ
+      (fun z => obs z.2) <$> (simulateQ impl₂ oa).run s := by
+  induction oa using OracleComp.inductionOn generalizing s with
+  | pure x => exact EvalDistEq.rfl
+  | query_bind t k ih =>
+    by_cases hs : stopped s
+    · exact (map_run_simulateQ_evalDistEq_pure_of_stopped impl₁ stopped obs h₁ _ hs).trans
+        (map_run_simulateQ_evalDistEq_pure_of_stopped impl₂ stopped obs h₂ _ hs).symm
+    · simp only [simulateQ_bind, simulateQ_query, OracleQuery.input_query,
+        OracleQuery.cont_query, id_map, StateT.run_bind, map_bind, hagree t s hs]
+      exact EvalDistEq.bind_right _ fun p => ih p.1 p.2
+
+end OracleComp

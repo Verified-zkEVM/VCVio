@@ -145,6 +145,15 @@ private theorem runGen_virtualize_bind [DecidableEq S] [CommSemiring F]
         runGen M obs ((virtualize z (k r.1.1)).run r.1.2) r.2) := by
   simp only [runGen, run, virtualize, simulateQ_bind, StateT.run_bind]
 
+/-- A virtualized group query is deterministic after real group interpretation. -/
+theorem exists_runGen_virtualize_group [DecidableEq S] [CommSemiring F]
+    [∀ s, AddCommMonoid (V s)] [∀ s, Module F (V s)]
+    {U : S → Type} [∀ s, DecidableEq (U s)]
+    (M : Model F σ V) (obs : (s : S) → V s → U s) (z : S → Handle)
+    (q : Query F σ) (τ : Tbl (fun _ : S => Handle)) (T : Tbl V) :
+    ∃ r, runGen M obs ((virtualizeImpl z (.inl q)).run τ) T = pure r := by
+  cases q <;> exact ⟨_, rfl⟩
+
 /-- One translated query preserves `WellFormed` in every outcome of its run. -/
 theorem virtualize_step_wellFormed [DecidableEq S] [CommSemiring F]
     [∀ s, AddCommMonoid (V s)] [∀ s, Module F (V s)]
@@ -172,7 +181,8 @@ theorem virtualize_step_wellFormed [DecidableEq S] [CommSemiring F]
     subst r
     exact hw
 
-private theorem virtualize_step_readBack [DecidableEq S] [CommSemiring F]
+/-- Reading back one virtualized query agrees with the corresponding direct real query. -/
+theorem virtualize_step_readBack [DecidableEq S] [CommSemiring F]
     [∀ s, AddCommMonoid (V s)] [∀ s, Module F (V s)]
     {U : S → Type} [∀ s, DecidableEq (U s)]
     (M : Model F σ V) (obs : (s : S) → V s → U s)

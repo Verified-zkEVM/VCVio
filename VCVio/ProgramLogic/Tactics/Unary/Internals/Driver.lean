@@ -446,11 +446,14 @@ def runVCGenPass : TacticM Bool := do
   let mut newGoals : Array MVarId := #[]
   for goal in goals do
     setGoals [goal]
+    let saved ← saveState
     if ← tryCoreVCGen <||> runVCGenStep then
       progress := true
       for newGoal in ← getGoals do
         newGoals := newGoals.push newGoal
     else
+      -- Normalization may assign the original goal to a new obligation before the step declines.
+      saved.restore
       newGoals := newGoals.push goal
   setGoals newGoals.toList
   return progress

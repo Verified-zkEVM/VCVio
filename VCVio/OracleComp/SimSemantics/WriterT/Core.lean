@@ -8,6 +8,8 @@ module
 public import VCVio.OracleComp.Support
 public import VCVio.OracleComp.SimSemantics.SimulateQ
 public import ToMathlib.Control.WriterT
+public import ToMathlib.Control.StateT
+public import ToMathlib.Control.WriterT.State
 
 /-!
 # Simulation through `WriterT` Handlers
@@ -21,7 +23,7 @@ public section
 
 open OracleSpec Function Prod
 
-universe u v w x
+universe u v w x idx
 
 open scoped OracleSpec.PrimitiveQuery
 
@@ -61,6 +63,15 @@ carries both logs as a product. -/
   WriterT.mk <| do
     let ((a, w₁), w₂) ← (impl t).run.run
     pure (a, (w₁, w₂))
+
+/-- Read a handler over `StateT σ (WriterT ω m)` as a handler over the product state `σ × ω`:
+each query appends the log it writes to the second component. This is the state-over-writer
+analogue of `flattenStateT`. -/
+@[expose] def flattenStateTWriterT {ι : Type _} {spec : OracleSpec ι}
+    {m : Type u → Type v} [Functor m] {σ ω : Type u} [Append ω]
+    (impl : QueryImpl spec (StateT σ (WriterT ω m))) :
+    QueryImpl spec (StateT (σ × ω) m) := fun t =>
+  StateT.mk fun p => (fun z => (z.1.1, (z.1.2, p.2 ++ z.2))) <$> ((impl t).run p.1).run
 
 end QueryImpl
 
@@ -119,5 +130,85 @@ theorem simulateQ_WriterT_compose {ι₁ ι₂ : Type*} {spec₁ : OracleSpec ι
   | query_bind t f ih =>
     simp only [simulateQ_bind, WriterT.run_bind', simulateQ_spec_query, bridge t, simulateQ_map]
     exact bind_congr fun p => by rw [ih p.1]
+
+end OracleComp
+
+namespace OracleComp
+
+/-- Writer-level simulation collapse: if a writer-instrumented handler `red` followed by `impl`
+agrees on every query with `game`, then it agrees on every program. -/
+theorem simulateQ_writerT_run_compose {ι₁ ι₂ : Type} {spec₁ : OracleSpec ι₁}
+    {spec₂ : OracleSpec ι₂} {ω : Type} [Monoid ω] {n : Type → Type} [Monad n] [LawfulMonad n]
+    (red : QueryImpl spec₁ (WriterT ω (OracleComp spec₂))) (impl : QueryImpl spec₂ n)
+    (game : QueryImpl spec₁ (WriterT ω n))
+    (bridge : ∀ q, simulateQ impl (red q).run = (game q).run) {α : Type}
+    (oa : OracleComp spec₁ α) :
+    simulateQ impl (simulateQ red oa).run = (simulateQ game oa).run := by
+  induction oa using OracleComp.inductionOn with
+  | pure x => simp
+  | query_bind t f ih =>
+    simp only [simulateQ_bind, WriterT.run_bind, simulateQ_spec_query, bridge t, simulateQ_map]
+    exact bind_congr fun p => by rw [ih p.1]
+
+/-- Simulation collapse through a writer over a state: if a handler `red` into
+`WriterT ω (StateT σ (OracleComp spec₂))` followed by `impl` agrees on every query and state with
+`game`, then it agrees on every program and state. -/
+theorem simulateQ_writerT_stateT_run_compose {ι₁ ι₂ : Type} {spec₁ : OracleSpec ι₁}
+    {spec₂ : OracleSpec ι₂} {ω σ : Type} [Monoid ω] {n : Type → Type} [Monad n] [LawfulMonad n]
+    (red : QueryImpl spec₁ (WriterT ω (StateT σ (OracleComp spec₂)))) (impl : QueryImpl spec₂ n)
+    (game : QueryImpl spec₁ (WriterT ω (StateT σ n)))
+    (bridge : ∀ q s, simulateQ impl ((red q).run.run s) = (game q).run.run s) {α : Type}
+    (oa : OracleComp spec₁ α) (s : σ) :
+    simulateQ impl ((simulateQ red oa).run.run s) = (simulateQ game oa).run.run s := by
+  induction oa using OracleComp.inductionOn generalizing s with
+  | pure x => simp
+  | query_bind t f ih =>
+    simp only [simulateQ_bind, WriterT.run_bind, simulateQ_spec_query, StateT.run_bind,
+      StateT.run_map, bridge t, simulateQ_map]
+    exact bind_congr fun p => by rw [ih p.1.1 p.2]
+
+
+/-- Product-state accumulation commutes with the existing free-oracle fold. -/
+theorem writerToState_simulateQ
+    {m : Type u → Type v} [Monad m] [LawfulMonad m] {σ ω α : Type u} {ι : Type idx}
+    {spec : OracleSpec.{idx, u} ι} [EmptyCollection ω] [Append ω] [LawfulAppend ω]
+    (impl : QueryImpl spec (WriterT ω (StateT σ m))) (program : OracleComp spec α) :
+    WriterT.appendToState (simulateQ impl program) =
+      simulateQ (fun input => WriterT.appendToState (impl input)) program := by
+  simpa only [simulateQ, WriterT.appendToStateHom] using
+    (PFunctor.FreeM.liftM_natural impl
+      (WriterT.appendToStateHom (m := m) (σ := σ) (ω := ω)) program)
+
+end OracleComp
+
+namespace OracleComp
+
+variable {ι : Type*} {spec : OracleSpec ι} {m : Type u → Type v} [Monad m] [LawfulMonad m]
+  {σ ω : Type u} [EmptyCollection ω] [Append ω] [LawfulAppend ω]
+
+/-- Running a handler over `StateT σ (WriterT ω m)` under its flattened handler from `(s, w₀)` is
+running it from `s` and appending its log to `w₀`. -/
+theorem simulateQ_flattenStateTWriterT_run (impl : QueryImpl spec (StateT σ (WriterT ω m)))
+    {α : Type u} (oa : OracleComp spec α) (s : σ) (w₀ : ω) :
+    (simulateQ impl.flattenStateTWriterT oa).run (s, w₀) =
+      (fun z : (α × σ) × ω => (z.1.1, (z.1.2, w₀ ++ z.2))) <$> ((simulateQ impl oa).run s).run := by
+  induction oa using OracleComp.inductionOn generalizing s w₀ with
+  | pure x => simp
+  | query_bind t k ih =>
+    simp only [simulateQ_bind, simulateQ_spec_query, StateT.run_bind, WriterT.run_bind',
+      map_bind, QueryImpl.flattenStateTWriterT, StateT.run_mk, bind_map_left]
+    refine bind_congr fun z => ?_
+    rw [ih z.1.1 z.1.2 (w₀ ++ z.2)]
+    simp [Functor.map_map, LawfulAppend.append_assoc]
+
+/-- The run of a handler over `StateT σ (WriterT ω m)` from the empty log, read off the run of its
+flattened handler. -/
+theorem run_simulateQ_eq_map_flattenStateTWriterT
+    (impl : QueryImpl spec (StateT σ (WriterT ω m))) {α : Type u} (oa : OracleComp spec α)
+    (s : σ) :
+    ((simulateQ impl oa).run s).run =
+      (fun w => ((w.1, w.2.1), w.2.2)) <$> (simulateQ impl.flattenStateTWriterT oa).run (s, ∅) := by
+  rw [simulateQ_flattenStateTWriterT_run, Functor.map_map]
+  simp
 
 end OracleComp

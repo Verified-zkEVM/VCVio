@@ -138,7 +138,7 @@ theorem publicKeyFromSignature_eq (signature : ForsSignature)
     SLHDSA.SHAKE128s.Fors.publicKeyFromSignature (m := Id) signature indices publicSeed address =
       Hashing.tweakable (m := Id) publicSeed (rootAddress address)
         (digestArrayBytes (recoveredRoot hash signature indices publicSeed address)) := by
-  simp only [SLHDSA.SHAKE128s.Fors.publicKeyFromSignature, Correctness.sequenceFin_id, bind,
+  simp only [SLHDSA.SHAKE128s.Fors.publicKeyFromSignature_eq_fold, Correctness.sequenceFin_id, bind,
     Correctness.foldlM_id, rootAddress]
   rfl
 

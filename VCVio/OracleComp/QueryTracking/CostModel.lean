@@ -48,19 +48,136 @@ Uses `AddWriterT` (defined in `ToMathlib.Control.WriterT`) for additive cost acc
 - `worstCaseCostBound_map_iff`: Pure observations preserve and reflect query-cost bounds.
 - `expectedCost_pure`: Expected cost of a pure computation is `0`.
 - `prEvent_costDist_gt_le_expectedCost_div`: Markov's inequality for cost distributions.
+
+## Universes
+
+`CostModel` and `WorstCaseCostBound` read only the query tree of a program and the charge along each
+completed path. Their query index, responses, results and cost carrier have independent universes,
+and `WorstCaseCostBound` is stated with PolyFun's `PFunctor.FreeM.Path.charge`.
+
+The instrumented run `instrumentedRun`, and with it `costDist`, `expectedCost` and
+`ExpectedCostBound`, runs `simulateQ` into `AddWriterT ω (OracleComp spec)`. A writer layer is
+`OracleComp spec (α × Multiplicative ω)`, and `simulateQ` folds into a monad whose inputs are the
+response universe. So the responses, the results and the cost carrier share one universe there,
+and only the query index is independent. `worstCaseCostBound_iff_support_bound` and
+`worstCaseCostBound_iff_pathwiseCostAtMost` relate the two layers in that shared universe.
+
+Probability events (`Pr{…}[…]`, through PolyFun's `prEvent`, which evaluates a computation of
+`Prop`), natural-valued costs and the bridge to per-index query bounds are stated in `Type`.
 -/
 
 @[expose] public section
 
 open OracleSpec OracleComp ENNReal
 
-/-! ## Cost Model, Cost Oracle, Cost Distribution
+universe uι v uα w u
 
-All definitions below operate at `Type` (= `Type 0`), matching the program logic and structural
-support API.
+/-! ## Cost models and worst-case bounds -/
+
+section Paths
+
+variable {ι : Type uι} {spec : OracleSpec.{uι, v} ι} {α β : Type uα} {ω : Type w}
+
+/-- A cost model assigns a cost in `ω` to each oracle query.
+The cost type `ω` can be `ℕ`, `ℝ≥0∞`, `ι → ℕ` (per-oracle), or any `AddCommMonoid`. -/
+structure CostModel (spec : OracleSpec.{uι, v} ι) (ω : Type w) [AddCommMonoid ω] where
+  /-- The cost charged for one query on input `t`; costs of successive queries add up. -/
+  queryCost : spec.Domain → ω
+
+namespace CostModel
+
+/-- The zero cost model: every query is free. -/
+def zero [AddCommMonoid ω] : CostModel spec ω where
+  queryCost _ := 0
+
+/-- Unit cost model: every oracle query costs 1.
+Total cost under this model equals total query count. -/
+def unit : CostModel spec ℕ where
+  queryCost _ := 1
+
+end CostModel
+
+/-- Every completed path of `oa` has total charge at most `bound` under `cm`. With signed weights
+this bounds completed paths only, not their prefixes. -/
+def WorstCaseCostBound [AddCommMonoid ω] [Preorder ω]
+    (oa : OracleComp spec α) (cm : CostModel spec ω) (bound : ω) : Prop :=
+  ∀ p : PFunctor.FreeM.Path oa, PFunctor.FreeM.Path.charge cm.queryCost oa p ≤ bound
+
+/-- A worst-case cost bound bounds the charge of every completed path. It says nothing about
+prefixes: with negative charges, a prefix may exceed a budget that every completed path meets. -/
+theorem worstCaseCostBound_iff_forall_charge_le [AddCommMonoid ω] [Preorder ω]
+    (oa : OracleComp spec α) (cm : CostModel spec ω) (bound : ω) :
+    WorstCaseCostBound oa cm bound ↔
+      ∀ p : PFunctor.FreeM.Path oa, PFunctor.FreeM.Path.charge cm.queryCost oa p ≤ bound :=
+  Iff.rfl
+
+/-- A worst-case cost bound holds for every larger budget. -/
+theorem WorstCaseCostBound.mono [AddCommMonoid ω] [Preorder ω]
+    {oa : OracleComp spec α} {cm : CostModel spec ω} {bound bound' : ω}
+    (h : WorstCaseCostBound oa cm bound) (hle : bound ≤ bound') :
+    WorstCaseCostBound oa cm bound' :=
+  fun p => (h p).trans hle
+
+/-- A budget bounds a sequenced program when it bounds the charge of each completed path through
+the first program followed by a completed path through the continuation at its output. -/
+theorem worstCaseCostBound_bind_iff [AddCommMonoid ω] [Preorder ω]
+    (first : OracleComp spec α) (next : α → OracleComp spec β) (cm : CostModel spec ω)
+    (bound : ω) :
+    WorstCaseCostBound (first >>= next) cm bound ↔
+      ∀ (p : PFunctor.FreeM.Path first)
+        (q : PFunctor.FreeM.Path (next (PFunctor.FreeM.output first p))),
+        PFunctor.FreeM.Path.charge cm.queryCost first p +
+          PFunctor.FreeM.Path.charge cm.queryCost _ q ≤ bound := by
+  constructor
+  · intro h p q
+    exact (PFunctor.FreeM.Path.charge_joinBind first next p q).symm.trans_le
+      (h (PFunctor.FreeM.Path.joinBind first next p q))
+  · intro h q
+    exact (PFunctor.FreeM.Path.charge_splitBind first next q).trans_le (h _ _)
+
+/-- A pure computation has zero charge. -/
+@[simp] theorem worstCaseCostBound_pure [AddCommMonoid ω] [Preorder ω]
+    (a : α) (cm : CostModel spec ω) (B : ω) :
+    WorstCaseCostBound (pure a : OracleComp spec α) cm B ↔ 0 ≤ B :=
+  ⟨fun h => h ⟨⟩, fun h _ => h⟩
+
+/-- A pure result observation preserves and reflects a complete-path query-cost bound. -/
+theorem worstCaseCostBound_map_iff [AddCommMonoid ω] [Preorder ω]
+    (program : OracleComp spec α) (f : α → β) (cm : CostModel spec ω) (budget : ω) :
+    WorstCaseCostBound (f <$> program) cm budget ↔ WorstCaseCostBound program cm budget := by
+  rw [map_eq_bind_pure_comp, worstCaseCostBound_bind_iff]
+  constructor
+  · intro h p
+    simpa using h p ⟨⟩
+  · intro h p _
+    simpa using h p
+
+/-- Every completed response of a single query has its designated charge. -/
+theorem worstCaseCostBound_query [AddCommMonoid ω] [Preorder ω] (query : spec.Domain)
+    (cm : CostModel spec ω) :
+    WorstCaseCostBound (spec.query query : OracleComp spec (spec.Range query)) cm
+      (cm.queryCost query) := by
+  rintro ⟨_, _⟩
+  exact (add_zero _).le
+
+/-- Pathwise budgets add under sequencing. -/
+theorem WorstCaseCostBound.bind [AddCommMonoid ω] [Preorder ω] [IsOrderedAddMonoid ω]
+    {oa : OracleComp spec α} {k : α → OracleComp spec β} {cm : CostModel spec ω} {A B : ω}
+    (ha : WorstCaseCostBound oa cm A) (hb : ∀ a, WorstCaseCostBound (k a) cm B) :
+    WorstCaseCostBound (oa >>= k) cm (A + B) :=
+  (worstCaseCostBound_bind_iff oa k cm _).2 fun p q => add_le_add (ha p) (hb _ q)
+
+end Paths
+
+/-! ## Cost oracle, instrumented run and cost distribution
+
+The writer layer `AddWriterT ω (OracleComp spec)` puts the responses, the results and the cost
+carrier in one universe `u`. The query index stays independent.
 -/
 
-variable {ι : Type} {spec : OracleSpec ι} {α β : Type} {ω : Type}
+section Run
+
+variable {ι : Type uι} {spec : OracleSpec.{uι, u} ι} {α β : Type u} {ω : Type u}
 
 /-- Oracle that tracks additive cost. Wraps `costOracle` with `Multiplicative`
 to get additive accumulation through the existing `WriterT` infrastructure. -/
@@ -81,20 +198,6 @@ lemma fst_map_run_simulateQ_addCostOracle [AddCommMonoid ω] (costFn : spec.Doma
     Prod.fst <$> (simulateQ (addCostOracle costFn) oa).run = oa :=
   (QueryImpl.fst_map_run_simulateQ_withAddCost _ costFn oa).trans (simulateQ_ofLift_eq_self oa)
 
-/-- A cost model assigns a cost in `ω` to each oracle query.
-The cost type `ω` can be `ℕ`, `ℝ≥0∞`, `ι → ℕ` (per-oracle), or any `AddCommMonoid`. -/
-structure CostModel (spec : OracleSpec ι) (ω : Type) [AddCommMonoid ω] where
-  /-- The cost charged for one query on input `t`; costs of successive queries add up. -/
-  queryCost : spec.Domain → ω
-
-namespace CostModel
-
-/-- The zero cost model: every query is free. -/
-def zero [AddCommMonoid ω] : CostModel spec ω where
-  queryCost _ := 0
-
-end CostModel
-
 /-- Run `oa` in the canonical free `OracleComp` runtime instrumented by `cm`'s additive
 query-cost function. This is the semantic core of `CostModel`. -/
 abbrev instrumentedRun [AddCommMonoid ω] (oa : OracleComp spec α) (cm : CostModel spec ω) :
@@ -106,7 +209,8 @@ additive cost tracking. Cost accumulates via `+` through `AddWriterT`.
 
 Since `Multiplicative ω` and `ω` are definitionally equal, the second component
 of the product can be used directly as `ω`. -/
-def costDist [AddCommMonoid ω] (oa : OracleComp spec α) (cm : CostModel spec ω) :=
+def costDist [AddCommMonoid ω] (oa : OracleComp spec α) (cm : CostModel spec ω) :
+    OracleComp spec (α × Multiplicative ω) :=
   (instrumentedRun oa cm).run
 
 /-- A pure computation records zero query cost. -/
@@ -144,7 +248,7 @@ theorem costDist_map [AddCommMonoid ω] (program : OracleComp spec α) (f : α �
 /-- Cost instrumentation does not change the output distribution. -/
 @[simp]
 theorem fst_map_costDist [AddCommMonoid ω] (oa : OracleComp spec α) (cm : CostModel spec ω) :
-    Prod.fst <$> costDist oa cm = oa :=
+    (Prod.fst : α × Multiplicative ω → α) <$> costDist oa cm = oa :=
   fst_map_run_simulateQ_addCostOracle cm.queryCost oa
 
 /-- **Completed paths.** The reachable `(output, totalCost)` pairs of the instrumented run are
@@ -155,8 +259,48 @@ theorem support_costDist_eq_range_path [AddCommMonoid ω] (oa : OracleComp spec 
       (PFunctor.FreeM.output oa p,
         Multiplicative.ofAdd (PFunctor.FreeM.Path.charge cm.queryCost oa p)) := by
   rw [costDist, instrumentedRun, QueryImpl.withAddCost_eq_withChargeW]
-  exact PFunctor.Handler.supp_run_liftM_id_withChargeW cm.queryCost oa
+  exact PFunctor.Handler.support_run_liftM_id_withChargeW cm.queryCost oa
 
+/-- `WorstCaseCostBound` is equivalently a support bound over `costDist`. -/
+theorem worstCaseCostBound_iff_support_bound [AddCommMonoid ω] [Preorder ω]
+    (oa : OracleComp spec α) (cm : CostModel spec ω) (bound : ω) :
+    WorstCaseCostBound oa cm bound ↔
+      ∀ z ∈ support (costDist oa cm), Multiplicative.toAdd z.2 ≤ bound := by
+  rw [support_costDist_eq_range_path, Set.forall_mem_range]
+  rfl
+
+/-- `WorstCaseCostBound` is the pathwise writer bound of the instrumented run. -/
+theorem worstCaseCostBound_iff_pathwiseCostAtMost [AddCommMonoid ω] [Preorder ω]
+    (oa : OracleComp spec α) (cm : CostModel spec ω) (bound : ω) :
+    WorstCaseCostBound oa cm bound ↔
+      AddWriterT.PathwiseCostAtMost (instrumentedRun oa cm) bound :=
+  worstCaseCostBound_iff_support_bound oa cm bound
+
+/-- The actual instrumented query charges its key before the continuation. -/
+theorem costDist_query_bind [AddCommMonoid ω]
+    (t : spec.Domain) (k : spec.Range t → OracleComp spec α) (cm : CostModel spec ω) :
+    costDist ((spec.query t : OracleComp spec (spec.Range t)) >>= k) cm =
+      (spec.query t : OracleComp spec (spec.Range t)) >>= fun u =>
+        (fun z => (z.1, Multiplicative.ofAdd (cm.queryCost t + Multiplicative.toAdd z.2))) <$>
+          costDist (k u) cm := by
+  simp [costDist, instrumentedRun, simulateQ_query,
+    QueryImpl.withAddCost, WriterT.run_bind, bind_assoc]
+
+/-- A query budget bounds the key charge plus every supported continuation cost. -/
+theorem worstCaseCostBound_query_bind_iff [AddCommMonoid ω] [Preorder ω]
+    (t : spec.Domain) (k : spec.Range t → OracleComp spec α) (cm : CostModel spec ω) (B : ω) :
+    WorstCaseCostBound ((spec.query t : OracleComp spec (spec.Range t)) >>= k) cm B ↔
+      ∀ u z, z ∈ support (costDist (k u) cm) →
+        cm.queryCost t + Multiplicative.toAdd z.2 ≤ B := by
+  rw [worstCaseCostBound_iff_support_bound, costDist_query_bind]
+  simp only [support_bind, support_liftM_query, Set.mem_iUnion, Set.mem_univ,
+    support_map, Set.mem_image]
+  constructor
+  · intro h u z hz
+    exact h _ ⟨u, trivial, z, hz, rfl⟩
+  · intro h z hz
+    obtain ⟨u, _, w, hw, rfl⟩ := hz
+    exact h u w hw
 
 /-! ## Expected Cost -/
 
@@ -174,11 +318,6 @@ choose which dimension to analyze. -/
 noncomputable def expectedCost (oa : OracleComp spec α) (cm : CostModel spec ω)
     (val : ω → ℝ≥0∞) : ℝ≥0∞ :=
   AddWriterT.expectedCost (instrumentedRun oa cm) val
-
-/-- Convenience: expected cost for `ℕ`-valued cost models. -/
-noncomputable abbrev expectedCostNat (oa : OracleComp spec α)
-    (cm : CostModel spec ℕ) : ℝ≥0∞ :=
-  expectedCost oa cm (fun n => ↑n)
 
 /-- The `CostModel.expectedCost` facade is the Lebesgue integral of the cost projection of the
 instrumented joint distribution. -/
@@ -211,98 +350,6 @@ theorem expectedCost_le_of_support_bound (oa : OracleComp spec α) (cm : CostMod
 
 end ExpectedCost
 
-/-! ## Worst-Case Cost Bounds -/
-
-/-- Every execution path of `oa` under `cm` has total cost at most `bound`. -/
-def WorstCaseCostBound [AddCommMonoid ω] [Preorder ω]
-    (oa : OracleComp spec α) (cm : CostModel spec ω) (bound : ω) : Prop :=
-  AddWriterT.PathwiseCostAtMost (instrumentedRun oa cm) bound
-
-/-- `WorstCaseCostBound` is equivalently a support bound over `costDist`. -/
-theorem worstCaseCostBound_iff_support_bound [AddCommMonoid ω] [Preorder ω]
-    (oa : OracleComp spec α) (cm : CostModel spec ω) (bound : ω) :
-    WorstCaseCostBound oa cm bound ↔
-      ∀ z ∈ support (costDist oa cm), Multiplicative.toAdd z.2 ≤ bound := by
-  unfold WorstCaseCostBound costDist instrumentedRun AddWriterT.PathwiseCostAtMost
-  rfl
-
-/-- A worst-case cost bound bounds the charge of every completed path. It says nothing about
-prefixes: with negative charges, a prefix may exceed a budget that every completed path meets. -/
-theorem worstCaseCostBound_iff_forall_charge_le [AddCommMonoid ω] [Preorder ω]
-    (oa : OracleComp spec α) (cm : CostModel spec ω) (bound : ω) :
-    WorstCaseCostBound oa cm bound ↔
-      ∀ p : PFunctor.FreeM.Path oa, PFunctor.FreeM.Path.charge cm.queryCost oa p ≤ bound := by
-  rw [worstCaseCostBound_iff_support_bound, support_costDist_eq_range_path,
-    Set.forall_mem_range]
-  rfl
-
-/-- A pure result observation preserves and reflects a complete-path query-cost bound. -/
-theorem worstCaseCostBound_map_iff [AddCommMonoid ω] [Preorder ω]
-    (program : OracleComp spec α) (f : α → β) (cm : CostModel spec ω) (budget : ω) :
-    WorstCaseCostBound (f <$> program) cm budget ↔ WorstCaseCostBound program cm budget := by
-  simp only [worstCaseCostBound_iff_support_bound, costDist_map, support_map, Set.mem_image]
-  constructor
-  · intro h result member
-    exact h (f result.1, result.2) ⟨result, member, rfl⟩
-  · intro h result member
-    obtain ⟨original, member, rfl⟩ := member
-    exact h original member
-
-/-- Every completed response of a single query has its designated charge. -/
-theorem worstCaseCostBound_query [AddCommMonoid ω] [Preorder ω] (query : spec.Domain)
-    (cm : CostModel spec ω) :
-    WorstCaseCostBound (spec.query query : OracleComp spec (spec.Range query)) cm
-      (cm.queryCost query) := by
-  intro result member
-  change result ∈ support (costDist (spec.query query : OracleComp spec _) cm) at member
-  rw [costDist_query] at member
-  rcases (mem_support_bind_iff _ _ _).mp member with ⟨response, _, member⟩
-  rw [mem_support_pure_iff] at member
-  subst result
-  exact le_rfl
-
-/-- The actual instrumented query charges its key before the continuation. -/
-theorem costDist_query_bind [AddCommMonoid ω]
-    (t : spec.Domain) (k : spec.Range t → OracleComp spec α) (cm : CostModel spec ω) :
-    costDist ((spec.query t : OracleComp spec (spec.Range t)) >>= k) cm =
-      (spec.query t : OracleComp spec (spec.Range t)) >>= fun u =>
-        (fun z => (z.1, Multiplicative.ofAdd (cm.queryCost t + Multiplicative.toAdd z.2))) <$>
-          costDist (k u) cm := by
-  simp [costDist, instrumentedRun, simulateQ_query,
-    QueryImpl.withAddCost, WriterT.run_bind, bind_assoc]
-
-/-- A pure computation has zero pathwise cost. -/
-@[simp] theorem worstCaseCostBound_pure [AddCommMonoid ω] [Preorder ω]
-    (a : α) (cm : CostModel spec ω) (B : ω) :
-    WorstCaseCostBound (pure a) cm B ↔ 0 ≤ B := by
-  simp [worstCaseCostBound_iff_support_bound, costDist, instrumentedRun]
-
-/-- A query budget bounds the key charge plus every supported continuation cost. -/
-theorem worstCaseCostBound_query_bind_iff [AddCommMonoid ω] [Preorder ω]
-    (t : spec.Domain) (k : spec.Range t → OracleComp spec α) (cm : CostModel spec ω) (B : ω) :
-    WorstCaseCostBound ((spec.query t : OracleComp spec (spec.Range t)) >>= k) cm B ↔
-      ∀ u z, z ∈ support (costDist (k u) cm) →
-        cm.queryCost t + Multiplicative.toAdd z.2 ≤ B := by
-  rw [worstCaseCostBound_iff_support_bound, costDist_query_bind]
-  simp only [support_bind, support_liftM_query, Set.mem_iUnion, Set.mem_univ,
-    support_map, Set.mem_image]
-  constructor
-  · intro h u z hz
-    exact h _ ⟨u, trivial, z, hz, rfl⟩
-  · intro h z hz
-    obtain ⟨u, _, w, hw, rfl⟩ := hz
-    exact h u w hw
-
-/-- Pathwise budgets add under sequencing of the actual instrumented computations. -/
-theorem WorstCaseCostBound.bind [AddCommMonoid ω] [Preorder ω] [IsOrderedAddMonoid ω]
-    {oa : OracleComp spec α} {k : α → OracleComp spec β} {cm : CostModel spec ω} {A B : ω}
-    (ha : WorstCaseCostBound oa cm A) (hb : ∀ a, WorstCaseCostBound (k a) cm B) :
-    WorstCaseCostBound (oa >>= k) cm (A + B) := by
-  unfold WorstCaseCostBound instrumentedRun at *
-  rw [simulateQ_bind]
-  exact AddWriterT.pathwiseCostAtMost_bind ha hb
-
-
 /-! ## Cost Bounds -/
 
 section CostBounds
@@ -322,7 +369,32 @@ theorem WorstCaseCostBound.toExpectedCostBound [Preorder ω]
     (hstrict : WorstCaseCostBound oa cm bound)
     {val : ω → ℝ≥0∞} (hval_mono : Monotone val) (hval : Measurable val) :
     ExpectedCostBound oa cm val (val bound) :=
-  AddWriterT.expectedCost_le_of_pathwiseCostAtMost hstrict hval_mono hval
+  AddWriterT.expectedCost_le_of_pathwiseCostAtMost
+    ((worstCaseCostBound_iff_pathwiseCostAtMost oa cm bound).1 hstrict) hval_mono hval
+
+end CostBounds
+
+end Run
+
+/-! ## Costs in `Type`
+
+Natural-valued expected costs, probability events and the bridge to per-index query bounds are
+stated with responses, results and costs in `Type`.
+-/
+
+section TypeZero
+
+variable {ι : Type uι} {spec : OracleSpec.{uι, 0} ι} {α β : Type} {ω : Type}
+
+/-- Convenience: expected cost for `ℕ`-valued cost models. -/
+noncomputable abbrev expectedCostNat [AnswerMeasure spec] (oa : OracleComp spec α)
+    (cm : CostModel spec ℕ) : ℝ≥0∞ :=
+  expectedCost oa cm (fun n => ↑n)
+
+section Markov
+
+variable [AddCommMonoid ω] [MeasurableSpace ω]
+variable [AnswerMeasure spec]
 
 /-- **Markov's inequality for cost distributions** (multiplication form).
 The probability that the valued cost exceeds `t`, times `t`, is at most `expectedCost`. -/
@@ -343,18 +415,13 @@ theorem prEvent_costDist_gt_le_expectedCost_div
   (ENNReal.le_div_iff_mul_le (.inl ht.ne') (.inl ht')).mpr
     (prEvent_costDist_gt_mul_le_expectedCost oa cm val hval t)
 
-end CostBounds
+end Markov
 
-/-! ## Standard Cost Models -/
+end TypeZero
 
-namespace CostModel
+section UnitCostBridge
 
-/-- Unit cost model: every oracle query costs 1.
-Total cost under this model equals total query count. -/
-def unit : CostModel spec ℕ where
-  queryCost _ := 1
-
-end CostModel
+variable {ι : Type} {spec : OracleSpec.{0, 0} ι} {α : Type} {ω : Type}
 
 @[simp]
 private lemma addCostOracle_unit_run_apply (t : spec.Domain) :
@@ -362,19 +429,6 @@ private lemma addCostOracle_unit_run_apply (t : spec.Domain) :
       (fun u => (u, Multiplicative.ofAdd 1)) <$>
         (spec.query t : OracleComp spec (spec.Range t)) := by
   simp [CostModel.unit, addCostOracle, QueryImpl.withAddCost]
-
-section UnitCostBridge
-
-private lemma exists_mem_support_costDist_of_mem_support
-    [AddCommMonoid ω]
-    (oa : OracleComp spec α) (cm : CostModel spec ω) {x : α}
-    (hx : x ∈ support oa) :
-    ∃ c, (x, c) ∈ support (costDist oa cm) := by
-  have hx' : x ∈ support (Prod.fst <$> costDist oa cm) := by
-    simpa [fst_map_costDist] using hx
-  rw [support_map] at hx'
-  obtain ⟨⟨x', c⟩, hz, rfl⟩ := hx'
-  exact ⟨c, hz⟩
 
 private lemma mem_support_costDist_unit_query_bind_of_mem_support
     (t : spec.Domain) (mx : spec.Range t → OracleComp spec α) (u : spec.Range t)
@@ -388,36 +442,30 @@ private lemma mem_support_costDist_unit_query_bind_of_mem_support
   · rw [support_map]
     exact ⟨z, hz, by simp [Nat.add_comm]⟩
 
-private theorem isPerIndexQueryBound_of_unit_support_bound
-    [DecidableEq ι] [∀ t, Nonempty (spec.Range t)]
+/-- A bound on the free unit-cost interpreter bounds the number of calls on every branch. -/
+theorem WorstCaseCostBound.toIsTotalQueryBound_unit
+    [∀ t, Nonempty (spec.Range t)]
     {oa : OracleComp spec α} {bound : ℕ}
-    (hSupport : ∀ z ∈ support (costDist oa CostModel.unit),
-      Multiplicative.toAdd z.2 ≤ bound) :
-    IsPerIndexQueryBound oa (fun _ => bound) := by
+    (h : WorstCaseCostBound oa CostModel.unit bound) : IsTotalQueryBound oa bound := by
   induction oa using OracleComp.inductionOn generalizing bound with
-  | pure x =>
-      exact isPerIndexQueryBound_pure x _
-  | query_bind t mx ih =>
-      rw [isPerIndexQueryBound_query_bind_iff]
-      refine ⟨?_, fun u => ?_⟩
-      · obtain ⟨u₀⟩ : Nonempty (spec.Range t) := inferInstance
-        rcases OracleComp.support_nonempty (mx u₀) with ⟨x, hx⟩
-        rcases exists_mem_support_costDist_of_mem_support (mx u₀) CostModel.unit hx with
-          ⟨c, hc⟩
-        have hle : Multiplicative.toAdd c + 1 ≤ bound := by
-          simpa using
-            hSupport _ (mem_support_costDist_unit_query_bind_of_mem_support t mx u₀ hc)
-        omega
-      · have hcontSupport :
-            ∀ z ∈ support (costDist (mx u) CostModel.unit), z.2 ≤ bound - 1 := by
-          intro z hz
-          have hle : Multiplicative.toAdd z.2 + 1 ≤ bound := by
-            simpa using hSupport _ (mem_support_costDist_unit_query_bind_of_mem_support t mx u hz)
-          change Multiplicative.toAdd z.2 ≤ bound - 1
-          omega
-        refine (ih u hcontSupport).mono fun i => ?_
-        simp only [Function.update_apply]
-        split <;> omega
+  | pure _ => trivial
+  | query_bind t next ih =>
+    rw [isTotalQueryBound_query_bind_iff]
+    have tailBound (u : spec.Range t) (z : α × Multiplicative ℕ)
+        (hz : z ∈ support (costDist (next u) CostModel.unit)) :
+        Multiplicative.toAdd z.2 + 1 ≤ bound :=
+      (worstCaseCostBound_iff_support_bound _ _ _).1 h _
+        (mem_support_costDist_unit_query_bind_of_mem_support t next u hz)
+    constructor
+    · obtain ⟨u⟩ : Nonempty (spec.Range t) := inferInstance
+      obtain ⟨z, hz⟩ := OracleComp.support_nonempty (costDist (next u) CostModel.unit)
+      have := tailBound u z hz
+      omega
+    · intro u
+      apply ih u
+      refine (worstCaseCostBound_iff_support_bound _ _ _).2 fun z hz => ?_
+      have := tailBound u z hz
+      omega
 
 /-- A strict bound under the unit cost model yields a uniform per-index query bound:
 if every execution uses at most `bound` total unit-cost steps, then each oracle index
@@ -426,9 +474,16 @@ theorem WorstCaseCostBound.toIsPerIndexQueryBound_unit
     [DecidableEq ι] [∀ t, Nonempty (spec.Range t)]
     {oa : OracleComp spec α} {bound : ℕ}
     (h : WorstCaseCostBound oa CostModel.unit bound) :
-    IsPerIndexQueryBound oa (fun _ => bound) :=
-  isPerIndexQueryBound_of_unit_support_bound fun z hz => by
-    exact h z hz
+    IsPerIndexQueryBound oa (fun _ => bound) := by
+  have total := h.toIsTotalQueryBound_unit
+  clear h
+  induction oa using OracleComp.inductionOn generalizing bound with
+  | pure _ => trivial
+  | query_bind t next ih =>
+    rw [isTotalQueryBound_query_bind_iff] at total
+    refine ⟨total.1, fun u => (ih u (total.2 u)).mono fun i => ?_⟩
+    simp only [Function.update_apply]
+    split <;> omega
 
 private lemma sum_update_pred_eq
     [DecidableEq ι] [Fintype ι]
@@ -473,7 +528,7 @@ theorem IsPerIndexQueryBound.toWorstCaseCostBound_unit_sum
           simpa [instrumentedRun, simulateQ_bind] using hbind
         · have := sum_update_pred_eq qb t hqb.1
           omega
-  exact haux h
+  exact (worstCaseCostBound_iff_pathwiseCostAtMost oa CostModel.unit _).2 (haux h)
 
 /-- Corollary: the expected total query count is also at most `∑ i, qb i`. Follows from the
 worst-case bound `toWorstCaseCostBound_unit_sum`. -/

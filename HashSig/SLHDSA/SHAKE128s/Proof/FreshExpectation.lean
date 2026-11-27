@@ -5,8 +5,8 @@ Authors: Tom Wambsgans
 -/
 
 module
+public import HashSig.SLHDSA.SHAKE128s.Proof.GrowthCharge
 
-public import HashSig.SLHDSA.SHAKE128s.Proof.ClassGrowth
 import VCVio.OracleComp.EvalDist.Sum
 
 /-!

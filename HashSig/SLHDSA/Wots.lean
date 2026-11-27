@@ -8,6 +8,7 @@ module
 public import VCVio.Algorithms.IndexedChain.Basic
 public import HashSig.SLHDSA.Oracle
 public import HashSig.SLHDSA.WotsEncoding
+public import HashSig.SLHDSA.Wots.Program.Laws
 public import ToMathlib.Data.Vector
 public import VCVio.OracleComp.HasQuery.Morphism
 public import VCVio.OracleComp.QueryTracking.QueryBound
@@ -85,7 +86,9 @@ def chain (prims : Primitives p) (pkSeed : prims.PkSeed) (adrs : Adrs) (x : prim
 
 @[simp] theorem chain_zero (prims : Primitives p) (pkSeed : prims.PkSeed)
     (adrs : Adrs) (x : prims.Y) (i : ℕ) :
-    chain prims pkSeed adrs x i 0 = x := rfl
+    chain prims pkSeed adrs x i 0 = x := by
+  simp only [chain, chainM, chainWith_zero, simulateQ_pure]
+  rfl
 
 @[simp] theorem chain_succ (prims : Primitives p) (pkSeed : prims.PkSeed)
     (adrs : Adrs) (x : prims.Y) (i s : ℕ) :
@@ -276,6 +279,40 @@ theorem sum_chainStepsCore_add_sum_complement (core : CorePrimitives p) (msg : c
   simp_rw [Nat.add_sub_of_le (chainStepsCore_le core msg _)]
   simp
 
+private theorem sum_getD (xs : List Nat) (n : Nat) (h : xs.length = n) :
+    (∑ i : Fin n, xs.getD i.val 0) = xs.sum := by
+  subst n
+  rw [← List.sum_ofFn]
+  congr 1
+  exact List.ext_getElem (by simp) (by simp +contextual [List.getD_eq_getElem?_getD])
+
+open VCVio.Algorithms VCVio.Algorithms.RadixEncoding in
+/-- A valid WOTS+ checksum saves at least one full chain across the recovery digits. -/
+theorem sum_complement_chainStepsCore_le_valid (hp : p.Valid)
+    (core : CorePrimitives p) (msg : core.Y) :
+    (∑ i : Fin p.len, (p.w - 1 - chainStepsCore core msg i.val)) ≤
+      p.len * (p.w - 1) - (p.w - 1) := by
+  have h := sum_chainStepsCore_add_sum_complement core msg
+  have hsteps : (∑ i : Fin p.len, chainStepsCore core msg i.val) =
+      (chainLengthsCore core msg).sum :=
+    sum_getD _ _ (chainLengthsCore_length core msg)
+  rw [hsteps, chainLengthsCore_eq_wotsFullDigits hp] at h
+  let ds := wotsMsgDigitsCore core msg
+  have hlen : ds.length = p.len1 := wotsMsgDigitsCore_length _ _
+  have hsum := pred_le_sum_append_of_fromBaseW_add_sum
+    (Nat.one_lt_two_pow (Nat.ne_of_gt hp.lgw_pos))
+    ds (digitsOfBaseW (wotsChecksumValue p.w ds) p.w p.len2)
+    (by rw [hlen]; by_contra! hz; have := hp.len1_mul_lgw; simp_all [hp.n_pos.ne'])
+    (by
+      change fromBaseW p.w _ + ds.sum = ds.length * (p.w - 1)
+      rw [fromBaseW_digitsOfBaseW_of_lt _ _ _
+        (lt_of_le_of_lt (wotsChecksumValue_le hlen (wotsMsgDigitsCore_mem_lt _ _))
+          hp.len1_mul_pred_w_lt_pow_len2)]
+      exact ComplementaryChecksum.value_add_sum_eq p.w ds (wotsMsgDigitsCore_mem_lt _ _))
+  change p.w - 1 ≤ (wotsFullDigits ds p.w p.len1 p.len2).sum at hsum
+  change (wotsFullDigits ds p.w p.len1 p.len2).sum + _ = _ at h
+  omega
+
 /-! ### Public-key generation, signing, and recovery -/
 
 /-- A WOTS+ signature: the `len` chain values, length-indexed. -/
@@ -285,17 +322,40 @@ abbrev WotsSig (p : Params) (core : CorePrimitives p) := Vector core.Y p.len
 def wotsPkGenTopsWith (core : CorePrimitives p) {m : Type → Type*} [Monad m]
     (hash : Adrs → core.Y → m core.Y) (sk : core.SkSeed) (pk : core.PkSeed)
     (adrs : Adrs) : m (Vector core.Y p.len) :=
-  Vector.ofFnM fun i =>
-    chainWith hash (wotsChainAdrs adrs i.val)
-      (core.PRF pk sk (wotsSkAdrs adrs i.val)) 0 (p.w - 1)
+  Wots.Program.runTops (I := Fin p.len) Vector.ofFnM
+    (fun i k => k (core.PRF pk sk (wotsSkAdrs adrs i.val)))
+    (fun i start steps value => chainWith hash (wotsChainAdrs adrs i.val) value start steps)
+    (p.w - 1) .publicKey
+
+/-- Public-key tops collect the full native chain intervals. -/
+theorem wotsPkGenTopsWith_eq {m : Type → Type*} [Monad m]
+    (core : CorePrimitives p) (hash : Adrs → core.Y → m core.Y)
+    (sk : core.SkSeed) (pk : core.PkSeed) (adrs : Adrs) :
+    wotsPkGenTopsWith core hash sk pk adrs = Vector.ofFnM (fun i =>
+      chainWith hash (wotsChainAdrs adrs i.val)
+        (core.PRF pk sk (wotsSkAdrs adrs i.val)) 0 (p.w - 1)) := by
+  simp only [wotsPkGenTopsWith, Wots.Program.runTops_publicKey,
+    Wots.Program.runChains_eq]
 
 /-- Low-level callback-parametric implementation of WOTS+ public-key generation. -/
 def wotsPkGenWith (core : CorePrimitives p) {m : Type → Type*} [Monad m]
     (hash : Adrs → core.Y → m core.Y)
     (compress : Adrs → List core.Y → m core.Y)
-    (sk : core.SkSeed) (pk : core.PkSeed) (adrs : Adrs) : m core.Y := do
-  let tops ← wotsPkGenTopsWith core hash sk pk adrs
-  compress (wotsPkAdrs adrs) tops.toList
+    (sk : core.SkSeed) (pk : core.PkSeed) (adrs : Adrs) : m core.Y :=
+  Wots.Program.run (I := Fin p.len) Vector.ofFnM
+    (fun i k => k (core.PRF pk sk (wotsSkAdrs adrs i.val)))
+    (fun i start steps value => chainWith hash (wotsChainAdrs adrs i.val) value start steps)
+    (fun tops => compress (wotsPkAdrs adrs) tops.toList) (p.w - 1) .publicKey
+
+/-- Public-key compression follows the collected native chain tops. -/
+theorem wotsPkGenWith_eq {m : Type → Type*} [Monad m]
+    (core : CorePrimitives p) (hash : Adrs → core.Y → m core.Y)
+    (compress : Adrs → List core.Y → m core.Y)
+    (sk : core.SkSeed) (pk : core.PkSeed) (adrs : Adrs) :
+    wotsPkGenWith core hash compress sk pk adrs = (do
+      let tops ← wotsPkGenTopsWith core hash sk pk adrs
+      compress (wotsPkAdrs adrs) tops.toList) := by
+  simp only [wotsPkGenWith, wotsPkGenTopsWith, Wots.Program.run_publicKey]
 
 /-- Canonical explicit-public-hash program for the `len` WOTS+ public-key chain ends. -/
 def wotsPkGenTopsM (core : CorePrimitives p) {m : Type → Type*} [Monad m]
@@ -328,9 +388,20 @@ def wotsSignWith (core : CorePrimitives p) {m : Type → Type*} [Monad m]
     (hash : Adrs → core.Y → m core.Y)
     (msg : core.Y) (sk : core.SkSeed) (pk : core.PkSeed)
     (adrs : Adrs) : m (WotsSig p core) :=
-  Vector.ofFnM fun i =>
-    chainWith hash (wotsChainAdrs adrs i.val)
-      (core.PRF pk sk (wotsSkAdrs adrs i.val)) 0 (chainStepsCore core msg i.val)
+  Wots.Program.runTops (I := Fin p.len) Vector.ofFnM
+    (fun i k => k (core.PRF pk sk (wotsSkAdrs adrs i.val)))
+    (fun i start steps value => chainWith hash (wotsChainAdrs adrs i.val) value start steps)
+    (p.w - 1) (.sign (fun i => chainStepsCore core msg i.val))
+
+/-- Signing collects the native message-selected chain intervals. -/
+theorem wotsSignWith_eq {m : Type → Type*} [Monad m]
+    (core : CorePrimitives p) (hash : Adrs → core.Y → m core.Y)
+    (msg : core.Y) (sk : core.SkSeed) (pk : core.PkSeed) (adrs : Adrs) :
+    wotsSignWith core hash msg sk pk adrs = Vector.ofFnM (fun i =>
+      chainWith hash (wotsChainAdrs adrs i.val)
+        (core.PRF pk sk (wotsSkAdrs adrs i.val)) 0 (chainStepsCore core msg i.val)) := by
+  simp only [wotsSignWith, Wots.Program.runTops_sign,
+    Wots.Program.runChains_eq]
 
 /-- Canonical explicit-public-hash WOTS+ signing program (FIPS 205 Algorithm 7). -/
 def wotsSignM (core : CorePrimitives p) {m : Type → Type*} [Monad m]
@@ -350,17 +421,40 @@ def wotsSign (prims : Primitives p) (msg : prims.Y) (sk : prims.SkSeed) (pk : pr
 def wotsPkFromSigTopsWith (core : CorePrimitives p) {m : Type → Type*} [Monad m]
     (hash : Adrs → core.Y → m core.Y)
     (sig : WotsSig p core) (msg : core.Y) (adrs : Adrs) : m (Vector core.Y p.len) :=
-  Vector.ofFnM fun i =>
-    chainWith hash (wotsChainAdrs adrs i.val) sig[i.val] (chainStepsCore core msg i.val)
-      (p.w - 1 - chainStepsCore core msg i.val)
+  Wots.Program.runTops (I := Fin p.len) Vector.ofFnM
+    (fun i k => k sig[i.val])
+    (fun i start steps value => chainWith hash (wotsChainAdrs adrs i.val) value start steps)
+    (p.w - 1) (.recover (fun i => sig[i.val]) (fun i => chainStepsCore core msg i.val))
+
+/-- Recovery collects the native complementary chain intervals. -/
+theorem wotsPkFromSigTopsWith_eq {m : Type → Type*} [Monad m]
+    (core : CorePrimitives p) (hash : Adrs → core.Y → m core.Y)
+    (sig : WotsSig p core) (msg : core.Y) (adrs : Adrs) :
+    wotsPkFromSigTopsWith core hash sig msg adrs = Vector.ofFnM (fun i =>
+      chainWith hash (wotsChainAdrs adrs i.val) sig[i.val] (chainStepsCore core msg i.val)
+        (p.w - 1 - chainStepsCore core msg i.val)) := by
+  simp only [wotsPkFromSigTopsWith, Wots.Program.runTops_recover]
 
 /-- Low-level callback-parametric implementation of WOTS+ public-key recovery. -/
 def wotsPkFromSigWith (core : CorePrimitives p) {m : Type → Type*} [Monad m]
     (hash : Adrs → core.Y → m core.Y)
     (compress : Adrs → List core.Y → m core.Y)
-    (sig : WotsSig p core) (msg : core.Y) (adrs : Adrs) : m core.Y := do
-  let tops ← wotsPkFromSigTopsWith core hash sig msg adrs
-  compress (wotsPkAdrs adrs) tops.toList
+    (sig : WotsSig p core) (msg : core.Y) (adrs : Adrs) : m core.Y :=
+  Wots.Program.run (I := Fin p.len) Vector.ofFnM
+    (fun i k => k sig[i.val])
+    (fun i start steps value => chainWith hash (wotsChainAdrs adrs i.val) value start steps)
+    (fun tops => compress (wotsPkAdrs adrs) tops.toList) (p.w - 1)
+    (.recover (fun i => sig[i.val]) (fun i => chainStepsCore core msg i.val))
+
+/-- Recovery compression follows the collected native suffix tops. -/
+theorem wotsPkFromSigWith_eq {m : Type → Type*} [Monad m]
+    (core : CorePrimitives p) (hash : Adrs → core.Y → m core.Y)
+    (compress : Adrs → List core.Y → m core.Y)
+    (sig : WotsSig p core) (msg : core.Y) (adrs : Adrs) :
+    wotsPkFromSigWith core hash compress sig msg adrs = (do
+      let tops ← wotsPkFromSigTopsWith core hash sig msg adrs
+      compress (wotsPkAdrs adrs) tops.toList) := by
+  simp only [wotsPkFromSigWith, wotsPkFromSigTopsWith, Wots.Program.run_recover]
 
 /-- Canonical explicit-public-hash program for the `len` chain ends recovered from a signature. -/
 def wotsPkFromSigTopsM (core : CorePrimitives p) {m : Type → Type*} [Monad m]
@@ -403,6 +497,7 @@ theorem wotsPkGenTopsWith_natural {m n : Type → Type*} [Monad m] [LawfulMonad 
     (sk : core.SkSeed) (pk : core.PkSeed) (adrs : Adrs) :
     F (wotsPkGenTopsWith core hashm sk pk adrs) =
       wotsPkGenTopsWith core hashn sk pk adrs := by
+  simp only [wotsPkGenTopsWith_eq]
   apply Vector.ofFnM_natural F
   intro i
   exact chainWith_natural F hashm hashn hhash _ _ _ _
@@ -419,7 +514,7 @@ theorem wotsPkGenWith_natural {m n : Type → Type*} [Monad m] [LawfulMonad m]
     (sk : core.SkSeed) (pk : core.PkSeed) (adrs : Adrs) :
     F (wotsPkGenWith core hashm compressm sk pk adrs) =
       wotsPkGenWith core hashn compressn sk pk adrs := by
-  simp [wotsPkGenWith, F.mmap_bind,
+  simp [wotsPkGenWith_eq, F.mmap_bind,
     wotsPkGenTopsWith_natural F core hashm hashn hhash, hcompress]
 
 /-- A monad morphism commutes with WOTS+ signing when it commutes with the hash callback. -/
@@ -430,6 +525,7 @@ theorem wotsSignWith_natural {m n : Type → Type*} [Monad m] [LawfulMonad m]
     (msg : core.Y) (sk : core.SkSeed) (pk : core.PkSeed) (adrs : Adrs) :
     F (wotsSignWith core hashm msg sk pk adrs) =
       wotsSignWith core hashn msg sk pk adrs := by
+  simp only [wotsSignWith_eq]
   apply Vector.ofFnM_natural F
   intro i
   exact chainWith_natural F hashm hashn hhash _ _ _ _
@@ -443,6 +539,7 @@ theorem wotsPkFromSigTopsWith_natural {m n : Type → Type*} [Monad m] [LawfulMo
     (sig : WotsSig p core) (msg : core.Y) (adrs : Adrs) :
     F (wotsPkFromSigTopsWith core hashm sig msg adrs) =
       wotsPkFromSigTopsWith core hashn sig msg adrs := by
+  simp only [wotsPkFromSigTopsWith_eq]
   apply Vector.ofFnM_natural F
   intro i
   exact chainWith_natural F hashm hashn hhash _ _ _ _
@@ -459,7 +556,7 @@ theorem wotsPkFromSigWith_natural {m n : Type → Type*} [Monad m] [LawfulMonad 
     (sig : WotsSig p core) (msg : core.Y) (adrs : Adrs) :
     F (wotsPkFromSigWith core hashm compressm sig msg adrs) =
       wotsPkFromSigWith core hashn compressn sig msg adrs := by
-  simp [wotsPkFromSigWith, F.mmap_bind,
+  simp [wotsPkFromSigWith_eq, F.mmap_bind,
     wotsPkFromSigTopsWith_natural F core hashm hashn hhash, hcompress]
 
 /-- Query-preserving monad morphisms commute with explicit WOTS+ public-key chain generation. -/
@@ -544,10 +641,13 @@ theorem chainM_isTotalQueryBound (core : CorePrimitives p) (pk : core.PkSeed)
     IsTotalQueryBound
       (chainM core pk adrs x i s : OracleComp (publicHashSpec core) core.Y) s := by
   induction s with
-  | zero => trivial
+  | zero =>
+      rw [chainM, chainWith_zero]
+      trivial
   | succ s ih =>
+      rw [chainM, chainWith_succ]
       change IsTotalQueryBound
-        (chainM core pk adrs x i s >>= fun y =>
+        ((chainM core pk adrs x i s : OracleComp (publicHashSpec core) core.Y) >>= fun y =>
           PublicHash.f core pk (adrs.setHashAddress (i + s)) y) (s + 1)
       exact isTotalQueryBound_bind ih fun y =>
         PublicHash.f_isTotalQueryBound core pk _ y
@@ -559,7 +659,7 @@ theorem wotsPkGenTopsM_isTotalQueryBound (core : CorePrimitives p)
       (wotsPkGenTopsM core sk pk adrs :
         OracleComp (publicHashSpec core) (Vector core.Y p.len))
       (p.len * (p.w - 1)) := by
-  simpa [wotsPkGenTopsM, wotsPkGenTopsWith, chainM] using
+  simpa [wotsPkGenTopsM, wotsPkGenTopsWith_eq, chainM] using
     (isTotalQueryBound_ofFnM
       (fun i : Fin p.len =>
         chainM core pk (wotsChainAdrs adrs i.val)
@@ -574,6 +674,7 @@ theorem wotsPkGenM_isTotalQueryBound (core : CorePrimitives p)
     IsTotalQueryBound
       (wotsPkGenM core sk pk adrs : OracleComp (publicHashSpec core) core.Y)
       (p.len * (p.w - 1) + 1) := by
+  rw [wotsPkGenM, wotsPkGenWith_eq]
   exact isTotalQueryBound_bind (wotsPkGenTopsM_isTotalQueryBound core sk pk adrs)
     fun tops => PublicHash.tl_isTotalQueryBound core pk (wotsPkAdrs adrs) tops.toList
 
@@ -584,6 +685,7 @@ theorem wotsSignM_isTotalQueryBound (core : CorePrimitives p) (msg : core.Y)
       (wotsSignM core msg sk pk adrs :
         OracleComp (publicHashSpec core) (WotsSig p core))
       (∑ i : Fin p.len, chainStepsCore core msg i.val) := by
+  rw [wotsSignM, wotsSignWith_eq]
   exact isTotalQueryBound_ofFnM _ _ fun i =>
     chainM_isTotalQueryBound core pk (wotsChainAdrs adrs i.val)
       (core.PRF pk sk (wotsSkAdrs adrs i.val)) 0 (chainStepsCore core msg i.val)
@@ -595,6 +697,7 @@ theorem wotsPkFromSigTopsM_isTotalQueryBound (core : CorePrimitives p)
       (wotsPkFromSigTopsM core sig msg pk adrs :
         OracleComp (publicHashSpec core) (Vector core.Y p.len))
       (∑ i : Fin p.len, (p.w - 1 - chainStepsCore core msg i.val)) := by
+  rw [wotsPkFromSigTopsM, wotsPkFromSigTopsWith_eq]
   exact isTotalQueryBound_ofFnM _ _ fun i =>
     chainM_isTotalQueryBound core pk (wotsChainAdrs adrs i.val) sig[i.val]
       (chainStepsCore core msg i.val) (p.w - 1 - chainStepsCore core msg i.val)
@@ -605,6 +708,7 @@ theorem wotsPkFromSigM_isTotalQueryBound (core : CorePrimitives p)
     IsTotalQueryBound
       (wotsPkFromSigM core sig msg pk adrs : OracleComp (publicHashSpec core) core.Y)
       ((∑ i : Fin p.len, (p.w - 1 - chainStepsCore core msg i.val)) + 1) := by
+  rw [wotsPkFromSigM, wotsPkFromSigWith_eq]
   exact isTotalQueryBound_bind
     (wotsPkFromSigTopsM_isTotalQueryBound core sig msg pk adrs)
     fun tops => PublicHash.tl_isTotalQueryBound core pk (wotsPkAdrs adrs) tops.toList
@@ -631,7 +735,8 @@ theorem wotsPkGenTops_eq_ofFn (prims : Primitives p) (sk : prims.SkSeed)
     wotsPkGenTops prims sk pk adrs = Vector.ofFn fun i : Fin p.len =>
       chain prims pk (wotsChainAdrs adrs i.val)
         (prims.PRF pk sk (wotsSkAdrs adrs i.val)) 0 (p.w - 1) := by
-  unfold wotsPkGenTops wotsPkGenTopsM wotsPkGenTopsWith
+  unfold wotsPkGenTops wotsPkGenTopsM
+  rw [wotsPkGenTopsWith_eq]
   rw [simulateQ_ofFnM]
   exact Vector.idRun_ofFnM
 
@@ -642,7 +747,8 @@ theorem wotsSign_eq_ofFn (prims : Primitives p) (msg : prims.Y) (sk : prims.SkSe
       chain prims pk (wotsChainAdrs adrs i.val)
         (prims.PRF pk sk (wotsSkAdrs adrs i.val)) 0
           (chainStepsCore prims.core msg i.val) := by
-  unfold wotsSign wotsSignM wotsSignWith
+  unfold wotsSign wotsSignM
+  rw [wotsSignWith_eq]
   rw [simulateQ_ofFnM]
   exact Vector.idRun_ofFnM
 
@@ -653,7 +759,8 @@ theorem wotsPkFromSigTops_eq_ofFn (prims : Primitives p) (sig : WotsSig p prims.
       chain prims pk (wotsChainAdrs adrs i.val) sig[i.val]
         (chainStepsCore prims.core msg i.val)
         (p.w - 1 - chainStepsCore prims.core msg i.val) := by
-  unfold wotsPkFromSigTops wotsPkFromSigTopsM wotsPkFromSigTopsWith
+  unfold wotsPkFromSigTops wotsPkFromSigTopsM
+  rw [wotsPkFromSigTopsWith_eq]
   rw [simulateQ_ofFnM]
   exact Vector.idRun_ofFnM
 
@@ -662,7 +769,7 @@ theorem wotsPkGen_eq_tl (prims : Primitives p) (sk : prims.SkSeed)
     (pk : prims.PkSeed) (adrs : Adrs) :
     wotsPkGen prims sk pk adrs =
       prims.Tl pk (wotsPkAdrs adrs) (wotsPkGenTops prims sk pk adrs).toList := by
-  simp only [wotsPkGen, wotsPkGenM, wotsPkGenWith, simulateQ_bind,
+  simp only [wotsPkGen, wotsPkGenM, wotsPkGenWith_eq, simulateQ_bind,
     PublicHash.tl, simulateQ_HasQuery_query, PublicHash.impl]
   rfl
 
@@ -671,7 +778,7 @@ theorem wotsPkFromSig_eq_tl (prims : Primitives p) (sig : WotsSig p prims.core)
     (msg : prims.Y) (pk : prims.PkSeed) (adrs : Adrs) :
     wotsPkFromSig prims sig msg pk adrs =
       prims.Tl pk (wotsPkAdrs adrs) (wotsPkFromSigTops prims sig msg pk adrs).toList := by
-  simp only [wotsPkFromSig, wotsPkFromSigM, wotsPkFromSigWith, simulateQ_bind,
+  simp only [wotsPkFromSig, wotsPkFromSigM, wotsPkFromSigWith_eq, simulateQ_bind,
     PublicHash.tl, simulateQ_HasQuery_query, PublicHash.impl]
   rfl
 

@@ -152,3 +152,129 @@ end routing
 end structural
 
 end VCVioTest.GrindFailFast
+
+/-! ## Shared construction interface simplification gates -/
+
+open OracleComp OracleSpec SignatureAlg
+universe reuseU reuseV reuseW reuseIdx
+
+namespace VCVioTest.GrindFailFast
+
+section writerMaps
+variable {m : Type reuseU → Type reuseV} [Monad m] [LawfulMonad m]
+variable {ω τ α : Type reuseU} [Monoid ω] [Monoid τ]
+
+example (f : ω →* τ) (body : WriterT ω m α) :
+    (WriterT.mapOutputHom f body).run = Prod.map id f <$> body.run := by simp
+
+end writerMaps
+
+section costMaps
+variable {m : Type reuseU → Type reuseV} [Monad m] [LawfulMonad m]
+variable {C D α : Type reuseU} [AddMonoid C] [AddMonoid D]
+
+example (f : C →+ D) (body : AddWriterT C m α) :
+    (AddWriterT.mapCostHom f body).runAdd = Prod.map id f <$> body.runAdd := by simp
+
+end costMaps
+
+example {m : Type reuseU → Type reuseV} {n : Type reuseU → Type reuseW} [Monad m] [Monad n]
+    [LawfulMonad m] [LawfulMonad n] {ω α : Type reuseU} [EmptyCollection ω] [Append ω]
+    (morphism : m →ᵐ n) (body : WriterT ω m α) :
+    (WriterT.mapBaseAppendHom morphism body).run = morphism body.run := by simp
+
+example {ι : Type reuseIdx} {spec : OracleSpec.{reuseIdx, 0} ι} {Request C α : Type}
+    [AddMonoid C] (policy : SigningView.Event spec Request → C)
+    (phase : SigningView.Phase) (value : α) :
+    SigningView.costed policy phase (pure value) = pure value := by simp
+
+example {Request Sig Reply : Type} (readback : Reply → Option Sig)
+    (firstLog secondLog : QueryLog (Request →ₒ Reply)) :
+    SigningView.returnedPairs readback (firstLog ++ secondLog) =
+      SigningView.returnedPairs readback firstLog ++
+        SigningView.returnedPairs readback secondLog := by
+  simp
+
+example {ι : Type reuseIdx} {spec : OracleSpec.{reuseIdx, 0} ι} {Request PK SK Sig Reply α : Type}
+    (view : SigningView (OracleComp spec) Request PK SK Sig Reply)
+    (pk : PK) (sk : SK) (value : α) :
+    view.runWithSigningOracle pk sk (pure value) = pure (value, []) := by simp
+
+section rejectingEncoding
+variable {m : Type → Type reuseV} [Monad m]
+variable {Request Msg PK SK Sig WireSig : Type}
+variable (alg : SignatureAlg m Msg PK SK Sig) (frame : Request → Option Msg)
+variable (encode : Sig → WireSig) (decode : WireSig → Option Sig)
+
+example : (SigningView.rejectingEncoding alg frame encode decode).keygen = alg.keygen := by simp
+
+example (pk : PK) (sk : SK) (request : Request) :
+    (SigningView.rejectingEncoding alg frame encode decode).sign pk sk request =
+      match frame request with
+      | none => pure none
+      | some message => (some ∘ encode) <$> alg.sign pk sk message :=
+  SigningView.rejectingEncoding_sign alg frame encode decode pk sk request
+
+example (pk : PK) (request : Request) (wire : WireSig) :
+    (SigningView.rejectingEncoding alg frame encode decode).verify pk request wire =
+      match frame request with
+      | none => pure false
+      | some message => match decode wire with
+        | none => pure false
+        | some signature => alg.verify pk message signature :=
+  SigningView.rejectingEncoding_verify alg frame encode decode pk request wire
+
+example (pk : PK) (sk : SK) (request : Request) (hFrame : frame request = none) :
+    (SigningView.rejectingEncoding alg frame encode decode).sign pk sk request = pure none := by
+  simp [hFrame]
+
+example (pk : PK) (sk : SK) (request : Request) (message : Msg)
+    (hFrame : frame request = some message) :
+    (SigningView.rejectingEncoding alg frame encode decode).sign pk sk request =
+      (some ∘ encode) <$> alg.sign pk sk message := by simp [hFrame]
+
+example (pk : PK) (request : Request) (wire : WireSig) (hFrame : frame request = none) :
+    (SigningView.rejectingEncoding alg frame encode decode).verify pk request wire =
+      pure false := by
+  simp [hFrame]
+
+example (pk : PK) (request : Request) (wire : WireSig) (message : Msg)
+    (hFrame : frame request = some message) (hDecode : decode wire = none) :
+    (SigningView.rejectingEncoding alg frame encode decode).verify pk request wire =
+      pure false := by
+  simp [hFrame, hDecode]
+
+example (pk : PK) (request : Request) (wire : WireSig) (message : Msg) (signature : Sig)
+    (hFrame : frame request = some message) (hDecode : decode wire = some signature) :
+    (SigningView.rejectingEncoding alg frame encode decode).verify pk request wire =
+      alg.verify pk message signature := by simp [hFrame, hDecode]
+
+example : (SigningView.rejectingEncoding alg frame encode decode).readback = id := by simp
+
+end rejectingEncoding
+
+section answerMaps
+variable {ι : Type reuseU} {R S : OracleSpec.{reuseU, reuseV} ι}
+
+example (f : ∀ input, R input → S input) (cache : R.QueryCache) (input : ι) :
+    QueryCache.mapAnswers f cache input = (cache input).map (f input) := by simp
+
+example (e : ∀ input, R input ≃ S input) :
+    QueryLog.mapAnswers e ([] : QueryLog R) = [] := by simp
+
+example (e : ∀ input, R input ≃ S input) (input : ι) (answer : R input) :
+    QueryLog.mapAnswers e [⟨input, answer⟩] = [⟨input, (e input) answer⟩] := by simp
+
+example (e : ∀ input, R input ≃ S input) (input : ι) :
+    QueryImpl.relabel e input =
+      (e input).symm <$> (liftM (S.query input) : OracleComp S (S input)) := by simp
+
+-- Requires the documented production tag @[simp, grind =] on QueryImpl.relabel_apply.
+
+example (e : ∀ input, R input ≃ S input) (input : ι) :
+    QueryImpl.relabel e input =
+      (e input).symm <$> (liftM (S.query input) : OracleComp S (S input)) := by grind
+
+end answerMaps
+
+end VCVioTest.GrindFailFast

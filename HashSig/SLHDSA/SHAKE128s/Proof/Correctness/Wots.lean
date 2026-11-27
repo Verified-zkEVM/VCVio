@@ -56,8 +56,8 @@ theorem publicKeyFromSignature_sign (message secretSeed publicSeed : Digest)
         (SLHDSA.SHAKE128s.Wots.sign (m := Id) message secretSeed publicSeed address)
         message publicSeed address =
       SLHDSA.SHAKE128s.Wots.publicKey (m := Id) secretSeed publicSeed address := by
-  simp only [SLHDSA.SHAKE128s.Wots.sign, SLHDSA.SHAKE128s.Wots.publicKeyFromSignature,
-    SLHDSA.SHAKE128s.Wots.publicKey, sequenceFin_id, bind]
+  simp only [SLHDSA.SHAKE128s.Wots.sign_eq, SLHDSA.SHAKE128s.Wots.publicKeyFromSignature_eq,
+    SLHDSA.SHAKE128s.Wots.publicKey_eq, sequenceFin_id, bind]
   congr 2
   funext i
   have digit_le : (Checksum.encode message i).val ≤ w - 1 := by

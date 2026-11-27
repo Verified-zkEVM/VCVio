@@ -7,8 +7,7 @@ Authors: Tom Wambsgans
 module
 
 public import HashSig.SLHDSA.SHAKE128s.Proof.TapeFactor
-public import HashSig.SLHDSA.SHAKE128s.Proof.CoverageCount
-import VCVio.OracleComp.EvalDist.Sum
+public import HashSig.SLHDSA.SHAKE128s.Proof.BlockViews
 
 /-!
 # The tape factorisation at the recorder that notices
@@ -25,10 +24,10 @@ does not touch the cache (`RecorderView.cacheOf_onQuery`), so the freshness guar
 what moves is only which state the two tests are read at, and the tests are arbitrary predicates
 of the state.
 
-The file has the recorder `noticingSplitTapeRecorder`, its step laws, the leave-one-out charge
-stated over an arbitrary run with the selection's causality as a hypothesis, the continuation
-forms of the factorisation and of the cell correspondences, and `blockRunOf`, the run with the
-two blocks it read kept beside its result.
+The file has the recorder `noticingSplitTapeRecorder`, its step laws, the continuation forms of the
+factorisation and of the cell correspondences, and `blockRunOf`, the run with the two blocks it
+read kept beside its result. `blockRunOf_eq_generalDraw` identifies that complete computation
+with the independent-block sampler used by `AnswerTape`'s causal expected-count laws.
 -/
 
 public section
@@ -132,17 +131,11 @@ theorem noticingLeftOf_prefix (leftKeep rightKeep : Bytes → σ → Prop)
       exact leftOf_step leftKeep rightKeep (Sum.inr input)
         (CacheView.onQuery state.1 input, state.2) step hstep
 
-/-! ## The charge, with the run a parameter
+/-! ## Independent blocks and selected counts
 
-The three lemmas the coverage charge is assembled from use only three things about the run:
-that one cell of the target block may be redrawn, that the run's *selection* of that cell does
-not see its value, and that a recorded entry is the block cell it came from. Only the second
-mentions the run at all, and it is the one a new presentation has to prove.
-
-So they are stated over an arbitrary `run`, with the selection's causality as a hypothesis; a
-bracketed three-stage run supplies it from its own and gets the rest free. **Stating the charge
-once means the rate and the index set are written once**: a second copy is a second place the
-margin could be spent.
+`blockRunOf` keeps both complete sampled blocks beside the run result. Its free-program
+identification with `AnswerTape.blockRunOf` supplies the FIPS sampler to the generic causal
+selection and expected-count laws in `AnswerTape`.
 -/
 
 /-- A run with the two blocks it read kept beside its result. -/
@@ -154,180 +147,15 @@ noncomputable def blockRunOf {ρ : Type} (run : List HashOutput → List HashOut
     padding rightLength >>= fun rightTape =>
       (fun result => ((leftTape, rightTape), result)) <$> run leftTape rightTape
 
-open scoped Classical in
-/-- **The charge on one target cell**, at the repaired recorder. -/
-theorem prob_selected_hit_le_of_causal {ρ : Type}
+/-- The complete FIPS two-block computation agrees with the independent-block specialization. -/
+theorem blockRunOf_eq_generalDraw {ρ : Type}
     (run : List HashOutput → List HashOutput → ProbComp ρ)
-    (rightOfResult : ρ → Record)
-    (leftLength rightLength index : Nat) (hindex : index < rightLength)
-    (goodBlock : List HashOutput → Prop) (hit : List HashOutput → HashOutput → Prop)
-    (rate : ℝ≥0∞)
-    (hrate : ∀ leftTape, goodBlock leftTape →
-      Pr{let value ← ($ᵗ HashOutput : ProbComp HashOutput)}[hit leftTape value] ≤ rate)
-    (hcausal : ∀ (leftTape rightTape : List HashOutput) (value : HashOutput),
-      Pr{let z ← run leftTape (rightTape.set index value)}[index < (rightOfResult z).length] =
-        Pr{let z ← run leftTape rightTape}[index < (rightOfResult z).length]) :
-    Pr{let outcome ← blockRunOf run leftLength rightLength}[
-          index < (rightOfResult outcome.2).length ∧ goodBlock outcome.1.1 ∧
-          ∃ value, outcome.1.2[index]? = some value ∧ hit outcome.1.1 value] ≤
-      Pr{let outcome ← blockRunOf run leftLength rightLength}[
-          index < (rightOfResult outcome.2).length] * rate := by
-  classical
-  set target : List HashOutput → List HashOutput → ℝ≥0∞ := fun leftTape rightTape =>
-    Pr{let result ← run leftTape rightTape}[index < (rightOfResult result).length] with htarget
-  -- The selection alone, with the blocks forgotten.
-  have hright : Pr{let outcome ← blockRunOf run leftLength rightLength}[
-        index < (rightOfResult outcome.2).length] =
-      ∑' leftTape, Pr{let x ← padding leftLength}[x = leftTape] *
-        ∑' rightTape, Pr{let x ← padding rightLength}[x = rightTape] *
-          target leftTape rightTape := by
-    rw [blockRunOf, OracleComp.prEvent_bind_eq_tsum]
-    refine tsum_congr fun leftTape => congrArg _ ?_
-    rw [OracleComp.prEvent_bind_eq_tsum]
-    refine tsum_congr fun rightTape => congrArg _ ?_
-    rw [prEvent_map]
-  -- The charged event, after one cell of the target block is redrawn.
-  have hleft : Pr{let outcome ← blockRunOf run leftLength rightLength}[
-        index < (rightOfResult outcome.2).length ∧ goodBlock outcome.1.1 ∧
-          ∃ value, outcome.1.2[index]? = some value ∧ hit outcome.1.1 value] =
-      ∑' leftTape, Pr{let x ← padding leftLength}[x = leftTape] *
-        ∑' rightTape, Pr{let x ← padding rightLength}[x = rightTape] *
-          ∑' value, Pr{let x ← ($ᵗ HashOutput : ProbComp HashOutput)}[x = value] *
-            Pr{let result ← run leftTape (rightTape.set index value)}[
-                index < (rightOfResult result).length ∧ goodBlock leftTape ∧
-                  ∃ other, (rightTape.set index value)[index]? = some other ∧
-                    hit leftTape other] := by
-    rw [blockRunOf]
-    refine ((EvalDistEq.bind_right (padding leftLength) fun leftTape =>
-      evalDist_padding_set rightLength index hindex
-        fun rightTape => (fun result => ((leftTape, rightTape), result)) <$>
-          run leftTape rightTape).prEvent_eq _).trans ?_
-    rw [OracleComp.prEvent_bind_eq_tsum]
-    refine tsum_congr fun leftTape => congrArg _ ?_
-    rw [OracleComp.prEvent_bind_eq_tsum]
-    refine tsum_congr fun rightTape => congrArg _ ?_
-    rw [OracleComp.prEvent_bind_eq_tsum]
-    refine tsum_congr fun value => congrArg _ ?_
-    rw [prEvent_map]
-  rw [hleft, hright, ← ENNReal.tsum_mul_right]
-  refine tsum_le_tsum fun leftTape => ?_
-  rw [mul_assoc, ← ENNReal.tsum_mul_right]
-  refine mul_le_mul' le_rfl (tsum_le_tsum fun rightTape => ?_)
-  rw [mul_assoc]
-  refine mul_le_mul' le_rfl ?_
-  -- The cell's own draw is all that is left to charge.
-  calc ∑' value, Pr{let x ← ($ᵗ HashOutput : ProbComp HashOutput)}[x = value] *
-        Pr{let result ← run leftTape (rightTape.set index value)}[
-            index < (rightOfResult result).length ∧ goodBlock leftTape ∧
-              ∃ other, (rightTape.set index value)[index]? = some other ∧ hit leftTape other]
-      ≤ ∑' value, Pr{let x ← ($ᵗ HashOutput : ProbComp HashOutput)}[x = value] *
-          (if goodBlock leftTape ∧ hit leftTape value then target leftTape rightTape else 0) := by
-        refine tsum_le_tsum fun value => mul_le_mul' le_rfl ?_
-        refine le_trans (prEvent_mono _ _ (fun result : ρ =>
-          (goodBlock leftTape ∧ hit leftTape value) ∧
-            index < (rightOfResult result).length) ?_) ?_
-        · rintro result ⟨hselected, hgood, other, hread, hhit⟩
-          exact ⟨⟨hgood, (eq_of_getElem?_set rightTape index value other hread) ▸ hhit⟩,
-            hselected⟩
-        · rw [prEvent_const_and]
-          by_cases hcase : goodBlock leftTape ∧ hit leftTape value
-          · rw [ite_eq_left hcase, ite_eq_left hcase, htarget]
-            exact le_of_eq (hcausal leftTape rightTape value)
-          · rw [ite_eq_right hcase, ite_eq_right hcase]
-    _ ≤ target leftTape rightTape * rate := by
-        by_cases hgood : goodBlock leftTape
-        · simp only [hgood, true_and]
-          calc ∑' value, Pr{let x ← ($ᵗ HashOutput : ProbComp HashOutput)}[x = value] *
-                (if hit leftTape value then target leftTape rightTape else 0)
-              = (∑' value, if hit leftTape value then
-                  Pr{let x ← ($ᵗ HashOutput : ProbComp HashOutput)}[x = value] else 0) *
-                  target leftTape rightTape := by
-                rw [← ENNReal.tsum_mul_right]
-                refine tsum_congr fun value => ?_
-                by_cases hhit : hit leftTape value
-                · rw [ite_eq_left hhit, ite_eq_left hhit]
-                · rw [ite_eq_right hhit, ite_eq_right hhit, zero_mul, mul_zero]
-            _ ≤ rate * target leftTape rightTape := by
-                rw [← OracleComp.prEvent_eq_tsum_ite]
-                exact mul_le_mul' (hrate leftTape hgood) le_rfl
-            _ = _ := mul_comm _ _
-        · simp only [hgood, false_and, ↓reduceIte, mul_zero, tsum_zero]
-          exact zero_le
-
-/-- The sum of the per-cell selection probabilities is an expected recording length. -/
-theorem sum_prob_selected_le_expected_of {ρ : Type}
-    (run : List HashOutput → List HashOutput → ProbComp ρ)
-    (rightOfResult : ρ → Record)
     (leftLength rightLength : Nat) :
-    (∑ index : Fin rightLength,
-        Pr{let outcome ← blockRunOf run leftLength rightLength}[
-          index.val < (rightOfResult outcome.2).length]) ≤
-      ∑' outcome, Pr{let x ← blockRunOf run leftLength rightLength}[x = outcome] *
-        (((rightOfResult outcome.2).length : Nat) : ℝ≥0∞) := by
-  classical
-  calc ∑ index : Fin rightLength,
-        Pr{let outcome ← blockRunOf run leftLength rightLength}[
-          index.val < (rightOfResult outcome.2).length]
-      = ∑ index : Fin rightLength, ∑' outcome,
-          (if index.val < (rightOfResult outcome.2).length then
-            Pr{let x ← blockRunOf run leftLength rightLength}[x = outcome]
-          else 0) :=
-        Finset.sum_congr rfl fun index _ => OracleComp.prEvent_eq_tsum_ite _ _
-    _ = ∑' outcome, ∑ index : Fin rightLength,
-          (if index.val < (rightOfResult outcome.2).length then
-            Pr{let x ← blockRunOf run leftLength rightLength}[x = outcome]
-          else 0) := sum_tsum_comm Finset.univ _
-    _ ≤ ∑' outcome, Pr{let x ← blockRunOf run leftLength rightLength}[x = outcome] *
-          (((rightOfResult outcome.2).length : Nat) : ℝ≥0∞) := by
-        refine tsum_le_tsum fun outcome => ?_
-        rw [Finset.sum_ite, Finset.sum_const, Finset.sum_const_zero, add_zero, nsmul_eq_mul,
-          mul_comm]
-        refine mul_le_mul' le_rfl (Nat.cast_le.mpr ?_)
-        have hinject := Finset.card_le_card_of_injOn (fun index : Fin rightLength => index.val)
-          (s := Finset.univ.filter
-            (fun index : Fin rightLength => index.val < (rightOfResult outcome.2).length))
-          (t := Finset.range (rightOfResult outcome.2).length)
-          (fun index hindex => Finset.mem_range.mpr (by simpa using hindex))
-          (fun left _ right _ hvalue => Fin.val_injective hvalue)
-        simpa using hinject
-
-open scoped Classical in
-/-- **The coverage charge, as an expectation**, at the repaired recorder. This is what the
-carrier's answer run composes with. -/
-theorem prob_exists_hit_le_expected_of_causal {ρ : Type}
-    (run : List HashOutput → List HashOutput → ProbComp ρ)
-    (rightOfResult : ρ → Record)
-    (leftLength rightLength : Nat)
-    (goodBlock : List HashOutput → Prop) (hit : List HashOutput → HashOutput → Prop)
-    (rate : ℝ≥0∞)
-    (hrate : ∀ leftTape, goodBlock leftTape →
-      Pr{let value ← ($ᵗ HashOutput : ProbComp HashOutput)}[hit leftTape value] ≤ rate)
-    (hcausal : ∀ (index : Nat) (leftTape rightTape : List HashOutput)
-        (value : HashOutput),
-      Pr{let z ← run leftTape (rightTape.set index value)}[index < (rightOfResult z).length] =
-        Pr{let z ← run leftTape rightTape}[index < (rightOfResult z).length]) :
-    Pr{let outcome ← blockRunOf run leftLength rightLength}[
-            ∃ index : Fin rightLength, index.val < (rightOfResult outcome.2).length ∧
-            goodBlock outcome.1.1 ∧
-            ∃ value, outcome.1.2[index.val]? = some value ∧ hit outcome.1.1 value] ≤
-      (∑' outcome, Pr{let x ← blockRunOf run leftLength rightLength}[x = outcome] *
-        (((rightOfResult outcome.2).length : Nat) : ℝ≥0∞)) * rate := by
-  classical
-  refine le_trans (prEvent_mono _ _ (fun outcome => ∃ index ∈ (Finset.univ :
-      Finset (Fin rightLength)), index.val < (rightOfResult outcome.2).length ∧
-      goodBlock outcome.1.1 ∧
-      ∃ value, outcome.1.2[index.val]? = some value ∧ hit outcome.1.1 value)
-    fun outcome hhit => by
-      obtain ⟨index, hindex⟩ := hhit
-      exact ⟨index, Finset.mem_univ index, hindex⟩) ?_
-  refine le_trans (prEvent_exists_finset_le _ _ _) ?_
-  refine le_trans (Finset.sum_le_sum fun index _ =>
-    prob_selected_hit_le_of_causal run rightOfResult leftLength rightLength
-      index.val
-      index.isLt goodBlock hit rate hrate (hcausal index.val)) ?_
-  rw [← Finset.sum_mul]
-  exact mul_le_mul' (sum_prob_selected_le_expected_of run rightOfResult
-    leftLength rightLength) le_rfl
+    NoticingTape.blockRunOf run leftLength rightLength =
+      AnswerTape.blockRunOf (DigestTape.padding leftLength)
+        ($ᵗ HashOutput : ProbComp HashOutput) run rightLength := by
+  unfold NoticingTape.blockRunOf AnswerTape.blockRunOf
+  rw [TapeFactor.iidTapeList_uniform_eq_padding]
 
 /-! ## The factorisation with a continuation, which is what composes
 
@@ -345,7 +173,7 @@ dropped block.
 
 **Blocks are drawn once, at the top.** That is not an optimisation. Three stages each drawing
 their own block would give the per-cell charge three index sets instead of one, and the counting
-step in `sum_prob_selected_le_expected_of` would be summing over a different thing. Drawn
+step in `AnswerTape.sum_prob_selected_le_expected_of` would sum over different blocks. Drawn
 once and threaded, the index set stays `Fin rightLength` over one block and the rate stays the
 per-cell one. -/
 

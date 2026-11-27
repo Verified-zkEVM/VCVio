@@ -7,6 +7,7 @@ Authors: Alexander Hicks
 module
 public import HashSig.SLHDSA.SHAKE128s.Bridge.Wire.KeyLog
 public import HashSig.SLHDSA.SHAKE128s.Statement.Game.CompleteBudget
+import HashSig.SLHDSA.SHAKE128s.Bridge.SharedExperiment.Recorded
 
 /-!
 # Fixed-context wire and counted-game equality
@@ -106,15 +107,15 @@ theorem runPhase_map {Output PK SK α β : Type}
     (signed : Game.SigningLog) :
     Game.runPhase scheme sk (f <$> program) signed =
       (fun z => ((f z.1.1, z.1.2), z.2)) <$> Game.runPhase scheme sk program signed := by
-  simp [Game.runPhase, Prod.map]
+  simp [Game.runPhase, SigningView.countedPhaseUsing, Functor.map_map]
 
 /-- Forgetting the query-cost vector recovers the original world program. -/
 theorem fst_map_countQueries {Output α : Type}
     (cost : (Game.World Output).Domain → Game.Counts)
     (program : OracleComp (Game.World Output) α) :
     Prod.fst <$> Game.countQueries cost program = program := by
-  simpa only [Game.countQueries, Functor.map_map, Function.comp_def] using
-    fst_map_run_simulateQ_addCostOracle cost program
+  unfold Game.countQueries
+  exact SigningView.costed_erases _ _ program
 
 /-- The actual named adversary retains its complete forgery and context-attached signing log. -/
 theorem runPhase_fixedContextAdversary (ctx : SLHDSA.Security.PureContext)
@@ -198,7 +199,8 @@ theorem experimentBySource_win {Output PK SK : Type}
       (scheme.keygen >>= fun keys =>
         (fun outcome => decide (Game.Wins outcome)) <$>
           Game.afterKeygen scheme adversary keys) := by
-  simp only [Game.experimentBySource, map_bind, map_pure]
+  rw [Game.experimentBySource_eq_countAllHashes]
+  simp only [map_bind, map_pure]
   trans (Game.countAllHashes scheme.keygen >>= fun result =>
     (fun outcome => decide (Game.Wins outcome)) <$> Game.afterKeygen scheme adversary result.1)
   · apply bind_congr

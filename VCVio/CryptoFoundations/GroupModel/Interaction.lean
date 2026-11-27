@@ -159,6 +159,7 @@ theorem Adversary.run_valid {Input I : Type} {ambient : OracleSpec I}
   generalize input.groups = basis at h hz
   induction program using OracleComp.inductionOn generalizing basis z with
   | pure out =>
+      simp only [simulateQ_pure, StateT.run_pure, support_pure, Set.mem_singleton_iff] at hz
       simpa only [simulateQ_pure, StateT.run_pure, support_pure, Set.mem_singleton_iff]
         using hz ▸ h
   | query_bind q next ih =>

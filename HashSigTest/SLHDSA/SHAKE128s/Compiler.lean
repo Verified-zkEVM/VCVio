@@ -5,13 +5,15 @@ Authors: Alexander Hicks
 -/
 
 module
-public import HashSig
+public import ToMathlib.Compiler.FinCases
+public import HashSig.SLHDSA.SHAKE128s.Statement.Scheme
 
 /-!
-# Compiler controls through the combined hash-signature library
+# Compiler controls through the explicit finite-index owner
 
 Direct finite-index elimination checks zero, successor and last indices after importing the
-combined library. A 32-entry family built by `sequenceFin` exercises the nested eliminators
+compiler owner and the actual `sequenceFin` client. A 32-entry family built by
+`sequenceFin` exercises the nested eliminators
 while recording callback order and checking every value and their sum.
 -/
 
@@ -67,5 +69,5 @@ def check : IO Unit := do
 
 end SLHDSA.SHAKE128s.CompilerTest
 
-/-- Run the compiler controls through the combined library import. -/
+/-- Run the compiler controls through the explicit owner and sequence client. -/
 def main : IO Unit := SLHDSA.SHAKE128s.CompilerTest.check

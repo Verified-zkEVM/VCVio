@@ -1,0 +1,21 @@
+MODULE StructuralRecovery
+Try this:
+  [apply] ring_nf
+
+  The `ring` tactic failed to close the goal. Use `ring_nf` to obtain a normal form.
+
+  Note that `ring` works primarily in *commutative* rings. If you have a noncommutative ring, abelian group or module, consider using `noncomm_ring`, `abel` or `module` instead.
+'SLHDSA.SecurityDelta.structural_bound' depends on axioms: [propext, Classical.choice, Quot.sound]
+'SLHDSA.SecurityDelta.byte_zero' depends on axioms: [propext, Classical.choice, Quot.sound]
+'SLHDSA.SecurityDelta.envelope_zero' depends on axioms: [propext, Classical.choice, Quot.sound]
+'SLHDSA.SecurityDelta.zero_caps_obstruction' depends on axioms: [propext, Classical.choice, Quot.sound]
+
+MODULE EligibleComparison
+'SLHDSA.SecurityDelta.constantClient_bound' depends on axioms: [propext, Classical.choice, Quot.sound]
+'SLHDSA.SecurityDelta.constantClient_joint' depends on axioms: [propext, Classical.choice, Quot.sound]
+'SLHDSA.SecurityDelta.constantClient_lifetime' depends on axioms: [propext, Classical.choice, Quot.sound]
+'SLHDSA.SecurityDelta.constantClient_advantage' depends on axioms: [propext, Classical.choice, Quot.sound]
+
+MODULE OperationalRecovery
+'SLHDSA.SHAKE128s.OperationalRecovery.advantage_eq_zero' depends on axioms: [propext, Classical.choice, Quot.sound]
+'SLHDSA.SHAKE128s.OperationalRecovery.advantage_eq_zero_fips' depends on axioms: [propext, Classical.choice, Quot.sound]
