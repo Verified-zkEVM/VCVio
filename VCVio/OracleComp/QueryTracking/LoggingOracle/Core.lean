@@ -804,6 +804,22 @@ lemma withQueryLog_query
       liftM (OracleSpec.query t) >>= fun u => pure (u, [⟨t, u⟩]) := by
   simp [withQueryLog]
 
+/-- Logging a mapped computation maps the logged output and keeps the log. -/
+lemma withQueryLog_map {ι : Type} {spec : OracleSpec.{0, 0} ι} {α β : Type}
+    (f : α → β) (oa : OracleComp spec α) :
+    (f <$> oa).withQueryLog = Prod.map f id <$> oa.withQueryLog := by
+  rw [map_eq_bind_pure_comp, withQueryLog_bind, map_eq_bind_pure_comp]
+  refine bind_congr fun p => ?_
+  simp [Prod.map]
+
+/-- A continuation that ignores the query log may drop the logging. -/
+lemma withQueryLog_bind_fst {ι : Type} {spec : OracleSpec.{0, 0} ι} {α β : Type}
+    (oa : OracleComp spec α) (k : α → OracleComp spec β) :
+    (oa.withQueryLog >>= fun p => k p.1) = oa >>= k := by
+  conv_rhs => rw [← loggingOracle.fst_map_run_simulateQ oa]
+  rw [bind_map_left]
+  rfl
+
 /-- Substituting into the logged path run and then forgetting the log is substituting into the
 program. The query index, the answers and the output may lie in any universes. -/
 theorem map_fst_subst_map_pathLogResult_withPath {i : Type u} {oSpec : OracleSpec.{u, v} i}

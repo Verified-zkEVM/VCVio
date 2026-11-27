@@ -28,6 +28,10 @@ public import VCVio.CryptoFoundations.Asymptotics.PathSemantics
 public import VCVio.CryptoFoundations.Asymptotics.RankedRun
 public import VCVio.CryptoFoundations.Asymptotics.ReductionCost
 public import VCVio.CryptoFoundations.Asymptotics.Security
+public import VCVio.CryptoFoundations.ChallengeVerifyProtocol.Basic
+public import VCVio.CryptoFoundations.ChallengeVerifyProtocol.Kilian
+public import VCVio.CryptoFoundations.ChallengeVerifyProtocol.Kilian.Merkle
+public import VCVio.CryptoFoundations.ChallengeVerifyProtocol.Kilian.Soundness
 public import VCVio.CryptoFoundations.CommitmentScheme
 public import VCVio.CryptoFoundations.CoordinateFork
 public import VCVio.CryptoFoundations.CoordinateFork.BlockFinder
@@ -372,7 +376,9 @@ public import VCVio.CryptoFoundations.UniversalHash
 public import VCVio.CryptoFoundations.VectorCommitment.Basic
 public import VCVio.CryptoFoundations.VectorCommitment.Completeness
 public import VCVio.CryptoFoundations.VectorCommitment.Hiding
+public import VCVio.CryptoFoundations.VectorCommitment.Merkle
 public import VCVio.CryptoFoundations.VectorCommitment.NonadaptiveCheck
+public import VCVio.CryptoFoundations.VectorCommitment.OnlineExtraction
 public import VCVio.CryptoFoundations.VectorCommitment.PositionBinding
 public import VCVio.CryptoFoundations.VectorCommitment.RomCompleteness
 public import VCVio.EvalDist.BitVec.Measure
@@ -530,6 +536,7 @@ public import VCVio.OracleComp.QueryTracking.QueryLog
 public import VCVio.OracleComp.QueryTracking.QueryLogCheck
 public import VCVio.OracleComp.QueryTracking.RandomOracle.AnswerRelabel
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
+public import VCVio.OracleComp.QueryTracking.RandomOracle.CacheOverlay
 public import VCVio.OracleComp.QueryTracking.RandomOracle.CachePartial
 public import VCVio.OracleComp.QueryTracking.RandomOracle.CachePartial.Cost
 public import VCVio.OracleComp.QueryTracking.RandomOracle.CachePartial.Hint
