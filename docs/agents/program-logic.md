@@ -130,7 +130,7 @@ to distinct tactics. [How `pvcgen` divides work with core
 
 | Tactic | What it does |
 |--------|--------------|
-| `pvcgen` | Exhaustively decomposes a `Triple` or probability goal with spec-aware stepping, loop invariant auto-detection, and support/indicator leaf closure |
+| `pvcgen` | Exhaustively decomposes a `Triple`, support statement or probability goal with spec-aware stepping, loop invariant auto-detection, and support/indicator leaf closure |
 | `vcstep` | One step: probability lowering → bind → conditional → match → loop → leaf |
 | `vcstep?` | Performs one step and emits the corresponding explicit script, often surfacing `as ⟨...⟩`, `using cut`, `inv I`, or `with theorem` |
 | `pvcgen?` | Runs `pvcgen` and emits the planned step replay across each pass |
@@ -189,6 +189,15 @@ is skipped when core makes no progress or leaves a loop to an invariant, so the 
 and VCVio's own structural steps continue. `vcstep` and the `?` replays do not take it;
 `set_option vcvio.vcgen.core false` switches it off.
 `VCVioTest/ProgramLogic/VCGenCoreDelegation.lean` exercises it.
+
+A core triple in the necessary reading (`open scoped OracleComp.Necessary`), and a support
+statement `∀ x ∈ support oa, post x`, which `pvcgen` first restates as `⦃ True ⦄ oa ⦃ post ⦄`
+(`OracleComp.Necessary.triple_true_iff_forall_support`), go to core `vcgen` in the same way,
+using the interpretation in the goal and the rules of `Unary/WP/NecessarySpecs.lean`. Core
+descends through draws and queries. `simp_all` discharges the resulting verification conditions
+where possible. The weakest precondition of an opaque sub-program is read back as a support
+statement, so the next pass introduces its output and continues into the rest of the program.
+`VCVioTest/ProgramLogic/VCGenCoreNecessary.lean` exercises it.
 
 
 **Loop invariants**: `pvcgen` auto-detects `replicate`, `List.foldlM`, and `List.mapM`

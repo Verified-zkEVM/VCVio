@@ -17,7 +17,8 @@ The qualitative core `WPMonad` interpretation quantifies over every structurally
 reachable output of `OracleComp spec`, independently of a probability interpretation.
 Enable it with `open scoped OracleComp.Necessary`.
 
-`wp_iff_forall_support` states it against the support. Probability-one coherence
+`wp_iff_forall_support` states it against the support, and `triple_true_iff_forall_support` reads
+a triple with precondition `True` as a support statement. Probability-one coherence
 additionally needs the uniform, finite-support assumptions stated in `Unary/WP/Coherence.lean`.
 -/
 
@@ -42,6 +43,12 @@ noncomputable scoped instance (priority := 1100) instWP :
 theorem wp_iff_forall_support (oa : OracleComp spec α) (post : α → Prop) :
     Std.WP.wp oa post Lean.Order.bot ↔ ∀ a ∈ support oa, post a :=
   Iff.rfl
+
+/-- A triple with precondition `True` states its postcondition at every possible output, so a
+support statement `∀ a ∈ support oa, post a` is the triple `⦃ True ⦄ oa ⦃ post ⦄`. -/
+theorem triple_true_iff_forall_support (oa : OracleComp spec α) (post : α → Prop) :
+    Triple oa True post Lean.Order.bot ↔ ∀ a ∈ support oa, post a :=
+  ⟨fun h => h.le_wp trivial, fun h => ⟨fun _ => h⟩⟩
 
 /-- A lifted primitive query may return any answer. This is the form `vcgen` reaches from
 `liftM (OracleSpec.query t)` once it unfolds the `MonadLiftT` chain. -/
