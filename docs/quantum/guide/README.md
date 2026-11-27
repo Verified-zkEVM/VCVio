@@ -74,7 +74,7 @@ variable-width parallel rounds and exact sequentialization at the point budget; 
 compressed-runtime output-law equivalence; parallel reprogramming and marked/fixed-target
 preimage bounds with adaptive round/point budgets; scheduled hybrids, retained-state finishers
 and two-phase time-lock experiments; complete raw-table encodings and exact honest algorithms in
-finite byte windows.
+finite byte windows; rank frontiers and the exact pointer-chain programmed-oracle coupling.
 
 Not covered: infinite-dimensional systems, continuous measurement outcomes, nonterminating loops,
 coherent choice of oracle port, or a general converse putting programs into comb form.

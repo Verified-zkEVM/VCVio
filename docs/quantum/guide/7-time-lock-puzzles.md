@@ -1,6 +1,7 @@
 # 7. Quantum time-lock puzzle experiments
 
-Covers: honest generation, quantum preprocessing and retained memory. Includes the exact finite-window raw encoding.
+Covers: honest generation, quantum preprocessing, retained memory, exact finite-window encoding
+and its programmed-oracle coupling.
 Read first: [programs and runtimes](4-programs-and-runtimes.md) and [the QROM](5-qrom.md).
 
 ## A challenge generated between two adversary phases
@@ -90,15 +91,15 @@ The interface does not model unrestricted-length byte queries.
 
 The raw interface supplies `quantumWindowScheme`, the injective honest-input encoding
 `hashInputWindow_injective`, and the fixed-oracle honest execution equalities
-`simulateQ_windowScheme_gen` and `simulateQ_windowScheme_solve`. The raw
-query signature retains all adversary registers throughout.
+`simulateQ_windowScheme_gen` and `simulateQ_windowScheme_solve`. The coupling
+programs the raw table directly, so the adversary retains all raw query registers throughout.
 
 Separately, `windowTableEquiv` splits that table into typed answers, fixed mask tails and
 all outside-image answers. `sampledDelayLawWith_quantumWindowScheme` transports the complete
 experiment through this bijection, and `qromDelayAdvantage_quantumWindowScheme` specializes
 it to key recovery. These standalone encoding laws retain the answering table jointly with
 the transcript and require no query budget. These table-splitting laws are separate from the raw
-encoding interface.
+encoding and programming interfaces.
 
 The honest generator and checked solver agree with the source leanSeal algorithms for
 every fixed byte-answer function, restricted to the window. The public puzzle is the
@@ -111,6 +112,23 @@ encoding alone does not establish that wire interface.
 and `evalDist_quantumWindowDerive_genWith` gives the point-mass law at the actual generated
 key for every fixed raw oracle and honest generation coins. The checked solver makes one
 extra commitment-validation call.
+
+The rank-frontier lemmas provide another prerequisite. A path input for the next honest
+query round depends only on labels received in preceding honest rounds; inputs further
+ahead have an unreached predecessor and a bounded per-point incidence. The commitment's
+output is already public, while its input contains the secret key.
+
+The rank-ordered programming coupling is proved separately.
+`PointerChainPuzzle.LeanSeal.qromDelayAdvantage_quantumWindowScheme_le_programmed` bounds
+actual recovery by `programmedWindowRecoveryAdvantage + solvePoints(n,m)^2 / |Bytes 32|`.
+The programmed game samples full raw path responses independently and uses the resulting
+completed oracle for both adversary phases. Its preprocessing memory is retained, and the
+hidden key remains joint with the endpoint event. The path-input collision allowance is
+charged once; the path responses are not conditioned on collision-freedom.
+
+This comparison needs no adversary query budget. A resource-bounded quantum analysis of the programmed game remains separate. See the
+[coupling specification](../../design/quantum-layer.md#18-rank-ordered-programming-coupling)
+for the causal order, collision event and preprocessing conventions.
 
 ## Checks
 

@@ -203,6 +203,7 @@ public import VCVioTest.ProgramLogic.OracleWP
 public import VCVioTest.ProgramLogic.StepCoverage
 public import VCVioTest.ProgramLogic.UntilBad
 public import VCVioTest.ProgramLogic.VCGenCoreDelegation
+public import VCVioTest.Quantum.AdaptiveProgramming
 public import VCVioTest.Quantum.Basic
 public import VCVioTest.Quantum.ChargeWeight
 public import VCVioTest.Quantum.CheckedRead
@@ -222,7 +223,10 @@ public import VCVioTest.Quantum.Parallel
 public import VCVioTest.Quantum.ParallelBridges
 public import VCVioTest.Quantum.ParallelPreimage
 public import VCVioTest.Quantum.ParallelSearch
+public import VCVioTest.Quantum.PointerChainCoupling
 public import VCVioTest.Quantum.PointerChainEncoding
+public import VCVioTest.Quantum.PointerChainFrontier
+public import VCVioTest.Quantum.PointerChainProgramming
 public import VCVioTest.Quantum.Pure
 public import VCVioTest.Quantum.SaltedMerkleMultiExtractable
 public import VCVioTest.Quantum.Sequentialize
