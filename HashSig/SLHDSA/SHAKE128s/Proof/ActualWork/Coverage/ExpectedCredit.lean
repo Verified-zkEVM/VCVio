@@ -10,7 +10,12 @@ public import HashSig.SLHDSA.SHAKE128s.Proof.ActualWork.Price.SampleSpaces
 public import HashSig.SLHDSA.SHAKE128s.Proof.ActualWork.Coverage.ConsumedCredit
 public import VCVio.OracleComp.EvalDist.Sum
 
-/-! # Expected FORS credit of the consumed signing and forgery prefixes -/
+/-!
+# Expected FORS credit of the consumed signing and forgery prefixes
+
+The signer and forger prefixes consumed on a run determine its FORS coverage event. Their
+expected credit bounds the probability of that event on the joint tape block.
+-/
 
 public section
 

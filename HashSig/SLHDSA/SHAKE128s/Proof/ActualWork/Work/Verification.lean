@@ -13,7 +13,13 @@ import all HashSig.SLHDSA.Security.NativeCounts
 import all VCVio.OracleComp.QueryTracking.RandomOracle.ClassIndexedTape.Position
 import VCVio.OracleComp.SimSemantics.StateT.StateSeparating
 
-/-! # Verification costs of accepting and rejecting wire requests -/
+/-!
+# Verification costs of accepting and rejecting wire requests
+
+The verifier charges its executed queries on accepting and rejecting runs. Malformed inputs
+return before any internal hash, and the count bound follows the queries of a well-formed
+verification.
+-/
 
 public section
 namespace SLHDSA.SHAKE128s.Bridge.SharedExperiment

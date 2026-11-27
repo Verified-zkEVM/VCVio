@@ -12,7 +12,12 @@ import all HashSig.SLHDSA.Security.NativeCounts
 import all VCVio.OracleComp.QueryTracking.RandomOracle.ClassIndexedTape.Position
 import VCVio.OracleComp.SimSemantics.StateT.StateSeparating
 
-/-! # Work accounting for a guarded raw hash call -/
+/-!
+# Work accounting for a guarded raw hash call
+
+In the adversary and final-verification phases, an admitted raw hash call pays for its
+contribution to the native counts on the same guarded execution.
+-/
 
 public section
 namespace SLHDSA.SHAKE128s.Bridge.SharedExperiment
@@ -71,7 +76,7 @@ private theorem guarded_marked_raw_normal_form
           bind_map_left]
       · simp [simulateQ_bind, StateT.run_bind, QueryImpl.guardQueryBudget, aborted, accepted]
 
-/-- An admitted raw marker funds the actual complete native count in its same terminal state. -/
+/-- An admitted adversary or verifier hash pays for its contribution to the native counts. -/
 theorem marked_raw_count_offsets
     (seed : FIPS205.core.PkSeed) (phase : SigningView.Phase) (raw : Raw.Domain)
     (hphase : phase = .adversary ∨ phase = .verification)

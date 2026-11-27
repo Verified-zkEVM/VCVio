@@ -9,7 +9,12 @@ public import HashSig.SLHDSA.Security.GraphProgramming
 public import HashSig.SLHDSA.SHAKE128s.Proof.CanonicalGraph.Programming
 public import HashSigTest.SLHDSA.Refactor.ForsGraphRecovery
 
-/-! # Ordinary concrete programming consumers -/
+/-!
+# Programming FORS subtree and signing schedules
+
+The tests instantiate the FORS subtree and signing schedules at SHAKE-192f and at a short test
+profile. They check how programmed and unscheduled cells appear in the resulting table.
+-/
 
 public section
 open OracleComp OracleSpec SLHDSA SLHDSA.Graph SLHDSA.Security

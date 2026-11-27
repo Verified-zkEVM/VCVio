@@ -12,16 +12,15 @@ public import HashSig.SLHDSA.SHAKE128s.Statement.BitSecurity
 /-!
 # The strong unforgeability game of a pure-mode signature over one hash oracle
 
-A signature scheme in pure mode signs requests made of a message and a context, and produces
-byte-string signatures; every party shares one lazily sampled random oracle on byte strings,
-whose answers have type `Output` (`ExternalScheme`).
+Each pure-mode signing request contains a message and a context. All parties share one lazily
+sampled random oracle with answers of type `Output`. The adversary receives the public key and
+can query the hash and signing oracles. It wins when its forgery verifies and the signer has
+never returned that signature for that request.
 
-The adversary gets the public key, the random oracle and a signing oracle, and outputs a forgery.
-It wins if the forgery verifies and the signing oracle never returned that message and signature
-(`Wins`). Every hash call is counted by its source: the adversary's own, key generation's, the
-signer's and the final verification's; signing requests are counted too (`securityGame`).
-`HasSecurityBits Z bits` says that every adversary within `2 ^ 64` signing requests and with at
-most `q ≥ 1` counted queries of the kinds in `Z` wins with probability at most `q / 2 ^ bits`.
+The game records each signing attempt and attributes each hash query to key generation, the
+signer, the adversary or final verification. For every positive budget `q`, `HasSecurityBits`
+bounds the winning probability by `q / 2 ^ bits` when the signing lifetime and the sum of the
+counts selected by `Z` each satisfy their respective bounds with probability one.
 -/
 
 public section
@@ -30,7 +29,7 @@ open OracleComp OracleSpec ENNReal
 
 namespace SLHDSA.SHAKE128s
 
-/-- At most `2 ^ 64` signatures per key. -/
+/-- Lifetime allowance of `2 ^ 64` signing attempts per key, including rejected requests. -/
 @[expose] def signingLimit : Nat := 2 ^ 64
 
 namespace Game
@@ -76,10 +75,9 @@ variable [SampleableType Output]
     (securityGame scheme).HasQueryBound () Z adversary q →
     (securityGame scheme).advantage () adversary ≤ q / ((2 ^ bits : Nat) : ℝ≥0∞)
 
-/-- The adversary's work is the sum of:
-- its signing requests (+1 per request, at most `2^64`),
-- its hash calls (+1 per call it makes to the random oracle),
-- the hash calls of verifying its forgery (+1 per call). -/
+/-- Source counters for the joint work budget. Each signing attempt, direct adversary hash
+query and final-verifier hash query costs one. Rejections, cache hits and hashes performed on
+losing runs count. Key-generation and signer hash queries have zero weight. -/
 @[expose] def adversaryWork : Finset Unforgeability.QueryKind := {.sign, .hash, .verifier}
 
 end Game

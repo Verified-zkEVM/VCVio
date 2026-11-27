@@ -12,7 +12,12 @@ public import HashSig.SLHDSA.SHAKE128s.Proof.ActualWork.Price.Graph
 import all HashSig.SLHDSA.SHAKE128s.Proof.ActualWork.Price.Graph
 import Mathlib.Tactic.NormNum
 
-/-! # Graph, private-key and FORS charges on the terminal cache -/
+/-!
+# Graph, private-key and FORS charges on the terminal cache
+
+The terminal charge combines graph entries, private-key aliases and FORS counts. Its bound uses
+the reserve certificate of the terminal cache.
+-/
 
 public section
 open OracleComp OracleSpec SignatureAlg

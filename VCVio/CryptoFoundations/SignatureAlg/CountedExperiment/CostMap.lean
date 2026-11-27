@@ -8,7 +8,12 @@ module
 public import VCVio.CryptoFoundations.SignatureAlg.CountedExperiment
 public import ToMathlib.Control.WriterT.Map
 
-/-! # Homomorphic observations of counted signature experiments -/
+/-!
+# Homomorphic observations of counted signature experiments
+
+An additive homomorphism transforms the declared event costs and their accumulated total while
+preserving the returned candidate, signing log and verification result.
+-/
 
 public section
 

@@ -25,13 +25,10 @@ C13 is the EVM-optimized SLH-DSA-family variant from the `SPHINCs-` research rep
 - **keccak256** (truncated to `n = 16`) over the FIPS 205 §11.2.2 *uncompressed* 32-byte `ADRS`,
   with a single domain-separated `H_msg = keccak256(seed ‖ root ‖ R ‖ msg ‖ 0xFF·32)` (no MGF1).
 
-This module fixes the parameters and the **C13-specific** byte sizes (the FIPS size formulas in
-`SLHDSA.Params` do **not** apply: WOTS+C has no checksum chains, and FORS+C omits one auth
-path). The remaining C13 build-out — a `WotsC` module (counter-mixed digits + fixed-sum gate),
-a `ForsC` module (forced-zero last tree), the `d = 2` hypertree fold, the keccak/32-byte-ADRS
-`Primitives` instantiation, and verification against `SPHINCs-C13Asm.sol` / the `signer-wasm`
-KAT — reuses the shared `PerfectMerkleTree` core and the `SLHDSA.WotsChecksum` incomparability
-lemma.
+These byte counts account for the WOTS+C fixed-sum rule and the omitted FORS+C path.
+The `WotsC` and `ForsC` modules implement those rules. `Hypertree` combines the two XMSS
+layers, and `Concrete` instantiates the scheme with Keccak over 32-byte addresses.
+The `slhdsa_c13_kat` executable checks the verifier against a reference signature.
 
 ## References
 

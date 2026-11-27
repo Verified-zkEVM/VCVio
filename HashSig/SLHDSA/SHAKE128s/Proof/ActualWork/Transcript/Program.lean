@@ -24,7 +24,12 @@ import VCVio.OracleComp.SimSemantics.StateT.PreservesInv
 import VCVio.OracleComp.SimSemantics.StateT.StateSeparating
 import VCVio.OracleComp.SimSemantics.Append.Core
 
-/-! # The guarded and deferred programs on a single signing transcript -/
+/-!
+# The guarded and deferred programs on a single signing transcript
+
+Projection of the phase and signing callbacks connects the framed guarded program with the
+deferred query program used to track the signing transcript.
+-/
 
 public section
 section

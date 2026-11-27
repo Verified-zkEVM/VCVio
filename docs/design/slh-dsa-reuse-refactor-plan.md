@@ -1,12 +1,9 @@
 # Reusable SLH-DSA specifications and complementary security proofs
 
-Status: P4, P5 and P6 are accepted. The [P5 checkpoint](slh-dsa-reuse-evidence/r6c/p5-checkpoint.md)
-records the shared-experiment security/semantics gate at clean validated `fb6f14cb`.
-The six canonical delegation units and five finite extraction/use families have independently
-accepted implementation checkpoints. The [current implementation table](slh-dsa-reuse-completion-manifest.md#current-implementation-checkpoints)
-records those checkpoints and the consumer/compiler and R8 work. The finite completion manifest
-fixes the endpoint; per-unit acceptance does not establish final integrated validation.
-Plan approval is not implementation acceptance.
+This is the implementation plan for #1009, merged on 2026-11-27 at `040dbc64`.
+Its gates and pinned revisions describe the work at the time. The completion manifest
+records the branch checkpoints. For the merged theorem and its assumptions, use the
+SHAKE-128s guide. [Merge and validation](https://github.com/Verified-zkEVM/VCVio/pull/1009) · [Implementation checkpoints](slh-dsa-reuse-completion-manifest.md#current-implementation-checkpoints) · [SHAKE-128s proof guide](slh-dsa-shake128s-suf-cma.md)
 
 The objective is maximum useful generality **while preserving or improving the end security
 guarantees over their original assumptions and resource regimes**. Intermediate theorems and

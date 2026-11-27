@@ -7,7 +7,12 @@ Authors: Alexander Hicks
 module
 public import HashSig.SLHDSA.SHAKE128s.Bridge.SharedExperiment.AnswerRepresentation
 
-/-! # Ordinary full30-byte answer clients with chronological phase/input cost words -/
+/-!
+# Ordered observations under 30-byte answer conversion
+
+The client records the sequence of phase-tagged queries and signing requests. Changing the
+representation of a 30-byte answer preserves this observation and transports the final cache.
+-/
 
 public section
 

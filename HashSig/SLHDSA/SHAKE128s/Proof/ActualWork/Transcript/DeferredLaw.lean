@@ -25,7 +25,12 @@ import VCVio.OracleComp.SimSemantics.StateT.StateSeparating
 import VCVio.OracleComp.SimSemantics.Append.Core
 public import HashSig.SLHDSA.SHAKE128s.Proof.ActualWork.Transcript.Program
 
-/-! # Law of the deferred experiment after erasing the tapes -/
+/-!
+# Law of the deferred experiment after erasing the tapes
+
+Averaging the signer and forger tapes and projecting the terminal state recovers the joint
+output and cache distribution of the deferred interpreter.
+-/
 
 public section
 section
@@ -565,6 +570,8 @@ private theorem observe_deferred_square
       ((result.1, result.2.2), result.2.1)) <$> computation) forward
   simpa [actual, Functor.map_map, Function.comp_def] using back
 
+/-- Projecting the terminal of the sampled tape block gives the distribution of the output and
+state of the deferred interpreter started from empty caches. -/
 theorem native_deferred_marginal :
   ∀ (s : FIPS205.core.PkSeed) (adv : Game.Adversary FIPS205.Answer PK)
     (reserve : Bool) (caps : Nat × Nat)

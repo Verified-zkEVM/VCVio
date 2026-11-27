@@ -12,7 +12,12 @@ public import HashSig.SLHDSA.SHAKE128s.Proof.ActualWork.Encoding.EndFill
 public import HashSig.SLHDSA.SHAKE128s.Proof.ActualWork.Transcript.CacheOrigins
 public import HashSig.SLHDSA.SHAKE128s.Proof.ActualWork.Transcript.DeferredLaw
 
-/-! # Activation of encoding clashes on the guarded cache -/
+/-!
+# Activation of encoding clashes on the guarded cache
+
+Cache provenance restricts which encoding aliases can occur after the graph is filled. The
+probability bound charges the applicable aliases on the guarded execution.
+-/
 
 public section
 

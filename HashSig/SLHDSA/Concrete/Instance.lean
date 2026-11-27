@@ -11,9 +11,9 @@ public import VCVio.Algorithms.Sha2
 /-!
 # Concrete SLH-DSA-SHA2-128-24 instantiation
 
-Wires pure-Lean SHA-256 (`VCVio.Algorithms.Sha2`) into the abstract `Primitives` bundle
-to make the proof-level scheme executable at the SLH-DSA-SHA2-128-24 parameter set, following
-the FIPS 205 §11.2.1 SHA-2 (category-1) instantiation:
+SLH-DSA-SHA2-128-24 is a reduced, single-layer research profile outside the twelve parameter
+sets in FIPS 205 Table 2. Its primitive bundle uses the pure Lean SHA-256 implementation
+in `VCVio.Algorithms.Sha2` following the category-1 construction in FIPS 205 §11.2.1.
 
 - node/seed type `Y = PkSeed = SkSeed = SkPrf = Bytes 16` (`n = 16`);
 - `F`/`H`/`T_ℓ`/`PRF` = `Trunc₁₆(SHA-256(PK.seed ‖ 0^48 ‖ ADRSc ‖ payload))`;
@@ -21,7 +21,7 @@ the FIPS 205 §11.2.1 SHA-2 (category-1) instantiation:
 - `H_msg` = `MGF1-SHA-256(R ‖ PK.seed ‖ SHA-256(R ‖ PK.seed ‖ PK.root ‖ M), 21)`;
 
 where `ADRSc` is the 22-byte compressed address (`Adrs.compressSha2`). A fixed-width signature
-decoder (`decodeSignature`) parses the 3856-byte FIPS wire format
+decoder (`decodeSignature`) parses the reduced profile’s 3856-byte signature
 (`R ‖ SIG_FORS ‖ SIG_HT`) so reference signatures can be verified; it is proved to agree with
 the strict structured codec on every canonical wire in `HashSig.SLHDSA.Concrete.Codec`.
 

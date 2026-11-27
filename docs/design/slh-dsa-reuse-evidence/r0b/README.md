@@ -44,6 +44,16 @@ answer carrier and conservative3929 cap. Hashes do not replace kernel proofs or 
 assertions. Changed expected data is not a passing recovery argument; any update requires
 separate review.
 
+The runtime binding for `HashSig/SLHDSA/Security/BoundEval.lean` covers the complete source
+file, including its docstrings. At the #1009 merge its SHA-256 was
+`4dc98a7f9a73a00ccbda9277821e8915a9f93ebf140bf99e8f6eee5a97d2192a`.
+The documentation revision gives it SHA-256
+`0b1477f79330b3495d69f2d58b38400fc10bffbdbf1d8ec13929a45b19e2c112`.
+The two versions have identical Lean declarations and proofs after removing declaration
+docstrings. The independent exact-rational check and kernel checks also apply to this binding.
+[Original evaluator and binding](https://github.com/Verified-zkEVM/VCVio/tree/040dbc64214816233467b89fa37a2ffa2187afa0/docs/design/slh-dsa-reuse-evidence/r0b) ·
+[Reviewed evaluator changes](https://github.com/Verified-zkEVM/VCVio/pull/1243/files)
+
 R0a's strict semantic fingerprints reject even benign changes to protected definition syntax.
 The readable contracts and sampled runtime controls do not prove future implementation
 compatibility, arbitrary compiler behavior, a shared counted-game equivalence, or P4/P5 recovery.

@@ -11,6 +11,9 @@ public import HashSig.SLHDSA.SHAKE128s.Proof.ActualWork.Price.Combined
 
 /-!
 # A joint-work forgery bound from covered residual winners
+
+In the nontrivial budget range, covering every remaining winning forgery by the native FORS
+event yields the strict joint-work estimate for the FIPS game.
 -/
 
 public section

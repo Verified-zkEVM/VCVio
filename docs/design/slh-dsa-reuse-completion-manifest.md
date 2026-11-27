@@ -1,34 +1,19 @@
 # Finite SLH-DSA reuse completion manifest
 
-The original evidence checkpoint is accepted commit
-`ae23574db895fd68ae28db806b54e0b3b275a551`. The clean committed full validation and independent P6 acceptance passed.
-This manifest freezes the finite completion deliverables; it does not freeze the
-intermediate declarations, proof bodies or public names. The later
-[P5 checkpoint](slh-dsa-reuse-evidence/r6c/p5-checkpoint.md) is accepted at `fb6f14cb`.
-The six R5 delegation units and five R6c extraction/use families have independently accepted
-implementation checkpoints. Consumer/compiler integration and final R8 acceptance are tracked
-below; the historical P5/P6 records keep their original scope.
+This is the historical acceptance record for the refactor merged on 2026-11-27 at
+`040dbc64`. The PR records the final validation and the changes since the earlier checkpoints.
+For current imports, resource hypotheses and theorem choices, see the security guide.
+[Merge and validation](https://github.com/Verified-zkEVM/VCVio/pull/1009) · [SHAKE-128s proof guide](slh-dsa-shake128s-suf-cma.md)
 
-This finite endpoint supplements the [reuse plan](slh-dsa-reuse-refactor-plan.md),
-[original strength inventory](slh-dsa-reuse-evidence/strength-manifest.json),
-[R0 semantic archive](slh-dsa-reuse-evidence/r0/README.md), and
-[R0b readable/runtime bindings](slh-dsa-reuse-evidence/r0b/README.md).
-The [source map](slh-dsa-reuse-evidence/r6c/source-map.json) retains its original
-historical provenance; every selected source anchor also matches this accepted
-commit. Those historical hashes are not claims about later documentation revisions.
-[Evidence and reproduction](slh-dsa-reuse-evidence/r6c/README.md),
-[target-shape requirements](slh-dsa-reuse-evidence/r6c/target-shapes.md), and the
-[P6 checkpoint](slh-dsa-reuse-evidence/r6c/p6-checkpoint.json) distinguish this
-finite deliverable list from the per-unit claims, implementations and evidence
-still needed for acceptance.
+P6 was accepted at `ae23574db895fd68ae28db806b54e0b3b275a551` and P5 at `fb6f14cb`.
+The source map and its hashes identify the inputs to those assessments.
+[Reuse plan](slh-dsa-reuse-refactor-plan.md) · [Strength inventory](slh-dsa-reuse-evidence/strength-manifest.json) · [R0 semantic archive](slh-dsa-reuse-evidence/r0/README.md) · [R0b bindings](slh-dsa-reuse-evidence/r0b/README.md) · [Source map](slh-dsa-reuse-evidence/r6c/source-map.json) · [Evidence and reproduction](slh-dsa-reuse-evidence/r6c/README.md) · [Target shapes](slh-dsa-reuse-evidence/r6c/target-shapes.md) · [P5](slh-dsa-reuse-evidence/r6c/p5-checkpoint.md) · [P6](slh-dsa-reuse-evidence/r6c/p6-checkpoint.json)
 
 ## Current implementation checkpoints
 
-These are independently reviewed branch checkpoints, rather than claims of merge to `main`.
-The finite endpoint and all retained-or-improved security requirements below remain unchanged.
-Targeted unit validation does not establish final whole-repository acceptance.
+The early rows identify independently reviewed branch commits. The final row identifies the merge.
 
-| Scope | Accepted checkpoint or pending gate | Result |
+| Scope | Revision | Result |
 |---|---|---|
 | R6c C1/C4, sampling and programming | `92c0e08e` | Real 128s/192f graph consumers use the shared traversal laws; warm-cache sampling keeps its explicit freshness/width hypotheses. |
 | R6c C2, independent moments | `0f0292f2` | The production FORS concentration route consumes the generic finite independent-moment proof. |
@@ -41,7 +26,7 @@ Targeted unit validation does not establish final whole-repository acceptance.
 | R7 provider and graph examples | `66abfede` | The clients passed 17 clean recorded checks, including both existing FORS runtime controls, and retain joint signature/cache observations and the precise programming/sampling scopes. |
 | R7 resource policy and certificates | `774e7a50` | The input-dependent policy proves eventwise domination and same-cap joint budget transport; all five modules, including numerical certificate leaves, passed the 18-check clean recorded validation. |
 | R7 compiler owner and import isolation | `1497e98d` | Explicit compiler ownership is checked across 25 inert and three opt-in imported environments, with the unchanged native 32-entry/sum1024 canary and the complete current-contract gate. |
-| Current-main integration and R8 | Final exact-head gate; see PR validation evidence | Commit the reviewed main/lock integration, documentation and generated imports before clean recorded full validation and independent review. Publish the actual validated commit and results in PR evidence while keeping that source unchanged. |
+| Integration and final validation | [`040dbc64`](https://github.com/Verified-zkEVM/VCVio/commit/040dbc64214816233467b89fa37a2ffa2187afa0) | #1009 merged the native FIPS byte-game proof and its transport to the paper transcription. The PR records the tested revisions and validation scope. |
 
 ## Endpoint and exclusions
 
@@ -364,7 +349,7 @@ private route/trace observations. A different private observer needs its own law
 
 ## R8 finite completion checklist
 
-R8 closes when: P5/retained-or-improved security guarantee mapping and P6;
+The planned R8 criteria were P5/retained-or-improved security guarantee mapping and P6;
 C1–C5 actual production use; R5 units1–6 canonical delegation;
 light normal-import adaptation recipes for valid/rejected contexts,128s/192f,
 effectful provider and ordered/input-dependent policy; old theorem eligibility

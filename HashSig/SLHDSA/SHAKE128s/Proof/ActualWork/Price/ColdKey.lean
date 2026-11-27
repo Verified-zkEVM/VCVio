@@ -12,7 +12,12 @@ public import HashSig.SLHDSA.SHAKE128s.Bridge.SharedExperiment.Observation
 
 public import HashSig.SLHDSA.SHAKE128s.Proof.ActualWork.Price.SampleSpaces
 
-/-! # Weak-key probability at the deferred key sampler -/
+/-!
+# Weak-key probability at the deferred key sampler
+
+The initial key in the filled guarded experiment has weak-key probability at most the honest
+address count divided by the size of the two-seed space.
+-/
 
 public section
 

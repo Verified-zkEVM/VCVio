@@ -472,16 +472,20 @@ def decodeSignature (vp : ValidatedParams) {core : CorePrimitives vp.params}
     Except CodecError (SignatureCore vp.params core) :=
   (signatureCodec vp atomic).decode raw
 
+/-- The strict public-key decoder recovers the structured key from its canonical bytes. -/
 @[simp] theorem decodePublicKey_encode {p : Params} {core : CorePrimitives p}
     (atomic : CoreWireCodec p core) (key : PublicKeyCore core) :
     decodePublicKey atomic (encodePublicKey atomic key) = .ok key := by
   exact WireCodec.decode_encode _ _
 
+/-- The strict secret-key decoder recovers all four key fields from their canonical bytes. -/
 @[simp] theorem decodeSecretKey_encode {p : Params} {core : CorePrimitives p}
     (atomic : CoreWireCodec p core) (key : SecretKeyCore core) :
     decodeSecretKey atomic (encodeSecretKey atomic key) = .ok key := by
   exact WireCodec.decode_encode _ _
 
+/-- At validated parameters, the strict signature decoder recovers the structured signature from
+its canonical bytes. -/
 @[simp] theorem decodeSignature_encode (vp : ValidatedParams)
     {core : CorePrimitives vp.params} (atomic : CoreWireCodec vp.params core)
     (signature : SignatureCore vp.params core) :
@@ -524,16 +528,20 @@ theorem encodeSignature_injective (vp : ValidatedParams)
     Function.Injective (encodeSignature vp atomic) :=
   WireCodec.encode_injective _
 
+/-- A public key encodes to the public-key width of the selected parameters. -/
 @[simp] theorem encodePublicKey_length {p : Params} {core : CorePrimitives p}
     (atomic : CoreWireCodec p core) (key : PublicKeyCore core) :
     (encodePublicKey atomic key).length = p.publicKeyBytes := by
   exact WireCodec.encode_length _ _
 
+/-- A secret key encodes to the secret-key width of the selected parameters. -/
 @[simp] theorem encodeSecretKey_length {p : Params} {core : CorePrimitives p}
     (atomic : CoreWireCodec p core) (key : SecretKeyCore core) :
     (encodeSecretKey atomic key).length = p.secretKeyBytes := by
   exact WireCodec.encode_length _ _
 
+/-- The canonical signature encoding occupies exactly the signature width of the validated
+parameters. -/
 @[simp] theorem encodeSignature_length (vp : ValidatedParams)
     {core : CorePrimitives vp.params} (atomic : CoreWireCodec vp.params core)
     (signature : SignatureCore vp.params core) :

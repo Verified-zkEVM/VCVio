@@ -12,6 +12,9 @@ import HashSig.SLHDSA.SHAKE128s.Bridge.SharedExperiment.Observation
 
 /-!
 # Weak keys at the physical FIPS key sampler
+
+The weak-key contribution is bounded using the distribution of the initial physical key pair.
+The result transfers this bound to the comparison with the filled experiment.
 -/
 
 open OracleComp OracleSpec SignatureAlg MeasureTheory
@@ -134,6 +137,8 @@ theorem physical_source_weak_win_le_honest_address_mass
 
 namespace Physical
 open Guarded
+/-- Under the work and signing caps, FIPS success is bounded by a win or a cache hazard in the
+filled experiment, plus the honest address count divided by 2²⁵⁶. -/
 theorem original_win_le_filled_add_address_mass (adv : Game.Adversary FIPS205.Answer PK) (q : Nat)
     (hlimit : Game.WithinSigningLimit FIPS205.scheme adv)
     (hbound : (Game.securityGame FIPS205.scheme).HasQueryBound () Game.adversaryWork adv q)

@@ -32,7 +32,12 @@ public import HashSig.SLHDSA.SHAKE128s.Proof.ActualWork.Transcript.RoleInvariant
 import all HashSig.SLHDSA.SHAKE128s.Proof.ActualWork.Transcript.CacheOrigins
 import all HashSig.SLHDSA.SHAKE128s.Proof.ActualWork.Transcript.Program
 
-/-! # FORS coverage witnessed by a cached typed forgery -/
+/-!
+# FORS coverage witnessed by a cached typed forgery
+
+A cached typed forgery with a fresh covered digest identifies a consumed forger position. The
+bound uses the signing and forgery counts of that run.
+-/
 
 public section
 

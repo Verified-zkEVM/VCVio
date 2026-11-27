@@ -25,7 +25,8 @@ open scoped ENNReal
 
 namespace SLHDSA.SHAKE128s.Bridge.SharedExperiment.ScalarPolicy
 
-/-- A model adversary with scalar work below 569 never wins, with no lifetime premise. -/
+/-- A dominating scalar policy gives zero model winning probability under an almost-sure work cap
+below 569, without a signing-lifetime premise. -/
 theorem advantage_eq_zero_model (policy : Event HashOutput → Nat)
     (hdom : ∀ event, selectedWork (sourcePolicy event) ≤ policy event)
     (adv : Game.Adversary HashOutput PublicKey)
@@ -35,7 +36,8 @@ theorem advantage_eq_zero_model (policy : Event HashOutput → Nat)
   rw [success_probability]
   exact SharedExperiment.advantage_eq_zero_model adv q hq (cap_transport policy hdom _ adv q hcap)
 
-/-- A FIPS adversary with scalar work below 569 never wins, with no lifetime premise. -/
+/-- A dominating scalar policy gives zero FIPS winning probability under an almost-sure work cap
+below 569, without a signing-lifetime premise. -/
 theorem advantage_eq_zero_fips (policy : Event FIPS205.Answer → Nat)
     (hdom : ∀ event, selectedWork (sourcePolicy event) ≤ policy event)
     (adv : Game.Adversary FIPS205.Answer (PublicKeyCore FIPS205.core))

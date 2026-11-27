@@ -11,7 +11,12 @@ public import HashSig.SLHDSA.Security.PrfKeyBound
 import HashSig.SLHDSA.Security.Transport
 import VCVio.OracleComp.Constructions.SampleableType.Measure
 
-/-! # Probabilities of graph collisions and activated private-key clashes -/
+/-!
+# Probabilities of graph collisions and activated private-key clashes
+
+Encoding aliases for the message key require an admitted signing attempt. The joint hazard bound
+uses the public cache and the attempt count on the same run.
+-/
 
 public section
 

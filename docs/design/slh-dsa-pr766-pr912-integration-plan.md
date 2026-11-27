@@ -1,9 +1,6 @@
 # SLH-DSA integration plan for PRs 766 and 912
 
-Status: execution specification and implementation record, updated 2026-10-24. The pinned inputs
-and pre-implementation probes are historical evidence. Completed implementation checkpoints are
-listed in the execution record below; final combined validation and merging require their own
-explicit acceptance at the exact new source head.
+Status: historical record of the additive integration. Its original probes, revisions and acceptance criteria are retained below. The subsequent consolidation derives the SHAKE-128s result on the native FIPS byte game. [Additive integration](https://github.com/Verified-zkEVM/VCVio/pull/912) · [Consolidation](https://github.com/Verified-zkEVM/VCVio/pull/1009) · [Current theorem guide](slh-dsa-shake128s-suf-cma.md)
 
 Preserve #766's general classical-ROM security results and reusable framework APIs. Land #912
 as an additional deterministic SHAKE-128s result, connect it to the existing wire-game API, and

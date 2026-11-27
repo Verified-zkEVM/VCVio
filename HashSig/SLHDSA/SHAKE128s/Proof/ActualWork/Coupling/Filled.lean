@@ -12,7 +12,13 @@ public import HashSig.SLHDSA.SHAKE128s.Proof.ActualWork.Coupling.Guarded
 import all HashSig.SLHDSA.SHAKE128s.Proof.ActualWork.Coupling.Guarded
 public import HashSig.SLHDSA.SHAKE128s.Proof.ActualWork.Work.JointBudget
 
-/-! # The guarded FIPS experiment and its filled typed transcript -/
+/-!
+# The guarded FIPS experiment and its filled typed transcript
+
+The sampled secret seeds and the guarded outcome reconstruct the FIPS secret key while retaining
+the public key, replies, cache and costs. The FIPS winning probability is bounded by a win or a
+cache hazard in the filled experiment, plus the weak-key contribution.
+-/
 
 public section
 

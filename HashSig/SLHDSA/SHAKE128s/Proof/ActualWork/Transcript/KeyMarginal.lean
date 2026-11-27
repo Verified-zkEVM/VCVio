@@ -30,7 +30,12 @@ public import HashSig.SLHDSA.SHAKE128s.Proof.ActualWork.Transcript.DeferredLaw
 
 import all HashSig.SLHDSA.SHAKE128s.Proof.ActualWork.Transcript.KeygenOrigins
 
-/-! # Public-key marginal of the guarded signing experiment -/
+/-!
+# Public-key marginal of the guarded signing experiment
+
+Key generation from the empty cache does not consume the signer or forger tapes. Factoring this
+prefix identifies the public-key marginal of the complete native run.
+-/
 
 public section
 section

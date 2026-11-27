@@ -187,6 +187,8 @@ def verifyInternal (vp : ValidatedParams) (prims : Primitives vp.params)
   simulateQ (PublicHash.impl prims)
     (verifyInternalM vp prims.core msg sig pk : OracleComp (publicHashSpec prims.core) Bool)
 
+/-- Interpreting the public-hash queries with the concrete primitives gives the same key pair as
+internal key generation on the supplied seeds. -/
 @[simp]
 theorem simulateQ_keygenInternalM (vp : ValidatedParams) (prims : Primitives vp.params)
     (skSeed : prims.SkSeed) (skPrf : prims.SkPrf) (pkSeed : prims.PkSeed) :
@@ -196,6 +198,8 @@ theorem simulateQ_keygenInternalM (vp : ValidatedParams) (prims : Primitives vp.
             (PublicKeyCore prims.core × SecretKeyCore prims.core)) =
       keygenInternal vp prims skSeed skPrf pkSeed := rfl
 
+/-- Interpreting the signing queries with the concrete primitives gives the same internal
+signature for the supplied message, secret key and randomizer input. -/
 @[simp]
 theorem simulateQ_signInternalM (vp : ValidatedParams) (prims : Primitives vp.params)
     (msg : List Byte) (sk : SecretKeyCore prims.core) (addrnd : prims.Y) :
@@ -220,6 +224,8 @@ theorem signInternal_eq_signInternalWithRandomizer (vp : ValidatedParams)
       signInternalWithRandomizer vp prims msg sk.skSeed sk.pkSeed sk.pkRoot
         (prims.PRFmsg sk.skPrf addrnd msg) := rfl
 
+/-- For a prescribed message randomizer, interpreting the public-hash queries gives the
+signature computed by the pure signer at that same randomizer. -/
 @[simp]
 theorem simulateQ_signInternalWithRandomizerM (vp : ValidatedParams)
     (prims : Primitives vp.params) (msg : List Byte) (skSeed : prims.SkSeed)
@@ -229,6 +235,8 @@ theorem simulateQ_signInternalWithRandomizerM (vp : ValidatedParams)
           OracleComp (publicHashSpec prims.core) (SignatureCore vp prims.core)) =
       signInternalWithRandomizer vp prims msg skSeed pkSeed pkRoot R := rfl
 
+/-- Interpreting the verifier’s public-hash queries with the concrete primitives gives the same
+Boolean result as pure internal verification. -/
 @[simp]
 theorem simulateQ_verifyInternalM (vp : ValidatedParams) (prims : Primitives vp.params)
     [DecidableEq prims.Y]

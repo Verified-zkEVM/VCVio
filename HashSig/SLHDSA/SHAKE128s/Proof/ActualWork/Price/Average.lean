@@ -12,6 +12,9 @@ import all HashSig.SLHDSA.SHAKE128s.Proof.ActualWork.Coupling.Tapes
 
 /-!
 # Averaging graph charges and weak keys over terminal blocks
+
+The proof averages terminal charges over the sampled tapes and public seed. The weak-key
+contribution is bounded using the key marginal of the same execution.
 -/
 
 public section

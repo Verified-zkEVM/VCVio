@@ -14,7 +14,12 @@ import all HashSig.SLHDSA.SHAKE128s.Proof.ActualWork.Coverage.Keygen
 import all HashSig.SLHDSA.SHAKE128s.Proof.ActualWork.Work.Verification
 import all HashSig.SLHDSA.Security.NativeCounts
 
-/-! # Joint work accounting for a signing client that can reject requests -/
+/-!
+# Joint work accounting for a signing client that can reject requests
+
+The callback records each admitted signing request, including malformed requests that receive no
+signature. Its count bounds extend through the adaptive client and final verification.
+-/
 
 public section
 

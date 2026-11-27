@@ -9,7 +9,13 @@ public import VCVio.CryptoFoundations.SignatureAlg.CountedExperiment.CostMap
 public import Mathlib.Algebra.FreeMonoid.Basic
 public import HashSig.SLHDSA.SHAKE128s.Bridge.SharedExperiment.Joint
 
-/-! # Declared scalar budgets of one shared counted experiment -/
+/-!
+# Declared scalar budgets of one shared counted experiment
+
+Observing both source counts and a scalar cost on the same execution preserves the signing log
+and verification result. Eventwise domination transports the scalar cap to the selected-work
+cap.
+-/
 
 public section
 

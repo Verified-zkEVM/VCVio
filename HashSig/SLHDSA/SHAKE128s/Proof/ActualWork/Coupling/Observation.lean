@@ -9,7 +9,12 @@ module
 public import HashSig.SLHDSA.SHAKE128s.Bridge.SharedExperiment.Joint
 import VCVio.OracleComp.SimSemantics.StateT.StateProjection
 
-/-! # Physical and typed observations at the FIPS key sampler -/
+/-!
+# Physical and typed observations at the FIPS key sampler
+
+Projecting the guarded execution to its physical keys, outcome and costs allows a winning run to
+be compared with its typed counterpart, accounting for encoding clashes.
+-/
 
 public section
 

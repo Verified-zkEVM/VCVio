@@ -39,6 +39,8 @@ def signInternalQueryBound (p : Params) : ℕ :=
 def verifyInternalQueryBound (p : Params) : ℕ :=
   1 + (p.k * (p.a + 1) + 1) + GeneralHypertree.recoverQueryBound p
 
+/-- Internal key generation makes at most `keygenInternalQueryBound` public-hash queries for any
+seeds at the validated parameters. -/
 theorem keygenInternalM_isTotalQueryBound (vp : ValidatedParams)
     (core : CorePrimitives vp.params) (skSeed : core.SkSeed) (skPrf : core.SkPrf)
     (pkSeed : core.PkSeed) :
@@ -56,6 +58,8 @@ theorem keygenInternalM_isTotalQueryBound (vp : ValidatedParams)
           SecretKeyCore.mk skSeed skPrf pkSeed pkRoot) :
           OracleComp (publicHashSpec core) _) 0 from trivial)
 
+/-- For any message, key and randomizer input, internal signing makes at most
+`signInternalQueryBound` public-hash queries. -/
 theorem signInternalM_isTotalQueryBound (vp : ValidatedParams)
     (core : CorePrimitives vp.params) (msg : List Byte) (sk : SecretKeyCore core)
     (addrnd : core.Y) :
@@ -79,6 +83,8 @@ theorem signInternalM_isTotalQueryBound (vp : ValidatedParams)
   simpa [signInternalM, signInternalWithRandomizerM, Scheme.Program.sign,
     signInternalQueryBound, R, bind_assoc, Nat.add_assoc] using hbound
 
+/-- For any message, structured signature and public key, internal verification makes at most
+`verifyInternalQueryBound` public-hash queries. -/
 theorem verifyInternalM_isTotalQueryBound (vp : ValidatedParams)
     (core : CorePrimitives vp.params) [DecidableEq core.Y]
     (msg : List Byte) (sig : SignatureCore vp core) (pk : PublicKeyCore core) :

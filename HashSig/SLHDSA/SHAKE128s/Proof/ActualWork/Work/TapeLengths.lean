@@ -9,7 +9,12 @@ module
 public import HashSig.SLHDSA.SHAKE128s.Proof.ActualWork.Transcript.Program
 public import HashSig.SLHDSA.SHAKE128s.Proof.ActualWork.Work.Signing
 
-/-! # Tape lengths for a guarded execution under a joint work cap -/
+/-!
+# Tape lengths for a guarded execution under a joint work cap
+
+The terminal counts of a supported native run bound its consumption of the two digest tapes
+under the joint work cap in the small-budget range.
+-/
 
 public section
 open OracleComp OracleSpec SignatureAlg

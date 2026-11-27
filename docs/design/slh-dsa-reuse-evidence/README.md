@@ -1,11 +1,8 @@
 # Bounded refactor probes
 
-These three frozen research sources validate small interfaces, not a completed shared security
-game or graph/probability port. [The plan](../slh-dsa-reuse-refactor-plan.md) records the unproved
-implementation gates. [evidence.json](evidence.json) binds source/log hashes, exact environment,
-results and limitations; [strength-manifest.json](strength-manifest.json) inventories 77 original
-source declarations in 25 groups. A source-header inventory does not replace kernel statement,
-observer or all-budget proof recovery during implementation.
+The three probes below tested interfaces during planning. Their sources, logs and dependency
+revisions are frozen at the recorded commits. The completed development merged at `040dbc64`.
+[Original plan](../slh-dsa-reuse-refactor-plan.md) · [Probe evidence](evidence.json) · [Original strength inventory](strength-manifest.json) · [Merged proof](https://github.com/Verified-zkEVM/VCVio/pull/1009)
 
 | Source | Validated scope |
 |---|---|

@@ -7,7 +7,12 @@ Authors: Alexander Hicks
 module
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Traversal
 
-/-! # Effect-preserving frame laws for computed graph cells -/
+/-!
+# Effect-preserving frame laws for computed graph cells
+
+Sequencing traversals threads their computed state through each callback. Coordinates outside
+the scheduled writes retain their initial values.
+-/
 
 public section
 
