@@ -32,8 +32,11 @@ structure Subgraph (S : CanonicalGraph pub X K R) (G : CanonicalGraph pub X' K' 
   cell : (X ⊕ K) ↪ (X' ⊕ K')
   /-- The node of the containing graph that supplies each selected public point. -/
   node : K → K'
+  /-- The cell and node maps agree on every selected node label. -/
   node_cell : ∀ k, cell (.inr k) = .inr (node k)
+  /-- The embedding preserves the full ordered list of child cells. -/
   children : ∀ k, G.ch (node k) = (S.ch k).map cell
+  /-- The same child values give the same public query at the embedded node. -/
   point : ∀ k vs, S.pt k vs = G.pt (node k) vs
 
 namespace Subgraph
