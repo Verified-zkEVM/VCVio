@@ -1,5 +1,8 @@
 module  -- shake: keep-all --deprecated_module: ignore
 
+public import HashSig.GXMSS.Security.Interval.Auxiliary.FullRangeInteraction
+public import HashSig.GXMSS.Security.Interval.FullRange
+public import HashSig.GXMSS.Security.Unforgeability
 public import HashSig.SLHDSA.Address
 public import HashSig.SLHDSA.AddressDiscipline
 public import HashSig.SLHDSA.C13.Concrete
