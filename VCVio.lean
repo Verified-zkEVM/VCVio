@@ -465,6 +465,7 @@ public import VCVio.OracleComp.EvalDist.DiscreteTVDistPi
 public import VCVio.OracleComp.EvalDist.List
 public import VCVio.OracleComp.EvalDist.ListSampling
 public import VCVio.OracleComp.EvalDist.Measure
+public import VCVio.OracleComp.EvalDist.PiSampling
 public import VCVio.OracleComp.EvalDist.Sum
 public import VCVio.OracleComp.FinRatPMF
 public import VCVio.OracleComp.HasQuery.Basic
