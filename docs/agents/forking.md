@@ -59,6 +59,23 @@ draws its centre uniformly from the whole challenge space and takes its pools fr
 so no theorem identifies the laws of `blockFinder (ι := Fin 1)` and the threshold finder. The sampler for the whole challenge is an
 argument: `SampleableType.piOfFintype` supplies it for a dependent product.
 
+### Probabilistic children
+
+In a multi-round finder the child of a challenge is itself a randomized search over the later
+rounds. `OracleComp.blockChildStep child k` draws a uniform centre and runs `Rewinding.blockChildren`
+with children `child c : ProbComp (Option W × ℕ)` that report a result and a cost.
+`OracleComp.prEvent_child_le_blockChildStep` is its success clause: if a uniformly drawn child
+succeeds with probability `ε`, the step succeeds with a probability `p` such that
+`ε ≤ κ + (1 - κ) p`, at the same `κ = ∑ j, (k j - 1) / |S j|` as the acceptance-oracle finder.
+The proof draws every child in advance: with probabilistic children the block step has the law of
+the step run on a table of independent results of all children
+(`Rewinding.blockChildren_eager_table`, in
+[`Rewinding/BlockEager.lean`](../../VCVio/CryptoFoundations/Rewinding/BlockEager.lean)), so the
+counting bound holds for every table and the success clause is its expectation. The eager form
+needs the marginals of `Fintype.mPi` along disjoint lists of indices (`Fintype.mPi_map_lists`, in
+[`OracleComp/EvalDist/PiSampling.lean`](../../VCVio/OracleComp/EvalDist/PiSampling.lean)). The cost
+clause with probabilistic children is not proved yet.
+
 ## Quadratic forks: seeded vs replay
 
 The distinction is what gets pre-sampled. Seeding is uniform — it pre-samples *every* oracle family

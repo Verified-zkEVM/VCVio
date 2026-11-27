@@ -531,6 +531,11 @@ families; `lintegral_evalDist_mPi_coord` handles full-mass factors.
 `Fin.mOfFn_map` and `Fintype.mPi_map` move coordinate observations through sequencing.
 `evalDist_map_coord_mOfFn` and `evalDist_map_coord_mPi` then give product measures on the
 chosen observation space without requiring a measurable space on the original payloads.
+For `ProbComp`, `VCVio/OracleComp/EvalDist/PiSampling.lean` states the laws of `Fintype.mPi` in
+distribution: it is a congruence (`Fintype.mPi_evalDistEq`), it runs all first steps of a family of
+binds before the second ones (`Fintype.mPi_bind_evalDistEq`), drawing one coordinate again leaves
+it unchanged (`Fintype.mPi_resample`), and reading it along disjoint lists of distinct indices is
+drawing every list independently (`Fintype.mPi_map_list`, `Fintype.mPi_map_lists`).
 `measurable_evalDist_mOfFn` and `measurable_evalDist_mPi` assemble measurable factor families
 into measurable product families, so `evalDistKernel` packages them as Mathlib kernels on
 the chosen parameter space. The proof uses kernel products and measurable reindexing.
