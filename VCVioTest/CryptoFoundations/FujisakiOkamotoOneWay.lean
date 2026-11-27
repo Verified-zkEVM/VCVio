@@ -54,10 +54,6 @@ example : OW_PCVA_queryImpl idAlg () true (.inr (.inr false)) = pure true := by
 example : OW_PCVA_queryImpl idAlg () true (.inr (.inl (true, true))) = pure true := by
   simp [OW_PCVA_queryImpl]
 
-/-- The canonical `ProbComp` runtime lifts public randomness by the identity. -/
-lemma liftProbComp_probComp {α : Type} (x : ProbComp α) :
-    ProbCompRuntime.probComp.liftProbComp x = x := rfl
-
 /-- Query the validity oracle on the challenge and guess the challenge exactly when it answers
 `true`. -/
 @[expose]
@@ -67,7 +63,7 @@ def validityEchoAdv : OW_PCVA_Adversary idAlg := fun _ cStar => do
 
 /-- The refused validity query makes the echoing adversary lose. -/
 example : OW_PCVA_Advantage ProbCompRuntime.probComp validityEchoAdv = 0 := by
-  simp [OW_PCVA_Advantage, OW_PCVA_Experiment, validityEchoAdv, liftProbComp_probComp]
+  simp [OW_PCVA_Advantage, OW_PCVA_Experiment, validityEchoAdv]
 
 /-- Guess the challenge ciphertext itself. -/
 @[expose]
@@ -75,15 +71,15 @@ def echoAdv : OW_PCVA_Adversary flipAlg := fun _ cStar => pure cStar
 
 /-- Echoing the challenge wins the usual OW-PCVA game against the flipping scheme. -/
 example : OW_PCVA_Advantage ProbCompRuntime.probComp echoAdv = 1 := by
-  simp [OW_PCVA_Advantage, OW_PCVA_Experiment, echoAdv, liftProbComp_probComp]
+  simp [OW_PCVA_Advantage, OW_PCVA_Experiment, echoAdv]
 
 /-- Echoing the challenge loses the HHK17 OW-PCVA game against the flipping scheme. -/
 example : OW_PCVA_PcoAdvantage ProbCompRuntime.probComp echoAdv = 0 := by
-  simp [OW_PCVA_PcoAdvantage, OW_PCVA_PcoExperiment, echoAdv, liftProbComp_probComp]
+  simp [OW_PCVA_PcoAdvantage, OW_PCVA_PcoExperiment, echoAdv]
 
 /-- The flipping scheme always decrypts the challenge incorrectly. -/
 example : OW_PCVA_DecryptionError ProbCompRuntime.probComp echoAdv = 1 := by
-  simp [OW_PCVA_DecryptionError, OW_PCVA_DecryptionErrorExperiment, echoAdv, liftProbComp_probComp]
+  simp [OW_PCVA_DecryptionError, OW_PCVA_DecryptionErrorExperiment, echoAdv]
 
 /-- The explicit-coins flipping scheme, with unit coins. -/
 @[expose, simps]

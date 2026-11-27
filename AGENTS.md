@@ -235,6 +235,7 @@ Security notions, experiments, games, and advantages follow
 - Query enforcement: `VCVio/OracleComp/QueryTracking/Enforcement.lean`
 - Seeded (Bellare-Neven) forking lemma: `VCVio/CryptoFoundations/SeededFork.lean`
 - Replay-based forking lemma: `VCVio/CryptoFoundations/ReplayFork.lean`
+- Coordinate-wise special soundness and its single-round rewinding extractor (eprint 2023/846 §2.9 and §7.1): `VCVio/CryptoFoundations/CoordinateFork.lean`, `VCVio/CryptoFoundations/CoordinateFork/Operational.lean`, `VCVio/CryptoFoundations/CoordinateFork/Realizability.lean`, `VCVio/CryptoFoundations/CoordinateFork/SpecialSoundness.lean`, `VCVio/CryptoFoundations/CoordinateFork/Extraction.lean`, `VCVio/CryptoFoundations/CoordinateFork/Finder.lean`, and with an alphabet and a threshold per coordinate `VCVio/CryptoFoundations/CoordinateFork/BlockOperational.lean` and `VCVio/CryptoFoundations/CoordinateFork/BlockFinder.lean`, over the combinatorics in `ToMathlib/Combinatorics/CoordinateWise.lean`
 - Independent products of computations: `VCVio/EvalDist/IndepProduct.lean`
 - Drawing without replacement and its expected draw count: `VCVio/OracleComp/Constructions/WithoutReplacement.lean`, `ToMathlib/Probability/NegativeHypergeometric.lean`
 - Expected values of `ℝ≥0∞`-valued functionals (`wp` and `∫⁻` against `𝒟[mx]`): `VCVio/ProgramLogic/Unary/HoareTriple.lean`
@@ -463,6 +464,8 @@ Before working in a specific area, read the relevant guide in `docs/agents/`:
 - **Probability reasoning (EvalDist, ProbComp)**: [`docs/agents/probability.md`](docs/agents/probability.md)
 - **Converting code written against the removed discrete `Pr[…]` API**: [`docs/agents/probability-migration.md`](docs/agents/probability-migration.md)
 - **Crypto primitives and reductions**: [`docs/agents/crypto.md`](docs/agents/crypto.md)
+- **Forking lemmas and black-box finders (seeded / replay / coordinate-wise / threshold)**: [`docs/agents/forking.md`](docs/agents/forking.md)
+- **Rewinding: reset policies, finders against frozen reruns, transcript recovery, query cost**: [`docs/agents/rewinding.md`](docs/agents/rewinding.md)
 - **End-to-end crypto examples**: [`docs/agents/end-to-end-examples.md`](docs/agents/end-to-end-examples.md)
 - **Program logic tactics**: [`docs/agents/program-logic.md`](docs/agents/program-logic.md)
 - **All notation**: [`docs/agents/notation.md`](docs/agents/notation.md)

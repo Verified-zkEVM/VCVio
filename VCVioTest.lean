@@ -18,6 +18,7 @@ public import VCVioTest.CryptoFoundations.FiatShamirStateSteps
 public import VCVioTest.CryptoFoundations.FiatShamirWithAbortCanary
 public import VCVioTest.CryptoFoundations.FiatShamirWithAbortInstance
 public import VCVioTest.CryptoFoundations.FujisakiOkamotoOneWay
+public import VCVioTest.CryptoFoundations.KEMAno
 public import VCVioTest.CryptoFoundations.KeyedHashCovering
 public import VCVioTest.CryptoFoundations.LeftOrRight
 public import VCVioTest.CryptoFoundations.MerkleTreeCacheRefinement
@@ -25,6 +26,7 @@ public import VCVioTest.CryptoFoundations.MerkleTreeCostRefinement
 public import VCVioTest.CryptoFoundations.OracleClosure
 public import VCVioTest.CryptoFoundations.PRFMultiKey
 public import VCVioTest.CryptoFoundations.PRFTableMeasure
+public import VCVioTest.CryptoFoundations.SDH
 public import VCVioTest.CryptoFoundations.SignatureAlg
 public import VCVioTest.CryptoFoundations.SignatureAlgBudget
 public import VCVioTest.CryptoFoundations.SignatureAlgRouted
@@ -60,10 +62,16 @@ public import VCVioTest.FirstSuccess
 public import VCVioTest.FischlinExpectedCost
 public import VCVioTest.FischlinExtraction
 public import VCVioTest.ForkBounds
+public import VCVioTest.Forking.BlockCoordinateWise
+public import VCVioTest.Forking.BlockFinder
+public import VCVioTest.Forking.CoordSpecialSoundness
+public import VCVioTest.Forking.CoordinateFinder
+public import VCVioTest.Forking.CoordinateFork
 public import VCVioTest.Forking.WithoutReplacement
 public import VCVioTest.Foundations
 public import VCVioTest.GrindFailFast
 public import VCVioTest.GroupModel.Basic
+public import VCVioTest.GroupModel.Certificate
 public import VCVioTest.GroupModel.Collision
 public import VCVioTest.GroupModel.Cost
 public import VCVioTest.GroupModel.Decisional
@@ -76,7 +84,9 @@ public import VCVioTest.GroupModel.GenericPairing
 public import VCVioTest.GroupModel.GenericRelation
 public import VCVioTest.GroupModel.GenericSDH
 public import VCVioTest.GroupModel.GenericSXDH
+public import VCVioTest.GroupModel.GenericUber
 public import VCVioTest.GroupModel.GenericXDH
+public import VCVioTest.GroupModel.HashToGroup
 public import VCVioTest.GroupModel.Instances
 public import VCVioTest.GroupModel.Interaction.Axioms
 public import VCVioTest.GroupModel.Interaction.Basic
@@ -92,6 +102,9 @@ public import VCVioTest.HashChainAntichain
 public import VCVioTest.HashChainExtraction
 public import VCVioTest.HashChainStrongPayload
 public import VCVioTest.ITSR
+public import VCVioTest.IncomparableEncoding.Basic
+public import VCVioTest.IncomparableEncoding.Code
+public import VCVioTest.IncomparableEncoding.Retry
 public import VCVioTest.IndexedChain
 public import VCVioTest.KernelSemantics
 public import VCVioTest.ListCache
@@ -119,6 +132,7 @@ public import VCVioTest.OracleComp.BudgetedPotential
 public import VCVioTest.OracleComp.CostSimulation
 public import VCVioTest.OracleComp.CostedCacheReplay
 public import VCVioTest.OracleComp.EqDistTriple
+public import VCVioTest.OracleComp.LargeResultUniverse
 public import VCVioTest.OracleComp.LoggedHistory
 public import VCVioTest.OracleComp.MeasuredProgram
 public import VCVioTest.OracleComp.PreservesInv
@@ -126,6 +140,7 @@ public import VCVioTest.OracleComp.Query
 public import VCVioTest.OracleComp.QueryAndHandlerLaws
 public import VCVioTest.OracleComp.QueryLogRelabel
 public import VCVioTest.OracleComp.QueryTracking.QueryLog
+public import VCVioTest.OracleComp.QueryTracking.SlotRenaming
 public import VCVioTest.OracleComp.SchwartzZippel
 public import VCVioTest.OracleComp.SecurityFamily
 public import VCVioTest.OracleComp.SimulateQ
@@ -228,6 +243,7 @@ public import VCVioTest.ReplayCheckpoint
 public import VCVioTest.ResumptionCompatibility
 public import VCVioTest.Rewinding
 public import VCVioTest.RewindingCost
+public import VCVioTest.RewindingExtraction
 public import VCVioTest.RoundByRound.OneRound
 public import VCVioTest.Runtime
 public import VCVioTest.SMDTDSPR
@@ -242,17 +258,24 @@ public import VCVioTest.SMDTUD
 public import VCVioTest.SMDTUDFinalValidity
 public import VCVioTest.SaltedMerkle
 public import VCVioTest.SampleableType
+public import VCVioTest.Schemes.BLS
+public import VCVioTest.Schemes.BLSAGM
+public import VCVioTest.Schemes.BLSAggregate
+public import VCVioTest.Schemes.BLSGeneric
 public import VCVioTest.Schemes.KEMDEM
 public import VCVioTest.Schemes.MerkleDamgard
 public import VCVioTest.Schemes.Pedersen.Generic
 public import VCVioTest.Schemes.Schnorr.ChallengeRestriction
 public import VCVioTest.Schemes.Schnorr.Transforms
+public import VCVioTest.Schemes.SchnorrAGM
 public import VCVioTest.Schemes.VectorPedersen
 public import VCVioTest.SeparatedOTP
 public import VCVioTest.SigmaProtocolMonad
+public import VCVioTest.SigningKernel
 public import VCVioTest.Smoke
 public import VCVioTest.StateSeparating.Measure
 public import VCVioTest.StateTLift
+public import VCVioTest.SyncSignatureAlg
 public import VCVioTest.Tactic.Expectation
 public import VCVioTest.Tactic.Finiteness
 public import VCVioTest.Tactic.FunProp
@@ -274,4 +297,5 @@ public import VCVioTest.UniversePolymorphism
 public import VCVioTest.Unpredictability
 public import VCVioTest.UntilBadBind
 public import VCVioTest.VCGenAmbiguity
+public import VCVioTest.WeightedQueryBound
 public import VCVioTest.WriterCostStateT

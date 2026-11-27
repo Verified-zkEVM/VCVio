@@ -503,7 +503,7 @@ theorem IND_CPA_Advantage_le [Fintype R] [DecidableEq R] (prf : PRFScheme K R M)
     rw [prfAdvantage, prfRealExperiment_prfReduction, prfIdealExperiment_prfReduction]
   have hI := fun b => boolDist_rfImpl_freshImpl_le leak b adversary (fun _ => rfl) hq
   have hF := evalDist_run'_freshImpl_eq (R := R) leak adversary
-  rw [SymmEncAlg.IND_CPA_Advantage_probComp]
+  rw [SymmEncAlg.IND_CPA_Advantage_eq_boolDist]
   set G := fun b => 𝒟[(scheme prf).IND_CPA_Experiment leak adversary b]
   set I := fun b => 𝒟[(simulateQ (rfImpl leak b) adversary).run' []]
   set F := fun b => 𝒟[(simulateQ (freshImpl (R := R) leak b) adversary).run' []]
