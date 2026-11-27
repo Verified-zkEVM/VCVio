@@ -53,6 +53,21 @@ lemma lookup?_cons (t' : spec.Domain) (u : spec.Range t') (rest : QueryLog spec)
       = if ht : t' = t then some (ht ▸ u) else lookup? rest t := by
   by_cases ht : t' = t <;> simp [lookup?, getQueryValue?, ht]
 
+/-- The reply returned by a successful first-match lookup occurs in the log. -/
+theorem mem_of_lookup?_eq_some (log : QueryLog spec) (t : spec.Domain) (v : spec.Range t)
+    (h : log.lookup? t = some v) : ⟨t, v⟩ ∈ log := by
+  induction log with
+  | nil => simp at h
+  | cons a log ih =>
+    obtain ⟨q, u⟩ := a
+    rw [lookup?_cons] at h
+    split at h
+    next eq =>
+      subst q
+      cases Option.some.inj h
+      exact .head _
+    next => exact .tail _ (ih h)
+
 /-- `lookup?` scans left-to-right through an append: the second log answers only the
 queries the first leaves unanswered. -/
 lemma lookup?_append (l₁ l₂ : QueryLog spec) (t : spec.Domain) :

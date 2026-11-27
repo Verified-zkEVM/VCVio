@@ -100,3 +100,33 @@ theorem run_withAddCost_eq_extendState
     Prod.map, id_eq] using atState
 
 end OracleComp
+
+open OracleComp
+
+namespace QueryImpl
+
+/-- A per-query bound on the increase of a state quantity adds along the actual charged run. -/
+theorem resource_le_runAdd {ι ι' σ α : Type} {spec : OracleSpec ι} {target : OracleSpec ι'}
+    (impl : QueryImpl spec (StateT σ (OracleComp target))) (resource : σ → ℕ∞) (cost : ι → Nat)
+    (step : ∀ t s z, z ∈ support ((impl t).run s) → resource z.2 ≤ resource s + cost t)
+    (oa : OracleComp spec α) (s : σ) (z : (α × Nat) × σ)
+    (hz : z ∈ support (((simulateQ (impl.withAddCost cost) oa).runAdd).run s)) :
+    resource z.2 ≤ resource s + z.1.2 := by
+  induction oa using OracleComp.inductionOn generalizing s z with
+  | pure a =>
+    simp only [simulateQ_pure, AddWriterT.runAdd_pure, StateT.run_pure, mem_support_pure_iff] at hz
+    subst z
+    simp
+  | query_bind t next ih =>
+    have charge : ((impl.withAddCost cost) t).runAdd = (fun u => (u, cost t)) <$> impl t := by
+      simp [withAddCost, withCost_apply, AddWriterT.runAdd, WriterT.run_bind, Functor.map_map]
+    rw [simulateQ_bind, simulateQ_spec_query, AddWriterT.runAdd_bind, charge,
+      bind_map_left, StateT.run_bind, mem_support_bind_iff] at hz
+    obtain ⟨u, hu, rest⟩ := hz
+    rw [StateT.run_map, support_map] at rest
+    obtain ⟨v, hv, rfl⟩ := rest
+    apply (ih u.1 u.2 v hv).trans
+    have h := add_le_add_left (step t s u hu) (v.1.2 : ℕ∞)
+    simpa [Nat.cast_add, add_comm, add_left_comm, add_assoc] using h
+
+end QueryImpl
