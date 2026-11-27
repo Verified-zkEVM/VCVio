@@ -1,5 +1,22 @@
 module  -- shake: keep-all --deprecated_module: ignore
 
+public import HashSig.GXMSS.Interval.Filler
+public import HashSig.GXMSS.Interval.Filler.Basic
+public import HashSig.GXMSS.Interval.Filler.Counting
+public import HashSig.GXMSS.Interval.Filler.Sampling
+public import HashSig.GXMSS.Security.Auxiliary.HashWitnesses
+public import HashSig.GXMSS.Security.Interval.Auxiliary.FillerOpening
+public import HashSig.GXMSS.Security.Interval.Auxiliary.FillerTargets
+public import HashSig.GXMSS.Security.Interval.Auxiliary.Interaction
+public import HashSig.GXMSS.Security.Interval.Auxiliary.MerkleWitnesses
+public import HashSig.GXMSS.Security.Interval.Auxiliary.MerkleWitnesses.Collision
+public import HashSig.GXMSS.Security.Interval.Auxiliary.MerkleWitnesses.Frontier
+public import HashSig.GXMSS.Security.Interval.Auxiliary.MerkleWitnesses.Opening
+public import HashSig.GXMSS.Security.Interval.Reductions.FillerGames
+public import HashSig.GXMSS.Security.Interval.Reductions.FillerGames.Bounds
+public import HashSig.GXMSS.Security.Interval.Reductions.FillerGames.Reductions
+public import HashSig.GXMSS.Security.Interval.Reductions.FillerGames.Setup
+public import HashSig.GXMSS.Security.Interval.Reductions.SourcePartition
 public import HashSig.SLHDSA.Address
 public import HashSig.SLHDSA.AddressDiscipline
 public import HashSig.SLHDSA.C13.Concrete
