@@ -362,3 +362,40 @@ Guo–Li–Liu–Zhang,
 specifies unbounded preprocessing with bounded classical advice; its discussion of barriers
 to classical presampling against quantum queries is relevant when choosing that track's
 intermediate model. Neither this model nor bounded quantum advice is currently implemented.
+
+### 17. Exact pointer-chain encoding prerequisites
+
+The exact pointer-chain puzzle has six oracle families with different state and link widths,
+ordinary iterated hash chains, an accumulator,
+and a published key commitment. Even with one chain and no public masked links, obtaining the
+key requires the internal chain, accumulator and key hash. leanSeal §4.4 states that its
+exact-encoding theorem is classical. Its §4.4 cites the idealized quantum puzzle of
+[Afshar et al.](https://eprint.iacr.org/2023/932), and §8.3 item 4 asks to extend that analysis
+to truncated links, the accumulator and the commitment.
+A round-bounded quantum recovery theorem requires additional analysis.
+
+The raw interface supplies the raw finite-window oracle, its injective honest-input encoding
+`hashInputWindow_injective`, and fixed-oracle agreement of the honest generator and solver
+with the byte algorithms. Coherent
+superpositions across labels, unused response bytes and outside-image inputs remain available.
+
+A separate encoding result, `Equiv.tableSplit`, decomposes a raw table into typed-answer,
+tail and outside-image tables. Its uniform reparameterization laws preserve observations
+jointly with the hidden table while leaving the quantum query signature unchanged. These are
+standalone table-encoding results; they are separate from the raw encoding interface.
+
+The current homogeneous QROM model requires a finite input type. `ByteArray.Bounded`
+contains every byte string up to a stated maximum length, including malformed and unlabelled
+inputs. Honest leanSeal hash inputs have lengths `52` (steps), `54+b` (starts), `81` (masks),
+`80` (accumulator and key), and `83` (commitments). A window of at least `max(54+b,83)` includes
+them all; `86` suffices for valid link widths. An exact theorem in that window must retain
+its explicit input-length scope. It is not a theorem for arbitrary-length byte queries.
+The honest algorithms use structured public puzzles and agree with the source `gen` and
+`solve` for every fixed byte-answer function restricted to the window. A serialized public
+puzzle interface and a theorem for arbitrary serialized solver inputs remain separate.
+
+The honest quantum program `quantumWindowDerive` has round bound
+`keyRound n m = n*(m+2)+1` and point bound `n*(m+3)`.
+`evalDist_quantumWindowDerive_genWith` proves that its fixed-oracle honest-generation law is
+a point mass at the generated key. The checked solver uses one further commitment-validation
+call; its full budget is `keyRound n m + 1` rounds and `solvePoints n m` points.
