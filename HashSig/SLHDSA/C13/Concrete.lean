@@ -20,7 +20,7 @@ Wires pure-Lean `keccak256` into the C13 abstract bundle, following `SPHINCs-C13
 - `F`/`H`/`T_ℓ`/`PRF` = `keccak256(seed32 ‖ ADRS32 ‖ payload)` truncated to the **top** 16 bytes;
 - `H_msg = keccak256(PK.seed ‖ PK.root ‖ R ‖ message ‖ 0xFF·32)` as the full 256-bit integer;
 - `H_wots = keccak256(PK.seed ‖ ADRS32 ‖ node ‖ counter)` as the 256-bit integer, counter in the
-  top 4 bytes of its word.
+  low 4 bytes of its 32-byte big-endian word.
 
 A fixed-width decoder for the 3688-byte C13 signature and an executable `verifyBytes` are
 provided for byte-exact KAT checks against the on-chain verifier.

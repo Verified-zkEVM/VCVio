@@ -9,7 +9,12 @@ public import HashSig.SLHDSA.Wots.Program
 import all HashSig.SLHDSA.Wots.Program
 public import VCVio.Algorithms.IndexedChain.Basic
 
-/-! # Algebra of ordered callback chains -/
+/-!
+# Algebra of ordered callback chains
+
+The callback chain composes consecutive intervals in execution order. These identities allow an
+effectful WOTS chain to be split at an intermediate step.
+-/
 
 public section
 

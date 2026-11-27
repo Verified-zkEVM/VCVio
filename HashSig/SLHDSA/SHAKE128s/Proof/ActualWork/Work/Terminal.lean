@@ -11,7 +11,12 @@ public import HashSig.SLHDSA.SHAKE128s.Proof.ActualWork.Work.TapeLengths
 public import HashSig.SLHDSA.SHAKE128s.Proof.ActualWork.Work.DigestCache
 public import HashSig.SLHDSA.SHAKE128s.Proof.ActualWork.Transcript.Support
 
-/-! # Terminal cache accounting on a complete guarded execution -/
+/-!
+# Terminal cache accounting on a complete guarded execution
+
+The terminal reserve relates graph entries, digest cache entries and the two class counts to the
+paid work of one supported execution.
+-/
 
 public section
 open OracleComp OracleSpec SignatureAlg

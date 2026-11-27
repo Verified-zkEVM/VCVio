@@ -30,7 +30,13 @@ public import HashSig.SLHDSA.SHAKE128s.Proof.ActualWork.Encoding.EndFill
 public import HashSig.SLHDSA.SHAKE128s.Proof.ActualWork.Transcript.KeygenOrigins
 import all HashSig.SLHDSA.SHAKE128s.Proof.ActualWork.Transcript.KeygenOrigins
 
-/-! # Public and private cache entries in a guarded signing transcript -/
+/-!
+# Public and private cache entries in a guarded signing transcript
+
+Each public cache entry is a fixed point of the router or a message hash at the initial public
+key. Cached and pending private entries constrain derivation addresses and the number of
+admitted signing attempts.
+-/
 
 public section
 
@@ -1354,6 +1360,8 @@ end SLHDSA.SHAKE128s.Bridge.SharedExperiment.Native
 
 namespace SLHDSA.SHAKE128s.Bridge.SharedExperiment.Native
 
+/-- Every supported run retains its public seed. Each public cache entry is a fixed point of the
+router or a message hash at the initial public key. -/
 theorem native_public_provenance :
   ∀ (s : FIPS205.core.PkSeed) (adv : Game.Adversary FIPS205.Answer PK)
     (reserve : Bool) (caps : Nat × Nat)
@@ -1370,6 +1378,8 @@ theorem native_public_provenance :
     terminal hterminal).2
   exact ⟨h.1, h.2.1⟩
 
+/-- Cached or pending PRF derivations use honest addresses. A cached or pending message-key
+derivation requires at least one admitted signing attempt. -/
 theorem native_private_provenance :
   ∀ (s : FIPS205.core.PkSeed) (adv : Game.Adversary FIPS205.Answer PK)
     (reserve : Bool) (caps : Nat × Nat)

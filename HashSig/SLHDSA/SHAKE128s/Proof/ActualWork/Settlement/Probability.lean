@@ -17,7 +17,12 @@ import all HashSig.SLHDSA.SHAKE128s.Proof.ActualWork.Coupling.Tapes
 import all HashSig.SLHDSA.SHAKE128s.Proof.ActualWork.Coupling.Guarded
 import all HashSig.SLHDSA.SHAKE128s.Proof.ActualWork.Price.Graph
 
-/-! # Bounding residual winning probability by actual FORS coverage -/
+/-!
+# Bounding residual winning probability by actual FORS coverage
+
+The remaining winners are covered by a native FORS event. Bounding its probability together with
+the charged hazards yields the middle-range work bound.
+-/
 
 public section
 

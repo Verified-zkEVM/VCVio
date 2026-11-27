@@ -18,7 +18,12 @@ import all HashSig.SLHDSA.SHAKE128s.Proof.ActualWork.Work.HashQuery
 public import HashSig.SLHDSA.SHAKE128s.Proof.ActualWork.Work.Signing
 import all HashSig.SLHDSA.SHAKE128s.Proof.ActualWork.Work.Signing
 
-/-! # Charging the public cache entries of the deferred verification graph -/
+/-!
+# Charging the public cache entries of the deferred verification graph
+
+The accounting assigns weights to raw query markers and follows them through signing and
+verification to bound the graph entries in the terminal cache.
+-/
 
 public section
 

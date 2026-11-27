@@ -16,7 +16,12 @@ import all VCVio.OracleComp.Coercions.Add.Basic
 import all VCVio.OracleComp.Coercions.SubSpec.Basic
 import all Cslib.Foundations.Data.PFunctor.Free
 
-/-! # Fixed-secret simulation of the guarded FIPS key sampler -/
+/-!
+# Fixed-secret simulation of the guarded FIPS key sampler
+
+The simulator resolves private derivations with the sampled secret seeds. The phase and signing
+lemmas describe how this interpretation acts on the guarded FIPS program.
+-/
 
 public section
 

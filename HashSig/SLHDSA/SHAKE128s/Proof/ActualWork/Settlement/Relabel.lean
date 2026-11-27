@@ -62,6 +62,8 @@ private theorem eq_of_observe_nonabort {v w : Value} (e : observe v = observe w)
   subst bw
   cases bv <;> simp_all [observe]
 
+/-- A conflict-free relabeled result can occur with the same value and merged cache in the real
+experiment if the projected public cache contains no entry at any encoded secret input. -/
 theorem realSupport_of_relabel (s : FIPS205.core.PkSeed)
     {α : Type} (free : OracleComp (deriveSpec FIPS205.core) α)
     (val : α) (filled : LabState FIPS205.core) (secret : Secret)
@@ -131,6 +133,8 @@ theorem realSupport_of_relabel (s : FIPS205.core.PkSeed)
     exact ⟨(val, (G.toSplitCache filled, false)), coupledSupport, rfl⟩
   exact realSupport
 
+/-- Equality of event probabilities for the observation and state transfers support membership
+for every nonaborting value paired with that state. -/
 theorem mem_of_observed {σ : Type} {p q : ProbComp (Value × σ)}
     (same : ∀ event : Observation → σ → Prop,
       Pr{let x ← p}[event (observe x.1) x.2] = Pr{let x ← q}[event (observe x.1) x.2])

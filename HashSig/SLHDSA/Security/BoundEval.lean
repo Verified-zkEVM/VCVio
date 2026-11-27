@@ -38,12 +38,13 @@ theorem rationalValue_securityBoundEval (p : Params) {card : ℕ} (hcard : card 
     rationalValue_natCast, rationalValue_div _ hc, rationalValue_weightedTargetCoverEval]
   simp [securityBound, rationalValue, div_eq_mul_inv]
 
-/-- The cardinality of honest addresses from its closed construction-count formula. -/
+/-- The construction-count formula that upper-bounds the number of honest addresses. -/
 @[expose] def honestAdrsCountEval (p : Params) : ℕ :=
   targetCount p .forsF + targetCount p .forsH + targetCount p .forsTl +
     wotsInstanceCount p * p.len * (p.w - 1) + targetCount p .wotsTl + targetCount p .xmssH +
     wotsInstanceCount p * p.len + targetCount p .forsF
 
+/-- The evaluator computes the honest-address upper bound at the validated parameters. -/
 theorem honestAdrsCountEval_eq (vp : ValidatedParams) :
     honestAdrsCountEval vp.params = honestAdrsCount vp := (honestAdrsCount_eq vp).symm
 
@@ -66,6 +67,8 @@ theorem honestAdrsCountEval_eq (vp : ValidatedParams) :
   byteBoundHedgedEval p (qh + GeneralScheme.verifyInternalQueryBound p) qs +
     ((qs : ℚ≥0) + 1) / (256 ^ p.n : ℕ)
 
+/-- The rational evaluator agrees with the deterministic byte-bound expression at the supplied
+hash and signing caps. -/
 theorem rationalValue_byteBoundEval (vp : ValidatedParams) (qh qs : ℕ) :
     rationalValue (byteBoundEval vp.params qh qs) = byteBound vp qh qs := by
   simp only [byteBoundEval, rationalValue_add,
@@ -74,6 +77,8 @@ theorem rationalValue_byteBoundEval (vp : ValidatedParams) (qh qs : ℕ) :
     rationalValue_div _ (by positivity : ((256 ^ vp.params.n : ℕ) : ℚ≥0) ≠ 0),
     rationalValue_natCast, rationalValue_one]
 
+/-- The rational evaluator agrees with the hedged byte-bound expression at the supplied hash and
+signing caps. -/
 theorem rationalValue_byteBoundHedgedEval (vp : ValidatedParams) (qh qs : ℕ) :
     rationalValue (byteBoundHedgedEval vp.params qh qs) = byteBoundHedged vp qh qs := by
   simp only [byteBoundHedgedEval, rationalValue_add, rationalValue_mul,
@@ -83,6 +88,8 @@ theorem rationalValue_byteBoundHedgedEval (vp : ValidatedParams) (qh qs : ℕ) :
     rationalValue_div _ (by positivity : (((256 ^ vp.params.n : ℕ) : ℚ≥0) ^ 2) ≠ 0),
     rationalValue_pow, rationalValue_natCast, rationalValue_one]
 
+/-- Exact rational evaluation gives the deterministic `everySeedBound` expression at the
+supplied caps. -/
 theorem rationalValue_everySeedBoundEval (vp : ValidatedParams) (qh qs : ℕ) :
     rationalValue (everySeedBoundEval vp.params qh qs) = everySeedBound vp qh qs := by
   simp only [everySeedBoundEval, rationalValue_add, rationalValue_mul,
@@ -92,6 +99,8 @@ theorem rationalValue_everySeedBoundEval (vp : ValidatedParams) (qh qs : ℕ) :
     rationalValue_natCast, rationalValue_one]
   rfl
 
+/-- Exact rational evaluation gives the hedged `everySeedBoundHedged` expression at the supplied
+caps. -/
 theorem rationalValue_everySeedBoundHedgedEval (vp : ValidatedParams) (qh qs : ℕ) :
     rationalValue (everySeedBoundHedgedEval vp.params qh qs) = everySeedBoundHedged vp qh qs := by
   simp only [everySeedBoundHedgedEval, rationalValue_add, rationalValue_byteBoundHedgedEval,
@@ -108,6 +117,8 @@ theorem rationalValue_everySeedBoundHedgedEval (vp : ValidatedParams) (qh qs : �
   byteBoundHedgedEval p qh qs + (honestAdrsCountEval p : ℚ≥0) / 2 ^ 256 *
     (if p.n = 32 then min 1 (everySeedBoundHedgedEval p qh qs) else 1)
 
+/-- The deterministic rational evaluator includes the full weak-seed contribution in the
+averaged byte bound. -/
 theorem rationalValue_averagedByteBoundEval (vp : ValidatedParams) (qh qs : ℕ) :
     rationalValue (averagedByteBoundEval vp.params qh qs) = byteBound vp qh qs +
       honestAdrsCount vp / 2 ^ 256 * weakSeedFactor vp (everySeedBound vp qh qs) := by
@@ -117,6 +128,8 @@ theorem rationalValue_averagedByteBoundEval (vp : ValidatedParams) (qh qs : ℕ)
       rationalValue_natCast, rationalValue_byteBoundEval, rationalValue_everySeedBoundEval,
       honestAdrsCountEval_eq, weakSeedFactor_of_n_eq_32, weakSeedFactor_of_ne]
 
+/-- The hedged rational evaluator includes the full weak-seed contribution in the averaged byte
+bound. -/
 theorem rationalValue_averagedByteBoundHedgedEval (vp : ValidatedParams) (qh qs : ℕ) :
     rationalValue (averagedByteBoundHedgedEval vp.params qh qs) = byteBoundHedged vp qh qs +
       honestAdrsCount vp / 2 ^ 256 * weakSeedFactor vp (everySeedBoundHedged vp qh qs) := by

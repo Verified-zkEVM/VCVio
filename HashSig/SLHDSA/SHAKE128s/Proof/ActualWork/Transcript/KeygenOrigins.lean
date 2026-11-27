@@ -26,7 +26,12 @@ import VCVio.OracleComp.SimSemantics.Append.Core
 public import HashSig.SLHDSA.SHAKE128s.Proof.ActualWork.Transcript.Program
 public import HashSig.SLHDSA.SHAKE128s.Proof.ActualWork.Encoding.EndFill
 
-/-! # Private cache origins during SHAKE-128s key generation -/
+/-!
+# Private cache origins during SHAKE-128s key generation
+
+The FIPS root-generation program restricts the derivations that can populate the initially empty
+cache. The resulting provenance statement applies before the signing client starts.
+-/
 
 public section
 section

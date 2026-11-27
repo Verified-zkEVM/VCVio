@@ -11,7 +11,13 @@ public import HashSig.SLHDSA.SHAKE128s.Proof.ActualWork.Price.RootKey
 
 public import HashSig.SLHDSA.SHAKE128s.Proof.ActualWork.Price.SampleSpaces
 
-/-! # Paying the root weak-key term and active key-encoding clashes -/
+/-!
+# Paying the root weak-key term and active key-encoding clashes
+
+Under the work and signing caps, the bound retains the probability of a win or weak key on an
+uncharged run of the filled experiment. It adds the deferred graph and key charge and the
+physical weak-key contribution.
+-/
 
 public section
 

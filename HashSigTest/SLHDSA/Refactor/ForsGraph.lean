@@ -7,7 +7,12 @@ Authors: Alexander Hicks
 module
 public import HashSigTest.SLHDSA.Refactor.ForsGraphSupport
 
-/-! # Native exact observation of direct functional graph cells -/
+/-!
+# Native exact observation of direct functional graph cells
+
+The executable compares the callbacks, replies and retained cells of the canonical FORS
+computation with those of its interpreted graph traversal.
+-/
 
 public section
 

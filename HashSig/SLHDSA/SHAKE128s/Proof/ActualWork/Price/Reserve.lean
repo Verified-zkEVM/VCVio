@@ -12,6 +12,10 @@ import VCVio.OracleComp.EvalDist.Sum
 
 /-!
 # Remaining work after paying for weak keys
+
+Averaging the terminal charge and accounting for weak keys gives the middle branch of the
+joint-work bound. Its value is strictly below the linear 127-bit estimate for every positive
+budget.
 -/
 
 public section
@@ -72,6 +76,8 @@ theorem native_price_with_escapes_le_strict_cap (q : Nat) (small : 2 * q < 2 ^ 1
       gcongr
     _ = _ := by rw [add_assoc, ← add_mul, show (32 : ℝ≥0∞) + 2 = 34 by norm_num]
 
+/-- For every positive budget, the strict-cap expression including the weak-key term is smaller
+than the linear 127-bit bound. -/
 theorem retained_reserve_lt_headline (q : Nat) (hq : 1 ≤ q) :
     ((32*q-1 : Nat) : ℝ≥0∞) / ((16 * 2 ^ 128 : Nat) : ℝ≥0∞) + 34 * weakMass <
       (q : ℝ≥0∞) / ((2^127 : Nat) : ℝ≥0∞) := by

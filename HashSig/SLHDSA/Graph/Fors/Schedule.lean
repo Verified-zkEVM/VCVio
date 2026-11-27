@@ -9,7 +9,12 @@ public import HashSig.SLHDSA.Graph.Children
 public import HashSig.SLHDSA.Fors
 public import VCVio.CryptoFoundations.MerkleTree.Addressed.NatIndexed.Sibling
 
-/-! # Actual FORS signing schedules in structural coordinates -/
+/-!
+# Actual FORS signing schedules in structural coordinates
+
+The schedule orders the provider call and public hashes for each FORS subtree. Its indices
+identify the leaf and authentication nodes selected by each message digit.
+-/
 
 public section
 

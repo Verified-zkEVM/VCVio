@@ -10,7 +10,13 @@ import HashSig.SLHDSA.SHAKE128s.Proof.ActualWork.Security
 public import HashSig.SLHDSA.SHAKE128s.Proof.Experiment
 public import HashSig.SLHDSA.SHAKE128s.Proof.VerificationBudget
 
-/-! # SHAKE-128s strong forgery under an actual joint work cap -/
+/-!
+# SHAKE-128s strong forgery under an actual joint work cap
+
+Erasing the hash counter recovers the signing experiment. The cost of an accepting verification
+gives zero success below 569 units of work. Transport from the FIPS byte game supplies the
+127-bit joint-work certificate.
+-/
 public section
 open OracleComp OracleSpec
 namespace SLHDSA.SHAKE128s.WorkFinal

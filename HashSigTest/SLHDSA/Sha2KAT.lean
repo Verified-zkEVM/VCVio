@@ -10,8 +10,9 @@ public import HashSig.SLHDSA.Concrete.Instance
 /-!
 # SLH-DSA-SHA2-128-24 known-answer regression test
 
-A deterministic reference vector produced by the SPHINCs- C reference
-(`signers/sphincsplus-128-24`, a fork of the SPHINCS+ reference implementation) with
+This test covers the reduced, single-layer SHA2-128-24 research profile outside the twelve
+parameter sets in FIPS 205 Table 2. The SPHINCs- C reference (`signers/sphincsplus-128-24`,
+a fork of the SPHINCS+ reference implementation) produced the deterministic vector with
 `seed = 0^48`, `message = 0x00`, `opt_rand = 0^16`. The hex is
 `pk_seed(16) ‖ pk_root(16) ‖ sig(3856)`.
 
@@ -20,8 +21,8 @@ internal-message entry point `verifyInternalBytes` (`HashSig.SLHDSA.Concrete.Ins
 the valid signature and rejects a tampered message. It also checks that treating the vector's
 message as a raw external message fails, which distinguishes the two interfaces. Together these
 checks validate the whole verification path (SHA-256 / MGF1 / HMAC, `H_msg`, leaf-index split,
-`F`/`H`/`T_ℓ`, the 22-byte `ADRSc` layout, FORS / WOTS+ / XMSS reconstruction, and the FIPS 205
-signature wire format). Run with `lake exe slhdsa_kat`.
+`F`/`H`/`T_ℓ`, the 22-byte `ADRSc` layout, FORS / WOTS+ / XMSS reconstruction, and the signature
+layout at the reduced profile’s widths). Run with `lake exe slhdsa_kat`.
 -/
 
 public section

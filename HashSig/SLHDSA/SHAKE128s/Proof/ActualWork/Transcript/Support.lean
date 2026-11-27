@@ -11,7 +11,12 @@ import HashSig.SLHDSA.SHAKE128s.Proof.ActualWork.Transcript.DeferredLaw
 import HashSig.SLHDSA.SHAKE128s.Proof.ActualWork.Encoding.ActivatedClash
 import HashSig.SLHDSA.SHAKE128s.Proof.DigestTape
 
-/-! # Support of a projected native execution -/
+/-!
+# Support of a projected native execution
+
+For any fixed signer and forger tapes, a reachable native terminal projects to a result in the
+support of the deferred interpreter.
+-/
 
 public section
 open OracleComp OracleSpec SignatureAlg

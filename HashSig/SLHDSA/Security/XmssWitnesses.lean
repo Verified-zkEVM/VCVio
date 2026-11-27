@@ -17,16 +17,13 @@ opens.  The case analysis is the Lean counterpart of the `valid_WOTSTWES`/`valid
 `valid_TCRTRH` split of the EasyCrypt SPHINCS+ development, specialised to one XMSS tree
 (`FL_SL_XMSS_MT_ES.ec`, the three case flags at `:3268-3269`, `:3270-3271` and `:3272-3273`).
 
-## What is proved, and what is not
+## Witness extraction
 
-The `H`-collision half is not new here.  `SLHDSA.xmssPkFromSig_binding` (`Xmss.lean:812`) already
-proves it, over the intrinsic `XmssSigCore` — whose authentication path is `Vector core.Y p.hp`,
-so it carries no path-length hypothesis — and this module consumes it unchanged.  What is added is
-exhaustiveness: `xmssPkFromSig_cases` says that when the binding lemma's leaf hypothesis fails the
-signature recovers the *honest* WOTS+ public key at that leaf, which is the hypothesis
-`wotsPkFromSig_cases` takes, and `xmssPkFromSig_forgeryCases` composes it with the WOTS+
-extractor pair (`findWotsWitness_isSome`, `findWotsWitness_sound`), whose three outcomes are
-`wotsPkFromSig_cases`' three.
+`SLHDSA.xmssPkFromSig_binding` supplies an `H` collision when the recovered leaf differs
+from the honest WOTS+ public key. The authentication path has type `Vector core.Y p.hp`.
+`xmssPkFromSig_cases` also covers the equal-leaf case, which supplies the recovered-key equality for
+`wotsPkFromSig_cases`. Given a distinct second message, `xmssPkFromSig_forgeryCases` combines
+this dichotomy with `findWotsWitness_isSome` and `findWotsWitness_sound` to extract a witness.
 
 Every *deterministic-inclusion* statement below has its free objects drawn from a parameter record
 or a primitive bundle over one, seeds, a structural address, natural-number indices, messages, and
@@ -222,10 +219,8 @@ internal node of height `0 < z ≤ h'` on the leaf's root path — at exactly th
 `xmssNodeAdrs adrs z (idx / 2 ^ z)`, between the honest child pair there and a second, different
 pair.
 
-The proof splits on whether the recovered leaf equals the honest one.  It is exhaustive by
-construction: the split is a decision on a proposition and its negation, and the collision half is
-`xmssPkFromSig_binding` (`Xmss.lean:812`) with `xmssLeaf_eq_wotsPkGen` used to read the honest leaf
-as a WOTS+ public key.
+`SLHDSA.xmssPkFromSig_binding` gives the collision when the recovered leaf differs from the
+honest leaf, and `xmssLeaf_eq_wotsPkGen` identifies the honest leaf with its WOTS+ public key.
 
 Together with its root hypothesis, the collision branch is the `valid_TCRTRH` case of
 `FL_SL_XMSS_MT_ES.ec:3272-3273`, whose extractor is `R_SMDTTCRCTRH_EUFNAGCMA`'s procedure `find`

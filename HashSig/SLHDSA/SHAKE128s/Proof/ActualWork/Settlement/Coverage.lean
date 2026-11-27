@@ -35,7 +35,12 @@ public import HashSig.SLHDSA.SHAKE128s.Proof.ActualWork.Coverage.Forgery
 import all HashSig.SLHDSA.SHAKE128s.Proof.ActualWork.Coupling.Tapes
 import all HashSig.SLHDSA.SHAKE128s.Proof.ActualWork.Coupling.Guarded
 
-/-! # FORS witnesses for successful forgeries with no charged hazard -/
+/-!
+# FORS witnesses for successful forgeries with no charged hazard
+
+A winning forgery outside the charged hazards supplies the leaves selected by its FORS digest
+among the tape positions consumed by the native run.
+-/
 
 public section
 

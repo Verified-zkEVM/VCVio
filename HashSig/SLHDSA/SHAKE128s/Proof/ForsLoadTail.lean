@@ -9,7 +9,12 @@ module
 public import HashSig.SLHDSA.SHAKE128s.Proof.ForsConcentrationSharper
 public import HashSig.SLHDSA.SHAKE128s.Proof.BlockViews
 
-/-! # Uniform FORS load tails and fixed-first-view symmetry -/
+/-!
+# Uniform FORS load tails and fixed-first-view symmetry
+
+A sixth-moment estimate bounds the probability that the sampled FORS load exceeds its cap.
+Symmetry gives the corresponding bound when the first view is fixed.
+-/
 
 public section
 open MeasureTheory ProbabilityTheory OracleComp OracleSpec

@@ -13,7 +13,12 @@ import VCVio.OracleComp.Constructions.SampleableType.Measure
 public import HashSig.SLHDSA.Security.ByteClash
 import HashSig.SLHDSA.SHAKE128s.Bridge.Encodings
 
-/-! # Encoding clashes in the completed random oracle cache -/
+/-!
+# Encoding clashes in the completed random oracle cache
+
+Filling draws the pending cells and retains entries already present. This identifies which
+queries in the completed cache can witness an encoding clash.
+-/
 
 public section
 

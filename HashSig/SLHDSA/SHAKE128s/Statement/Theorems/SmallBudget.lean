@@ -9,7 +9,12 @@ public import HashSig.SLHDSA.SHAKE128s.Statement.FIPS205
 import HashSig.SLHDSA.SHAKE128s.Proof.VerificationBudget
 import HashSig.SLHDSA.SHAKE128s.Bridge.Scheme
 
-/-! # Zero forgery advantage below the SHAKE-128s verification floor -/
+/-!
+# Zero forgery advantage below the SHAKE-128s verification floor
+
+A successful verification needs at least 569 charged queries. An almost-sure cap below that
+threshold gives zero advantage without a signing-lifetime hypothesis.
+-/
 public section
 open OracleComp OracleSpec
 namespace SLHDSA.SHAKE128s

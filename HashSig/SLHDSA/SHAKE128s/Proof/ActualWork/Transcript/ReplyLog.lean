@@ -14,6 +14,9 @@ public import HashSig.SLHDSA.External.Framing
 
 /-!
 # Decoding accepted signing replies and transporting freshness
+
+Decoding the chronological reply log retains accepted typed signatures and skips rejected
+requests. Freshness of an encoded forgery implies freshness in the decoded log.
 -/
 
 public section

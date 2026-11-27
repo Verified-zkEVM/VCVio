@@ -13,7 +13,12 @@ import all HashSig.SLHDSA.Security.NativeRelative
 import all HashSig.SLHDSA.SHAKE128s.Proof.ActualWork.Work.Verification
 import all HashSig.SLHDSA.Security.NativeCounts
 
-/-! # Digest cache cardinality along a marked execution -/
+/-!
+# Digest cache cardinality along a marked execution
+
+An inserted public hash entry can affect only the queried point. This bounds the number of typed
+message-digest entries by the native counts on the same execution.
+-/
 
 public section
 

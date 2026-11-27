@@ -8,7 +8,12 @@ module
 
 public import HashSig.SLHDSA.SHAKE128s.Proof.ActualWork.Encoding.ActivatedClash
 
-/-! # Erasure of sampled tapes on the completed experiment -/
+/-!
+# Erasure of sampled tapes on the completed experiment
+
+Filling the terminal graph and drawing the secret preserve the distribution of the retained tape
+block. Erasing the two tapes recovers the distribution used by the filled experiment.
+-/
 
 public section
 

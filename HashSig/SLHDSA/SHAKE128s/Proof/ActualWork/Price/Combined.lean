@@ -12,6 +12,9 @@ public import HashSig.SLHDSA.SHAKE128s.Proof.ActualWork.Coverage.ExpectedCredit
 
 /-!
 # Summing coverage and graph charges at the terminal cache
+
+FORS coverage and graph or encoding hazards are bounded by a single expected charge evaluated on
+the same terminal block.
 -/
 
 public section

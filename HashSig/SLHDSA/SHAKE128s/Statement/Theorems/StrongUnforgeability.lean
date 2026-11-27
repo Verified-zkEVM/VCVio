@@ -82,7 +82,7 @@ theorem jointWorkBound_lt_of_middle {q : Nat} (low : 569 ≤ q) (high : q < 2 ^ 
   simpa only [weakMass, Nat.cast_pow, Nat.cast_ofNat, mul_div_assoc] using
     retained_reserve_lt_headline q (by omega)
 
-/-- The piecewise work bound preserves the original coefficient at every natural budget. -/
+/-- The piecewise work bound is at most the linear bound `q / 2^127` for every natural budget. -/
 theorem jointWorkBound_le (q : Nat) : jointWorkBound q ≤ (q : ℝ≥0∞) / (2 ^ 127) := by
   by_cases low : q < 569
   · rw [jointWorkBound_of_lt_569 low]

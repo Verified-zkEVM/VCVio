@@ -9,7 +9,12 @@ module
 public import HashSig.SLHDSA.SHAKE128s.Proof.ActualWork.Price.ColdKey
 public import HashSig.SLHDSA.SHAKE128s.Proof.ActualWork.Price.RootCharge
 
-/-! # Charging a successful forgery to coverage, graph events and weak keys -/
+/-!
+# Charging a successful forgery to coverage, graph events and weak keys
+
+The FIPS success probability is bounded by the probability of a remaining winner, the expected
+graph and key charge, and two weak-key contributions.
+-/
 
 public section
 

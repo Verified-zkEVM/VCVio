@@ -11,7 +11,13 @@ public import HashSig.SLHDSA.Security.SeedCoupling
 public import VCVio.OracleComp.QueryTracking.RandomOracle.JointPotential
 import all HashSig.SLHDSA.SHAKE128s.Bridge.SharedExperiment.Joint
 
-/-! # Joint cache consistency of the guarded SHAKE-128s experiment -/
+/-!
+# Joint cache consistency of the guarded SHAKE-128s experiment
+
+The guarded observation records the returned outcome on runs that stay within budget. Its
+distribution relates execution at a fixed secret to the experiment that fills the cache before
+drawing the secret.
+-/
 
 public section
 

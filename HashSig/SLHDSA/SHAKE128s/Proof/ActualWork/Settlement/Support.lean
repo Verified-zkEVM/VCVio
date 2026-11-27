@@ -30,7 +30,12 @@ import all HashSig.SLHDSA.SHAKE128s.Proof.ActualWork.Transcript.DeferredLaw
 import all HashSig.SLHDSA.SHAKE128s.Proof.ActualWork.Transcript.CacheOrigins
 import all HashSig.SLHDSA.SHAKE128s.Proof.ActualWork.Transcript.KeyMarginal
 
-/-! # Nonaborting execution and support of the eager guarded cache -/
+/-!
+# Nonaborting execution and support of the eager guarded cache
+
+The output of a nonaborting guard retains the physical cache. A supported native terminal with a
+conflict-free completion can be realized by the eager interpreter.
+-/
 
 public section
 
@@ -240,6 +245,8 @@ private theorem deferred_forget_metadata_run_eq
     reshapeObserved, reshapePlain, Functor.map_map, Function.comp_def,
     Prod.map, id_eq] using routedProjection
 
+/-- A conflict-free completion of a supported native terminal can occur with the same projected
+output in the eager interpreter. -/
 theorem filled_native_mem_support_eager
     (s : FIPS205.core.PkSeed) (adv : Game.Adversary FIPS205.Answer PK)
     (reserve : Bool) (caps : Nat × Nat)

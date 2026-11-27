@@ -8,7 +8,12 @@ module
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Presampling
 import VCVio.OracleComp.QueryTracking.WriterCost
 
-/-! # Ordinary clients of random-oracle presampling value laws -/
+/-!
+# Return values under random-oracle presampling
+
+The tests compare client return values before and after presampling, including a repeated
+traversal of an entry already in the initial cache.
+-/
 
 public section
 
@@ -184,12 +189,15 @@ namespace VCVioTest.QueryTracking.RandomOraclePresampling.CollidingPrefix
 @[expose] def client : OracleComp (unifSpec + (Unit →ₒ Bool)) Bool :=
   liftM ((unifSpec + (Unit →ₒ Bool)).query (.inr ()))
 
+/-- Distinct Boolean nodes query the same unit input. -/
 theorem not_separated : ¬Separated input := by
   intro h
   exact h false true (by decide) false false rfl
 
+/-- The traversal visits the false node twice. -/
 theorem not_nodup : ¬nodes.Nodup := by decide
 
+/-- The unit input of the traversal is already present in the initial cache. -/
 theorem not_fresh : ¬FreshFor input nodes initial := by
   intro h
   have impossible : some true = (none : Option Bool) := h false (by decide) false

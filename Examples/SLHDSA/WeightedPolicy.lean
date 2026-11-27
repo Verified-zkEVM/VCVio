@@ -7,7 +7,12 @@ Authors: Alexander Hicks
 module
 public import HashSig.SLHDSA.SHAKE128s.Bridge.SharedExperiment.ScalarPolicy
 
-/-! # Input-sensitive scalar budgets of one shared counted experiment -/
+/-!
+# Input-sensitive scalar budgets of one shared counted experiment
+
+A signing attempt costs one. An adversary or verifier hash costs one plus its input length,
+which gives an eventwise comparison with the joint-work policy.
+-/
 
 public section
 

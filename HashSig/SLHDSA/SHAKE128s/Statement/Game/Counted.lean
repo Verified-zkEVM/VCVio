@@ -167,7 +167,7 @@ theorem legacyRun_run {Output C α : Type}
         program.run.runAdd := by
   simp [legacyRun, AddWriterT.runAdd, Functor.map_map]
 
-/-- A cached interpretation retains the whole legacy result and cost under every continuation. -/
+/-- Every continuation receives the returned value, cost, prefixed signing log and final cache. -/
 theorem legacyRun_run_bind {Output C α Cache β : Type}
     {m : Type → Type v} [Monad m] [LawfulMonad m]
     (program : SigningView.LoggedCostM (World Output) Message (Option Bytes) C α)

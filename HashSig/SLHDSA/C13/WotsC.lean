@@ -131,6 +131,8 @@ def wotsPkFromSig (prims : Primitives) (sig : WotsSig prims) (node : prims.Y)
 
 /-! ### Correctness -/
 
+/-- Using the same message node and counter to sign and recover gives all the chain endpoints
+of the generated WOTS+C public key. -/
 theorem wotsPkFromSigTops_wotsSign (prims : Primitives) (node : prims.Y) (sk : prims.SkSeed)
     (pk : prims.PkSeed) (adrs : Adrs) (count : ℕ) :
     wotsPkFromSigTops prims (wotsSign prims node sk pk adrs count) node pk adrs count

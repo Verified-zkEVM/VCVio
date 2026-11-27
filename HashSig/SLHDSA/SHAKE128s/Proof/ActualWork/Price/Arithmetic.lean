@@ -8,7 +8,12 @@ module
 
 public import HashSig.SLHDSA.SHAKE128s.Proof.ActualWork.Work.Signing
 
-/-! # Joint cache and coverage inequalities for SHAKE-128s -/
+/-!
+# Joint cache and coverage inequalities for SHAKE-128s
+
+The denominator-cleared inequalities combine graph, private-key and FORS contributions using
+cache cardinalities and the available joint work.
+-/
 
 public section
 open scoped ENNReal
