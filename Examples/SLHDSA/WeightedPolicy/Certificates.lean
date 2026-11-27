@@ -25,14 +25,16 @@ open scoped ENNReal
 
 namespace SLHDSA.SHAKE128s.Bridge.SharedExperiment.WeightedPolicy
 
-/-- A model adversary with scalar work below 569 never wins, with no lifetime premise. -/
+/-- The byte-sensitive policy gives zero model winning probability under an almost-sure work cap
+below 569, without a signing-lifetime premise. -/
 theorem advantage_eq_zero_model (adv : Game.Adversary HashOutput PublicKey)
     (q : Nat) (hq : q < 569)
     (hcap : Pr{let observed ← run Bridge.model adv}[observed.cost ≤ q] = 1) :
     Pr{let observed ← run Bridge.model adv}[SigningView.Wins id observed.toOutcome] = 0 := by
   exact ScalarPolicy.advantage_eq_zero_model policy policy_domination adv q hq hcap
 
-/-- A FIPS adversary with scalar work below 569 never wins, with no lifetime premise. -/
+/-- The byte-sensitive policy gives zero FIPS winning probability under an almost-sure work cap
+below 569, without a signing-lifetime premise. -/
 theorem advantage_eq_zero_fips
     (adv : Game.Adversary FIPS205.Answer (PublicKeyCore FIPS205.core))
     (q : Nat) (hq : q < 569)

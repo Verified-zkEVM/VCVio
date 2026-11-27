@@ -25,7 +25,7 @@ open scoped ENNReal
 open SLHDSA SLHDSA.Security SLHDSA.SHAKE128s
 namespace SLHDSA.SHAKE128s.Bridge.SharedExperiment
 
-/-- An adversary with zero probability-one joint work allowance has no winning execution. -/
+/-- If joint work is zero with probability one, the probability of winning is zero. -/
 theorem original_zero_work_win_eq_zero
     (adv : Game.Adversary FIPS205.Answer (PublicKeyCore FIPS205.core))
     (hbound : (Game.securityGame FIPS205.scheme).HasQueryBound () Game.adversaryWork adv 0) :

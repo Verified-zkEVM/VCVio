@@ -60,7 +60,7 @@ theorem advantage_le_127 (q : Nat) (hq : 1 ≤ q)
   simpa only [Nat.cast_pow, Nat.cast_ofNat] using
     (advantage_le_jointWorkBound q adversary hlimit hbound).trans (jointWorkBound_le q)
 
-/-- A model adversary below 569 joint calls never wins, with no lifetime or positivity premise. -/
+/-- An almost-sure joint-work cap below 569 gives zero winning probability in the model. -/
 theorem advantage_eq_zero_model (adversary : Game.Adversary HashOutput PublicKey)
     (q : Nat) (hq : q < 569)
     (hbound : (observedGame Bridge.model).HasQueryBound () Game.adversaryWork adversary q) :
