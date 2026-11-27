@@ -731,9 +731,11 @@ public import VCVio.ProgramLogic.Unary.WP.OracleMeasure
 public import VCVio.ProgramLogic.Unary.WP.Probabilistic
 public import VCVio.ProgramLogic.Unary.WP.Probabilistic.Measure
 public import VCVio.Quantum.Comp.Basic
+public import VCVio.Quantum.Comp.ChargeWeight
 public import VCVio.Quantum.Comp.Combinators
 public import VCVio.Quantum.Comp.GradedRuntime
 public import VCVio.Quantum.Comp.Hybrid
+public import VCVio.Quantum.Comp.HybridBudget
 public import VCVio.Quantum.Comp.HybridIndex
 public import VCVio.Quantum.Comp.HybridMeasure
 public import VCVio.Quantum.Comp.HybridProjected
@@ -748,6 +750,7 @@ public import VCVio.Quantum.Comp.Runtime
 public import VCVio.Quantum.Comp.Sequentialize
 public import VCVio.Quantum.Comp.Simulation
 public import VCVio.Quantum.Comp.TotalQueryBound
+public import VCVio.Quantum.Foundations.Hybrid
 public import VCVio.Quantum.Foundations.Parallel
 public import VCVio.Quantum.Oracle.Classical
 public import VCVio.Quantum.Oracle.ClassicalCalls
@@ -783,6 +786,11 @@ public import VCVio.Quantum.Oracle.Emulated
 public import VCVio.Quantum.Oracle.EmulatedTensor
 public import VCVio.Quantum.Oracle.Model
 public import VCVio.Quantum.Oracle.Parallel
+public import VCVio.Quantum.Oracle.ParallelFinding
+public import VCVio.Quantum.Oracle.ParallelHybrid
+public import VCVio.Quantum.Oracle.ParallelPreimage
+public import VCVio.Quantum.Oracle.ParallelReprogramming
+public import VCVio.Quantum.Oracle.ParallelSearch
 public import VCVio.Quantum.Oracle.Sequentialize
 public import VCVio.Quantum.Oracle.UniformSample
 public import VCVio.Quantum.Semantics

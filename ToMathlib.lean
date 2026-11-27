@@ -66,6 +66,8 @@ public import ToMathlib.MeasureTheory.Measure.TotalVariation.Bind
 public import ToMathlib.MeasureTheory.Measure.TotalVariation.Fintype
 public import ToMathlib.MeasureTheory.Measure.TotalVariation.Variation
 public import ToMathlib.MeasureTheory.Measure.UniformTable
+public import ToMathlib.MeasureTheory.Measure.UniformTable.Bounds
+public import ToMathlib.MeasureTheory.Measure.UniformTable.Target
 public import ToMathlib.Order.RelClasses
 public import ToMathlib.OrderEnrichedCategory
 public import ToMathlib.Probability.Divergence.Renyi
