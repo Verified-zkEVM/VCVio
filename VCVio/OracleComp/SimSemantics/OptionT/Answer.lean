@@ -15,7 +15,7 @@ An optional reply permits the handler to stop after retaining the state of its l
 Keeping refusal in the response type allows ordinary stateful estimates on the stopped caller.
 -/
 
-@[expose] public section
+public section
 namespace OracleComp.OptionalAnswer
 
 open OracleSpec
@@ -27,7 +27,7 @@ variable {ι α : Type} {spec : OracleSpec ι}
 abbrev Spec (spec : OracleSpec ι) : OracleSpec ι := fun t => Option (spec.Range t)
 
 /-- A refusal stops the caller before the next adaptive query. -/
-def program (p : OracleComp spec α) : OracleComp (Spec spec) (Option α) :=
+@[expose] def program (p : OracleComp spec α) : OracleComp (Spec spec) (Option α) :=
   (simulateQ (spec := spec) (r := OptionT (OracleComp (Spec spec)))
     (fun t => OptionT.mk (liftM ((Spec spec).query t))) p).run
 

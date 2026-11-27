@@ -18,7 +18,7 @@ Cached accepted selections can grow only when the probe fills the selected posit
 Weighting their mass by the number of accepted rows also pays for a new partner of an older row.
 -/
 
-@[expose] public section
+public section
 
 open OracleSpec OracleComp OracleComp.AcceptedScan
 open scoped ENNReal
@@ -29,22 +29,22 @@ variable {A X Y K D : Type} [Fintype X] [DecidableEq A] [DecidableEq Y] [Samplea
 
 open Classical in
 /-- Positions of the scan already occupied by accepted words before the probe. -/
-noncomputable def validRows (accepted : Finset Y) (encode : X → A)
+@[expose] noncomputable def validRows (accepted : Finset Y) (encode : X → A)
     (c : (A →ₒ Y).QueryCache) : Finset X :=
   Finset.univ.filter fun r => ∃ w ∈ accepted, c (encode r) = some w
 
 /-- Average over the original full word returned by the fresh query. -/
-noncomputable def freshMean (f : Y → ℝ≥0∞) : ℝ≥0∞ :=
+@[expose] noncomputable def freshMean (f : Y → ℝ≥0∞) : ℝ≥0∞ :=
   ∑' w, Pr{let y ← $ᵗ Y}[y = w] * f w
 
 /-- Probability that the finder selects an initially accepted, occupied row. -/
-noncomputable def cachedMass (accepted : Finset Y) (encode : X → A) (xs : List X)
+@[expose] noncomputable def cachedMass (accepted : Finset Y) (encode : X → A) (xs : List X)
     (c : (A →ₒ Y).QueryCache) : ℝ≥0∞ :=
   Pr{let z ← (simulateQ randomOracle (scan accepted encode xs)).run c}[
     ∃ r ∈ validRows accepted encode c, z.1 = some r]
 
 /-- Probability of selecting the probed target after fixing it to an accepted answer. -/
-noncomputable def forcedMass (accepted : Finset Y) (encode : X → A) (xs : List X)
+@[expose] noncomputable def forcedMass (accepted : Finset Y) (encode : X → A) (xs : List X)
     (c : (A →ₒ Y).QueryCache) (target : X) (ref : Y) : ℝ≥0∞ :=
   Pr{let z ←
     (simulateQ randomOracle (scan accepted encode xs)).run (c.cacheQuery (encode target) ref)}[

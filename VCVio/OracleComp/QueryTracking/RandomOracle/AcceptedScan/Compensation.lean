@@ -15,7 +15,7 @@ The number of valid physical inputs and the occupied selection mass pay for new 
 One count is shared across messages and scan schedules at that key.
 -/
 
-@[expose] public section
+public section
 
 open OracleSpec OracleComp OracleComp.AcceptedScan
 open scoped ENNReal

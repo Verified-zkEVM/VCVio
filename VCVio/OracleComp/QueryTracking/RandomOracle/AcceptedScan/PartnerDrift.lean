@@ -16,7 +16,7 @@ public import VCVio.OracleComp.QueryTracking.RandomOracle.AcceptedScan.PartnerSe
 An earlier selected row and the newly queried address can each acquire a partner.
 -/
 
-@[expose] public section
+public section
 
 open OracleSpec OracleComp OracleComp.AcceptedScan
 open scoped ENNReal
@@ -26,19 +26,19 @@ namespace randomOracle.Partners
 variable {A X Y K D : Type} [Fintype X] [DecidableEq A] [DecidableEq Y] [SampleableType Y]
 
 /-- The selected finder position already has a digest partner in this initial cache. -/
-noncomputable def partneredMass (key : A → K) (decode : Y → Option D) (accepted : Finset Y)
-    (encode : X → A) (xs : List X) (c : (A →ₒ Y).QueryCache) : ℝ≥0∞ :=
+@[expose] noncomputable def partneredMass (key : A → K) (decode : Y → Option D)
+    (accepted : Finset Y) (encode : X → A) (xs : List X) (c : (A →ₒ Y).QueryCache) : ℝ≥0∞ :=
   Pr{let z ← (simulateQ randomOracle (scan accepted encode xs)).run c}[
     ∃ r, z.1 = some r ∧ Partner key decode c (encode r)]
 
 /-- Probability that the probe word decodes to a digest already present at the same key. -/
-noncomputable def priorPairRate (key : A → K) (decode : Y → Option D)
+@[expose] noncomputable def priorPairRate (key : A → K) (decode : Y → Option D)
     (c : (A →ₒ Y).QueryCache) (a : A) : ℝ≥0∞ :=
   Pr{let y ← $ᵗ Y}[∃ d, decode y = some d ∧ ∃ b ≠ a, key b = key a ∧
     ∃ w, c b = some w ∧ decode w = some d]
 
 /-- A word decodes to a digest already present at the given key, from any message. -/
-def StoredDigest (key : A → K) (decode : Y → Option D) (c : (A →ₒ Y).QueryCache)
+@[expose] def StoredDigest (key : A → K) (decode : Y → Option D) (c : (A →ₒ Y).QueryCache)
     (k : K) (w : Y) : Prop :=
   ∃ d, decode w = some d ∧ ∃ b, key b = k ∧ ∃ u, c b = some u ∧ decode u = some d
 
