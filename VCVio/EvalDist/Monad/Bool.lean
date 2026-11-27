@@ -16,7 +16,8 @@ public import ToMathlib.MeasureTheory.Measure.Bool
 A fair hidden bit and two lossless Boolean branches have a guessing bias equal to the branches'
 distinguishing distance. The monad is arbitrary; fairness and losslessness are semantic hypotheses.
 Two lossless Boolean computations, each at most as likely as the other to return either bit, have
-the same law.
+the same law. The Boolean distance of two computations is the distance of their probabilities of
+returning `true`.
 -/
 
 public section
@@ -49,6 +50,14 @@ theorem evalDist_boolBias_bind_coin {m : Type → Type v} [Monad m]
   rw [hgame]
   exact Measure.boolBias_bind_coin 𝒟[coin] 𝒟[real] 𝒟[rand]
     htrue hfalse (by simp) (by simp)
+
+/-- The Boolean distance of two computations is the absolute difference of their probabilities of
+returning `true`. -/
+theorem boolDist_evalDist_eq_absDiff {m : Type → Type v} [Monad m] [LawfulMonad m]
+    [EvalDistSemantics m] [LawfulEvalDistSemantics m] (mx my : m Bool) :
+    𝒟[mx].boolDist 𝒟[my] =
+      ENNReal.absDiff (Pr{let x ← mx}[x = true]) (Pr{let x ← my}[x = true]) := by
+  rw [Measure.boolDist, prEvent_eq_evalDist_singleton, prEvent_eq_evalDist_singleton]
 
 /-- Two lossless Boolean computations, each at most as likely as the other to return `true` and to
 return `false`, have the same law: under a probability measure each bit's mass is one minus the

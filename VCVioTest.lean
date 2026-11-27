@@ -24,6 +24,7 @@ public import VCVioTest.CryptoFoundations.LeftOrRight
 public import VCVioTest.CryptoFoundations.MerkleTreeCacheRefinement
 public import VCVioTest.CryptoFoundations.MerkleTreeCostRefinement
 public import VCVioTest.CryptoFoundations.OracleClosure
+public import VCVioTest.CryptoFoundations.PRFIdealHops
 public import VCVioTest.CryptoFoundations.PRFMultiKey
 public import VCVioTest.CryptoFoundations.PRFTableMeasure
 public import VCVioTest.CryptoFoundations.SDH

@@ -301,6 +301,7 @@ public import VCVio.CryptoFoundations.MerkleTree.Salted.Instability
 public import VCVio.CryptoFoundations.PRF
 public import VCVio.CryptoFoundations.PRF.Asymptotic
 public import VCVio.CryptoFoundations.PRF.HiddenBit
+public import VCVio.CryptoFoundations.PRF.Perfect
 public import VCVio.CryptoFoundations.PRG
 public import VCVio.CryptoFoundations.ReplayFork
 public import VCVio.CryptoFoundations.ReplayForkCost
