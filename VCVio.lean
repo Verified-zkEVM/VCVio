@@ -502,6 +502,7 @@ public import VCVio.OracleComp.QueryTracking.CountingOracle.Core
 public import VCVio.OracleComp.QueryTracking.CountingOracle.FirstMoment
 public import VCVio.OracleComp.QueryTracking.CountingOracle.FreshTrials
 public import VCVio.OracleComp.QueryTracking.CountingOracle.ObserveTrials
+public import VCVio.OracleComp.QueryTracking.CountingOracle.TrialCharge
 public import VCVio.OracleComp.QueryTracking.DeterminedCost
 public import VCVio.OracleComp.QueryTracking.Enforcement
 public import VCVio.OracleComp.QueryTracking.ExpectedQueryCount
