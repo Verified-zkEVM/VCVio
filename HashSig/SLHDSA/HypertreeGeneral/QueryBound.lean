@@ -22,6 +22,10 @@ open OracleComp
 
 variable {p : Params}
 
+/-- Recovery of an XMSS signature with the mandatory WOTS+ checksum digit work. -/
+def xmssChecksumRecoverQueryBound (p : Params) : ℕ :=
+  (p.len * (p.w - 1) - (p.w - 1)) + 1 + p.hp
+
 /-- One XMSS signature without the discarded root recovery. -/
 def xmssSignQueryBound (p : Params) : ℕ :=
   p.len * (p.w - 1) + xmssAuthPathQueryBound p p.hp
@@ -47,7 +51,7 @@ def signQueryBound (p : Params) : ℕ :=
 
 /-- Algorithm 13 recovers exactly one XMSS signature at every layer. -/
 def recoverQueryBound (p : Params) : ℕ :=
-  p.d * xmssRecoverQueryBound p
+  p.d * xmssChecksumRecoverQueryBound p
 
 theorem xmssSignM_isTotalQueryBound_coarse (core : CorePrimitives p)
     (msg : core.Y) (sk : core.SkSeed) (pk : core.PkSeed) (adrs : Adrs) (idx : ℕ) :
@@ -70,6 +74,19 @@ theorem xmssPkFromSigM_isTotalQueryBound_coarse (core : CorePrimitives p)
   apply (xmssPkFromSigM_isTotalQueryBound core idx sig msg pk adrs).mono
   unfold xmssRecoverQueryBound
   have := sum_complement_chainStepsCore_le core msg
+  omega
+
+/-- Valid WOTS+ parameters give the checksum-sensitive cap for one recovered XMSS root. -/
+theorem xmssPkFromSigM_isTotalQueryBound_checksum (valid : p.Valid) (core : CorePrimitives p)
+    (idx : ℕ) (sig : XmssSig p core) (msg : core.Y)
+    (pk : core.PkSeed) (adrs : Adrs) :
+    IsTotalQueryBound
+      (xmssPkFromSigM core idx sig msg pk adrs :
+        OracleComp (publicHashSpec core) core.Y)
+      (xmssChecksumRecoverQueryBound p) := by
+  apply (xmssPkFromSigM_isTotalQueryBound core idx sig msg pk adrs).mono
+  unfold xmssChecksumRecoverQueryBound
+  have := sum_complement_chainStepsCore_le_valid valid core msg
   omega
 
 /-- Signing and recovery while retaining both results has the same complete-chain budget as the
@@ -105,7 +122,7 @@ theorem signFromPositionM_isTotalQueryBound (vp : ValidatedParams)
   | one =>
       cases recoverFinal with
       | false =>
-          simpa [signFromPositionM, signFromPositionWith, xmssSignM,
+          simpa [signFromPositionM, signFromPositionWith_one, xmssSignM,
             signLoopQueryBound] using
             isTotalQueryBound_bind
               (xmssSignM_isTotalQueryBound_coarse core msg sk pk pos.toAdrs pos.leaf.val)
@@ -116,7 +133,7 @@ theorem signFromPositionM_isTotalQueryBound (vp : ValidatedParams)
             (xmssSignRecoverPairM_isTotalQueryBound core msg sk pk pos.toAdrs pos.leaf.val)
             (fun sigAndRoot => show IsTotalQueryBound
               (pure #v[sigAndRoot.1] : OracleComp (publicHashSpec core) _) 0 from trivial)
-          simpa [signFromPositionM, signFromPositionWith, xmssSignM, xmssPkFromSigM,
+          simpa [signFromPositionM, signFromPositionWith_one, xmssSignM, xmssPkFromSigM,
             signLoopQueryBound, bind_assoc] using hbound
   | more layers _ ih =>
       let next := pos.next (by omega)
@@ -127,7 +144,7 @@ theorem signFromPositionM_isTotalQueryBound (vp : ValidatedParams)
             (hremaining := by simp [next]; omega) (msg := pair.2))
           (fun rest => show IsTotalQueryBound
             (pure (rest.insertIdx 0 pair.1) : OracleComp (publicHashSpec core) _) 0 from trivial))
-      simpa [signFromPositionM, signFromPositionWith, xmssSignM, xmssPkFromSigM,
+      simpa [signFromPositionM, signFromPositionWith_add_two, xmssSignM, xmssPkFromSigM,
         signLoopQueryBound, next, bind_assoc] using hbound
 
 theorem recoverFromPositionM_isTotalQueryBound (vp : ValidatedParams)
@@ -137,19 +154,21 @@ theorem recoverFromPositionM_isTotalQueryBound (vp : ValidatedParams)
     IsTotalQueryBound
       (recoverFromPositionM vp core pk pos layers hremaining msg sigs :
         OracleComp (publicHashSpec core) core.Y)
-      (layers * xmssRecoverQueryBound vp.params) := by
+      (layers * xmssChecksumRecoverQueryBound vp.params) := by
   induction layers using Nat.twoStepInduction generalizing pos msg with
   | zero => trivial
   | one =>
-      simpa [recoverFromPositionM, recoverFromPositionWith, xmssPkFromSigM] using
-        xmssPkFromSigM_isTotalQueryBound_coarse core pos.leaf.val sigs.head msg pk pos.toAdrs
+      simpa [recoverFromPositionM, recoverFromPositionWith_one, xmssPkFromSigM] using
+        xmssPkFromSigM_isTotalQueryBound_checksum vp.valid core
+          pos.leaf.val sigs.head msg pk pos.toAdrs
   | more layers _ ih =>
       let next := pos.next (by omega)
       have hbound := isTotalQueryBound_bind
-        (xmssPkFromSigM_isTotalQueryBound_coarse core pos.leaf.val sigs.head msg pk pos.toAdrs)
+        (xmssPkFromSigM_isTotalQueryBound_checksum vp.valid core
+          pos.leaf.val sigs.head msg pk pos.toAdrs)
         (fun root => ih (pos := next) (hremaining := by simp [next]; omega)
           (msg := root) (sigs := sigs.tail))
-      simpa [recoverFromPositionM, recoverFromPositionWith, xmssPkFromSigM, next,
+      simpa [recoverFromPositionM, recoverFromPositionWith_add_two, xmssPkFromSigM, next,
         Nat.add_mul, Nat.add_assoc, Nat.add_comm, Nat.add_left_comm, two_mul] using hbound
 
 theorem signLoopQueryBound_false (p : Params) (layers : ℕ) (hlayers : 0 < layers) :

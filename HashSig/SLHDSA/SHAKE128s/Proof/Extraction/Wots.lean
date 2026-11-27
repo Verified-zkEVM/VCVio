@@ -90,7 +90,7 @@ theorem publicKeyFromSignature_eq (signature : WotsSignature) (message publicSee
     SLHDSA.SHAKE128s.Wots.publicKeyFromSignature (m := Id) signature message publicSeed address =
       Hashing.tweakable (m := Id) publicSeed (SLHDSA.SHAKE128s.Wots.publicKeyAddress address)
         (digestArrayBytes (endpoints hash signature message publicSeed address)) := by
-  simp only [SLHDSA.SHAKE128s.Wots.publicKeyFromSignature, Correctness.sequenceFin_id, bind]
+  simp only [SLHDSA.SHAKE128s.Wots.publicKeyFromSignature_eq, Correctness.sequenceFin_id, bind]
   rfl
 
 /-- A collision at the final WOTS public-key compression: the two endpoint tuples give distinct

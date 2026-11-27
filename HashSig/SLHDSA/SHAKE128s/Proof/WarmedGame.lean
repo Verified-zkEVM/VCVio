@@ -72,8 +72,16 @@ theorem experiment_eq (adversary : Adversary) :
     experiment adversary = (liftM seeds : OracleComp OracleWorld _) >>= afterSeeds adversary := by
   have hsample : (simulateQ (fun i => query (spec := unifSpec) i) ($ᵗ Digest) :
       OracleComp OracleWorld Digest) = liftM ($ᵗ Digest : ProbComp Digest) := rfl
-  unfold experiment afterSeeds seeds Scheme.keygen
-  simp only [liftM_bind, bind_pure_comp, bind_assoc, liftM_map, bind_map_left, hsample]
+  have afterEq := funext (fun keys : SecretKey × PublicKey =>
+    Game.afterKeygen_eq_runPhase externalScheme adversary keys)
+  rw [Security.experiment_eq_keygen_bind]
+  change (Scheme.keygen >>= Game.afterKeygen externalScheme adversary) = _
+  rw [afterEq]
+  simp_rw [← Security.legacyPhase_eq_runPhase]
+  unfold afterSeeds seeds Scheme.keygen
+  simp only [liftM_bind, bind_pure_comp, bind_assoc, liftM_map, bind_map_left, hsample,
+    AddWriterT.runAdd, StateT.run_map, externalScheme,
+    countQueries, Counts.single, Game.Counts.single, hashCost, Game.hashCost, Prod.map, id_eq]
 
 /-! ## The warmed run
 
@@ -123,8 +131,10 @@ theorem evalDist_outcome (adversary : Adversary) :
   exact (Presample.evalDist_counted_warmed seeds (afterSeeds adversary)
     (fun sds => sds.2.2) (fun sds => sds.1)).symm
 
-/-- **The target's event, transferred to the warmed run.** The winning event looks only at the
-outcome, so warming — which changes the cache, and only the cache — leaves it alone. -/
+/-- The counted outcome's event has the same probability in the warmed run.
+
+The final cache and the unselected warmup work may differ; the returned outcome and selected
+count have the same joint law. -/
 theorem prEvent_warmed (adversary : Adversary) (event : Outcome × Nat → Prop) :
     Pr{let result ← WholeGameStructural.instrumentedRun adversary}[event result.1] =
       Pr{let result ← warmedRun adversary}[event result.1.2] := by

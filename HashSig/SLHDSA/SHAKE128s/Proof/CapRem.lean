@@ -9,21 +9,13 @@ module
 public import HashSig.SLHDSA.SHAKE128s.Proof.CapComp
 
 /-!
-# Caps that report what they leave
+# Weighted caps with a remainder or an explicit overflow result
 
-`CapComp.capComp` truncates a computation at a weighted budget and returns only its value. A
-game that caps two phases against one budget needs the second cap to start from what the first
-left, and a game that skips a step after a cap fired needs to know that it fired. So:
-
-* `capCompRem` returns the value with the unspent budget beside it;
-* `capCompOpt` returns `none` if the cap fired and `some value` otherwise.
-
-Each comes with the two facts `CapComp` proves for `capComp` — the capped run's cost is within
-the limit (`cost_capCompRem_le`, `cost_capCompOpt_le`), and where the uncapped run stays within
-it the cap changes nothing (`evalDist_capCompRem`, `evalDist_capCompOpt`) — and with one more:
-**a capped run and the uncapped one agree until the cap fires**, so an event of the uncapped run
-that also keeps it within the limit is at most as likely as the event of the capped one
-(`prEvent_le_capCompRem`).
+`capCompRem` returns the unspent budget with its result. `capCompOpt` signals overflow
+with `none`. For a handler whose state reports query costs, both computations respect
+the initial budget. `prEvent_le_capCompRem` compares budget-respecting events with
+the capped run. `evalDist_capCompOpt` identifies the option-valued law when the original
+computation stays within its limit.
 -/
 
 public section

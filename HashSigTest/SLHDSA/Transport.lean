@@ -102,7 +102,8 @@ theorem conflict_filledState (hd : core.KeyDiscipline vp) (e : core.SkSeed ≃ c
     (by rw [show core.adrsToKey ((wotsChainAdrs (wotsInstanceAdrs pos) i.val).setHashAddress 0) =
         (firstStep core pos i).1 from rfl, merge_fst_missState core hd]; rfl)
     ((simulateQ_toPartialImpl_oracleSecret_merge (Adrs.isSecretKey_wotsSkAdrs _ _)).trans
-      (QueryCache.cacheQuery_self _ _ _)) rfl
+      (QueryCache.cacheQuery_self _ _ _))
+    (chain?_zero core _ pkSeed _ x 0)
 
 /-- At every FIPS 205 parameter set, a WOTS+ chain secret drawn by the fill at a value whose first
 hash step the public cache already holds is a conflict. -/

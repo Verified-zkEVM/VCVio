@@ -1,41 +1,116 @@
 /-
 Copyright (c) 2026 Tom Wambsgans. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Tom Wambsgans
+Authors: Tom Wambsgans, Alexander Hicks
 -/
 
 module
 
-public import HashSig.SLHDSA.SHAKE128s.Statement.FIPS205
-import HashSig.SLHDSA.SHAKE128s.Bridge.Scheme
-import HashSig.SLHDSA.SHAKE128s.Proof.WorkFinal
+public import HashSig.SLHDSA.SHAKE128s.Statement.Theorems.SmallBudget
+public import HashSig.SLHDSA.Security.WeakKeyBound
+import HashSig.SLHDSA.SHAKE128s.Proof.ActualWork.Price.Reserve
+import HashSig.SLHDSA.SHAKE128s.Proof.ActualWork.Settlement.Probability
+import all HashSig.SLHDSA.SHAKE128s.Bridge.SharedExperiment.Observation
 
 /-!
-# Strong unforgeability of SLH-DSA-SHAKE-128s
+# Actual-work security of deterministic SHAKE-128s
 
-`slhDsa_sufCma_127`: the library's FIPS 205 SLH-DSA-SHAKE-128s (`SLHDSA.SHAKE128s.FIPS205.scheme`),
-in pure mode, with deterministic signing and every SHAKE256 call one query of a single shared
-random oracle on byte strings, has 127 bits of strong unforgeability in the sense of
-`SLHDSA.SHAKE128s.Game.HasSecurityBits`: an adversary within `2 ^ 64` signing requests whose work is
-at most `q ≥ 1` wins with probability at most `q / 2 ^ 127`, its work counting its signing
-requests, its own hash calls and the hash calls of verifying its forgery (`Game.adversaryWork`).
-
-The bound is proved on a transcription of the scheme with `240`-bit oracle answers
-(`HashSig.SLHDSA.SHAKE128s.Statement.Scheme`, `WorkFinal.hasSecurityBits_work`) and carried to
-FIPS 205's scheme, whose answers are `30`-byte strings, by the bridge of
-`HashSig.SLHDSA.SHAKE128s.Bridge.Scheme`: the two schemes issue the same oracle queries, and their
-key generations have the same law.
+The attacker and the verifier use the same 30-byte SHAKE oracle as the signer. The probability-one
+budget counts each signing attempt, each direct attacker hash and the actual hashes used by final
+verification. The lifetime condition permits at most `2 ^ 64` signing attempts.
+`slhDsa_sufCma_le` bounds forgery at every budget. Below 569, the separate
+`slhDsa_sufCma_eq_zero_of_lt_569` needs only the budget.
 -/
 
 public section
 
+open OracleComp
+open scoped ENNReal
+
 namespace SLHDSA.SHAKE128s
 
-/-- **SLH-DSA-SHAKE-128s has 127 bits of strong unforgeability**: FIPS 205's pure-mode scheme over
-one SHAKE256 random oracle with deterministic signing, counting the adversary's signing requests,
-its hash calls and the verification of its forgery. -/
+open Bridge.SharedExperiment.Physical
+
+/-- The verifier floor, paid native charge and unit probability bound in their respective ranges. -/
+@[expose] noncomputable def jointWorkBound (q : Nat) : ℝ≥0∞ :=
+  if q < 569 then 0 else if q < 2 ^ 127 then
+    ((32 * q - 1 : Nat) : ℝ≥0∞) / ((16 * 2 ^ 128 : Nat) : ℝ≥0∞) +
+      34 * (SLHDSA.Security.honestAdrsCount FIPS205.params : ℝ≥0∞) / (2 ^ 256)
+  else 1
+
+/-- An accepting verifier cannot fit below its minimum work. -/
+@[simp] theorem jointWorkBound_of_lt_569 {q : Nat} (low : q < 569) : jointWorkBound q = 0 := by
+  unfold jointWorkBound
+  exact ite_eq_left low
+
+/-- In the nontrivial range, the paid charge leaves a fixed reserve after the weak-key correction.
+The numerator in the correction counts the honest addresses of SHAKE-128s. -/
+@[simp] theorem jointWorkBound_of_middle {q : Nat} (low : 569 ≤ q) (high : q < 2 ^ 127) :
+    jointWorkBound q =
+      ((32 * q - 1 : Nat) : ℝ≥0∞) / ((16 * 2 ^ 128 : Nat) : ℝ≥0∞) +
+        34 * (1591788895347057694892543 : ℝ≥0∞) / (2 ^ 256) := by
+  simp only [jointWorkBound, ite_eq_right (Nat.not_lt.mpr low), ite_eq_left high,
+    Bridge.SharedExperiment.honestAdrsCount_fips205, Nat.cast_ofNat]
+
+/-- At the trivial probability threshold the work bound saturates at one. -/
+@[simp] theorem jointWorkBound_of_ge_two_pow {q : Nat} (high : 2 ^ 127 ≤ q) :
+    jointWorkBound q = 1 := by
+  have low : ¬q < 569 := by omega
+  unfold jointWorkBound
+  rw [ite_eq_right low, ite_eq_right (Nat.not_lt.mpr high)]
+
+/-- Under the signing lifetime and an almost-sure joint cap, the forgery probability is
+bounded by the verifier floor, the paid hash fraction or one, according to the budget. -/
+theorem slhDsa_sufCma_le (adv : Game.Adversary FIPS205.Answer (PublicKeyCore FIPS205.core))
+    (q : Nat) (life : Game.WithinSigningLimit FIPS205.scheme adv)
+    (cap : (Game.securityGame FIPS205.scheme).HasQueryBound () Game.adversaryWork adv q) :
+    (Game.securityGame FIPS205.scheme).advantage () adv ≤ jointWorkBound q := by
+  by_cases low : q < 569
+  · rw [jointWorkBound_of_lt_569 low]
+    exact (slhDsa_sufCma_eq_zero_of_lt_569 adv q low cap).le
+  by_cases high : q < 2 ^ 127
+  · rw [jointWorkBound_of_middle (Nat.le_of_not_gt low) high]
+    simpa only [weakMass, Nat.cast_pow, Nat.cast_ofNat, mul_div_assoc] using
+      actual_joint_work_le_reserve adv q (by omega) life cap
+  · rw [jointWorkBound_of_ge_two_pow (Nat.le_of_not_gt high)]
+    exact prEvent_le_one _
+
+/-- The paid cache reserve makes the nontrivial range strictly smaller than the 127-bit bound. -/
+theorem jointWorkBound_lt_of_middle {q : Nat} (low : 569 ≤ q) (high : q < 2 ^ 127) :
+    jointWorkBound q < (q : ℝ≥0∞) / (2 ^ 127) := by
+  rw [jointWorkBound_of_middle low high]
+  simpa only [weakMass, Nat.cast_pow, Nat.cast_ofNat, mul_div_assoc] using
+    retained_reserve_lt_headline q (by omega)
+
+/-- The piecewise work bound preserves the original coefficient at every natural budget. -/
+theorem jointWorkBound_le (q : Nat) : jointWorkBound q ≤ (q : ℝ≥0∞) / (2 ^ 127) := by
+  by_cases low : q < 569
+  · rw [jointWorkBound_of_lt_569 low]
+    exact zero_le
+  by_cases high : q < 2 ^ 127
+  · exact (jointWorkBound_lt_of_middle (Nat.le_of_not_gt low) high).le
+  have large : 2 ^ 127 ≤ q := Nat.le_of_not_gt high
+  have h : (2 ^ 127 : ℝ≥0∞) ≤ q := by exact_mod_cast large
+  rw [jointWorkBound_of_ge_two_pow large]
+  calc
+    1 = (2 ^ 127 : ℝ≥0∞) / (2 ^ 127) :=
+      (ENNReal.div_self (by positivity) (by finiteness)).symm
+    _ ≤ (q : ℝ≥0∞) / (2 ^ 127) := by gcongr
+
+/-- The piecewise forgery bound implies the linear work bound at every natural budget. -/
+theorem Bridge.SharedExperiment.Physical.actual_joint_work_le
+    (adv : Game.Adversary FIPS205.Answer (PublicKeyCore FIPS205.core))
+    (q : Nat)
+    (hlimit : Game.WithinSigningLimit FIPS205.scheme adv)
+    (hbound : (Game.securityGame FIPS205.scheme).HasQueryBound () Game.adversaryWork adv q) :
+    (Game.securityGame FIPS205.scheme).advantage () adv ≤
+      (q : ℝ≥0∞) / ((2 ^ 127 : Nat) : ℝ≥0∞) := by
+  simpa only [Nat.cast_pow, Nat.cast_ofNat] using
+    (slhDsa_sufCma_le adv q hlimit hbound).trans (jointWorkBound_le q)
+
+/-- Deterministic FIPS 205 SHAKE-128s has 127 bits of strong unforgeability under the joint
+budget for signing attempts, direct attacker queries and verification. -/
 theorem slhDsa_sufCma_127 : Game.HasSecurityBits FIPS205.scheme Game.adversaryWork 127 :=
-  Bridge.hasSecurityBits_fips205
-    ((Bridge.hasSecurityBits_model_iff _ _).mp WorkFinal.hasSecurityBits_work)
+  fun q _ adv life cap => actual_joint_work_le adv q life cap
 
 end SLHDSA.SHAKE128s

@@ -38,7 +38,7 @@ example [HasQuery (publicHashSpec core) m]
       let sig ← xmssSignM core msg sk pk pos.toAdrs pos.leaf.val
       let _ ← xmssPkFromSigM core pos.leaf.val sig msg pk pos.toAdrs
       return #v[sig]) : m (Vector (XmssSig vp.params core) 1)) := by
-  simp [signFromPositionM, signFromPositionWith, xmssSignM, xmssPkFromSigM]
+  simp [signFromPositionM, signFromPositionWith_one, xmssSignM, xmssPkFromSigM]
 
 /-- With two layers, the first signature is recovered and signed by the top XMSS tree, while the
 top signature is returned without a second discarded recovery. -/
@@ -51,7 +51,8 @@ example [HasQuery (publicHashSpec core) m]
       let next := pos.next (by omega)
       let sig1 ← xmssSignM core root0 sk pk next.toAdrs next.leaf.val
       return (#v[sig1]).insertIdx 0 sig0) : m (Vector (XmssSig vp.params core) 2)) := by
-  simp [signFromPositionM, signFromPositionWith, xmssSignM, xmssPkFromSigM]
+  simp [signFromPositionM, signFromPositionWith_add_two, signFromPositionWith_one,
+    xmssSignM, xmssPkFromSigM]
 
 /-- General root generation always addresses layer `d - 1`, tree zero. -/
 example (hash : Adrs → core.Y → m core.Y)
@@ -72,31 +73,32 @@ example (prims : Primitives vp.params) (msg : prims.Y)
 
 /-! ## Named FIPS multi-layer canaries -/
 
-def sha2_128sVp : ValidatedParams :=
+/-- Validated parameters for the FIPS SHA2-128s multi-layer profile. -/
+def sha2128sVp : ValidatedParams :=
   FipsParameterSet.SLHDSA_SHA2_128s.validatedParams
 
 /-- The named SHA2-128s profile takes the real multi-layer branch and returns seven XMSS
 components in increasing layer order. -/
-example (core : CorePrimitives sha2_128sVp.params) {m : Type → Type*} [Monad m]
+example (core : CorePrimitives sha2128sVp.params) {m : Type → Type*} [Monad m]
     [HasQuery (publicHashSpec core) m] (msg : core.Y) (sk : core.SkSeed) (pk : core.PkSeed)
-    (parts : DigestParts sha2_128sVp.params) :
-    (signM sha2_128sVp core msg sk pk parts : m (HtSigCore sha2_128sVp.params core)) =
-      signFromPositionM sha2_128sVp core sk pk false
-        (LayerPosition.initial sha2_128sVp parts) 7 (by rfl) msg := by
+    (parts : DigestParts sha2128sVp.params) :
+    (signM sha2128sVp core msg sk pk parts : m (HtSigCore sha2128sVp.params core)) =
+      signFromPositionM sha2128sVp core sk pk false
+        (LayerPosition.initial sha2128sVp parts) 7 (by rfl) msg := by
   rfl
 
 /-- The value FIPS 205 Algorithm 18 publishes as `PK.root` for SHA2-128s is the XMSS root at
 layer six, tree zero. -/
-example (core : CorePrimitives sha2_128sVp.params) {m : Type → Type*} [Monad m]
+example (core : CorePrimitives sha2128sVp.params) {m : Type → Type*} [Monad m]
     [HasQuery (publicHashSpec core) m] (sk : core.SkSeed) (pk : core.PkSeed) :
-    (rootM sha2_128sVp core sk pk : m core.Y) =
+    (rootM sha2128sVp core sk pk : m core.Y) =
       xmssRootM core sk pk (layerAdrs 6 0) := by
   rfl
 
 /-- The closed SHA2-128s signing budget contains six sign-and-recover cycles followed by one top
 signature without a discarded recovery. -/
-example : signQueryBound sha2_128sVp.params =
-    6 * xmssCycleQueryBound sha2_128sVp.params + xmssSignQueryBound sha2_128sVp.params := by
+example : signQueryBound sha2128sVp.params =
+    6 * xmssCycleQueryBound sha2128sVp.params + xmssSignQueryBound sha2128sVp.params := by
   rfl
 
 end SLHDSA.GeneralHypertreeTest

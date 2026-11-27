@@ -116,7 +116,7 @@ theorem verifyInternal_of_verify (pk : PublicKey) (request : Message) (signature
     ∃ (message : Bytes) (parsed : Signature),
       request.frame = some message ∧ Signature.fromBytes? signature = some parsed ∧
         Scheme.verifyInternal (m := Id) pk message parsed = true := by
-  unfold Scheme.verify at haccept
+  unfold Scheme.verify SignatureAlg.SigningView.Encoding.verify at haccept
   cases hframe : request.frame with
   | none => rw [hframe] at haccept; exact absurd haccept (by simp)
   | some message =>

@@ -19,5 +19,5 @@ external signing and verification programs at that context. Generated keys carry
 public fields, and context attachment preserves returned-pair freshness of the complete log.
 The complete winning programs and advantages agree under one shared random oracle.
 Syntactic wire budgets bound the real game's signing requests and selected work, including
-the actual external verifier's universal 3929-call cap.
+the actual external verifier's checksum-sensitive 3824-call cap.
 -/

@@ -91,8 +91,9 @@ variable {vp : ValidatedParams} (core : CorePrimitives vp.params)
 include hpure hbind hhash hcompress hsecret in
 /-- The provider-parametric WOTS+ public key satisfies `Q`. -/
 theorem wotsPkGenWithSecret_pred (adrs : Adrs) :
-    Q (wotsPkGenWithSecret core hash compress secret adrs) :=
-  hbind _ _ (Vector.ofFnM_pred Q hpure hbind _ fun _ =>
+    Q (wotsPkGenWithSecret core hash compress secret adrs) := by
+  rw [wotsPkGenWithSecret_eq, wotsPkGenTopsWithSecret_eq]
+  exact hbind _ _ (Vector.ofFnM_pred Q hpure hbind _ fun _ =>
     hbind _ _ (hsecret _ (Adrs.isSecretKey_wotsSkAdrs _ _)) fun x =>
       chainWith_pred Q hpure hbind x 0 _ fun _ _ => hhash _ type_le_four)
     fun _ => hcompress _ type_le_four _
@@ -100,16 +101,18 @@ theorem wotsPkGenWithSecret_pred (adrs : Adrs) :
 include hpure hbind hhash hsecret in
 /-- Provider-parametric WOTS+ signing satisfies `Q`. -/
 theorem wotsSignWithSecret_pred (msg : core.Y) (adrs : Adrs) :
-    Q (wotsSignWithSecret core hash secret msg adrs) :=
-  Vector.ofFnM_pred Q hpure hbind _ fun _ =>
+    Q (wotsSignWithSecret core hash secret msg adrs) := by
+  rw [wotsSignWithSecret_eq]
+  exact Vector.ofFnM_pred Q hpure hbind _ fun _ =>
     hbind _ _ (hsecret _ (Adrs.isSecretKey_wotsSkAdrs _ _)) fun x =>
       chainWith_pred Q hpure hbind x 0 _ fun _ _ => hhash _ type_le_four
 
 include hpure hbind hhash hcompress in
 /-- WOTS+ public-key recovery satisfies `Q`. -/
 theorem wotsPkFromSigWith_pred (sig : WotsSig vp.params core) (msg : core.Y) (adrs : Adrs) :
-    Q (wotsPkFromSigWith core hash compress sig msg adrs) :=
-  hbind _ _ (Vector.ofFnM_pred Q hpure hbind _ fun _ =>
+    Q (wotsPkFromSigWith core hash compress sig msg adrs) := by
+  rw [wotsPkFromSigWith_eq, wotsPkFromSigTopsWith_eq]
+  exact hbind _ _ (Vector.ofFnM_pred Q hpure hbind _ fun _ =>
     chainWith_pred Q hpure hbind _ _ _ fun _ _ => hhash _ type_le_four)
     fun _ => hcompress _ type_le_four _
 
@@ -176,7 +179,7 @@ theorem GeneralHypertree.signFromPositionWithSecret_pred (recoverFinal : Bool)
         msg)
   | 0, _, _ => hpure _
   | 1, _, msg => by
-      rw [signFromPositionWithSecret]
+      rw [signFromPositionWithSecret_one]
       refine hbind _ _ (xmssSignWithSecret_pred Q hpure hbind core hhash hcompress hnode hsecret
         msg _ _) fun sig => ?_
       cases recoverFinal
@@ -184,7 +187,7 @@ theorem GeneralHypertree.signFromPositionWithSecret_pred (recoverFinal : Bool)
       · exact hbind _ _ (xmssPkFromSigWith_pred Q hpure hbind core hhash hcompress hnode _ sig
           msg _) fun _ => hpure _
   | layers + 2, _, msg => by
-      rw [signFromPositionWithSecret]
+      rw [signFromPositionWithSecret_add_two]
       exact hbind _ _ (xmssSignWithSecret_pred Q hpure hbind core hhash hcompress hnode hsecret
         msg _ _) fun sig => hbind _ _ (xmssPkFromSigWith_pred Q hpure hbind core hhash hcompress
           hnode _ sig msg _) fun root => hbind _ _
@@ -192,19 +195,18 @@ theorem GeneralHypertree.signFromPositionWithSecret_pred (recoverFinal : Bool)
 
 include hpure hbind hhash hcompress hnode in
 /-- Hypertree root recovery from a layer position satisfies `Q`. -/
-theorem GeneralHypertree.recoverFromPositionWith_pred (pkSeed : core.PkSeed)
-    (pos : LayerPosition vp) :
+theorem GeneralHypertree.recoverFromPositionWith_pred (pos : LayerPosition vp) :
     ∀ (layers : ℕ) (h : pos.layer.val + layers = vp.params.d) (msg : core.Y)
       (sigs : Vector (XmssSig vp.params core) layers),
-      Q (recoverFromPositionWith vp core hash compress nodeHash pkSeed pos layers h msg sigs)
+      Q (recoverFromPositionWith vp core hash compress nodeHash pos layers h msg sigs)
   | 0, _, _, _ => hpure _
   | 1, _, msg, sigs =>
       xmssPkFromSigWith_pred Q hpure hbind core hhash hcompress hnode _ sigs.head msg _
   | layers + 2, _, msg, sigs => by
-      rw [recoverFromPositionWith]
+      rw [recoverFromPositionWith_add_two]
       exact hbind _ _ (xmssPkFromSigWith_pred Q hpure hbind core hhash hcompress hnode _
         sigs.head msg _) fun root =>
-          recoverFromPositionWith_pred pkSeed _ (layers + 1) _ root sigs.tail
+          recoverFromPositionWith_pred _ (layers + 1) _ root sigs.tail
 
 end SLHDSA
 
@@ -253,8 +255,8 @@ theorem verifyInternalM_pred [DecidableEq core.Y] (msg : List Byte) (sig : Signa
   have hh := fun a ha l r => htl a ha [l, r]
   hbind _ _ hmsg fun _ =>
     hbind _ _ (forsPkFromSigWith_pred Q hpure hbind core hf htl hh _ _ _) fun _ =>
-      hbind _ _ (GeneralHypertree.recoverFromPositionWith_pred Q hpure hbind core hf htl hh _ _
-        _ _ _ _) fun _ => hpure _
+      hbind _ _ (GeneralHypertree.recoverFromPositionWith_pred Q hpure hbind core hf htl hh
+        _ _ _ _ _) fun _ => hpure _
 
 end SLHDSA.GeneralScheme
 

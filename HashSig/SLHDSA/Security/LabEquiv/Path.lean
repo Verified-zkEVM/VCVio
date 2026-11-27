@@ -177,7 +177,9 @@ theorem chainWith_labTriple (hd : core.KeyDiscipline vp) (pkSeed : core.PkSeed)
         (chainWith (PublicHash.f core pkSeed) (wotsChainAdrs (wotsInstanceAdrs pos) i) x j s)
         (chainWith (labF core) (wotsChainAdrs (wotsInstanceAdrs pos) i) x j s)
         fun y st ↦ CellHolds core st (wotsChainCell core (wotsInstanceAdrs pos) i (j + s)) y
-  | 0, _ => QueryImpl.EqDistTriple.pure x fun _ h ↦ h
+  | 0, _ => by
+    simp only [chainWith_zero, Nat.add_zero]
+    exact QueryImpl.EqDistTriple.pure x fun _ h ↦ h
   | s + 1, hs => by
     simp only [chainWith_succ]
     refine (chainWith_labTriple hd pkSeed pos i x j s (by omega)).bind fun y ↦ ?_

@@ -316,6 +316,66 @@ theorem map_run_withLogging_inputs_eq_run_appendInputLog
 
 end inputLog
 
+/-! ## Invariants of stateful logged services -/
+
+/-- Local invariants on the actual service state and chronological log lift through a client.
+Ambient queries retain the log; every service reply contributes its full query-response entry. -/
+theorem holds_of_mem_support_run_add_stateful_withLogging
+    {ι κ World α : Type} {spec : OracleSpec ι} {loggedSpec : OracleSpec κ}
+    (ambient : QueryImpl spec (StateT World ProbComp))
+    (service : QueryImpl loggedSpec (StateT World ProbComp))
+    (Allowed : spec.Domain → Prop)
+    (Inv : QueryLog loggedSpec → World → Prop)
+    (ambient_step : ∀ (input : spec.Domain), Allowed input →
+      ∀ (entries : QueryLog loggedSpec) (before : World), Inv entries before →
+        ∀ (after : spec.Range input × World),
+          after ∈ support ((ambient input).run before) → Inv entries after.2)
+    (signing_step : ∀ (request : loggedSpec.Domain)
+      (entries : QueryLog loggedSpec) (before : World), Inv entries before →
+        ∀ (after : loggedSpec.Range request × World),
+          after ∈ support ((service request).run before) →
+            Inv (entries ++ [⟨request, after.1⟩]) after.2)
+    (program : OracleComp (spec + loggedSpec) α)
+    (allowed : AllQueriesSatisfy program (Sum.elim Allowed (fun _ => True)))
+    (entries : QueryLog loggedSpec) (before : World) (hinitial : Inv entries before)
+    (out : (α × QueryLog loggedSpec) × World)
+    (hout : out ∈ support
+      ((simulateQ (QueryImpl.add (ambient.liftTarget _) service.withLogging)
+        program).run.run before)) :
+    Inv (entries ++ out.1.2) out.2 := by
+  let mixed : QueryImpl (spec + loggedSpec)
+      (WriterT (QueryLog loggedSpec) (StateT World ProbComp)) :=
+    QueryImpl.add (ambient.liftTarget _) service.withLogging
+  let augmented := fun input : (spec + loggedSpec).Domain =>
+    WriterT.appendToState (mixed input)
+  let JointInv : World × QueryLog loggedSpec → Prop :=
+    fun current => Inv current.2 current.1
+  have augmented_step (input : (spec + loggedSpec).Domain)
+      (hi : Sum.elim Allowed (fun _ => True) input)
+      (start : World × QueryLog loggedSpec) (hstart : JointInv start)
+      (finish : (spec + loggedSpec).Range input × (World × QueryLog loggedSpec))
+      (hfinish : finish ∈ support ((augmented input).run start)) : JointInv finish.2 := by
+    rcases input with native | request
+    · simp only [augmented, mixed, WriterT.appendToState, StateT.run_mk,
+        QueryImpl.add_eq_hAdd, QueryImpl.add_apply_inl, QueryImpl.liftTarget_apply,
+        WriterT.run_liftM, StateT.run_map, Functor.map_map, support_map] at hfinish
+      obtain ⟨answer, hanswer, rfl⟩ := hfinish
+      simpa only [JointInv, List.empty_eq, List.append_nil] using
+        ambient_step native hi start.2 start.1 hstart answer hanswer
+    · simp only [augmented, mixed, WriterT.appendToState, StateT.run_mk,
+        QueryImpl.add_eq_hAdd, QueryImpl.add_apply_inr, QueryImpl.run_withLogging_apply,
+        StateT.run_bind, StateT.run_pure, map_bind, map_pure,
+        mem_support_bind_iff, support_pure, Set.mem_singleton_iff] at hfinish
+      obtain ⟨answer, hanswer, rfl⟩ := hfinish
+      exact signing_step request start.2 start.1 hstart answer hanswer
+  have accumulated : (out.1.1, (out.2, entries ++ out.1.2)) ∈ support
+      ((simulateQ augmented program).run (before, entries)) := by
+    rw [← writerToState_simulateQ]
+    simp only [WriterT.appendToState, StateT.run_mk, support_map]
+    exact ⟨out, hout, rfl⟩
+  exact allowed.holds_of_mem_support_run_simulateQ JointInv augmented_step
+    hinitial accumulated
+
 section logEntries
 
 variable {ι κ : Type} {spec : OracleSpec.{0, 0} ι} {sigSpec : OracleSpec.{0, 0} κ} {σ : Type}
@@ -388,34 +448,26 @@ theorem holds_of_mem_support_run_add_withLogging
       ((HasQuery.toQueryImpl (spec := spec) (m := OracleComp spec)).liftTarget
         (WriterT (QueryLog sigSpec) (OracleComp spec)) + sign.withLogging) oa).run)).run s₀)) :
     I (log₀ ++ z.1.2) z.2 := by
-  induction oa using OracleComp.inductionOn generalizing log₀ s₀ z with
-  | pure x => simp_all
-  | query_bind t k ih =>
-    rw [allQueriesSatisfy_query_bind_iff] at hoa
-    rw [simulateQ_bind, simulateQ_spec_query, WriterT.run_bind', simulateQ_bind, StateT.run_bind,
-      mem_support_bind_iff] at hz
-    obtain ⟨⟨⟨u, w₁⟩, s'⟩, h₁, h₂⟩ := hz
-    simp only [simulateQ_map, StateT.run_map, support_map, Set.mem_image] at h₂
-    obtain ⟨⟨⟨a, w₂⟩, s''⟩, h₂, rfl⟩ := h₂
-    dsimp only
-    cases t with
-    | inl t =>
-      simp only [QueryImpl.add_apply_inl, QueryImpl.liftTarget_apply, HasQuery.toQueryImpl_apply,
-        HasQuery.instOfMonadLift_query, WriterT.run_monadLift', simulateQ_map, StateT.run_map,
-        support_map, Set.mem_image, Prod.mk.injEq] at h₁
-      obtain ⟨⟨v, s₁'⟩, hv, ⟨⟨rfl, rfl⟩, rfl⟩⟩ := h₁
-      rw [simulateQ_spec_query] at hv
-      simpa only [Prod.map_snd, List.empty_eq, List.nil_append] using
-        ih _ (hoa.2 _) (hamb t hoa.1 log₀ s₀ h₀ _ hv) h₂
-    | inr t =>
-      rw [QueryImpl.add_apply_inr, QueryImpl.run_withLogging_apply, simulateQ_bind, StateT.run_bind,
-        mem_support_bind_iff] at h₁
-      obtain ⟨⟨v, s₁'⟩, hv, h₁⟩ := h₁
-      simp only [simulateQ_pure, StateT.run_pure, support_pure, Set.mem_singleton_iff,
-        Prod.mk.injEq] at h₁
-      obtain ⟨⟨rfl, rfl⟩, rfl⟩ := h₁
-      simpa only [Prod.map_snd, List.append_assoc] using
-        ih _ (hoa.2 _) (hsign t log₀ s₀ h₀ _ hv) h₂
+  have mapped :
+      outer.writerTMapBase
+        (QueryImpl.add
+          ((HasQuery.toQueryImpl (spec := spec) (m := OracleComp spec)).liftTarget
+            (WriterT (QueryLog sigSpec) (OracleComp spec))) sign.withLogging) =
+        QueryImpl.add (outer.liftTarget _)
+          (QueryImpl.withLogging (fun request => simulateQ outer (sign request))) := by
+    funext input
+    apply WriterT.ext
+    rcases input with native | request
+    · simp only [writerTMapBase_apply, QueryImpl.add_eq_hAdd, QueryImpl.add_apply_inl,
+        QueryImpl.liftTarget_apply, WriterT.run_monadLift', HasQuery.toQueryImpl_apply,
+        HasQuery.instOfMonadLift_query, simulateQ_map, simulateQ_spec_query]
+    · simp only [writerTMapBase_apply, QueryImpl.add_eq_hAdd, QueryImpl.add_apply_inr,
+        QueryImpl.run_withLogging_apply, simulateQ_bind, simulateQ_pure]
+  simp only [QueryImpl.add_eq_hAdd] at mapped
+  rw [simulateQ_writerTMapBase_run, mapped] at hz
+  exact holds_of_mem_support_run_add_stateful_withLogging outer
+    (fun request => simulateQ outer (sign request)) allowed I hamb hsign oa hoa
+    log₀ s₀ h₀ z hz
 
 omit [Preorder σ] in
 /-- **Logged queries are counted.**  For an outer state-monotone simulation carrying a counter

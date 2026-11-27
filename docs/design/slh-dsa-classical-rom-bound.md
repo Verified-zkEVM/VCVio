@@ -257,6 +257,14 @@ Beside the forger's `2·q_h / 2^{8n}`, the bound has two terms:
   (`targetCoverBound_le_weightedTargetCoverBound`);
 - the verifier's own queries, `(r + 1) · verifyInternalQueryBound` at `r = 1`, two hazards each.
 
+The WOTS+ payload and checksum digits have a positive sum divisible by `w − 1`.
+Across one recovered XMSS root this reduces the chain allowance by at least `w − 1`,
+saving 15 calls per hypertree layer for each FIPS parameter set. The resulting verifier
+caps are 3824 (128s), 11541 (128f), 5577 (192s), 16887 (192f), 8324 (256s), and
+17267 (256f). They apply to each verification outcome and enter both the structured
+bound and the deterministic and hedged single-SHAKE bounds.
+
+
 The three-oracle bound (`securityBound` in `Target.lean`) has no term linear in `q_s`, in either
 signing mode: signing queries enter only through the coverage term. The byte-level statement adds
 `q_s / 2^{8n}`, the faithfulness event for the signer's strings: a signing query whose randomizer

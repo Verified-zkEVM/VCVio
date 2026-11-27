@@ -27,11 +27,7 @@ theorem chain_eq_indexedChain {m : Type → Type} [Monad m] [LawfulMonad m]
     chain (m := m) publicSeed address start steps value =
       VCVio.Algorithms.IndexedChain.chainM (m := m)
         (fun j x => Hashing.tweakable publicSeed
-          { address with hashOrIndex := BitVec.ofNat 32 j } (bytesBE n x)) start steps value := by
-  induction steps generalizing start value with
-  | zero => rfl
-  | succ steps ih =>
-    rw [chain, VCVio.Algorithms.IndexedChain.chainM_succ_left]
-    exact bind_congr fun x => ih (start + 1) x
+          { address with hashOrIndex := BitVec.ofNat 32 j } (bytesBE n x)) start steps value :=
+  SLHDSA.Wots.Program.chain_eq_indexedChain (chainStep publicSeed address) start steps value
 
 end SLHDSA.SHAKE128s.Wots

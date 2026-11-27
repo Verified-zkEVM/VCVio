@@ -6,6 +6,7 @@ Authors: Tom Wambsgans
 
 module
 
+import VCVio.OracleComp.Constructions.Replicate
 public import HashSig.SLHDSA.SHAKE128s.Proof.GrowthCharge
 public import HashSig.SLHDSA.SHAKE128s.Proof.ForsAdaptiveTargets
 public import HashSig.SLHDSA.SHAKE128s.Proof.ForsDisclosureTape
@@ -186,24 +187,23 @@ theorem recorder_cache_value_persists {α : Type} (keep : Bytes → Prop)
 
 /-! ## The padding and the view tape -/
 
+/-- Padding draws the same independent samples as the generic list replication program. -/
+theorem padding_eq_replicate (n : Nat) :
+    padding n = replicate n ($ᵗ HashOutput : ProbComp HashOutput) := by
+  induction n with
+  | zero => rfl
+  | succ n ih => rw [padding, replicate_succ_bind, ih]
+
+/-- Uniform padding has full support on the lists of the requested length. -/
+theorem mem_support_padding_iff (n : Nat) (tape : List HashOutput) :
+    tape ∈ support (padding n) ↔ tape.length = n := by
+  rw [padding_eq_replicate, support_replicate]
+  exact and_iff_left fun _ _ => mem_support_uniformSample (α := HashOutput)
+
 /-- The padding block has exactly the length it was asked for. -/
 theorem padding_length (trials : Nat) (pad : List HashOutput)
-    (hmem : pad ∈ support (padding trials)) : pad.length = trials := by
-  induction trials generalizing pad with
-  | zero =>
-    rw [padding, support_pure, Set.mem_singleton_iff] at hmem
-    rw [hmem]
-    rfl
-  | succ remaining ih =>
-    rw [show padding (remaining + 1) =
-      ($ᵗ HashOutput : ProbComp HashOutput) >>= fun value =>
-        padding remaining >>= fun rest => (pure (value :: rest) : ProbComp _) from rfl,
-      mem_support_bind_iff] at hmem
-    obtain ⟨value, -, hrest⟩ := hmem
-    rw [mem_support_bind_iff] at hrest
-    obtain ⟨rest, hrestMem, hpure⟩ := hrest
-    rw [support_pure, Set.mem_singleton_iff] at hpure
-    rw [hpure, List.length_cons, ih rest hrestMem]
+    (hmem : pad ∈ support (padding trials)) : pad.length = trials :=
+  (mem_support_padding_iff trials pad).1 hmem
 
 /-- Coordinatewise, a uniform word of answers has a uniform tape of parsed views. -/
 theorem viewTape_uniform (trials : Nat) :

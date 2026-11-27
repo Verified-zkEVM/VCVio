@@ -1,0 +1,133 @@
+{
+  "status": "THREE_SCOPED_PROTOTYPES_PASS_NOT_FULL_REFACTOR",
+  "recordedAtUTC": "2026-10-26",
+  "planningBase": "9b4e1a0307414994c5fe7b136d4c52cdd39333fa",
+  "planningTree": "e10d9c5580c60c61e60659a3895c95e0f443b5a2",
+  "executionBase": "92eaa1af9d9c120e6e6e9d3036aca1af9e751573",
+  "executionTree": "74b8149d68e52b870195b90783e19a5a177c3bc2",
+  "executionBaseRole": "Private isolated local clone only; not intended withdrawal/migration base",
+  "toolchain": "leanprover/lean4:v4.35.0",
+  "activeLean": "Lean (version 4.35.0, x86_64-unknown-linux-gnu, commit eb6cafb7290e8bd5f2937522d8d804f58f02bafc, Release)",
+  "manifestSHA256": "68e3e9f60f635be3e88e676b871b3419004f882626da3ab85523cb2b374da8d2",
+  "dependencyRevisions": {
+    "mathlib": "56a005855ea17e0b0958f73ec801ae140b0a1679",
+    "PolyFun": "ecac686fd8a3b4763d3df2e738c91947bdec40d6",
+    "plausible": "dfa4f38190d07c37e315953e08b90fe2d95b3c24",
+    "LeanSearchClient": "d6b4c7be5be75ec4917c873ac50c756dc1436372",
+    "importGraph": "a41f0e9a4dea23188ea9cc1c41ac9f8bbafe0b93",
+    "proofwidgets": "df72b022e558978a1c50264cfc4d7fec86fa8e04",
+    "aesop": "4a174c490d8707121c4a9290800489f105d85e07",
+    "Qq": "dce0ad79c486cb1fb504af04f953c3466b0c6db8",
+    "batteries": "66e469188fe07963e5cf666c7d4433f45b8131c5",
+    "cslib": "5b56df99362532c46e1175381fbbdd755bd56030",
+    "Cli": "c24fe6078c630e89b489bffe59b3e20ac30d12c8"
+  },
+  "sourceAndAll11DependenciesCleanAndUnchanged": true,
+  "framesSHA256": {
+    "p1Before": "20b8c6a1c5b18ab2bbc04a0c1365b79df8c07caf291c16384a21550da7cbd202",
+    "p1After": "20b8c6a1c5b18ab2bbc04a0c1365b79df8c07caf291c16384a21550da7cbd202",
+    "p2p3Before": "55b8c99a49e615156b4307cff8feeef2b3125b68be792659ed8a6a3f5b194530",
+    "p2p3After": "55b8c99a49e615156b4307cff8feeef2b3125b68be792659ed8a6a3f5b194530"
+  },
+  "sourceRelation": {
+    "P1": {
+      "localImportModuleCount": 295,
+      "allSharedCoreGitBlobsEqualBetweenPlanAndExecution": true,
+      "compiled912Modules": 0,
+      "staticClosureSHA256": "7810838f852d414d744ede73660b139eb6525b1860fa1bb2d386be57477fcf40",
+      "sharedGitBlobPacketSHA256": "71a054820495ca4785ac3f90fb1b2de6bb713525c333469d423a29b7312cee41"
+    },
+    "P2P3": "Framework imports only; no HashSig imports. Copied final sources/logs verified against frozen author packet."
+  },
+  "probes": [
+    {
+      "id": "P1",
+      "source": "VariableContextWire.lean",
+      "log": "p1.log.txt",
+      "exitCode": 0,
+      "elapsedSeconds": 27.629625272995327,
+      "command": [
+        "timeout",
+        "90s",
+        "lake",
+        "env",
+        "lean",
+        "--root=/tmp/slhdsa-refactor-research/prototypes",
+        "-DautoImplicit=false",
+        "-o",
+        "/tmp/slhdsa-refactor-research/prototypes/VariableContextWire.olean",
+        "/tmp/slhdsa-refactor-research/prototypes/VariableContextWire.lean"
+      ],
+      "result": "Mixed valid contexts, full general/weak term and sharper hedged bounds,128s/192f consumers, invalid256lengthcollision",
+      "limits": "No optionalreply/rejected execution, actualjoint127 or graphport"
+    },
+    {
+      "id": "P2",
+      "source": "WeightedBudgetProbe.lean",
+      "log": "p2.log.txt",
+      "exitCode": 0,
+      "elapsedSeconds": 4.977838848019019,
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "-DautoImplicit=false",
+        "/tmp/slhdsa-refactor-research/framework/WeightedBudgetProbe.lean"
+      ],
+      "result": "Generic exactweighted structural→samepathwisebudget and totalcount→scaledweightedbudget; concreteweight3/1 adaptivebound6 withreachable6; joint2 vsnecessaryseparate2+2; costerasure/AE/p1. No full SUF/source/cache-refinement claim.",
+      "limits": "No full counted SUF/source/cache refinement or input-dependentpolicy execution"
+    },
+    {
+      "id": "P3",
+      "source": "ReplyLogProbe.lean",
+      "log": "p3.log.txt",
+      "exitCode": 0,
+      "elapsedSeconds": null,
+      "elapsedNote": "No independent per-process timer on this successful rerun.",
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "-DautoImplicit=false",
+        "/tmp/slhdsa-refactor-research/framework/ReplyLogProbe.lean"
+      ],
+      "result": "Existing QueryLog and actual SignatureAlg.signingLogContains specialization for total replies; #912-shaped optional-success predicate; rejected entries filtered only from successful-pair view, retained rawlog; replay/newsignature fixtures. Pure log laws, not a counted experiment/signing execution proof.",
+      "limits": "Pureloglaw only; no actual signer execution/request charge or game equivalence"
+    }
+  ],
+  "limits": {
+    "P4": "Effectful FORS/weighted component observer unproved",
+    "P5": "Full shared experiment/keygen/cache/sourcevector and allq strength recovery unproved",
+    "P6": "Canonical parametergraph on128s+192f unproved"
+  },
+  "independentScopedReviews": {
+    "P1": {
+      "SHA256": "b8365df9875f916e39318383fd3cbec4f142157969f99d6c50b022537bad097a",
+      "result": "SCOPED_PASS_P1_VALID_VARIABLE_CONTEXT_REUSE"
+    },
+    "P2P3": {
+      "SHA256": "e945431cbdd0fa70fed5feab0e23465e7004118443cc43db8844435505709b0f",
+      "result": "SCOPED_PASS_FROZEN_P2_P3_RESEARCH_PROBES"
+    }
+  },
+  "strengthInventory": {
+    "file": "strength-manifest.json",
+    "SHA256": "1f94f82c956990d0ee15ba1aff19bd3451e339af499532a2aa34b5aaaa06eed5",
+    "declaredGroups": 25,
+    "declaredSourceVerifiedDeclarations": 77,
+    "scope": "Source-header/semantic inventory, not a substitute for elaborated all-budget theorem and observer recovery",
+    "version": "v2 resource-tightnessanchors included"
+  },
+  "axioms": "All printed probe security/probability declarations use subsets of propext,Classical.choice,Quot.sound; no sorryAx or warnings in final logs.",
+  "resourceOptions": "Explicit autoImplicit=false,threads4,defaultrecursion/heartbeats; no full repository build by probes.",
+  "filesSHA256": {
+    "README.md": "52220407cd52a39733b8de9e792052e976832df9b163a92957ec2d22471868dc",
+    "ReplyLogProbe.lean": "149a5a6f5d730f1f7122cdc861d9de84755deada7887814dcf54714bceeba613",
+    "VariableContextWire.lean": "2f82a3ac10079848afa3e9ba76e0cd707e69795d1a46fa71d5b058d74a81ec82",
+    "WeightedBudgetProbe.lean": "859e33f681ad2f9459d02e67df253c425df236fa343d66f7363ec28155c1c53b",
+    "p1.log.txt": "8f724a83a48e1e4ed5a38e0e69d7da7cde57fdd4bb09c2fddb9966534d84a0dc",
+    "p2.log.txt": "836ea003a253f30710c01a3afcd6f0246bfeea75eec6945d8cc31965d388ff49",
+    "p3.log.txt": "15793b593b3ecf6f8457fe4219e8c0019a6a231d95ea2b8d9c5d64edb4de1dd3",
+    "strength-manifest.json": "1f94f82c956990d0ee15ba1aff19bd3451e339af499532a2aa34b5aaaa06eed5"
+  }
+}

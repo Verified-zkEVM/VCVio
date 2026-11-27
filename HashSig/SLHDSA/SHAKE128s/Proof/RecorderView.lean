@@ -80,8 +80,7 @@ instance : CacheView (QueryCache HashSpec) where
   update := fun cache input answer => cache.cacheQuery input answer
   cache_update := fun _ _ _ => rfl
 
-/-- And so is the handler's carrier, at the operations it already has. A view that *does*
-notice its queries is `CarriedWitness.servingView`; this one carries the carrier along. -/
+/-- The carrier's cache view reads and updates the stored random-oracle answers. -/
 instance : CacheView HandlerCarrier.State where
   cacheOf := HandlerCarrier.cacheOf
   update := HandlerCarrier.cacheAnswer

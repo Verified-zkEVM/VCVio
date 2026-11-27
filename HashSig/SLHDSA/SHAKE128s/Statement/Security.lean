@@ -30,6 +30,13 @@ open OracleComp OracleSpec ENNReal
 
 namespace SLHDSA.SHAKE128s.Security
 
+/-- The paper algorithms with their actual key generation, request signer and verifier. -/
+@[expose] noncomputable def externalScheme :
+    Game.ExternalScheme HashOutput PublicKey SecretKey where
+  keygen := Scheme.keygen
+  sign := Scheme.sign
+  verify := Scheme.verify
+
 /-- The signing oracle's interface. -/
 abbrev SigningSpec : OracleSpec Message := Game.SigningSpec
 
@@ -59,46 +66,27 @@ abbrev CountedRun := AddWriterT Counts (StateT SigningLog (OracleComp OracleWorl
 @[expose] def hashCost : OracleWorld.Domain → Nat :=
   RandomOracleModel.hashCost Bytes HashOutput
 
-/-- Run a computation, and also return the sum of `cost` over its queries. -/
+/-- The shared component observer with its original phase-count interface. -/
 @[expose] def countQueries {α : Type} (cost : OracleWorld.Domain → Counts)
     (computation : OracleComp OracleWorld α) : OracleComp OracleWorld (α × Counts) :=
-  (fun result => (result.1, Multiplicative.toAdd result.2)) <$>
-    (simulateQ (addCostOracle cost) computation).run
+  Game.countQueries cost computation
 
-/-- Run a computation, and also return its number of hash calls. -/
+/-- The shared component observer for every actual hash call. -/
 @[expose] def countAllHashes {α : Type} (computation : OracleComp OracleWorld α) :
-    OracleComp OracleWorld (α × Nat) :=
-  (fun result => (result.1, Multiplicative.toAdd result.2)) <$>
-    (simulateQ (addCostOracle hashCost) computation).run
+    OracleComp OracleWorld (α × Nat) := Game.countAllHashes computation
 
-/-- Signs with the real key, counts each request and logs each answer. -/
-@[expose] def signingOracle (sk : SecretKey) : QueryImpl SigningSpec CountedRun := fun request => do
-  AddWriterT.addTell (Counts.single .signing 1)
-  let answer ← liftM (Scheme.sign sk request : OracleComp OracleWorld (Option Bytes))
-  liftM (modify (fun signed => signed ++ [⟨request, answer⟩]) :
-    StateT SigningLog (OracleComp OracleWorld) Unit)
-  return answer
+/-- The shared callback signer, presented through the paper proof's phase/log interface. -/
+@[expose] def signingOracle (sk : SecretKey) : QueryImpl SigningSpec CountedRun :=
+  fun request => Game.Counted.legacyRun
+    (SignatureAlg.SigningView.countedSigningOracleUsing Game.Counted.phasePolicy
+      (fun request => (Scheme.sign sk request : OracleComp OracleWorld (Option Bytes))) request)
 
 /-- The result of one run of the experiment. -/
 abbrev Outcome := Game.Outcome
 
-/-- The adversary's phase and the verification of its forgery. -/
+/-- The shared supplied-key client and final verifier retain the paper phase observation. -/
 @[expose] noncomputable def afterKeygen (adversary : Adversary) (keys : SecretKey × PublicKey) :
-    OracleComp OracleWorld Outcome := do
-  let (sk, pk) := keys
-  let ((forgery, adversaryCounts), signed) ←
-    (simulateQ
-      ((QueryImpl.ofLift OracleWorld (StateT SigningLog (OracleComp OracleWorld))).withAddCost
-          (fun input => Counts.single .hash (hashCost input)) + signingOracle sk)
-      (adversary.main pk)).run.run []
-  let (verified, verifierCounts) ← countQueries
-    (fun input => Counts.single .verification (hashCost input))
-    (Scheme.verify pk forgery.message forgery.signature)
-  return {
-    forgery := forgery
-    signed := signed
-    verified := verified
-    counts := Multiplicative.toAdd adversaryCounts + verifierCounts }
+    OracleComp OracleWorld Outcome := Game.afterKeygen externalScheme adversary keys
 
 /-- The forgery is new: no signing request returned this pair. -/
 @[expose] def Fresh (signed : SigningLog) (forgery : Forgery) : Prop :=
@@ -127,12 +115,10 @@ instance (outcome : Outcome) : Decidable (Wins outcome) := by
   | .signer => laterHashes - outcome.counts .hash - outcome.counts .verification
   | .verifier => outcome.counts .verification
 
-/-- Key generation, then the adversary's phase and verification, with the counts by source. -/
+/-- The shared counted experiment, projected to the paper outcome and all five source counts. -/
 @[expose] noncomputable def experimentBySource (adversary : Adversary) :
-    OracleComp OracleWorld (Outcome × Unforgeability.QueryCounts) := do
-  let (keys, keygenHashes) ← countAllHashes Scheme.keygen
-  let (outcome, laterHashes) ← countAllHashes (afterKeygen adversary keys)
-  return (outcome, sourceCounts outcome keygenHashes laterHashes)
+    OracleComp OracleWorld (Outcome × Unforgeability.QueryCounts) :=
+  Game.experimentBySource externalScheme adversary
 
 /-- All parties share one random oracle, starting empty. -/
 @[expose] noncomputable def runBySource (adversary : Adversary) :

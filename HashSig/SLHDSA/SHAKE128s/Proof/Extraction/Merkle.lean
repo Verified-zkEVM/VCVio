@@ -65,7 +65,8 @@ theorem root_eq_canonical_or_collision (secretSeed publicSeed message : Digest)
       SLHDSA.SHAKE128s.Merkle.publicKeyFromSignature (m := Id) index signature
         message publicSeed address := by
     rw [BinaryPath.value_eq_fold]
-    simp only [SLHDSA.SHAKE128s.Merkle.publicKeyFromSignature, bind, Correctness.foldlM_id]
+    simp only [SLHDSA.SHAKE128s.Merkle.publicKeyFromSignature_eq_fold, bind,
+      Correctness.foldlM_id]
     congr 1
     funext current j
     simp only [siblings, dite_eq_left j.isLt, BinaryPath.ordered]

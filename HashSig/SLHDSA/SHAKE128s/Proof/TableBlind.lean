@@ -5,29 +5,14 @@ Authors: Tom Wambsgans
 -/
 
 module
-
-public import HashSig.SLHDSA.SHAKE128s.Proof.SensitiveQuery
 public import VCVio.OracleComp.QueryTracking.RandomOracle.DeferredSampling
 
 /-!
-# A run that reads only part of the table is blind to the rest
+# Simulating with partially observed tables
 
-This file supplies the lifting that turns a *per-step* blindness statement into a run-level one.
-A handler is parameterised by the table it may read; `evalDist_run_congr_of_step` says that if
-each step's law is unchanged by altering the table within an equivalence `Agree`, so is the
-whole run's, hence so is any event about its record. The per-step hypothesis is where the graph
-enters: a query at a node all of whose children's cells are available is answered by that node's
-own cell, which `CanonicalGraph.available_of_children_available` says is available too, so the
-answer is a function of the available cells alone.
-
-The lifting applies to a presentation in which the handler reads the table, which is the lazy
-one. In a presentation where the table enters through the *initial cache* instead, the
-dependence is in the state rather than in the handler, and the lifting says nothing: two caches
-built from tables that differ are told apart by a single query at a canonical input where they
-differ, so no run-level congruence holds.
-
-It does not cover a set of unavailable cells that shrinks as signatures are issued: the lifting
-is not indexed by prefixes of the run.
+A stateful query handler can depend on an auxiliary table. If two tables induce the same
+step law at every state, then they induce the same joint output and final-state law for
+every computation.
 -/
 
 public section
@@ -35,8 +20,6 @@ public section
 open OracleComp OracleSpec ENNReal
 
 namespace SLHDSA.SHAKE128s.TableBlind
-
-open SensitiveQuery
 
 /-! ## Lifting blindness from a step to a run -/
 
@@ -59,7 +42,5 @@ theorem evalDist_run_congr_of_step {ι : Type} {spec : OracleSpec ι} {σ Table 
   | query_bind t next ih =>
     simp only [simulateQ_bind, simulateQ_spec_query, StateT.run_bind]
     exact evalDist_bind_congr (hstep t s left right hagree) fun p => ih p.1 p.2
-
-variable {Node Index State : Type} [Fintype Index] [DecidableEq Index]
 
 end SLHDSA.SHAKE128s.TableBlind

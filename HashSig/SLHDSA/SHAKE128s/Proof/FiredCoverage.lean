@@ -40,7 +40,7 @@ with probability at most `2 ^ -177` (`prob_helpedBy_le`). If there are two, two 
 pair of blocks so they are facts about the run rather than about the blocks' law:
 
 * `hcausal` — whether the run reaches target cell `index` does not depend on any cell at or after
-  it. `NoticingTape.prob_selected_hit_le_of_causal` needs only `cell = index`; the pairs here also
+  it. `AnswerTape.prob_selected_hit_le_of_causal` needs only `cell = index`; the pairs here also
   need later cells, because the helper may be read after the target was reached.
 * `hthin1`, `hthin2` — reaching a cell and then seeing it fire costs `2 ^ -128` per cell.
 -/
@@ -148,13 +148,15 @@ theorem succ_pow_le (load : Nat) : (load + 1) ^ 14 ≤ 2 ^ 14 * (1 + load ^ 14) 
       _ ≤ 2 ^ 14 * (1 + load ^ 14) := Nat.mul_le_mul_left _ (by omega)
 
 set_option exponentiation.threshold 1024 in
-/-- **Two uniform views at one instance cover each other rarely.** With the loads' fourteenth
-moment at most `2 ^ 102`, a uniform target is covered by the disclosures together with an
-independent uniform helper at its own instance with probability at most `2 ^ -177`. -/
-theorem prob_helpedBy_le (revealed : Disclosures) (loads : Instance → Nat)
+open scoped Classical in
+/-- A load-moment cap with a cardinality certificate bounds a uniform helped pair. -/
+private theorem prob_helpedBy_le_of_moment_cap
+    (revealed : Disclosures) (loads : Instance → Nat) (momentCap : Nat)
     (hload : ∀ index tree, (revealed index tree).card ≤ loads index)
-    (hmoment : ∑ index, loads index ^ 14 ≤ 2 ^ 102) :
-    Pr{let pair ← ($ᵗ (View × View) : ProbComp (View × View))}[HelpedBy revealed pair.1 pair.2] ≤
+    (hmoment : ∑ index, loads index ^ 14 ≤ momentCap)
+    (hcard : (2 ^ 12) ^ 14 * (2 ^ 14 * (2 ^ 63 + momentCap)) ≤ 2 ^ 285) :
+    Pr{let pair ← ($ᵗ (View × View) : ProbComp (View × View))}[
+      HelpedBy revealed pair.1 pair.2] ≤
       1 / ((2 ^ 177 : Nat) : ℝ≥0∞) := by
   classical
   have hsum : ∑ index : Instance, (2 ^ 12) ^ 14 * (loads index + 1) ^ 14 ≤ 2 ^ 285 := by
@@ -164,14 +166,14 @@ theorem prob_helpedBy_le (revealed : Disclosures) (loads : Instance → Nat)
     refine le_trans hone ?_
     rw [← Finset.mul_sum, ← Finset.mul_sum, Finset.sum_add_distrib, Finset.sum_const,
       Finset.card_univ]
-    have hcard : Fintype.card Instance = 2 ^ 63 := by
+    have hinstanceCard : Fintype.card Instance = 2 ^ 63 := by
       unfold ForsCoverage.Instance MessageDigest.Instance totalHeight
       exact Fintype.card_fin _
-    rw [hcard, smul_eq_mul, mul_one]
+    rw [hinstanceCard, smul_eq_mul, mul_one]
     calc (2 ^ 12) ^ 14 * (2 ^ 14 * (2 ^ 63 + ∑ index : Instance, loads index ^ 14))
-        ≤ (2 ^ 12) ^ 14 * (2 ^ 14 * (2 ^ 63 + 2 ^ 102)) :=
+        ≤ (2 ^ 12) ^ 14 * (2 ^ 14 * (2 ^ 63 + momentCap)) :=
           Nat.mul_le_mul_left _ (Nat.mul_le_mul_left _ (Nat.add_le_add_left hmoment _))
-      _ ≤ 2 ^ 285 := by norm_num
+      _ ≤ 2 ^ 285 := hcard
   rw [SampleableType.prEvent_uniformSample]
   have hcard : Fintype.card (View × View) = 2 ^ 462 := by
     norm_num [View, Instance, ForsCoverage.Tree, Leaf, MessageDigest.View, MessageDigest.Instance,
@@ -186,6 +188,17 @@ theorem prob_helpedBy_le (revealed : Disclosures) (loads : Instance → Nat)
     _ = 1 / ((2 ^ 177 : Nat) : ℝ≥0∞) := by
         apply (ENNReal.toReal_eq_toReal_iff' (by finiteness) (by finiteness)).mp
         norm_num
+
+set_option exponentiation.threshold 1024 in
+/-- **Two uniform views at one instance cover each other rarely.** With the loads' fourteenth
+moment at most `2 ^ 102`, a uniform target is covered by the disclosures together with an
+independent uniform helper at its own instance with probability at most `2 ^ -177`. -/
+theorem prob_helpedBy_le (revealed : Disclosures) (loads : Instance → Nat)
+    (hload : ∀ index tree, (revealed index tree).card ≤ loads index)
+    (hmoment : ∑ index, loads index ^ 14 ≤ 2 ^ 102) :
+    Pr{let pair ← ($ᵗ (View × View) : ProbComp (View × View))}[HelpedBy revealed pair.1 pair.2] ≤
+      1 / ((2 ^ 177 : Nat) : ℝ≥0∞) := by
+  exact prob_helpedBy_le_of_moment_cap revealed loads (2 ^ 102) hload hmoment (by norm_num)
 
 set_option exponentiation.threshold 1024 in
 /-- **A uniform view lands on a given instance with probability `2 ^ -63`.** -/
@@ -431,27 +444,22 @@ theorem mem_leftDisclosures {leftLength : Nat} {leftTape : List HashOutput} {vie
   · exact hleaf
 
 open scoped Classical in
-/-- **The wide event falls into four.** The block is bad; or the target is covered by the block
-alone; or exactly one fired cell at its instance helps; or two fired cells share an instance. -/
-theorem firedCovered_cases {ρ : Type} (len : ρ → Nat) (fired : ρ → Nat → Prop)
-    (leftLength rightLength : Nat) (leftTape rightTape : List HashOutput) (z : ρ)
-    (hcovered : FiredCovered len fired leftLength rightLength ((leftTape, rightTape), z)) :
-    ¬ GoodLeft leftLength leftTape ∨
-      (∃ target < rightLength, target < len z ∧ GoodLeft leftLength leftTape ∧
-        Covered (leftDisclosures leftLength leftTape) (cellView rightTape target)) ∨
-      (∃ target < rightLength, ∃ helper < rightLength, target ≠ helper ∧
-        (helper < len z ∧ fired z helper) ∧
-        (GoodLeft leftLength leftTape ∧ HelpedBy (leftDisclosures leftLength leftTape)
-          (cellView rightTape target) (cellView rightTape helper))) ∨
-      (∃ first < rightLength, ∃ second < rightLength, first < second ∧
-        (second < len z ∧ fired z first ∧ fired z second) ∧
-        (cellView rightTape first).1 = (cellView rightTape second).1) := by
+/-- Coverage by a fixed disclosure cutoff has three combinatorial witness forms. -/
+private theorem firedCovered_cases_core
+    {ρ : Type} (len : ρ → Nat) (fired : ρ → Nat → Prop)
+    (cutoff rightLength : Nat) (leftTape rightTape : List HashOutput) (z : ρ)
+    (hcovered : FiredCovered len fired cutoff rightLength ((leftTape, rightTape), z)) :
+    (∃ target < rightLength, target < len z ∧
+      Covered (leftDisclosures cutoff leftTape) (cellView rightTape target)) ∨
+    (∃ target < rightLength, ∃ helper < rightLength, target ≠ helper ∧
+      (helper < len z ∧ fired z helper) ∧
+      HelpedBy (leftDisclosures cutoff leftTape)
+        (cellView rightTape target) (cellView rightTape helper)) ∨
+    (∃ first < rightLength, ∃ second < rightLength, first < second ∧
+      (second < len z ∧ fired z first ∧ fired z second) ∧
+      (cellView rightTape first).1 = (cellView rightTape second).1) := by
   classical
   obtain ⟨target, htarget, hreached, htrees⟩ := hcovered
-  by_cases hgood : GoodLeft leftLength leftTape
-  swap
-  · exact Or.inl hgood
-  refine Or.inr ?_
   -- Two distinct fired cells at the target's instance.
   by_cases htwo : ∃ first < rightLength, ∃ second < rightLength, first ≠ second ∧
       first < len z ∧ second < len z ∧ fired z first ∧ fired z second ∧
@@ -470,7 +478,7 @@ theorem firedCovered_cases {ρ : Type} (len : ρ → Nat) (fired : ρ → Nat �
       (cellView rightTape helper).1 = (cellView rightTape target).1
   · obtain ⟨helper, hhelper, hhelperLen, hne, hfired, hinstance⟩ := hone
     refine Or.inr (Or.inl ⟨target, htarget, helper, hhelper, hne.symm, ⟨hhelperLen, hfired⟩,
-      hgood, hinstance, fun tree => ?_⟩)
+      hinstance, fun tree => ?_⟩)
     rcases htrees tree with hblock | ⟨other, hother, hotherLen, hotherNe, hotherFired,
       hotherInstance, hotherLeaf⟩
     · exact Or.inl (mem_leftDisclosures hblock)
@@ -479,11 +487,36 @@ theorem firedCovered_cases {ρ : Type} (len : ρ → Nat) (fired : ρ → Nat �
         exact Or.inr hotherLeaf
       · exact absurd ⟨other, hother, helper, hhelper, hsame, hotherLen, hhelperLen,
           hotherFired, hfired, hotherInstance, hinstance⟩ htwo
-  · refine Or.inl ⟨target, htarget, hreached, hgood, fun tree => ?_⟩
+  · refine Or.inl ⟨target, htarget, hreached, fun tree => ?_⟩
     rcases htrees tree with hblock | ⟨other, hother, hotherLen, hotherNe, hotherFired,
       hotherInstance, -⟩
     · exact mem_leftDisclosures hblock
     · exact absurd ⟨other, hother, hotherLen, hotherNe, hotherFired, hotherInstance⟩ hone
+
+open scoped Classical in
+/-- **The wide event falls into four.** The block is bad; or the target is covered by the block
+alone; or exactly one fired cell at its instance helps; or two fired cells share an instance. -/
+theorem firedCovered_cases {ρ : Type} (len : ρ → Nat) (fired : ρ → Nat → Prop)
+    (leftLength rightLength : Nat) (leftTape rightTape : List HashOutput) (z : ρ)
+    (hcovered : FiredCovered len fired leftLength rightLength ((leftTape, rightTape), z)) :
+    ¬ GoodLeft leftLength leftTape ∨
+      (∃ target < rightLength, target < len z ∧ GoodLeft leftLength leftTape ∧
+        Covered (leftDisclosures leftLength leftTape) (cellView rightTape target)) ∨
+      (∃ target < rightLength, ∃ helper < rightLength, target ≠ helper ∧
+        (helper < len z ∧ fired z helper) ∧
+        (GoodLeft leftLength leftTape ∧ HelpedBy (leftDisclosures leftLength leftTape)
+          (cellView rightTape target) (cellView rightTape helper))) ∨
+      (∃ first < rightLength, ∃ second < rightLength, first < second ∧
+        (second < len z ∧ fired z first ∧ fired z second) ∧
+        (cellView rightTape first).1 = (cellView rightTape second).1) := by
+  classical
+  by_cases hgood : GoodLeft leftLength leftTape
+  · rcases firedCovered_cases_core len fired leftLength rightLength leftTape rightTape z
+        hcovered with ⟨target, ht, hr, hc⟩ | ⟨target, ht, helper, hh, hn, hf, hc⟩ | htwo
+    · exact Or.inr (Or.inl ⟨target, ht, hr, hgood, hc⟩)
+    · exact Or.inr (Or.inr (Or.inl ⟨target, ht, helper, hh, hn, hf, hgood, hc⟩))
+    · exact Or.inr (Or.inr (Or.inr htwo))
+  · exact Or.inl hgood
 
 /-! ## The two rates, at fresh answers -/
 
@@ -516,15 +549,16 @@ theorem evalDist_parse_pair :
   exact evalDist_parse_uniform.bind fun _ => evalDist_parse_uniform.bind fun _ => .rfl
 
 open scoped Classical in
-/-- **The pair rate at fresh answers**: two fresh answers parse to a helped pair with probability
-at most `2 ^ -177`, as a double expectation. -/
-theorem tsum_pair_helpedBy_le (revealed : Disclosures) (loads : Instance → Nat)
-    (hload : ∀ index tree, (revealed index tree).card ≤ loads index)
-    (hmoment : ∑ index, loads index ^ 14 ≤ 2 ^ 102) :
+/-- A helped-pair rate for views transfers to two full uniform hash outputs. -/
+private theorem tsum_pair_helpedBy_le_of_rate
+    (revealed : Disclosures) (rate : ℝ≥0∞)
+    (hrate :
+      Pr{let pair ← ($ᵗ (View × View) : ProbComp (View × View))}[HelpedBy revealed pair.1 pair.2] ≤
+        rate) :
     ∑' first, Pr{let x ← ($ᵗ HashOutput : ProbComp HashOutput)}[x = first] *
       ∑' second, Pr{let x ← ($ᵗ HashOutput : ProbComp HashOutput)}[x = second] *
         (if HelpedBy revealed (MessageDigest.parse first) (MessageDigest.parse second)
-          then 1 else 0) ≤ 1 / ((2 ^ 177 : Nat) : ℝ≥0∞) := by
+          then 1 else 0) ≤ rate := by
   classical
   have hdouble : (∑' first, Pr{let x ← ($ᵗ HashOutput : ProbComp HashOutput)}[x = first] *
       ∑' second, Pr{let x ← ($ᵗ HashOutput : ProbComp HashOutput)}[x = second] *
@@ -545,7 +579,20 @@ theorem tsum_pair_helpedBy_le (revealed : Disclosures) (loads : Instance → Nat
     (prEvent_map _ _ (fun pair : View × View => HelpedBy revealed pair.1 pair.2)).symm.trans
       (evalDist_parse_pair.prEvent_eq _)
   rw [hmap]
-  exact prob_helpedBy_le revealed loads hload hmoment
+  exact hrate
+
+open scoped Classical in
+/-- **The pair rate at fresh answers**: two fresh answers parse to a helped pair with probability
+at most `2 ^ -177`, as a double expectation. -/
+theorem tsum_pair_helpedBy_le (revealed : Disclosures) (loads : Instance → Nat)
+    (hload : ∀ index tree, (revealed index tree).card ≤ loads index)
+    (hmoment : ∑ index, loads index ^ 14 ≤ 2 ^ 102) :
+    ∑' first, Pr{let x ← ($ᵗ HashOutput : ProbComp HashOutput)}[x = first] *
+      ∑' second, Pr{let x ← ($ᵗ HashOutput : ProbComp HashOutput)}[x = second] *
+        (if HelpedBy revealed (MessageDigest.parse first) (MessageDigest.parse second)
+          then 1 else 0) ≤ 1 / ((2 ^ 177 : Nat) : ℝ≥0∞) := by
+  exact tsum_pair_helpedBy_le_of_rate revealed _
+    (prob_helpedBy_le revealed loads hload hmoment)
 
 open scoped Classical in
 /-- **The instance rate at a fresh answer**, as an expectation. -/
@@ -585,6 +632,57 @@ theorem tsum_tsum_swap (f : HashOutput → HashOutput → ℝ≥0∞) :
   rw [tsum_comm]
   exact tsum_congr fun second => tsum_congr fun first => by ring
 
+open scoped Classical in
+/-- A fixed-left disclosure family charges a helped pair at the reach mass of either cell. -/
+private theorem reachMass_helped_le_of_pair_rate
+    {ρ : Type} (run : List HashOutput → List HashOutput → ProbComp ρ) (len : ρ → Nat)
+    (leftLength rightLength target helper : Nat)
+    (htarget : target < rightLength) (hhelper : helper < rightLength) (hne : target ≠ helper)
+    (revealedOf : List HashOutput → Disclosures) (goodBlock : List HashOutput → Prop)
+    (pairRate : ℝ≥0∞)
+    (hpair : ∀ leftTape : List HashOutput,
+      ∑' first, Pr{let x ← ($ᵗ HashOutput : ProbComp HashOutput)}[x = first] *
+        ∑' second, Pr{let x ← ($ᵗ HashOutput : ProbComp HashOutput)}[x = second] *
+          (if goodBlock leftTape ∧ HelpedBy (revealedOf leftTape)
+            (MessageDigest.parse first) (MessageDigest.parse second) then 1 else 0) ≤ pairRate)
+    (hcausal : ∀ (index cell : Nat) (leftTape rightTape : List HashOutput)
+        (value : HashOutput), index ≤ cell →
+      (Pr{let z ← run leftTape (rightTape.set cell value)}[index < len z]) =
+        Pr{let z ← run leftTape rightTape}[index < len z]) :
+    reachMass run len leftLength rightLength helper (fun leftTape rightTape =>
+      if goodBlock leftTape ∧ HelpedBy (revealedOf leftTape)
+        (cellView rightTape target) (cellView rightTape helper) then 1 else 0) ≤
+      pairRate *
+        (Pr{let outcome ← blockRunOf run leftLength rightLength}[target < len outcome.2] +
+          Pr{let outcome ← blockRunOf run leftLength rightLength}[helper < len outcome.2]) := by
+  classical
+  rcases Nat.lt_or_gt_of_ne hne with hlt | hgt
+  · -- the target is the earlier cell
+    rw [reachMass_resample run len leftLength rightLength helper helper hhelper
+      (fun leftTape rightTape value => hcausal helper helper leftTape rightTape value le_rfl)]
+    refine le_trans (reachMass_mono_index run len leftLength rightLength (le_of_lt hlt) _) ?_
+    rw [reachMass_resample run len leftLength rightLength target target htarget
+      (fun leftTape rightTape value => hcausal target target leftTape rightTape value le_rfl)]
+    refine le_trans (reachMass_le_const_of_length run len leftLength rightLength target _ _
+      fun leftTape rightTape hlength => ?_) (mul_le_mul' le_rfl le_self_add)
+    refine le_of_eq_of_le (tsum_congr fun w => congrArg _ (tsum_congr fun v => ?_))
+      (hpair leftTape)
+    rw [cellView_set_ne (Ne.symm hne), cellView_set_self (by rw [hlength]; exact htarget),
+      cellView_set_self (by rw [List.length_set, hlength]; exact hhelper)]
+  · -- the helper is the earlier cell
+    rw [reachMass_resample run len leftLength rightLength helper target htarget
+      (fun leftTape rightTape value => hcausal helper target leftTape rightTape value
+        (le_of_lt hgt))]
+    rw [reachMass_resample run len leftLength rightLength helper helper hhelper
+      (fun leftTape rightTape value => hcausal helper helper leftTape rightTape value le_rfl)]
+    refine le_trans (reachMass_le_const_of_length run len leftLength rightLength helper _ _
+      fun leftTape rightTape hlength => ?_) (mul_le_mul' le_rfl le_add_self)
+    refine le_of_eq_of_le ?_ (hpair leftTape)
+    rw [tsum_tsum_swap]
+    refine tsum_congr fun w => congrArg _ (tsum_congr fun v => ?_)
+    rw [cellView_set_self (by rw [List.length_set, hlength]; exact htarget),
+      cellView_set_ne hne, cellView_set_self (by rw [hlength]; exact hhelper)]
+
 section Charges
 
 variable {ρ : Type} (run : List HashOutput → List HashOutput → ProbComp ρ) (len : ρ → Nat)
@@ -620,32 +718,9 @@ theorem reachMass_helped_le (leftLength rightLength target helper : Nat)
         (fun part tree => ForsDisclosureTape.disclosures_card_le_loads _ part tree) hgood
     · simp only [hgood, false_and, ↓reduceIte, mul_zero, tsum_zero]
       exact zero_le
-  rcases Nat.lt_or_gt_of_ne hne with hlt | hgt
-  · -- the target is the earlier cell
-    rw [reachMass_resample run len leftLength rightLength helper helper hhelper
-      (fun leftTape rightTape value => hcausal helper helper leftTape rightTape value le_rfl)]
-    refine le_trans (reachMass_mono_index run len leftLength rightLength (le_of_lt hlt) _) ?_
-    rw [reachMass_resample run len leftLength rightLength target target htarget
-      (fun leftTape rightTape value => hcausal target target leftTape rightTape value le_rfl)]
-    refine le_trans (reachMass_le_const_of_length run len leftLength rightLength target _ _
-      fun leftTape rightTape hlength => ?_) (mul_le_mul' le_rfl le_self_add)
-    refine le_of_eq_of_le (tsum_congr fun w => congrArg _ (tsum_congr fun v => ?_))
-      (hpair leftTape)
-    rw [cellView_set_ne (Ne.symm hne), cellView_set_self (by rw [hlength]; exact htarget),
-      cellView_set_self (by rw [List.length_set, hlength]; exact hhelper)]
-  · -- the helper is the earlier cell
-    rw [reachMass_resample run len leftLength rightLength helper target htarget
-      (fun leftTape rightTape value => hcausal helper target leftTape rightTape value
-        (le_of_lt hgt))]
-    rw [reachMass_resample run len leftLength rightLength helper helper hhelper
-      (fun leftTape rightTape value => hcausal helper helper leftTape rightTape value le_rfl)]
-    refine le_trans (reachMass_le_const_of_length run len leftLength rightLength helper _ _
-      fun leftTape rightTape hlength => ?_) (mul_le_mul' le_rfl le_add_self)
-    refine le_of_eq_of_le ?_ (hpair leftTape)
-    rw [tsum_tsum_swap]
-    refine tsum_congr fun w => congrArg _ (tsum_congr fun v => ?_)
-    rw [cellView_set_self (by rw [List.length_set, hlength]; exact htarget),
-      cellView_set_ne hne, cellView_set_self (by rw [hlength]; exact hhelper)]
+  exact reachMass_helped_le_of_pair_rate run len leftLength rightLength target helper
+    htarget hhelper hne (leftDisclosures leftLength) (GoodLeft leftLength)
+    (1 / ((2 ^ 177 : Nat) : ℝ≥0∞)) hpair hcausal
 
 open scoped Classical in
 /-- **Two cells at one instance, at the reach mass of the earlier one.** Redraw the later. -/
@@ -679,13 +754,8 @@ theorem mem_support_blockRunOf {ρ : Type} (run : List HashOutput → List HashO
     (leftLength rightLength : Nat) {outcome : (List HashOutput × List HashOutput) × ρ}
     (hmem : outcome ∈ support (blockRunOf run leftLength rightLength)) :
     outcome.1.1 ∈ support (padding leftLength) ∧ outcome.1.2 ∈ support (padding rightLength) := by
-  rw [blockRunOf, mem_support_bind_iff] at hmem
-  obtain ⟨leftTape, hleft, hrest⟩ := hmem
-  rw [mem_support_bind_iff] at hrest
-  obtain ⟨rightTape, hright, hinner⟩ := hrest
-  rw [support_map] at hinner
-  obtain ⟨z, -, rfl⟩ := hinner
-  exact ⟨hleft, hright⟩
+  have block := NoticingTape.mem_support_blockRunOf run leftLength rightLength outcome hmem
+  exact ⟨block.1, block.2.1⟩
 
 open scoped Classical in
 /-- **A bad disclosing block is a fact about the block alone**, at the sharper cap. -/
@@ -732,56 +802,59 @@ theorem second_order_constants :
   norm_num
 
 open scoped Classical in
-/-- **The coverage charge with fired cells admitted as witnesses.**
-
-The first-order term is the block's: `2 ^ -129` per expected target, at the sharper cap. The
-fired cells cost `rightLength · 2 ^ -303` per expected target, which at any `rightLength ≤ 2 ^ 128`
-is far inside the other half unit. -/
-theorem prob_firedCovered_le {ρ : Type} (run : List HashOutput → List HashOutput → ProbComp ρ)
-    (rightOfResult : ρ → Record) (fired : ρ → Nat → Prop)
-    (leftLength rightLength : Nat) (hcap : leftLength ≤ 5 * 2 ^ 62)
-    (hcausal : ∀ (index cell : Nat) (leftTape rightTape : List HashOutput) (value : HashOutput),
-      index ≤ cell →
-        Pr{let z ← run leftTape (rightTape.set cell value)}[index < (rightOfResult z).length] =
-          Pr{let z ← run leftTape rightTape}[index < (rightOfResult z).length])
+/-- One selected disclosure family charges good coverage using its fresh single and pair rates. -/
+private theorem prob_firedCovered_and_good_le
+    {ρ : Type} (run : List HashOutput → List HashOutput → ProbComp ρ)
+    (len : ρ → Nat) (fired : ρ → Nat → Prop)
+    (leftLength rightLength : Nat) (cutoffOf : List HashOutput → Nat)
+    (goodBlock : List HashOutput → Prop) (freshRate : ℝ≥0∞)
+    (hfresh : ∀ leftTape, goodBlock leftTape →
+      Pr{let value ← ($ᵗ HashOutput : ProbComp HashOutput)}[BlockHit
+        (cutoffOf leftTape) leftTape value] ≤ freshRate)
+    (hpair : ∀ leftTape, goodBlock leftTape →
+      Pr{let pair ← ($ᵗ (View × View) : ProbComp (View × View))}[HelpedBy
+        (leftDisclosures (cutoffOf leftTape) leftTape) pair.1 pair.2] ≤
+        1 / ((2 ^ 177 : Nat) : ℝ≥0∞))
+    (hcausal : ∀ (index cell : Nat) (leftTape rightTape : List HashOutput)
+        (value : HashOutput), index ≤ cell →
+      (Pr{let z ← run leftTape (rightTape.set cell value)}[index < len z]) =
+        Pr{let z ← run leftTape rightTape}[index < len z])
     (hthin1 : ∀ (index : Nat) (leftTape rightTape : List HashOutput),
-      Pr{let z ← run leftTape rightTape}[index < (rightOfResult z).length ∧ fired z index] ≤
+      Pr{let z ← run leftTape rightTape}[index < len z ∧ fired z index] ≤
         1 / ((2 ^ 128 : Nat) : ℝ≥0∞) *
-          Pr{let z ← run leftTape rightTape}[index < (rightOfResult z).length])
+          Pr{let z ← run leftTape rightTape}[index < len z])
     (hthin2 : ∀ (first second : Nat) (leftTape rightTape : List HashOutput), first < second →
-      Pr{let z ← run leftTape rightTape}[second < (rightOfResult z).length ∧ fired z first ∧
-          fired z second] ≤
+      Pr{let z ← run leftTape rightTape}[second < len z ∧ fired z first ∧ fired z second] ≤
         1 / ((2 ^ 256 : Nat) : ℝ≥0∞) *
-          Pr{let z ← run leftTape rightTape}[first < (rightOfResult z).length]) :
-    Pr{let x ← blockRunOf run leftLength rightLength}[
-        (FiredCovered (fun z => (rightOfResult z).length) fired leftLength rightLength) x] ≤
-      (1 : ℝ≥0∞) / 2 ^ 126 +
-        (∑' outcome, Pr{let x ← blockRunOf run leftLength rightLength}[x = outcome] *
-            (((rightOfResult outcome.2).length : Nat) : ℝ≥0∞)) *
-          (1 / ((2 ^ 129 : Nat) : ℝ≥0∞)) +
-        (rightLength : ℝ≥0∞) *
-          (∑' outcome, Pr{let x ← blockRunOf run leftLength rightLength}[x = outcome] *
-            (((rightOfResult outcome.2).length : Nat) : ℝ≥0∞)) *
-          (1 / ((2 ^ 303 : Nat) : ℝ≥0∞)) := by
+          Pr{let z ← run leftTape rightTape}[first < len z]) :
+    Pr{let outcome ← blockRunOf run leftLength rightLength}[
+      goodBlock outcome.1.1 ∧
+        FiredCovered len fired (cutoffOf outcome.1.1) rightLength outcome] ≤
+      (∑' outcome, Pr{let x ← blockRunOf run leftLength rightLength}[x = outcome] *
+        ((len outcome.2 : Nat) : ℝ≥0∞)) *
+        (freshRate + (rightLength : ℝ≥0∞) / ((2 ^ 303 : Nat) : ℝ≥0∞)) := by
   classical
-  set len : ρ → Nat := fun z => (rightOfResult z).length with hlen
   set expectation := ∑' outcome, Pr{let x ← blockRunOf run leftLength rightLength}[x = outcome] *
-    (((rightOfResult outcome.2).length : Nat) : ℝ≥0∞) with hexpectation
+    ((len outcome.2 : Nat) : ℝ≥0∞) with hexpectation
   set reach : Nat → ℝ≥0∞ := fun index =>
     Pr{let outcome ← blockRunOf run leftLength rightLength}[index < len outcome.2] with hreach
-  have hsum : ∑ index : Fin rightLength, reach index.val ≤ expectation :=
-    sum_prob_selected_le_expected_of run rightOfResult leftLength rightLength
-  -- The four events.
+  have hsum : ∑ index : Fin rightLength, reach index.val ≤ expectation := by
+    simpa only [reach, expectation, NoticingTape.blockRunOf_eq_generalDraw] using
+        (AnswerTape.sum_prob_selected_le_expected_of
+          (DigestTape.padding leftLength) ($ᵗ HashOutput : ProbComp HashOutput)
+          run len rightLength)
+  -- The three selected witness events.
   set eventA : (List HashOutput × List HashOutput) × ρ → Prop := fun outcome =>
-    ∃ index : Fin rightLength, index.val < (rightOfResult outcome.2).length ∧
-      GoodLeft leftLength outcome.1.1 ∧
-        ∃ value, outcome.1.2[index.val]? = some value ∧ BlockHit leftLength outcome.1.1 value
+    ∃ index : Fin rightLength, index.val < len outcome.2 ∧
+      goodBlock outcome.1.1 ∧
+        ∃ value, outcome.1.2[index.val]? = some value ∧
+          BlockHit (cutoffOf outcome.1.1) outcome.1.1 value
     with heventA
   set eventB : (List HashOutput × List HashOutput) × ρ → Prop := fun outcome =>
     ∃ pair ∈ (Finset.univ : Finset (Fin rightLength × Fin rightLength)),
       pair.1.val ≠ pair.2.val ∧
         ((pair.2.val < len outcome.2 ∧ fired outcome.2 pair.2.val) ∧
-          (GoodLeft leftLength outcome.1.1 ∧ HelpedBy (leftDisclosures leftLength outcome.1.1)
+          (goodBlock outcome.1.1 ∧ HelpedBy (leftDisclosures (cutoffOf outcome.1.1) outcome.1.1)
             (cellView outcome.1.2 pair.1.val) (cellView outcome.1.2 pair.2.val))) with heventB
   set eventC : (List HashOutput × List HashOutput) × ρ → Prop := fun outcome =>
     ∃ pair ∈ (Finset.univ : Finset (Fin rightLength × Fin rightLength)),
@@ -790,48 +863,42 @@ theorem prob_firedCovered_le {ρ : Type} (run : List HashOutput → List HashOut
           (cellView outcome.1.2 pair.1.val).1 = (cellView outcome.1.2 pair.2.val).1)
     with heventC
   have hsplit : Pr{let x ← blockRunOf run leftLength rightLength}[
-        FiredCovered len fired leftLength rightLength x] ≤
-      Pr{let outcome ← blockRunOf run leftLength rightLength}[¬ GoodLeft leftLength outcome.1.1] +
-        (Pr{let x ← blockRunOf run leftLength rightLength}[eventA x] +
-          (Pr{let x ← blockRunOf run leftLength rightLength}[eventB x] +
-            Pr{let x ← blockRunOf run leftLength rightLength}[eventC x])) := by
-    refine le_trans (prEvent_mono_of_support _ _ (fun outcome =>
-      ¬ GoodLeft leftLength outcome.1.1 ∨ (eventA outcome ∨ (eventB outcome ∨ eventC outcome)))
+        goodBlock x.1.1 ∧ FiredCovered len fired (cutoffOf x.1.1) rightLength x] ≤
+      Pr{let x ← blockRunOf run leftLength rightLength}[eventA x] +
+        (Pr{let x ← blockRunOf run leftLength rightLength}[eventB x] +
+          Pr{let x ← blockRunOf run leftLength rightLength}[eventC x]) := by
+    refine le_trans (prEvent_mono_of_support _ _
+      (fun outcome => eventA outcome ∨ eventB outcome ∨ eventC outcome)
       fun outcome hmem hcovered => ?_) ?_
     · have hlength := padding_length rightLength outcome.1.2
         (mem_support_blockRunOf run leftLength rightLength hmem).2
-      rcases firedCovered_cases len fired leftLength rightLength outcome.1.1 outcome.1.2
-          outcome.2 hcovered with hbad | ⟨target, htarget, hreached, hgood, hcov⟩ |
-          ⟨target, htarget, helper, hhelper, hne, hthin, hhelp⟩ |
-          ⟨first, hfirst, second, hsecond, horder, hthin, hinstance⟩
-      · exact Or.inl hbad
-      · refine Or.inr (Or.inl ⟨⟨target, htarget⟩, hreached, hgood,
-          outcome.1.2.getD target default, ?_, hcov⟩)
+      rcases firedCovered_cases_core len fired (cutoffOf outcome.1.1) rightLength
+          outcome.1.1 outcome.1.2 outcome.2 hcovered.2 with
+        ⟨target, htarget, hreached, hcov⟩ |
+        ⟨target, htarget, helper, hhelper, hne, hthin, hhelp⟩ |
+        ⟨first, hfirst, second, hsecond, horder, hthin, hinstance⟩
+      · refine Or.inl ⟨⟨target, htarget⟩, hreached, hcovered.1,
+          outcome.1.2.getD target default, ?_, hcov⟩
         rw [List.getD_eq_getElem?_getD, List.getElem?_eq_getElem (by rw [hlength]; exact htarget)]
         rfl
-      · exact Or.inr (Or.inr (Or.inl ⟨(⟨target, htarget⟩, ⟨helper, hhelper⟩),
-          Finset.mem_univ _, hne, hthin, hhelp⟩))
-      · exact Or.inr (Or.inr (Or.inr ⟨(⟨first, hfirst⟩, ⟨second, hsecond⟩),
-          Finset.mem_univ _, horder, hthin, hinstance⟩))
-    · refine le_trans (prEvent_or_le _ _ _) (add_le_add le_rfl ?_)
-      refine le_trans (prEvent_or_le _ _ _) (add_le_add le_rfl ?_)
-      exact prEvent_or_le _ _ _
-  -- The block alone.
-  have hbad := prob_not_goodLeft_le run leftLength rightLength hcap
+      · exact Or.inr (Or.inl ⟨(⟨target, htarget⟩, ⟨helper, hhelper⟩),
+          Finset.mem_univ _, hne, hthin, hcovered.1, hhelp⟩)
+      · exact Or.inr (Or.inr ⟨(⟨first, hfirst⟩, ⟨second, hsecond⟩),
+          Finset.mem_univ _, horder, hthin, hinstance⟩)
+    · exact le_trans (prEvent_or_le _ _ _)
+        (add_le_add le_rfl (prEvent_or_le _ _ _))
   -- The first-order term.
   have hfirstOrder : Pr{let x ← blockRunOf run leftLength rightLength}[eventA x] ≤
-      expectation * (1 / ((2 ^ 129 : Nat) : ℝ≥0∞)) :=
-    NoticingTape.prob_exists_hit_le_expected_of_causal run rightOfResult leftLength rightLength
-      (GoodLeft leftLength) (BlockHit leftLength) (1 / ((2 ^ 129 : Nat) : ℝ≥0∞))
-      (fun leftTape hgood => by
-        refine le_trans (le_of_eq ?_) (ForsCoverage.fresh_coverage_le_sharper
-          (ForsDisclosureTape.disclosures (blockTape leftLength leftTape))
-          (ForsDisclosureTape.loads (blockTape leftLength leftTape))
-          (fun part tree => ForsDisclosureTape.disclosures_card_le_loads _ part tree) hgood)
-        exact (prEvent_map _ _ (fun view : View => Covered
-          (ForsDisclosureTape.disclosures (blockTape leftLength leftTape)) view)).symm.trans
-          (evalDist_parse_uniform.prEvent_eq _))
-      (fun index leftTape rightTape value => hcausal index index leftTape rightTape value le_rfl)
+      expectation * freshRate := by
+    simpa only [eventA, expectation, NoticingTape.blockRunOf_eq_generalDraw] using
+        (AnswerTape.prob_exists_hit_le_expected_of_causal
+          (A := HashOutput) (B := HashOutput)
+          (DigestTape.padding leftLength) ($ᵗ HashOutput : ProbComp HashOutput)
+          run len rightLength
+          goodBlock (fun leftTape value => BlockHit (cutoffOf leftTape) leftTape value)
+          freshRate hfresh
+          (fun index leftTape rightTape value =>
+            hcausal index index leftTape rightTape value le_rfl))
   -- One fired helper.
   set pairRate : ℝ≥0∞ := 1 / ((2 ^ 128 : Nat) : ℝ≥0∞) * (1 / ((2 ^ 177 : Nat) : ℝ≥0∞))
     with hpairRate
@@ -844,19 +911,26 @@ theorem prob_firedCovered_le {ρ : Type} (run : List HashOutput → List HashOut
       exact zero_le
     · rw [prEvent_congr _ _ (fun outcome : (List HashOutput × List HashOutput) × ρ =>
           (pair.2.val < len outcome.2 ∧ fired outcome.2 pair.2.val) ∧
-            (GoodLeft leftLength outcome.1.1 ∧
-              HelpedBy (leftDisclosures leftLength outcome.1.1)
+            (goodBlock outcome.1.1 ∧
+              HelpedBy (leftDisclosures (cutoffOf outcome.1.1) outcome.1.1)
                 (cellView outcome.1.2 pair.1.val) (cellView outcome.1.2 pair.2.val)))
           (fun outcome => ⟨fun h => h.2, fun h => ⟨hsame, h⟩⟩)]
       refine le_trans (prob_thin_le run len leftLength rightLength pair.2.val
         (fun z => pair.2.val < len z ∧ fired z pair.2.val) _
         (fun leftTape rightTape => hthin1 pair.2.val leftTape rightTape)
-        (fun leftTape rightTape => GoodLeft leftLength leftTape ∧
-          HelpedBy (leftDisclosures leftLength leftTape)
+        (fun leftTape rightTape => goodBlock leftTape ∧
+          HelpedBy (leftDisclosures (cutoffOf leftTape) leftTape)
             (cellView rightTape pair.1.val) (cellView rightTape pair.2.val))) ?_
       rw [hpairRate, mul_assoc]
-      exact mul_le_mul' le_rfl (reachMass_helped_le run len leftLength rightLength
-        pair.1.val pair.2.val pair.1.isLt pair.2.isLt hsame hcausal)
+      exact mul_le_mul' le_rfl (reachMass_helped_le_of_pair_rate run len leftLength rightLength
+        pair.1.val pair.2.val pair.1.isLt pair.2.isLt hsame
+        (fun leftTape => leftDisclosures (cutoffOf leftTape) leftTape) goodBlock
+        (1 / ((2 ^ 177 : Nat) : ℝ≥0∞)) (fun leftTape => by
+          by_cases hgood : goodBlock leftTape
+          · simp only [hgood, true_and]
+            exact tsum_pair_helpedBy_le_of_rate _ _ (hpair leftTape hgood)
+          · simp only [hgood, false_and, ↓reduceIte, mul_zero, tsum_zero]
+            exact zero_le) hcausal)
   -- Two fired cells at one instance.
   set twoRate : ℝ≥0∞ := 1 / ((2 ^ 256 : Nat) : ℝ≥0∞) * (1 / ((2 ^ 63 : Nat) : ℝ≥0∞))
     with htwoRate
@@ -903,12 +977,79 @@ theorem prob_firedCovered_le {ρ : Type} (run : List HashOutput → List HashOut
           mul_le_mul' second_order_constants (mul_le_mul' le_rfl hsum)
       _ = (rightLength : ℝ≥0∞) * expectation * (1 / ((2 ^ 303 : Nat) : ℝ≥0∞)) := by ring
   calc Pr{let x ← blockRunOf run leftLength rightLength}[
+        goodBlock x.1.1 ∧ FiredCovered len fired (cutoffOf x.1.1) rightLength x]
+      ≤ _ := hsplit
+    _ ≤ expectation * freshRate +
+          (rightLength : ℝ≥0∞) * expectation * (1 / ((2 ^ 303 : Nat) : ℝ≥0∞)) :=
+        add_le_add hfirstOrder (le_trans (add_le_add hhelped htwo) hpairs)
+    _ = _ := by
+      simp only [mul_add, div_eq_mul_inv, one_mul]
+      ac_rfl
+
+open scoped Classical in
+/-- **The coverage charge with fired cells admitted as witnesses.**
+
+The first-order term is the block's: `2 ^ -129` per expected target, at the sharper cap. The
+fired cells cost `rightLength · 2 ^ -303` per expected target, which at any `rightLength ≤ 2 ^ 128`
+is far inside the other half unit. -/
+theorem prob_firedCovered_le {ρ : Type} (run : List HashOutput → List HashOutput → ProbComp ρ)
+    (rightOfResult : ρ → Record) (fired : ρ → Nat → Prop)
+    (leftLength rightLength : Nat) (hcap : leftLength ≤ 5 * 2 ^ 62)
+    (hcausal : ∀ (index cell : Nat) (leftTape rightTape : List HashOutput) (value : HashOutput),
+      index ≤ cell →
+        Pr{let z ← run leftTape (rightTape.set cell value)}[index < (rightOfResult z).length] =
+          Pr{let z ← run leftTape rightTape}[index < (rightOfResult z).length])
+    (hthin1 : ∀ (index : Nat) (leftTape rightTape : List HashOutput),
+      Pr{let z ← run leftTape rightTape}[index < (rightOfResult z).length ∧ fired z index] ≤
+        1 / ((2 ^ 128 : Nat) : ℝ≥0∞) *
+          Pr{let z ← run leftTape rightTape}[index < (rightOfResult z).length])
+    (hthin2 : ∀ (first second : Nat) (leftTape rightTape : List HashOutput), first < second →
+      Pr{let z ← run leftTape rightTape}[second < (rightOfResult z).length ∧ fired z first ∧
+          fired z second] ≤
+        1 / ((2 ^ 256 : Nat) : ℝ≥0∞) *
+          Pr{let z ← run leftTape rightTape}[first < (rightOfResult z).length]) :
+    Pr{let x ← blockRunOf run leftLength rightLength}[
+        (FiredCovered (fun z => (rightOfResult z).length) fired leftLength rightLength) x] ≤
+      (1 : ℝ≥0∞) / 2 ^ 126 +
+        (∑' outcome, Pr{let x ← blockRunOf run leftLength rightLength}[x = outcome] *
+            (((rightOfResult outcome.2).length : Nat) : ℝ≥0∞)) *
+          (1 / ((2 ^ 129 : Nat) : ℝ≥0∞)) +
+        (rightLength : ℝ≥0∞) *
+          (∑' outcome, Pr{let x ← blockRunOf run leftLength rightLength}[x = outcome] *
+            (((rightOfResult outcome.2).length : Nat) : ℝ≥0∞)) *
+          (1 / ((2 ^ 303 : Nat) : ℝ≥0∞)) := by
+  classical
+  let len : ρ → Nat := fun z => (rightOfResult z).length
+  have hsplit : Pr{let x ← blockRunOf run leftLength rightLength}[
+        FiredCovered len fired leftLength rightLength x] ≤
+      Pr{let x ← blockRunOf run leftLength rightLength}[¬ GoodLeft leftLength x.1.1] +
+        Pr{let x ← blockRunOf run leftLength rightLength}[
+          GoodLeft leftLength x.1.1 ∧ FiredCovered len fired leftLength rightLength x] := by
+    refine le_trans (prEvent_mono _ _ _ fun x hx => ?_) (prEvent_or_le _ _ _)
+    by_cases hg : GoodLeft leftLength x.1.1
+    · exact Or.inr ⟨hg, hx⟩
+    · exact Or.inl hg
+  have hgood := prob_firedCovered_and_good_le run len fired leftLength rightLength
+    (fun _ => leftLength) (GoodLeft leftLength) (1 / ((2 ^ 129 : Nat) : ℝ≥0∞))
+    (fun leftTape hg => by
+      refine le_trans (le_of_eq ?_) (ForsCoverage.fresh_coverage_le_sharper
+        (ForsDisclosureTape.disclosures (blockTape leftLength leftTape))
+        (ForsDisclosureTape.loads (blockTape leftLength leftTape))
+        (fun part tree => ForsDisclosureTape.disclosures_card_le_loads _ part tree) hg)
+      exact (prEvent_map _ _ (fun view : View => Covered
+        (ForsDisclosureTape.disclosures (blockTape leftLength leftTape)) view)).symm.trans
+        (evalDist_parse_uniform.prEvent_eq _))
+    (fun leftTape hg => prob_helpedBy_le _ _
+      (fun part tree => ForsDisclosureTape.disclosures_card_le_loads _ part tree) hg)
+    hcausal hthin1 hthin2
+  calc Pr{let x ← blockRunOf run leftLength rightLength}[
         FiredCovered len fired leftLength rightLength x]
       ≤ _ := hsplit
-    _ ≤ (1 : ℝ≥0∞) / 2 ^ 126 + (expectation * (1 / ((2 ^ 129 : Nat) : ℝ≥0∞)) +
-          ((rightLength : ℝ≥0∞) * expectation * (1 / ((2 ^ 303 : Nat) : ℝ≥0∞)))) :=
-        add_le_add hbad (add_le_add hfirstOrder
-          (le_trans (add_le_add hhelped htwo) hpairs))
-    _ = _ := by ring
+    _ ≤ (1 : ℝ≥0∞) / 2 ^ 126 + _ :=
+      add_le_add (prob_not_goodLeft_le run leftLength rightLength hcap) hgood
+    _ = _ := by
+      dsimp only [len]
+      simp only [mul_add, div_eq_mul_inv, one_mul]
+      ac_rfl
 
 end SLHDSA.SHAKE128s.FiredCoverage

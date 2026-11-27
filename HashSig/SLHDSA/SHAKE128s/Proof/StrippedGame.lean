@@ -160,12 +160,9 @@ theorem run_liftM_state {α : Type} (x : StateT SigningLog (OracleComp OracleWor
 signer, and append the answer to the log. -/
 @[expose] noncomputable def signingOracleWith
     (signer : Message → OracleComp OracleWorld (Option Bytes)) :
-    QueryImpl SigningSpec CountedRun := fun request => do
-  AddWriterT.addTell (Counts.single .signing 1)
-  let answer ← liftM (signer request)
-  liftM (modify (fun signed => signed ++ [⟨request, answer⟩]) :
-    StateT SigningLog (OracleComp OracleWorld) Unit)
-  return answer
+    QueryImpl SigningSpec CountedRun := fun request =>
+  Game.Counted.legacyRun
+    (SignatureAlg.SigningView.countedSigningOracleUsing Game.Counted.phasePolicy signer request)
 
 /-- The experiment's signing oracle is this one, at the real signer. -/
 theorem signingOracle_eq (sk : SecretKey) :
@@ -181,9 +178,7 @@ theorem run_signingOracleWith
         (pure ((answer, Multiplicative.ofAdd (Counts.single .signing 1)),
           log ++ [⟨request, answer⟩]) :
           OracleComp OracleWorld ((Option Bytes × Multiplicative Counts) × SigningLog)) := by
-  simp only [signingOracleWith, WriterT.run_bind, WriterT.run_pure, AddWriterT.run_addTell,
-    StateT.run_bind, StateT.run_pure, run_liftM_counted, run_liftM_state,
-    StateT.run_modify, map_eq_bind_pure_comp, bind_assoc, pure_bind, Function.comp_def, mul_one]
+  exact Game.Counted.legacyRun_signing_run signer request log
 
 /-- The signing oracle with its signer answered from the warm table. -/
 @[expose] noncomputable def strippedSigningOracle (warm : QueryCache HashSpec) (sk : SecretKey) :
