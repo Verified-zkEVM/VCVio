@@ -92,6 +92,30 @@ for the local operations or relabellings introduced by the translation. A width-
 emits no oracle queries, but may still relabel the public register into the caller's remainder
 (`sequentialize_queryBind_zero`).
 
+## Numbering calls for changing oracle schedules
+
+`x.numberQueries t` labels successive oracle calls with `t`, `t + 1`, and so on. Local
+operations keep the current label. A batch is one call, including a width-zero batch; its
+slots are not numbered separately. The translation keeps the original local signature,
+registers and outcomes and preserves total-call and port-charge bounds.
+
+`QuantumRuntime.numbered R steps` dispatches these labels to a family of answering steps,
+with the same private register and initial state as `R`. A constant schedule runs exactly
+as the original program (`run_numberQueries_const`), including the final private register.
+Schedules agreeing at all possible calls give equal complete runs
+(`run_numberQueries_eq_of_prefix`). For the weight entering call `j`, agreement is needed
+only at earlier calls (`queryWeight_numberQueries_eq_of_prefix`); the current answer and
+future answers do not affect that input weight.
+
+`Comp/NumberedHybrid.lean` uses these facts to compare schedules differing at one call.
+`rpow_inv_two_evalDistMap_numberQueries_le_of_eq_off_tag` charges only that call's
+disagreement weight in the reference run. Its event-probability version charges twice the
+square root of that weight. The observer can depend on fixed challenger data, so a hybrid
+may retain correlations between a hidden key and the adversary's output.
+
+Call-label invariants apply to programs produced by `numberQueries`. An arbitrary program
+over a numbered signature can choose its own labels.
+
 ## Combs
 
 The textbook quantum adversary alternates fixed unitaries with oracle calls:
@@ -112,9 +136,14 @@ theorem says they agree:
 | combs and programs | `QuantumComb.run_toComp` |
 | fixed-register and general programs | `QuantumRuntime.branch_run₂` |
 | a batch program and its ordered single-point translation | `QuantumRuntime.run_sequentialize` |
+| a numbered program under a constant schedule and its original complete run | `QuantumRuntime.run_numberQueries_const` |
 
 **They compute the right numbers.** The tests work small examples to exact values: one half of a
 Bell state passed through an oracle call, with its coherences intact.
 `VCVioTest/Quantum/Sequentialize.lean` checks adaptive budgets and register changes, zero-weight
 branches, zero-width relabellings, and ordered calls that exchange public slots with shared private
 memory.
+`VCVioTest/Quantum/NumberedQueries.lean` checks shifted call labels, local operations that do not
+advance them, exact port charges and the distinction between a call's input weight and its answer.
+Failure at an earlier call removes later input mass; failure at the current answer leaves its
+input weight intact while removing final mass.

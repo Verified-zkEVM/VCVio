@@ -25,3 +25,11 @@ the PDF page of the version linked.
 | `partitionInstability` | Chiesa, Di, Hu, Zheng, [ePrint 2025/2166](https://eprint.iacr.org/2025/2166), Definition 5.3, p. 31 | any indexed family |
 | `instability_cacheHasCollision_le` | CMS19 Lemma 6.11, p. 35; CDHZ Lemma 8.7, p. 56 | the sharper $(t-1)/n$ |
 | (motivation only) | CMS19 Lemma 5.10, p. 24; CDHZ Theorem 5.4, p. 31 | not formalized here |
+
+The separate auxiliary-input model allows unbounded preprocessing and limits retained advice.
+Chung, Guo, Liu and Qian, *Tight Quantum Time-Space Tradeoffs for Function Inversion*,
+[arXiv:2006.05650v2](https://arxiv.org/abs/2006.05650v2), §3.1, Definition 3.1, distinguishes
+classical and quantum advice. Guo, Li, Liu and Zhang, *Unifying Presampling via Concentration
+Bounds*, [ePrint 2020/1589](https://eprint.iacr.org/2020/1589), Definition 1, specifies bounded
+classical advice after unbounded preprocessing. Both advice models differ from query-bounded preprocessing with unrestricted
+retained memory.
