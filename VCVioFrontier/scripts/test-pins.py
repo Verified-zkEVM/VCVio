@@ -1,0 +1,85 @@
+"""Run the dependency-isolation fixtures without downloading Lake packages."""
+
+import json
+from pathlib import Path
+import runpy
+import tempfile
+import unittest
+
+
+PINS = runpy.run_path(str(Path(__file__).with_name("check-pins.py")))
+
+
+class FrontierPins(unittest.TestCase):
+    def setUp(self):
+        temp = tempfile.TemporaryDirectory()
+        self.addCleanup(temp.cleanup)
+        self.root = Path(temp.name)
+        self.package = self.root / "VCVioFrontier"
+        self.package.mkdir()
+        (self.root / "lakefile.lean").write_text("require PolyFun from git\n")
+        self.core = {"name": "PolyFun", "type": "git", "url": "https://example.org/PolyFun",
+                     "rev": "a" * 40, "inputRev": "a" * 40}
+        (self.root / "lake-manifest.json").write_text(json.dumps({"packages": [self.core]}))
+        (self.root / "Interop").mkdir()
+        self.interop = self.root / "Interop/lake-manifest.json"
+        self.interop.write_text(json.dumps({"packages": [dict(self.core, inherited=True)]}))
+
+    def test_root_without_updated_lockfile(self):
+        lakefile = self.root / "lakefile.lean"
+        lakefile.write_text("/- require «cslib-frontier» /- nested -/ -/\nrequire PolyFun from git\n")
+        PINS["check_root"](self.root)
+        for requirement in ('«cslib-frontier»', '"cslib-community" / "cslib-frontier"',
+                            'PolyFunFrontier', 'VCVioFrontier'):
+            with self.subTest(requirement=requirement):
+                lakefile.write_text(f"require /- comment -/\n {requirement} from git\n")
+                with self.assertRaisesRegex(SystemExit, "optional dependency"):
+                    PINS["check_root"](self.root)
+
+    def test_stale_root_manifest(self):
+        (self.root / "lake-manifest.json").write_text('{"packages":[{"name":"«cslib-frontier»"}]}')
+        with self.assertRaisesRegex(SystemExit, "unexpectedly resolves"):
+            PINS["check_root"](self.root)
+
+    def test_interop_inherits_stable_polyfun(self):
+        PINS["check_root"](self.root)
+        for mutation in ({"rev": "b" * 40}, {"url": "https://example.org/other"},
+                         {"inherited": False}):
+            with self.subTest(mutation=mutation):
+                entry = {**self.core, "inherited": True, **mutation}
+                self.interop.write_text(json.dumps({"packages": [entry]}))
+                with self.assertRaisesRegex(SystemExit, "Interop must inherit"):
+                    PINS["check_root"](self.root)
+
+    def test_polyfun_locations(self):
+        for name in ("lakefile.toml", "lake-manifest.json", "lean-toolchain"):
+            (self.package / name).write_bytes((PINS["ROOT"] / name).read_bytes())
+        for name in ("PolyFunFrontier/PolyFunFrontier", "cslib-frontier"):
+            peer = self.package / ".lake/packages" / name
+            peer.mkdir(parents=True)
+            (peer / "lake-manifest.json").write_text('{"packages":[]}')
+            (peer / "lean-toolchain").write_bytes((self.package / "lean-toolchain").read_bytes())
+        lock = self.package / "lake-manifest.json"
+        original = lock.read_text()
+        PINS["check"](self.package)
+        for field, value in (("url", "https://example.org/PolyFun"), ("subDir", None),
+                             ("rev", "1" * 40)):
+            with self.subTest(field=field):
+                manifest = json.loads(original)
+                next(p for p in manifest["packages"] if p["name"] == "PolyFunFrontier")[field] = value
+                lock.write_text(json.dumps(manifest))
+                with self.assertRaisesRegex(SystemExit, "PolyFunFrontier"):
+                    PINS["check"](self.package)
+
+        # Agreement between the nested lakefile and lockfile still requires the canonical remote.
+        upstream = "https://github.com/Verified-zkEVM/PolyFun"
+        other = "https://example.org/PolyFun"
+        config = self.package / "lakefile.toml"
+        config.write_text(config.read_text().replace(upstream, other))
+        lock.write_text(original.replace(upstream, other))
+        with self.assertRaisesRegex(SystemExit, "canonical PolyFun repository"):
+            PINS["check"](self.package)
+
+
+if __name__ == "__main__":
+    unittest.main()

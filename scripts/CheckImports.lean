@@ -29,6 +29,7 @@ private partial def sources (dir : FilePath) : IO (Array FilePath) := do
   let mut files := #[]
   if !(← dir.isDir) then return files
   for entry in ← dir.readDir do
+    if entry.fileName == ".lake" then continue
     if ← entry.path.isDir then
       files := files ++ (← sources entry.path)
     else if entry.path.extension == some "lean" then
@@ -40,6 +41,8 @@ private def allowed (externOnly : Bool) (owner : String) (path : FilePath) (name
   let source := (path.withExtension "").components.foldl Name.str .anonymous
   if externOnly then
     owner == "Extern" || tests.contains owner || head != "Extern"
+  else if ["CslibFrontier", "PolyFunFrontier", "VCVioFrontier"].contains head then
+    false
   else if core.contains owner then
     !(["Interop", "Hax", "Aeneas"].contains head) &&
       (if (`VCVio.Algorithms).isPrefixOf source then

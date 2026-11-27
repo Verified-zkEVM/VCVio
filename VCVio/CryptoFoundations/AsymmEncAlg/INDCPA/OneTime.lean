@@ -41,6 +41,14 @@ structure IND_CPA_OneTime_Adversary (encAlg : AsymmEncAlg m M PK SK C) where
 variable {encAlg : AsymmEncAlg (OracleComp spec) M PK SK C}
   (adv : IND_CPA_OneTime_Adversary encAlg)
 
+/-- The adversary's raw guess when the challenge bit is fixed. A true bit selects the first
+message, and both branches retain the state from message selection. -/
+def IND_CPA_OneTime_branch (b : Bool) : OracleComp spec Bool := do
+  let keys ← encAlg.keygen
+  let choice ← adv.chooseMessages keys.1
+  let ct ← encAlg.encrypt keys.1 (if b then choice.1 else choice.2.1)
+  adv.distinguish choice.2.2 ct
+
 /-- One-time IND-CPA experiment for an asymmetric encryption algorithm:
 sample keys, let the adversary choose challenge messages, encrypt one branch, and return whether
 the adversary guessed the hidden bit. -/
@@ -60,6 +68,23 @@ noncomputable def IND_CPA_OneTime_Advantage
     (runtime : ProbCompRuntime (OracleComp spec))
     (adv : IND_CPA_OneTime_Adversary encAlg) : ℝ≥0∞ :=
   (runtime.evalDist (IND_CPA_OneTime_Game (encAlg := encAlg) adv runtime)).boolBias
+
+/-- The bias of the one-time hidden-bit experiment is the distance between the distributions
+of the adversary's guesses in the two fixed-bit experiments. -/
+theorem IND_CPA_OneTime_Advantage_eq_boolDist {enc : AsymmEncAlg ProbComp M PK SK C}
+    (a : enc.IND_CPA_OneTime_Adversary) :
+    enc.IND_CPA_OneTime_Advantage ProbCompRuntime.probComp a =
+      (𝒟[IND_CPA_OneTime_branch a false]).boolDist (𝒟[IND_CPA_OneTime_branch a true]) := by
+  have h : IND_CPA_OneTime_Game a ProbCompRuntime.probComp = (do
+      let b ← uniformSample Bool
+      let g ← if b then IND_CPA_OneTime_branch a true else IND_CPA_OneTime_branch a false
+      pure (b == g)) := by
+    change (uniformSample Bool >>= _) = (uniformSample Bool >>= _)
+    apply congrArg (fun f => uniformSample Bool >>= f)
+    funext b
+    cases b <;> simp [IND_CPA_OneTime_branch, monad_norm]
+  rw [IND_CPA_OneTime_Advantage, ProbCompRuntime.probComp_evalDist, h,
+    evalDist_boolBias_bind_uniformBool, MeasureTheory.Measure.boolDist_comm]
 
 end IND_CPA_TwoPhase
 

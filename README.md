@@ -62,6 +62,8 @@ See the [repository ownership map](docs/design/repository-layout.md) for placeme
 build boundaries and the staged consolidation.
 
 - `VCVio/` contains the oracle-computation framework, probability semantics, program logic, and generic crypto abstractions.
+- [VCVioFrontier](VCVioFrontier/README.md) is the optional package connecting VCVio's security games
+  to probabilistic Turing machines through PolyFun's polynomial interfaces and free programs.
 - `VCVio/Algorithms/` contains shared pure SHA-2, HMAC, MGF1, SHA-3 and SHAKE implementations;
   their independent regressions run with `lake exe algorithm_tests`.
 - `LatticeCrypto/` contains lattice algebra, hardness assumptions, ML-DSA, ML-KEM, Falcon, and their concrete implementations.

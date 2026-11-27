@@ -168,7 +168,7 @@ theorem oneTimeDDHReduction_toOneTime_eq [Field F] [Fintype F] [DecidableEq F]
     simp [readBack, lookup]
   have hv := runGen_virtualize (Model.group (F := F) G) (fun _ => id) A.chooseMessages hw
   rw [hr] at hv
-  simp only [IND_CPA_OneTime_DDHReduction, oneTimeDDHReductionBody,
+  simp only [IND_CPA_OneTime_DDHReduction, oneTimeDDHReductionBody, oneTimeDDHReductionWith,
     GenericOneTimeAdversary.toOneTime, DDHAdversary.ofGeneric, ddhOfGeneric]
   erw [runGen_bind, runGen_smul, pure_bind]
   have ht : append (fun _ : Unit => [gen, X, Y, T]) ()

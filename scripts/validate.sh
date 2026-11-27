@@ -97,6 +97,8 @@ uv run --no-project --python 3.12 python ./scripts/test-classify-migration-error
 bash scripts/check-extern-isolation.sh
 uv run --no-project --python 3.12 python scripts/test-interop-isolation.py
 bash scripts/check-interop-isolation.sh
+uv run --no-project --python 3.12 python VCVioFrontier/scripts/check-pins.py --root-only
+uv run --no-project --python 3.12 python VCVioFrontier/scripts/test-pins.py
 bash scripts/test-comment-fences.sh
 uv run --no-project --python 3.12 python ./scripts/check-comment-fences.py
 
