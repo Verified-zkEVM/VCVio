@@ -1,11 +1,6 @@
 # SLH-DSA in the classical random-oracle model: the target bound and leanVM's 127-bit proof
 
-Status: design record, established 2026-10-05. It fixes how the classical random-oracle bound for
-FIPS 205 SLH-DSA is accounted, records the levels that accounting reaches, and compares the result
-with the 127-bit proof for a SPHINCS variant in
-[`leanEthereum/leanVM`](https://github.com/leanEthereum/leanVM) (`formal/sphincs`), whose argument
-this work draws on. The development is in pull request #766; the implementation status of `main`
-is in [`slh-dsa-status-and-roadmap.md`](slh-dsa-status-and-roadmap.md).
+This guide follows the structural reduction for the FIPS 205 SHAKE profiles, its concrete coefficients and its relationship to the leanVM proof for a SPHINCS variant. For deterministic SHAKE-128s under a cap on actual work, use the companion proof guide. [Structural reduction](https://github.com/Verified-zkEVM/VCVio/pull/766) · [leanVM](https://github.com/leanEthereum/leanVM) · [Actual-work theorem](slh-dsa-shake128s-suf-cma.md) · [FIPS 205 source guide](../agents/slh-dsa.md)
 
 **What is proved.** Every bound below is a bound on the strong forging advantage (SUF-CMA): the
 forger wins with a valid pair of message and signature that the signing oracle never returned, so

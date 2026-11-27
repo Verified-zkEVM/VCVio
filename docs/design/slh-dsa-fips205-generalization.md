@@ -1,13 +1,6 @@
 # SLH-DSA FIPS 205 generalization and conformance plan
 
-Status: implementation plan, established 2026-08-30. This document fixes the target architecture,
-pull-request ownership, dependency order, acceptance gates, and restacking protocol for moving the
-current reduced-profile `d = 1` SLH-DSA development to a general, executable formalization of
-FIPS 205. It is a plan, not an implementation-status report. A capability is present only when the
-corresponding source and validation have merged. The implementation status, the list of plan
-statements that are now stale, and the ordered remaining slices are maintained in
-[`slh-dsa-status-and-roadmap.md`](slh-dsa-status-and-roadmap.md); the "Planning baseline" and
-"Existing `d = 1` security work" sections below describe the 2026-08-30 snapshot.
+Status: historical generalization plan, established 2026-08-30. The milestones below describe the transition from the reduced depth-one construction to arbitrary-depth SLH-DSA. For the implemented algorithms, proofs and tests, see the [FIPS 205 source guide](../agents/slh-dsa.md) and the [implementation roadmap](slh-dsa-status-and-roadmap.md).
 
 The key outcome is one canonical SLH-DSA scheme that:
 

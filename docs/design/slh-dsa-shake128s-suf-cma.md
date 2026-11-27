@@ -1,37 +1,20 @@
-# SLH-DSA-SHAKE-128s: 127 bits of strong unforgeability in the random-oracle model
+# Strong unforgeability of deterministic SLH-DSA-SHAKE-128s
 
-Status: design record for `HashSig/SLHDSA/SHAKE128s/`, established 2026-10-24.
+The FIPS byte-game theorem `slhDsa_sufCma_le` bounds the probability of a fresh verifying request/signature pair by `jointWorkBound q`. Its linear corollary `slhDsa_sufCma_127` gives at most `q / 2^127` for every positive budget. Both theorems concern classical queries to a random oracle and assume at most 2⁶⁴ signing attempts with probability one. [Native theorems](../../HashSig/SLHDSA/SHAKE128s/Statement/Theorems/StrongUnforgeability.lean) · [All profiles and algorithms](../agents/slh-dsa.md)
 
-## The statement
+## Scheme and experiment
 
-`SLHDSA.SHAKE128s.slhDsa_sufCma_127`
-(`HashSig/SLHDSA/SHAKE128s/Statement/Theorems/StrongUnforgeability.lean`):
+The external pure-mode interface takes a message and context and uses canonical signature bytes. Key generation samples independent uniform seeds. Deterministic signing sets `opt_rand = PK.seed`. All hash roles use one SHAKE oracle on byte strings. Each answer contains 30 bytes. The tweakable hashes, PRF and message PRF read the first 16 bytes. The concrete interpretation of the oracle by SHAKE256 recovers the library's internal algorithms. The security estimate uses random answers. [Scheme](../../HashSig/SLHDSA/SHAKE128s/Statement/FIPS205.lean) · [SHAKE interpretation](../../HashSig/SLHDSA/Security/ByteConformance.lean)
 
-```lean
-theorem slhDsa_sufCma_127 : Game.HasSecurityBits FIPS205.scheme Game.adversaryWork 127
-```
+On each execution, the budget counts every signing attempt, every direct adversary hash query and every hash query made while verifying the final forgery. Repeats cost a query even on a cache hit. The cap holds with probability one. Key-generation and signer hashes use the same cache and have zero weight in this measure. [Counted game](../../HashSig/SLHDSA/SHAKE128s/Statement/Game.lean)
 
-* **The scheme** (`Statement/FIPS205.lean`): the library's FIPS 205 SLH-DSA at the
-  SLH-DSA-SHAKE-128s parameters over one SHAKE256 random oracle on byte strings
-  (`SLHDSA.Security.shakeRomScheme`, whose oracle answered by SHAKE256 is the library's FIPS 205
-  SHAKE internal algorithms, `shakeRomScheme_map_shakeAnswer`), with deterministic signing
-  (`opt_rand = PK.seed`) and the pure-mode external interface of Algorithms 22 and 24: requests
-  carry a message and a context (`SLHDSA.External.encodePureMessage`), signatures are byte strings
-  in the library's canonical encoding (`SLHDSA.encodeSignature`, `SLHDSA.decodeSignature`).
-  Every SHAKE256 call, `PRF` and `PRF_msg` included, is a query of the shared oracle; the oracle
-  answers 30 bytes and `F`, `H`, `T_ℓ`, `PRF`, `PRF_msg` read the first 16.
-* **The game** (`Statement/Game.lean`): the adversary gets the public key, the random oracle and
-  a signing oracle and outputs a request and a byte string; it wins when the string verifies and
-  the signing oracle never returned that pair (strong unforgeability). Every hash call is counted
-  by its source (adversary, key generation, signer, verification) and signing requests are
-  counted too.
-* **Bit security** (`Game.HasSecurityBits`): every adversary that makes at most `2 ^ 64` signing
-  requests and whose counted work is at most `q ≥ 1` with probability one wins with probability at
-  most `q / 2 ^ 127`. The counted work (`Game.adversaryWork`) is its signing requests, its own hash
-  calls and the hash calls of verifying its forgery; key generation's and the signer's hash calls
-  are free.
+## How the two security arguments fit together
 
-## The proof
+Both arguments use the native construction's classification of an accepting fresh forgery. Given a cache that replays key generation, the signing log and successful verification, the classification yields a target collision, a hidden hit, coverage at a fresh message-hash point, or a previously returned pair. Strong freshness excludes the last case. The structural reduction and the actual-work proof both invoke `bad_event_or_logged_of_settled`. [Shared classification](../../HashSig/SLHDSA/Security/RomSchemeBridge.lean) · [Structural client](../../HashSig/SLHDSA/Security/ByteLinkedView.lean) · [Actual-work client](../../HashSig/SLHDSA/SHAKE128s/Proof/ActualWork/Settlement/Coverage.lean)
+
+The structural argument bounds the relevant events under separate adversary hash and signing caps. It covers the six SHAKE sets, with results for deterministic and hedged signing. The actual-work argument follows the events and resources of the same sampled run. Different executions can maximize different costs. Bounding each cost separately by its maximum can exceed the original joint allowance, and a bound observed on real runs need not bound every branch of an oracle program. This is why substituting query budgets in the structural theorem does not recover the specialized result. At the common fixed-context interface Lean applies the two estimates to one advantage and takes their minimum. [Structural bounds](slh-dsa-classical-rom-bound.md) · [Worked budget obstruction](slh-dsa-security-delta.md) · [Wire theorem](../../HashSig/SLHDSA/SHAKE128s/Statement/Theorems/WireStrongUnforgeability.lean)
+
+## Proof of the actual-work bound
 
 The public game starts with an empty cache for its single byte-string oracle. Each signing
 request carries its own message and context. The log records the request and its optional
@@ -42,14 +25,14 @@ losing runs. Invalid framing or an undecodable signature returns false before ha
 [External scheme](../../HashSig/SLHDSA/SHAKE128s/Statement/FIPS205.lean) ·
 [Counted game](../../HashSig/SLHDSA/SHAKE128s/Statement/Game.lean)
 
-To apply the construction proof from #766 with this budget, the reduction uses a guarded
+To apply the construction proof with this budget, the reduction uses a guarded
 execution. An admitted query returns the handler's reply and updated cache and cost. An
 over-budget query, or any later query, receives the fallback and leaves the cache and
 paid count fixed. The accounting proof follows the logged adversary through its direct
 queries and signing callbacks. It follows final verification through the construction's
 address ledger and the message hash at the returned public key. These local steps use
 the calls that actually occur. The public theorem takes the almost-sure joint cap and
-the original signing lifetime.
+the signing lifetime.
 [Query guard](../../VCVio/OracleComp/QueryTracking/Enforcement.lean) ·
 [Signing](../../HashSig/SLHDSA/SHAKE128s/Proof/ActualWork/Work/Signing.lean) ·
 [Verification](../../HashSig/SLHDSA/SHAKE128s/Proof/ActualWork/Work/Verification.lean)
@@ -57,7 +40,7 @@ the original signing lifetime.
 For each supported guarded run, `native_whole_reserve` relates the final cache entries,
 signer and forger digest counts, and paid work of that same run. Those quantities bound
 the charge for graph conflicts and hidden-value queries. The remaining fresh forgeries
-require FORS coverage. The estimates from #912 apply to the digest blocks actually
+require FORS coverage. The finite-tape FORS estimates apply to the digest blocks actually
 consumed. Completing the deferred cache and drawing the final secret preserve the joint
 distribution of both tapes and the original terminal result. The proof can therefore
 price coverage and the weak-key event using that result's counters and public key.
@@ -82,12 +65,12 @@ same piecewise bound at any natural budget `q`. The client proves that each even
 weight covers its original selected cost, that total weighted cost is at most `q` with
 probability one, and that the signing lifetime holds. The byte-sensitive example charges
 one per signing attempt and one plus the input length per direct adversary or verifier
-hash. Below 569 its separate zero-success theorem needs only the weighted cap.
+hash. The example proves domination for these weights, so below 569 its caller supplies only
+the weighted cap. A custom policy also needs the eventwise domination proof.
 [Scalar policy certificates](../../HashSig/SLHDSA/SHAKE128s/Bridge/SharedExperiment/ScalarPolicy/Certificates.lean) ·
 [Byte-sensitive example](../../Examples/SLHDSA/WeightedPolicy/Certificates.lean)
 
-For fixed-context adversaries with separate structural caps on their hash and signing
-queries, `wireStrongAdvantage_le_jointWorkBound` takes the minimum of the parameterized
+For a fixed valid context, structural caps `qh` and `qs`, and `qs ≤ 2^64`, `wireStrongAdvantage_le_jointWorkBound` takes the minimum of the parameterized
 construction bound and `jointWorkBound (qh + qs + 3824)`. The 3824-call allowance is a
 proved upper bound on verifier work for SHAKE-128s. The companion `wireStrongAdvantage_le`
 gives the same minimum with
@@ -110,7 +93,4 @@ runs needs a new argument for its chosen experiment.
 
 ## Scope
 
-* SLH-DSA-SHAKE-128s, pure mode, deterministic signing. Hedged signing, the prehash mode and the
-  other parameter sets are not covered.
-* The oracle has fixed 30-byte answers, the longest SHAKE256 output FIPS 205 reads at this set.
-* Classical random-oracle model; nothing is quantum.
+The joint-work theorem covers deterministic pure-mode SHAKE-128s. It permits a different context on each request. The structural family supplies the pure-mode hedged and other SHAKE-profile results at a fixed valid context. A proof for a concrete implementation must also relate its bytes, randomness and charged operations to the relevant experiment. [Structural interface](../../HashSig/SLHDSA/Security/Wire.lean) · [Profile examples](../../Examples/SLHDSA/Profiles.lean)
