@@ -30,6 +30,7 @@ public import VCVio.CryptoFoundations.Asymptotics.ReductionCost
 public import VCVio.CryptoFoundations.Asymptotics.Security
 public import VCVio.CryptoFoundations.CommitmentScheme
 public import VCVio.CryptoFoundations.CoordinateFork
+public import VCVio.CryptoFoundations.CoordinateFork.BlockChildren
 public import VCVio.CryptoFoundations.CoordinateFork.BlockFinder
 public import VCVio.CryptoFoundations.CoordinateFork.BlockOperational
 public import VCVio.CryptoFoundations.CoordinateFork.Extraction
