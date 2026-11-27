@@ -121,7 +121,8 @@ theorem counted_forget_run (caller : OracleComp (Queries pub Notice) α) (s : St
     simp only [bind_pure_comp, Functor.map_map, ← base]
     cases t <;> rfl
 
-/-- The target-match bound holds when the run is capped by all its physical public calls. -/
+/-- The joint probability of a hit and final public-call count at most `q` is at most `q * ε`.
+The flag starts clear and the initial public-call count must cover the initial paid count. -/
 theorem prEvent_hit_and_count (ε : ℝ≥0∞) (finite : ε ≠ ⊤) (rate : ∀ t k, role t = some k →
     ∀ v, Pr{let w ← $ᵗ (pub.Range t)}[project t w = v] ≤ ε)
     (caller : OracleComp (Queries pub Notice) α) (s : State pub K V) (clean : s.hit = false)

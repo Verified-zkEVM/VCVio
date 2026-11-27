@@ -11,7 +11,7 @@ public import VCVio.OracleComp.QueryTracking.RandomOracle.JointPotential
 /-!
 # Charged hazards in a subgraph
 
-A cell outside a chosen subgraph cannot change its state.
+Drawing a cell outside the chosen subgraph leaves the projected state unchanged.
 If a public point misses every ready node, it also misses every ready node in the subgraph.
 These two properties preserve the charge for any hazard in the subgraph.
 -/
@@ -43,12 +43,14 @@ variable (f : Subgraph S G)
 @[expose] def project (st : RelabelState pub X' K' R) : RelabelState pub X K R :=
   (st.1, QueryCache.ofFn fun c => st.2 (f.cell c))
 
+/-- Extending both full caches also extends the projected caches. -/
 theorem project_mono : Monotone f.project := by
   intro st later h
   refine ⟨h.1, ?_⟩
   intro c u e
   exact h.2 e
 
+/-- Projection preserves the values of the ordered children, including a missing child. -/
 theorem childVals (st : RelabelState pub X' K' R) (k : K) :
     G.childVals st (f.node k) = S.childVals (f.project st) k := by
   apply Option.ext
@@ -82,7 +84,8 @@ private theorem project_outside (st : RelabelState pub X' K' R) (c : X' ⊕ K') 
 variable [DecidableEq ι] [SampleableType R] [∀ t, SampleableType (pub.Range t)]
 
 /-- A hazard charged in the selected graph keeps its potential in the full graph.
-Drawing a cell outside the selection costs zero, even when the caller chooses it adaptively. -/
+Drawing a cell outside the selection leaves the projected potential unchanged and cannot
+introduce the projected hazard. -/
 theorem isCharged {P : RelabelState pub X K R → Prop} {φ : RelabelState pub X K R → ℝ≥0∞}
     (charge : S.IsCharged P φ) : G.IsCharged (P ∘ f.project) (φ ∘ f.project) where
   mono := charge.mono.comp f.project_mono

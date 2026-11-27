@@ -12,6 +12,9 @@ import Mathlib.Tactic.NormNum
 
 /-!
 # First-accepted queries with warm cache entries
+
+The examples track a cached rejection, the full answer at a cold position, and the bias
+toward a cached acceptance when the caller chooses its starting point uniformly.
 -/
 
 public section
@@ -21,7 +24,7 @@ open scoped ENNReal
 
 namespace VCVioTest.RandomOracleAcceptedScan
 
-/-- A cached rejection consumes the first trial and the second trial uses a fresh bit. -/
+/-- A cached rejection skips the first position. A fresh true bit selects the second. -/
 theorem warm_reject_then_cold :
     let cache : QueryCache (Nat →ₒ Bool) :=
       QueryCache.ofFn fun i => if i = 0 then some false else none

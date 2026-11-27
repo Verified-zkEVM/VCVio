@@ -94,7 +94,8 @@ private theorem answerProbability_congr (accepted : Finset Y) (encode : X → A)
 
 variable [DecidableEq A]
 
-/-- The initial table determines the exact law of any event on the scan's returned answer. -/
+/-- When the encoded positions are distinct, the fold over the initial cache gives the exact
+probability of an event on the first accepted position and answer, including exhaustion. -/
 theorem prEvent_scanWithAnswer (accepted : Finset Y) (encode : X → A) (xs : List X)
     (distinct : (xs.map encode).Nodup) (cache : QueryCache (A →ₒ Y))
     (event : Option (X × Y) → Prop) :

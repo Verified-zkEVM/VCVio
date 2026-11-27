@@ -13,6 +13,9 @@ import Mathlib.Tactic.NormNum
 
 /-!
 # Counting fresh trials up to an adaptive stop
+
+The caller queries a second fresh bit only after the first bit is false.
+The probability of using two trials is 1/2, and the expected number of trials is 3/2.
 -/
 
 public section
@@ -57,6 +60,7 @@ theorem expected_trial_charge :
   have law := countsTrials 2 ({true} : Finset Bool) (fun (_ : Nat) _ => true) (1 / 2) halfRate
   have bridge := law.expected_trials_eq_charge untilTrue (∅, 0, 0)
   simp only [Nat.cast_zero, zero_add] at bridge
+  -- Compute the observed count under the random oracle, retaining both replies on a rejection.
   rw [← bridge]
   simp only [untilTrue, simulateQ_bind, simulateQ_spec_query, StateT.run_bind, observe,
     BernoulliMoment.observe, QueryImpl.extendState_apply, randomOracle.run_eq,
@@ -72,6 +76,7 @@ theorem expected_trial_charge :
   simp only [OracleQuery.input_query, ne_eq, one_ne_zero, not_false_eq_true,
     QueryCache.cacheQuery_of_ne, QueryCache.empty_apply, ↓reduceIte, StateT.run_bind,
     StateT.run_monadLift, monadLift_self, bind_pure_comp, StateT.run_modifyGet, Functor.map_map]
+  -- After a false first bit both possible second replies leave the trial count at two.
   let result (a : Bool) : Bool × State Nat Bool :=
     (a, ((∅ : (Nat →ₒ Bool).QueryCache).cacheQuery 0 false).cacheQuery 1 a, 2,
       if a then 1 else 0)

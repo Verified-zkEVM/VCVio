@@ -25,7 +25,7 @@ namespace randomOracle.Partners
 
 variable {A X Y K D : Type} [Fintype X] [DecidableEq A] [DecidableEq Y] [SampleableType Y]
 
-/-- The selected finder position already has a digest partner in this initial cache. -/
+/-- Probability of selecting a position whose digest already has a partner in the initial cache. -/
 @[expose] noncomputable def partneredMass (key : A → K) (decode : Y → Option D)
     (accepted : Finset Y) (encode : X → A) (xs : List X) (c : (A →ₒ Y).QueryCache) : ℝ≥0∞ :=
   Pr{let z ← (simulateQ randomOracle (scan accepted encode xs)).run c}[
@@ -43,7 +43,8 @@ variable {A X Y K D : Type} [Fintype X] [DecidableEq A] [DecidableEq Y] [Samplea
   ∃ d, decode w = some d ∧ ∃ b, key b = k ∧ ∃ u, c b = some u ∧ decode u = some d
 
 omit [DecidableEq A] [DecidableEq Y] in
-/-- An occupied row of the probe's key can account for at most one digest. -/
+/-- The chance of drawing a digest stored at the key is at most the number of covering rows
+times the largest permitted probability for a single digest. -/
 theorem storedDigest_rate_le (key : A → K) (decode : Y → Option D) (c : (A →ₒ Y).QueryCache)
     (k : K) (rows : Finset A) (ε : ℝ≥0∞)
     (covered : ∀ b, key b = k → ∀ w, c b = some w → ∀ d, decode w = some d → b ∈ rows)
@@ -73,7 +74,8 @@ theorem storedDigest_rate_le (key : A → K) (decode : Y → Option D) (c : (A �
     _ = _ := by simp [nsmul_eq_mul, mul_comm]
 
 omit [DecidableEq A] [DecidableEq Y] in
-/-- An occupied row of the probe's key can account for at most one digest. -/
+/-- The chance of matching a digest at another address of the probe's key is at most
+the number of covering rows times the bound for one digest. -/
 theorem priorPairRate_le (key : A → K) (decode : Y → Option D) (c : (A →ₒ Y).QueryCache)
     (a : A) (rows : Finset A) (ε : ℝ≥0∞)
     (covered : ∀ b, key b = key a → ∀ w, c b = some w → ∀ d, decode w = some d → b ∈ rows)

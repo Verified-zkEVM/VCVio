@@ -3,18 +3,26 @@ Copyright (c) 2026 VCVio Contributors. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: VCVio Contributors
 -/
+
 module
 
 public import VCVio.OracleComp.QueryTracking.RandomOracle.HiddenSeed.Residual
 
-/-! # Repeated and adaptive queries to residual tables -/
+/-!
+# Repeated and adaptive queries to residual tables
+
+The caller repeats a private key selected by an auxiliary reply. Keeping the two residual
+tables local preserves all four tables, including conflicting bits at the same underlying key.
+-/
 
 public section
 open OracleSpec OracleComp SecretEncoding
 open scoped OracleSpec.PrimitiveQuery
 namespace VCVioTest.RandomOracleResidualTables
 
+/-- A two-address table with Boolean replies. -/
 abbrev Table := Bool →ₒ Bool
+/-- Two public tables and two classes of private derivation keys. -/
 abbrev World := (Table + Table).withDerivations (Bool ⊕ Bool) Bool
 
 /-- A public reply selects a private start, and an auxiliary reply chooses a residual key twice. -/

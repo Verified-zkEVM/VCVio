@@ -10,6 +10,9 @@ public import VCVio.OracleComp.QueryTracking.RandomOracle.PairedValue.Ordinary
 
 /-!
 # A warm high row and cold low row at an ordinary input
+
+At an input with only its high bit cached, the caller draws the low bit, reuses the high bit,
+and keeps the pending graph cells.
 -/
 
 public section
@@ -18,8 +21,8 @@ open CanonicalGraph.PairedQueries OracleComp OracleSpec
 open scoped OracleSpec.PrimitiveQuery
 namespace VCVioTest.RandomOracleOrdinaryWord
 
-/-- A partially populated prior table is legal and must replay its high bit.
-The subsequent low draw leaves every earlier pending cell intact. -/
+/-- When only the high bit is cached, the low read draws a fresh bit before the high read
+replays its stored value. The pending cells are unchanged. -/
 theorem high_only (G : CanonicalGraph (PairedSpec Nat Bool) Nat Nat Bool)
     (off : OrdinaryAt G 7) (labels : ((Nat ⊕ Nat) →ₒ Bool).QueryCache) :
     let c := (∅ : (PairedSpec Nat Bool).QueryCache).cacheQuery (.inr 7) true

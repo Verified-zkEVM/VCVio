@@ -11,6 +11,9 @@ public import VCVio.OracleComp.Constructions.SampleableType.Measure
 
 /-!
 # Expected reserve on an adaptive early return
+
+Each true bit increments both counters. A false first reply stops the run immediately,
+so the estimate also covers paths that return after one call.
 -/
 
 public section
@@ -29,7 +32,7 @@ namespace VCVioTest.CompensatedState
 @[expose] def untilFalse : OracleComp (Unit →ₒ Bool) Bool := do
   if ← query (spec := Unit →ₒ Bool) () then query (spec := Unit →ₒ Bool) () else pure false
 
-/-- Equal starting counters give the same expected charge and reserve on adaptive return. -/
+/-- With equal starting counters, the expected reserve covers the caller's expected charge. -/
 theorem early_return (n : Nat) :
     let run := (simulateQ tick untilFalse).run (n, n)
     (∑' z, Pr{let u ← run}[u = z] * (z.2.1 : ℝ≥0∞)) + n ≤ n +

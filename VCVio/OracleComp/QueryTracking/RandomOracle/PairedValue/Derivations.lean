@@ -3,6 +3,7 @@ Copyright (c) 2026 VCVio Contributors. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: VCVio Contributors
 -/
+
 module
 
 public import VCVio.OracleComp.QueryTracking.RandomOracle.PairedValue
@@ -158,8 +159,8 @@ private theorem step (t : (World aux L X F).Domain) (s : Cache aux L X F) :
       map_state, split_frame] at h ⊢
     with_unfolding_all exact h
 
-/-- Pairing both word tables preserves every adaptive observation and both complete terminal
-states, including the cache of the auxiliary ports. -/
+/-- From a word state and its split representation, both runs give the same joint law of the
+reply and both forms of the final state, including the auxiliary cache. -/
 theorem run_joint {α : Type} (program : OracleComp (World aux L X F) α)
     (initial : Cache aux L X F) :
     (fun z => (z.1, z.2, splitState aux e z.2)) <$>

@@ -5,14 +5,16 @@ Authors: VCVio Contributors
 -/
 
 module
+
 public import VCVio.OracleComp.QueryTracking.RandomOracle.CachePartial
 
 /-!
 # Comparing computations from a known cache
 
-A partial cache can determine an output without specifying answers for every query.
-Two computations can also give the same joint output and final cache from every extension
-of the known cache. This relation composes across adaptive continuations.
+`Resolves cache p a` means that the entries already in `cache` suffice to run `p` and return `a`.
+`ReplayEq cache p q` compares the joint laws of the return value and final cache
+for every sampler and every initial cache extending `cache`.
+Thus a caller may use the returned value to choose its next query.
 -/
 
 public section
@@ -70,7 +72,8 @@ end Resolves
 
 variable [DecidableEq ι]
 
-/-- Each extension gives the same joint law of the output and the final cache. -/
+/-- For every sampler and every extension of the initial cache, the two runs have the same
+joint distribution of the return value and final cache. -/
 @[expose] def ReplayEq (cache : QueryCache spec) (left right : OracleComp spec α) : Prop :=
   ∀ (sampler : QueryImpl spec ProbComp) (c : QueryCache spec), cache ≤ c →
     (simulateQ sampler.withCaching left).run c =ᵈ (simulateQ sampler.withCaching right).run c
@@ -84,7 +87,7 @@ protected theorem refl (cache : QueryCache spec) (p : OracleComp spec α) : Repl
 /-- Returning the same value preserves the cache. -/
 protected theorem pure (a : α) : ReplayEq cache (Pure.pure a) (Pure.pure a) := .refl _ _
 
-/-- The first computation grows the cache, so corresponding continuations still agree. -/
+/-- Replay equivalence is preserved by binding continuations that agree for each reply. -/
 theorem bind {p q : OracleComp spec α} (h : ReplayEq cache p q) (f g : α → OracleComp spec β)
     (k : ∀ x, ReplayEq cache (f x) (g x)) : ReplayEq cache (p >>= f) (q >>= g) := by
   intro sampler c hc

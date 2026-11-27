@@ -203,7 +203,8 @@ private theorem world_step
       QueryImpl.add_apply_inr, splitCache]
     exact h
 
-/-- The reply of an adaptive program and both forms of its final cache have the same joint law. -/
+/-- Starting the tagged oracle with the split initial word cache preserves the joint law of the
+reply, the final word cache and its tagged representation. -/
 theorem evalDist_world_run_joint {α : Type}
     (program : OracleComp (unifSpec + (L →ₒ Full)) α) (initial : (L →ₒ Full).QueryCache) :
     (fun z : α × (L →ₒ Full).QueryCache => (z.1, z.2, splitCache e z.2)) <$>

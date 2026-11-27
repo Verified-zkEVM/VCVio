@@ -10,6 +10,8 @@ public import VCVio.OracleComp.QueryTracking.RandomOracle.PairedValue.MixedCap
 
 /-!
 # A refused full query after an internal touch
+
+At zero budget a free internal touch is still recorded before the next full public read is refused.
 -/
 
 public section

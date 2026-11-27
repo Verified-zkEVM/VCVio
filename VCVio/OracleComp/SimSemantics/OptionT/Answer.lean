@@ -3,6 +3,7 @@ Copyright (c) 2026 VCVio Contributors. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: VCVio Contributors
 -/
+
 module
 
 public import VCVio.OracleComp.SimSemantics.OptionT.Basic
@@ -16,6 +17,7 @@ Keeping refusal in the response type allows ordinary stateful estimates on the s
 -/
 
 public section
+
 namespace OracleComp.OptionalAnswer
 
 open OracleSpec
@@ -45,7 +47,8 @@ theorem simulate_program {m : Type → Type} [Monad m] [LawfulMonad m]
     · simp
     · exact ih a
 
-/-- A query-by-query compensated estimate survives refusal and any adaptive caller. -/
+/-- If each query bounds the expected increase in value by the expected increase in reserve,
+the same bound holds at return. A refusal contributes the state reached by its query. -/
 theorem run_compensated {σ : Type} (impl : QueryImpl spec (OptionT (StateT σ ProbComp)))
     (I : σ → Prop)
     (preserves : (show QueryImpl (Spec spec) (StateT σ ProbComp) from fun t =>

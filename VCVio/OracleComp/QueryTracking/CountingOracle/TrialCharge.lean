@@ -44,6 +44,7 @@ private theorem trialCharge_step (so : QueryImpl spec (StateT σ ProbComp)) (n :
       ∑' z, Pr{let u ← (so t).run s}[u = z] * k z.1 z.2 := by
   let : MeasurableSpace σ := ⊤
   let : (t : ι) → MeasurableSpace (spec.Range t) := fun _ => ⊤
+  -- The joint reply has finite support even when the answer and state types are uncountable.
   let m := (so t).run s
   have hs := support_finite m
   simp only [trialCharge, OpSpec.statefulExpectedCharge_apply, evalDistKernelOfDiscrete_apply]
@@ -65,7 +66,7 @@ private theorem mean_next_trials {so : QueryImpl spec (StateT σ ProbComp)} {n v
   · rw [prEvent_eq_one_of_forall_mem_support _ _ (fun z hz => (active z hz).1)]
     exact tsum_prEvent_mul_of_const_on_support _ fun z hz => by simp [(active z hz).1]
 
-/-- The terminal trial count is the initial count plus the expected charge of the stopped caller. -/
+/-- The expected final trial count is the initial count plus the caller's expected charge. -/
 theorem CountsTrials.expected_trials_eq_charge {so : QueryImpl spec (StateT σ ProbComp)}
     {n v : σ → ℕ} {p : ℝ} {q : ℕ} (law : CountsTrials so n v p q)
     (body : OracleComp spec γ) (s : σ) :

@@ -12,6 +12,9 @@ public import VCVio.OracleComp.Constructions.SampleableType.Measure
 
 /-!
 # A warm repeat or an additional fresh trial determined by the first response
+
+A repeated query returns a cached bit and leaves both counters alone.
+From any starting cache, expected successes equal half the expected number of fresh trials.
 -/
 
 public section
@@ -21,12 +24,14 @@ open scoped ENNReal
 
 namespace VCVioTest.FreshTrialMean
 
+/-- Repeat the same address after true and switch to the other address after false. -/
 def retry : OracleComp (Bool →ₒ Bool) Bool := do
   if ← query (spec := Bool →ₒ Bool) false then
     query (spec := Bool →ₒ Bool) false
   else query (spec := Bool →ₒ Bool) true
 
-/-- A true first reply reuses the old word; a false reply draws at the other physical input. -/
+/-- Starting with either address already cached is allowed.
+Only cache misses contribute to the expected trial and success counts. -/
 theorem retry_mean (c : (Bool →ₒ Bool).QueryCache) :
     let m := (simulateQ (observe 2 {true} (fun _ _ => true)) retry).run (c, 0, 0)
     (∑' z, Pr{let u ← m}[u = z] * (z.2.2.2 : ℝ≥0∞)) =

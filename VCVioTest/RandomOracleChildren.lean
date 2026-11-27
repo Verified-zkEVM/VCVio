@@ -8,7 +8,12 @@ module
 
 public import VCVio.OracleComp.QueryTracking.RandomOracle.TouchRead.Children
 
-/-! # Repeated and empty inputs of eager graph points -/
+/-!
+# Repeated and empty inputs of eager graph points
+
+Reading `[c, d, c]` must return the same value at both occurrences of `c`.
+Two graph points with no children can return their labels without prior touches.
+-/
 
 public section
 
@@ -20,7 +25,8 @@ variable {ι X K R : Type} {pub : OracleSpec ι} (G : CanonicalGraph pub X K R)
   [DecidableEq ι] [DecidableEq X] [DecidableEq K] [SampleableType R]
   [∀ t, SampleableType (pub.Range t)]
 
-/-- The positions on either side of a distinct intervening read agree at a repeated child. -/
+/-- The two reads of `c` agree, and the final cache holds the reply to the intervening read
+of `d`. -/
 theorem repeated_child (c d : X ⊕ K) (st later : RelabelState pub X K R) (x y z : R)
     (run : ([x, y, z], later) ∈ support ((simulateQ G.eagerImpl
       ([c, d, c].mapM fun k => readCell (some k))).run st)) :

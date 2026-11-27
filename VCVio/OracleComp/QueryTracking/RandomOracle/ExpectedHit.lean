@@ -14,7 +14,8 @@ public import VCVio.OracleComp.SimSemantics.StateT.StateProjection
 
 Marking happens before the query and may depend on the incoming state.
 Each marked reply can set the persistent flag.
-The caller sees the same replies and pays for the marked calls it actually made.
+The bound uses the expected final counter of the original run. The counter increases by one
+on each marked call and can start above zero.
 -/
 
 public section
@@ -33,7 +34,9 @@ variable {ι σ α : Type} {spec : OracleSpec ι}
     (t : spec.Domain) (s : σ) (a : spec.Range t) (_ : σ) (seen : Bool) : Bool :=
   seen || (mark t s && hit t s a)
 
-/-- A hit costs its conditional response rate times the expected count in the original run. -/
+/-- Starting with the flag clear, the probability it is set by the end of the run is at most
+`ε` times the expected final counter. Each marked call has conditional hit probability at
+most `ε`. -/
 theorem prEvent_le_expected (so : QueryImpl spec (StateT σ ProbComp)) (paid : σ → Nat)
     (mark : spec.Domain → σ → Bool) (hit : (t : spec.Domain) → σ → spec.Range t → Bool)
     (ε : ℝ≥0∞)

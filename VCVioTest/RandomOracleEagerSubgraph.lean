@@ -3,16 +3,23 @@ Copyright (c) 2026 VCVio Contributors. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: VCVio Contributors
 -/
+
 module
 
 public import VCVio.OracleComp.QueryTracking.RandomOracle.JointPotential.EagerSubgraph.Run
 
-/-! # A public query outside a selected eager subgraph -/
+/-!
+# A public query outside a selected eager subgraph
+
+The selected graph contains only the `false` node. Querying the extra `true` point in the
+full graph can fill its node label, so that query fails the frame and exactness conditions.
+-/
 
 public section
 open OracleSpec OracleComp
 namespace VCVioTest.RandomOracleEagerSubgraph
 
+/-- A single node with no children whose public point is `false`. -/
 def small : CanonicalGraph (Bool →ₒ Bool) Unit Unit Bool where
   ch _ := []
   pt _ _ := false
@@ -22,6 +29,7 @@ def small : CanonicalGraph (Bool →ₒ Bool) Unit Unit Bool where
     have y := List.eq_nil_of_length_eq_zero hy
     exact ⟨Subsingleton.elim _ _, x.trans y.symm⟩
 
+/-- Two nodes with no children, one at each Boolean public point. -/
 def big : CanonicalGraph (Bool →ₒ Bool) Unit Bool Bool where
   ch _ := []
   pt b _ := b
@@ -31,6 +39,7 @@ def big : CanonicalGraph (Bool →ₒ Bool) Unit Bool Bool where
     have y := List.eq_nil_of_length_eq_zero hy
     exact ⟨eq, x.trans y.symm⟩
 
+/-- Embed the single node at the `false` point of the two-node graph. -/
 def selected : small.Subgraph big where
   cell := ⟨Sum.map id (fun _ => false), by rintro (a|a) (b|b) eq <;> simp_all⟩
   node _ := false
@@ -38,7 +47,7 @@ def selected : small.Subgraph big where
   children _ := rfl
   point _ _ := rfl
 
-/-- Repeating the selected ordinary query preserves both the outside canonical and public rows. -/
+/-- Repeating the selected public query preserves outside cells and unrelated public rows. -/
 theorem repeat_selected : selected.Preserves (do
     let a ← query (spec := (Bool →ₒ Bool).withLabels Unit Unit Bool) (.inl (.inl (.inr false)))
     let b ← query (spec := (Bool →ₒ Bool).withLabels Unit Unit Bool) (.inl (.inl (.inr false)))
@@ -61,7 +70,7 @@ theorem outside_changes {z : Bool × RelabelState (Bool →ₒ Bool) Unit Bool B
   rw [stored] at outside
   contradiction
 
-/-- The first read selects a touch or an ordinary query without losing the outside cells. -/
+/-- The first read chooses a touch or a selected public query. Both retain the outside cells. -/
 theorem exact_adaptive : selected.Exact (do
     let a ← readCell (pub := Bool →ₒ Bool) (some (.inl ())) (K := Unit)
     if a then touchCell (some (.inr ())) else do
@@ -74,7 +83,7 @@ theorem exact_adaptive : selected.Exact (do
     exact selected.exact_bind (selected.exact_public () [] rfl) fun _ => selected.exact_pure ()
   | true => exact selected.exact_touchCell (.inr ())
 
-/-- An unselected ordinary query cannot satisfy exactness when it fills an outside private label. -/
+/-- The unselected public query breaks exactness by filling an outside node label. -/
 theorem not_exact_outside : ¬selected.Exact
     (query (spec := (Bool →ₒ Bool).withLabels Unit Unit Bool) (.inl (.inl (.inr true)))) := by
   intro law

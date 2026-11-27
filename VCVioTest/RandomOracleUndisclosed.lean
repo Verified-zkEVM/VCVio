@@ -9,7 +9,12 @@ module
 public import VCVio.OracleComp.QueryTracking.RandomOracle.DisclosureTrace
 public import VCVio.OracleComp.QueryTracking.RandomOracle.PublicReplay
 
-/-! # A public probe of a deferred Boolean chain -/
+/-!
+# A public probe of a deferred Boolean chain
+
+A public probe to an unready node leaves its private child undisclosed. Repeating a pending
+Boolean cell in the final fill still gives a fixed guess probability at most one half.
+-/
 
 public section
 open OracleSpec OracleComp
@@ -27,7 +32,7 @@ def chain : CanonicalGraph (Bool →ₒ Bool) Unit Unit Bool where
     obtain ⟨y, rfl⟩ := List.length_eq_one_iff.mp hy
     exact ⟨Subsingleton.elim _ _, congrArg (fun v => [v]) eq⟩
 
-/-- Even a query at the eventual true address cannot draw the node or its private child. -/
+/-- Starting from empty caches, querying `true` leaves the node and its private child absent. -/
 theorem raw_probe {z} (run : z ∈ support ((chain.deferredImpl
     (.inl (.inl (.inr true)))).run ((∅, ∅), []))) :
     z.2.1.2 (.inr ()) = none ∧ z.2.1.2 (.inl ()) = none := by

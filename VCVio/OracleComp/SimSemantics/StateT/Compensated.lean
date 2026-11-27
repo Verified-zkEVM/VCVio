@@ -40,8 +40,8 @@ private theorem avg_fin {α : Type} (p : ProbComp α) (f : α → ℝ≥0∞)
   exact ENNReal.sum_ne_top.mpr fun x hx =>
     ENNReal.mul_ne_top (prEvent_ne_top _) (fin x (by simpa [vals] using hx))
 
-/-- A reserve paying the gain at each individual query pays the accumulated gain of any caller.
-Both expected values refer to the same complete resulting state, even after an adaptive stop. -/
+/-- If each query bounds the expected increase in value by the expected increase in reserve,
+the same inequality holds for the caller. The reserve must be finite on invariant states. -/
 theorem run_compensated {ι σ α : Type} {spec : OracleSpec ι}
     (impl : QueryImpl spec (StateT σ ProbComp))
     (I : σ → Prop) (preserves : impl.PreservesInv I) (value reserve : σ → ℝ≥0∞)

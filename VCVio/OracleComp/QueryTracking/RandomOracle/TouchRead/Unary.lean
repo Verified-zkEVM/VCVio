@@ -12,7 +12,8 @@ public import VCVio.OracleComp.QueryTracking.RandomOracle.TouchRead.Children
 # Unary edges in the eager relabelled game
 
 Reading the child fixes the actual input of a unary node.
-The public query then draws that node and preserves the entire relabelled state.
+Querying the public point then gives the same reply and final state as touching the child
+and reading the node label. An absent label is sampled and stored.
 -/
 
 public section

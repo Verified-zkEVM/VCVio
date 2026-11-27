@@ -8,7 +8,12 @@ module
 
 public import VCVio.OracleComp.QueryTracking.WeightedCap.Handler
 
-/-! A refusal keeps previous handler effects, and the query that exceeded the limit is absent. -/
+/-!
+# Effects of a refused request
+
+The handler appends each admitted request to a list. A refused request adds no entry,
+and earlier entries survive the refusal.
+-/
 
 public section
 
@@ -16,6 +21,7 @@ open OracleSpec OracleComp
 
 namespace OracleComp.WeightedCap.HandlerTest
 
+/-- Boolean requests are logged and return `()`. -/
 abbrev Calls := Bool →ₒ Unit
 
 private def record : QueryImpl Calls (StateM (List Bool)) :=

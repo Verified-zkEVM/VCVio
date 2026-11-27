@@ -10,7 +10,12 @@ public import VCVio.OracleComp.QueryTracking.RandomOracle.ExpectedPotential
 public import VCVio.OracleComp.QueryTracking.RandomOracle.MarkedReplies.Registration
 import VCVio.OracleComp.Constructions.SampleableType.Measure
 
-/-! # Registering the answer to a previous query -/
+/-!
+# Registering the answer to a previous query
+
+Registering an observed bit and rereading it cannot create a fresh hit. A registered target
+at a cold input matches a fresh bit with probability one half.
+-/
 
 public section
 
@@ -32,8 +37,8 @@ def register : Register H (Unit × Bool) Unit Bool :=
 /-- Begin with an empty cache and no active target. -/
 def initial : State H Unit Bool := ⟨∅, fun _ => none, 0, false⟩
 
-/-- Querying a cell, registering its actual answer, and repeating the same query costs zero
-and cannot fire a retroactive match. -/
+/-- Registering a bit observed before the target was active and rereading it leaves the
+charged-fresh-query counter at zero and the hit flag clear. -/
 theorem register_previous (t : Nat) :
     ∀ z ∈ support ((simulateQ (impl register (fun _ : Nat => some ()) (fun _ b => b)) (do
       let w ← query (spec := Q) (.inl (.inr t))
@@ -76,7 +81,8 @@ theorem registered_cold (t : Nat) :
     SampleableType.prEvent_uniformSample_eq_singleton_natCard,
     Nat.card_eq_fintype_card]
 
-/-- An adaptive caller pays one half of its expected number of cold, registered queries. -/
+/-- The probability of any hit is at most half the expected number of cold queries with
+a registered target. -/
 theorem registered_expected {α : Type} (caller : OracleComp Q α) :
     let m := (simulateQ (impl register (fun _ : Nat => some ()) (fun _ b => b)) caller).run initial
     Pr{let z ← m}[z.2.hit = true] ≤ (∑' z, Pr{let u ← m}[u = z] * z.2.paid) / 2 := by

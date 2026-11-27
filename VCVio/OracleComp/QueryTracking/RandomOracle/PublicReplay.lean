@@ -12,9 +12,9 @@ public import VCVio.OracleComp.QueryTracking.RandomOracle.CachePartial
 /-!
 # Replaying public computations before the final draw
 
-A verifier that uses only public hash queries can run in the partial public table of the
-deferred game. The table need only be clean and extend the end of that verifier's run.
-In particular, this does not require first filling any of the pending cells.
+Take a supported verifier run making only public queries in the deferred game.
+In any conflict-free state extending its final state, merging the ordinary table with the
+available graph labels replays every query and returns the same result before the final fill.
 -/
 
 public section

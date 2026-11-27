@@ -3,6 +3,7 @@ Copyright (c) 2026 VCVio Contributors. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: VCVio Contributors
 -/
+
 module
 
 public import VCVio.OracleComp.QueryTracking.RandomOracle.HiddenSeed
@@ -12,7 +13,7 @@ public import VCVio.OracleComp.SimSemantics.StateT.StateProjection
 # Reindex private derivation labels
 
 A bijection changes the names of private queries and transports their complete table.
-The public and uniform oracles keep their original queries and caches.
+Public queries keep their original cache. Uniform draws pass through unchanged.
 -/
 
 public section
@@ -32,11 +33,13 @@ variable {I X Y R : Type} (pub : OracleSpec I) (e : X ≃ Y)
 @[expose] def reindexState (s : SplitCache pub X R) : SplitCache pub Y R :=
   (s.1, .ofFn (fun y => s.2 (e.symm y)))
 
+/-- The new table at `e x` contains the old entry at `x`. -/
 @[simp] theorem reindexState_apply (s : SplitCache pub X R) (x : X) :
     (reindexState pub e s).2 (e x) = s.2 x := by
   change s.2 (e.symm (e x)) = s.2 x
   exact congrArg (β := Option R) (fun k : X => s.2 k) (e.symm_apply_apply x)
 
+/-- Reindexing by the inverse restores both original caches. -/
 theorem reindexState_symm (s : SplitCache pub X R) :
     reindexState pub e.symm (reindexState pub e s) = s := by
   refine Prod.ext rfl ?_
@@ -60,8 +63,9 @@ private theorem reindex_store [DecidableEq X] [DecidableEq Y]
 variable [DecidableEq I] [DecidableEq X] [DecidableEq Y] [SampleableType R]
   [∀ t, SampleableType (pub.Range t)]
 
-/-- Both executions draw the same words and return the same observations after reindexing.
-This equality of computations holds from arbitrary, independently populated private tables. -/
+/-- Running from the reindexed initial table gives the same computation as reindexing the
+final table.
+The source can start from any public and private caches. -/
 theorem reindex_ideal {α : Type} (body : OracleComp (pub.withDerivations X R) α)
     (start : SplitCache pub X R) :
     Prod.map id (reindexState pub e) <$>

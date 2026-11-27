@@ -11,7 +11,11 @@ public import VCVio.OracleComp.QueryTracking.QueryBound.Basic
 public import VCVio.OracleComp.EvalDist.Measure
 
 /-!
-# Distributional state projection on a caller's actual query domain
+# Projecting the state of an adaptive oracle computation
+
+`AllQueriesSatisfy p P` restricts the one-step comparison to requests permitted by `P`.
+The source handler must preserve the initial invariant on every supported response.
+The resulting equality in distribution covers both the caller's reply and the projected final state.
 -/
 
 public section

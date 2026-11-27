@@ -11,8 +11,9 @@ public import VCVio.OracleComp.QueryTracking.RandomOracle.FreshAnswer
 /-!
 # Fresh matching replies at selected addresses
 
-The charge counts only occupied addresses in a chosen set.
-A caller can draw private coins, revisit other addresses and start from an arbitrary cache.
+The charge counts distinct occupied addresses in a fixed set. The caller may draw private
+coins, revisit addresses, and start with a populated cache. The match bound requires that
+the initial cache contain no selected matching reply.
 -/
 
 public section
@@ -97,7 +98,8 @@ theorem isPotentialStep_hasMatch (eligible : Set ι) (mark : ∀ t, spec.Range t
             gcongr
             exact keep w
 
-/-- Bound a new match by the observed number of selected addresses at the end of the run. -/
+/-- From a cache with no match, the joint probability of a terminal match and at most `q`
+occupied selected addresses is at most `q * ε`. -/
 theorem prEvent_hasMatch_and_count {α : Type} (eligible : Set ι)
     (mark : ∀ t, spec.Range t → Prop) (ε : ℝ≥0∞) (finite : ε ≠ ⊤)
     (rate : ∀ t ∈ eligible, Pr{let w ← $ᵗ (spec.Range t)}[mark t w] ≤ ε)

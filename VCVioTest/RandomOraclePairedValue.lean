@@ -10,6 +10,9 @@ public import VCVio.OracleComp.QueryTracking.RandomOracle.PairedValue
 
 /-!
 # Adaptive paired-cache controls
+
+The caller can repeat an input chosen from its first reply. The two tagged rows recover
+the full word only when both are present.
 -/
 
 public section

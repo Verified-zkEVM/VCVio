@@ -3,6 +3,7 @@ Copyright (c) 2026 VCVio Contributors. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: VCVio Contributors
 -/
+
 module
 
 public import VCVio.OracleComp.QueryTracking.RandomOracle.PairedValue.GraphCost
@@ -16,7 +17,7 @@ public import VCVio.OracleComp.QueryTracking.QueryLog
 Each original public request observes both tagged rows.
 A ready graph point gets its reply from a canonical label.
 Other public rows get their reply from the ordinary cache.
-A conflict is the case in which a stored ordinary row becomes a ready graph point.
+A conflict means that an ordinary row is occupied at the point of a ready node.
 -/
 
 public section

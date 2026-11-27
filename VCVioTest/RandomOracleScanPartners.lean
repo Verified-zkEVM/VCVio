@@ -10,7 +10,10 @@ public import VCVio.OracleComp.QueryTracking.RandomOracle.AcceptedScan.NewPartne
 import Mathlib.Tactic.NormNum
 
 /-!
-# Selecting either end of a newly formed pair
+# Selecting the new address of a matching pair
+
+A fresh bit at address zero can match the cached true bit at address one.
+Scanning zero first selects the new partner half the time. Scanning one first always stops there.
 -/
 
 public section

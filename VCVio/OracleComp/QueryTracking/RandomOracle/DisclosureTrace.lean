@@ -12,8 +12,9 @@ public import VCVio.OracleComp.QueryTracking.LoggingOracle.Core
 /-!
 # Direct disclosures on the realized graph trace
 
-The protected set can be chosen from the candidate returned at the end of the game.
-Only direct reads on that same execution can explain why a protected cell became visible.
+The protected set can be chosen after observing the run. Its cells must be absent initially,
+and every protected node must have a protected child. Under these conditions, a protected
+cell can appear before the final fill only if the logged run directly read a protected cell.
 -/
 
 public section
@@ -25,8 +26,8 @@ variable {ι X K R α : Type} {pub : OracleSpec ι} (G : CanonicalGraph pub X K 
   [DecidableEq ι] [DecidableEq X] [DecidableEq K] [SampleableType R]
   [∀ t, SampleableType (pub.Range t)]
 
-/-- A set of protected cells stays missing when the realized graph trace contains no direct
-read from the set. Other branches of the caller may make such reads. -/
+/-- Initially absent cells stay absent before the final fill if each protected node has a protected
+child and this execution logs no direct read from the set. -/
 theorem stays_undisclosed_on_log (oa : OracleComp (pub.withLabels X K R) α)
     {hidden : Set (X ⊕ K)} (child : ∀ k, .inr k ∈ hidden → ∃ c ∈ G.ch k, c ∈ hidden)
     {s : RelabelState pub X K R × List (X ⊕ K)} (cold : ∀ c ∈ hidden, s.1.2 c = none)

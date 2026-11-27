@@ -30,8 +30,8 @@ variable {A X Y : Type} [DecidableEq A] [DecidableEq Y] [SampleableType Y]
   | none => False
   | some (x, _) => ∃ y ∈ accepted, c (encode x) = some y
 
-/-- Placing an accepted word at any address can only increase the probability that the selected
-position was occupied in the starting cache. -/
+/-- Filling a cache entry with an accepted word can only increase the probability of selecting
+an initially occupied position. Each scan uses its own starting cache to test occupancy. -/
 theorem cachedSelection_le_of_accepted (accepted : Finset Y) (encode : X → A) (xs : List X)
     (distinct : (xs.map encode).Nodup) (c : QueryCache (A →ₒ Y)) (a : A) (v : Y)
     (good : v ∈ accepted) :

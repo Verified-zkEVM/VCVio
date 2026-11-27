@@ -5,6 +5,7 @@ Authors: VCVio Contributors, Alexander Hicks
 -/
 
 module
+
 public import VCVio.OracleComp.QueryTracking.RandomOracle.HiddenSeed
 public import VCVio.OracleComp.SimSemantics.StateT.Measure
 

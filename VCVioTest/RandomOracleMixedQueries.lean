@@ -10,6 +10,9 @@ public import VCVio.OracleComp.QueryTracking.RandomOracle.PairedValue.Mixed
 
 /-!
 # Physical charges of mixed graph calls
+
+Two reads of the same full word consume two public charges. A separate test assigns an
+arbitrary fee to an internal node read.
 -/
 
 public section

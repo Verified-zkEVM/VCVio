@@ -127,6 +127,35 @@ response-dependent routing, repeated labels and the empty-response boundary. Run
 execute the concrete routing and vector counters; they do not test proof terms, which are erased.
 Run the concrete checks with `lake exe oracle_cost_tests`; `lake test` includes that executable.
 
+## Adaptive trials and cache charges
+
+For an adaptive caller, charge a counted trial in the state in which the call starts.
+Under `OracleComp.BernoulliMoment.CountsTrials`, each call either leaves the trial counter alone
+or increments it by one on every supported reply.
+`CountsTrials.expected_trials_eq_charge` identifies the expected final count with the initial
+count plus PolyFun's expected charge over the caller's free program.
+The per-call charge is the probability of that increment.
+For example, a fair trial that stops on success and allows at most two attempts incurs one charge
+for its first attempt and another with probability one half, for an expected charge of 3/2.
+See `VCVioTest/AdaptiveTrialCount.lean` for the checked example.
+
+Meter placement matters when a public hash read can touch two cache rows at one physical address.
+With one row already present, fetching the missing row makes a fresh row query but adds zero
+physical addresses.
+`CanonicalGraph.PairedQueries.metered_footprint` bounds the final number of physical addresses by
+the initial number plus the original caller's charge on each supported run.
+The two rows contribute at most one address to this bound.
+
+PolyFun's `PFunctor.FreeM.Path.exists_run_liftM_amortized` transfers target charges along a
+completed path using a potential on the handler state.
+Its inequality is `target charge + initial potential ≤ final potential + source charge`.
+The footprint theorem uses `final footprint ≤ initial footprint + caller charge`.
+PolyFun also bounds resource growth by a uniform program budget in
+`PFunctor.FreeM.IsChargeBound.le_of_canReturn_run_liftM`.
+The footprint theorem charges the caller for the calls it made on the particular return path.
+For the meter that counts individual keys forwarded by a memoizing handler, see
+[PolyFun's cache-meter law](https://github.com/Verified-zkEVM/PolyFun/pull/499).
+
 ## Association-list cache representation
 
 `ListCache.lean` supplies `QueryImpl.ListCache.handler` for an executable association-list

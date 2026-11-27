@@ -84,7 +84,8 @@ theorem mixed_footprint {α : Type} (internalCost : (Internal X K H).Domain → 
   · have eqn := internal_frame G t st h
     simp [eqn]
 
-/-- An adaptive mixed run preserves joint occupancy of the public rows. -/
+/-- Under the paired readiness hypothesis, every occupied high row still has an occupied low row
+after an adaptive mixed run. -/
 theorem mixed_present {α : Type} (internalCost : (Internal X K H).Domain → Nat)
     (body : OracleComp (Mixed L F X K H) α) (s : DeferredState L H X K) (inv : PresentTogether s)
     (paired : ∀ st b, Ready G st (.inl b) → Ready G st (.inr b)) (z)

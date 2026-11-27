@@ -3,6 +3,7 @@ Copyright (c) 2026 VCVio Contributors. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: VCVio Contributors
 -/
+
 module
 
 public import VCVio.OracleComp.QueryTracking.WeightedCap
@@ -10,8 +11,9 @@ public import VCVio.OracleComp.QueryTracking.WeightedCap
 /-!
 # Resources on every path of a capped caller
 
-A handler can spend part of its query fee without increasing a tracked resource.
-That part remains available when bounding the resource, even if the caller eventually stops.
+If a query increases the resource by at most its fee, the final resource is at most its
+initial value plus the budget. The cap deducts the full fee even when the resource grows
+by less. The bound also holds on refusal.
 -/
 
 public section

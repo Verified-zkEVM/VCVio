@@ -21,6 +21,7 @@ open OracleComp OracleSpec OracleSpec.QueryCache
 
 namespace VCVioTest.CacheReplay
 
+/-- A single address suffices to observe whether a query populated the cache. -/
 abbrev Spec := Unit →ₒ Bool
 
 /-- A known answer selects the same continuation from every extension of the cache. -/

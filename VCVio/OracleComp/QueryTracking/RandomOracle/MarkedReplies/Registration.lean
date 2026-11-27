@@ -181,7 +181,8 @@ theorem charged (register : Register pub Notice K V)
             rw [add_comm]
     · exact Or.inl ⟨(), _, rfl, good⟩
 
-/-- An interleaved caller pays according to its observed number of cold queries with a target. -/
+/-- With the flag initially clear, the joint probability of a hit and a final paid counter at
+most `q` is at most `q * ε`. Repeated reads and queries with no active target add no charge. -/
 theorem prEvent_hit_and_paid {α : Type} (register : Register pub Notice K V)
     (role : ι → Option K) (project : ∀ t, pub.Range t → V)
     (ε : ℝ≥0∞) (finite : ε ≠ ⊤) (rate : ∀ t k, role t = some k → ∀ v,

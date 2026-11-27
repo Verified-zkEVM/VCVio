@@ -23,7 +23,9 @@ namespace VCVioTest.ExpectedMarkedHit
 open OracleComp OracleSpec
 open scoped ENNReal
 
+/-- A hidden draw and a public draw, each returning a Boolean. -/
 abbrev Q := (Bool →ₒ Bool)
+/-- The hidden bit and the number of marked public draws. -/
 abbrev Store := Bool × Nat
 
 /-- The public draw pays one exactly when the prior hidden coin enables it. -/

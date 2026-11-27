@@ -3,11 +3,17 @@ Copyright (c) 2026 VCVio Contributors. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: VCVio Contributors
 -/
+
 module
 
 public import VCVio.OracleComp.QueryTracking.RandomOracle.PairedValue.GraphReadback
 
-/-! # Paired readback with an ordinary high row and a canonical low row -/
+/-!
+# Paired readback with an ordinary high row and a canonical low row
+
+One full word can combine a canonical low label with an ordinary high row. A conflict can
+make a stored ordinary low bit disagree with the merged lookup.
+-/
 
 public section
 open OracleSpec OracleComp CanonicalGraph.PairedQueries
@@ -38,7 +44,7 @@ example (s : State) (key low high : Bool)
   exact (RandomOraclePairedValue.joinCache_eq_some_iff _ _ _ _).2
     ⟨by simpa [graph, label] using lo, hi.trans ordinary⟩
 
-/-- An ordinary low answer can be shadowed when its input becomes a ready node point. -/
+/-- A ready node label can shadow an ordinary low reply in the same state. -/
 private theorem shadowedLow (s : State) (key : Bool) (child : s.2 (.inl ()) = some key)
     (old : s.1 (.inl key) = some false) (label : s.2 (.inr ()) = some true) :
     graph.Conflict s ∧ graph.merge s (.inl key) ≠ some false := by
@@ -55,5 +61,17 @@ example : ∃ s : State, graph.Conflict s ∧ s.1 (.inl true) = some false ∧
   let s : State := (.ofFn (fun _ => some false), .ofFn (fun _ => some true))
   have bad := shadowedLow s true rfl rfl rfl
   exact ⟨s, bad.1, rfl, bad.2⟩
+
+/-- Filling a missing high row changes its answer while preserving every physical address. -/
+example (c : (PairedSpec Nat Bool).QueryCache) (key : Nat) (low high : Bool)
+    (warm : c (.inl key) = some low) (cold : c (.inr key) = none) :
+    (c.cacheQuery (.inr key) high) (.inr key) ≠ c (.inr key) ∧
+      physicalInputs (c.cacheQuery (.inr key) high) = physicalInputs c := by
+  refine ⟨by simp [cold], ?_⟩
+  ext x
+  by_cases eq : x = key
+  · subst x
+    simp [physicalInputs, warm]
+  · simp [physicalInputs, eq]
 
 end VCVioTest.RandomOraclePairedGraphReadback

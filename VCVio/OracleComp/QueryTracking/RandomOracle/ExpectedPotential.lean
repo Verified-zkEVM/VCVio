@@ -99,7 +99,8 @@ theorem IsPotentialStep.expected_credit {so : QueryImpl spec (StateT σ ProbComp
     obtain ⟨a, _, rfl⟩ := hz
     exact fee a
 
-/-- A terminal clean-state credit of at least one bounds the hit by the expected charge. -/
+/-- If the expected sum of the terminal potential and the clean-event indicator is at least one,
+the event probability is at most the expected terminal potential. -/
 theorem prEvent_le_expected_of_credit {γ : Type} (m : ProbComp γ) (P : γ → Prop)
     (Φ : γ → ℝ≥0∞) [DecidablePred P]
     (credit : 1 ≤ ∑' z, Pr{let u ← m}[u = z] * (Φ z + if P z then 0 else 1)) :

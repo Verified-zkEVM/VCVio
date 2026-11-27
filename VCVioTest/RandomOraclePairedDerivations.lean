@@ -3,18 +3,26 @@ Copyright (c) 2026 VCVio Contributors. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: VCVio Contributors
 -/
+
 module
 
 public import VCVio.OracleComp.QueryTracking.RandomOracle.PairedValue.Derivations
 
-/-! # Independent warm public and private words at the same key -/
+/-!
+# Independent warm public and private words at the same key
+
+The public and private tables may contain different words at the same key. Splitting their
+rows keeps both tables and the auxiliary reply in an adaptive run.
+-/
 
 public section
 open OracleSpec OracleComp RandomOraclePairedValue.Derivations
 open scoped OracleSpec.PrimitiveQuery
 
 namespace VCVioTest.RandomOraclePairedDerivations
+/-- A single auxiliary address returning one Boolean. -/
 abbrev Auxiliary := Unit →ₒ Bool
+/-- Public and private tables of Boolean pairs together with the auxiliary oracle. -/
 abbrev Source := World Auxiliary Nat Nat (Bool × Bool)
 
 /-- A private draw and the public and private answers determine the last key. -/

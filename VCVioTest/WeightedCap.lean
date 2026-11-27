@@ -3,11 +3,16 @@ Copyright (c) 2026 VCVio Contributors. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: VCVio Contributors
 -/
+
 module
+
 public import VCVio.OracleComp.QueryTracking.WeightedCap
 
 /-!
 # Zero-cost queries and repeated charged requests
+
+A zero-cost query can choose a continuation even at zero budget. Two unit-cost reads of
+the same address need two units, so a budget of one refuses the second.
 -/
 
 public section
@@ -15,6 +20,7 @@ open OracleSpec OracleComp
 
 namespace OracleComp.WeightedCap.Test
 
+/-- Both requests return a Boolean. Only `true` costs one unit. -/
 abbrev Source := Bool →ₒ Bool
 
 private def fee : Bool → Nat

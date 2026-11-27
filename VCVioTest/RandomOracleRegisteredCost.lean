@@ -10,6 +10,9 @@ public import VCVio.OracleComp.QueryTracking.RandomOracle.MarkedReplies.Cost
 
 /-!
 # A warm lookup costs one physical query and zero watched queries
+
+A warm lookup at an active key increments the total public-call counter without counting
+a fresh target trial.
 -/
 
 public section

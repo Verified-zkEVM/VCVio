@@ -10,6 +10,9 @@ public import VCVio.OracleComp.QueryTracking.RandomOracle.AcceptedScan.CyclicMas
 
 /-!
 # Cached selections across the two starts of a Boolean cycle
+
+One position already holds an accepted bit. The other has a fresh answer.
+The bound sums the probabilities of selecting the occupied position over both starts.
 -/
 
 public section

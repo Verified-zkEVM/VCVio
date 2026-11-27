@@ -3,6 +3,7 @@ Copyright (c) 2026 VCVio Contributors. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: VCVio Contributors
 -/
+
 module
 
 public import VCVio.OracleComp.QueryTracking.RandomOracle.JointPotential.Subgraph
@@ -43,18 +44,21 @@ variable [DecidableEq X] [DecidableEq K] [DecidableEq X'] [DecidableEq K']
   | .inr (.inl c) => touchCell (some (f.cell c))
   | .inr (.inr k) => readCell (some (.inr (f.node k)))
 
-/-- Each full execution projects to a supported selected execution with the same reply. -/
+/-- Each supported full execution projects to a supported selected execution with the same
+reply, and its final state agrees with its initial state on the entries specified by `Framed`. -/
 @[expose] def Preserves {α : Type} (p : OracleComp (pub.withLabels X K R) α) : Prop :=
   ∀ (s : RelabelState pub X' K' R) z, z ∈ support ((simulateQ G.eagerImpl
       (simulateQ f.liftQuery p)).run s) →
     (z.1, f.project z.2) ∈ support ((simulateQ S.eagerImpl p).run (f.project s)) ∧ f.Framed s z.2
 
+/-- A pure return projects to the same result and changes no entries. -/
 theorem preserves_pure {α : Type} (a : α) : f.Preserves (pure a) := by
   intro s z run
   simp only [simulateQ_pure, StateT.run_pure, mem_support_pure_iff] at run ⊢
   subst z
   exact ⟨rfl, ⟨fun _ _ => rfl, fun _ _ => rfl⟩⟩
 
+/-- The support projection and frame are preserved when every continuation preserves them. -/
 theorem preserves_bind {α β : Type} {p : OracleComp (pub.withLabels X K R) α}
     {k : α → OracleComp (pub.withLabels X K R) β}
     (first : f.Preserves p) (rest : ∀ a, f.Preserves (k a)) : f.Preserves (p >>= k) := by
@@ -67,6 +71,7 @@ theorem preserves_bind {α β : Type} {p : OracleComp (pub.withLabels X K R) α}
   exact ⟨fun c hc => (outside'.cells c hc).trans (outside.cells c hc),
     fun i hi => (outside'.publicRows i hi).trans (outside.publicRows i hi)⟩
 
+/-- Mapping the return value commutes with projection and keeps the frame. -/
 theorem preserves_map {α β : Type} (g : α → β) {p : OracleComp (pub.withLabels X K R) α}
     (ready : f.Preserves p) : f.Preserves (g <$> p) := by
   rw [← bind_pure_comp]
@@ -94,6 +99,7 @@ private theorem draw_selected (c : X ⊕ K) (s : RelabelState pub X' K' R) {z}
     · exact ⟨fun x outside => QueryCache.cacheQuery_of_ne _ _ (fun eq => outside ⟨c, eq.symm⟩),
         fun _ _ => rfl⟩
 
+/-- Reading an embedded cell projects to the same read in the selected graph. -/
 theorem preserves_readCell (c : X ⊕ K) : f.Preserves (readCell (some c)) := by
   intro s z run
   rw [S.eagerImpl_readCell_run]

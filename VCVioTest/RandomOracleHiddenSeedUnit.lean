@@ -5,6 +5,7 @@ Authors: Alexander Hicks
 -/
 
 module
+
 public import VCVio.OracleComp.QueryTracking.RandomOracle.HiddenSeed.Unit
 
 /-!

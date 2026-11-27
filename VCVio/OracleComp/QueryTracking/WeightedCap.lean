@@ -5,6 +5,7 @@ Authors: Tom Wambsgans, Alexander Hicks
 -/
 
 module
+
 public import VCVio.OracleComp.QueryTracking.QueryBound.Basic
 public import VCVio.EvalDist.ProbabilityBounds
 public import VCVio.OracleComp.EvalDist.Measure
@@ -75,7 +76,8 @@ theorem cost_run_ge (impl : QueryImpl spec (StateT S ProbComp)) (weight : ι →
     have hstepCost := hcost t state step hstep
     omega
 
-/-- **The capped run's cost stays within the limit.** -/
+/-- On success or refusal, the terminal cost is at most the initial cost plus the remaining
+budget. -/
 theorem cost_capCompOpt_le (impl : QueryImpl spec (StateT S ProbComp)) (weight : ι → Nat)
     (cost : S → Nat) (hcost : ReportsCost impl weight cost) :
     ∀ (oa : OracleComp spec α) (limit : Nat) (state : S),
@@ -104,7 +106,8 @@ theorem cost_capCompOpt_le (impl : QueryImpl spec (StateT S ProbComp)) (weight :
       dsimp only
       omega
 
-/-- **Where the uncapped run stays within the limit, the capped one never fires.** -/
+/-- If every supported uncapped run adds at most `limit` cost, capping returns the same joint
+law of the result and final state, with each result wrapped in `some`. -/
 theorem evalDist_capCompOpt (impl : QueryImpl spec (StateT S ProbComp)) (weight : ι → Nat)
     (cost : S → Nat) (hcost : ReportsCost impl weight cost) :
     ∀ (oa : OracleComp spec α) (limit : Nat) (state : S),

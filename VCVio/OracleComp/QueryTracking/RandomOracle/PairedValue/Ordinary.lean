@@ -7,7 +7,6 @@ Authors: VCVio Contributors
 module
 
 public import VCVio.OracleComp.QueryTracking.RandomOracle.PairedValue.Mixed
-
 import all VCVio.OracleComp.QueryTracking.RandomOracle.PairedValue.Mixed
 import all VCVio.OracleComp.QueryTracking.RandomOracle.PairedValue.GraphCost
 import all VCVio.OracleComp.QueryTracking.RandomOracle.PairedValue.Presence
@@ -15,8 +14,9 @@ import all VCVio.OracleComp.QueryTracking.RandomOracle.PairedValue.Presence
 /-!
 # Full public words outside a canonical graph
 
-If neither half can name a graph point, a miss samples an independent full word.
-A hit reuses the old word, including in the presence of pending internal graph work.
+When neither row can name a graph point, each lookup reuses its stored half or samples a
+missing half. Two missing halves give a fresh full word. A partially occupied pair keeps its
+stored half. The graph cells and pending list stay unchanged.
 -/
 
 public section

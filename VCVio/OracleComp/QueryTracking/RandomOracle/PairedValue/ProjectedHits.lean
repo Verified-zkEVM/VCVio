@@ -38,8 +38,9 @@ theorem potential_le_physical (keys : G.ProjKeys) (high : ∀ b : L, keys.node (
 
 variable [DecidableEq L] [DecidableEq X] [DecidableEq K]
 
-/-- The probability of a projected hit within the measured budget is at most one uniform
-label per paid query, including all queries in a setup followed by an adaptive caller. -/
+/-- The joint probability of a projected hit after the final fill and a reported cost at most `q`
+is at most `q / Nat.card H`. The setup must report at least its number of occupied physical
+inputs. The caller adds one for each full public query. -/
 theorem prEvent_hit_afterSetup_and_cost {α β : Type}
     (keys : G.ProjKeys) (high : ∀ b : L, keys.node (.inr b) = none)
     (setup : OracleComp ((PairedSpec L H).withLabels X K H) (β × Nat))

@@ -3,18 +3,23 @@ Copyright (c) 2026 VCVio Contributors. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: VCVio Contributors
 -/
+
 module
 
 public import VCVio.OracleComp.QueryTracking.WeightedCap.Domination
 
 /-!
 # Relaxed tariffs on queries that already caused a persistent event
+
+With a budget of one, the first charged call sets a flag before the second is refused.
+Making both calls free preserves that flag and allows the second to return.
 -/
 
 public section
 open OracleSpec OracleComp
 namespace OracleComp.WeightedCap.DominationTest
 
+/-- A Boolean request can set a persistent flag and returns `()`. -/
 abbrev Calls := Bool →ₒ Unit
 
 /-- Each selected request sets the persistent flag. -/

@@ -13,7 +13,7 @@ public import VCVio.OracleComp.QueryTracking.RandomOracle.PairedValue.GraphCost
 # Occupied rows under paired public queries
 
 Each query reads the low row before the high row.
-If a low row is canonical, the high row is already canonical.
+The preservation lemmas assume that whenever the low row is ready, the high row is also ready.
 If the low row is ordinary, it is present before the high query runs.
 -/
 
@@ -29,7 +29,7 @@ variable {L H F X K : Type} (G : CanonicalGraph (PairedSpec L H) X K H) (e : F �
 @[expose] def PresentTogether (st : DeferredState L H X K) : Prop :=
   ∀ b : L, (st.1.1 (.inr b)).isSome → (st.1.1 (.inl b)).isSome
 
-/-- The same query values enable both halves of the public point. -/
+/-- A public row is the point of some node at its currently stored child values. -/
 @[expose] def Ready (st : RelabelState (PairedSpec L H) X K H) (key : L ⊕ L) : Prop :=
   ∃ k vs, G.childVals st k = some vs ∧ G.pt k vs = key
 
@@ -83,7 +83,8 @@ private theorem read_preserves (paired : ∀ st b, Ready G st (.inl b) → Ready
       exact QueryCache.isSome_mono
         ((G.le_of_mem_support_deferredImpl hl).1.trans preserved) (old _ orig)
 
-/-- A single full call, or a private draw, preserves joint occupancy. -/
+/-- When low readiness implies high readiness, each full query or private draw preserves the
+invariant that an occupied high row has an occupied low row. -/
 theorem caller_preserves_presence (paired : ∀ st b, Ready G st (.inl b) → Ready G st (.inr b)) :
     (callerImpl G e).PreservesInv PresentTogether := by
   intro t s inv w hw
@@ -105,7 +106,8 @@ theorem caller_preserves_presence (paired : ∀ st b, Ready G st (.inl b) → Re
     obtain ⟨_, _, rfl⟩ := hw
     exact inv
 
-/-- Forwarded private sampling and paired public queries preserve the occupied low rows. -/
+/-- Under the paired readiness hypothesis, forwarding private samples and expanding public
+queries preserves the implication from high-row occupancy to low-row occupancy. -/
 theorem meteredCaller_present {α : Type} (p : OracleComp (FullWorld L F) α)
     (paired : ∀ st b, Ready G st (.inl b) → Ready G st (.inr b))
     (st : DeferredState L H X K) (old : PresentTogether st)

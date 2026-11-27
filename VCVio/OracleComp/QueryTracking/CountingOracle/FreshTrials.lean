@@ -13,8 +13,9 @@ public import VCVio.OracleComp.SimSemantics.StateT.StateProjection
 /-!
 # Counting fresh accepted random-oracle replies
 
-The counter observes the first q eligible fresh queries. Eligibility may depend on the cache
-before the query. Repeated queries return the actual cached word and leave both counters alone.
+An eligible cache miss counts as one trial while the trial count is below the cap.
+Eligibility can depend on the cache before the query.
+A repeated query returns the cached answer and leaves both counters alone.
 -/
 
 public section
