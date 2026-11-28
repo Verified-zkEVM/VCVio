@@ -73,8 +73,13 @@ the step run on a table of independent results of all children
 [`Rewinding/BlockEager.lean`](../../VCVio/CryptoFoundations/Rewinding/BlockEager.lean)), so the
 counting bound holds for every table and the success clause is its expectation. The eager form
 needs the marginals of `Fintype.mPi` along disjoint lists of indices (`Fintype.mPi_map_lists`, in
-[`OracleComp/EvalDist/PiSampling.lean`](../../VCVio/OracleComp/EvalDist/PiSampling.lean)). The cost
-clause with probabilistic children is not proved yet.
+[`OracleComp/EvalDist/PiSampling.lean`](../../VCVio/OracleComp/EvalDist/PiSampling.lean)).
+`OracleComp.expectedCalls_blockChildStep_le` is the cost clause: the step costs at most
+`1 + ∑ j, (k j - 1)` times the children's average expected cost. On a table, the draws of the
+accepted centres at coordinate `j` inspect at most `k j - 1` times the total weight in expectation
+(`OracleComp.sum_drawWeight_neighbourPool_le`). This is the weighted column count
+`CoordinateWise.sum_accept_column_weight_le`, which bounds each centre's draws with
+`ProbComp.drawWeight_le_split`.
 
 ## Quadratic forks: seeded vs replay
 
