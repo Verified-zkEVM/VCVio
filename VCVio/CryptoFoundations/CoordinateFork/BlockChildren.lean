@@ -183,7 +183,7 @@ with acceptance `ρ` and entry weights `w`, the expected weight that the draws a
 the block step inspect, summed over the accepted centres, is at most `k j - 1` times the total
 weight. -/
 theorem sum_drawWeight_neighbourPool_le (ρ : ((i : ι) → S i) → Bool)
-    (w : ((i : ι) → S i) → ℝ≥0) (k : ι → ℕ) (j : ι) [Nonempty (S j)] :
+    (w : ((i : ι) → S i) → ℝ≥0) (k : ι → ℕ) (j : ι) :
     ∑ c, (if ρ c then drawWeight ρ w (k j - 1) (neighbourPool c j) else 0) ≤
       ((k j - 1 : ℕ) : ℝ≥0) * ∑ c, w c := by
   classical
@@ -225,7 +225,6 @@ theorem expectedCalls_blockChildStep_le [SampleableType ((i : ι) → S i)]
       (1 + ∑ j, ((k j - 1 : ℕ) : ℝ≥0∞)) *
         ((∑ c, expectedCalls (child c)) / Fintype.card ((i : ι) → S i)) := by
   classical
-  have : ∀ j, Nonempty (S j) := fun j => ⟨(Classical.arbitrary ((i : ι) → S i)) j⟩
   let _ : MeasurableSpace (((i : ι) → S i) → Option W × ℕ) := ⊤
   let _ : DiscreteMeasurableSpace (((i : ι) → S i) → Option W × ℕ) := ⟨fun _ => trivial⟩
   let _ : MeasurableSpace (Option W) := ⊤

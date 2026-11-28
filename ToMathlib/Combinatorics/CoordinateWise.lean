@@ -956,7 +956,7 @@ accepted challenges of its column at coordinate `j` by `R / (N - 1)` and the rej
 `R / N`, where `N` is the number of accepted challenges of the column. Summed over the accepted
 challenges, this is at most `R` times the total weight. -/
 theorem sum_accept_column_weight_le [∀ j, DecidableEq (S j)] (j : ι)
-    [Nonempty (S j)] (w : ((i : ι) → S i) → ℝ≥0) (R : ℝ≥0) :
+    (w : ((i : ι) → S i) → ℝ≥0) (R : ℝ≥0) :
     ∑ c, (if accept c then
         R / ((columnCount accept j c - 1 : ℕ) : ℝ≥0) *
             ∑ y ∈ (Finset.univ.filter fun y => accept (Function.update c j y)).erase (c j),
@@ -966,7 +966,10 @@ theorem sum_accept_column_weight_le [∀ j, DecidableEq (S j)] (j : ι)
               w (Function.update c j y)
       else 0) ≤ R * ∑ c, w c := by
   classical
-  obtain ⟨d⟩ := (inferInstance : Nonempty (S j))
+  rcases isEmpty_or_nonempty (S j) with hS | hS
+  · have : IsEmpty ((i : ι) → S i) := isEmpty_pi.mpr ⟨j, hS⟩
+    simp [Finset.univ_eq_empty]
+  obtain ⟨d⟩ := hS
   set reps : Finset ((i : ι) → S i) :=
     (Finset.univ : Finset ((i : ι) → S i)).image fun c => Function.update c j d
   have hmaps : ∀ c ∈ (Finset.univ : Finset ((i : ι) → S i)), Function.update c j d ∈ reps :=
