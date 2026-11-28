@@ -33,6 +33,7 @@ public import VCVio.CryptoFoundations.CoordinateFork
 public import VCVio.CryptoFoundations.CoordinateFork.BlockChildren
 public import VCVio.CryptoFoundations.CoordinateFork.BlockFinder
 public import VCVio.CryptoFoundations.CoordinateFork.BlockOperational
+public import VCVio.CryptoFoundations.CoordinateFork.BlockTreeFinder
 public import VCVio.CryptoFoundations.CoordinateFork.Extraction
 public import VCVio.CryptoFoundations.CoordinateFork.Finder
 public import VCVio.CryptoFoundations.CoordinateFork.Operational

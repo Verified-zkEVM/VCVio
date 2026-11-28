@@ -96,8 +96,9 @@ theorem blockChildList_keys {ι : Type} [Fintype ι] [DecidableEq ι] {S : ι �
     refine (Finset.nodup_toList _).pairwise_of_forall_ne fun j _ j' _ hne => ?_
     exact List.disjoint_left.mpr fun y hy hy' =>
       hne (eq_of_mem_neighbourPool (hmem j y hy) (hmem j' y hy'))
-  · have hset : (c₀ :: (Finset.univ : Finset ι).toList.flatMap fun j => (ws j).map Prod.fst).toFinset
-        = neighbourFamily c₀ N := by
+  · have hset :
+        (c₀ :: (Finset.univ : Finset ι).toList.flatMap fun j => (ws j).map Prod.fst).toFinset =
+          neighbourFamily c₀ N := by
       ext x
       simp [neighbourFamily, N, List.mem_flatMap]
     rw [hset]
@@ -171,7 +172,8 @@ theorem simulateQ_counted_blockTreeFinder (n : ℕ) (ι : Fin n → Type) [∀ r
       blockTreeProgram (fun j => StateT.lift (ProbComp.uniformFin j)) n ι S k
         (fun r => StateT.lift ($ᵗ ((i : ι r) → S r i))) (counted f) := by
   have hcentre : ∀ r, simulateQ (coins (S := ℕ) + counted f)
-      (OracleComp.liftComp ($ᵗ ((i : ι r) → S r i)) (unifSpec + accSpec fun r => (i : ι r) → S r i)) =
+      (OracleComp.liftComp ($ᵗ ((i : ι r) → S r i))
+        (unifSpec + accSpec fun r => (i : ι r) → S r i)) =
       StateT.lift ($ᵗ ((i : ι r) → S r i)) := by
     intro r
     rw [QueryImpl.simulateQ_add_liftComp_left]
@@ -230,8 +232,8 @@ theorem runFinder_blockTreeFinder_succ (n : ℕ) (ι : Fin (n + 1) → Type) [�
     rw [StateT.run_bind, blockTreeProgram_counted_run]
     simp only [chargedChild, StateT.run_mk, StateT.run_pure, bind_pure_comp, Functor.map_map]
   rw [hchild]
-  simp only [blockChildStep, StateT.run_bind, StateT.run_lift, bind_assoc, pure_bind,
-    StateT.run_pure, map_bind, bind_pure_comp, bind_map_left, StateT.run_map]
+  simp only [blockChildStep, StateT.run_bind, StateT.run_lift, map_bind, bind_pure_comp,
+    bind_map_left, StateT.run_map]
 
 /-- With no round left, the finder asks the acceptance oracle about the empty challenge, once. -/
 theorem runFinder_blockTreeFinder_zero (ι : Fin 0 → Type) [∀ r, Fintype (ι r)]
@@ -309,7 +311,7 @@ theorem blockTreeError_succ {n : ℕ} {ι : Fin (n + 1) → Type} [∀ r, Fintyp
     intro m ι _ S _ k
     rw [blockTreeError]
     exact ENNReal.sub_sub_cancel (by finiteness)
-      (Finset.prod_le_one' fun r _ => tsub_le_self)
+      (Finset.prod_le_one fun r _ => tsub_le_self)
   rw [blockTreeError, Fin.prod_univ_succ, ← hprod]
   exact ENNReal.one_sub_one_sub_mul_one_sub_eq_add_one_sub_mul h0 (blockTreeError_le_one _ _)
 
@@ -526,7 +528,7 @@ theorem isTreeFinder_blockTreeFinder (n : ℕ) (ι : Fin n → Type) [∀ r, Fin
     (k : (r : Fin n) → ι r → ℕ) (hκ : ∀ r, blockError (S := S r) (k r) ≤ 1) :
     IsTreeFinder (fun r => blockArity (k r)) (blockNodeOk k) (blockTreeFinder n ι S k)
       (blockTreeError S k) (∏ r, (blockArity (k r) : ℝ≥0∞)) where
-  one_le r := Nat.le_add_left 1 _
+  one_le _ := Nat.le_add_left 1 _
   sound f z hz t ht := blockTreeFinder_sound n ι S k f z hz t ht
   success := blockTreeFinder_success n ι S k hκ
   cost := expectedCalls_blockTreeFinder n ι S k
