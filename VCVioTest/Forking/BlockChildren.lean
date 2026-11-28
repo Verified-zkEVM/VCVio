@@ -19,6 +19,9 @@ twice: the second can give `[true, false]` and the first cannot. So the hypothes
 challenges with a first coordinate over `Fin 5` and a second over `Fin 3`, with the neighbour pools
 of a concrete centre, so its instance arguments are synthesized at a dependent product.
 
+**The cost clause.** Children that each cost one call give the block step an expected cost of at
+most `1 + 2 + 1 = 4`, the size of a star.
+
 **The success clause forces success.** A child that succeeds on the challenges whose first
 coordinate is not `4` succeeds with probability `ε = 12/15`, above the error `κ = 2/5 + 1/3 = 11/15`
 of thresholds `(3, 2)`. `prEvent_child_le_blockChildStep` then forces the block step to succeed
@@ -117,5 +120,15 @@ example : Pr{let z ← blockChildStep child k}[z.1.isSome] ≠ 0 := by
     (ENNReal.add_ne_top.mpr ⟨h1, h2⟩), ENNReal.toReal_add h1 h2, ENNReal.toReal_div,
     ENNReal.toReal_div, ENNReal.toReal_div] at h
   norm_num at h
+
+/-- Children that each cost one call give the block step an expected cost of at most `4`. -/
+example : Rewinding.expectedCalls (blockChildStep child k) ≤ 4 := by
+  refine (expectedCalls_blockChildStep_le child k).trans (le_of_eq ?_)
+  simp only [child, Rewinding.expectedCalls_pure, Nat.cast_one, Finset.sum_const, Finset.card_univ,
+    nsmul_eq_mul, mul_one, Fin.sum_univ_two, k]
+  have hcard : (Fintype.card ((u : Fin 2) → alph u) : ℝ≥0∞) ≠ 0 := by
+    exact_mod_cast Fintype.card_ne_zero
+  rw [ENNReal.div_self hcard (ENNReal.natCast_ne_top _)]
+  norm_num
 
 end BlockChildrenTest
