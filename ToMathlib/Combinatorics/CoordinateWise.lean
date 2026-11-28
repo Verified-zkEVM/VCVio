@@ -12,6 +12,7 @@ public import Mathlib.Data.Finset.Card
 public import Mathlib.Data.Fin.VecNotation
 public import Mathlib.Data.Fintype.BigOperators
 public import Mathlib.Tactic.Ring
+import ToMathlib.Algebra.BigOperators.Finset
 
 /-!
 # Coordinate-wise special soundness
@@ -74,6 +75,10 @@ time are outside this file.
   success condition. `CoordinateWise.div_card_filter_le_affine` is its constant case.
 * `CoordinateWise.isCoordSpecialSound_coordFamily` and `CoordinateWise.card_coordFamily` — what
   the table core's candidate output must satisfy to be an `SS(S, ℓ, k)` set.
+* `CoordinateWise.sum_accept_column_weight_le` — the weighted count behind the cost of the block
+  step with probabilistic children: for every accepted challenge, the other accepted challenges of
+  its column weighed by `R / (N - 1)` and the rejected ones by `R / N` sum to at most `R` times the
+  total weight.
 * `CoordinateWise.le_card_of_hasCoordNeighbours` — the paper's cardinality is already forced as a
   lower bound by the neighbour condition alone.
 
@@ -85,7 +90,7 @@ public section
 
 open Finset
 
-open scoped ENNReal
+open scoped ENNReal NNReal
 
 namespace Function
 
@@ -919,6 +924,79 @@ theorem div_card_filter_le_affine_pi [∀ j, Nonempty (S j)] (k : ι → ℕ) :
     rw [ENNReal.mul_sub fun _ _ => hκtop, mul_one, ENNReal.sub_mul fun _ _ => hgtop, one_mul,
       ← (ENNReal.cancel_of_ne hκgtop).add_tsub_assoc_of_le hκg_le_κ,
       ← (ENNReal.cancel_of_ne hκgtop).add_tsub_assoc_of_le hκg_le_g, add_comm]
+
+/-- **The weighted count of one column.** Let `A` be the accepted values of a column, `H = |A|`. For
+each accepted value `x`, a search that inspects every other accepted value with probability
+`R / (H - 1)` and every rejected value with probability `R / H` has expected weight at most
+`R / (H - 1)` times the other accepted weight plus `R / H` times the rejected weight. Summed over
+the accepted values, this is at most `R` times the weight of the column. -/
+theorem sum_filter_weight_le {α : Type*} [Fintype α] [DecidableEq α] (p : α → Prop)
+    [DecidablePred p] (a : α → ℝ≥0) (R : ℝ≥0) :
+    ∑ x ∈ Finset.univ.filter p,
+        (R / (((Finset.univ.filter p).card - 1 : ℕ) : ℝ≥0) *
+            ∑ y ∈ (Finset.univ.filter p).erase x, a y +
+          R / ((Finset.univ.filter p).card : ℝ≥0) * ∑ y ∈ Finset.univ.filter (¬ p ·), a y)
+      ≤ R * ∑ y, a y := by
+  set A := Finset.univ.filter p
+  rw [Finset.sum_add_distrib, ← Finset.mul_sum, Finset.sum_sum_erase, nsmul_eq_mul,
+    Finset.sum_const, nsmul_eq_mul, ← Finset.sum_filter_add_sum_filter_not Finset.univ p, mul_add]
+  have key : ∀ R n : ℝ≥0, R / n * n ≤ R := fun R n => by
+    rcases eq_or_ne n 0 with h | h
+    · simp [h]
+    · rw [div_mul_cancel₀ R h]
+  refine add_le_add ?_ ?_
+  · rw [← mul_assoc]
+    exact mul_le_mul_left (key R _) _
+  · calc (A.card : ℝ≥0) * (R / (A.card : ℝ≥0) * ∑ y ∈ Finset.univ.filter (¬ p ·), a y)
+        = R / (A.card : ℝ≥0) * (A.card : ℝ≥0) * ∑ y ∈ Finset.univ.filter (¬ p ·), a y := by ring
+      _ ≤ R * ∑ y ∈ Finset.univ.filter (¬ p ·), a y := mul_le_mul_left (key R _) _
+
+/-- **The weighted count over all columns.** For every accepted challenge `c`, weigh the other
+accepted challenges of its column at coordinate `j` by `R / (N - 1)` and the rejected ones by
+`R / N`, where `N` is the number of accepted challenges of the column. Summed over the accepted
+challenges, this is at most `R` times the total weight. -/
+theorem sum_accept_column_weight_le [∀ j, DecidableEq (S j)] (j : ι)
+    (w : ((i : ι) → S i) → ℝ≥0) (R : ℝ≥0) :
+    ∑ c, (if accept c then
+        R / ((columnCount accept j c - 1 : ℕ) : ℝ≥0) *
+            ∑ y ∈ (Finset.univ.filter fun y => accept (Function.update c j y)).erase (c j),
+              w (Function.update c j y) +
+          R / (columnCount accept j c : ℝ≥0) *
+            ∑ y ∈ Finset.univ.filter (fun y => ¬ accept (Function.update c j y)),
+              w (Function.update c j y)
+      else 0) ≤ R * ∑ c, w c := by
+  classical
+  rcases isEmpty_or_nonempty (S j) with hS | hS
+  · have : IsEmpty ((i : ι) → S i) := isEmpty_pi.mpr ⟨j, hS⟩
+    simp [Finset.univ_eq_empty]
+  obtain ⟨d⟩ := hS
+  set reps : Finset ((i : ι) → S i) :=
+    (Finset.univ : Finset ((i : ι) → S i)).image fun c => Function.update c j d
+  have hmaps : ∀ c ∈ (Finset.univ : Finset ((i : ι) → S i)), Function.update c j d ∈ reps :=
+    fun c _ => Finset.mem_image_of_mem _ (Finset.mem_univ c)
+  have hrj : ∀ r ∈ reps, r j = d := by
+    rintro r hr
+    obtain ⟨c₀, -, rfl⟩ := Finset.mem_image.mp hr
+    simp
+  -- the weight of a column is the weight of its refillings
+  have hfib : ∀ (g : ((i : ι) → S i) → ℝ≥0) (r : (i : ι) → S i), r ∈ reps →
+      ∑ c ∈ (Finset.univ : Finset ((i : ι) → S i)).filter (fun c => Function.update c j d = r),
+        g c = ∑ x : S j, g (Function.update r j x) := by
+    intro g r hr
+    rw [filter_update_eq_image (hrj r hr),
+      Finset.sum_image fun x _ y _ h => Function.update_injective r j h]
+  rw [← Finset.sum_fiberwise_of_maps_to hmaps, ← Finset.sum_fiberwise_of_maps_to hmaps,
+    Finset.mul_sum]
+  refine Finset.sum_le_sum fun r hr => ?_
+  rw [hfib _ r hr, hfib _ r hr]
+  simp only [Function.update_idem, columnCount_update]
+  rw [← Finset.sum_filter]
+  have hcol : columnCount accept j r =
+      (Finset.univ.filter fun y => accept (Function.update r j y)).card := rfl
+  rw [hcol]
+  simp only [Function.update_self]
+  exact sum_filter_weight_le (fun y => accept (Function.update r j y))
+    (fun y => w (Function.update r j y)) R
 
 end ColumnCount
 

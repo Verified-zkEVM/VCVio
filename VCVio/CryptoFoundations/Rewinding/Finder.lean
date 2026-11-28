@@ -204,6 +204,55 @@ theorem counted_mPi {Q α β : Type} (f : Q → α) {ι : Type} [Fintype ι]
   rw [Equiv.symm_symm]
   exact (Equiv.sum_comp (Fintype.equivFin ι) fun k => (v k).2).symm
 
+/-- A computation in `StateT ℕ ProbComp` whose counter is *additive*: run from the counter `s`, it
+adds to `s` what it adds to `0`. It is the property `Rewinding.counted_run_add` gives a simulated
+finder, for computations that carry their counter themselves. -/
+@[expose] def CounterAdditive {β : Type} (g : StateT ℕ ProbComp β) : Prop :=
+  ∀ s, g.run s = (fun z => (z.1, s + z.2)) <$> g.run 0
+
+/-- Running a finite sequence of computations with additive counters adds up their counters, as
+`Rewinding.counted_mOfFn` does for simulated finders. -/
+theorem run_mOfFn_add {β : Type} :
+    ∀ {n : ℕ} (g : Fin n → StateT ℕ ProbComp β), (∀ i, CounterAdditive (g i)) →
+      ∀ s : ℕ, (Fin.mOfFn n g).run s =
+        (fun v : Fin n → β × ℕ => (fun i => (v i).1, s + ∑ i, (v i).2)) <$>
+          Fin.mOfFn n fun i => (g i).run 0
+  | 0, g, _, s => by
+      simp only [Fin.mOfFn, StateT.run_pure, map_pure, Finset.univ_eq_empty,
+        Finset.sum_empty, add_zero]
+      congr 2
+      funext i
+      exact i.elim0
+  | n + 1, g, hg, s => by
+      have hrest := fun c => run_mOfFn_add (fun i : Fin n => g i.succ) (fun i => hg i.succ) c
+      simp only [Fin.mOfFn, StateT.run_bind, StateT.run_pure, map_bind]
+      rw [hg 0 s, bind_map_left]
+      refine bind_congr fun p => ?_
+      simp only [hrest, bind_map_left, map_pure]
+      refine bind_congr fun v => ?_
+      simp only [Fin.sum_univ_succ, Fin.cons_zero, Fin.cons_succ]
+      congr 2
+      · funext i
+        refine Fin.cases rfl (fun _ => rfl) i
+      · ring
+
+/-- `Rewinding.run_mOfFn_add` over a finite index type. -/
+theorem run_mPi_add {ι : Type} [Fintype ι] {β : Type} (g : ι → StateT ℕ ProbComp β)
+    (hg : ∀ i, CounterAdditive (g i)) (s : ℕ) :
+    (Fintype.mPi g).run s =
+      (fun v : ι → β × ℕ => (fun i => (v i).1, s + ∑ i, (v i).2)) <$>
+        Fintype.mPi fun i => (g i).run 0 := by
+  simp only [Fintype.mPi, StateT.run_map,
+    run_mOfFn_add (fun k => g ((Fintype.equivFin ι).symm k)) (fun k => hg _) s,
+    Functor.map_map]
+  congr 1
+  funext v
+  simp only [Equiv.arrowCongr_apply, Equiv.refl_apply, Function.comp_apply, Prod.mk.injEq]
+  refine ⟨rfl, ?_⟩
+  congr 1
+  rw [Equiv.symm_symm]
+  exact (Equiv.sum_comp (Fintype.equivFin ι) fun k => (v k).2).symm
+
 /-- Fraction of complete challenge vectors accepted by `f`. -/
 @[expose] noncomputable def acceptRate [Fintype R] [DecidableEq R] [∀ r, Fintype (C r)]
     (f : ((r : R) → C r) → Bool) : ℝ≥0∞ :=

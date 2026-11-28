@@ -30,6 +30,7 @@ public import VCVio.CryptoFoundations.Asymptotics.ReductionCost
 public import VCVio.CryptoFoundations.Asymptotics.Security
 public import VCVio.CryptoFoundations.CommitmentScheme
 public import VCVio.CryptoFoundations.CoordinateFork
+public import VCVio.CryptoFoundations.CoordinateFork.BlockChildren
 public import VCVio.CryptoFoundations.CoordinateFork.BlockFinder
 public import VCVio.CryptoFoundations.CoordinateFork.BlockOperational
 public import VCVio.CryptoFoundations.CoordinateFork.Extraction
@@ -305,6 +306,7 @@ public import VCVio.CryptoFoundations.PRG
 public import VCVio.CryptoFoundations.ReplayFork
 public import VCVio.CryptoFoundations.ReplayForkCost
 public import VCVio.CryptoFoundations.Rewinding.Basic
+public import VCVio.CryptoFoundations.Rewinding.BlockEager
 public import VCVio.CryptoFoundations.Rewinding.BlockRound
 public import VCVio.CryptoFoundations.Rewinding.Cost
 public import VCVio.CryptoFoundations.Rewinding.Eager
@@ -473,6 +475,7 @@ public import VCVio.OracleComp.EvalDist.DiscreteTVDistPi
 public import VCVio.OracleComp.EvalDist.List
 public import VCVio.OracleComp.EvalDist.ListSampling
 public import VCVio.OracleComp.EvalDist.Measure
+public import VCVio.OracleComp.EvalDist.PiSampling
 public import VCVio.OracleComp.EvalDist.Sum
 public import VCVio.OracleComp.FinRatPMF
 public import VCVio.OracleComp.HasQuery.Basic
