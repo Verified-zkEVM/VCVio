@@ -181,9 +181,6 @@ def secretKeyBytes (p : Params) : ℕ := 4 * p.n
 
 end Params
 
-/-- The WOTS+ coefficient `w - 2` subtracts from a width of at least two at valid parameters. -/
-theorem Security.two_le_w {p : Params} (h : p.Valid) : 2 ≤ p.w := h.two_le_w
-
 /-- Raw SLH-DSA parameters paired with a proof of their mathematical validity.
 
 Generic multi-layer algorithms should accept this bundle instead of accepting a bare `Params`.
