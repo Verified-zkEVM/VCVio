@@ -13,7 +13,8 @@ public import Mathlib.Topology.Instances.ENNReal.Lemmas
 # Finite sums over `Function.update` and scaled indicators
 
 Rewriting `∑ i, Function.update f j v i` in terms of `∑ i, f i`, the filtered variants, and
-`Finset.sum_boole'` for a scaled indicator.
+`Finset.sum_boole'` for a scaled indicator. `Finset.sum_sum_erase` counts the members of a set
+summed over the others.
 -/
 
 public section
@@ -67,3 +68,12 @@ open ENNReal
 calc (∑ x ∈ s, if p x then r else 0 : β) = (∑ x ∈ s, if p x then 1 else 0 : ℕ) • r :=
     by simp only [← Finset.sum_nsmul_assoc, ite_smul, one_smul, zero_smul]
   _ = (s.filter p).card • r := by simp only [sum_boole, Nat.cast_id]
+
+/-- Summing, over the members `x` of `A`, the values at the other members counts each member
+`A.card - 1` times. -/
+theorem Finset.sum_sum_erase {α M : Type*} [DecidableEq α] [AddCommMonoid M] (A : Finset α)
+    (a : α → M) : ∑ x ∈ A, ∑ y ∈ A.erase x, a y = (A.card - 1) • ∑ y ∈ A, a y := by
+  rw [Finset.sum_comm' (t' := A) (s' := fun y => A.erase y) fun x y => by
+    simp only [Finset.mem_erase]; tauto, Finset.smul_sum]
+  refine Finset.sum_congr rfl fun y hy => ?_
+  rw [Finset.sum_const, Finset.card_erase_of_mem hy]

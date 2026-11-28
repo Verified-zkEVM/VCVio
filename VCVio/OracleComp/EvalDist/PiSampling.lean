@@ -20,9 +20,9 @@ results into a function. This file gives its laws in distribution for `ProbComp`
   the family (`Fintype.mPi_resample`).
 * Reading the family at one index has the law of that index's computation
   (`Fintype.mPi_map_eval`). Reading it at an index, or along a list of distinct indices, together
-  with a function of
-  the family that ignores those indices, has the law of drawing them first and, independently, the
-  function of the family (`Fintype.mPi_map_eval_prod`, `Fintype.mPi_map_list_prod`). Reading it
+  with a function of the family that ignores those indices, has the law of drawing them first and,
+  independently, the function of the family (`Fintype.mPi_map_eval_prod`,
+  `Fintype.mPi_map_list_prod`). Reading it
   along disjoint lists of distinct indices has the law of drawing every list independently
   (`Fintype.mPi_map_list`, `Fintype.mPi_map_lists`).
 * Drawing a uniform index and running its computation has the law of drawing the whole family and

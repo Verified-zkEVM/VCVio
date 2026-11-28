@@ -75,11 +75,12 @@ counting bound holds for every table and the success clause is its expectation. 
 needs the marginals of `Fintype.mPi` along disjoint lists of indices (`Fintype.mPi_map_lists`, in
 [`OracleComp/EvalDist/PiSampling.lean`](../../VCVio/OracleComp/EvalDist/PiSampling.lean)).
 `OracleComp.expectedCalls_blockChildStep_le` is the cost clause: the step costs at most
-`1 + ∑ j, (k j - 1)` times the children's average expected cost. On a table, the draws of the
-accepted centres at coordinate `j` inspect at most `k j - 1` times the total weight in expectation
-(`OracleComp.sum_drawWeight_neighbourPool_le`). This is the weighted column count
-`CoordinateWise.sum_accept_column_weight_le`, which bounds each centre's draws with
-`ProbComp.drawWeight_le_split`.
+`1 + ∑ j, (k j - 1)` times the children's average expected cost. On a table, the step costs the
+centre's entry and, if it succeeds, the expected weight of every pool's draws
+(`Rewinding.expectedCalls_blockChildren_table`). Each accepted centre's draws at coordinate `j` are
+bounded by `ProbComp.drawWeight_le_split`, and summing over the centres is the weighted column
+count `CoordinateWise.sum_accept_column_weight_le`, so the draws of all accepted centres at `j`
+inspect at most `k j - 1` times the total weight (`OracleComp.sum_drawWeight_neighbourPool_le`).
 
 ## Quadratic forks: seeded vs replay
 

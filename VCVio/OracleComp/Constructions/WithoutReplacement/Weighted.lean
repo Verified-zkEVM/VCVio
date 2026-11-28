@@ -398,7 +398,7 @@ theorem drawWeight_le (accept : S → Bool) (w : S → ℝ≥0) (n : ℕ) :
 until `r` accepted entries are found inspects each accepted entry with probability at most
 `r / h` and each rejected entry with probability at most `r / (h + 1)`, where `h` is the number of
 accepted entries of the pool. With `r ≤ h` this is `drawWeight_eq`; otherwise the whole pool is
-drawn and both factors are at least one. -/
+drawn and both factors are at least one, except that the accepted weight is zero when `h = 0`. -/
 theorem drawWeight_le_split (accept : S → Bool) (w : S → ℝ≥0) (r : ℕ) (l : List S) :
     drawWeight accept w r l ≤
       (r : ℝ≥0) / l.countP accept * listWeight (fun x => if accept x then w x else 0) l +

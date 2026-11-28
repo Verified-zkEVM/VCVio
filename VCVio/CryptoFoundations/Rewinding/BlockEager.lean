@@ -9,7 +9,7 @@ public import VCVio.CryptoFoundations.Rewinding.BlockRound
 public import VCVio.CryptoFoundations.Rewinding.ThresholdEager
 public import VCVio.OracleComp.EvalDist.PiSampling
 public import VCVio.OracleComp.Constructions.WithoutReplacement.Weighted
-public import VCVio.EvalDist.IndepProductMeasure
+import VCVio.EvalDist.IndepProductMeasure
 
 /-!
 # The block step against children sampled in advance
