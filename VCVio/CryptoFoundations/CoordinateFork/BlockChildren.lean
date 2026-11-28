@@ -26,7 +26,13 @@ The proof draws all children in advance (`Rewinding.blockChildren_eager_table`).
 results as the child, the step succeeds exactly at the good centres of the table's successful
 entries (`OracleComp.prEvent_isSome_blockChildren_table`), so the counting bound
 `CoordinateWise.div_card_filter_le_affine_pi` holds for every table, and the success clause is its
-expectation over the table. The cost of the step with probabilistic children is not bounded here.
+expectation over the table.
+
+`OracleComp.expectedCalls_blockChildStep_le` is its cost clause: the step costs at most
+`1 + ∑ j, (k j - 1)` times the average expected cost of the children. On a table, the draws of the
+accepted centres at coordinate `j` inspect at most `k j - 1` times the total weight in expectation
+(`OracleComp.sum_drawWeight_neighbourPool_le`), by the column count
+`CoordinateWise.sum_accept_column_weight_le`.
 
 ## References
 
@@ -38,7 +44,7 @@ public section
 
 open Finset CoordinateWise OracleComp OracleSpec ProbComp Rewinding MeasureTheory
 
-open scoped ENNReal
+open scoped ENNReal NNReal
 
 namespace OracleComp
 
@@ -163,5 +169,116 @@ theorem prEvent_child_le_blockChildStep [SampleableType ((i : ι) → S i)]
           Fintype.card ((i : ι) → S i) ∂𝒟[Fintype.mPi child] := by
         rw [lintegral_add_left measurable_const, lintegral_const, measure_univ, mul_one,
           lintegral_const_mul _ Measurable.of_discrete]
+
+omit [Fintype ι] in
+/-- The weight of a neighbour pool is the weight of the other values of the coordinate. -/
+theorem listWeight_neighbourPool (f : ((i : ι) → S i) → ℝ≥0) (c : (i : ι) → S i) (j : ι) :
+    listWeight f (neighbourPool c j) =
+      ∑ y ∈ Finset.univ.erase (c j), f (Function.update c j y) := by
+  rw [listWeight, neighbourPool, altPool, List.map_map, Finset.sum_map_toList]
+  rfl
+
+/-- **The expected weight of the draws of all accepted centres at one coordinate.** On a table
+with acceptance `ρ` and entry weights `w`, the expected weight that the draws at coordinate `j` of
+the block step inspect, summed over the accepted centres, is at most `k j - 1` times the total
+weight. -/
+theorem sum_drawWeight_neighbourPool_le (ρ : ((i : ι) → S i) → Bool)
+    (w : ((i : ι) → S i) → ℝ≥0) (k : ι → ℕ) (j : ι) [Nonempty (S j)] :
+    ∑ c, (if ρ c then drawWeight ρ w (k j - 1) (neighbourPool c j) else 0) ≤
+      ((k j - 1 : ℕ) : ℝ≥0) * ∑ c, w c := by
+  classical
+  refine le_trans (Finset.sum_le_sum fun c _ => ?_)
+    (sum_accept_column_weight_le (accept := fun c => ρ c = true) j w ((k j - 1 : ℕ) : ℝ≥0))
+  by_cases hacc : ρ c = true
+  · simp only [hacc, ↓reduceIte]
+    refine (drawWeight_le_split ρ w (k j - 1) (neighbourPool c j)).trans (le_of_eq ?_)
+    have hcount : (neighbourPool c j).countP ρ + 1 = columnCount (fun c => ρ c = true) j c := by
+      rw [countP_neighbourPool]; exact card_hitSet_succ hacc j
+    have hc : (columnCount (fun c => ρ c = true) j c - 1 : ℕ) = (neighbourPool c j).countP ρ := by
+      omega
+    rw [hc, ← hcount, Nat.cast_add, Nat.cast_one, listWeight_neighbourPool,
+      listWeight_neighbourPool]
+    congr 2
+    · rw [Finset.sum_ite, Finset.sum_const_zero, add_zero]
+      congr 1
+      ext y
+      simp only [Finset.mem_filter, Finset.mem_erase, Finset.mem_univ, true_and, and_true]
+    · rw [Finset.sum_ite, Finset.sum_const_zero, add_zero]
+      congr 1
+      ext y
+      simp only [Finset.mem_filter, Finset.mem_erase, Finset.mem_univ, true_and, and_true,
+        Bool.not_eq_true']
+      constructor
+      · exact fun h => by simpa using h.2
+      · intro h
+        refine ⟨fun hy => ?_, by simpa using h⟩
+        subst hy
+        simp [Function.update_eq_self, hacc] at h
+  · simp only [hacc, Bool.false_eq_true, ↓reduceIte, le_refl]
+
+/-- **The cost clause.** If the children cost `expectedCalls (child c)` in expectation, the block
+step with these children costs at most `1 + ∑ j, (k j - 1)` times their average cost: the centre's
+child, and at every coordinate `j` at most `k j - 1` children in expectation. -/
+theorem expectedCalls_blockChildStep_le [SampleableType ((i : ι) → S i)]
+    (child : ((i : ι) → S i) → ProbComp (Option W × ℕ)) (k : ι → ℕ) :
+    expectedCalls (blockChildStep child k) ≤
+      (1 + ∑ j, ((k j - 1 : ℕ) : ℝ≥0∞)) *
+        ((∑ c, expectedCalls (child c)) / Fintype.card ((i : ι) → S i)) := by
+  classical
+  have : ∀ j, Nonempty (S j) := fun j => ⟨(Classical.arbitrary ((i : ι) → S i)) j⟩
+  let _ : MeasurableSpace (((i : ι) → S i) → Option W × ℕ) := ⊤
+  let _ : DiscreteMeasurableSpace (((i : ι) → S i) → Option W × ℕ) := ⟨fun _ => trivial⟩
+  let _ : MeasurableSpace (Option W) := ⊤
+  set N : ℝ≥0∞ := (Fintype.card ((i : ι) → S i) : ℝ≥0∞) with hN
+  -- the cost of the step on one table
+  have hT : ∀ T : ((i : ι) → S i) → Option W × ℕ,
+      expectedCalls (do
+          let c₀ ← $ᵗ ((i : ι) → S i)
+          (blockChildren (fun n => StateT.lift (ProbComp.uniformFin n)) (tableChild ∘ T) k c₀
+            (neighbourPool c₀)).run 0) ≤
+        (1 + ∑ j, ((k j - 1 : ℕ) : ℝ≥0∞)) * ((∑ c, ((T c).2 : ℝ≥0∞)) / N) := by
+    intro T
+    let _ : MeasurableSpace ((i : ι) → S i) := ⊤
+    let _ : MeasurableSingletonClass ((i : ι) → S i) := ⟨fun _ => trivial⟩
+    rw [expectedCalls_bind, SampleableType.evalDist_uniformSample,
+      ProbabilityTheory.lintegral_uniformOn_univ]
+    simp only [expectedCalls_blockChildren_table]
+    rw [mul_div_assoc']
+    refine ENNReal.div_le_div_right ?_ _
+    have hsplit : ∀ c : (i : ι) → S i, ((T c).2 : ℝ≥0∞) + (if (T c).1.isSome then
+        ∑ j, (drawWeight (fun c => (T c).1.isSome) (fun c => ((T c).2 : ℝ≥0)) (k j - 1)
+          (neighbourPool c j) : ℝ≥0∞) else 0) =
+        ((T c).2 : ℝ≥0∞) + ∑ j, ((if (T c).1.isSome then
+          drawWeight (fun c => (T c).1.isSome) (fun c => ((T c).2 : ℝ≥0)) (k j - 1)
+            (neighbourPool c j) else 0 : ℝ≥0) : ℝ≥0∞) := by
+      intro c
+      split <;> simp
+    simp only [hsplit]
+    rw [Finset.sum_add_distrib, Finset.sum_comm, add_mul, one_mul, Finset.sum_mul]
+    refine add_le_add le_rfl (Finset.sum_le_sum fun j _ => ?_)
+    have hB := sum_drawWeight_neighbourPool_le (fun c => (T c).1.isSome)
+      (fun c => ((T c).2 : ℝ≥0)) k j
+    have hB' := ENNReal.coe_le_coe.mpr hB
+    push_cast at hB'
+    simpa [Finset.mul_sum] using hB'
+  rw [expectedCalls_eq_of_evalDistEq (blockChildStep_eager child k), expectedCalls_bind]
+  calc ∫⁻ T, expectedCalls (do
+          let c₀ ← $ᵗ ((i : ι) → S i)
+          (blockChildren (fun n => StateT.lift (ProbComp.uniformFin n)) (tableChild ∘ T) k c₀
+            (neighbourPool c₀)).run 0) ∂𝒟[Fintype.mPi child]
+      ≤ ∫⁻ T, (1 + ∑ j, ((k j - 1 : ℕ) : ℝ≥0∞)) * ((∑ c, ((T c).2 : ℝ≥0∞)) / N)
+          ∂𝒟[Fintype.mPi child] := lintegral_mono hT
+    _ = (1 + ∑ j, ((k j - 1 : ℕ) : ℝ≥0∞)) * ((∑ c, expectedCalls (child c)) / N) := by
+        simp only [div_eq_mul_inv]
+        rw [lintegral_const_mul _ Measurable.of_discrete,
+          lintegral_mul_const _ Measurable.of_discrete,
+          lintegral_finsetSum _ fun _ _ => Measurable.of_discrete]
+        congr 3
+        funext c
+        rw [← expectedCalls_eq_of_evalDistEq (Fintype.mPi_map_eval child c),
+          expectedCalls_eq_lintegral]
+        exact (lintegral_evalDist_map (Fintype.mPi child) (f := fun T => T c)
+          Measurable.of_discrete (g := fun z : Option W × ℕ => (z.2 : ℝ≥0∞))
+          ((Measurable.of_discrete (f := fun n : ℕ => (n : ℝ≥0∞))).comp measurable_snd)).symm
 
 end OracleComp
