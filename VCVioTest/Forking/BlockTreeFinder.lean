@@ -16,7 +16,8 @@ of the error, of the cost or of the arity breaks a check.
 
 * Two rounds of one coordinate each, over `Fin 5` with threshold `3` and over `Fin 3` with threshold
   `2`. The round errors are `2/5` and `1/3`, so the error of the finder is `1 - (3/5)(2/3) = 3/5`,
-  below their sum `11/15`, and its cost is `3 · 2 = 6`.
+  below their sum `11/15`, at which the contract also holds (`IsTreeFinder.mono`), and its cost is
+  `3 · 2 = 6`.
 * One round of two coordinates, over `Fin 3` with threshold `2` and over `Fin 4` with threshold
   `3`. The round branches `1 + 2 + 1 = 4` times, so the sum over the coordinates in the arity is
   read; the error is `1/3 + 2/4 = 5/6` and the cost is `4`.
@@ -99,6 +100,18 @@ example : IsTreeFinder (fun r => blockArity (k r)) (blockNodeOk k)
 example : blockTreeError alph k ≤ 2 / 5 + 1 / 3 := by
   have h := blockTreeError_le_sum alph k
   rwa [Fin.sum_univ_two, blockError_zero, blockError_one] at h
+
+/-- The contract read at the sum `2/5 + 1/3` of the round errors, by `IsTreeFinder.mono`. -/
+example : IsTreeFinder (fun r => blockArity (k r)) (blockNodeOk k)
+    (blockTreeFinder 2 (fun _ => Fin 1) alph k) (2 / 5 + 1 / 3) 6 := by
+  have h := isTreeFinder_blockTreeFinder 2 (fun _ => Fin 1) alph k
+  have hcost : (∏ r, (blockArity (k r) : ℝ≥0∞)) = 6 := by
+    rw [Fin.prod_univ_two]
+    simp [blockArity, k]
+    norm_num
+  have hsum := blockTreeError_le_sum alph k
+  rw [Fin.sum_univ_two, blockError_zero, blockError_one] at hsum
+  exact h.mono (fun _ _ h => h) hsum hcost.le
 
 /-! ## One round of two coordinates -/
 

@@ -70,6 +70,9 @@ nothing else. `Rewinding.IsFinder` states its contract against every fixed accep
 - `cost`: the expected number of acceptance-oracle calls is at most `T`, counted over complete
   runs whether or not they succeed.
 
+The contract weakens to any weaker output predicate, larger error and larger cost
+(`Rewinding.IsFinder.mono`, and `Rewinding.IsTreeFinder.mono` for node predicates).
+
 `Rewinding.IsTreeFinder` specializes the contract to finders that return a `Rewinding.VecTree`
 whose sibling challenges satisfy a node predicate and whose leaves all accept. The threshold finder
 of Attema–Cramer–Kohl is a tree finder (`Rewinding.isTreeFinder_thresholdFinder`). Figure 11 of

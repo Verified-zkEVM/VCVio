@@ -8,13 +8,16 @@ module
 public import VCVio.CryptoFoundations.Rewinding.Basic
 public import Mathlib.Data.Fintype.Pi
 public import ToMathlib.Control.Monad.Fold
+import ToMathlib.Data.ENNReal.Gauss
 
 /-!
 # Black-box finders for accepting challenge trees
 
 Rounds are indexed by any finite linearly ordered type. A challenge tree assigns a vector to
 each branch path, with the challenge at a round depending only on the path through that round.
-The finder sees only a Boolean acceptance oracle and its own independent random coins.
+The finder sees only a Boolean acceptance oracle and its own independent random coins. A finder
+meets its contract for any weaker output predicate, larger error and larger cost
+(`Rewinding.IsFinder.mono`, `Rewinding.IsTreeFinder.mono`).
 
 The file also collects the facts about the complete-run counter that finder analyses share.
 `Rewinding.expectedCalls_bind` and `Rewinding.expectedCalls_bind_le_add` bound the expected counter
@@ -289,6 +292,17 @@ theorem IsFinder.acceptRate_sub_le [Fintype R] [DecidableEq R] [∀ r, Fintype (
   tsub_le_iff_left.mpr ((h.success f).trans
     (add_le_add le_rfl (mul_le_of_le_one_left zero_le tsub_le_self)))
 
+/-- A finder meets its contract for any weaker output predicate, larger error and larger cost. -/
+theorem IsFinder.mono [Fintype R] [DecidableEq R] [∀ r, Fintype (C r)] {Out : Type}
+    {good good' : (((r : R) → C r) → Bool) → Out → Prop}
+    {find : OracleComp (unifSpec + accSpec C) (Option Out)} {κ κ' T T' : ℝ≥0∞}
+    (h : IsFinder good find κ T) (hgood : ∀ f o, good f o → good' f o) (hκ : κ ≤ κ')
+    (hT : T ≤ T') : IsFinder good' find κ' T' where
+  sound f z hz o ho := hgood f o (h.sound f z hz o ho)
+  success f :=
+    (h.success f).trans (ENNReal.add_one_sub_mul_le_add_one_sub_mul hκ (prEvent_le_one _))
+  cost f := (h.cost f).trans hT
+
 /-- A black-box tree finder with branching factors `k`, node predicate `nodeOk`, error `κ` and
 cost `T`: a finder (`Rewinding.IsFinder`) whose every returned tree is structured and accepting.
 
@@ -302,6 +316,16 @@ structure IsTreeFinder [Fintype R] [LinearOrder R] [∀ r, Fintype (C r)] (k : R
       find κ T where
   /-- Every round has at least one branch, so the leaves of a returned tree are not vacuous. -/
   one_le : ∀ r, 1 ≤ k r
+
+/-- A tree finder meets its contract for any weaker node predicate, larger error and larger
+cost. -/
+theorem IsTreeFinder.mono [Fintype R] [LinearOrder R] [∀ r, Fintype (C r)] {k : R → ℕ}
+    {nodeOk nodeOk' : (r : R) → (Fin (k r) → C r) → Prop}
+    {find : OracleComp (unifSpec + accSpec C) (Option (VecTree C k))} {κ κ' T T' : ℝ≥0∞}
+    (h : IsTreeFinder k nodeOk find κ T) (hnode : ∀ r ch, nodeOk r ch → nodeOk' r ch)
+    (hκ : κ ≤ κ') (hT : T ≤ T') : IsTreeFinder k nodeOk' find κ' T' where
+  toIsFinder := h.toIsFinder.mono (fun _ _ ht => ⟨fun p r => hnode r _ (ht.1 p r), ht.2⟩) hκ hT
+  one_le := h.one_le
 
 /-- Threshold knowledge error `1 − ∏ᵣ (1 − (kᵣ − 1)/|Cᵣ|)`: the knowledge error of a protocol
 that is special sound with threshold `k r` and challenge set `C r` in each round (Attema, Cramer
