@@ -97,4 +97,9 @@ example : IsTreeFinder (fun r => blockArity (k r)) (blockNodeOk k)
     norm_num
   rwa [blockTreeError_eq, hcost] at h
 
+/-- The error is below the sum `2/5 + 1/3 = 11/15` of the round errors. -/
+example : blockTreeError alph k ≤ 2 / 5 + 1 / 3 := by
+  have h := blockTreeError_le_sum alph k
+  rwa [Fin.sum_univ_two, blockError_zero, blockError_one] at h
+
 end BlockTreeFinderTest

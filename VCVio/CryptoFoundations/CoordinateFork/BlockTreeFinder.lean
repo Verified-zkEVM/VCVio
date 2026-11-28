@@ -298,6 +298,12 @@ theorem blockTreeError_le_one {n : ℕ} {ι : Fin n → Type} [∀ r, Fintype (�
     (S : (r : Fin n) → ι r → Type) [∀ r i, Fintype (S r i)] (k : (r : Fin n) → ι r → ℕ) :
     blockTreeError S k ≤ 1 := tsub_le_self
 
+/-- The error of the finder is at most the sum of the round errors. -/
+theorem blockTreeError_le_sum {n : ℕ} {ι : Fin n → Type} [∀ r, Fintype (ι r)]
+    (S : (r : Fin n) → ι r → Type) [∀ r i, Fintype (S r i)] (k : (r : Fin n) → ι r → ℕ) :
+    blockTreeError S k ≤ ∑ r, blockError (S := S r) (k r) :=
+  ENNReal.one_sub_prod_one_sub_le_sum _ _
+
 /-- The error of the first round composes with the error of the later rounds. -/
 theorem blockTreeError_succ {n : ℕ} {ι : Fin (n + 1) → Type} [∀ r, Fintype (ι r)]
     (S : (r : Fin (n + 1)) → ι r → Type) [∀ r i, Fintype (S r i)]
@@ -392,7 +398,7 @@ theorem blockTreeFinder_success : ∀ (n : ℕ) (ι : Fin n → Type) [∀ r, Fi
 
 /-- The node predicate of a block round: the siblings are pairwise distinct and form a block
 star. -/
-@[expose] def blockNodeOk {n : ℕ} {ι : Fin n → Type} [∀ r, Fintype (ι r)] [∀ r, DecidableEq (ι r)]
+@[expose] def blockNodeOk {n : ℕ} {ι : Fin n → Type} [∀ r, Fintype (ι r)]
     {S : (r : Fin n) → ι r → Type} [∀ r i, DecidableEq (S r i)] (k : (r : Fin n) → ι r → ℕ)
     (r : Fin n) (ch : Fin (blockArity (k r)) → (i : ι r) → S r i) : Prop :=
   Function.Injective ch ∧ IsBlockSpecialSound (k r) (Finset.univ.image ch)
