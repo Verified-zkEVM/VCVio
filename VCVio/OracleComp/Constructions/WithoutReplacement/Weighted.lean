@@ -394,4 +394,30 @@ theorem drawWeight_le (accept : S → Bool) (w : S → ℝ≥0) (n : ℕ) :
   | nil => simp
   | cons x xs ih => simp [ih]
 
+/-- **The weighted work of drawing until success, for any threshold.** Drawing without replacement
+until `r` accepted entries are found inspects each accepted entry with probability at most
+`r / h` and each rejected entry with probability at most `r / (h + 1)`, where `h` is the number of
+accepted entries of the pool. With `r ≤ h` this is `drawWeight_eq`; otherwise the whole pool is
+drawn and both factors are at least one. -/
+theorem drawWeight_le_split (accept : S → Bool) (w : S → ℝ≥0) (r : ℕ) (l : List S) :
+    drawWeight accept w r l ≤
+      (r : ℝ≥0) / l.countP accept * listWeight (fun x => if accept x then w x else 0) l +
+        (r : ℝ≥0) / (l.countP accept + 1) *
+          listWeight (fun x => if !accept x then w x else 0) l := by
+  by_cases hr : r ≤ l.countP accept
+  · exact (drawWeight_eq accept w _ r l rfl hr).le
+  · refine (drawWeight_le accept w _ r l rfl).trans ?_
+    rw [listWeight_eq_ite_add_not accept w l]
+    rw [not_le] at hr
+    refine add_le_add ?_ ?_
+    · rcases Nat.eq_zero_or_pos (l.countP accept) with h0 | hpos
+      · rw [listWeight_ite_eq_zero_of_countP_eq_zero accept w l h0]
+        simp
+      · refine le_mul_of_one_le_left zero_le ?_
+        rw [one_le_div (by exact_mod_cast hpos)]
+        exact_mod_cast hr.le
+    · refine le_mul_of_one_le_left zero_le ?_
+      rw [one_le_div (by positivity)]
+      exact_mod_cast hr
+
 end ProbComp
