@@ -121,6 +121,9 @@ the module docstring records. -/
   | .wotsTl => wotsInstanceCount p
   | .xmssH => xmssTreeCount p * (2 ^ p.hp - 1)
 
+/-- The WOTS+ coefficient `w - 2` subtracts from a width of at least two at valid parameters. -/
+theorem two_le_w {p : Params} (h : p.Valid) : 2 ≤ p.w := h.two_le_w
+
 theorem wotsInstanceCount_eq_xmssTreeCount_mul (p : Params) :
     wotsInstanceCount p = xmssTreeCount p * 2 ^ p.hp := by
   unfold wotsInstanceCount xmssTreeCount

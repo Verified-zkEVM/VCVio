@@ -127,6 +127,10 @@ theorem len_pos (p : Params) : 0 < p.len := by
 /-- `0 < w = 2^lgw`. -/
 theorem w_pos (p : Params) : 0 < p.w := Nat.two_pow_pos p.lgw
 
+/-- A valid parameter set has a Winternitz width of at least two. -/
+theorem Valid.two_le_w {p : Params} (h : p.Valid) : 2 ≤ p.w :=
+  Nat.one_lt_two_pow (Nat.ne_of_gt h.lgw_pos)
+
 /-- Under the alignment obligation `lgw ∣ 8n`, the ceiling in Eq 5.2 is attained: the `len1`
 message digits carry exactly the `8n` message bits. -/
 theorem Valid.len1_mul_lgw {p : Params} (valid : p.Valid) : p.len1 * p.lgw = 8 * p.n := by
@@ -148,7 +152,7 @@ theorem Valid.w_pow_len1 {p : Params} (valid : p.Valid) : p.w ^ p.len1 = 256 ^ p
 checksum `len1 · (w − 1)` (FIPS 205 Eq 5.3). -/
 theorem Valid.len1_mul_pred_w_lt_pow_len2 {p : Params} (valid : p.Valid) :
     p.len1 * (p.w - 1) < p.w ^ p.len2 :=
-  Nat.lt_pow_succ_log_self (Nat.one_lt_two_pow (Nat.ne_of_gt valid.lgw_pos)) _
+  Nat.lt_pow_succ_log_self valid.two_le_w _
 
 /-- Number of leaves in one FORS tree, `t = 2^a`. -/
 def t (p : Params) : ℕ := 2 ^ p.a

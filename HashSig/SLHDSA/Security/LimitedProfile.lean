@@ -5,135 +5,57 @@ Authors: Alexander Hicks
 -/
 
 module
-public import HashSig.SLHDSA.Security.SufBound
+
 public import HashSig.SLHDSA.Security.EncodedTargets
+public import HashSig.SLHDSA.Security.TargetCounts
 
 /-!
-# The bound at the SLH-DSA-SHA2-128-24 profile
+# The SLH-DSA-SHA2-128-24 profile
 
-`HashSig.SLHDSA.Security.Composition` states the twelve-summand EUF-CMA bound for an arbitrary
-validated parameter set and an arbitrary primitive bundle, and
-`HashSig.SLHDSA.Security.SufBound` carries it across the SUF-to-EUF partition.  This module
-instantiates both at one parameter set — the SP 800-230 reduced profile
-`SLHDSA.slhdsaSha2_128_24` — and at one primitive bundle, the FIPS SHA-2 family at that profile.
+The SP 800-230 reduced parameter set `SLHDSA.slhdsaSha2_128_24`, validated as `limitedVp`, and the
+FIPS SHA-2 primitive family at it, `limitedPrimitives`, together with the carrier instances the
+`SM_DT_*` games ask for, the parameter values, the eight per-role target caps, and two profile
+facts used by witness extraction and ledger commitment.
 
-## What instantiating does
-
-Three things, and the Labels section below counts what they come to: nine instances, one
-coefficient equation and eight cap equations — eighteen of the thirty-four declarations.  The other
-sixteen are the five corollaries those three things are for, the nine that write the profile down
-(the parameter set, the bundle, their two equations, four plain parameter values and the
-disequality that separates the first dark cell), and the two facts of *The two profile facts the
-witness families need* below, which nothing here consumes.
-
-* **It discharges the instance obligations.**  `Certificate` asks for nine carrier instances, and at
-  this bundle none of them is found by instance search.  Eight of the nine are stated with
-  `inferInstanceAs` at the byte type the carrier is definitionally equal to; the ninth goes through
-  `Fintype.ofFinite`, for the reason the comment above it gives.  Instance search does not unfold
-  `limitedPrimitives`, so plain `inferInstance` finds none of the nine, over the five distinct
-  carriers `Y`, `PkSeed`, `SkSeed`, `SkPrf` and `AdrsKey`.
-* **It turns the one `Params`-level coefficient into a numeral.**  `Summands.bound` carries
-  `(p.w - 2 : ℕ)` on the WOTS+-`F` undetectability summand; here `lgw = 2`, so `w = 4` and the
-  coefficient is `2`.  `limitedAdvantage_le_summands` is the bound with that numeral and with the
-  library's `3` written out, in one inequality.
-* **It turns the eight target caps into numerals.**  `limitedTargetCount_*` below.
-
-## What instantiating does not do
-
-It does not make the statement say anything about SLH-DSA-SHA2-128-24's security, and the reason
-is not specific to this profile.  `Certificate` quantifies existentially over eleven adversaries
-with nothing tying any of them to the adversary being bounded, so — as
-`HashSig.SLHDSA.Security.Composition`'s module docstring records and
-`HashSigTest.SLHDSA.Composition` checks — a closed certificate is constructible from an address
-key and a public seed at *every* validated parameter set and *every* bundle carrying those nine
-instances, and the bound it names is then at least one.  This profile and this bundle are one such
-pair: `HashSigTest.SLHDSA.LimitedProfile` builds that certificate here and proves that the bound
-it names is at least one, so at it `limitedAdvantage_le_bound` is `MeasureTheory.measure_le_one`
-with extra
-steps.  Every deferral of the two general modules is inherited
-unchanged: no reduction adversary is constructed, no challenge is recorded, no game's final
-validity is established, neither PRF hop is taken, the undetectability hybrid is not performed,
-the `MCO_ITSR` summand carries no query bound, the same-randomizer residual has no bound at all,
-and the Lean branch assignment is not the source's.
-
-So what is quoted below as "the bound at SLH-DSA-SHA2-128-24" is the *shape* of
-`EUFCMA_SPHINCS_PLUS`'s right-hand side, with this profile's coefficient and this profile's caps
-filled in.  It is not a security claim, and a reader who wants one should read the certificate
-the fixture builds first.
-
-## Which bundle, and the other one
+## Which bundle
 
 `limitedPrimitives` is `Concrete.sha2Primitives` at this profile: the parameterised FIPS SHA-2
 family, which is the bundle `limitedEncodedTargetLedgerConditions` and the reachable-target ledgers
 of `HashSig.SLHDSA.Security.ReachableTargets` are stated at.
 
-It is **not** `Concrete.shaPrimitives`, the hand-written SLH-DSA-SHA2-128-24 bundle of
+It is not `Concrete.shaPrimitives`, the hand-written SLH-DSA-SHA2-128-24 bundle of
 `HashSig.SLHDSA.Concrete.Instance` that `HashSigTest.SLHDSA.Sha2KAT` executes and
-`Concrete.shaWireCodec` encodes against.  The two are different terms — `adrsToKey` is `shaAdrsKey`
-in one and `sha2AdrsKey` in the other, and `Thash` is `shaThash` against `sha2Thash` — and nothing
-in this repository relates them.  No declaration names both, over every `.lean` file with comments
-stripped.  The one file whose code names each of them is `HashSig.SLHDSA.Concrete.Codec`, which
-gives the two bundles a wire codec apiece and states no equation between them, and `shaPrimitives =
-sha2Primitives slhdsaSha2_128_24` is not closed by `rfl`.  So no statement here transfers to the
-bundle the known-answer test runs, and none should be read as doing so.
+`Concrete.shaWireCodec` encodes against. The two are different terms — `adrsToKey` is `shaAdrsKey`
+in one and `sha2AdrsKey` in the other, and `Thash` is `shaThash` against `sha2Thash` — and no
+theorem relates them, so no statement here transfers to the bundle the known-answer test runs.
 
-## The profile, and the two cells that go dark at it
+## The profile
 
 `slhdsaSha2_128_24` is `n = 16`, `h = 22`, `d = 1`, `hp = 22`, `a = 24`, `k = 6`, `lgw = 2`.
-Because `d = 1` the hypertree is a single XMSS tree, and three consequences matter for reading the
-bound.
+Because `d = 1` the hypertree is a single XMSS tree, with three consequences for the caps.
 
-* The FORS-`T_k` and WOTS+-`T_len` compression games have **the same cap**, `2 ^ 22`.  That is not
-  an accident of this profile: `HashSigTest.SLHDSA.Composition` proves the caps equal at every
-  valid `d = 1` parameter set and strictly ordered at every valid set with `2 ≤ d`.  So at this
-  profile a cap check cannot tell the two games apart, and what does is the arity — `p.k = 6`
-  against `p.len = 68`, pinned here by `limitedParams_k`, `limitedParams_len` and
-  `limitedParams_k_ne_len`, and read off the two games' own attacked-member equations in the
-  fixture.
-* The WOTS+-`F` undetectability and preimage caps are **equal too**, and not only here:
-  `targetCount` gives both `wotsInstanceCount p * p.len` at every parameter set, which
-  `limitedTargetCount_wotsFUd` and `limitedTargetCount_wotsFPre` show at this one.  Their arities
-  coincide as well, both being the single-node chain hash, so neither a cap nor an arity separates
-  those two summands; what does is the two games' types, `SM_DT_UD_SourceFinalValidity` against
-  `SM_DT_PRE_SourceFinalValidity`, which is what the two `Certificate` fields carry.
+* The FORS-`T_k` and WOTS+-`T_len` compression caps are equal, `2 ^ 22`, as at every valid `d = 1`
+  parameter set; the two compressions are separated by their arities, `p.k = 6` against
+  `p.len = 68` (`limitedParams_k`, `limitedParams_len`, `limitedParams_k_ne_len`).
+* The WOTS+-`F` undetectability and preimage caps are equal at every parameter set: `targetCount`
+  gives both `wotsInstanceCount p * p.len` (`limitedTargetCount_wotsFUd`,
+  `limitedTargetCount_wotsFPre`).
 * The XMSS-`H` cap is `2 ^ 22 - 1`, one node short of the FORS-`T_k` cap, because a single tree of
   height `hp` has `2 ^ hp - 1` internal nodes.
-
-## Labels
-
-Thirty-four declarations, of which nine are instances.
-
-*Profile data* — a statement about the parameter set, the bundle, or a cap at it.  Twenty:
-
-* `limitedVp`, `limitedPrimitives`, `limitedVp_params`, `limitedPrimitives_eq`;
-* `limitedParams_d`, `limitedParams_w`, `limitedParams_wotsFUd_coefficient`,
-  `limitedParams_k`, `limitedParams_len`, `limitedParams_k_ne_len`;
-* `limitedTargetCount_forsF`, `limitedTargetCount_forsH`, `limitedTargetCount_forsTl`,
-  `limitedTargetCount_wotsFUd`, `limitedTargetCount_wotsFTcr`, `limitedTargetCount_wotsFPre`,
-  `limitedTargetCount_wotsTl`, `limitedTargetCount_xmssH`;
-* `limitedPrimitives_byteLaws`, `limitedEncodedConditions`.
-
-*Profile corollary* — a general theorem of the two previous modules at this profile.  Five:
-
-* `limitedAdvantage_le_bound`, `limitedBound_eq`, `limitedAdvantage_le_summands`;
-* `limitedStrongAdvantage_le_bound_add_sameMessage`, `limitedStrongAdvantage_le_sufBound`.
-
-None is `private`.  Two carry `@[expose]`, `limitedVp` and `limitedPrimitives`, and the comment
-above each says what the attribute is required for.
 
 ## References
 
 - NIST SP 800-230 (initial public draft) for the reduced `SLH-DSA-SHA2-128-24` profile
 - NIST FIPS 205, §11.2.1 for the SHA-2 family this bundle instantiates
 - Barbosa, Dupressoir, Hülsing, Meijers, and Strub, "A Tight Security Proof for SPHINCS+,
-  Formally Verified" (`SPHINCS_PLUS.ec`, `WOTS_TW_ES.ec`)
+  Formally Verified" (`WOTS_TW_ES.ec`)
 -/
 
 public section
 
 namespace SLHDSA.Security
 
-open OracleComp OracleSpec ENNReal SignatureAlg TweakableHash Security.CanonicalGames
+open OracleComp OracleSpec
 
 /-! ## The profile and its bundle -/
 
@@ -152,8 +74,7 @@ same term `limitedEncodedTargetLedgerConditions` concludes at.
 
 -- Exposed for code generation: the eight carrier instances below that generate code infer their
 -- compilation type from it, and `limitedPrimitives_eq` is proved by `rfl`.  The ninth instance, the
--- noncomputable finiteness one, generates no code and does not need it, and no corollary needs it
--- either.
+-- noncomputable finiteness one, generates no code and does not need it.
 /-- The FIPS SHA-2 primitive bundle at that profile: `n = 16`, so every seed and node carrier is
 `Bytes 16`, and the compressed address key is `Bytes 22`.
 
@@ -247,9 +168,9 @@ theorem limitedParams_d : limitedVp.params.d = 1 := rfl
 *Profile data.* -/
 theorem limitedParams_w : limitedVp.params.w = 4 := rfl
 
-/-- **The undetectability coefficient at this profile is two.**  `Summands.bound` carries
-`(p.w - 2 : ℕ)`; here that is `4 - 2`.  At every FIPS 205 set `lgw = 4` and the coefficient is
-`14` instead, so this numeral is a property of the reduced profile and not of the expression.
+/-- **`w - 2` is two at this profile.**  The WOTS+-`F` undetectability term of the EasyCrypt
+SPHINCS+ bound carries the coefficient `(p.w - 2 : ℕ)`; here that is `4 - 2`.  At every FIPS 205
+set `lgw = 4` and the coefficient is `14` instead.
 
 *Profile data.* -/
 theorem limitedParams_wotsFUd_coefficient : (limitedVp.params.w - 2 : ℕ) = 2 := rfl
@@ -326,10 +247,7 @@ theorem limitedTargetCount_xmssH :
 /-- Fixed-width byte nodes satisfy the representation-coherence boundary, which is what
 `SchemeWitnesses.findWitness_isSome` asks of a bundle.
 
-Like `limitedEncodedConditions` below it is stated here and consumed nowhere: it is not a hypothesis
-of the corollaries, and its only occurrence in this repository is its own pin in
-`HashSigTest.SLHDSA.LimitedProfile`.  What would ask it is witness extraction, in the
-`HashSig.SLHDSA.Security.*Witnesses` modules.
+Witness extraction in the `HashSig.SLHDSA.Security.*Witnesses` modules asks for it.
 
 *Profile data.* -/
 theorem limitedPrimitives_byteLaws : limitedPrimitives.core.ByteLaws :=
@@ -338,136 +256,12 @@ theorem limitedPrimitives_byteLaws : limitedPrimitives.core.ByteLaws :=
 /-- **The encoded target ledgers stay duplicate-free at this profile**, which is
 `limitedEncodedTargetLedgerConditions` at its one constructor.
 
-It is stated here as a fact about the profile and is deliberately *not* a hypothesis of the
-corollaries below: nothing in the bound's proof consumes it.  What consumes it is the adversary
-construction that none of these modules performs — the `SourceFinalValidity` monitor kills a
-game's validity bit on a repeated target tweak, so a reduction that commits the encoded ledger
-needs exactly this.
+A reduction that commits the encoded ledger to a `SourceFinalValidity` game needs it: the
+game's monitor clears the validity bit on a repeated target tweak.
 
 *Profile data.* -/
 theorem limitedEncodedConditions :
     EncodedTargetLedgerConditions limitedVp limitedPrimitives :=
   limitedEncodedTargetLedgerConditions .SLHDSA_SHA2_128_24
-
-/-! ## The corollaries
-
-Each is a general theorem of `HashSig.SLHDSA.Security.Composition` or
-`HashSig.SLHDSA.Security.SufBound` applied at `limitedPrimitives`, with the instances above
-discharging its instance hypotheses.  None strengthens what it instantiates, and each carries the
-same `Certificate` hypothesis, which at this bundle costs an address key and a public seed. -/
-
-section Corollary
-
-variable {adv : UnforgeableAdversary (generalAlg limitedPrimitives)}
-
-/-- **The conditional EUF-CMA bound at SLH-DSA-SHA2-128-24.**  For any adversary against the
-external SLH-DSA algebra at this bundle and any certificate for it, the EUF-CMA advantage is at
-most the twelve-summand expression that certificate names.
-
-This is `Composition.advantage_le_bound` and nothing more.  Its antecedent is free here exactly as
-it is there: `HashSigTest.SLHDSA.LimitedProfile` builds a closed `Certificate` at this bundle from
-an address key and a public seed and proves the bound it names is at least one.
-
-*Profile corollary.* -/
-theorem limitedAdvantage_le_bound (c : Certificate limitedPrimitives adv) :
-    unforgeableAdvantage ProbCompRuntime.probComp adv ≤ c.summands.bound limitedVp.params :=
-  advantage_le_bound c
-
-/-- **The bound written out at this profile**: `Certificate.bound_eq` with `(p.w - 2 : ℕ)`
-evaluated to the numeral `2`.  The other coefficient, the `3` on the FORS-`F` target-collision
-summand, is the library's and is not a property of the profile:
-`SM_DT_OpenPRE_SourceFinalValidity.TCRDSPRBound` has it.
-
-*Profile corollary.* -/
-theorem limitedBound_eq (c : Certificate limitedPrimitives adv) :
-    c.summands.bound limitedVp.params =
-      PRFScheme.prfAdvantage (skPrfScheme limitedPrimitives c.pkSeed) c.skgAdv
-        + PRFScheme.prfAdvantage (msgPrfScheme limitedPrimitives) c.mkgAdv
-        + KeyedHash.ITSRAdvantage c.itsrAdv
-        + SM_DT_DSPR_SourceFinalValidity.advantage
-            (SM_DT_OpenPRE_SourceFinalValidity.toDSPR c.openPreAdv)
-        + 3 * SM_DT_TCR_SourceFinalValidity.advantage
-            (SM_DT_OpenPRE_SourceFinalValidity.toTCR c.openPreAdv)
-        + SM_DT_TCR_SourceFinalValidity.advantage c.forsHAdv
-        + SM_DT_TCR_SourceFinalValidity.advantage c.forsTlAdv
-        + 2 * SM_DT_UD_SourceFinalValidity.advantage c.wotsFUdAdv
-        + SM_DT_TCR_SourceFinalValidity.advantage c.wotsFTcrAdv
-        + SM_DT_PRE_SourceFinalValidity.advantage c.wotsFPreAdv
-        + SM_DT_TCR_SourceFinalValidity.advantage c.wotsTlAdv
-        + SM_DT_TCR_SourceFinalValidity.advantage c.xmssHAdv := by
-  rw [Certificate.bound_eq, limitedParams_wotsFUd_coefficient, Nat.cast_ofNat]
-
-/-- **The reduced profile's bound, as one inequality.**  This is the form the corollary is quoted
-in: twelve named advantages, the source's order, the source's `3`, and this profile's `2` where
-the general expression carries `w − 2`.
-
-Both coefficients are visible and neither is bounded by anything.  Read
-`HashSigTest.SLHDSA.LimitedProfile`'s canary before quoting it: the eleven adversaries are the
-certificate's, chosen with nothing tying them to `adv`, and at a certificate this file's fixture
-builds the right-hand side is at least one.
-
-*Profile corollary.* -/
-theorem limitedAdvantage_le_summands (c : Certificate limitedPrimitives adv) :
-    unforgeableAdvantage ProbCompRuntime.probComp adv ≤
-      PRFScheme.prfAdvantage (skPrfScheme limitedPrimitives c.pkSeed) c.skgAdv
-        + PRFScheme.prfAdvantage (msgPrfScheme limitedPrimitives) c.mkgAdv
-        + KeyedHash.ITSRAdvantage c.itsrAdv
-        + SM_DT_DSPR_SourceFinalValidity.advantage
-            (SM_DT_OpenPRE_SourceFinalValidity.toDSPR c.openPreAdv)
-        + 3 * SM_DT_TCR_SourceFinalValidity.advantage
-            (SM_DT_OpenPRE_SourceFinalValidity.toTCR c.openPreAdv)
-        + SM_DT_TCR_SourceFinalValidity.advantage c.forsHAdv
-        + SM_DT_TCR_SourceFinalValidity.advantage c.forsTlAdv
-        + 2 * SM_DT_UD_SourceFinalValidity.advantage c.wotsFUdAdv
-        + SM_DT_TCR_SourceFinalValidity.advantage c.wotsFTcrAdv
-        + SM_DT_PRE_SourceFinalValidity.advantage c.wotsFPreAdv
-        + SM_DT_TCR_SourceFinalValidity.advantage c.wotsTlAdv
-        + SM_DT_TCR_SourceFinalValidity.advantage c.xmssHAdv := by
-  rw [← limitedBound_eq c]
-  exact limitedAdvantage_le_bound c
-
-end Corollary
-
-section StrongCorollary
-
-variable {sadv : StrongUnforgeableAdversary (generalAlg limitedPrimitives)}
-
-/-- **The SUF-CMA bound at SLH-DSA-SHA2-128-24**, which is `SufBound`'s headline here: the
-twelve-summand expression plus the same-message residual.
-
-`SufBound.strongAdvantage_le_add_sameMessage_iff` says this is the existential corollary above and
-nothing more — the residual on the right is the residual inside the left, and the two cancel.
-
-The `Certificate` hypothesis is as free here as it is for the existential corollary above:
-`HashSigTest.SLHDSA.LimitedProfile` builds a closed one at this bundle from an address key and a
-public seed and proves the bound it names is at least one.
-
-*Profile corollary.* -/
-theorem limitedStrongAdvantage_le_bound_add_sameMessage
-    (c : Certificate limitedPrimitives sadv.toUnforgeableAdversary) :
-    strongUnforgeableAdvantage ProbCompRuntime.probComp sadv ≤
-      c.summands.bound limitedVp.params +
-        sameMessageStrongUnforgeableAdvantage ProbCompRuntime.probComp sadv :=
-  strongAdvantage_le_bound_add_sameMessage c
-
-/-- **The SUF-CMA bound refined through the two named halves at this profile.**  The residual is
-the fresh-randomizer half plus the same-randomizer half of
-`HashSig.SLHDSA.Security.SchemeGames`, the second of which nothing in this repository bounds and
-which has no counterpart in the source at all.
-
-Like the statement it instantiates this one is a `≤` and may be strict; what would close it is the
-two defining equations `SufBound.sufBound_eq_bound_add_sameMessage_of_unfoldings` takes.  And like
-every headline in this module it carries the free `Certificate` hypothesis, one of which
-`HashSigTest.SLHDSA.LimitedProfile` builds at this bundle from an address key and a public seed.
-
-*Profile corollary.* -/
-theorem limitedStrongAdvantage_le_sufBound
-    (c : Certificate limitedPrimitives sadv.toUnforgeableAdversary) :
-    strongUnforgeableAdvantage ProbCompRuntime.probComp sadv ≤
-      c.summands.sufBound limitedVp.params (freshRandomizerHalf sadv)
-        (sameRandomizerHalf sadv) :=
-  strongAdvantage_le_sufBound c
-
-end StrongCorollary
 
 end SLHDSA.Security

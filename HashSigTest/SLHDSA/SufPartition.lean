@@ -5,29 +5,21 @@ Authors: Alexander Hicks
 -/
 
 module
-public import HashSig.SLHDSA.Security.SufBound
+public import HashSig.SLHDSA.Security.SufPartition
 
 /-!
 # SLH-DSA strong-unforgeability residual canaries
 
 Executable checks for the *decidable* shadow of the residual that
-`HashSig.SLHDSA.Security.SufBound` carries — which branch of
+`HashSig.SLHDSA.Security.SufPartition` partitions — which branch of
 `SchemeGames.randomizerLogged` a forgery lands in, at three signing logs — together with one
-elaboration pin per exported declaration of that module and the vacuity canary its headline
-inherits.
+elaboration pin per exported declaration of that module.
 
-## Nothing about the bound itself is runnable, and that is a property of the subject
-
-Every statement `HashSig.SLHDSA.Security.SufBound` exports is about a probability, and every
-probability in it is `noncomputable`: the two advantages, both halves, the instrumented experiment
-and `Summands.sufBound` alike.  So the headline, the two equivalences and the four bounds have **no
-runtime coverage at all** and cannot be given any.  What the checks below read is the selector that
-decides which of the two named halves a forgery contributes to, which is decidable because it is a
-list membership; what pins the statements is the `Pins` section, and the matrix below records how
-far that pinning reaches.
-
-A reader of the lane's other fixtures will look for the headline among the runtime checks.  It is
-not there, and no fixture could put it there.
+Every statement that module exports is about a probability, and every probability in it is
+`noncomputable`, so the two equivalences and the bounds on the two halves have no runtime coverage.
+What the checks below read is the selector that decides which of the two named halves a forgery
+contributes to, which is decidable because it is a list membership; what pins the statements is the
+`Pins` section.
 
 ## The profile is the lane's, copied rather than imported
 
@@ -39,9 +31,7 @@ own its `main`, and a module that imports another fixture cannot declare one.
 
 What this fixture holds, beyond that block: three forgeries — `forgeryEarly` and `forgeryLate`, a
 second signature under each of the hedged log's two randomizers at one message, and `forgeryDet`,
-the same at the deterministic variant's single randomizer; the misreading `randomizerLoggedRaw`; and
-four instances the vacuity canary's `SLHDSA.Security.Certificate` asks for — `DecidableEq` on the
-public seed and on the address key, `Fintype` and `Inhabited` on the node type.
+the same at the deterministic variant's single randomizer; and the misreading `randomizerLoggedRaw`.
 
 Seven of that block's declarations are absent here, nothing below reading them: `byteFold` and
 `toyByteLaws`, `otherPkSeed`, and the four dispatch-arm forgeries `sigD`, `sigE`, `sigH` and
@@ -92,30 +82,14 @@ randomizer occurs at `msgP` and nowhere else.  It is not read at **L3**.
   gap in the fixture.
 * **R1 at L3 under a dropped head.**  L3's head pair recurs at its third entry, so dropping it
   changes nothing there.  L1 catches it; L3 does not.
-* **Every reader against anything probabilistic.**  See above.
+* **Every reader against anything probabilistic.**  No probability is computable here.
 
 ## What the checks cannot catch
 
-* **A reordering or reassociation of `Summands.sufBound`'s two residuals that moves this file too.**
-  Nothing outside these two files constrains the expression's order or its association.  Either edit
-  made in the library module alone fails three entries here, but not the same three: the reordering
-  fails three `Pins` entries, the reassociation two of those and the vacuity canary's own
-  restatement of the refinement.  Made in both, nothing fails, and at that point the claim has been
-  changed rather than a bug found.  A coefficient other than one on a residual and a stray additive
-  constant are *not* in this class — the library refuses each on its own, at
-  `sufBound_eq_bound_add_sameMessage_of_unfoldings` and, for the constant, at
-  `sufBound_eq_bound_of_residuals_zero` as well.
-* **Anything about a probability.**  See above.
-* **Which of the two halves the consumption form bounds.**  The theorem
-  `strongAdvantage_le_bound_add_sameRandomizer_of_fresh_le` takes a bound on the *fresh* half and
-  leaves the same-randomizer one; the mirror statement is
-  equally true and equally provable, so nothing inside the library module refuses the swap.  The pin
-  here names `freshRandomizerHalf` in the hypothesis and refuses it; a paired edit moving this file
-  too is silent, and the only remaining check is the argument in the module docstring for why the
-  fresh branch is the one with somewhere to go.
-* **Whether the residual's two branches are the source's.**  They are not: the source has no
-  strong-unforgeability statement at all.  That is a reading of the eleven `.ec`/`.eca` files,
-  recorded in the library module's docstring, and no fixture can check it.
+* **Anything about a probability.**  No probability is computable here.
+* **Whether the residual's two branches are the source's.**  They are not: the EasyCrypt
+  development has no strong-unforgeability statement at all.  That is a reading of its eleven
+  `.ec`/`.eca` files, recorded in the library module's docstring, and no fixture can check it.
 
 ## The deterministic-variant boundary this fixture exercises
 
@@ -131,11 +105,7 @@ reach: the same checks put `forgeryLate` on the logged branch at L1 and on the f
 
 Thirty-two runtime checks in three groups — the branch each forgery lands in at the hedged log (13),
 what the two FIPS 205 §9.2 variants change (10), and the reader at a longer log and against a mutant
-of itself (9).  Nineteen `example`s in `Pins`: one for each of the fifteen declarations the
-library module exports, plus three coefficient pins on the two residuals and the three-part shape
-written out.  Then the vacuity canary: thirteen declarations copied from
-`HashSigTest.SLHDSA.Composition` and four new ones, which put the strong-unforgeability headline at
-the certificate that costs nothing and prove that what it bounds the advantage by is at least one.
+of itself (9) — and the `Pins` section.
 
 ## References
 
@@ -144,7 +114,7 @@ the certificate that costs nothing and prove that what it bounds the advantage b
 
 public section
 
-namespace SLHDSA.SufBoundTest
+namespace SLHDSA.SufPartitionTest
 
 open Security Security.CanonicalGames KeyedHash OracleSpec TweakableHash SignatureAlg
 
@@ -155,10 +125,9 @@ def ensure (label : String) (condition : Bool) : IO Unit :=
 
 /-! ## The profile -/
 
--- Exposed because `toyParams` has to reduce throughout this file: the nine instances written at the
--- bundle below need it both to typecheck and to compile, the two restatements of the vacuity canary
--- at this profile need `toy.params` to reduce to `toyParams`, and the definitions that read the
--- carrier need its width.
+-- Exposed because `toyParams` has to reduce throughout this file: the five instances written at the
+-- bundle below need it both to typecheck and to compile, and the definitions that read the carrier
+-- need its width.
 /-- Two layers of height two, two FORS trees of height one. -/
 @[expose] def toyParams : Params :=
   { n := 1, h := 4, d := 2, hp := 2, a := 1, k := 2, lgw := 4 }
@@ -201,7 +170,7 @@ def toyDigestByte (r seed root : UInt8) (msg : List Byte) (i : ℕ) : UInt8 :=
   mixByte (UInt8.ofNat ((r.toNat * (6 * i + 37) + seed.toNat * (10 * i + 53) +
     root.toNat * (14 * i + 89) + (byteMix msg).toNat * (22 * i + 149) + (30 * i + 7)) % 256))
 
--- Exposed and `@[reducible]`, for two different reasons.  Exposed for code generation: the nine
+-- Exposed and `@[reducible]`, for two different reasons.  Exposed for code generation: the five
 -- instances just below and the three signature-equality instances after them have to infer the same
 -- compilation type for this bundle as an importing module would, which needs its body.  Reducible
 -- because the carrier has to unfold to `Bytes 1` for instance resolution to reach it: `byteOf`'s
@@ -226,18 +195,6 @@ def toyDigestByte (r seed root : UInt8) (msg : List Byte) (i : ℕ) : UInt8 :=
 
 /-- Node equality, at the one-byte carrier. -/
 instance : DecidableEq toyPrimitives.Y := inferInstanceAs (DecidableEq (Bytes 1))
-
-/-- Public-seed equality, which the certificate's instance block asks for. -/
-instance : DecidableEq toyPrimitives.PkSeed := inferInstanceAs (DecidableEq (Bytes 1))
-
-/-- Tweak equality, which the collection games ask for. -/
-instance : DecidableEq toyPrimitives.AdrsKey := inferInstanceAs (DecidableEq Adrs)
-
-/-- The node type is finite, which the decisional reduction's advantage asks for. -/
-instance : Fintype toyPrimitives.Y := inferInstanceAs (Fintype (Bytes 1))
-
-/-- And inhabited, which the open-preimage game asks for. -/
-instance : Inhabited toyPrimitives.Y := inferInstanceAs (Inhabited (Bytes 1))
 
 /-- Key generation samples the public seed. -/
 instance : SampleableType toyPrimitives.PkSeed := inferInstanceAs (SampleableType (Bytes 1))
@@ -487,18 +444,15 @@ def checkLogs : IO Unit := do
 
 /-! ## The pins
 
-One `example` for each of the fifteen declarations `HashSig.SLHDSA.Security.SufBound` exports,
-restated at this bundle's own types, plus the shape pins on `Summands.sufBound`.  These are the only
-thing that refuses a weakening of a statement: every statement in that module is about a
-probability, so no `ensure` above can see any of them. -/
+One `example` for each declaration `HashSig.SLHDSA.Security.SufPartition` exports, restated at this
+bundle's own types.  These are the only thing that refuses a weakening of a statement: every
+statement in that module is about a probability, so no `ensure` above can see any of them. -/
 
 section Pins
 
 open OracleComp ENNReal
 
-variable (sadv : StrongUnforgeableAdversary (generalAlg (vp := toy) toyPrimitives))
-  (c : Certificate (vp := toy) toyPrimitives sadv.toUnforgeableAdversary) (s : Summands)
-  (x y : ℝ≥0∞)
+variable (sadv : StrongUnforgeableAdversary (generalAlg (vp := toy) toyPrimitives)) (x : ℝ≥0∞)
 
 /-! ### The two arms -/
 
@@ -541,369 +495,22 @@ example : freshRandomizerHalf sadv ≤ strongUnforgeableAdvantage ProbCompRuntim
 example : sameRandomizerHalf sadv ≤ strongUnforgeableAdvantage ProbCompRuntime.probComp sadv :=
   sameRandomizerHalf_le_strongAdvantage sadv
 
-/-! ### The bound expression -/
-
-noncomputable example : ℝ≥0∞ := s.sufBound toyParams x y
-
-example : s.sufBound toyParams x y = s.bound toyParams + (x + y) :=
-  Summands.sufBound_eq s toyParams x y
-
-example : s.sufBound toyParams 0 0 = s.bound toyParams :=
-  sufBound_eq_bound_of_residuals_zero s toyParams
-
-/-- The residuals carry coefficient one, each on its own: with the twelve summands zero the
-expression is the residual. -/
-example : (Summands.mk 0 0 0 0 0 0 0 0 0 0 0 0).sufBound toyParams x 0 = x := by
-  rw [Summands.sufBound_eq, bound_eq_zero_of_summands_zero]
-  simp
-
-example : (Summands.mk 0 0 0 0 0 0 0 0 0 0 0 0).sufBound toyParams 0 y = y := by
-  rw [Summands.sufBound_eq, bound_eq_zero_of_summands_zero]
-  simp
-
-example : (Summands.mk 0 0 0 0 0 0 0 0 0 0 0 0).sufBound toyParams x y = x + y := by
-  rw [Summands.sufBound_eq, bound_eq_zero_of_summands_zero]
-  simp
-
-/-- The three-part shape written out: the twelve summands of the source expression, then the two
-residuals as a group.  This is what refuses a residual attached inside the twelve. -/
-example : s.sufBound toyParams x y =
-    s.skgPrf + s.mkgPrf + s.hmsgItsr
-      + s.forsFDspr + 3 * s.forsFTcr + s.forsHTcr + s.forsTlTcr
-      + (toyParams.w - 2 : ℕ) * s.wotsFUd + s.wotsFTcr + s.wotsFPre + s.wotsTlTcr + s.xmssHTcr
-      + (x + y) := by
-  rw [Summands.sufBound_eq, Summands.bound_eq]
-
-/-! ### The headline and its three companions -/
-
-example : strongUnforgeableAdvantage ProbCompRuntime.probComp sadv ≤
-    c.summands.bound toy.params +
-      sameMessageStrongUnforgeableAdvantage ProbCompRuntime.probComp sadv :=
-  strongAdvantage_le_bound_add_sameMessage c
-
-example (sel : QueryLog (List Byte →ₒ GeneralScheme.SignatureCore toy toyPrimitives.core) →
-      List Byte → GeneralScheme.SignatureCore toy toyPrimitives.core → Bool) :
-    strongUnforgeableAdvantage ProbCompRuntime.probComp sadv ≤ c.summands.bound toy.params +
-      (𝒟[instrumentedSameMessageExperiment sadv sel]
-        {z | z.1 = true ∧ z.2 = false} +
-        𝒟[instrumentedSameMessageExperiment sadv sel]
-          {z | z.1 = true ∧ z.2 = true}) :=
-  strongAdvantage_le_bound_add_arms c sel
-
-example : strongUnforgeableAdvantage ProbCompRuntime.probComp sadv ≤
-    c.summands.sufBound toy.params (freshRandomizerHalf sadv) (sameRandomizerHalf sadv) :=
-  strongAdvantage_le_sufBound c
-
-example (hfresh : freshRandomizerHalf sadv ≤ x) :
-    strongUnforgeableAdvantage ProbCompRuntime.probComp sadv ≤
-      c.summands.bound toy.params + x + sameRandomizerHalf sadv :=
-  strongAdvantage_le_bound_add_sameRandomizer_of_fresh_le c x hfresh
-
 /-! ### Exact randomizer partition -/
 
 example : sameMessageStrongUnforgeableAdvantage ProbCompRuntime.probComp sadv =
     freshRandomizerHalf sadv + sameRandomizerHalf sadv :=
   sameMessageAdvantage_eq_freshRandomizerHalf_add_sameRandomizerHalf sadv
 
-example : s.sufBound toyParams (freshRandomizerHalf sadv) (sameRandomizerHalf sadv) =
-    s.bound toyParams + sameMessageStrongUnforgeableAdvantage ProbCompRuntime.probComp sadv :=
-  sufBound_eq_bound_add_sameMessage s toyParams sadv
-
 end Pins
-
-/-! ## The vacuity canary
-
-The composition fixture's vacuity canary, at this module's headline.  A closed
-`SLHDSA.Security.Certificate` is constructible at an arbitrary validated parameter set, an arbitrary
-bundle carrying the instances the structure asks for and an arbitrary adversary, from an address key
-and a public seed and no security assumption at all, and the bound it names is at least one.  At
-that certificate `strongAdvantage_le_bound_add_sameMessage` reads
-`strongUnforgeableAdvantage _ sadv ≤ (something ≥ 1) + residual`, which
-`MeasureTheory.measure_le_one` gives with extra steps.
-
-**The residual does not repair it and cannot.**  By `strongAdvantage_le_add_sameMessage_iff` the
-headline is equivalent to the previous module's `advantage_le_bound` at the same certificate, so its
-vacuity is that one's exactly.  The canary below is that equivalence instantiated: both conjuncts of
-`freeCertificate_suf_headline` are proved, and the second is what makes the first empty.
-
-**What this section holds.**  The free-certificate stack of `HashSigTest.SLHDSA.Composition` —
-thirteen declarations: the two idle adversaries, the open-preimage adversary that records nothing
-with its three advantage lemmas and its counting interface, the winning preimage adversary with its
-inverse, and the certificate with the bound it names — together with `freeCertificate_suf_headline`
-and `freeCertificate_sufBound_headline` at the end.  It is a copy rather than an import because that
-module is a `lean_exe` root and declares a top-level `main`, which a module importing it cannot also
-declare; the lane has no shared fixture module.  Every declaration in it is that module's verbatim,
-but for the docstrings of the two statements named above.
-
-That module's anchoring analysis — `winningOpenPre`, `anchoredCertificate` and
-`nonempty_countingInterface_iff` — is not here: the question it answers is about `Certificate`'s own
-fields and nothing about it changes when the residual is added. -/
-
-section Vacuity
-
-open OracleComp OracleSpec ENNReal SignatureAlg
-
-/-! ### Adversaries that assume nothing
-
-`idleTcr` and `idleUd` are here only to fill fields: nothing below reads their advantages. -/
-
-/-- A target-collision adversary that forges nothing. -/
-def idleTcr {ix PkS Tw Msg Nd : Type} [Inhabited Msg]
-    (prob : SM_DT_TCR_SourceFinalValidity.Problem ix PkS Tw Msg Nd) :
-    SM_DT_TCR_SourceFinalValidity.Adversary prob where
-  State := Unit
-  choose := pure ()
-  forge := fun _ _ => pure (0, default)
-
-/-- An undetectability adversary that always answers `false`. -/
-def idleUd {ix PkS Tw Msg Msg' Nd : Type}
-    (prob : SM_DT_UD_SourceFinalValidity.Problem ix PkS Tw Msg Msg' Nd) :
-    SM_DT_UD_SourceFinalValidity.Adversary prob where
-  State := Unit
-  pick := pure ()
-  distinguish := fun _ _ => pure false
-
--- Exposed, and the only one of the seven definitions in this section that needs to be.  Inside a
--- `public section` a definition's body is not available to later declarations, so without it
--- `(Problem.toDSPR (idleOpenPre prob)).State` does not reduce to `Unit × _ × _` and
--- `idleOpenPre_toDSPR_choose` cannot even be stated.
-/-- An open-preimage adversary that commits to no target and opens nothing. -/
-@[expose] def idleOpenPre {ix PkS Tw Msg Nd : Type} [Inhabited Msg]
-    (prob : SM_DT_OpenPRE_SourceFinalValidity.Problem ix PkS Tw Msg Nd) :
-    SM_DT_OpenPRE_SourceFinalValidity.Adversary prob where
-  State := Unit
-  pick := pure ((), [])
-  find := fun _ _ _ => pure (0, default)
-
-/-- It records no challenge, so the selected index misses and its advantage is zero. -/
-theorem idleOpenPre_advantage {ix PkS Tw Msg Nd : Type} [DecidableEq Tw] [DecidableEq Nd]
-    [Inhabited Msg] (prob : SM_DT_OpenPRE_SourceFinalValidity.Problem ix PkS Tw Msg Nd) :
-    SM_DT_OpenPRE_SourceFinalValidity.advantage (idleOpenPre prob) = 0 := by
-  unfold SM_DT_OpenPRE_SourceFinalValidity.advantage
-    SM_DT_OpenPRE_SourceFinalValidity.experiment
-  simp [idleOpenPre, SM_DT_OpenPRE_SourceFinalValidity.initializeTargets,
-    SourceFinalValidity.State.initial]
-
-/-- The induced DSPR adversary's selection phase makes no challenge query either.  Stated
-separately because the `do` block has to be reduced before the experiment can be. -/
-theorem idleOpenPre_toDSPR_choose {ix PkS Tw Msg Nd : Type} [DecidableEq Msg] [Inhabited Msg]
-    (prob : SM_DT_OpenPRE_SourceFinalValidity.Problem ix PkS Tw Msg Nd) :
-    (SM_DT_OpenPRE_SourceFinalValidity.toDSPR (idleOpenPre prob)).choose = pure ((), [], []) := by
-  change (do
-      let __x ← (pure ((), []) :
-        OracleComp (unifSpec + (SM_DT_TCR_SourceFinalValidity.challengeSpec Tw Msg Nd +
-          SourceFinalValidity.collectionSpec prob.thColl)) (Unit × List Tw))
-      let __x_1 ← SM_DT_OpenPRE_SourceFinalValidity.reductionInitialize prob
-        (List.take prob.numTargets __x.2)
-      pure (__x.1, __x_1)) = _
-  rw [pure_bind]
-  simp [SM_DT_OpenPRE_SourceFinalValidity.reductionInitialize]
-  rfl
-
-/-- So the induced DSPR advantage is zero: both its experiment and its `SPprob` baseline reject. -/
-theorem idleOpenPre_dspr {ix PkS Tw Msg Nd : Type} [Fintype Msg] [DecidableEq Tw]
-    [DecidableEq Msg] [DecidableEq Nd] [Inhabited Msg]
-    (prob : SM_DT_OpenPRE_SourceFinalValidity.Problem ix PkS Tw Msg Nd) :
-    SM_DT_DSPR_SourceFinalValidity.advantage
-      (SM_DT_OpenPRE_SourceFinalValidity.toDSPR (idleOpenPre prob)) = 0 := by
-  unfold SM_DT_DSPR_SourceFinalValidity.advantage SM_DT_DSPR_SourceFinalValidity.Success
-    SM_DT_DSPR_SourceFinalValidity.SPProbability
-    SM_DT_DSPR_SourceFinalValidity.experiment SM_DT_DSPR_SourceFinalValidity.spExperiment
-  simp only [idleOpenPre_toDSPR_choose]
-  simp [SM_DT_OpenPRE_SourceFinalValidity.toDSPR, idleOpenPre,
-    SourceFinalValidity.State.initial]
-
-/-- **The counting interface is inhabited from nothing.**  VCVio calls it "deliberately a proof
-obligation, not a theorem supplied by this file"; at an adversary that records no target every
-mass is zero, both decompositions read `0 = 0`, and the strata inequality reads `0 ≤ _`.  Its one
-real input is `Problem.HasUniformInputs`, which `forsFOpenPreProblem_hasUniformInputs` proves. -/
-noncomputable def idleCounting {ix PkS Tw Msg Nd : Type} [Fintype Msg] [DecidableEq Tw]
-    [DecidableEq Msg] [DecidableEq Nd] [Inhabited Msg] [SampleableType Msg]
-    {prob : SM_DT_OpenPRE_SourceFinalValidity.Problem ix PkS Tw Msg Nd}
-    (h : prob.HasUniformInputs) :
-    SM_DT_OpenPRE_SourceFinalValidity.CountingInterface (idleOpenPre prob) where
-  uniformInputs := h
-  singleMass := 0
-  multipleMass := fun _ => 0
-  openPRE_decomposition := by simp [idleOpenPre_advantage]
-  dspr_decomposition := by
-    simp [idleOpenPre_dspr, SM_DT_OpenPRE_SourceFinalValidity.reciprocalMass]
-  tcr_strata_le := by simp [SM_DT_OpenPRE_SourceFinalValidity.collisionMass]
-
-
-section Preimage
-
-variable {vp : ValidatedParams} (prims : Primitives vp.params)
-  [SampleableType prims.PkSeed] [SampleableType prims.Y]
-
-/-- Classical inversion of the WOTS+-`F` preimage game's attacked map. -/
-noncomputable def wotsFPreInverse (pk : prims.PkSeed) (t : prims.AdrsKey) : prims.Y → prims.Y :=
-  Function.invFun fun m =>
-    (wotsFPreCProblem prims).th.eval pk t ((wotsFPreCProblem prims).emb m)
-
-theorem wotsFPreInverse_eval (pk : prims.PkSeed) (t : prims.AdrsKey) (a : prims.Y) :
-    (wotsFPreCProblem prims).th.eval pk t ((wotsFPreCProblem prims).emb
-        (wotsFPreInverse prims pk t ((wotsFPreCProblem prims).th.eval pk t
-          ((wotsFPreCProblem prims).emb a)))) =
-      (wotsFPreCProblem prims).th.eval pk t ((wotsFPreCProblem prims).emb a) :=
-  Function.invFun_eq (f := fun m =>
-    (wotsFPreCProblem prims).th.eval pk t ((wotsFPreCProblem prims).emb m)) ⟨a, rfl⟩
-
-variable [DecidableEq prims.AdrsKey] [DecidableEq prims.Y]
-
-/-- One challenge query, then classical inversion of the image it was answered with. -/
-noncomputable def freePreAdv (t : prims.AdrsKey) :
-    SM_DT_PRE_SourceFinalValidity.Adversary (wotsFPreCProblem prims) where
-  State := prims.Y
-  choose := liftM ((unifSpec +
-    (SM_DT_PRE_SourceFinalValidity.challengeSpec prims.AdrsKey prims.Y +
-      SourceFinalValidity.collectionSpec (wotsFPreCProblem prims).thColl)).query (.inr (.inl t)))
-  invert := fun y pk => pure (0, wotsFPreInverse prims pk t y)
-
-/-- **Preimage resistance is unconditionally false in this model**, at every validated parameter
-set and every primitive bundle: the tenth summand of `Summands.bound` is exactly one here. -/
-theorem freePreAdv_advantage (t : prims.AdrsKey) :
-    SM_DT_PRE_SourceFinalValidity.advantage (freePreAdv prims t) = 1 := by
-  unfold SM_DT_PRE_SourceFinalValidity.advantage SM_DT_PRE_SourceFinalValidity.experiment
-  simp [freePreAdv, wotsFPreInverse_eval, SM_DT_PRE_SourceFinalValidity.oracles,
-    SM_DT_PRE_SourceFinalValidity.challengeOracle,
-    SourceFinalValidity.State.recordTarget, SourceFinalValidity.State.initial,
-    TweakableHash.TweakFresh, TweakableHash.TweakReserved,
-    targetCount_pos vp.params vp.valid TargetRole.wotsFPre]
-
-end Preimage
-
-/-! ### The closed certificate -/
-
-section Closed
-
-variable {vp : ValidatedParams} {prims : Primitives vp.params}
-  [SampleableType prims.SkSeed] [SampleableType prims.SkPrf] [SampleableType prims.PkSeed]
-  [SampleableType prims.Y] [DecidableEq prims.PkSeed] [DecidableEq prims.AdrsKey]
-  [DecidableEq prims.Y] [Fintype prims.Y] [Inhabited prims.Y]
-
-/-- **A `Certificate` from nothing.**  The two arguments are an address key and a public seed,
-which are data the scheme itself has and not assumptions.  `forsBranch := 0` puts the whole
-obligation on `hypertreeBranch_le`, and `freePreAdv_advantage` discharges it. -/
-noncomputable def freeCertificate {adv : UnforgeableAdversary (generalAlg prims)}
-    (t : prims.AdrsKey) (pkSeed : prims.PkSeed) : Certificate prims adv where
-  skgAdv := (pure true : OracleComp (PRFScheme.PRFOracleSpec Adrs prims.Y) Bool)
-  mkgAdv := (pure true :
-    OracleComp (PRFScheme.PRFOracleSpec (prims.Y × List Byte) prims.Y) Bool)
-  pkSeed := pkSeed
-  itsrAdv := ⟨(pure (default, ⟨pkSeed, default, []⟩) :
-    OracleComp (unifSpec + ITSRTargetSpec (HmsgITSRInput prims.PkSeed prims.Y) prims.Y)
-      (prims.Y × HmsgITSRInput prims.PkSeed prims.Y))⟩
-  openPreAdv := idleOpenPre (forsFOpenPreProblem prims)
-  counting := idleCounting (forsFOpenPreProblem_hasUniformInputs prims)
-  forsHAdv := idleTcr _
-  forsTlAdv := idleTcr _
-  wotsFUdAdv := idleUd _
-  wotsFTcrAdv := idleTcr _
-  wotsFPreAdv := freePreAdv prims t
-  wotsTlAdv := idleTcr _
-  xmssHAdv := idleTcr _
-  idealAdvantage := unforgeableAdvantage ProbCompRuntime.probComp adv
-  forsBranch := 0
-  hypertreeBranch := unforgeableAdvantage ProbCompRuntime.probComp adv
-  prfHops := le_add_self
-  split := by simp
-  forsBranch_le := by simp
-  hypertreeBranch_le := by
-    calc unforgeableAdvantage ProbCompRuntime.probComp adv ≤ 1 := MeasureTheory.measure_le_one _ _
-      _ = SM_DT_PRE_SourceFinalValidity.advantage (freePreAdv prims t) :=
-          (freePreAdv_advantage prims t).symm
-      _ ≤ _ := le_add_right (le_add_right le_add_self)
-
-/-- **The bound that certificate names is at least one**, so it is the trivial bound. -/
-theorem one_le_freeCertificate_bound {adv : UnforgeableAdversary (generalAlg prims)}
-    (t : prims.AdrsKey) (pkSeed : prims.PkSeed) :
-    1 ≤ (freeCertificate (adv := adv) t pkSeed).summands.bound vp.params := by
-  rw [Certificate.bound_eq]
-  calc (1 : ℝ≥0∞) = SM_DT_PRE_SourceFinalValidity.advantage (freePreAdv prims t) :=
-        (freePreAdv_advantage prims t).symm
-    _ ≤ _ := le_add_right (le_add_right le_add_self)
-
-end Closed
-
-/-- **The headline at that certificate.**  Both conjuncts together are the canary: the bound holds,
-and what it bounds the strong advantage by is at least one — so the strong-unforgeability statement
-of this module is, at this certificate, `MeasureTheory.measure_le_one` with extra steps, exactly as
-the
-existential one is at the same certificate.
-
-The residual is on the right-hand side of both conjuncts and changes neither. -/
-theorem freeCertificate_suf_headline
-    {vp : ValidatedParams} {prims : Primitives vp.params}
-    [SampleableType prims.SkSeed] [SampleableType prims.SkPrf] [SampleableType prims.PkSeed]
-    [SampleableType prims.Y] [DecidableEq prims.PkSeed] [DecidableEq prims.AdrsKey]
-    [DecidableEq prims.Y] [Fintype prims.Y] [Inhabited prims.Y]
-    {sadv : StrongUnforgeableAdversary (generalAlg prims)}
-    (t : prims.AdrsKey) (pkSeed : prims.PkSeed) :
-    strongUnforgeableAdvantage ProbCompRuntime.probComp sadv ≤
-        (freeCertificate (adv := sadv.toUnforgeableAdversary) t pkSeed).summands.bound vp.params +
-          sameMessageStrongUnforgeableAdvantage ProbCompRuntime.probComp sadv ∧
-      1 ≤ (freeCertificate (adv := sadv.toUnforgeableAdversary) t pkSeed).summands.bound vp.params +
-          sameMessageStrongUnforgeableAdvantage ProbCompRuntime.probComp sadv :=
-  ⟨strongAdvantage_le_bound_add_sameMessage _,
-    le_trans (one_le_freeCertificate_bound t pkSeed) le_self_add⟩
-
-/-- The same at the refinement through the two named halves, so that naming the same-randomizer term
-is not mistaken for bounding it. -/
-theorem freeCertificate_sufBound_headline
-    {vp : ValidatedParams} {prims : Primitives vp.params}
-    [SampleableType prims.SkSeed] [SampleableType prims.SkPrf] [SampleableType prims.PkSeed]
-    [SampleableType prims.Y] [DecidableEq prims.PkSeed] [DecidableEq prims.AdrsKey]
-    [DecidableEq prims.Y] [Fintype prims.Y] [Inhabited prims.Y]
-    {sadv : StrongUnforgeableAdversary (generalAlg prims)}
-    (t : prims.AdrsKey) (pkSeed : prims.PkSeed) :
-    strongUnforgeableAdvantage ProbCompRuntime.probComp sadv ≤
-        (freeCertificate (adv := sadv.toUnforgeableAdversary) t pkSeed).summands.sufBound vp.params
-          (freshRandomizerHalf sadv) (sameRandomizerHalf sadv) ∧
-      1 ≤ (freeCertificate (adv := sadv.toUnforgeableAdversary) t pkSeed).summands.sufBound
-          vp.params (freshRandomizerHalf sadv) (sameRandomizerHalf sadv) := by
-  refine ⟨strongAdvantage_le_sufBound _, ?_⟩
-  rw [Summands.sufBound_eq]
-  exact le_trans (one_le_freeCertificate_bound t pkSeed) le_self_add
-
-end Vacuity
-
-/-! ### The same facts at this file's own bundle
-
-The section above is at an arbitrary `ValidatedParams` and an arbitrary bundle; these restate the
-two new statements at the profile the rest of this file uses, so a change that breaks only the
-concrete case is caught too. -/
-
-theorem toyFreeCertificateBound (t : Adrs) (pkSeed : toyPrimitives.PkSeed)
-    (sadv : StrongUnforgeableAdversary (generalAlg (vp := toy) toyPrimitives)) :
-    strongUnforgeableAdvantage ProbCompRuntime.probComp sadv ≤
-        (freeCertificate (vp := toy) (prims := toyPrimitives)
-          (adv := sadv.toUnforgeableAdversary) t pkSeed).summands.bound toy.params +
-          sameMessageStrongUnforgeableAdvantage ProbCompRuntime.probComp sadv ∧
-      1 ≤ (freeCertificate (vp := toy) (prims := toyPrimitives)
-          (adv := sadv.toUnforgeableAdversary) t pkSeed).summands.bound toy.params +
-          sameMessageStrongUnforgeableAdvantage ProbCompRuntime.probComp sadv :=
-  freeCertificate_suf_headline (vp := toy) (prims := toyPrimitives) (sadv := sadv) t pkSeed
-
-theorem toyFreeCertificateSufBound (t : Adrs) (pkSeed : toyPrimitives.PkSeed)
-    (sadv : StrongUnforgeableAdversary (generalAlg (vp := toy) toyPrimitives)) :
-    strongUnforgeableAdvantage ProbCompRuntime.probComp sadv ≤
-        (freeCertificate (vp := toy) (prims := toyPrimitives)
-          (adv := sadv.toUnforgeableAdversary) t pkSeed).summands.sufBound toy.params
-          (freshRandomizerHalf sadv) (sameRandomizerHalf sadv) ∧
-      1 ≤ (freeCertificate (vp := toy) (prims := toyPrimitives)
-          (adv := sadv.toUnforgeableAdversary) t pkSeed).summands.sufBound toy.params
-          (freshRandomizerHalf sadv) (sameRandomizerHalf sadv) :=
-  freeCertificate_sufBound_headline (vp := toy) (prims := toyPrimitives) (sadv := sadv) t pkSeed
 
 /-- Run the three check groups in order, then report. -/
 def main : IO Unit := do
   checkBranch
   checkVariants
   checkLogs
-  IO.println "SLH-DSA SUF bound tests: PASS"
+  IO.println "SLH-DSA SUF partition tests: PASS"
 
-end SLHDSA.SufBoundTest
+end SLHDSA.SufPartitionTest
 
-/-- Entry point for `slhdsa_suf_bound_tests`. -/
-def main : IO Unit := SLHDSA.SufBoundTest.main
+/-- Entry point for `slhdsa_suf_partition_tests`. -/
+def main : IO Unit := SLHDSA.SufPartitionTest.main
