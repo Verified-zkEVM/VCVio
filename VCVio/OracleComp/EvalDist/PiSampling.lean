@@ -18,7 +18,9 @@ results into a function. This file gives its laws in distribution for `ProbComp`
   the law of running all first steps and then all second steps (`Fintype.mPi_bind_evalDistEq`).
 * Drawing the family and then overwriting coordinate `a` with a fresh draw of `f a` has the law of
   the family (`Fintype.mPi_resample`).
-* Reading the family at an index, or along a list of distinct indices, together with a function of
+* Reading the family at one index has the law of that index's computation
+  (`Fintype.mPi_map_eval`). Reading it at an index, or along a list of distinct indices, together
+  with a function of
   the family that ignores those indices, has the law of drawing them first and, independently, the
   function of the family (`Fintype.mPi_map_eval_prod`, `Fintype.mPi_map_list_prod`). Reading it
   along disjoint lists of distinct indices has the law of drawing every list independently
@@ -278,6 +280,20 @@ theorem Fintype.mPi_map_eval_lists {α : Type} {ι : Type} [Fintype ι] {κ : Ty
     (fun t => (pure (x, t) : ProbComp _))
   simpa only [bind_map_left] using h
 
+/-- Reading one coordinate of a family of independent draws has the law of that coordinate's
+computation. -/
+theorem Fintype.mPi_map_eval {α : Type} {ι : Type} [Fintype ι]
+    (f : ι → ProbComp α) (a : ι) : ((fun T => T a) <$> Fintype.mPi f) =ᵈ f a := by
+  classical
+  have h := EvalDistEq.map_congr (m := ProbComp) Prod.fst
+    (Fintype.mPi_map_eval_prod f a (fun _ => ()) fun _ _ => rfl)
+  simp only [Functor.map_map, map_bind, map_pure] at h
+  have hdrop := EvalDistEq.bind_right (m := ProbComp) (f a)
+    (f := fun x => (fun _ => ()) <$> Fintype.mPi f >>= fun _ => pure x) (g := pure)
+    fun x => OracleComp.EvalDistEq.bind_const _ _
+  rw [bind_pure] at hdrop
+  exact h.trans hdrop
+
 /-- **A lazy table is an eager one.** Drawing a uniform index and running its computation has the
 law of drawing the whole family of independent computations and then reading it at a uniform
 index. -/
@@ -287,11 +303,4 @@ theorem Fintype.uniformSample_bind_evalDistEq_mPi {α : Type} {ι : Type} [Finty
   classical
   refine (EvalDistEq.bind_right (m := ProbComp) _ fun c => ?_).trans
     (OracleComp.EvalDistEq.bind_bind_swap _ _ _)
-  have h := EvalDistEq.map_congr (m := ProbComp) Prod.fst
-    (Fintype.mPi_map_eval_prod f c (fun _ => ()) fun _ _ => rfl)
-  simp only [Functor.map_map, map_bind, map_pure] at h
-  have hdrop := EvalDistEq.bind_right (m := ProbComp) (f c)
-    (f := fun x => (fun _ => ()) <$> Fintype.mPi f >>= fun _ => pure x) (g := pure)
-    fun x => OracleComp.EvalDistEq.bind_const _ _
-  rw [bind_pure] at hdrop
-  simpa only [map_eq_bind_pure_comp, Function.comp_def] using (h.trans hdrop).symm
+  simpa only [map_eq_bind_pure_comp, Function.comp_def] using (Fintype.mPi_map_eval f c).symm

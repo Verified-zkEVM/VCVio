@@ -8,6 +8,8 @@ module
 public import VCVio.CryptoFoundations.Rewinding.BlockRound
 public import VCVio.CryptoFoundations.Rewinding.ThresholdEager
 public import VCVio.OracleComp.EvalDist.PiSampling
+public import VCVio.OracleComp.Constructions.WithoutReplacement.Weighted
+public import VCVio.EvalDist.IndepProductMeasure
 
 /-!
 # The block step against children sampled in advance
@@ -28,11 +30,16 @@ This file reads the block step against children sampled in advance, in three for
   step has the law of drawing one table of independent results of all children and reading it at
   the centre and along the pools (`Rewinding.blockChildren_eager_table`). This is the form in which
   a bound proved for every table holds in expectation.
+
+On a table, the expected cost of the step is the centre's cost and, if the centre's entry
+succeeds, the expected weight of every pool's draws (`Rewinding.expectedCalls_blockChildren_table`).
 -/
 
 public section
 
-open OracleComp OracleSpec
+open OracleComp OracleSpec ProbComp MeasureTheory
+
+open scoped ENNReal NNReal
 
 namespace Rewinding
 
@@ -218,6 +225,75 @@ theorem blockChildren_eager_table [Fintype C]
     (fun p => blockTableRun k p.1 p.2 count)
   simp only [bind_map_left, bind_assoc, pure_bind] at h
   exact h.symm
+
+/-- **The expected cost of the block step on a table.** It reads the centre's entry and, if that
+succeeds, draws every pool without replacement until `k j - 1` entries succeed, charging every entry
+it reads: in expectation, the centre's cost plus the expected weight of each pool's draws. -/
+theorem expectedCalls_blockChildren_table (T : C → Option W × ℕ) (k : ι → ℕ) (c₀ : C)
+    (pools : ι → List C) :
+    expectedCalls ((blockChildren (fun n => StateT.lift (ProbComp.uniformFin n))
+        (tableChild ∘ T) k c₀ pools).run 0) =
+      (T c₀).2 + if (T c₀).1.isSome then
+        ∑ j, (drawWeight (fun c => (T c).1.isSome) (fun c => ((T c).2 : ℝ≥0)) (k j - 1)
+          (pools j) : ℝ≥0∞)
+      else 0 := by
+  classical
+  let _ : MeasurableSpace (Option (W × (ι → List W))) := ⊤
+  rw [expectedCalls_eq_lintegral]
+  let _ : MeasurableSpace (List C) := ⊤
+  let _ : DiscreteMeasurableSpace (List C) := ⟨fun _ => trivial⟩
+  rw [← blockChildren_map, ← blockTableRun, blockTableRun_eq]
+  cases hw : (T c₀).1 with
+  | none => simp
+  | some w₀ =>
+      have hdraws : (Fintype.mPi fun j => ProbComp.drawUntil (fun z : Option W × ℕ => z.1.isSome)
+          (k j - 1) ((pools j).map T)) =
+          (fun d j => (d j).map T) <$> Fintype.mPi fun j =>
+            ProbComp.drawUntil (fun c => (T c).1.isSome) (k j - 1) (pools j) := by
+        rw [Fintype.mPi_map]
+        congr 1
+        funext j
+        exact ProbComp.drawUntil_map T _ _ _ _ rfl
+      simp only [Option.isSome_some, ite_true]
+      have hsnd : Measurable fun z : Option (W × (ι → List W)) × ℕ => (z.2 : ℝ≥0∞) :=
+        (Measurable.of_discrete (f := fun n : ℕ => (n : ℝ≥0∞))).comp measurable_snd
+      have hprob : ∀ j, 𝒟[ProbComp.drawUntil (fun c => (T c).1.isSome) (k j - 1) (pools j)]
+          Set.univ = 1 := fun j =>
+        (isProbabilityMeasure_evalDist_drawUntil _ _ _ _ rfl).measure_univ
+      have hpi : IsProbabilityMeasure 𝒟[Fintype.mPi fun j =>
+          ProbComp.drawUntil (fun c => (T c).1.isSome) (k j - 1) (pools j)] := by
+        constructor
+        rw [evalDist_mPi_apply_univ]
+        exact Finset.prod_eq_one fun j _ => hprob j
+      have hcoord : ∀ j, Measurable fun d : ι → List C =>
+          ((((d j).map T).map Prod.snd).sum : ℝ≥0∞) := fun j =>
+        (Measurable.of_discrete
+          (f := fun l : List C => ((((l.map T).map Prod.snd).sum : ℕ) : ℝ≥0∞))).comp
+          (measurable_pi_apply j)
+      rw [hdraws, Functor.map_map, ← lintegral_evalDist_map _ measurable_snd
+        (g := fun n : ℕ => (n : ℝ≥0∞)) Measurable.of_discrete, Functor.map_map]
+      have hG : Measurable fun d : ι → List C =>
+          0 + (T c₀).2 + ∑ j, (((d j).map T).map Prod.snd).sum := by
+        have : ∀ j, Measurable fun d : ι → List C => (((d j).map T).map Prod.snd).sum :=
+          fun j => (Measurable.of_discrete
+            (f := fun l : List C => ((l.map T).map Prod.snd).sum)).comp (measurable_pi_apply j)
+        exact measurable_const.add (Finset.measurable_sum _ fun j _ => this j)
+      simp only
+      rw [lintegral_evalDist_map _ hG Measurable.of_discrete]
+      simp only [zero_add, Nat.cast_add, Nat.cast_sum]
+      rw [lintegral_add_left measurable_const, lintegral_const, measure_univ, mul_one,
+        lintegral_finsetSum _ fun j _ => hcoord j]
+      congr 1
+      refine Finset.sum_congr rfl fun j _ => ?_
+      rw [lintegral_evalDist_mPi_coord _ hprob j
+        (fun l : List C => ((((l.map T).map Prod.snd).sum : ℕ) : ℝ≥0∞)) Measurable.of_discrete,
+        ← lintegral_listWeight_drawUntil _ _ _ _ _ rfl,
+        lintegral_evalDist_map _ Measurable.of_discrete measurable_coe_nnreal_ennreal]
+      refine lintegral_congr fun l => ?_
+      simp only [listWeight, List.map_map, Function.comp_def]
+      induction l with
+      | nil => simp
+      | cons x xs ih => simp [ih]
 
 end Block
 
