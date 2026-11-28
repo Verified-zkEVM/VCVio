@@ -280,9 +280,9 @@ section Pins
 
 /-! ### The two `T_ℓ` games, pinned by arity
 
-The cap check of `checkTlDiscrimination` goes dark at `d = 1`; these two do not.  Each names the
-attacked member at its own arity, which is `p.k` for the FORS compression and `p.len` for the
-WOTS+ one, and the two arities differ at every profile this file carries. -/
+The FORS compression takes `p.k` inputs and the WOTS+ compression takes `p.len`. The two arities
+differ at the two-layer toy profile and every named FIPS or limited-use parameter set.
+The profile `collideParams` shows that a valid parameter set can have equal arities. -/
 
 example (pkSeed : toyPrimitives.PkSeed) (address : Adrs)
     (input : Vector toyPrimitives.Y toyParams.k) :
