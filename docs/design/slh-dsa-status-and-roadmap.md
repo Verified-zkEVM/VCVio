@@ -8,8 +8,13 @@ and their resource assumptions. This roadmap records the development against the
 
 A capability is listed as DONE only when its source and validation are on `main`. Open pull
 requests are named as such. Conditional EUF-CMA composition, the SUF residual bound and the
-SP 800-230 profile corollary are on `main`. They leave the scheme-to-game reductions as
-hypotheses and do not prove a small concrete bound or bound the same-message SUF residual. PR #766 adds an unconditional SUF-CMA bound, and with it EUF-CMA at the same bound, in the
+SP 800-230 profile corollary are on `main`. They assume the scheme-to-game reductions
+and do not give a nontrivial bound on the additive same-message SUF residual. Given an address key
+and a public seed, the test fixture constructs a certificate with a bound of at least one for any adversary.
+A useful bound requires explicit reductions from the forger to the component games and bounds on
+the resulting adversaries’ advantages. [Certificate and bound](../../HashSigTest/SLHDSA/Composition.lean)
+
+PR #766 adds an unconditional SUF-CMA bound, and with it EUF-CMA at the same bound, in the
 classical random-oracle model
 ([below](#classical-random-oracle-bound-merged-766)). It merged as
 `55c29f083ccde8850b4a0dc5a7d5d13ff5cc1dc8` on 2026-10-24. The specialized SHAKE-128s
@@ -27,7 +32,7 @@ transcription at `040dbc64`. [Specialized integration #912](https://github.com/V
 | General hypertree and scheme | `HypertreeGeneral.lean` (+ `QueryBound.lean`), `GeneralScheme.lean`, `GeneralSchemeQueryBound.lean`, `DepthOneCompatibility.lean` | `slhdsa_hypertree_tests`, `HashSigTest/SLHDSA/HypertreeGeneral.lean`, `GeneralScheme.lean` |
 | Depth-one compatibility scheme | `Hypertree.lean`, `Scheme.lean`, `RandomOracle.lean`, `Oracle.lean` | `HashSigTest/SLHDSA/Hypertree.lean`, `Oracle.lean`, `Scheme.lean` |
 | Wire codecs | `Codec.lean`, `Concrete/Codec.lean` | `slhdsa_data_codec_tests` |
-| Concrete primitives (12 FIPS sets) | `VCVio/Algorithms/Sha2.lean`, `VCVio/Algorithms/Keccak.lean`, `Concrete/FIPS.lean`, `Concrete/Instance.lean`, `Concrete/Prehash.lean` | `algorithm_tests` (+ `VCVioTest/Algorithms/HashVectors/`), `slhdsa_primitive_tests` (+ `PrimitiveVectors/`), `slhdsa_kat` |
+| Concrete primitives (12 FIPS sets) | `VCVio/Algorithms/Sha2.lean`, `VCVio/Algorithms/Keccak.lean`, `Concrete/FIPS.lean`, `Concrete/Instance.lean`, `Concrete/Prehash.lean` | `algorithm_tests` (+ `VCVioTest/Algorithms/HashVectors/`), `slhdsa_primitive_tests` (+ `PrimitiveVectors/`). The separate `slhdsa_kat` exercises the reduced SHA2-128-24 instance. |
 | C13 variant (WOTS+C/FORS+C, keccak256, `d = 2`) | `C13/{Params,Primitives,WotsC,ForsC,Xmss,Hypertree,Scheme,Concrete}.lean` | `slhdsa_c13_kat` |
 | External interfaces (Alg. 21–25) | `External.lean` | `slhdsa_external_tests` |
 | Security packaging | `Security.lean` (primitive families as `TweakableHash`/`PRFScheme`), `MerkleExtractor.lean` | — |
@@ -280,7 +285,7 @@ pushed, so a quoted one goes stale without notice.
 | FORS and hypertree conformance ports | DONE | #627, #628 | `ForsConformance.lean`, `HypertreeConformance.lean`, typed trajectory traces, concrete address bounds | none |
 | G8 external interfaces and prehash | DONE | #611 | `External.lean` (`requireContext`, `signPure*`, `verifyPure*`, prehash variants), `Concrete/Prehash.lean` (12 ACVP names, OIDs), pinned `opt_rand = PK.seed` | The byte-model ACVP cases exercise internal signing. Full-corpus external-interface testing belongs to G10. |
 | G9 efficient refinement-linked execution | NOT MERGED | frozen branch `feat/slhdsa-g9-efficient-execution-20260831`, tip `0529cefa` (still hosted) | branch-only `HashSig/SLHDSA/Execution.lean` with the full `*_eq_spec` refinement chain | the frozen branch carries stale pre-merge copies of the G4–G8 files; re-slice it instead of rebasing the whole branch (see below) |
-| G10 ACVP and KAT coverage | Partial | `slhdsa_byte_model_tests`, `Sha2KAT.lean`, `C13KAT.lean` | Fifteen pinned NIST internal-interface cases execute across SHAKE-128f, 192f and 256f, in addition to the SHA2-128-24 and C13 KATs. | Full-corpus external-interface execution remains open. |
+| G10 ACVP and KAT coverage | Partial | `slhdsa_byte_model_tests`, `slhdsa_primitive_tests`, `slhdsa_external_tests`, `slhdsa_data_codec_tests`, `Sha2KAT.lean`, `C13KAT.lean` | Fifteen NIST ACVP internal-interface records run across SHAKE-128f, 192f and 256f. All six approved SHA-2 sets have primitive fingerprints, and SHA2-128f has pure, prehash and wire-format round trips. Separate KATs cover reduced SHA2-128-24 and C13. [SHA-2 test scope](../agents/slh-dsa.md#sha-2-parameter-sets) | Full-scheme ACVP execution for the approved SHA-2 sets and full-corpus external-interface testing remain open. |
 | CF1 final-validity games | DONE | #594, #622, #624 | `TweakableHash/FinalValidity.lean`, `SMDTTCRFinalValidity`, `SMDTPREFinalValidity`, `ToFinalValidity.lean` | none |
 | CF2 DSPR, OpenPRE, UD, ITSR | DONE | #596, #623, #625 | `SMDTDSPRFinalValidity`, `SMDTOpenPREFinalValidity`, `SMDTUDFinalValidity` (message-subspace parameter), `KeyedHash/ITSR.lean`, `OpenPREFromTCRDSPR.lean` (`toTCR`, `toDSPR`, `CountingInterface`) | the OpenPRE probability coupling remains an explicit interface, as the plan allows |
 | CF3 generic SUF surface | DONE | #601 | `SignatureAlg.StrongUnforgeableAdversary`, `sameMessageStrongUnforgeableAdvantage`, `strongUnforgeableAdvantage_eq_euf_add_sameMessage` | SLH-DSA must use the per-adversary partition, not `SameMessageBinding` (#629 item 2b) |
