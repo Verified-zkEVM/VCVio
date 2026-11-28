@@ -89,8 +89,9 @@ alphabets `S r i` and thresholds `k r i`. Every round draws a uniform centre and
 `Rewinding.blockChildren` with the finder on the later rounds as the child, and a node has the
 centre and its collected neighbours as children, `blockArity (k r) = ∑ j, (k r j - 1) + 1` in all.
 `OracleComp.isTreeFinder_blockTreeFinder` is its tree-finder contract: block stars at every node
-(`OracleComp.blockNodeOk`), error `1 - ∏ r, (1 - κ r)` (`OracleComp.blockTreeError`) when every
-round error `κ r` is at most one, and cost `∏ r, blockArity (k r)`. One round of the counted finder
+(`OracleComp.blockNodeOk`), error `1 - ∏ r, (1 - κ r)` (`OracleComp.blockTreeError`, at most
+`∑ r, κ r` by `OracleComp.blockTreeError_le_sum`) for the round errors `κ r`, and cost
+`∏ r, blockArity (k r)`. One round of the counted finder
 is the block step with probabilistic children (`OracleComp.runFinder_blockTreeFinder_succ`), so the
 induction uses the success and cost clauses above. The finder sequences coordinates with
 `Fintype.mPi` and is noncomputable, and it draws its centres uniformly over the challenges rather

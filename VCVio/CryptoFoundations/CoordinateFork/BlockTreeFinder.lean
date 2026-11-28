@@ -7,7 +7,9 @@ module
 
 public import VCVio.CryptoFoundations.CoordinateFork.BlockChildren
 public import VCVio.CryptoFoundations.Rewinding.BlockSemantics
-public import VCVio.CryptoFoundations.Rewinding.ThresholdBounds
+public import VCVio.CryptoFoundations.Rewinding.Threshold
+import VCVio.CryptoFoundations.Rewinding.ThresholdBounds
+import VCVio.CryptoFoundations.Rewinding.ThresholdSemantics
 
 /-!
 # The multi-round block finder
@@ -23,9 +25,9 @@ it at `j` alone, `∑ j, (k r j - 1) + 1 = blockArity (k r)` in all.
 
 * every returned tree has, at every node, pairwise distinct siblings that form a block star
   (`OracleComp.blockNodeOk`), and accepted leaves;
-* when every round error `κ r = ∑ j, (k r j - 1) / |S r j|` is at most one, the acceptance rate `ε`
-  and the success probability `p` satisfy `ε ≤ κ + (1 - κ) p` for
-  `κ = 1 - ∏ r, (1 - κ r)` (`OracleComp.blockTreeError`);
+* with the round errors `κ r = ∑ j, (k r j - 1) / |S r j|`, the acceptance rate `ε` and the success
+  probability `p` satisfy `ε ≤ κ + (1 - κ) p` for `κ = 1 - ∏ r, (1 - κ r)`
+  (`OracleComp.blockTreeError`), which is at most `∑ r, κ r` (`OracleComp.blockTreeError_le_sum`);
 * the expected number of acceptance-oracle calls is at most `∏ r, blockArity (k r)`.
 
 The proof is an induction on rounds. One round of the counted finder is the block step with
@@ -294,6 +296,7 @@ theorem expectedCalls_blockTreeFinder : ∀ (n : ℕ) (ι : Fin n → Type) [∀
     ℝ≥0∞ :=
   1 - ∏ r, (1 - blockError (S := S r) (k r))
 
+/-- The error of the finder is at most one. -/
 theorem blockTreeError_le_one {n : ℕ} {ι : Fin n → Type} [∀ r, Fintype (ι r)]
     (S : (r : Fin n) → ι r → Type) [∀ r i, Fintype (S r i)] (k : (r : Fin n) → ι r → ℕ) :
     blockTreeError S k ≤ 1 := tsub_le_self
@@ -321,20 +324,10 @@ theorem blockTreeError_succ {n : ℕ} {ι : Fin (n + 1) → Type} [∀ r, Fintyp
   rw [blockTreeError, Fin.prod_univ_succ, ← hprod]
   exact ENNReal.one_sub_one_sub_mul_one_sub_eq_add_one_sub_mul h0 (blockTreeError_le_one _ _)
 
-private theorem average_affine {C : Type} [Fintype C] [Nonempty C]
-    (b d : ℝ≥0∞) (p : C → ℝ≥0∞) :
-    (∑ c, (b + d * p c)) / Fintype.card C = b + d * ((∑ c, p c) / Fintype.card C) := by
-  have hN : (Fintype.card C : ℝ≥0∞) ≠ 0 := by exact_mod_cast Fintype.card_ne_zero
-  simp only [Finset.sum_add_distrib, Finset.sum_const, Finset.card_univ,
-    nsmul_eq_mul, ← Finset.mul_sum, div_eq_mul_inv, add_mul]
-  rw [mul_comm (Fintype.card C : ℝ≥0∞) b, mul_assoc b,
-    ENNReal.mul_inv_cancel hN (by finiteness), mul_one, mul_assoc]
-
-/-- **The success of the multi-round block finder.** When the error of every round is at most one,
-the acceptance rate `ε` of any acceptance function and the success probability `p` of the finder
-satisfy `ε ≤ κ + (1 - κ) p`, for the error `κ = 1 - ∏ r, (1 - κ r)` of `blockTreeError`. -/
-theorem blockTreeFinder_success : ∀ (n : ℕ) (ι : Fin n → Type) [∀ r, Fintype (ι r)]
-    [∀ r, DecidableEq (ι r)] (S : (r : Fin n) → ι r → Type) [∀ r i, Fintype (S r i)]
+/-- The success induction, when the error of every round is at most one. -/
+private theorem blockTreeFinder_success_of_le_one :
+    ∀ (n : ℕ) (ι : Fin n → Type) [∀ r, Fintype (ι r)] [∀ r, DecidableEq (ι r)]
+    (S : (r : Fin n) → ι r → Type) [∀ r i, Fintype (S r i)]
     [∀ r i, DecidableEq (S r i)] [∀ r, SampleableType ((i : ι r) → S r i)]
     (k : (r : Fin n) → ι r → ℕ) (_hκ : ∀ r, blockError (S := S r) (k r) ≤ 1)
     (f : ((r : Fin n) → (i : ι r) → S r i) → Bool),
@@ -384,7 +377,7 @@ theorem blockTreeFinder_success : ∀ (n : ℕ) (ι : Fin n → Type) [∀ r, Fi
       rw [havg] at hstep
       set b := blockTreeError (ι := fun r => ι r.succ) (fun r => S r.succ) (fun r => k r.succ)
       have htail : ∀ c, acceptRate (fun q => f (Fin.cons c q)) ≤ b + (1 - b) * p c := fun c =>
-        blockTreeFinder_success n _ _ _ (fun r => hκ r.succ) _
+        blockTreeFinder_success_of_le_one n _ _ _ (fun r => hκ r.succ) _
       rw [hprob, blockTreeError_succ S k (hκ 0)]
       apply affine_error_compose (hκ 0) (blockTreeError_le_one _ _)
       calc acceptRate f = (∑ c : (i : ι 0) → S 0 i, acceptRate (fun q => f (Fin.cons c q))) /
@@ -395,6 +388,26 @@ theorem blockTreeFinder_success : ∀ (n : ℕ) (ι : Fin n → Type) [∀ r, Fi
         _ ≤ b + (1 - b) * (blockError (S := S 0) (k 0) +
             (1 - blockError (S := S 0) (k 0)) * Pr{let z ← node}[z.1.isSome]) :=
           add_le_add le_rfl (mul_le_mul' le_rfl hstep)
+
+/-- **The success of the multi-round block finder.** The acceptance rate `ε` of any acceptance
+function and the success probability `p` of the finder satisfy `ε ≤ κ + (1 - κ) p`, for the error
+`κ = 1 - ∏ r, (1 - κ r)` of `blockTreeError`. When a round error exceeds one, `κ = 1` and the bound
+is `ε ≤ 1`. -/
+theorem blockTreeFinder_success (n : ℕ) (ι : Fin n → Type) [∀ r, Fintype (ι r)]
+    [∀ r, DecidableEq (ι r)] (S : (r : Fin n) → ι r → Type) [∀ r i, Fintype (S r i)]
+    [∀ r i, DecidableEq (S r i)] [∀ r, SampleableType ((i : ι r) → S r i)]
+    (k : (r : Fin n) → ι r → ℕ) (f : ((r : Fin n) → (i : ι r) → S r i) → Bool) :
+    acceptRate f ≤ blockTreeError S k + (1 - blockTreeError S k) *
+      Pr{let z ← runFinder (blockTreeFinder n ι S k) f}[z.1.isSome] := by
+  by_cases hκ : ∀ r, blockError (S := S r) (k r) ≤ 1
+  · exact blockTreeFinder_success_of_le_one n ι S k hκ f
+  · push Not at hκ
+    obtain ⟨r, hr⟩ := hκ
+    have h1 : blockTreeError S k = 1 := by
+      rw [blockTreeError, Finset.prod_eq_zero (Finset.mem_univ r) (tsub_eq_zero_of_le hr.le),
+        tsub_zero]
+    rw [h1, tsub_self, zero_mul, add_zero]
+    exact acceptRate_le_one f
 
 /-- The node predicate of a block round: the siblings are pairwise distinct and form a block
 star. -/
@@ -531,12 +544,12 @@ one, and cost the product of the round arities. -/
 theorem isTreeFinder_blockTreeFinder (n : ℕ) (ι : Fin n → Type) [∀ r, Fintype (ι r)]
     [∀ r, DecidableEq (ι r)] (S : (r : Fin n) → ι r → Type) [∀ r i, Fintype (S r i)]
     [∀ r i, DecidableEq (S r i)] [∀ r, SampleableType ((i : ι r) → S r i)]
-    (k : (r : Fin n) → ι r → ℕ) (hκ : ∀ r, blockError (S := S r) (k r) ≤ 1) :
+    (k : (r : Fin n) → ι r → ℕ) :
     IsTreeFinder (fun r => blockArity (k r)) (blockNodeOk k) (blockTreeFinder n ι S k)
       (blockTreeError S k) (∏ r, (blockArity (k r) : ℝ≥0∞)) where
   one_le _ := Nat.le_add_left 1 _
   sound f z hz t ht := blockTreeFinder_sound n ι S k f z hz t ht
-  success := blockTreeFinder_success n ι S k hκ
+  success := blockTreeFinder_success n ι S k
   cost := expectedCalls_blockTreeFinder n ι S k
 
 end OracleComp
