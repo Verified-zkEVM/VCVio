@@ -435,8 +435,8 @@ script test (args) do
     "slhdsa_hmsg_witness_tests",
     "slhdsa_suf_residual_tests",
     "slhdsa_scheme_game_tests",
-    "slhdsa_composition_tests",
-    "slhdsa_suf_bound_tests",
+    "slhdsa_canonical_game_cap_tests",
+    "slhdsa_suf_partition_tests",
     "slhdsa_limited_profile_tests",
     "slhdsa_byte_model_tests",
     "slhdsa_wire_tests",
@@ -719,39 +719,20 @@ elaboration only. -/
 lean_exe slhdsa_scheme_game_tests where
   root := `HashSigTest.SLHDSA.SchemeGames
 
-/-- The composition certificate and the conditional bound: nothing about the bound itself is
-runnable, because `Summands.bound` is `ℝ≥0∞`-valued and every advantage it sums is
-`noncomputable`, so what runs is the `Params`-level data the bound is parameterised by — the
-Winternitz coefficient `w - 2` at the scheme-dispatch fixture's two-layer profile and at the
-SP 800-230 reduced set, together with two parameter sets where the coefficient is zero and the
-whole undetectability summand leaves the bound — one with `lgw = 1`, which is *valid*, and one
-with `lgw = 0`, which is not valid and at which the `ℕ` subtraction truncates; the eight
-formula-derived target caps at both profiles; and a twelve-row routing table naming, per summand
-of the source expression, the cap role of the game it is the advantage of and whether one of this
-lane's witness families lands in that game, asserted to have three roleless rows, nine
-witness-backed ones and eight distinct backing branches, the FORS open-preimage branch backing two
-summands.  The two `T_l` compressions' caps are asserted to differ at the two-layer profile and to
-*coincide* at the reduced set; the fixture proves both generally, the coincidence at every
-one-layer set and the separation at every deeper one, and exhibits a *valid* profile with
-`k = len` at which the two games are the same term and nothing can separate them, so the arity
-separation the routing relies on is asserted where it is true — over the whole shipped parameter
-table.  Everything about the bound's own shape — both coefficients, the summand-to-game routing,
-each certificate field's game, the ten games' declared caps and the two open-preimage transports —
-is pinned by elaboration, at least one `example` per exported declaration, in a file no
-library-side edit can reach.  So is the strength of the bound's hypotheses: a vacuity canary
-builds a closed `Certificate` at an arbitrary validated parameter set from an address key and a
-public seed, and proves that the bound it names is at least one.  It builds a second one from
-those two and a counting interface at an open-preimage adversary of advantage one, whose three
-`ℝ≥0∞` fields are the experiment's own quantities — so tying those fields to the experiment
-refuses the first certificate and not the second — and proves that over a node type with at least
-two elements such an interface exists exactly when that adversary's two induced reductions satisfy
-`DSPR + 3 · TCR ≥ 1`. -/
-lean_exe slhdsa_composition_tests where
-  root := `HashSigTest.SLHDSA.Composition
+/-- Canonical-game caps and open-preimage canaries: the Winternitz width at a two-layer toy
+profile, the SP 800-230 reduced set and two edge-case parameter sets; the eight target caps at both
+profiles; and the separation of the two `T_ℓ` compression games, by cap at `d = 2`, by arity at
+`d = 1`, and not at all at a valid `d = 1` set with `k = len`, together with `k ≠ len` over every
+shipped parameter set.  Elaboration pins tie each canonical game's declared cap to `targetCount`,
+read the two `T_ℓ` games' arities off their attacked-member equations, prove the cap separation for
+every valid parameter set, and pin the `ITSRProblem` shape.  The open-preimage section proves that
+the preimage and open-preimage games admit adversaries of advantage one against an unbounded
+adversary, and characterises when VCVio's `CountingInterface` exists at such an adversary. -/
+lean_exe slhdsa_canonical_game_cap_tests where
+  root := `HashSigTest.SLHDSA.CanonicalGameCaps
 
-/-- The strong-unforgeability residual bound: nothing about the bound itself is runnable, because
-every statement the module exports is about a probability and every probability in it is
-`noncomputable`, so what runs is the decidable shadow of the residual — which branch of the
+/-- The strong-unforgeability residual partition: every statement the module exports is about a
+probability, so what runs is the decidable shadow of the residual — which branch of the
 same-message selector a forgery lands in, read at three signing logs over the scheme-games
 fixture's own two-layer profile.  Five forgeries are sent through it: one under randomness no log
 carries, one carrying the randomizer the log recorded at a *different* message, and three that are
@@ -765,39 +746,21 @@ deterministic log's own second signature is asserted to be on the *logged* branc
 inhabited under either variant.  A third reader, sweeping the whole log rather than the entries at
 one message, is asserted to disagree with the real one at the cross-message forgery and to agree
 with it at a forgery under randomness no log carries and at the deterministic log's second
-signature.  Everything about the bound's own shape — the three-part
-expression, the unit coefficient on each residual, the two equivalences saying the residual cancels,
-and each of the fifteen exported statements — is pinned by elaboration, at least one `example` per
-declaration, in a file no library-side edit can reach.  So is the strength of its hypotheses: the
-vacuity canary rebuilds the composition fixture's free certificate and proves that at it the
-strong-unforgeability headline bounds the advantage by something at least one. -/
-lean_exe slhdsa_suf_bound_tests where
-  root := `HashSigTest.SLHDSA.SufBound
+signature.  The two equivalences saying the residual cancels, the bounds on the two halves and the
+exact randomizer partition are pinned by elaboration. -/
+lean_exe slhdsa_suf_partition_tests where
+  root := `HashSigTest.SLHDSA.SufPartition
 
-/-- The bound at the SP 800-230 reduced profile: nothing about the corollaries is runnable,
-because each instantiates a statement about a probability and every probability in them is
-`noncomputable`, so what runs is the `Params`-level arithmetic they are stated at — the profile's
-seven parameters and the width, chain count, digest and signature sizes they derive; the
-undetectability coefficient the profile turns from `w - 2` into the numeral two, asserted beside
-the fourteen every FIPS 205 set gives instead; the eight target caps as numerals, together with
-the two structural counts at `d = 1` and four arithmetic relations between the caps that a
-mis-transcribed formula breaks; and a twelve-row summand table carrying, per summand of the source
-expression, its game's cap role, that cap at this profile, and the arity of the hash the game
-attacks — no column of which is only written down, the twelve names being checked in the source's
-order, the caps against `targetCount`, each role against the name its own row carries, and all
-nine arities against literals.  Two cells of that table go dark at this profile and both are
-asserted rather than hidden: the two `T_l` compressions have the same cap at every one-layer
-parameter set and are separated only by their arity, six against sixty-eight, and the WOTS+-`F`
-undetectability and preimage roles have the same cap at *every* parameter set and the same arity
-too, so only their games' types separate them — which the pins read off the two certificate
-fields.  Everything about the corollaries' own shape — the nine carrier instances none of which
-instance search finds at this bundle, the five carriers they are stated at, both coefficients as
-numerals, the ten games' caps read at the concrete bundle, the ten attacked-member statements
-that carry the table's nine arities, and each of the five exported corollaries — is pinned by
-elaboration, at least one `example` per exported declaration, in a file no library-side edit can
-reach.  So is their strength: the vacuity canary rebuilds the composition fixture's free
-certificate at this bundle and proves that at it both headlines bound the advantage by something
-at least one. -/
+/-- The SP 800-230 reduced profile: the profile's seven parameters and the width, chain count,
+digest and signature sizes they derive; `w - 2` as the numeral two, beside the fourteen every FIPS
+205 set gives; the eight target caps as numerals, together with the two structural counts at
+`d = 1` and arithmetic relations between the caps that a mis-transcribed formula breaks; and the two
+cells where caps coincide, asserted rather than hidden — the two `T_l` compressions, which have the
+same cap at every one-layer parameter set and are separated only by their arity, six against
+sixty-eight, and the WOTS+-`F` undetectability and preimage roles, which have the same cap at
+*every* parameter set.  The nine carrier instances, the five carriers they are stated at, the ten
+games' caps at the concrete bundle and the attacked-member statements that carry each game's arity
+are pinned by elaboration. -/
 lean_exe slhdsa_limited_profile_tests where
   root := `HashSigTest.SLHDSA.LimitedProfile
 

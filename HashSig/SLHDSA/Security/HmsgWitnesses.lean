@@ -51,8 +51,7 @@ assumption, the FIPS-shaped one is strictly the stronger.
 Those last two paragraphs speak of adversaries and hardness, and nothing here proves them at that
 level: they are the informal reading of the deterministic `Iff` below together with the obvious
 query embedding, and the statements that carry a probability, an adversary and an advantage live in
-`Security.SchemeGames` and `Security.Composition`.  What this module proves is the deterministic
-core they rest on.
+`Security.SchemeGames`.  What this module proves is the deterministic core they rest on.
 
 **What would be lost if a reduction needed the converse.**  A reduction that wanted to discharge a
 Lean SLH-DSA bound from the source's assumption alone — that is, to conclude wide-hardness from

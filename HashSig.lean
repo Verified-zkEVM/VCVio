@@ -265,7 +265,6 @@ public import HashSig.SLHDSA.Security.CacheReaders
 public import HashSig.SLHDSA.Security.CacheSecret
 public import HashSig.SLHDSA.Security.CanonicalGames
 public import HashSig.SLHDSA.Security.ComponentTraces
-public import HashSig.SLHDSA.Security.Composition
 public import HashSig.SLHDSA.Security.CoverageBound
 public import HashSig.SLHDSA.Security.CoverageCountCausality
 public import HashSig.SLHDSA.Security.CoverageHits
@@ -319,7 +318,7 @@ public import HashSig.SLHDSA.Security.SecretTraces
 public import HashSig.SLHDSA.Security.SeedCoupling
 public import HashSig.SLHDSA.Security.SeedCouplingBound
 public import HashSig.SLHDSA.Security.SeedCouplingQueries
-public import HashSig.SLHDSA.Security.SufBound
+public import HashSig.SLHDSA.Security.SufPartition
 public import HashSig.SLHDSA.Security.SufResidual
 public import HashSig.SLHDSA.Security.Target
 public import HashSig.SLHDSA.Security.TargetCounts
