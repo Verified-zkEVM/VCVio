@@ -82,6 +82,20 @@ bounded by `ProbComp.drawWeight_le_split`, and summing over the centres is the w
 count `CoordinateWise.sum_accept_column_weight_le`, so the draws of all accepted centres at `j`
 inspect at most `k j - 1` times the total weight (`OracleComp.sum_drawWeight_neighbourPool_le`).
 
+### The multi-round block finder
+
+`OracleComp.blockTreeFinder n ι S k` recurses on `n` rounds, each a block with coordinates `ι r`,
+alphabets `S r i` and thresholds `k r i`. Every round draws a uniform centre and runs
+`Rewinding.blockChildren` with the finder on the later rounds as the child, and a node has the
+centre and its collected neighbours as children, `blockArity (k r) = ∑ j, (k r j - 1) + 1` in all.
+`OracleComp.isTreeFinder_blockTreeFinder` is its tree-finder contract: block stars at every node
+(`OracleComp.blockNodeOk`), error `1 - ∏ r, (1 - κ r)` (`OracleComp.blockTreeError`) when every
+round error `κ r` is at most one, and cost `∏ r, blockArity (k r)`. One round of the counted finder
+is the block step with probabilistic children (`OracleComp.runFinder_blockTreeFinder_succ`), so the
+induction uses the success and cost clauses above. The finder sequences coordinates with
+`Fintype.mPi` and is noncomputable, and it draws its centres uniformly over the challenges rather
+than by index into a pool.
+
 ## Quadratic forks: seeded vs replay
 
 The distinction is what gets pre-sampled. Seeding is uniform — it pre-samples *every* oracle family
