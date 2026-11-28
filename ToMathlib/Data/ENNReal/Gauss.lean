@@ -92,6 +92,22 @@ lemma one_sub_add_one_sub_mul {a b : ℝ≥0∞} (ha : a ≤ 1) (hb : b ≤ 1) :
       mul_le_mul' (show 1 - a ≤ 1 from tsub_le_self) (show 1 - b ≤ 1 from tsub_le_self)
     _ = 1 := one_mul 1
 
+/-- The affine error bound `a + (1 - a) b` is monotone in the error `a` when `b ≤ 1`. -/
+lemma add_one_sub_mul_le_add_one_sub_mul {a a' b : ℝ≥0∞} (h : a ≤ a') (hb : b ≤ 1) :
+    a + (1 - a) * b ≤ a' + (1 - a') * b := by
+  by_cases ha' : a' ≤ 1
+  · rw [← one_sub_one_sub_mul_one_sub_eq_add_one_sub_mul (h.trans ha') hb,
+      ← one_sub_one_sub_mul_one_sub_eq_add_one_sub_mul ha' hb]
+    exact tsub_le_tsub_left (mul_le_mul' (tsub_le_tsub_left h 1) le_rfl) 1
+  · push Not at ha'
+    rw [tsub_eq_zero_of_le ha'.le, zero_mul, add_zero]
+    by_cases ha : a ≤ 1
+    · rw [← one_sub_one_sub_mul_one_sub_eq_add_one_sub_mul ha hb]
+      exact tsub_le_self.trans ha'.le
+    · push Not at ha
+      rw [tsub_eq_zero_of_le ha.le, zero_mul, add_zero]
+      exact h
+
 /-- The union bound for a product of complements: `1 - ∏ r ∈ s, (1 - a r) ≤ ∑ r ∈ s, a r`. -/
 lemma one_sub_prod_one_sub_le_sum {R : Type*} (s : Finset R) (a : R → ℝ≥0∞) :
     1 - ∏ r ∈ s, (1 - a r) ≤ ∑ r ∈ s, a r := by

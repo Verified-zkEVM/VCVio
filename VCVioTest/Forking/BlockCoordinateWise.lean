@@ -13,10 +13,10 @@ public import ToMathlib.Combinatorics.CoordinateWise
 # Regression checks for the counting core with an alphabet per coordinate
 
 The challenge has two coordinates, the first over `Fin 5` and the second over `Fin 3`, with
-thresholds `(3, 2)`, so `κ = 2/5 + 1/3 = 11/15`. The acceptance function accepts the challenges
+thresholds `(3, 2)`, so `κ = 2/5 + 1/3 = 11/15`. The acceptance function accepts the six challenges
 whose first coordinate is below `2`, so every column of the first coordinate holds `2 < 3` accepted
-challenges and no challenge is good. The affine bound applies with a nonvacuous error, and the
-accepted fraction `2/5` stays below the bound `κ`.
+challenges and no challenge is good. The affine bound `div_card_filter_le_affine_pi` is stated with
+its error rewritten to `11/15`, so a change of the error in the theorem breaks the check.
 -/
 
 public section
@@ -68,7 +68,8 @@ example : (Finset.univ.filter fun c : (u : Fin 2) → alph u => accept c).card =
 
 /-- The error of this instance is `κ = 2/5 + 1/3 = 11/15`. With the thresholds swapped it would be
 `1/5 + 2/3 = 13/15`. -/
-example : (∑ j : Fin 2, ((k j - 1 : ℕ) : ℝ≥0∞) / (Fintype.card (alph j) : ℝ≥0∞)) = 11 / 15 := by
+theorem kappa_eq : (∑ j : Fin 2, ((k j - 1 : ℕ) : ℝ≥0∞) / (Fintype.card (alph j) : ℝ≥0∞)) =
+    11 / 15 := by
   rw [Fin.sum_univ_two]
   have h5 : Fintype.card (alph 0) = 5 := by decide
   have h3 : Fintype.card (alph 1) = 3 := by decide
@@ -80,20 +81,15 @@ example : (∑ j : Fin 2, ((k j - 1 : ℕ) : ℝ≥0∞) / (Fintype.card (alph j
     ENNReal.toReal_add h1 h2, ENNReal.toReal_div, ENNReal.toReal_div, ENNReal.toReal_div]
   norm_num
 
+/-- The affine bound at this instance, with the error of the theorem evaluated to `11/15`: the
+accepted fraction `6/15` is at most `11/15 + (4/15) p`, where the good fraction `p` is `0`. -/
+example : ((Finset.univ.filter fun c : (u : Fin 2) → alph u => accept c).card : ℝ≥0∞)
+        / Fintype.card ((u : Fin 2) → alph u)
+      ≤ 11 / 15 + (1 - 11 / 15) *
+        (((Finset.univ.filter fun c : (u : Fin 2) → alph u =>
+            accept c ∧ ∀ j, k j ≤ columnCount accept j c).card : ℝ≥0∞)
+          / Fintype.card ((u : Fin 2) → alph u)) := by
+  have h := div_card_filter_le_affine_pi (accept := accept) k
+  rwa [kappa_eq] at h
+
 end BlockCoordinateWiseTest
-
-/--
-info: 'CoordinateWise.div_card_filter_le_affine_pi' depends on axioms: [propext,
- Classical.choice,
- Quot.sound]
--/
-#guard_msgs (whitespace := lax) in
-#print axioms CoordinateWise.div_card_filter_le_affine_pi
-
-/--
-info: 'CoordinateWise.card_filter_accept_le_affine_pi' depends on axioms: [propext,
- Classical.choice,
- Quot.sound]
--/
-#guard_msgs (whitespace := lax) in
-#print axioms CoordinateWise.card_filter_accept_le_affine_pi

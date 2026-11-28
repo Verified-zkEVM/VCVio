@@ -15,7 +15,9 @@ public import ToMathlib.Data.ENNReal.Gauss
 
 Acceptance rates decompose along the first challenge coordinate. The complement of the threshold
 error is multiplicative over rounds, yielding the affine recursion for successive extraction steps.
-The threshold error is at most the sum of the per-round errors (`thresholdError_le_sum`). The
+The threshold error is at most the sum of the per-round errors (`thresholdError_le_sum`). An
+acceptance rate is at most one (`acceptRate_le_one`), and averaging commutes with affine estimates
+(`average_affine`). The
 generic `ℝ≥0∞` identities behind these recursions live in `ToMathlib.Data.ENNReal.Gauss`.
 -/
 
@@ -125,5 +127,23 @@ theorem affine_error_compose {a b p ε : ℝ≥0∞} (ha : a ≤ 1) (hb : b ≤ 
       ENNReal.one_sub_one_sub_mul_one_sub_eq_add_one_sub_mul ha hb]
   rw [hab]
   ring
+
+/-- The acceptance rate of any acceptance function is at most one. -/
+theorem acceptRate_le_one {R : Type} [Fintype R] [DecidableEq R] {C : R → Type}
+    [∀ r, Fintype (C r)] (f : ((r : R) → C r) → Bool) : acceptRate f ≤ 1 := by
+  rw [acceptRate]
+  refine ENNReal.div_le_of_le_mul ?_
+  rw [one_mul]
+  exact_mod_cast Finset.card_filter_le _ _
+
+/-- The average of affine estimates `b + d p c` over a nonempty finite type is the affine estimate
+of the average. -/
+theorem average_affine {C : Type} [Fintype C] [Nonempty C] (b d : ℝ≥0∞) (p : C → ℝ≥0∞) :
+    (∑ c, (b + d * p c)) / Fintype.card C = b + d * ((∑ c, p c) / Fintype.card C) := by
+  have hN : (Fintype.card C : ℝ≥0∞) ≠ 0 := by exact_mod_cast Fintype.card_ne_zero
+  simp only [Finset.sum_add_distrib, Finset.sum_const, Finset.card_univ,
+    nsmul_eq_mul, ← Finset.mul_sum, div_eq_mul_inv, add_mul]
+  rw [mul_comm (Fintype.card C : ℝ≥0∞) b, mul_assoc b,
+    ENNReal.mul_inv_cancel hN (by finiteness), mul_one, mul_assoc]
 
 end Rewinding

@@ -20,8 +20,9 @@ frozen across the reruns. It has three layers:
 | Policies | `Rewinding.fixedTape`, `Rewinding.ResetPolicy.ofRandomOracle`, `Rewinding.ResetPolicy.product` | [`FixedTape.lean`](../../VCVio/CryptoFoundations/Rewinding/FixedTape.lean), [`Instances.lean`](../../VCVio/CryptoFoundations/Rewinding/Instances.lean) |
 | Eager table | `Rewinding.ResetPolicy.eagerTable`, `Rewinding.ResetPolicy.attempt_eagerTable` | [`Eager.lean`](../../VCVio/CryptoFoundations/Rewinding/Eager.lean) |
 | Finder contract | `Rewinding.IsFinder`, `Rewinding.IsTreeFinder` | [`Finder.lean`](../../VCVio/CryptoFoundations/Rewinding/Finder.lean) |
-| Finders | `Rewinding.isTreeFinder_thresholdFinder`, `OracleComp.isFinder_coordFinder`, `OracleComp.isFinder_blockFinder` | [`ThresholdFinder.lean`](../../VCVio/CryptoFoundations/Rewinding/ThresholdFinder.lean), [`CoordinateFork/Finder.lean`](../../VCVio/CryptoFoundations/CoordinateFork/Finder.lean), [`CoordinateFork/BlockFinder.lean`](../../VCVio/CryptoFoundations/CoordinateFork/BlockFinder.lean) |
+| Finders | `Rewinding.isTreeFinder_thresholdFinder`, `OracleComp.isFinder_coordFinder`, `OracleComp.isFinder_blockFinder`, `OracleComp.isTreeFinder_blockTreeFinder` | [`ThresholdFinder.lean`](../../VCVio/CryptoFoundations/Rewinding/ThresholdFinder.lean), [`CoordinateFork/Finder.lean`](../../VCVio/CryptoFoundations/CoordinateFork/Finder.lean), [`CoordinateFork/BlockFinder.lean`](../../VCVio/CryptoFoundations/CoordinateFork/BlockFinder.lean), [`CoordinateFork/BlockTreeFinder.lean`](../../VCVio/CryptoFoundations/CoordinateFork/BlockTreeFinder.lean) |
 | Rounds | `Rewinding.thresholdChildren`, `Rewinding.blockChildren`, `Rewinding.thresholdChildren_eq_blockChildren` | [`ThresholdRound.lean`](../../VCVio/CryptoFoundations/Rewinding/ThresholdRound.lean), [`BlockRound.lean`](../../VCVio/CryptoFoundations/Rewinding/BlockRound.lean) |
+| Eager rounds | `Rewinding.thresholdChildren_eager`, `Rewinding.blockChildren_eager`, `Rewinding.blockChildren_eager_table`, `Rewinding.expectedCalls_blockChildren_table` | [`ThresholdEager.lean`](../../VCVio/CryptoFoundations/Rewinding/ThresholdEager.lean), [`BlockEager.lean`](../../VCVio/CryptoFoundations/Rewinding/BlockEager.lean) |
 | Bounds against reruns | `Rewinding.ResetPolicy.finder_bounds_honest` | [`FinderBridge.lean`](../../VCVio/CryptoFoundations/Rewinding/FinderBridge.lean) |
 | Transcript recovery | `Rewinding.recover`, `Rewinding.ResetPolicy.recover_bounds_honest` | [`Extraction.lean`](../../VCVio/CryptoFoundations/Rewinding/Extraction.lean) |
 | Query cost | `Rewinding.ResetPolicy.chargedAttempt`, `Rewinding.ResetPolicy.recover_bounds_honest_charged` | [`Cost.lean`](../../VCVio/CryptoFoundations/Rewinding/Cost.lean), [`Extraction.lean`](../../VCVio/CryptoFoundations/Rewinding/Extraction.lean) |
@@ -69,6 +70,9 @@ nothing else. `Rewinding.IsFinder` states its contract against every fixed accep
 - `cost`: the expected number of acceptance-oracle calls is at most `T`, counted over complete
   runs whether or not they succeed.
 
+The contract weakens to any weaker output predicate, larger error and larger cost
+(`Rewinding.IsFinder.mono`, and `Rewinding.IsTreeFinder.mono` for node predicates).
+
 `Rewinding.IsTreeFinder` specializes the contract to finders that return a `Rewinding.VecTree`
 whose sibling challenges satisfy a node predicate and whose leaves all accept. The threshold finder
 of Attema–Cramer–Kohl is a tree finder (`Rewinding.isTreeFinder_thresholdFinder`). Figure 11 of
@@ -76,8 +80,10 @@ Fenzi–Moghaddas–Nguyen is a finder that returns a star of challenges
 (`OracleComp.isFinder_coordFinder`). Its generalization to an alphabet and a threshold per coordinate
 (`OracleComp.isFinder_blockFinder`) runs one round of `Rewinding.blockChildren`, which collects,
 from a pool per coordinate, `k j - 1` accepted children of an accepted centre. At one coordinate
-that round is the threshold round of Attema–Cramer–Kohl
-(`Rewinding.thresholdChildren_eq_blockChildren`).
+that round is what the threshold round of Attema–Cramer–Kohl runs after drawing its first child
+from the pool (`Rewinding.thresholdChildren_eq_blockChildren`). The two finders choose the centre
+differently, the block finder uniformly over the challenges and the threshold finder by index into
+a pool, and no theorem yet relates their laws.
 
 ## Bounds against frozen reruns
 

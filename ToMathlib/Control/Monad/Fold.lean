@@ -11,13 +11,16 @@ public import Mathlib.Data.Fin.Basic
 public import Mathlib.Data.Fin.Tuple.Basic
 public import Mathlib.Data.Fintype.EquivFin
 public import Mathlib.Control.Basic
+public import PolyFun.Control.Monad.Hom
 
 /-!
 # `Fin`-indexed monadic sequencing
 
 `Fin.mOfFn`: run a `Fin n`-indexed family of monadic computations in order and collect the
 results as a function.
-`Fintype.mPi` transports this construction to any finite index type.
+`Fintype.mPi` transports this construction to any finite index type; over an index type with one
+element it is the computation at that element (`Fintype.mPi_unique`). Both commute with monad
+morphisms (`MonadHom.mmap_mOfFn`, `MonadHom.mmap_mPi`).
 -/
 
 public section
@@ -60,6 +63,27 @@ theorem Fin.mOfFn_map {α β : Type u} {m : Type u → Type v} [Monad m] [Lawful
       funext i
       exact Fin.cases rfl (fun _ ↦ rfl) i
 
+/-- A finite family of computations over an index type with one element is the computation at
+that element. -/
+theorem Fintype.mPi_unique {α : Type u} {m : Type u → Type v} [Monad m] [LawfulMonad m]
+    {ι : Type} [Fintype ι] [Unique ι] (g : ι → m α) :
+    Fintype.mPi g = (fun a _ => a) <$> g default := by
+  unfold Fintype.mPi
+  generalize Fintype.equivFin ι = e
+  have hn : Fintype.card ι = 1 := Fintype.card_unique
+  revert e
+  rw [hn]
+  intro e
+  simp only [Fin.mOfFn, map_bind, map_pure]
+  rw [show e.symm 0 = default from Subsingleton.elim _ _, map_eq_bind_pure_comp]
+  refine bind_congr fun a => ?_
+  rw [pure_bind]
+  congr 1
+  funext i
+  simp only [Equiv.arrowCongr_apply, Equiv.refl_apply, Function.comp_apply, Equiv.symm_symm]
+  rw [show e i = 0 from Subsingleton.elim _ _]
+  rfl
+
 /-- Coordinate observations commute with sequencing over a finite index type. -/
 theorem Fintype.mPi_map {α β : Type u} {m : Type u → Type v} [Monad m] [LawfulMonad m]
     {ι : Type} [Fintype ι] (g : ι → m α) (f : ι → α → β) :
@@ -70,3 +94,22 @@ theorem Fintype.mPi_map {α β : Type u} {m : Type u → Type v} [Monad m] [Lawf
   congr 1
   funext w i
   simp [Function.comp_def, Equiv.arrowCongr]
+
+/-- Sequencing a finite family commutes with monad morphisms. -/
+theorem MonadHom.mmap_mOfFn {m : Type u → Type v} {n : Type u → Type w} [Monad m] [LawfulMonad m]
+    [Monad n] [LawfulMonad n] (φ : m →ᵐ n) {α : Type u} :
+    ∀ {k : ℕ} (f : Fin k → m α), φ (Fin.mOfFn k f) = Fin.mOfFn k fun i => φ (f i)
+  | 0, f => by simp [Fin.mOfFn]
+  | k + 1, f => by
+      simp only [Fin.mOfFn, φ.mmap_bind, φ.mmap_pure]
+      congr 1
+      funext a
+      have ih := MonadHom.mmap_mOfFn φ (fun i => f i.succ)
+      simp only at ih
+      rw [ih]
+
+/-- Running a finite family of computations independently commutes with monad morphisms. -/
+theorem MonadHom.mmap_mPi {m : Type u → Type v} {n : Type u → Type w} [Monad m] [LawfulMonad m]
+    [Monad n] [LawfulMonad n] (φ : m →ᵐ n) {α : Type u} {ι : Type} [Fintype ι] (f : ι → m α) :
+    φ (Fintype.mPi f) = Fintype.mPi fun i => φ (f i) := by
+  simp only [Fintype.mPi, MonadHom.mmap_map, MonadHom.mmap_mOfFn]

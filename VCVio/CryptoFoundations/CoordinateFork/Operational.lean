@@ -26,8 +26,9 @@ output rather than an external accounting.
 order. The two agree on what matters. `prEvent_isSome_coordForkOp` shows the loop succeeds with
 exactly the core's probability — the sampled column order is irrelevant, because the loop stops
 only on success or exhaustion — and `coordForkOp_success` shows a successful run returns a
-coordinate-wise `k`-special sound set of accepting challenges, via the shared
-`coordFamily_success`.
+coordinate-wise `k`-special sound set of accepting challenges. Both clauses are the constant case of
+the block loop (`blockForkOpAt_const`): the output clause reads `blockForkOpAt_success`, whose star
+comes from `CoordinateWise.isBlockSpecialSound_neighbourFamily`.
 
 So the success and output clauses of Lemma 7.1 hold for the paper's actual algorithm and not only
 for the table model. This is against a *fixed* acceptance table, which is the setting §7.1 needs:

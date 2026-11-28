@@ -49,26 +49,36 @@ namespace VecTree
       intro s hs
       exact h s.succ (Fin.succ_le_succ_iff.mpr hs)
 
+/-- A tree whose root children satisfy the node predicate of the first round, and whose subtrees
+are structured for the later rounds, is structured. -/
+theorem cons_isStructured_of {n : ℕ} {C : Fin (n + 1) → Type} {k : Fin (n + 1) → ℕ}
+    (nodeOk : (r : Fin (n + 1)) → (Fin (k r) → C r) → Prop)
+    (children : Fin (k 0) → C 0 × VecTree (fun i : Fin n => C i.succ) (fun i : Fin n => k i.succ))
+    (hroot : nodeOk 0 fun j => (children j).1)
+    (hchildren : ∀ j, (children j).2.IsStructured fun r : Fin n => nodeOk r.succ) :
+    (VecTree.cons children).IsStructured nodeOk := by
+  intro p r
+  cases r using Fin.cases with
+  | zero =>
+    change nodeOk 0 (fun j => (children ((Function.update p 0 j) 0)).1)
+    simpa only [Function.update_self] using hroot
+  | succ r =>
+    change nodeOk r.succ (fun j =>
+      (children ((Function.update p r.succ j) 0)).2.leaf
+        (fun i => (Function.update p r.succ j) i.succ) r)
+    simp only [Function.update_of_ne (Fin.succ_ne_zero r).symm]
+    have ht := hchildren (p 0) (fun i => p i.succ) r
+    change nodeOk r.succ (fun j =>
+      (children (p 0)).2.leaf (Function.update (fun i => p i.succ) r j) r) at ht
+    simpa only [← Fin.tail_def, Fin.tail_update_succ] using ht
+
 /-- Distinct root challenges and structured children form a structured threshold tree. -/
 theorem cons_isStructured {n : ℕ} {C : Fin (n + 1) → Type} {k : Fin (n + 1) → ℕ}
     (children : Fin (k 0) → C 0 × VecTree (fun i : Fin n => C i.succ) (fun i : Fin n => k i.succ))
     (hroot : Function.Injective fun j => (children j).1)
     (hchildren : ∀ j, (children j).2.IsStructured (fun _ ch => Function.Injective ch)) :
-    (cons children).IsStructured (fun _ ch => Function.Injective ch) := by
-  intro p r
-  cases r using Fin.cases with
-  | zero =>
-    change Function.Injective (fun j => (children ((Function.update p 0 j) 0)).1)
-    simpa only [Function.update_self] using hroot
-  | succ r =>
-    change Function.Injective (fun j =>
-      (children ((Function.update p r.succ j) 0)).2.leaf
-        (fun i => (Function.update p r.succ j) i.succ) r)
-    simp only [Function.update_of_ne (Fin.succ_ne_zero r).symm]
-    have ht := hchildren (p 0) (fun i => p i.succ) r
-    change Function.Injective (fun j =>
-      (children (p 0)).2.leaf (Function.update (fun i => p i.succ) r j) r) at ht
-    simpa only [← Fin.tail_def, Fin.tail_update_succ] using ht
+    (cons children).IsStructured (fun _ ch => Function.Injective ch) :=
+  cons_isStructured_of (fun _ ch => Function.Injective ch) children hroot hchildren
 
 end VecTree
 

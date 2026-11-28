@@ -52,9 +52,50 @@ alphabet and the constant threshold `k`, `OracleComp.blockForkOpAt_const` identi
 with `coordForkOpAt`, and the success and cost results of `coordForkOp` and the contract
 `OracleComp.isFinder_coordFinder` are derived from the block ones. A call site with one alphabet
 names it, as in `blockFinder (S := fun _ => S)`, since Lean does not infer a constant family.
-At width one, the round of `blockChildren` is the threshold round of Attema–Cramer–Kohl
-(`Rewinding.thresholdChildren_eq_blockChildren`). The sampler for the whole challenge is an
+At width one, `blockChildren` is the step of the threshold round of Attema–Cramer–Kohl after its
+first draw: the threshold round draws the centre from its pool by index and then runs the block step
+on the rest of the pool (`Rewinding.thresholdChildren_eq_blockChildren`). The block finder instead
+draws its centre uniformly from the whole challenge space and takes its pools from `neighbourPool`,
+so no theorem identifies the laws of `blockFinder (ι := Fin 1)` and the threshold finder. The sampler for the whole challenge is an
 argument: `SampleableType.piOfFintype` supplies it for a dependent product.
+
+### Probabilistic children
+
+In a multi-round finder the child of a challenge is itself a randomized search over the later
+rounds. `OracleComp.blockChildStep child k` draws a uniform centre and runs `Rewinding.blockChildren`
+with children `child c : ProbComp (Option W × ℕ)` that report a result and a cost.
+`OracleComp.prEvent_child_le_blockChildStep` is its success clause: if a uniformly drawn child
+succeeds with probability `ε`, the step succeeds with a probability `p` such that
+`ε ≤ κ + (1 - κ) p`, at the same `κ = ∑ j, (k j - 1) / |S j|` as the acceptance-oracle finder.
+The proof draws every child in advance: with probabilistic children the block step has the law of
+the step run on a table of independent results of all children
+(`Rewinding.blockChildren_eager_table`, in
+[`Rewinding/BlockEager.lean`](../../VCVio/CryptoFoundations/Rewinding/BlockEager.lean)), so the
+counting bound holds for every table and the success clause is its expectation. The eager form
+needs the marginals of `Fintype.mPi` along disjoint lists of indices (`Fintype.mPi_map_lists`, in
+[`OracleComp/EvalDist/PiSampling.lean`](../../VCVio/OracleComp/EvalDist/PiSampling.lean)).
+`OracleComp.expectedCalls_blockChildStep_le` is the cost clause: the step costs at most
+`1 + ∑ j, (k j - 1)` times the children's average expected cost. On a table, the step costs the
+centre's entry and, if it succeeds, the expected weight of every pool's draws
+(`Rewinding.expectedCalls_blockChildren_table`). Each accepted centre's draws at coordinate `j` are
+bounded by `ProbComp.drawWeight_le_split`, and summing over the centres is the weighted column
+count `CoordinateWise.sum_accept_column_weight_le`, so the draws of all accepted centres at `j`
+inspect at most `k j - 1` times the total weight (`OracleComp.sum_drawWeight_neighbourPool_le`).
+
+### The multi-round block finder
+
+`OracleComp.blockTreeFinder n ι S k` recurses on `n` rounds, each a block with coordinates `ι r`,
+alphabets `S r i` and thresholds `k r i`. Every round draws a uniform centre and runs
+`Rewinding.blockChildren` with the finder on the later rounds as the child, and a node has the
+centre and its collected neighbours as children, `blockArity (k r) = ∑ j, (k r j - 1) + 1` in all.
+`OracleComp.isTreeFinder_blockTreeFinder` is its tree-finder contract: block stars at every node
+(`OracleComp.blockNodeOk`), error `1 - ∏ r, (1 - κ r)` (`OracleComp.blockTreeError`, at most
+`∑ r, κ r` by `OracleComp.blockTreeError_le_sum`) for the round errors `κ r`, and cost
+`∏ r, blockArity (k r)`. One round of the counted finder
+is the block step with probabilistic children (`OracleComp.runFinder_blockTreeFinder_succ`), so the
+induction uses the success and cost clauses above. The finder sequences coordinates with
+`Fintype.mPi` and is noncomputable, and it draws its centres uniformly over the challenges rather
+than by index into a pool.
 
 ## Quadratic forks: seeded vs replay
 
@@ -256,7 +297,7 @@ noncomputable def coordForkOpAt (k : ℕ) (ρ : (ι → S) → Bool) (c₀ : ι 
   if ρ c₀ then do
     let d ← Fintype.mPi (coordDraws k ρ c₀)
     let cost : ℕ := 1 + ∑ j, (d j).length
-    if ∀ j, (collected ρ c₀ d j).card = k - 1 then
+    if ∀ j, ((d j).filter fun x => ρ (Function.update c₀ j x)).length = k - 1 then
       return (some (coordFamily c₀ (collected ρ c₀ d)), cost)
     else return (none, cost)
   else return (none, 1)
@@ -266,9 +307,11 @@ The two agree on everything the bound sees. `prEvent_isSome_coordForkOp` proves 
 with exactly the core's probability — which column order it happened to draw is irrelevant, because
 it stops only on success or on exhaustion (`countP_of_mem_support_drawUntil` is what pins that
 down) — and `coordForkOp_success` proves a successful run returns a coordinate-wise `k`-special
-sound set of accepting challenges. Both the core and the loop reach that conclusion through the
-same `coordFamily_success`, which asks only for `k − 1` accepting replacements per coordinate and
-does not care which ones.
+sound set of accepting challenges. The core reaches that conclusion through `coordFamily_success`,
+which asks only for `k − 1` accepting replacements per coordinate and does not care which ones. The
+loop reaches it as the constant case of the block loop: `coordForkOpAt_success` rewrites with
+`blockForkOpAt_const` and reads `blockForkOpAt_success`, whose output is a block star by
+`CoordinateWise.isBlockSpecialSound_neighbourFamily`.
 
 `coordForkOpT` is the same loop carrying the prover's responses, so its output clause is about
 *transcripts*; it is what `CoordinateFork/Extraction.lean` names as the extractor.

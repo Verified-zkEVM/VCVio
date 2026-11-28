@@ -99,6 +99,15 @@ theorem countP_neighbourPool (ρ : ((i : ι) → T i) → Bool) (c : (i : ι) �
   rw [neighbourPool, List.countP_map]
   exact countP_altPool ρ c j
 
+/-- No challenge is a neighbour of the centre at two coordinates. -/
+theorem eq_of_mem_neighbourPool {y : (i : ι) → T i} {j j' : ι} (h : y ∈ neighbourPool c j)
+    (h' : y ∈ neighbourPool c j') : j = j' :=
+  (differsOnlyAt_of_mem_neighbourPool h).coord_eq (differsOnlyAt_of_mem_neighbourPool h')
+
+/-- The centre is not its own neighbour. -/
+theorem centre_notMem_neighbourPool (c : (i : ι) → T i) (j : ι) : c ∉ neighbourPool c j :=
+  fun h => (differsOnlyAt_of_mem_neighbourPool h).ne rfl
+
 end Pools
 
 /-! ## Per-coordinate costs -/

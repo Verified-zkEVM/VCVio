@@ -70,8 +70,10 @@ public import VCVioTest.FirstSuccess
 public import VCVioTest.FischlinExpectedCost
 public import VCVioTest.FischlinExtraction
 public import VCVioTest.ForkBounds
+public import VCVioTest.Forking.BlockChildren
 public import VCVioTest.Forking.BlockCoordinateWise
 public import VCVioTest.Forking.BlockFinder
+public import VCVioTest.Forking.BlockTreeFinder
 public import VCVioTest.Forking.CoordSpecialSoundness
 public import VCVioTest.Forking.CoordinateFinder
 public import VCVioTest.Forking.CoordinateFork
