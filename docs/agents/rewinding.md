@@ -76,8 +76,10 @@ Fenzi–Moghaddas–Nguyen is a finder that returns a star of challenges
 (`OracleComp.isFinder_coordFinder`). Its generalization to an alphabet and a threshold per coordinate
 (`OracleComp.isFinder_blockFinder`) runs one round of `Rewinding.blockChildren`, which collects,
 from a pool per coordinate, `k j - 1` accepted children of an accepted centre. At one coordinate
-that round is the threshold round of Attema–Cramer–Kohl
-(`Rewinding.thresholdChildren_eq_blockChildren`).
+that round is what the threshold round of Attema–Cramer–Kohl runs after drawing its first child
+from the pool (`Rewinding.thresholdChildren_eq_blockChildren`). The two finders choose the centre
+differently, the block finder uniformly over the challenges and the threshold finder by index into
+a pool, and no theorem yet relates their laws.
 
 ## Bounds against frozen reruns
 

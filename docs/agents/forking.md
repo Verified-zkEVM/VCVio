@@ -52,8 +52,11 @@ alphabet and the constant threshold `k`, `OracleComp.blockForkOpAt_const` identi
 with `coordForkOpAt`, and the success and cost results of `coordForkOp` and the contract
 `OracleComp.isFinder_coordFinder` are derived from the block ones. A call site with one alphabet
 names it, as in `blockFinder (S := fun _ => S)`, since Lean does not infer a constant family.
-At width one, the round of `blockChildren` is the threshold round of Attema–Cramer–Kohl
-(`Rewinding.thresholdChildren_eq_blockChildren`). The sampler for the whole challenge is an
+At width one, `blockChildren` is the step of the threshold round of Attema–Cramer–Kohl after its
+first draw: the threshold round draws the centre from its pool by index and then runs the block step
+on the rest of the pool (`Rewinding.thresholdChildren_eq_blockChildren`). The block finder instead
+draws its centre uniformly from the whole challenge space and takes its pools from `neighbourPool`,
+so no theorem identifies the laws of `blockFinder (ι := Fin 1)` and the threshold finder. The sampler for the whole challenge is an
 argument: `SampleableType.piOfFintype` supplies it for a dependent product.
 
 ## Quadratic forks: seeded vs replay
@@ -256,7 +259,7 @@ noncomputable def coordForkOpAt (k : ℕ) (ρ : (ι → S) → Bool) (c₀ : ι 
   if ρ c₀ then do
     let d ← Fintype.mPi (coordDraws k ρ c₀)
     let cost : ℕ := 1 + ∑ j, (d j).length
-    if ∀ j, (collected ρ c₀ d j).card = k - 1 then
+    if ∀ j, ((d j).filter fun x => ρ (Function.update c₀ j x)).length = k - 1 then
       return (some (coordFamily c₀ (collected ρ c₀ d)), cost)
     else return (none, cost)
   else return (none, 1)
@@ -266,9 +269,11 @@ The two agree on everything the bound sees. `prEvent_isSome_coordForkOp` proves 
 with exactly the core's probability — which column order it happened to draw is irrelevant, because
 it stops only on success or on exhaustion (`countP_of_mem_support_drawUntil` is what pins that
 down) — and `coordForkOp_success` proves a successful run returns a coordinate-wise `k`-special
-sound set of accepting challenges. Both the core and the loop reach that conclusion through the
-same `coordFamily_success`, which asks only for `k − 1` accepting replacements per coordinate and
-does not care which ones.
+sound set of accepting challenges. The core reaches that conclusion through `coordFamily_success`,
+which asks only for `k − 1` accepting replacements per coordinate and does not care which ones. The
+loop reaches it as the constant case of the block loop: `coordForkOpAt_success` rewrites with
+`blockForkOpAt_const` and reads `blockForkOpAt_success`, whose output is a block star by
+`CoordinateWise.isBlockSpecialSound_neighbourFamily`.
 
 `coordForkOpT` is the same loop carrying the prover's responses, so its output clause is about
 *transcripts*; it is what `CoordinateFork/Extraction.lean` names as the extractor.
