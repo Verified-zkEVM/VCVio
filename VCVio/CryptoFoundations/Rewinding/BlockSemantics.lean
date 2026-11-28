@@ -6,42 +6,24 @@ Authors: aryaethn
 module
 
 public import VCVio.CryptoFoundations.Rewinding.BlockRound
-public import VCVio.CryptoFoundations.Rewinding.ThresholdSemantics
-public import VCVio.EvalDist.IndepProduct
+import VCVio.CryptoFoundations.Rewinding.ThresholdSemantics
+import VCVio.EvalDist.IndepProduct
 
 /-!
 # Semantics of the block step
 
 `Rewinding.blockChildren` commutes with monad morphisms (`Rewinding.map_blockChildren`), through the
-same fact for `Fin.mOfFn` and `Fintype.mPi`. In an oracle computation, a successful block step ran
-its child at the centre successfully and returned, at every coordinate, an output of that
-coordinate's collector with `k j - 1` entries (`Rewinding.mem_support_blockChildren`); the counter
-form is `Rewinding.length_of_mem_support_blockChildren_run`. These are what a recursion over rounds
-needs from one round.
+same fact for `Fin.mOfFn` and `Fintype.mPi` (`MonadHom.mmap_mOfFn`, `MonadHom.mmap_mPi`). In an
+oracle computation, a successful block step ran its child at the centre successfully and returned,
+at every coordinate, an output of that coordinate's collector with `k j - 1` entries
+(`Rewinding.mem_support_blockChildren`); the counter form is
+`Rewinding.length_of_mem_support_blockChildren_run`. These are what a recursion over rounds needs
+from one round.
 -/
 
 public section
 
 open OracleComp OracleSpec
-
-/-- Sequencing a finite family commutes with monad morphisms. -/
-theorem MonadHom.mmap_mOfFn {m n : Type → Type} [Monad m] [LawfulMonad m] [Monad n]
-    [LawfulMonad n] (φ : m →ᵐ n) {α : Type} :
-    ∀ {k : ℕ} (f : Fin k → m α), φ (Fin.mOfFn k f) = Fin.mOfFn k fun i => φ (f i)
-  | 0, f => by simp [Fin.mOfFn]
-  | k + 1, f => by
-      simp only [Fin.mOfFn, φ.mmap_bind, φ.mmap_pure]
-      congr 1
-      funext a
-      have ih := MonadHom.mmap_mOfFn φ (fun i => f i.succ)
-      simp only at ih
-      rw [ih]
-
-/-- Running a finite family of computations independently commutes with monad morphisms. -/
-theorem MonadHom.mmap_mPi {m n : Type → Type} [Monad m] [LawfulMonad m] [Monad n]
-    [LawfulMonad n] (φ : m →ᵐ n) {α : Type} {ι : Type} [Fintype ι] (f : ι → m α) :
-    φ (Fintype.mPi f) = Fintype.mPi fun i => φ (f i) := by
-  simp only [Fintype.mPi, MonadHom.mmap_map, MonadHom.mmap_mOfFn]
 
 namespace Rewinding
 
