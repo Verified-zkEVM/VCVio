@@ -55,10 +55,10 @@ theorem card_alph_one : Fintype.card (alph 1 0) = 3 := by decide
 
 /-- The round errors are `2/5` and `1/3`. -/
 theorem blockError_zero : blockError (S := alph 0) (k 0) = 2 / 5 := by
-  simp [blockError, k, card_alph_zero]
+  simp [blockError, k]
 
 theorem blockError_one : blockError (S := alph 1) (k 1) = 1 / 3 := by
-  simp [blockError, k, card_alph_one]
+  simp [blockError, k]
 
 theorem blockError_le_one : ∀ r, blockError (S := alph r) (k r) ≤ 1 := by
   intro r
@@ -75,12 +75,17 @@ theorem blockTreeError_eq : blockTreeError alph k = 3 / 5 := by
     rw [ENNReal.sub_eq_of_eq_add (by finiteness)]
     rw [ENNReal.div_add_div_same]
     norm_num
+    exact (ENNReal.div_self (by norm_num) (by finiteness)).symm
   have h2 : (1 : ℝ≥0∞) - 1 / 3 = 2 / 3 := by
     rw [ENNReal.sub_eq_of_eq_add (by finiteness)]
     rw [ENNReal.div_add_div_same]
     norm_num
-  rw [h1, h2]
-  sorry
+    exact (ENNReal.div_self (by norm_num) (by finiteness)).symm
+  have h3 : (3 : ℝ≥0∞) / 5 * (2 / 3) = 2 / 5 := by
+    rw [← ENNReal.toReal_eq_toReal_iff' (by finiteness) (by finiteness), ENNReal.toReal_mul,
+      ENNReal.toReal_div, ENNReal.toReal_div, ENNReal.toReal_div]
+    norm_num
+  rw [h1, h2, h3, h1]
 
 /-- The contract at these values: error `3/5`, cost `3 · 2 = 6`. -/
 example : IsTreeFinder (fun r => blockArity (k r)) (blockNodeOk k)
