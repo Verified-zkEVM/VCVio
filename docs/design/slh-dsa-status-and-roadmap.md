@@ -9,8 +9,8 @@ and their resource assumptions. This roadmap records the development against the
 A capability is listed as DONE only when its source and validation are on `main`. Open pull
 requests are named as such. Conditional EUF-CMA composition, the SUF residual bound and the
 SP 800-230 profile corollary are on `main`. They assume the scheme-to-game reductions
-and leave the same-message SUF residual unbounded. Given an address key and a public seed, the
-test fixture constructs a certificate with a bound of at least one for any adversary.
+and do not give a nontrivial bound on the additive same-message SUF residual. Given an address key
+and a public seed, the test fixture constructs a certificate with a bound of at least one for any adversary.
 A useful bound requires explicit reductions from the forger to the component games and bounds on
 the resulting adversaries’ advantages. [Certificate and bound](../../HashSigTest/SLHDSA/Composition.lean)
 
