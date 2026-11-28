@@ -50,8 +50,9 @@ the forged pair is one of the embedded targets
 (`SufResidual.mem_embedTargets_of_mem_loggedRandomizers`), so the `H_msg` winning condition fails
 on its freshness conjunct
 (`not_wins_of_mem_loggedRandomizers`). The fresh half reaches it through
-`SchemeGames.freshRandomizer_notMem_embedTargets` and `freshRandomizer_wins_or_uncovered`. Neither
-half is bounded in this module.
+`SchemeGames.freshRandomizer_notMem_embedTargets` and `freshRandomizer_wins_or_uncovered`. Each
+half is at most the strong advantage. Bounding the halves in terms of the component hash-function
+assumptions remains open.
 
 ## References
 
